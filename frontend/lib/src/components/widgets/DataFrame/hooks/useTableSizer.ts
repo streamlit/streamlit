@@ -19,9 +19,12 @@
 
 import { useLayoutEffect, useState } from "react"
 
-import { Size as ResizableSize } from "re-resizable"
+import type { Size as ResizableSize } from "re-resizable"
 
-import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe as DataframeProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
 import {
   calculateTableHeight,
@@ -34,7 +37,7 @@ import {
 } from "~lib/components/widgets/DataFrame/dimensionUtils"
 import { notNullOrUndefined } from "~lib/util/utils"
 
-import { CustomGridTheme } from "./useCustomTheme"
+import type { CustomGridTheme } from "./useCustomTheme"
 
 type AutoSizerReturn = {
   // The minimum height that the data grid can be resized to
@@ -77,8 +80,8 @@ function useTableSizer(
   containerWidth: number,
   fullscreenContainerHeight?: number,
   isFullScreen?: boolean,
-  widthConfig?: streamlit.IWidthConfig | null,
-  heightConfig?: streamlit.IHeightConfig | null,
+  widthConfig?: streamlit.WidthConfig.$Properties | null,
+  heightConfig?: streamlit.HeightConfig.$Properties | null,
   measuredContainerHeight?: number,
   isInRoot?: boolean
 ): AutoSizerReturn {

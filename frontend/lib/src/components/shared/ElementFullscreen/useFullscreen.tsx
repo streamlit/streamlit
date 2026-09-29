@@ -59,11 +59,7 @@ export const useFullscreen = (): UseFullscreenShape => {
 
   const controlKeys = useCallback(
     (event: KeyboardEvent) => {
-      /**
-       * keyCode 27 is the ESC key
-       * @see https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/keyCode
-       */
-      if (event.keyCode === 27 && expanded) {
+      if (event.key === "Escape" && expanded) {
         // Exit fullscreen
         zoomOut()
       }

@@ -21,13 +21,17 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from starlette.websockets import WebSocketDisconnect
 
+from streamlit.errors import StreamlitAuthError
+from streamlit.runtime import runtime_util
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_websocket import (
     StarletteClientContext,
     StarletteSessionClient,
     _gather_user_info,
     _get_signed_cookie_with_chunks,
+    _is_host_allowed,
     _is_origin_allowed,
     _parse_decoded_user_cookie,
     _parse_subprotocols,
@@ -360,8 +364,76 @@ class TestParseUserCookieSigned:
         assert result["is_logged_in"] is True
 
 
+class TestIsHostAllowed:
+    """Tests for _is_host_allowed function."""
+
+    @pytest.mark.parametrize(
+        ("host", "expected"),
+        [
+            ("app.example.com:8501", True),
+            ("APP.EXAMPLE.COM.", True),
+            ("sub.example.org:443", True),
+            ("example.org", False),
+            ("attacker.example.net:8501", False),
+            ("[::1]:8501", True),
+            ("app.example.com:not-a-port", False),
+            ("user:pass@app.example.com:8501", False),
+            ("app.example.com/evil", False),
+            (None, False),
+        ],
+        ids=[
+            "exact_host_with_port",
+            "host_case_and_trailing_dot",
+            "wildcard_subdomain",
+            "wildcard_excludes_base_domain",
+            "disallowed_host",
+            "ipv6_host",
+            "invalid_port",
+            "embedded_credentials",
+            "path_component",
+            "missing_host",
+        ],
+    )
+    @patch_config_options(
+        {
+            "server.allowedHosts": [
+                "app.example.com",
+                "*.example.org",
+                "::1",
+            ]
+        }
+    )
+    def test_host_allowlist(self, host: str | None, expected: bool) -> None:
+        """Test exact, wildcard, and IP Host allow-list entries."""
+        assert _is_host_allowed(host) is expected
+
+    @patch_config_options({"server.allowedHosts": []})
+    def test_empty_host_allowlist_preserves_existing_behavior(self) -> None:
+        """Test that Host validation remains opt-in for compatibility."""
+        assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
+        assert _is_host_allowed(None) is True
+
+    @patch_config_options({"server.allowedHosts": ["*"]})
+    def test_global_host_wildcard_allows_any_valid_host(self) -> None:
+        """Test that the global wildcard accepts any valid Host header."""
+        assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
+        assert _is_host_allowed("dynamic-proxy.example.com:not-a-port") is False
+        assert _is_host_allowed(None) is False
+
+
 class TestIsOriginAllowed:
     """Tests for _is_origin_allowed function (Origin validation for WebSocket)."""
+
+    @patch_config_options({"server.allowedHosts": ["app.example.com"]})
+    def test_rejects_same_origin_connection_with_disallowed_host(self) -> None:
+        """Test that same-origin comparison cannot bypass Host validation."""
+        assert (
+            _is_origin_allowed(
+                "http://rebind.attacker.example:8501",
+                "rebind.attacker.example:8501",
+            )
+            is False
+        )
 
     @pytest.mark.parametrize(
         ("origin", "host", "expected"),
@@ -504,6 +576,250 @@ class TestWebsocketHandlerUserInfoPrecedence:
         assert user_info["is_logged_in"] is True
 
 
+class TestWebsocketHandlerTokenExposure:
+    """Tests for exposing auth tokens to ``st.user`` via the websocket handler."""
+
+    @staticmethod
+    def _make_authenticated_websocket() -> MagicMock:
+        """Build a mock websocket carrying valid signed user and token cookies."""
+        from starlette.websockets import WebSocketDisconnect
+
+        cookie_payload = json.dumps(
+            {
+                "origin": "http://localhost",
+                "is_logged_in": True,
+                "email": "user@example.com",
+            }
+        )
+        signed_user_cookie = starlette_app_utils.create_signed_value(
+            "test-secret", "_streamlit_user", cookie_payload
+        )
+        signed_tokens_cookie = starlette_app_utils.create_signed_value(
+            "test-secret",
+            "_streamlit_user_tokens",
+            json.dumps({"access_token": "access-123", "id_token": "id-456"}),
+        )
+        xsrf_token = starlette_app_utils.generate_xsrf_token_string()
+
+        mock_websocket = MagicMock()
+        mock_websocket.headers = MagicMock()
+        mock_websocket.headers.get.side_effect = lambda key: {
+            "Origin": "http://localhost",
+            "Host": "localhost:8501",
+            "sec-websocket-protocol": f"streamlit, {xsrf_token}",
+        }.get(key)
+        mock_websocket.headers.getlist.return_value = []
+        mock_websocket.cookies = {
+            "_streamlit_user": signed_user_cookie.decode("utf-8"),
+            "_streamlit_user_tokens": signed_tokens_cookie.decode("utf-8"),
+            "_streamlit_xsrf": xsrf_token,
+        }
+        mock_websocket.accept = AsyncMock()
+        mock_websocket.close = AsyncMock()
+        mock_websocket.receive_bytes = AsyncMock(side_effect=WebSocketDisconnect())
+        return mock_websocket
+
+    @staticmethod
+    def _make_runtime() -> MagicMock:
+        """Build a mock runtime that records ``connect_session`` calls."""
+        mock_runtime = MagicMock()
+        mock_runtime.connect_session = MagicMock(return_value="test-session-id")
+        mock_runtime.disconnect_session = MagicMock()
+        return mock_runtime
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.cookieSecret": "test-secret",
+            "server.enableCORS": False,
+        }
+    )
+    def test_expose_tokens_read_lazily_on_connect(self) -> None:
+        """Token filtering honors ``expose_tokens`` resolved after handler creation.
+
+        ``st.App(secrets=...)`` merges programmatic secrets during the ASGI
+        lifespan, which runs *after* the websocket route (and its handler) is
+        built. Reading ``expose_tokens`` lazily on connect ensures those late
+        secrets are honored rather than the empty config captured at build time.
+        """
+        mock_websocket = self._make_authenticated_websocket()
+        mock_runtime = self._make_runtime()
+
+        # Build the handler while expose_tokens is still empty, mirroring the
+        # state before programmatic secrets are merged during the lifespan.
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket.get_expose_tokens_config",
+            return_value=[],
+        ):
+            handler = create_websocket_handler(mock_runtime)
+
+        # Now simulate the merged secrets exposing only the access token and
+        # connect. The handler must pick up the freshly resolved config.
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.get_expose_tokens_config",
+                return_value=["access"],
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+            ) as mock_client_class,
+            patch(
+                "streamlit.web.server.starlette.starlette_app_utils.validate_xsrf_token",
+                return_value=True,
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            asyncio.run(handler(mock_websocket))
+
+        call_kwargs = mock_runtime.connect_session.call_args
+        user_info = call_kwargs.kwargs.get("user_info") or call_kwargs[1].get(
+            "user_info"
+        )
+
+        # Only the exposed "access" token should be present; the "id" token was
+        # in the cookie but is not in expose_tokens, so it must be excluded.
+        assert user_info["tokens"] == {"access": "access-123"}
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.cookieSecret": "test-secret",
+            "server.enableCORS": False,
+        }
+    )
+    def test_no_tokens_exposed_when_expose_tokens_empty(self) -> None:
+        """No tokens leak into ``st.user`` when ``expose_tokens`` is unset/empty.
+
+        The token cookie carries both ``access`` and ``id`` tokens, but an empty
+        ``expose_tokens`` allowlist must yield an empty ``tokens`` dict so that
+        nothing is exposed by default.
+        """
+        mock_websocket = self._make_authenticated_websocket()
+        mock_runtime = self._make_runtime()
+
+        handler = create_websocket_handler(mock_runtime)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.get_expose_tokens_config",
+                return_value=[],
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+            ) as mock_client_class,
+            patch(
+                "streamlit.web.server.starlette.starlette_app_utils.validate_xsrf_token",
+                return_value=True,
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            asyncio.run(handler(mock_websocket))
+
+        call_kwargs = mock_runtime.connect_session.call_args
+        user_info = call_kwargs.kwargs.get("user_info") or call_kwargs[1].get(
+            "user_info"
+        )
+
+        assert user_info["tokens"] == {}
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.cookieSecret": "test-secret",
+            "server.enableCORS": False,
+        }
+    )
+    def test_invalid_expose_tokens_config_surfaces(self) -> None:
+        """An invalid ``expose_tokens`` config surfaces instead of being swallowed.
+
+        ``get_expose_tokens_config`` raises ``StreamlitAuthError`` for unsupported
+        values (e.g. ``["refresh"]``). Resolving it outside the defensive
+        cookie-parsing block ensures the misconfiguration propagates rather than
+        being silently logged as a cookie-parsing failure that leaves the tokens
+        empty and the connection alive.
+        """
+        mock_websocket = self._make_authenticated_websocket()
+        mock_runtime = self._make_runtime()
+
+        handler = create_websocket_handler(mock_runtime)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.get_expose_tokens_config",
+                side_effect=StreamlitAuthError("Invalid expose_tokens configuration."),
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+            ) as mock_client_class,
+            patch(
+                "streamlit.web.server.starlette.starlette_app_utils.validate_xsrf_token",
+                return_value=True,
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            with pytest.raises(StreamlitAuthError):
+                asyncio.run(handler(mock_websocket))
+
+        # The misconfiguration must abort the connection rather than silently
+        # proceeding with an empty token set.
+        mock_runtime.connect_session.assert_not_called()
+
+
+class TestWebsocketHandlerMessageSize:
+    """Tests for inbound WebSocket message size enforcement."""
+
+    @patch_config_options(
+        {
+            "server.enableCORS": False,
+            "server.enableXsrfProtection": False,
+            "server.maxWidgetStateSize": 1,
+        }
+    )
+    def test_closes_connection_for_oversized_client_message(self) -> None:
+        """Test that oversized client messages close the connection with code 1009."""
+        mock_websocket = MagicMock()
+        mock_websocket.headers = MagicMock()
+        mock_websocket.headers.get.return_value = None
+        mock_websocket.headers.getlist.return_value = []
+        mock_websocket.cookies = {}
+        mock_websocket.accept = AsyncMock()
+        mock_websocket.close = AsyncMock()
+        mock_websocket.receive_bytes = AsyncMock(return_value=b"x" * 1_100_000)
+
+        mock_runtime = MagicMock()
+        mock_runtime.connect_session = MagicMock(return_value="test-session-id")
+        mock_runtime.disconnect_session = MagicMock()
+        mock_runtime.handle_backmsg = MagicMock()
+
+        handler = create_websocket_handler(mock_runtime)
+        with (
+            patch.object(runtime_util, "_max_widget_state_size_bytes", None),
+            patch(
+                "streamlit.web.server.starlette.starlette_websocket.StarletteSessionClient"
+            ) as mock_client_class,
+        ):
+            mock_client = MagicMock()
+            mock_client.aclose = AsyncMock()
+            mock_client_class.return_value = mock_client
+
+            asyncio.run(handler(mock_websocket))
+
+        mock_websocket.close.assert_called_once_with(code=1009)
+        mock_runtime.handle_backmsg.assert_not_called()
+        mock_runtime.disconnect_session.assert_called_once_with(
+            "test-session-id", client=mock_client
+        )
+
+
 class TestGetSignedCookieWithChunks:
     """Tests for _get_signed_cookie_with_chunks function."""
 
@@ -589,6 +905,59 @@ class TestStarletteSessionClient:
 
         assert client._closed.is_set()
         assert client._sender_task.cancelled()
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        ("error_type", "expect_exception_log"),
+        [(WebSocketDisconnect, False), (RuntimeError, True)],
+        ids=["disconnect", "generic-error"],
+    )
+    async def test_sender_closes_client_on_send_failure(
+        self, error_type: type[BaseException], expect_exception_log: bool
+    ) -> None:
+        """Send failures close the client without propagating to the caller."""
+        mock_websocket = MagicMock()
+        mock_websocket.send_bytes = AsyncMock(side_effect=error_type())
+        client = StarletteSessionClient(mock_websocket)
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket._LOGGER"
+        ) as mock_logger:
+            await client._send_queue.put(b"payload")
+            await asyncio.wait_for(client._closed.wait(), timeout=1)
+            mock_websocket.send_bytes.assert_awaited_once_with(b"payload")
+            if expect_exception_log:
+                mock_logger.exception.assert_called_once()
+            else:
+                mock_logger.exception.assert_not_called()
+        await client.aclose()
+
+
+class TestWebsocketOriginRejection:
+    """The websocket handler must close disallowed origins before accepting."""
+
+    @patch_config_options({"server.enableCORS": True})
+    def test_rejects_disallowed_origin(self) -> None:
+        """Cross-origin connections are closed with policy-violation code 1008."""
+        mock_websocket = MagicMock()
+        mock_websocket.headers = MagicMock()
+        mock_websocket.headers.get.side_effect = lambda key: {
+            "Origin": "http://evil.com",
+            "Host": "localhost:8501",
+        }.get(key)
+        mock_websocket.close = AsyncMock()
+        mock_runtime = MagicMock()
+
+        handler = create_websocket_handler(mock_runtime)
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket.is_url_from_allowed_origins",
+            return_value=False,
+        ) as mock_allowed_origin:
+            asyncio.run(handler(mock_websocket))
+
+        mock_allowed_origin.assert_called_once_with("http://evil.com")
+        mock_websocket.close.assert_awaited_once_with(code=1008)
+        mock_websocket.accept.assert_not_called()
+        mock_runtime.connect_session.assert_not_called()
 
 
 class TestCreateWebsocketRoutes:

@@ -44,6 +44,8 @@ export const StyledResizableContainer =
       "& .dvn-scroller": {
         ["overflowX" as unknown as string]: "auto !important",
         ["overflowY" as unknown as string]: "auto !important",
+        // This prevents accidental overscrolling that triggers the browser's Back button.
+        overscrollBehaviorX: "contain",
       },
       "& .gdg-search-bar": {
         ...getPopoverContainerStyle(theme),

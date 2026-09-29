@@ -175,13 +175,16 @@ from starlette.routing import Route, Mount
 from starlette.responses import JSONResponse, PlainTextResponse, FileResponse
 from starlette.staticfiles import StaticFiles
 
+
 # REST API endpoint (#439)
 async def api_data(request):
     return JSONResponse({"data": [1, 2, 3]})
 
+
 # robots.txt at root (#9673)
 async def robots_txt(request):
     return PlainTextResponse("User-agent: *\nDisallow: /admin/")
+
 
 # Serve generated site folder (#6195)
 generated_site = StaticFiles(directory="./generated_docs", html=True)
@@ -207,6 +210,7 @@ import streamlit as st
 from starlette.middleware import Middleware
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 
+
 class SecurityHeadersMiddleware:
     def __init__(self, app):
         self.app = app
@@ -222,7 +226,9 @@ class SecurityHeadersMiddleware:
                 headers[b"content-security-policy"] = b"default-src 'self'"
                 message["headers"] = list(headers.items())
             await send(message)
+
         await self.app(scope, receive, send_with_headers)
+
 
 app = st.App(
     "main.py",
@@ -241,6 +247,7 @@ app = st.App(
 import streamlit as st
 from starlette.middleware import Middleware
 
+
 class SetCookieMiddleware:
     def __init__(self, app):
         self.app = app
@@ -254,6 +261,7 @@ class SetCookieMiddleware:
             await send(message)
 
         await self.app(scope, receive, send_with_cookie)
+
 
 app = st.App(
     "main.py",
@@ -292,10 +300,12 @@ django_app = get_asgi_application()
 streamlit_app = st.App("analytics/dashboard.py")
 
 # Combine Django and Streamlit in one ASGI app
-app = Starlette(routes=[
-    Mount("/analytics", app=streamlit_app),
-    Mount("/", app=django_app),
-])
+app = Starlette(
+    routes=[
+        Mount("/analytics", app=streamlit_app),
+        Mount("/", app=django_app),
+    ]
+)
 ```
 
 ##### Mount Streamlit in FastAPI
@@ -308,9 +318,11 @@ import streamlit as st
 
 app = FastAPI()
 
+
 @app.get("/api/health")
 async def health():
     return {"status": "healthy"}
+
 
 streamlit_app = st.App("dashboard.py")
 
@@ -330,13 +342,16 @@ import streamlit as st
 # Create FastAPI sub-application
 api = FastAPI()
 
+
 @api.get("/health")
 async def health():
     return {"status": "healthy"}
 
+
 @api.post("/predict")
 async def predict(data: dict):
     return {"prediction": data.get("value", 0) * 2}
+
 
 # Mount FastAPI into Streamlit app
 # - Streamlit UI at /
@@ -358,6 +373,7 @@ app = st.App(
 import streamlit as st
 from contextlib import asynccontextmanager
 
+
 @asynccontextmanager
 async def lifespan(app):
     # Startup: runs before accepting connections (#7688, #8991)
@@ -365,14 +381,15 @@ async def lifespan(app):
     # load_ml_model uses cache_data and init_db_pool uses cache_resource, so they will be pre-warmed and initialized before the first user connects.
     from myapp.cache import load_ml_model, init_db_pool
 
-    model = load_ml_model()   # Pre-warm cache
-    db = init_db_pool()       # Initialize connection pool
+    model = load_ml_model()  # Pre-warm cache
+    db = init_db_pool()  # Initialize connection pool
 
     yield
 
     # Shutdown: cleanup global resources (#7688)
     print("Cleaning up...")
     await db.close()
+
 
 app = st.App("main.py", lifespan=lifespan)
 ```
@@ -386,16 +403,20 @@ import streamlit as st
 from starlette.routing import Route
 from starlette.responses import JSONResponse
 
+
 # Serve custom manifest.json (#5673)
 async def manifest(request):
-    return JSONResponse({
-        "name": "My Analytics App",
-        "short_name": "Analytics",
-        "description": "Interactive data analytics dashboard",
-        "icons": [{"src": "/app/static/icon-192.png", "sizes": "192x192"}],
-        "theme_color": "#ff4b4b",
-        "background_color": "#ffffff",
-    })
+    return JSONResponse(
+        {
+            "name": "My Analytics App",
+            "short_name": "Analytics",
+            "description": "Interactive data analytics dashboard",
+            "icons": [{"src": "/app/static/icon-192.png", "sizes": "192x192"}],
+            "theme_color": "#ff4b4b",
+            "background_color": "#ffffff",
+        }
+    )
+
 
 app = st.App(
     "main.py",

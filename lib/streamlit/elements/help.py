@@ -19,6 +19,7 @@ from __future__ import annotations
 import ast
 import contextlib
 import inspect
+import os
 import re
 import types
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -29,11 +30,10 @@ from streamlit.proto.Help_pb2 import Help as HelpProto
 from streamlit.proto.Help_pb2 import Member as MemberProto
 from streamlit.runtime.caching.cache_utils import CachedFunc
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner.script_runner import (
-    __file__ as SCRIPTRUNNER_FILENAME,  # noqa: N812
-)
 from streamlit.runtime.secrets import Secrets
 from streamlit.string_util import is_mem_address_str
+
+_STREAMLIT_PACKAGE_DIR: Final = os.path.realpath(os.path.dirname(streamlit.__file__))
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -136,7 +136,7 @@ class HelpMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
 
 
@@ -327,16 +327,16 @@ _NEWLINES = re.compile(r"[\n\r]+")
 
 
 def _get_current_line_of_code_as_str() -> str | None:
-    scriptrunner_frame = _get_scriptrunner_frame()
+    caller_frame = _get_caller_frame()
 
-    if scriptrunner_frame is None:
-        # If there's no ScriptRunner frame, something weird is going on. This
-        # can happen when the script is executed with `python myscript.py`.
-        # Either way, let's bail out nicely just in case there's some valid
-        # edge case where this is OK.
+    if caller_frame is None:
+        # If we can't find the caller, something weird is going on. This can
+        # happen when the script is executed with `python myscript.py`. Either
+        # way, let's bail out nicely just in case there's some valid edge case
+        # where this is OK.
         return None
 
-    code_context = scriptrunner_frame.code_context
+    code_context = caller_frame.code_context
 
     if not code_context:
         # Sometimes a frame has no code_context. This can happen inside certain exec() calls, for
@@ -349,27 +349,34 @@ def _get_current_line_of_code_as_str() -> str | None:
     return re.sub(_NEWLINES, "", code_as_string.strip())
 
 
-def _get_scriptrunner_frame() -> inspect.FrameInfo | None:
-    prev_frame = None
-    scriptrunner_frame = None
+def _get_caller_frame() -> inspect.FrameInfo | None:
+    """Return the innermost user frame that called `st.help(...)`.
 
-    # Look back in call stack to get the variable name passed into st.help().
-    # The frame *before* the ScriptRunner frame is the correct one.
-    # IMPORTANT: This will change if we refactor the code. But hopefully our tests will catch the
-    # issue and we'll fix it before it lands upstream!
+    The user frame is the closest frame on the stack whose source file lives
+    outside the ``streamlit`` package. This correctly handles nested cases —
+    e.g. a page function invoked via ``st.navigation`` / ``page.run()`` — where
+    the frame that literally contains the ``st.help(...)`` call is user code
+    that streamlit machinery is a few frames above.
+    """
     for frame in inspect.stack():
-        # Check if this is running inside a funny "exec()" block that won't provide the info we
-        # need. If so, just quit.
+        # A frame with no code_context can happen inside certain exec() calls;
+        # in that case we can't recover the source line either way.
+        # See https://stackoverflow.com/a/12072941
         if frame.code_context is None:
             return None
 
-        if frame.filename == SCRIPTRUNNER_FILENAME:
-            scriptrunner_frame = prev_frame
-            break
+        if not _is_streamlit_internal_frame(frame):
+            return frame
 
-        prev_frame = frame
+    return None
 
-    return scriptrunner_frame
+
+def _is_streamlit_internal_frame(frame: inspect.FrameInfo) -> bool:
+    try:
+        resolved = os.path.realpath(frame.filename)
+    except (OSError, ValueError):
+        return False
+    return resolved.startswith(_STREAMLIT_PACKAGE_DIR + os.sep)
 
 
 def _is_stcommand(tree: Any, command_name: str) -> bool:

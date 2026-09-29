@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useId,
@@ -25,8 +25,10 @@ import {
   useState,
 } from "react"
 
+import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { Cancel } from "@emotion-icons/material-rounded"
 import { Minus, Plus } from "@emotion-icons/open-iconic"
-import { Input as UIInput } from "baseui/input"
+import { TextField } from "react-aria-components"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
@@ -36,6 +38,8 @@ import {
 } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
@@ -48,13 +52,18 @@ import {
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StyledClearButton,
+  StyledEndEnhancer,
   StyledInputContainer,
   StyledInputControl,
   StyledInputControls,
+  StyledInputElement,
   StyledInstructionsContainer,
+  StyledStartEnhancer,
+  StyledVisuallyHidden,
 } from "./styled-components"
 import {
   canDecrement,
@@ -75,6 +84,8 @@ export interface Props {
   fragmentId?: string
 }
 
+const REQUIRED_FIELD_MESSAGE = "This field is required."
+
 const NumberInput: React.FC<Props> = ({
   disabled,
   element,
@@ -91,6 +102,8 @@ const NumberInput: React.FC<Props> = ({
     icon,
     min,
     max,
+    hasMin,
+    hasMax,
   } = element
 
   const { width, elementRef } = useCalculatedDimensions()
@@ -127,6 +140,8 @@ const NumberInput: React.FC<Props> = ({
       step,
     })
   })
+  const [validationError, setValidationError] = useState<string | null>(null)
+  const [hasRequiredError, setHasRequiredError] = useState(false)
 
   const queryParamBinding = element.queryParamKey
     ? {
@@ -154,14 +169,18 @@ const NumberInput: React.FC<Props> = ({
       const newValue = elementDefault ?? null
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
+      setValidationError(null)
+      setHasRequiredError(false)
     }, [elementDefault, formatCurrentValue]),
     queryParamBinding,
   })
 
   // Additional local state for UI interactions
   const [isFocused, setIsFocused] = useState(false)
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const formSubmitValidatorRef = useRef<() => boolean>(() => true)
   const id = useId()
+  const validationErrorId = `${id}-validation-error`
 
   const inForm = isInForm({ formId: elementFormId })
   // Allows form submission on Enter & displays Enter instructions, or if not in form and state is dirty
@@ -182,33 +201,116 @@ const NumberInput: React.FC<Props> = ({
   useEffect(() => {
     if (!dirty) {
       setFormattedValue(formatCurrentValue(value))
+      // Clear any stale validation error: when the widget is not dirty the
+      // displayed value is (re)synced from the backend (e.g. a session_state
+      // update or a step on an out-of-range value), so an error tied to the
+      // previous value no longer applies to what the user now sees.
+      setValidationError(null)
     }
   }, [value, dirty, formatCurrentValue])
 
-  // Commit a value: validate, update widget manager, and sync to URL
+  const getRangeValidationMessage = useCallback(
+    (valueArg: number): string | null => {
+      const isBelowMin = valueArg < min
+      const isAboveMax = valueArg > max
+      if (!isBelowMin && !isAboveMax) {
+        return null
+      }
+
+      const minText = formatCurrentValue(min) ?? String(min)
+      const maxText = formatCurrentValue(max) ?? String(max)
+
+      if (hasMin && hasMax) {
+        return `Number is outside the allowed range. Please enter a value between ${minText} and ${maxText}.`
+      }
+      if (isBelowMin) {
+        return hasMin
+          ? `Number is below the allowed range. Please enter a value greater than or equal to ${minText}.`
+          : "Number is below the allowed range."
+      }
+      return hasMax
+        ? `Number is above the allowed range. Please enter a value less than or equal to ${maxText}.`
+        : "Number is above the allowed range."
+    },
+    [formatCurrentValue, hasMax, hasMin, max, min]
+  )
+
+  /**
+   * Writes a value after required-then-range checks. Returns false without
+   * writing when either check fails. `skipRequired` stages an empty in-form
+   * value so submit-time validators can still paint the required error.
+   */
   const commitValue = useCallback(
     ({
       value: valueArg,
-      fromUi,
+      fromUser,
+      skipRequired = false,
     }: {
       value: number | null
-      fromUi: boolean
-    }) => {
-      // Validate range and show browser validation message if out of range
-      if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
-        inputRef.current?.reportValidity()
-        return
-      }
-
+      fromUser: boolean
+      skipRequired?: boolean
+    }): boolean => {
       const newValue = valueArg ?? elementDefault ?? null
 
-      setValueWithSource({ value: newValue, fromUi })
+      if (element.required && newValue === null && !skipRequired) {
+        setHasRequiredError(true)
+        return false
+      }
+
+      // Validate range and show Streamlit-styled error message if out of range.
+      if (notNullOrUndefined(valueArg)) {
+        const rangeValidationError = getRangeValidationMessage(valueArg)
+        if (rangeValidationError) {
+          setValidationError(rangeValidationError)
+          return false
+        }
+      }
+
+      setHasRequiredError(false)
+      setValidationError(null)
+      setValueWithSource({ value: newValue, fromUser })
+
+      // Inside a form, write the committed value to the WidgetStateManager
+      // synchronously. `setValueWithSource` only defers the write to an effect,
+      // but the Enter key handler submits the form synchronously in the same
+      // event, so without this the form would submit the *previously* committed
+      // value (the effect runs after `submitForm`). Writing a form's widget
+      // state doesn't schedule a rerun, so this adds no extra rerun.
+      if (inForm) {
+        updateWidgetMgrState(
+          element,
+          widgetMgr,
+          { value: newValue, fromUser },
+          fragmentId
+        )
+      }
 
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
+      return true
     },
-    [min, max, elementDefault, formatCurrentValue, setValueWithSource]
+    [
+      elementDefault,
+      formatCurrentValue,
+      getRangeValidationMessage,
+      setValueWithSource,
+      inForm,
+      element,
+      widgetMgr,
+      fragmentId,
+    ]
   )
+
+  // When the widget has no default, the user can clear the value to null.
+  // `clearable` is false when disabled, so the clear button is never shown in that state.
+  // Required fields hide the clear button because it would commit an empty value.
+  // Users can still empty the field by selecting the text and deleting it.
+  const clearable =
+    isNullOrUndefined(element.default) && !disabled && !element.required
+
+  const handleClear = useCallback(() => {
+    commitValue({ value: null, fromUser: true })
+  }, [commitValue])
 
   const handleFocus = useCallback((): void => {
     setIsFocused(true)
@@ -233,23 +335,16 @@ const NumberInput: React.FC<Props> = ({
     return undefined
   }, [])
 
-  const clearable = isNullOrUndefined(element.default) && !disabled
-
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    (e: React.ChangeEvent<HTMLInputElement>): void => {
       const { value: targetValue } = e.target
 
-      if (targetValue === "") {
-        setDirty(true)
-        setFormattedValue(null)
-      } else {
-        setDirty(true)
-        setFormattedValue(targetValue)
-
-        // We don't call setValueWithSource here because we want to allow
-        // intermediate values (like "1." for floats). The value is committed
-        // on blur or enter.
-      }
+      setValidationError(null)
+      setHasRequiredError(false)
+      setDirty(true)
+      // Don't call setValueWithSource here: intermediate values (like "1."
+      // for floats) are committed on blur or enter.
+      setFormattedValue(targetValue === "" ? null : targetValue)
     },
     []
   )
@@ -260,12 +355,40 @@ const NumberInput: React.FC<Props> = ({
       return null
     }
     if (element.dataType === NumberInputProto.DataType.INT) {
-      const parsed = parseInt(formattedValue, 10)
-      return isNaN(parsed) ? null : parsed
+      const parsed = Number.parseInt(formattedValue, 10)
+      return Number.isNaN(parsed) ? null : parsed
     }
-    const parsed = parseFloat(formattedValue)
-    return isNaN(parsed) ? null : parsed
+    const parsed = Number.parseFloat(formattedValue)
+    return Number.isNaN(parsed) ? null : parsed
   }, [formattedValue, element.dataType])
+
+  /**
+   * True when the value, after the default fallback, is empty — i.e. what
+   * commitValue would write is null.
+   */
+  const isRequiredEmpty = (valueArg: number | null): boolean =>
+    (valueArg ?? elementDefault ?? null) === null
+
+  // Clear the stored error once it is no longer visible. Keyed widgets preserve
+  // local state across required changes and programmatic values, so otherwise
+  // re-enabling required could resurrect a stale error.
+  const requiredError =
+    element.required &&
+    hasRequiredError &&
+    isRequiredEmpty(currentNumericValue)
+      ? REQUIRED_FIELD_MESSAGE
+      : null
+  if (
+    hasRequiredError &&
+    (!element.required || !isRequiredEmpty(currentNumericValue))
+  ) {
+    setHasRequiredError(false)
+  }
+  const displayedError = requiredError ?? validationError
+  const errorAlertText =
+    requiredError ?? (validationError ? `Error: ${validationError}` : null)
+  const errorTooltipSource =
+    requiredError ?? (validationError ? `**Error**: ${validationError}` : null)
 
   // Calculate button enabled states based on the currently displayed value, not the committed value
   const canDec = canDecrement(currentNumericValue, step, min)
@@ -273,12 +396,17 @@ const NumberInput: React.FC<Props> = ({
 
   const handleBlur = useCallback((): void => {
     if (dirty) {
-      // Use currentNumericValue (parsed from formattedValue) not value (from useBasicWidgetState)
-      // because value isn't updated until commit, but the user has typed a new value
-      commitValue({ value: currentNumericValue, fromUi: true })
+      // Validate the user's current edit, not the last committed value. In a
+      // form, stage empty values here and let the submit validator enforce
+      // requiredness.
+      commitValue({
+        value: currentNumericValue,
+        fromUser: true,
+        skipRequired: inForm,
+      })
     }
     setIsFocused(false)
-  }, [dirty, currentNumericValue, commitValue])
+  }, [dirty, currentNumericValue, commitValue, inForm])
 
   const increment = useCallback(() => {
     if (canInc) {
@@ -287,7 +415,7 @@ const NumberInput: React.FC<Props> = ({
         step,
         "add"
       )
-      commitValue({ value: newValue, fromUi: true })
+      commitValue({ value: newValue, fromUser: true })
     }
   }, [currentNumericValue, min, step, canInc, commitValue])
 
@@ -298,12 +426,12 @@ const NumberInput: React.FC<Props> = ({
         step,
         "subtract"
       )
-      commitValue({ value: newValue, fromUi: true })
+      commitValue({ value: newValue, fromUser: true })
     }
   }, [currentNumericValue, max, step, canDec, commitValue])
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
+    (e: React.KeyboardEvent<HTMLInputElement>): void => {
       const { key } = e
 
       switch (key) {
@@ -315,34 +443,92 @@ const NumberInput: React.FC<Props> = ({
           e.preventDefault()
           decrement()
           break
+        case "Escape":
+          if (clearable) {
+            e.preventDefault()
+            handleClear()
+          }
+          break
+        case "Enter": {
+          let shouldSubmitForm = true
+          if (dirty) {
+            // When committing, if currentNumericValue is null (empty input),
+            // commitValue will fall back to elementDefault. In-form Enter
+            // stages without the required check so submitForm can run every
+            // validator (including this field's required/range checks).
+            shouldSubmitForm = commitValue({
+              value: currentNumericValue,
+              fromUser: true,
+              skipRequired: inForm,
+            })
+          }
+          // Also gate on `!validationError`: a step on an out-of-range value
+          // can set a validation error while `dirty` stays false, and in that
+          // case `commitValue` above is not called — so block submission while
+          // an error is visible to keep the UI consistent.
+          if (
+            shouldSubmitForm &&
+            !validationError &&
+            widgetMgr.allowFormEnterToSubmit(elementFormId)
+          ) {
+            widgetMgr.submitForm(elementFormId, fragmentId)
+          }
+          break
+        }
         default:
       }
     },
-    [increment, decrement]
-  )
-
-  const handleKeyPress = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
-      if (e.key === "Enter") {
-        if (dirty) {
-          // When committing, if currentNumericValue is null (empty input),
-          // commitValue will fall back to elementDefault
-          commitValue({ value: currentNumericValue, fromUi: true })
-        }
-        if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
-          widgetMgr.submitForm(elementFormId, fragmentId)
-        }
-      }
-    },
     [
+      increment,
+      decrement,
+      clearable,
+      handleClear,
       dirty,
       currentNumericValue,
       commitValue,
+      inForm,
+      validationError,
       widgetMgr,
       elementFormId,
       fragmentId,
     ]
   )
+
+  /** Returns false to abort the form submit, painting the required or range error. Runs on both submit-button click and Enter. */
+  formSubmitValidatorRef.current = () => {
+    if (dirty) {
+      return commitValue({
+        value: currentNumericValue,
+        fromUser: true,
+      })
+    }
+
+    // Do not write a clean value. commitValue parses the display-formatted
+    // string, so an untouched 0.075 with default %0.2f would become 0.08.
+    if (element.required && isRequiredEmpty(value)) {
+      setHasRequiredError(true)
+      return false
+    }
+
+    // A step on an out-of-range value can set validationError while dirty
+    // stays false. Keep blocking submit while that error is visible.
+    return !validationError
+  }
+
+  // Register for every in-form number input so submit checks required and range.
+  // Dirty fields validate the live edit; clean fields preserve the stored value.
+  useEffect(() => {
+    if (!inForm) {
+      return undefined
+    }
+
+    const validator = (): boolean => formSubmitValidatorRef.current()
+    widgetMgr.addFormSubmitValidator(elementFormId, element.id, validator)
+
+    return () => {
+      widgetMgr.removeFormSubmitValidator(elementFormId, element.id)
+    }
+  }, [element.id, elementFormId, inForm, widgetMgr])
 
   // Adjust breakpoint for icon so the total width of the input element
   // is same when input controls hidden
@@ -367,6 +553,7 @@ const NumberInput: React.FC<Props> = ({
       <WidgetLabel
         label={element.label}
         disabled={disabled}
+        required={element.required}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
@@ -376,150 +563,143 @@ const NumberInput: React.FC<Props> = ({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <StyledInputContainer
-        className={isFocused ? "focused" : ""}
-        data-testid="stNumberInputContainer"
+      {/*
+       * We use React Aria's generic TextField rather than NumberField as
+       * NumberField manages display formatting exclusively through
+       * Intl.NumberFormat (formatOptions), which is incompatible with the
+       * printf-style format strings supported by st.number_input's `format`
+       * parameter (e.g. "%0.2f", "%e", "%g").
+       */}
+      {/*
+       * `validationBehavior="aria"` disables React Aria's native constraint
+       * validation. Otherwise React Aria reflects the input's native `min`/`max`
+       * `ValidityState` into `aria-invalid`/`data-invalid` independently of our
+       * `displayedError`, which leaves the field styled red (and marked invalid
+       * for screen readers) after the user corrects an out-of-range value.
+       * Driving `isInvalid` from `displayedError` makes our custom required and
+       * range validation the single source of truth for the invalid state.
+       */}
+      <TextField
+        isDisabled={disabled}
+        aria-label={element.label}
+        validationBehavior="aria"
+        isInvalid={!!displayedError}
       >
-        <UIInput
-          type="number"
-          inputRef={inputRef}
-          value={formattedValue ?? ""}
-          placeholder={element.placeholder}
-          onBlur={handleBlur}
-          onFocus={handleFocus}
-          onChange={handleChange}
-          onKeyPress={handleKeyPress}
-          onKeyDown={handleKeyDown}
-          clearable={clearable}
-          clearOnEscape={clearable}
-          disabled={disabled}
-          aria-label={element.label}
-          startEnhancer={
-            element.icon && (
+        <StyledInputContainer
+          $isFocused={isFocused}
+          $hasError={!!displayedError}
+          data-testid="stNumberInputContainer"
+        >
+          {element.icon && (
+            <StyledStartEnhancer
+              $isMaterialIcon={isMaterialIcon(element.icon)}
+            >
               <DynamicIcon
                 data-testid="stNumberInputIcon"
                 iconValue={element.icon}
                 size="base"
               />
-            )
-          }
-          id={id}
-          overrides={{
-            ClearIconContainer: {
-              style: {
-                padding: 0,
-              },
-            },
-            ClearIcon: {
-              props: {
-                overrides: {
-                  Svg: {
-                    style: {
-                      color: theme.colors.grayTextColor,
-                      // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                      padding: theme.spacing.threeXS,
-                      height: theme.sizes.clearIconSize,
-                      width: theme.sizes.clearIconSize,
-                      ":hover": {
-                        fill: theme.colors.bodyText,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            Input: {
-              props: {
-                "data-testid": "stNumberInputField",
-                step: step,
-                min: min,
-                max: max,
-                // We specify the type as "number" to have numeric keyboard on mobile devices.
-                // We also set inputMode to "" since by default BaseWeb sets "text",
-                // and for "decimal" / "numeric" IOS shows keyboard without a minus sign.
-                type: "number",
-                inputMode: "",
-              },
-              style: {
-                fontWeight: theme.fontWeights.normal,
-                lineHeight: theme.lineHeights.inputWidget,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                paddingRight: theme.spacing.sm,
-                paddingLeft: theme.spacing.md,
-                paddingBottom: theme.spacing.sm,
-                paddingTop: theme.spacing.sm,
-                "::placeholder": {
-                  color: theme.colors.fadedText60,
-                },
-              },
-            },
-            InputContainer: {
-              style: () => ({
-                borderTopRightRadius: 0,
-                borderBottomRightRadius: 0,
-              }),
-            },
-            Root: {
-              style: {
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderTopRightRadius: 0,
-                borderBottomRightRadius: 0,
-                borderTopLeftRadius: 0,
-                borderBottomLeftRadius: 0,
-                borderLeftWidth: 0,
-                borderRightWidth: 0,
-                borderTopWidth: 0,
-                borderBottomWidth: 0,
-                paddingRight: 0,
-                paddingLeft: icon ? theme.spacing.sm : 0,
-              },
-            },
-            StartEnhancer: {
-              style: {
-                paddingLeft: 0,
-                paddingRight: 0,
-                // Keeps emoji icons from being cut off on the right
-                minWidth: theme.iconSizes.base,
-                // Material icons color changed as inactionable
-                color: isMaterialIcon(icon)
-                  ? theme.colors.fadedText60
-                  : "inherit",
-              },
-            },
-          }}
-        />
-        {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
-        {width > numberInputControlBreakpoint && (
-          <StyledInputControls>
-            <StyledInputControl
-              data-testid="stNumberInputStepDown"
-              onClick={decrement}
-              disabled={!canDec || disabled}
+            </StyledStartEnhancer>
+          )}
+          <StyledInputElement
+            ref={inputRef}
+            id={id}
+            data-testid="stNumberInputField"
+            type="number"
+            // Omit inputMode because the native default for type="number" provides
+            // the appropriate mobile keyboard.
+            step={step}
+            min={min}
+            max={max}
+            value={formattedValue ?? ""}
+            placeholder={element.placeholder}
+            // `aria-invalid` is driven by the TextField's `isInvalid` prop.
+            aria-required={element.required ? true : undefined}
+            aria-describedby={displayedError ? validationErrorId : undefined}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+          />
+          {errorTooltipSource && (
+            <StyledEndEnhancer>
+              <Tooltip
+                content={
+                  <StreamlitMarkdown
+                    source={errorTooltipSource}
+                    allowHTML={false}
+                  />
+                }
+                placement={Placement.TOP_RIGHT}
+                error
+              >
+                <Icon content={ErrorOutline} size="base" />
+              </Tooltip>
+            </StyledEndEnhancer>
+          )}
+          {clearable && notNullOrUndefined(formattedValue) && (
+            <StyledClearButton
+              type="button"
+              data-testid="stNumberInputClearButton"
+              aria-label="Clear value"
+              // Plain <button> does not inherit isDisabled from React Aria's
+              // TextField context — must be passed explicitly.
+              disabled={disabled}
               tabIndex={-1}
+              // Prevent mousedown from moving focus away from the input before
+              // the click fires. Without this, handleBlur commits the current
+              // dirty value first, causing a spurious extra Streamlit rerun.
+              onMouseDown={e => e.preventDefault()}
+              onClick={handleClear}
             >
-              <Icon
-                content={Minus}
-                size="xs"
-                color={canDec ? "inherit" : theme.colors.fadedText40}
-              />
-            </StyledInputControl>
-            <StyledInputControl
-              data-testid="stNumberInputStepUp"
-              onClick={increment}
-              disabled={!canInc || disabled}
-              tabIndex={-1}
-            >
-              <Icon
-                content={Plus}
-                size="xs"
-                color={canInc ? "inherit" : theme.colors.fadedText40}
-              />
-            </StyledInputControl>
-          </StyledInputControls>
-        )}
-      </StyledInputContainer>
+              <Cancel size={theme.iconSizes.base} aria-hidden="true" />
+            </StyledClearButton>
+          )}
+          {/* Show the increment/decrement controls only when there is sufficient room. */}
+          {width > numberInputControlBreakpoint && (
+            <StyledInputControls>
+              <StyledInputControl
+                type="button"
+                data-testid="stNumberInputStepDown"
+                aria-label="Decrement"
+                onClick={decrement}
+                disabled={!canDec || disabled}
+                tabIndex={-1}
+              >
+                <Icon
+                  content={Minus}
+                  size="xs"
+                  color={canDec ? "inherit" : theme.colors.fadedText40}
+                />
+              </StyledInputControl>
+              <StyledInputControl
+                type="button"
+                data-testid="stNumberInputStepUp"
+                aria-label="Increment"
+                onClick={increment}
+                disabled={!canInc || disabled}
+                tabIndex={-1}
+              >
+                <Icon
+                  content={Plus}
+                  size="xs"
+                  color={canInc ? "inherit" : theme.colors.fadedText40}
+                />
+              </StyledInputControl>
+            </StyledInputControls>
+          )}
+          {errorAlertText && (
+            <StyledVisuallyHidden id={validationErrorId} role="alert">
+              {errorAlertText}
+            </StyledVisuallyHidden>
+          )}
+        </StyledInputContainer>
+      </TextField>
       {shouldShowInstructions && (
-        <StyledInstructionsContainer clearable={clearable}>
+        <StyledInstructionsContainer
+          $clearable={clearable}
+          $hasError={!!displayedError}
+        >
           <InputInstructions
             dirty={dirty}
             value={formattedValue ?? ""}

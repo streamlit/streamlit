@@ -23,6 +23,7 @@ import {
   NumberColumn,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"
+import ButtonColumn from "~lib/components/widgets/DataFrame/columns/ButtonColumn"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import useDataExporter, { toCsvRow } from "./useDataExporter"
@@ -160,12 +161,14 @@ describe("useDataExporter hook", () => {
       expect(getCellContentMock).toHaveBeenCalled()
     })
     // Number of writes: 1 for BOM + 1 for header + num rows
-    expect(mockWrite).toBeCalledTimes(NUM_ROWS + 2)
-    expect(mockWrite).toBeCalledWith(textEncoder.encode("\ufeff"))
+    expect(mockWrite).toHaveBeenCalledTimes(NUM_ROWS + 2)
+    expect(mockWrite).toHaveBeenCalledWith(textEncoder.encode("\ufeff"))
     // Write the header row:
-    expect(mockWrite).toBeCalledWith(textEncoder.encode("column_1,column_2\n"))
-    expect(mockWrite).toBeCalledWith(textEncoder.encode("123,foo\n"))
-    expect(mockClose).toBeCalledTimes(1)
+    expect(mockWrite).toHaveBeenCalledWith(
+      textEncoder.encode("column_1,column_2\n")
+    )
+    expect(mockWrite).toHaveBeenCalledWith(textEncoder.encode("123,foo\n"))
+    expect(mockClose).toHaveBeenCalledTimes(1)
   })
 
   it("correctly creates a file picker", async () => {
@@ -181,9 +184,9 @@ describe("useDataExporter hook", () => {
     result.current.exportToCsv()
 
     await waitFor(() => {
-      expect(showSaveFilePicker).toBeCalledTimes(1)
+      expect(showSaveFilePicker).toHaveBeenCalledTimes(1)
     })
-    expect(showSaveFilePicker).toBeCalledWith({
+    expect(showSaveFilePicker).toHaveBeenCalledWith({
       excludeAcceptAllOption: false,
       suggestedName: `${timestamp}_export.csv`,
       types: [{ accept: { "text/csv": [".csv"] } }],
@@ -281,8 +284,81 @@ describe("useDataExporter hook", () => {
     })
 
     // Number of writes: 1 for BOM + 1 for header + 0 rows
-    expect(mockWrite).toBeCalledTimes(2)
-    expect(mockClose).toBeCalledTimes(1)
+    expect(mockWrite).toHaveBeenCalledTimes(2)
+    expect(mockClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("excludes button columns from the CSV export while keeping column alignment", async () => {
+    const buttonColumn = ButtonColumn({
+      id: "actions",
+      name: "actions",
+      title: "actions",
+      indexNumber: 1,
+      arrowType: {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("actions", new Utf8(), true),
+        pandasType: {
+          field_name: "actions",
+          name: "actions",
+          pandas_type: "unicode",
+          numpy_type: "object",
+          metadata: null,
+        },
+      },
+      isEditable: false,
+      isHidden: false,
+      isIndex: false,
+      isPinned: false,
+      isStretched: false,
+    })
+
+    // Place the button column *between* the two data columns to verify the
+    // exporter keeps the original column index alignment when skipping it.
+    const columnsWithButton: BaseColumn[] = [
+      MOCK_COLUMNS[0], // number column at index 0
+      buttonColumn, // button column at index 1 (must be skipped)
+      MOCK_COLUMNS[1], // text column at index 2
+    ]
+
+    const getCellContentWithButtonMock = vi
+      .fn()
+      .mockImplementation(([col]: readonly [number]) => {
+        const column = columnsWithButton[col]
+        if (column.kind === "number") {
+          return column.getCell(123)
+        }
+        if (column.kind === "button") {
+          return column.getCell("Click me")
+        }
+        return column.getCell("foo")
+      })
+
+    const { result } = renderHook(() => {
+      return useDataExporter(
+        getCellContentWithButtonMock,
+        columnsWithButton,
+        1,
+        false
+      )
+    })
+
+    result.current.exportToCsv()
+
+    const textEncoder = new TextEncoder()
+
+    await waitFor(() => {
+      expect(getCellContentWithButtonMock).toHaveBeenCalled()
+    })
+
+    // Header skips the button column:
+    expect(mockWrite).toHaveBeenCalledWith(
+      textEncoder.encode("column_1,column_2\n")
+    )
+    // Row skips the button column but keeps the data columns read from their
+    // original indices (number at 0, text at 2):
+    expect(mockWrite).toHaveBeenCalledWith(textEncoder.encode("123,foo\n"))
+    // The button column index (1) must never be read for export:
+    expect(getCellContentWithButtonMock).not.toHaveBeenCalledWith([1, 0])
   })
 
   it("handles null cell values", async () => {
@@ -310,6 +386,6 @@ describe("useDataExporter hook", () => {
     })
 
     // Should handle null values gracefully (empty string in CSV)
-    expect(mockWrite).toBeCalledWith(textEncoder.encode(",foo\n"))
+    expect(mockWrite).toHaveBeenCalledWith(textEncoder.encode(",foo\n"))
   })
 })

@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
@@ -35,21 +34,23 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
 
 # Compiled regex for validating hex colors (#RGB or #RRGGBB format)
 _HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}){1,2}$")
@@ -96,6 +97,7 @@ class ColorPickerMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> str:
         r"""Display a color picker widget.
 
@@ -200,6 +202,21 @@ class ColorPickerMixin:
             ``st.query_params``; it can only be programmatically changed
             through ``st.session_state``.
 
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
+
         Returns
         -------
         str
@@ -230,6 +247,7 @@ class ColorPickerMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
         )
 
@@ -247,9 +265,14 @@ class ColorPickerMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         check_widget_policies(
             self.dg,
@@ -257,7 +280,7 @@ class ColorPickerMixin:
             on_change,
             default_value=value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         # Enforce minimum width of 40px to match the color block's intrinsic size.
         # The color block is always 40x40px, so the widget should never be smaller.
@@ -284,17 +307,21 @@ class ColorPickerMixin:
 
         # make sure the value is a string
         if not isinstance(value, str):
-            raise StreamlitAPIException(f"""
-Color Picker Value has invalid type: {type(value).__name__}. Expects a hex string
-like '#00FFAA' or '#000'.
-""")
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                type(value).__name__,
+                ["str"],
+                detail="Pass a hex string like `'#00FFAA'` or `'#000'`.",
+            )
 
-        # validate the value and expects a hex string
         if not _HEX_COLOR_RE.match(value):
-            raise StreamlitAPIException(f"""
-'{value}' is not a valid hex code for colors. Valid ones are like
-'#00FFAA' or '#000'.
-""")
+            # Not StreamlitInvalidColorError: its message documents RGB
+            # sequences, which st.color_picker does not accept.
+            raise StreamlitAPIException(
+                f"'{value}' is not a valid hex code for colors. Valid ones are like "
+                "'#00FFAA' or '#000'.",
+                error_id="color-picker-invalid-hex",
+            )
 
         color_picker_proto = ColorPickerProto()
         color_picker_proto.id = element_id
@@ -307,7 +334,7 @@ like '#00FFAA' or '#000'.
         )
 
         if help is not None:
-            color_picker_proto.help = dedent(help)
+            color_picker_proto.help = to_help_str(help)
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
@@ -324,7 +351,9 @@ like '#00FFAA' or '#000'.
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             # Color picker is not clearable (defaults to black)
             clearable=False,
         )
@@ -343,5 +372,5 @@ like '#00FFAA' or '#000'.
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

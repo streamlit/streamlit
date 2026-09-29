@@ -16,6 +16,7 @@
 
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { setInteractionModality } from "react-aria/private/interactions/useFocusVisible"
 
 import {
   LabelVisibility as LabelVisibilityProto,
@@ -28,7 +29,10 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import NumberInput, { Props } from "./NumberInput"
 
-const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
+const getProps = (
+  elementProps: Partial<NumberInputProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => ({
   element: NumberInputProto.create({
     label: "Label",
     default: 0,
@@ -41,28 +45,53 @@ const getProps = (elementProps: Partial<NumberInputProto> = {}): Props => ({
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
+  ...widgetProps,
 })
 
-const getIntProps = (elementProps: Partial<NumberInputProto> = {}): Props => {
-  return getProps({
-    dataType: NumberInputProto.DataType.INT,
-    default: 10,
-    min: 0,
-    max: 100,
-    ...elementProps,
-  })
+const getIntProps = (
+  elementProps: Partial<NumberInputProto> = {},
+  widgetProps: Partial<Props> = {}
+): Props => {
+  return getProps(
+    {
+      dataType: NumberInputProto.DataType.INT,
+      default: 10,
+      min: 0,
+      max: 100,
+      ...elementProps,
+    },
+    widgetProps
+  )
 }
 
 const getFloatProps = (
-  elementProps: Partial<NumberInputProto> = {}
+  elementProps: Partial<NumberInputProto> = {},
+  widgetProps: Partial<Props> = {}
 ): Props => {
-  return getProps({
-    dataType: NumberInputProto.DataType.FLOAT,
-    default: 10.0,
-    min: 0.0,
-    max: 100.0,
-    ...elementProps,
-  })
+  return getProps(
+    {
+      dataType: NumberInputProto.DataType.FLOAT,
+      default: 10.0,
+      min: 0.0,
+      max: 100.0,
+      ...elementProps,
+    },
+    widgetProps
+  )
+}
+
+const createFormWidgetMgr = (): {
+  sendRerunBackMsg: ReturnType<typeof vi.fn>
+  widgetMgr: WidgetStateManager
+} => {
+  const sendRerunBackMsg = vi.fn()
+  return {
+    sendRerunBackMsg,
+    widgetMgr: new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    }),
+  }
 }
 
 describe("NumberInput widget", () => {
@@ -73,6 +102,10 @@ describe("NumberInput widget", () => {
     })
   })
 
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it("renders without crashing", () => {
     const props = getIntProps()
     render(<NumberInput {...props} />)
@@ -81,27 +114,27 @@ describe("NumberInput widget", () => {
     expect(numberInput).toHaveClass("stNumberInput")
   })
 
-  it("adds a focused class when running onFocus", async () => {
+  it("input receives focus when clicked (onFocus fires)", async () => {
     const user = userEvent.setup()
     const props = getIntProps()
     render(<NumberInput {...props} />)
 
-    await user.click(screen.getByTestId("stNumberInputField"))
-    expect(screen.getByTestId("stNumberInputContainer")).toHaveClass("focused")
+    const input = screen.getByTestId("stNumberInputField")
+    await user.click(input)
+    expect(input).toHaveFocus()
   })
 
-  it("removes the focused class when running onBlur", async () => {
+  it("input loses focus after tabbing away (onBlur fires)", async () => {
     const user = userEvent.setup()
     const props = getIntProps()
     render(<NumberInput {...props} />)
 
-    await user.click(screen.getByTestId("stNumberInputField"))
-    expect(screen.getByTestId("stNumberInputContainer")).toHaveClass("focused")
+    const input = screen.getByTestId("stNumberInputField")
+    await user.click(input)
+    expect(input).toHaveFocus()
 
     await user.tab()
-    expect(screen.getByTestId("stNumberInputContainer")).not.toHaveClass(
-      "focused"
-    )
+    expect(input).not.toHaveFocus()
   })
 
   it("commits typed value when input loses focus (blur)", async () => {
@@ -123,10 +156,9 @@ describe("NumberInput widget", () => {
 
     // Verify the TYPED value (42.5) was committed, not the old value (10.0)
     expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       42.5,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(numberInput).toHaveValue(42.5)
   })
@@ -144,10 +176,9 @@ describe("NumberInput widget", () => {
     await user.tab()
 
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       42,
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(numberInput).toHaveValue(42)
   })
@@ -210,15 +241,6 @@ describe("NumberInput widget", () => {
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
-  it("sets input mode to empty string", () => {
-    const props = getIntProps()
-    render(<NumberInput {...props} />)
-
-    const numberInput = screen.getByTestId("stNumberInputField")
-
-    expect(numberInput).toHaveAttribute("inputmode", "")
-  })
-
   it("sets input type to number", () => {
     const props = getIntProps()
     render(<NumberInput {...props} />)
@@ -264,13 +286,147 @@ describe("NumberInput widget", () => {
     // Our widget should be reset, and the widgetMgr should be updated
     expect(numberInput).toHaveValue(props.element.default)
     expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.default,
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
+  })
+
+  describe("form submission via Enter", () => {
+    it("submits the freshly typed value on the first Enter (not the previous value)", async () => {
+      // Regression test: a number_input inside st.form used to submit the
+      // *previously committed* value on the first Enter, because commitValue
+      // wrote to the WidgetStateManager asynchronously (in an effect) while
+      // submitForm ran synchronously in the same event handler. The committed
+      // value must be written before the form is submitted.
+      const user = userEvent.setup()
+      const props = getIntProps({
+        formId: "form",
+        default: 5,
+        min: 1,
+        max: 10,
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+      // Capture the value present in widget state at the moment the form is
+      // submitted. getIntValue reads the form's pending value first, so this
+      // reflects exactly what would be sent to the backend.
+      let valueAtSubmit: number | undefined
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => {
+        valueAtSubmit = props.widgetMgr.getIntValue(props.element)
+        return true
+      })
+
+      render(<NumberInput {...props} />)
+      const input = screen.getByTestId("stNumberInputField")
+
+      await user.clear(input)
+      await user.type(input, "8")
+      // A single Enter must be enough to submit the typed value.
+      await user.keyboard("{enter}")
+
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+      // The freshly typed value (8) must be submitted, not the previously
+      // committed value (5).
+      expect(valueAtSubmit).toBe(8)
+    })
+
+    it("submits the freshly typed float value on the first Enter (not the previous value)", async () => {
+      const user = userEvent.setup()
+      const props = getFloatProps({
+        formId: "form",
+        default: 5.0,
+        min: 1,
+        max: 10,
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+
+      let valueAtSubmit: number | undefined
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => {
+        valueAtSubmit = props.widgetMgr.getDoubleValue(props.element)
+        return true
+      })
+
+      render(<NumberInput {...props} />)
+      const input = screen.getByTestId("stNumberInputField")
+
+      await user.clear(input)
+      await user.type(input, "8.5")
+      await user.keyboard("{enter}")
+
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+      // The freshly typed float value (8.5) must be submitted, not the
+      // previously committed value (5.0).
+      expect(valueAtSubmit).toBe(8.5)
+    })
+
+    it("does NOT submit the form on Enter when the typed value is out of range", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({
+        formId: "form",
+        default: 5,
+        min: 1,
+        max: 10,
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      const submitFormSpy = vi.spyOn(props.widgetMgr, "submitForm")
+      const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+      render(<NumberInput {...props} />)
+      const input = screen.getByTestId("stNumberInputField")
+      setIntValueSpy.mockClear() // ignore the initial mount write
+
+      await user.clear(input)
+      await user.type(input, "99") // above max
+      await user.keyboard("{enter}")
+
+      // commitValue returns false on an out-of-range value, so the form must
+      // not submit...
+      expect(submitFormSpy).not.toHaveBeenCalled()
+      // ...and the invalid value must never be written to widget state.
+      expect(setIntValueSpy).not.toHaveBeenCalled()
+      expect(screen.getByRole("alert")).toBeInTheDocument()
+    })
+
+    it("does NOT submit the form on Enter while a validation error from a step is showing", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({
+        formId: "form",
+        default: 100,
+        min: 0,
+        max: 50,
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      const submitFormSpy = vi.spyOn(props.widgetMgr, "submitForm")
+
+      render(<NumberInput {...props} />)
+      const input = screen.getByTestId("stNumberInputField")
+      await user.click(input)
+      // 100 -> 99, still > max: sets the error without marking the input dirty.
+      await user.keyboard("{ArrowDown}")
+      expect(screen.getByRole("alert")).toBeInTheDocument()
+
+      await user.keyboard("{enter}")
+      expect(submitFormSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  it("does not write the value twice on Enter when NOT in a form", async () => {
+    const user = userEvent.setup()
+    // No formId -> inForm is false, so the synchronous form write is skipped
+    // and only the deferred effect writes the value.
+    const props = getIntProps({ default: 5, min: 1, max: 10 })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    const input = screen.getByTestId("stNumberInputField")
+    setIntValueSpy.mockClear() // ignore the initial mount write
+
+    await user.clear(input)
+    await user.type(input, "8")
+    await user.keyboard("{enter}")
+
+    expect(setIntValueSpy).toHaveBeenCalledTimes(1) // deferred effect only
   })
 
   it("shows Input Instructions on dirty state when not in form (by default)", async () => {
@@ -379,12 +535,13 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setDoubleValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         props.element.default,
         {
-          fromUi: false,
-        },
-        undefined
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -530,10 +687,9 @@ describe("NumberInput widget", () => {
       // Verify the new value was committed
       expect(numberInput).toHaveDisplayValue("25.75")
       expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         25.75,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       // Submit the form – this should trigger onFormCleared
@@ -549,10 +705,9 @@ describe("NumberInput widget", () => {
 
       // 2. Verify that the default value was set in widgetMgr (dirty state was reset)
       expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         10.0,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       // 3. Verify we can interact with the widget again after form clear
@@ -563,10 +718,9 @@ describe("NumberInput widget", () => {
       // New value should be committed successfully. The browser normalizes "15.50" to "15.5".
       expect(numberInput).toHaveDisplayValue("15.5")
       expect(props.widgetMgr.setDoubleValue).toHaveBeenLastCalledWith(
-        props.element,
+        props.element.id,
         15.5,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })
@@ -586,12 +740,13 @@ describe("NumberInput widget", () => {
       render(<NumberInput {...props} />)
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         props.element.default,
         {
-          fromUi: false,
-        },
-        undefined
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -636,8 +791,10 @@ describe("NumberInput widget", () => {
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
         expect.anything(),
         10,
-        { fromUi: false },
-        "myFragmentId"
+        expect.objectContaining({
+          fragmentId: "myFragmentId",
+          fromUser: false,
+        })
       )
     })
 
@@ -1052,27 +1209,264 @@ describe("NumberInput widget", () => {
         expect(input).toHaveDisplayValue("42")
       })
 
-      it("handles out-of-range values by not updating formatted value", async () => {
+      it("handles out-of-range values with custom validation UI", async () => {
         const user = userEvent.setup()
         const props = getIntProps({ default: 10, min: 0, max: 50 })
-
-        // Mock reportValidity to track if it's called
-        const mockReportValidity = vi.fn()
-        HTMLInputElement.prototype.reportValidity = mockReportValidity
+        const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+        const reportValiditySpy = vi
+          .spyOn(HTMLInputElement.prototype, "reportValidity")
+          .mockReturnValue(true)
 
         render(<NumberInput {...props} />)
+        setIntValueSpy.mockClear()
 
         const input = screen.getByTestId("stNumberInputField")
         await user.clear(input)
         await user.type(input, "100") // Above max
         await user.keyboard("{enter}")
 
-        // Should not change the formatted value and call reportValidity
+        // Should keep the invalid value visible, block commit, and avoid the
+        // native browser validation popup.
         expect(input).toHaveDisplayValue("100") // Still shows the invalid input
-        expect(mockReportValidity).toHaveBeenCalled()
+        expect(setIntValueSpy).not.toHaveBeenCalled()
+        expect(reportValiditySpy).not.toHaveBeenCalled()
 
-        // Cleanup
-        HTMLInputElement.prototype.reportValidity = () => true
+        const expectedError =
+          "Number is outside the allowed range. Please enter a value between 0 and 50."
+        const alert = screen.getByRole("alert")
+        expect(input).toHaveAttribute("aria-invalid", "true")
+        expect(input).toHaveAttribute("aria-describedby", alert.id)
+        expect(alert).toHaveTextContent(`Error: ${expectedError}`)
+
+        const errorIcon = screen.getByTestId("stTooltipErrorHoverTarget")
+        expect(errorIcon).toBeVisible()
+
+        act(() => setInteractionModality("pointer"))
+        await user.hover(errorIcon)
+
+        const tooltip = await screen.findByTestId("stTooltipErrorContent")
+        expect(tooltip).toHaveTextContent(`Error: ${expectedError}`)
+
+        reportValiditySpy.mockRestore()
+      })
+
+      it("clears range validation error when user edits value", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 10, min: 0, max: 50 })
+
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "100")
+        await user.keyboard("{enter}")
+
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+
+        await user.clear(input)
+        await user.type(input, "25")
+
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+        expect(input).not.toHaveAttribute("aria-invalid")
+        expect(
+          screen.queryByTestId("stTooltipErrorHoverTarget")
+        ).not.toBeInTheDocument()
+      })
+
+      it("clears a stale validation error when a new value arrives from the backend", async () => {
+        const user = userEvent.setup()
+        // The backend value (5) is below the min (10) — such an out-of-range
+        // value can arrive via session_state. Stepping up keeps it out of
+        // range and sets a validation error while the widget is NOT dirty
+        // (the user never typed).
+        const props = getIntProps({ default: 5, min: 10, max: 100, step: 1 })
+        const { rerender } = render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.click(screen.getByTestId("stNumberInputStepUp"))
+
+        // The out-of-range step surfaces the validation error even though the
+        // widget is not dirty.
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+        expect(input).toHaveAttribute("aria-invalid", "true")
+
+        // A rerun delivers a valid value from the backend (session_state update).
+        const updatedProps = getIntProps({
+          default: 5,
+          min: 10,
+          max: 100,
+          step: 1,
+          value: 50,
+          setValue: true,
+        })
+        updatedProps.widgetMgr = props.widgetMgr
+        rerender(<NumberInput {...updatedProps} />)
+
+        // The displayed value syncs to the backend value and the stale error
+        // must be cleared (no lingering red styling / alert / aria-invalid).
+        expect(input).toHaveDisplayValue("50")
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+        expect(input).not.toHaveAttribute("aria-invalid")
+        expect(
+          screen.queryByTestId("stTooltipErrorHoverTarget")
+        ).not.toBeInTheDocument()
+      })
+
+      it("does not submit form via Enter when range validation fails", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({
+          default: 10,
+          formId: "form",
+          min: 0,
+          max: 50,
+        })
+        vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+          true
+        )
+        vi.spyOn(props.widgetMgr, "submitForm")
+
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "100")
+        await user.keyboard("{enter}")
+
+        expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+      })
+
+      it("does not submit form via Enter while a validation error is shown but the widget is not dirty", async () => {
+        const user = userEvent.setup()
+        // The backend value (5) is below the min (10). Stepping up keeps it
+        // out of range and sets a validation error while dirty stays false
+        // (commitValue is not called from the Enter handler in this state).
+        const props = getIntProps({
+          default: 5,
+          min: 10,
+          max: 100,
+          step: 1,
+          formId: "form",
+        })
+        vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+          true
+        )
+        vi.spyOn(props.widgetMgr, "submitForm")
+
+        render(<NumberInput {...props} />)
+
+        await user.click(screen.getByTestId("stNumberInputStepUp"))
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.click(input)
+        await user.keyboard("{enter}")
+
+        // The visible validation error must block form submission even though
+        // the widget is not dirty.
+        expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+        expect(screen.getByRole("alert")).toBeInTheDocument()
+      })
+
+      it("shows the validation error and blocks commit when blurring an invalid value", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 10, min: 0, max: 50 })
+        const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+        render(<NumberInput {...props} />)
+        setIntValueSpy.mockClear()
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "100") // Above max
+        // Blur (tab away) rather than pressing Enter.
+        await user.tab()
+
+        expect(input).toHaveDisplayValue("100")
+        expect(setIntValueSpy).not.toHaveBeenCalled()
+        const alert = screen.getByRole("alert")
+        expect(alert).toHaveTextContent(
+          "Error: Number is outside the allowed range. Please enter a value between 0 and 50."
+        )
+        expect(input).toHaveAttribute("aria-invalid", "true")
+      })
+
+      it("shows a below-range message when only min_value is set", async () => {
+        const user = userEvent.setup()
+        // Only min is user-provided; max is the safe-integer sentinel.
+        const props = getIntProps({
+          default: 10,
+          min: 0,
+          max: Number.MAX_SAFE_INTEGER,
+          hasMin: true,
+          hasMax: false,
+        })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "-5")
+        await user.keyboard("{enter}")
+
+        const alert = screen.getByRole("alert")
+        expect(alert).toHaveTextContent(
+          "Error: Number is below the allowed range. Please enter a value greater than or equal to 0."
+        )
+        // The sentinel max must not leak into the message.
+        expect(alert).not.toHaveTextContent("between")
+        expect(alert).not.toHaveTextContent(String(Number.MAX_SAFE_INTEGER))
+      })
+
+      it("shows an above-range message when only max_value is set", async () => {
+        const user = userEvent.setup()
+        // Only max is user-provided; min is the safe-integer sentinel.
+        const props = getIntProps({
+          default: 10,
+          min: Number.MIN_SAFE_INTEGER,
+          max: 50,
+          hasMin: false,
+          hasMax: true,
+        })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "100")
+        await user.keyboard("{enter}")
+
+        const alert = screen.getByRole("alert")
+        expect(alert).toHaveTextContent(
+          "Error: Number is above the allowed range. Please enter a value less than or equal to 50."
+        )
+        expect(alert).not.toHaveTextContent("between")
+        expect(alert).not.toHaveTextContent(String(Number.MIN_SAFE_INTEGER))
+      })
+
+      it("does not leak the float sentinel bound into the message", async () => {
+        const user = userEvent.setup()
+        // Float input with only max_value set; min is the float sentinel,
+        // which would render as a ~300-digit number if leaked.
+        const props = getFloatProps({
+          default: 1.0,
+          min: -Number.MAX_VALUE,
+          max: 10.5,
+          format: "%0.1f",
+          hasMin: false,
+          hasMax: true,
+        })
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "20")
+        await user.keyboard("{enter}")
+
+        const alert = screen.getByRole("alert")
+        expect(alert).toHaveTextContent(
+          "Error: Number is above the allowed range. Please enter a value less than or equal to 10.5."
+        )
+        // A 30+ digit run would indicate the sentinel leaked into the message.
+        expect(alert.textContent).not.toMatch(/\d{30,}/)
       })
 
       it.each([
@@ -1450,6 +1844,829 @@ describe("NumberInput widget", () => {
       expect(input).toHaveValue(0.51)
     })
   })
+
+  describe("disabled state", () => {
+    it("disables the input field when disabled prop is true", () => {
+      const props = { ...getIntProps(), disabled: true }
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInputField")).toBeDisabled()
+    })
+
+    it("disables step up button when disabled prop is true", () => {
+      const props = { ...getIntProps(), disabled: true }
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInputStepUp")).toBeDisabled()
+    })
+
+    it("disables step down button when disabled prop is true", () => {
+      const props = { ...getIntProps(), disabled: true }
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInputStepDown")).toBeDisabled()
+    })
+
+    it("does not render clear button when disabled even with no default", () => {
+      // clearable = isNullOrUndefined(default) && !disabled, so disabled prevents
+      // the clear button from rendering.
+      const props = { ...getProps({ default: null }), disabled: true }
+      render(<NumberInput {...props} />)
+
+      expect(
+        screen.queryByTestId("stNumberInputClearButton")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  describe("accessibility", () => {
+    it("applies aria-label from element.label to the input", () => {
+      const props = getIntProps()
+      render(<NumberInput {...props} />)
+
+      // React Aria's TextField propagates aria-label to the inner input element.
+      expect(screen.getByTestId("stNumberInputField")).toHaveAttribute(
+        "aria-label",
+        props.element.label
+      )
+    })
+
+    it("applies aria-label='Increment' to step up button", () => {
+      const props = getIntProps()
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInputStepUp")).toHaveAttribute(
+        "aria-label",
+        "Increment"
+      )
+    })
+
+    it("applies aria-label='Decrement' to step down button", () => {
+      const props = getIntProps()
+      render(<NumberInput {...props} />)
+
+      expect(screen.getByTestId("stNumberInputStepDown")).toHaveAttribute(
+        "aria-label",
+        "Decrement"
+      )
+    })
+  })
+
+  describe("clear button (clearable widget)", () => {
+    // clearable = true when element.default is null (no default set)
+    const getClearableProps = (
+      elementProps: Partial<NumberInputProto> = {}
+    ): Props =>
+      getProps({
+        dataType: NumberInputProto.DataType.INT,
+        default: null,
+        min: 0,
+        max: 100,
+        ...elementProps,
+      })
+
+    it("does not render clear button when default is set (not clearable)", () => {
+      const props = getIntProps({ default: 10 })
+      render(<NumberInput {...props} />)
+
+      expect(
+        screen.queryByTestId("stNumberInputClearButton")
+      ).not.toBeInTheDocument()
+    })
+
+    it("does not render clear button when clearable but input is empty", () => {
+      // With default=null and no value typed yet, formattedValue is null → no button.
+      const props = getClearableProps()
+      render(<NumberInput {...props} />)
+
+      expect(
+        screen.queryByTestId("stNumberInputClearButton")
+      ).not.toBeInTheDocument()
+    })
+
+    it("renders clear button when clearable and a value is present", async () => {
+      const user = userEvent.setup()
+      const props = getClearableProps()
+      render(<NumberInput {...props} />)
+
+      await user.type(screen.getByTestId("stNumberInputField"), "42")
+
+      expect(
+        screen.getByTestId("stNumberInputClearButton")
+      ).toBeInTheDocument()
+    })
+
+    it("clicking clear button commits null and hides the button", async () => {
+      const user = userEvent.setup()
+      const props = getClearableProps()
+      vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "42")
+      await user.keyboard("{enter}") // commit so the clear button shows on a non-dirty input
+
+      const clearButton = screen.getByTestId("stNumberInputClearButton")
+      await user.click(clearButton)
+
+      expect(input).toHaveDisplayValue("")
+      expect(
+        screen.queryByTestId("stNumberInputClearButton")
+      ).not.toBeInTheDocument()
+      expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+        props.element.id,
+        null,
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+      )
+    })
+
+    it("pressing Escape when clearable clears the value", async () => {
+      const user = userEvent.setup()
+      const props = getClearableProps()
+      vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "42")
+      await user.keyboard("{enter}") // commit the value first
+
+      // Now press Escape to clear
+      await user.click(input)
+      await user.keyboard("{Escape}")
+
+      expect(input).toHaveDisplayValue("")
+      expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+        props.element.id,
+        null,
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+      )
+    })
+
+    it("Escape does not clear when widget has a default (not clearable)", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ default: 10 })
+      vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.click(input)
+      await user.keyboard("{Escape}")
+
+      // Should remain at default value
+      expect(input).toHaveValue(10)
+    })
+  })
+
+  describe("required", () => {
+    const getRequiredEmptyProps = (
+      elementProps: Partial<NumberInputProto> = {},
+      widgetProps: Partial<Props> = {}
+    ): Props =>
+      getIntProps(
+        {
+          default: null,
+          required: true,
+          ...elementProps,
+        },
+        widgetProps
+      )
+
+    it("does not show a required error on initial render", () => {
+      render(<NumberInput {...getRequiredEmptyProps()} />)
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+    })
+
+    it("sets aria-required only when required is true", () => {
+      const { unmount } = render(<NumberInput {...getRequiredEmptyProps()} />)
+      expect(screen.getByTestId("stNumberInputField")).toHaveAttribute(
+        "aria-required",
+        "true"
+      )
+      unmount()
+
+      render(<NumberInput {...getIntProps({ required: false })} />)
+      expect(screen.getByTestId("stNumberInputField")).not.toHaveAttribute(
+        "aria-required"
+      )
+    })
+
+    it("shows the required marker when the label is visible", () => {
+      render(<NumberInput {...getRequiredEmptyProps()} />)
+
+      expect(screen.getByTestId("stWidgetLabelRequired")).toHaveTextContent(
+        "(required)"
+      )
+    })
+
+    it.each([
+      ["hidden", LabelVisibilityProto.LabelVisibilityOptions.HIDDEN],
+      ["collapsed", LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED],
+    ])(
+      "omits the required marker when the label is %s",
+      (_visibility, value) => {
+        render(
+          <NumberInput
+            {...getRequiredEmptyProps({
+              labelVisibility: { value },
+            })}
+          />
+        )
+
+        expect(
+          screen.queryByTestId("stWidgetLabelRequired")
+        ).not.toBeInTheDocument()
+        expect(screen.getByTestId("stNumberInputField")).toHaveAttribute(
+          "aria-required",
+          "true"
+        )
+      }
+    )
+
+    it.each(["blur", "Enter"] as const)(
+      "blocks empty %s commits outside a form",
+      async commitVia => {
+        const user = userEvent.setup()
+        const props = getRequiredEmptyProps()
+        const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+        render(<NumberInput {...props} />)
+        setIntValueSpy.mockClear()
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.type(input, "5")
+        await user.clear(input)
+        if (commitVia === "blur") {
+          await user.click(document.body)
+        } else {
+          await user.keyboard("{Enter}")
+        }
+
+        expect(setIntValueSpy).not.toHaveBeenCalledWith(
+          props.element.id,
+          null,
+          expect.anything()
+        )
+        expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
+        expect(input).toHaveAttribute("aria-invalid", "true")
+        expect(screen.getByRole("alert")).toHaveTextContent(
+          "This field is required."
+        )
+        expect(screen.getByRole("alert")).not.toHaveTextContent("Error:")
+        expect(input).toHaveAttribute("aria-required", "true")
+        expect(input).toHaveDisplayValue("")
+      }
+    )
+
+    it("does not show a required error on unedited empty blur", async () => {
+      const user = userEvent.setup()
+      render(<NumberInput {...getRequiredEmptyProps()} />)
+
+      await user.click(screen.getByTestId("stNumberInputField"))
+      await user.click(document.body)
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+    })
+
+    it("treats 0 as a non-empty value", async () => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps()
+      const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+      setIntValueSpy.mockClear()
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "0")
+      await user.click(document.body)
+
+      expect(setIntValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        0,
+        expect.anything()
+      )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(input).toHaveDisplayValue("0")
+    })
+
+    it("reverts to default when committing empty if default is set, even when required", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ required: true, default: 10 })
+      const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+      setIntValueSpy.mockClear()
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.clear(input)
+      await user.keyboard("{Enter}")
+
+      expect(input).toHaveDisplayValue("10")
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(setIntValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        10,
+        expect.anything()
+      )
+    })
+
+    it.each([
+      ["outside a form", {}],
+      ["inside a form", { formId: "form" }],
+    ])(
+      "does not render clear button when required %s",
+      async (_where, formProps) => {
+        const user = userEvent.setup()
+        const props = getRequiredEmptyProps(formProps)
+        render(<NumberInput {...props} />)
+
+        await user.type(screen.getByTestId("stNumberInputField"), "42")
+
+        expect(
+          screen.queryByTestId("stNumberInputClearButton")
+        ).not.toBeInTheDocument()
+      }
+    )
+
+    it("still shows the clear button when required is false and default is null", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ default: null, required: false })
+      render(<NumberInput {...props} />)
+
+      await user.type(screen.getByTestId("stNumberInputField"), "42")
+
+      expect(
+        screen.getByTestId("stNumberInputClearButton")
+      ).toBeInTheDocument()
+    })
+
+    it("Escape does not clear when required", async () => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps()
+      const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "42")
+      await user.keyboard("{Enter}")
+      setIntValueSpy.mockClear()
+
+      await user.click(input)
+      await user.keyboard("{Escape}")
+
+      expect(input).toHaveDisplayValue("42")
+      expect(setIntValueSpy).not.toHaveBeenCalledWith(
+        props.element.id,
+        null,
+        expect.anything()
+      )
+    })
+
+    it("keyboard emptying still allowed and then blocked on commit", async () => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps()
+      const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "5")
+      await user.keyboard("{Enter}")
+      setIntValueSpy.mockClear()
+
+      await user.clear(input)
+      expect(input).toHaveDisplayValue("")
+
+      await user.click(document.body)
+
+      expect(setIntValueSpy).not.toHaveBeenCalled()
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+    })
+
+    it("does not show a required error on empty blur inside a form", async () => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps({ formId: "form" })
+      const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+      setIntValueSpy.mockClear()
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "5")
+      await user.clear(input)
+      await user.click(document.body)
+
+      expect(setIntValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        null,
+        expect.anything()
+      )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    })
+
+    it("registers a form validator for required", () => {
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      const props = getRequiredEmptyProps({ formId: "form" }, { widgetMgr })
+      render(<NumberInput {...props} />)
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+    })
+
+    it("runs all form validators so every required field can show an error", () => {
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      const amountProps = getRequiredEmptyProps(
+        { id: "required-amount", formId: "form", label: "Amount" },
+        { widgetMgr }
+      )
+      const countProps = getRequiredEmptyProps(
+        { id: "required-count", formId: "form", label: "Count" },
+        { widgetMgr }
+      )
+      render(
+        <>
+          <NumberInput {...amountProps} />
+          <NumberInput {...countProps} />
+        </>
+      )
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      const alerts = screen.getAllByRole("alert")
+      expect(alerts).toHaveLength(2)
+      expect(alerts[0]).toHaveTextContent("This field is required.")
+      expect(alerts[1]).toHaveTextContent("This field is required.")
+      expect(screen.getAllByTestId("stTooltipErrorHoverTarget")).toHaveLength(
+        2
+      )
+    })
+
+    it("does not clear widget values when a required form submit fails", async () => {
+      const user = userEvent.setup()
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      widgetMgr.setFormSubmitBehaviors("form", true)
+      const props = getRequiredEmptyProps({ formId: "form" }, { widgetMgr })
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "5")
+      await user.clear(input)
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      expect(input).toHaveDisplayValue("")
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+    })
+
+    it("deregisters the form submit validator on unmount", () => {
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      const props = getRequiredEmptyProps({ formId: "form" }, { widgetMgr })
+      const { unmount } = render(<NumberInput {...props} />)
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+      unmount()
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+      expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    })
+
+    it("required takes precedence over range when empty", async () => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps({
+        min: 1,
+        max: 10,
+        hasMin: true,
+        hasMax: true,
+      })
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "5")
+      await user.clear(input)
+      await user.click(document.body)
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+      expect(screen.getByRole("alert")).not.toHaveTextContent("range")
+    })
+
+    it("shows range copy for an out-of-range number when required", async () => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps({
+        min: 0,
+        max: 10,
+        hasMin: true,
+        hasMax: true,
+      })
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "99")
+      await user.click(document.body)
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Number is outside the allowed range."
+      )
+      expect(screen.getByRole("alert")).not.toHaveTextContent(
+        "This field is required."
+      )
+    })
+
+    it("clears a leftover required error when required is turned off", async () => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps()
+      const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+      const { rerender } = render(<NumberInput {...props} />)
+      setIntValueSpy.mockClear()
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "5")
+      await user.clear(input)
+      await user.click(document.body)
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+
+      const updatedElement = NumberInputProto.create({
+        ...props.element,
+        required: false,
+      })
+      rerender(<NumberInput {...props} element={updatedElement} />)
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+      expect(input).not.toHaveAttribute("aria-invalid")
+      expect(input).not.toHaveAttribute("aria-required")
+
+      await user.type(input, "3")
+      await user.clear(input)
+      await user.click(document.body)
+      expect(setIntValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        null,
+        expect.anything()
+      )
+    })
+
+    it("does not resurrect a leftover required error when required is turned back on", async () => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps()
+      const { rerender } = render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "5")
+      await user.clear(input)
+      await user.click(document.body)
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+
+      rerender(
+        <NumberInput
+          {...props}
+          element={NumberInputProto.create({
+            ...props.element,
+            required: false,
+          })}
+        />
+      )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+
+      rerender(<NumberInput {...props} />)
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+      expect(input).not.toHaveAttribute("aria-invalid")
+    })
+
+    it("clears a leftover required error after a programmatic refill", () => {
+      const props = getRequiredEmptyProps({
+        formId: "form",
+        id: "required-refill",
+      })
+      const { rerender } = render(<NumberInput {...props} />)
+
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+
+      rerender(
+        <NumberInput
+          {...props}
+          element={NumberInputProto.create({
+            ...props.element,
+            setValue: true,
+            value: 3,
+          })}
+        />
+      )
+
+      expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue("3")
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+      expect(screen.getByTestId("stNumberInputField")).not.toHaveAttribute(
+        "aria-invalid"
+      )
+    })
+
+    it("does not show a leftover required error after a programmatic fill-then-clear", () => {
+      const props = getRequiredEmptyProps({
+        formId: "form",
+        id: "required-fill-clear",
+      })
+      const { rerender } = render(<NumberInput {...props} />)
+
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+
+      rerender(
+        <NumberInput
+          {...props}
+          element={NumberInputProto.create({
+            ...props.element,
+            setValue: true,
+            value: 3,
+          })}
+        />
+      )
+      expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue("3")
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+
+      rerender(
+        <NumberInput
+          {...props}
+          element={NumberInputProto.create({
+            ...props.element,
+            setValue: true,
+            value: null,
+          })}
+        />
+      )
+
+      expect(screen.getByTestId("stNumberInputField")).toHaveDisplayValue("")
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+      expect(screen.getByTestId("stNumberInputField")).not.toHaveAttribute(
+        "aria-invalid"
+      )
+    })
+
+    it("keeps the last accepted ignore pending value when a required empty commit is blocked", async () => {
+      const user = userEvent.setup()
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      const props = getRequiredEmptyProps({ ignoreRerun: true }, { widgetMgr })
+      const setIntValueSpy = vi.spyOn(widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+      setIntValueSpy.mockClear()
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "5")
+      await user.keyboard("{Enter}")
+      expect(setIntValueSpy).toHaveBeenCalledWith(props.element.id, 5, {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      })
+
+      await user.clear(input)
+      await user.click(document.body)
+
+      expect(setIntValueSpy).not.toHaveBeenCalledWith(
+        props.element.id,
+        null,
+        expect.anything()
+      )
+      expect(widgetMgr.getIntValue(props.element)).toBe(5)
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    })
+
+    it("does not write null on a blocked empty commit when queryParamKey is set", async () => {
+      const user = userEvent.setup()
+      const props = getRequiredEmptyProps({ queryParamKey: "amount" })
+      const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+      setIntValueSpy.mockClear()
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.type(input, "5")
+      await user.keyboard("{Enter}")
+      setIntValueSpy.mockClear()
+
+      await user.clear(input)
+      await user.click(document.body)
+
+      expect(setIntValueSpy).not.toHaveBeenCalledWith(
+        props.element.id,
+        null,
+        expect.anything()
+      )
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "This field is required."
+      )
+    })
+  })
+
+  describe("form submit validation", () => {
+    it("does not rewrite an untouched %0.2f value on form submit", () => {
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      const props = getFloatProps(
+        {
+          formId: "form",
+          default: 0.075,
+          format: "%0.2f",
+          min: 0,
+          max: 1,
+          hasMin: true,
+          hasMax: true,
+        },
+        { widgetMgr }
+      )
+      const setDoubleValueSpy = vi.spyOn(widgetMgr, "setDoubleValue")
+      render(<NumberInput {...props} />)
+      setDoubleValueSpy.mockClear()
+
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).toHaveBeenCalled()
+      expect(setDoubleValueSpy).not.toHaveBeenCalled()
+      expect(widgetMgr.getDoubleValue(props.element)).toBe(0.075)
+    })
+
+    it("blocks form submit click for an out-of-range value when not required", async () => {
+      const user = userEvent.setup()
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      const props = getIntProps(
+        {
+          formId: "form",
+          required: false,
+          min: 0,
+          max: 10,
+          hasMin: true,
+          hasMax: true,
+        },
+        { widgetMgr }
+      )
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.clear(input)
+      await user.type(input, "99")
+      act(() => {
+        widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Number is outside the allowed range."
+      )
+      expect(screen.getByRole("alert")).not.toHaveTextContent(
+        "This field is required."
+      )
+    })
+  })
 })
 
 describe("NumberInput query param binding", () => {
@@ -1534,5 +2751,233 @@ describe("NumberInput query param binding", () => {
       true,
       undefined
     )
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // WidgetStateManager reaches sendRerunBackMsg via scheduleFlush → setTimeout(0).
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getIntProps({ ignoreRerun: true }, { widgetMgr })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.clear(input)
+    await user.type(input, "30")
+    await user.keyboard("{enter}")
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 30, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getIntProps({ ignoreRerun: false }, { widgetMgr })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.clear(input)
+    await user.type(input, "30")
+    await user.keyboard("{enter}")
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 30, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getIntProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+      },
+      { widgetMgr }
+    )
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByTestId("stNumberInputStepUp"))
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 11, {
+      formId: "testForm",
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const props = getIntProps({ ignoreRerun: true })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.clear(input)
+    await user.type(input, "12")
+
+    expect(setIntValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when step up is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getIntProps({ ignoreRerun: true }, { widgetMgr })
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByTestId("stNumberInputStepUp"))
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 11, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when clear is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      {
+        dataType: NumberInputProto.DataType.INT,
+        default: null,
+        min: 0,
+        max: 100,
+        ignoreRerun: true,
+      },
+      { widgetMgr }
+    )
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.type(input, "42")
+    expect(setIntValueSpy).not.toHaveBeenCalled()
+
+    await user.click(screen.getByTestId("stNumberInputClearButton"))
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, null, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false for FLOAT commits", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getFloatProps({ ignoreRerun: true }, { widgetMgr })
+    const setDoubleValueSpy = vi.spyOn(props.widgetMgr, "setDoubleValue")
+
+    render(<NumberInput {...props} />)
+    setDoubleValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.clear(input)
+    await user.type(input, "12.5")
+    await user.tab()
+
+    expect(setDoubleValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      12.5,
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })

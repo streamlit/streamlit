@@ -25,7 +25,10 @@ from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.connections import BaseConnection
 from streamlit.connections.util import extract_from_dict
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
@@ -188,7 +191,8 @@ class SQLConnection(BaseConnection["Engine"]):
         if not len(conn_params):
             raise StreamlitAPIException(
                 "Missing SQL DB connection configuration. "
-                "Did you forget to set this in `secrets.toml` or as kwargs to `st.connection`?"
+                "Did you forget to set this in `secrets.toml` or as kwargs to `st.connection`?",
+                error_id="sql-missing-connection-config",
             )
 
         if "url" in conn_params:
@@ -196,7 +200,13 @@ class SQLConnection(BaseConnection["Engine"]):
         else:
             for p in _REQUIRED_CONNECTION_PARAMS:
                 if p not in conn_params:
-                    raise StreamlitAPIException(f"Missing SQL DB connection param: {p}")
+                    raise StreamlitMissingRequiredParameterError(
+                        p,
+                        detail=(
+                            "Set this SQL DB connection parameter in `secrets.toml` "
+                            "or pass it as a kwarg to `st.connection`."
+                        ),
+                    )
 
             drivername = conn_params["dialect"] + (
                 f"+{conn_params['driver']}" if "driver" in conn_params else ""
@@ -295,21 +305,16 @@ class SQLConnection(BaseConnection["Engine"]):
 
         from sqlalchemy import text
         from sqlalchemy.exc import DatabaseError, InternalError, OperationalError
-        from tenacity import (
-            retry,
-            retry_if_exception_type,
-            stop_after_attempt,
-            wait_fixed,
-        )
 
-        @retry(
-            after=lambda _: self.reset(),
-            stop=stop_after_attempt(3),
-            reraise=True,
-            retry=retry_if_exception_type(
-                (DatabaseError, InternalError, OperationalError)
+        from streamlit.connections import retry_util
+
+        @retry_util.retry(
+            max_attempts=3,
+            wait_seconds=1,
+            retry_on_exception=lambda exc: isinstance(
+                exc, (DatabaseError, InternalError, OperationalError)
             ),
-            wait=wait_fixed(1),
+            after=self.reset,
         )
         def _query(
             # Dummy parameter to retain per-instance caching.
@@ -343,12 +348,12 @@ class SQLConnection(BaseConnection["Engine"]):
             ttl
         ).replace(".", "_")
         _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
-        _query = cache_data(
+        cached_query = cache_data(
             show_spinner=show_spinner,
             ttl=ttl,
         )(_query)
 
-        return _query(
+        return cached_query(
             self._connection_instance_id,
             sql,
             index_col=index_col,
@@ -401,7 +406,7 @@ class SQLConnection(BaseConnection["Engine"]):
 
     @property
     def session(self) -> Session:
-        """Return a SQLAlchemy Session.
+        """A SQLAlchemy Session.
 
         Users of this connection should use the contextmanager pattern for writes,
         transactions, and anything more complex than simple read queries.

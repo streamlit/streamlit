@@ -14,12 +14,18 @@
 
 """metric unit tests."""
 
+from decimal import Decimal
+
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.policies import _LOGGER
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -196,6 +202,91 @@ class MetricTest(DeltaGeneratorTestCase):
             assert c.color == color_value
             assert c.direction == direction_value
 
+    @parameterized.expand(
+        [
+            (0, "0"),
+            (0.0, "0.0"),
+            (Decimal("0.00"), "0.00"),
+            ("0", "0"),
+            # Leading whitespace is dedented before rendering, so " 0" must be
+            # treated the same as "0" (neutral) instead of a positive delta.
+            (" 0", "0"),
+            # Numeric negative zero equals 0, so it is neutral even though it
+            # still renders with a leading minus (str(-0.0) == "-0.0").
+            (-0.0, "-0.0"),
+        ]
+    )
+    def test_zero_delta_color_and_direction(self, delta, expected_delta):
+        """Test that zero delta values are rendered as neutral."""
+        st.metric("label_test", "123", delta)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.delta == expected_delta
+        assert c.color == MetricProto.MetricColor.GRAY
+        assert c.direction == MetricProto.MetricDirection.NONE
+
+    @parameterized.expand(
+        [
+            ("normal",),
+            ("inverse",),
+            ("off",),
+        ]
+    )
+    def test_zero_delta_color_modes(self, delta_color_value):
+        """Zero deltas are gray for the normal, inverse, and off color modes."""
+        st.metric("label_test", "123", 0, delta_color=delta_color_value)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.color == MetricProto.MetricColor.GRAY
+        assert c.direction == MetricProto.MetricDirection.NONE
+
+    def test_zero_delta_respects_named_color(self):
+        """Test that zero deltas respect explicit named colors."""
+        st.metric("label_test", "123", 0, delta_color="green")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.color == MetricProto.MetricColor.GREEN
+        assert c.direction == MetricProto.MetricDirection.NONE
+
+    @parameterized.expand(
+        [
+            ("up", MetricProto.MetricDirection.UP),
+            ("down", MetricProto.MetricDirection.DOWN),
+            ("off", MetricProto.MetricDirection.NONE),
+        ]
+    )
+    def test_zero_delta_arrow_override(self, delta_arrow_value, expected_direction):
+        """Test that delta_arrow can override the direction for zero deltas."""
+        st.metric("label_test", "123", 0, delta_arrow=delta_arrow_value)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.color == MetricProto.MetricColor.GRAY
+        assert c.direction == expected_direction
+
+    @parameterized.expand(["0.0", "+0", "0%"])
+    def test_zero_like_strings_keep_positive_direction(self, delta):
+        """Test that only the literal string '0' is treated as zero."""
+        st.metric("label_test", "123", delta)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.color == MetricProto.MetricColor.GREEN
+        assert c.direction == MetricProto.MetricDirection.UP
+
+    def test_negative_zero_string_is_negative(self):
+        """The string '-0' is negative, unlike the numeric -0.0 neutral case.
+
+        Strings are matched as opaque display text (a leading '-' looks
+        negative), while numbers are compared numerically (-0.0 == 0), so the
+        two intentionally diverge.
+        """
+        st.metric("label_test", "123", "-0")
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.delta == "-0"
+        assert c.color == MetricProto.MetricColor.RED
+        assert c.direction == MetricProto.MetricDirection.DOWN
+
     def test_delta_arrow_default(self):
         """Test that metric delta arrow defaults to auto."""
         st.metric("label_test", "123", 123)
@@ -259,21 +350,19 @@ class MetricTest(DeltaGeneratorTestCase):
 
         assert metric_proto.label == "Column 5"
 
-    def test_invalid_label(self):
-        with pytest.raises(TypeError) as exc:
-            st.metric(123, "-321")
+    def test_non_str_label_is_coerced(self):
+        """Non-string labels are coerced so protobuf assignment does not TypeError."""
+        st.metric(123, "-321")
 
-        assert str(exc.value) == (
-            "'123' is of type <class 'int'>, which is not an accepted type. "
-            "label only accepts: str. Please convert the label to an accepted type."
-        )
+        metric_proto = self.get_delta_from_queue().new_element.metric
+        assert metric_proto.label == "123"
 
     def test_invalid_label_visibility(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.metric("label_test", "123", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_empty_label_warning(self):
@@ -290,28 +379,25 @@ class MetricTest(DeltaGeneratorTestCase):
         assert logs.records[0].stack_info is not None
 
     def test_invalid_value(self):
-        with pytest.raises(TypeError) as exc:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             st.metric("Testing", [1, 2, 3])
 
-        assert str(exc.value) == (
-            "'[1, 2, 3]' is of type <class 'list'>, which is not an accepted type. "
-            "Please convert the value to an accepted number type."
-        )
+        assert exc.value.exec_kwargs["parameter"] == "value"
+        assert "Invalid `value` type" in str(exc.value)
+        assert "Expected one of: int, float, Decimal, NumPy number." in str(exc.value)
 
     def test_invalid_delta(self):
-        with pytest.raises(TypeError) as exc:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             st.metric("Testing", "123", [123])
 
-        assert str(exc.value) == (
-            "'[123]' is of type <class 'list'>, which is not an accepted type. "
-            "Please convert the value to an accepted number type."
-        )
+        assert exc.value.exec_kwargs["parameter"] == "delta"
+        assert "Invalid `delta` type" in str(exc.value)
 
     def test_invalid_delta_color(self):
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.metric("Hello World.", 123, 0, delta_color="Invalid")
 
-        assert "'Invalid' is not an accepted value" in str(exc.value)
+        assert "Invalid `delta_color` value" in str(exc.value)
 
     @parameterized.expand(
         [
@@ -349,6 +435,36 @@ class MetricTest(DeltaGeneratorTestCase):
         st.metric("label_test", value="500", help="   help text")
         c = self.get_delta_from_queue().new_element.metric
         assert c.help == "help text"
+
+    def test_icon_default(self):
+        """Test that icon defaults to empty string on the proto."""
+        st.metric("label_test", "123")
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.icon == ""
+
+    def test_icon_none(self):
+        """Test that icon=None serializes to empty string on the proto."""
+        st.metric("label_test", "123", icon=None)
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.icon == ""
+
+    @parameterized.expand(
+        [
+            (":material/thermostat:", ":material/thermostat:"),
+            ("🔥", "🔥"),
+            ("spinner", "spinner"),
+        ]
+    )
+    def test_icon_forwards_to_proto(self, icon_value, expected):
+        """Test that the icon parameter is forwarded to the proto icon field."""
+        st.metric("label_test", "123", icon=icon_value)
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.icon == expected
+
+    def test_icon_invalid_raises(self):
+        """Test that an invalid icon raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.metric("label_test", "123", icon="not-a-valid-icon")
 
     def test_height_default(self):
         """Test that height defaults to content."""

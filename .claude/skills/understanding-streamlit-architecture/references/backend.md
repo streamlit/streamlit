@@ -54,6 +54,8 @@ Represents a single browser tab.
 
 **File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes.
 
+**Script event loop**: Owns one non-running asyncio loop for the script thread, reused across `ScriptRunner` instances and closed on session shutdown.
+
 ## Session bootstrap ordering
 
 Initial session creation and first script run are intentionally decoupled:
@@ -83,6 +85,7 @@ Executes user scripts in isolated thread.
 - `SCRIPT_STOPPED_WITH_COMPILE_ERROR`
 - `SCRIPT_STOPPED_FOR_RERUN` (st.rerun() called)
 - `FRAGMENT_STOPPED_WITH_SUCCESS`
+- `SHUTDOWN` (the ScriptRunner is exiting)
 
 **Interrupt points**: Most `st.*` commands check for stop/rerun requests and raise `RerunException` or `StopException`.
 
@@ -111,6 +114,12 @@ The `st` object users interact with.
 - `RunningCursor`: Moves forward as elements added
 - `LockedCursor`: Fixed position for updating elements
 - Delta path: `[0, 2, 3]` uniquely identifies element position
+
+**Block delta paths**: `_block()` does not always write to the position that the parent cursor points to.
+
+- It can redirect the write into one or more outside-container wrapper blocks, so the new block lands deeper in the tree (see the fragment system section below).
+- Blocks that re-send their own proto later, such as `st.status` and `st.dialog`, must read `DeltaGenerator._block_delta_path` after `_block()` returns. Do not read `delta_path` from the parent cursor.
+- A stored path that points at a wrapper instead of the block makes the update overwrite the wrapper and blank the app.
 
 **Element creation**:
 ```
@@ -143,7 +152,9 @@ register_widget(
 
 **Lifecycle hooks**:
 - `on_script_will_rerun()`: Process widget states from browser, run callbacks
-- `on_script_finished()`: Clean up stale widgets not seen this run
+- `on_script_finished()`: Reset trigger widgets. Drop stale widgets not seen this run, except on `SCRIPT_STOPPED_FOR_RERUN`: `st.rerun()` can interrupt before later widgets register, so stale cleanup is deferred until the next completed run.
+
+**Disabled widget enforcement**: `WidgetMetadata` carries a `disabled` flag (set via `register_widget(..., disabled=...)`). Because a disabled widget cannot be interacted with in the browser, this is enforced server-side to guard against a stale UI or a forged `BackMsg`: `SessionState.register_widget()` discards any incoming frontend value for a disabled widget (falling back to its previous value, or its default on first registration), and `_call_callbacks()` suppresses its `on_change`/`on_click` callback. Programmatic `st.session_state` assignments are still honored.
 
 ## Caching (`lib/streamlit/runtime/caching/`)
 
@@ -225,11 +236,26 @@ sequenceDiagram
 - Each fragment gets a unique `fragment_id` (hash of function identity + delta-path context)
 - Frontend tracks `fragmentIdsThisRun` to know which fragments are active
 - Delta messages include `fragment_id` for proper tree updates
+- `@st.fragment(key=...)` also indexes that `fragment_id` under the user-facing name in `FragmentStorage` (`"app"` and `"fragment"` are reserved and cannot be used as keys)
+
+**Keyed / event-scoped reruns**:
+- `st.rerun("<key>")` or `st.rerun(["k1", "k2"])` from a widget callback (`on_click` / `on_change`) resolves those names to fragment ids and reruns only those fragments, replacing the interaction's default rerun.
+- This form is only valid from a callback. Calling it from the main script body or a fragment body raises `StreamlitAPIException`.
+- When the interaction's default rerun is app-wide (the widget lives in the main script, not inside a fragment), a sibling callback that returns normally or calls `st.rerun()` escalates the result to a full-app rerun. Interactions originating inside a fragment keep the targeted scope unless a sibling explicitly calls plain `st.rerun()`; a pending `st.switch_page()` is exempt.
+- A full-app run prunes `FragmentStorage` down to the fragments that actually executed during it, so a fragment skipped by a `False` conditional loses its key.
 
 **Staleness with fragments**:
 - Elements track both `scriptRunId` and `fragmentId`
 - During fragment reruns, stale cleanup uses `scriptRunId` + `fragmentIdsThisRun` to prune affected subtrees while preserving unrelated nodes
 - Main script elements are preserved during fragment-only reruns
+
+**Outside-container writes**:
+- A fragment can write into a container that the script declares outside the fragment body.
+- The first such write creates a layout-transparent wrapper block inside that container. See `_needs_outside_wrapper()` and `_get_or_create_outside_wrapper()` in `lib/streamlit/delta_generator.py`.
+- The wrapper isolates the writes of one fragment, so repeated fragment reruns overwrite in place instead of appending past the end of the outside container.
+- `FragmentStorage` caches each wrapper as an `OutsideContainerWrapper` (`lib/streamlit/runtime/outside_container_wrapper.py`), keyed by fragment and container.
+- Before a fragment reruns, the runtime evicts the wrappers whose outside containers this fragment rebuilds, then re-emits and resets the wrappers that survive (`_reset_outside_wrappers()` in `lib/streamlit/runtime/fragment.py`). A full script run clears all wrappers.
+- Each wrapper adds a level to the delta path. Code that stores a delta path for a later update must use the path that the write actually reached. See `_block_delta_path` in the `DeltaGenerator` section above.
 
 **Script events for fragments**:
 - `FRAGMENT_STOPPED_WITH_SUCCESS`: Fragment completed successfully
@@ -276,6 +302,22 @@ sequenceDiagram
     Note over Storage: After 2 min without reconnect
     Storage-->>SM: Session entry expires (next connect creates a new AppSession)
 ```
+
+**Reconnecting to a still-active session**:
+
+An unclean WebSocket close can leave a session still marked active when a new
+connection arrives reusing the same `existing_session_id` (before the previous
+connection's cleanup runs). In this case `WebsocketSessionManager.connect_session()`
+disconnects the stale active session first (moving it to storage) and then
+reconnects the new client to it, preserving state instead of creating a brand-new
+session and discarding the previous state.
+
+To keep the old and new connections from interfering during this handoff,
+`Runtime.disconnect_session()`, `Runtime.handle_backmsg()`, and
+`Runtime.handle_backmsg_deserialization_exception()` accept an optional `client`.
+When provided, the call is a no-op if the session's current client is no longer
+that client, so the old connection's late cleanup or in-flight BackMsgs cannot
+disrupt the newly reconnected client.
 
 **Key components**:
 - `WebsocketSessionManager` (`lib/streamlit/runtime/websocket_session_manager.py`): Manages session lifecycle

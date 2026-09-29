@@ -30,12 +30,17 @@ from streamlit.elements.lib.options_selector_utils import (
     index_,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
+    resolve_value_against_options,
     validate_and_sync_multiselect_value_with_options,
     validate_and_sync_range_value_with_options,
     validate_and_sync_value_with_options,
     validate_select_widget_filter_mode,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitDefaultNotInOptionsError,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
@@ -70,7 +75,7 @@ class TestCheckAndConvertToIndices:
         assert res == [1]
 
     def test_check_and_convert_to_indices_default_not_in_opts(self):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitDefaultNotInOptionsError):
             check_and_convert_to_indices(["a", "b"], "c")
 
 
@@ -104,39 +109,32 @@ class TestTransformOptions:
 
 class TestValidateSelectWidgetFilterMode:
     @pytest.mark.parametrize(
-        ("mode", "command", "expected"),
+        ("mode", "expected"),
         [
             (
                 "fuzzy",
-                "st.selectbox",
                 ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY,
             ),
             (
                 "contains",
-                "st.selectbox",
                 ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS,
             ),
             (
                 "prefix",
-                "st.multiselect",
                 ProtoSelectWidgetFilterMode.FILTER_MODE_PREFIX,
             ),
             (
                 None,
-                "st.multiselect",
                 ProtoSelectWidgetFilterMode.FILTER_MODE_NONE,
             ),
         ],
     )
-    def test_validates_known_modes(
-        self, mode: str | None, command: str, expected: int
-    ) -> None:
+    def test_validates_known_modes(self, mode: str | None, expected: int) -> None:
         """Test that known filter modes map to the expected protobuf values."""
         assert (
             validate_select_widget_filter_mode(
                 mode,
                 accept_new_options=False,
-                command=command,
             )
             == expected
         )
@@ -146,7 +144,17 @@ class TestValidateSelectWidgetFilterMode:
             validate_select_widget_filter_mode(
                 cast("Any", []),
                 accept_new_options=False,
-                command="st.selectbox",
+            )
+
+    def test_rejects_none_with_accept_new_options(self) -> None:
+        """filter_mode=None cannot be combined with accept_new_options=True."""
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=r"`filter_mode=None` and `accept_new_options=True`",
+        ):
+            validate_select_widget_filter_mode(
+                None,
+                accept_new_options=True,
             )
 
 
@@ -361,7 +369,7 @@ class TestEnumCoercion:
 
     @patch_config_options({"runner.enumCoercion": "badValue"})
     def test_coerce_enum_bad_config_value(self, EnumAOrig, EnumAEqual):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             _coerce_enum(EnumAOrig.A, EnumAEqual)
 
     def test_maybe_coerce_enum(self):
@@ -445,6 +453,34 @@ class TestEnumCoercion:
             )
             is tuple_result
         )
+
+    def test_maybe_coerce_enum_preserves_incoming_serialized_value(self):
+        """Coercing an Enum value must not drop other RegisterWidgetResult fields.
+
+        Otherwise the wire label needed for the identity-dependent format_func
+        fallback is lost for Enum selectboxes.
+        """
+
+        class EnumA(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+
+        result = RegisterWidgetResult(EnumA.A, False, incoming_serialized_value="A")
+        coerced = maybe_coerce_enum(result, EnumA, list(EnumA))
+        assert coerced.value is EnumA.A
+        assert coerced.incoming_serialized_value == "A"
+
+    def test_maybe_coerce_enum_sequence_preserves_incoming_serialized_value(self):
+        """Coercing an Enum sequence must not drop other RegisterWidgetResult fields."""
+
+        class EnumA(enum.Enum):
+            A = enum.auto()
+            B = enum.auto()
+
+        result = RegisterWidgetResult([EnumA.A], False, incoming_serialized_value="A")
+        coerced = maybe_coerce_enum_sequence(result, EnumA, list(EnumA))
+        assert coerced.value == [EnumA.A]
+        assert coerced.incoming_serialized_value == "A"
 
 
 class TestCreateMappings:
@@ -963,3 +999,112 @@ class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
         assert len(values) == 1
         assert values[0].value == "b"
         assert needs_reset is True
+
+
+class TestResolveValueAgainstOptions:
+    """Tests for the selectbox value resolver (format_func with wire-label fallback)."""
+
+    def test_none_value_returns_unchanged(self) -> None:
+        """A None current value is returned as-is without a reset."""
+        value, reset = resolve_value_against_options(
+            None, ["a", "b"], {"a": 0, "b": 1}, 0, None
+        )
+        assert value is None
+        assert reset is False
+
+    def test_value_in_options_is_kept(self) -> None:
+        """A value whose format_func label is in options is kept (no reset)."""
+        options = ["a", "b", "c"]
+        value, reset = resolve_value_against_options(
+            "b", options, {"a": 0, "b": 1, "c": 2}, 0, None
+        )
+        assert value == "b"
+        assert reset is False
+
+    def test_value_not_in_options_resets_to_default(self) -> None:
+        """A value whose label is no longer among the options resets to default."""
+        options = ["a", "b", "c"]
+        value, reset = resolve_value_against_options(
+            "z", options, {"a": 0, "b": 1, "c": 2}, 0, None
+        )
+        assert value == "a"
+        assert reset is True
+
+    def test_format_func_raises_wire_label_in_options_returns_current_instance(
+        self,
+    ) -> None:
+        """When format_func raises, a matching wire label keeps the selection.
+
+        The returned object must be the current option instance, not the
+        passed-in (potentially stale) value.
+        """
+
+        class Stale:  # noqa: B903
+            def __init__(self, name: str):
+                self.name = name
+
+        options = ["A", "B"]
+        stale = Stale("b")
+        lookup: dict[Any, str] = {}  # empty -> format_func raises KeyError
+
+        def format_func(x: Any) -> str:
+            return lookup[x]
+
+        value, reset = resolve_value_against_options(
+            stale,
+            options,
+            {"a": 0, "b": 1},
+            0,
+            None,
+            format_func,
+            incoming_serialized_value="b",
+        )
+        assert value is options[1]
+        assert reset is False
+
+    def test_format_func_raises_wire_label_not_in_options_resets(self) -> None:
+        """When format_func raises and the wire label is absent, reset to default.
+
+        Covers the model-swap case: the stored value belongs to a different
+        data model, so neither format_func nor its label match the new options.
+        """
+
+        class Stale:  # noqa: B903
+            def __init__(self, name: str):
+                self.name = name
+
+        options = ["X", "Y"]
+        stale = Stale("a")
+        lookup: dict[Any, str] = {}
+
+        def format_func(x: Any) -> str:
+            return lookup[x]
+
+        value, reset = resolve_value_against_options(
+            stale,
+            options,
+            {"x": 0, "y": 1},
+            0,
+            None,
+            format_func,
+            incoming_serialized_value="a",
+        )
+        assert value == "X"
+        assert reset is True
+        assert value is not stale
+
+    def test_format_func_raises_without_wire_label_resets(self) -> None:
+        """When format_func raises and no wire label is available, reset."""
+
+        class Stale:  # noqa: B903
+            def __init__(self, name: str):
+                self.name = name
+
+        def format_func(x: Any) -> str:
+            return x.missing_attr
+
+        value, reset = resolve_value_against_options(
+            Stale("a"), ["X", "Y"], {"x": 0, "y": 1}, None, None, format_func
+        )
+        assert value is None
+        assert reset is True

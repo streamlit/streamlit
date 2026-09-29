@@ -31,5 +31,7 @@ describe("AppSkeleton element", () => {
     const appSkeleton = await screen.findByTestId("stAppSkeleton")
     expect(appSkeleton).toBeVisible()
     expect(appSkeleton).toHaveClass("stAppSkeleton")
+    // The skeleton is decorative and hidden from assistive technologies.
+    expect(appSkeleton).toHaveAttribute("aria-hidden", "true")
   })
 })

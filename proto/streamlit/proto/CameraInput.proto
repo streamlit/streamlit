@@ -25,4 +25,5 @@ message CameraInput {
   string form_id = 4;
   bool disabled = 5;
   LabelVisibility label_visibility = 6;
+  optional int32 resolution_height = 7;
 }

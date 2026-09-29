@@ -64,6 +64,11 @@ message ButtonGroup {
   // This prevents deselection and ensures a value is always selected once set.
   bool required = 16;
 
+  // If false, options stay on one row and the group scrolls horizontally.
+  // Absent means the frontend decides based on layout (no wrap in horizontal
+  // containers; wrap otherwise).
+  optional bool wrap = 17;
+
   reserved 7, 9;
-  // next id: 17
+  // next id: 18
 }

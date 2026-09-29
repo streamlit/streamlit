@@ -24,6 +24,7 @@ import pyarrow as pa
 import pytest
 from parameterized import parameterized
 
+import streamlit as st
 from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_config_utils import (
     _EDITING_COMPATIBILITY_MAPPING,
@@ -38,11 +39,16 @@ from streamlit.elements.lib.column_config_utils import (
     _determine_data_kind_via_pandas_dtype,
     apply_data_specific_configs,
     determine_dataframe_schema,
+    extract_button_column_configs,
     is_type_compatible,
     process_config_mapping,
+    register_button_column_widgets,
     update_column_config,
 )
+from streamlit.elements.lib.column_types import ButtonColumn
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
     from streamlit.elements.lib.column_types import ColumnConfig
@@ -200,6 +206,7 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                 ColumnDataKind.PERIOD,
             ),
             (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
+            (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
             (
                 pd.Series([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
@@ -415,6 +422,84 @@ class ColumnConfigUtilsTest(unittest.TestCase):
         with pytest.raises(StreamlitAPIException):
             process_config_mapping({"col1": ["a", "b"]})  # type: ignore
 
+    def test_process_config_mapping_copies_button_column_result(self) -> None:
+        """ButtonColumnResult configs are copied so later mutation is isolated."""
+        button_result = ButtonColumn("Actions", key="action_click")
+        processed_button = process_config_mapping({"actions": button_result})
+        assert processed_button["actions"] == button_result.config
+        processed_button["actions"]["label"] = "Changed"
+        assert button_result.config["label"] != "Changed"
+
+    def test_extract_button_column_configs(self):
+        """Test extraction of interactive ButtonColumn wrapper configs."""
+        button_column = ButtonColumn("Actions", key="action_click")
+        processed_config, button_columns = extract_button_column_configs(
+            {
+                "name": "Name",
+                2: button_column,
+            }
+        )
+
+        assert processed_config == {
+            "name": "Name",
+            2: button_column.config,
+        }
+        assert button_columns == {"_pos:2": button_column}
+
+    def test_extract_button_column_configs_with_none(self):
+        """Test that a None column config returns (None, {})."""
+        processed_config, button_columns = extract_button_column_configs(None)
+
+        assert processed_config is None
+        assert button_columns == {}
+
+    def test_extract_button_column_configs_with_empty_dict(self):
+        """Test that an empty column config returns ({}, {})."""
+        processed_config, button_columns = extract_button_column_configs({})
+
+        assert processed_config == {}
+        assert button_columns == {}
+
+    def test_extract_button_column_configs_with_string_key(self):
+        """Test that a string-keyed ButtonColumn is extracted under its raw name."""
+        button_column = ButtonColumn("Actions", key="action_click")
+        processed_config, button_columns = extract_button_column_configs(
+            {"actions": button_column}
+        )
+
+        assert processed_config == {"actions": button_column.config}
+        # String keys are used as-is, without the positional "_pos:" prefix.
+        assert button_columns == {"actions": button_column}
+
+    def test_extract_button_column_configs_with_mixed_config_types(self):
+        """Test extraction with multiple button columns alongside other config value types."""
+        str_button = ButtonColumn("Edit", key="edit_click")
+        pos_button = ButtonColumn("Delete", key="delete_click")
+        processed_config, button_columns = extract_button_column_configs(
+            {
+                "name": "Name",  # str config
+                "details": {"label": "Details"},  # ColumnConfig dict
+                "hidden_col": None,  # None config
+                "edit": str_button,  # string-keyed button
+                1: pos_button,  # positional button
+            }
+        )
+
+        # Non-button configs pass through unchanged, button configs are replaced
+        # with their serializable .config attribute.
+        assert processed_config == {
+            "name": "Name",
+            "details": {"label": "Details"},
+            "hidden_col": None,
+            "edit": str_button.config,
+            1: pos_button.config,
+        }
+        # Both button columns are extracted, keyed by name (str) or "_pos:" prefix (int).
+        assert button_columns == {
+            "edit": str_button,
+            "_pos:1": pos_button,
+        }
+
     def test_update_column_config(self):
         """Test that the update_column_config function correctly updates a column's configuration."""
 
@@ -509,3 +594,22 @@ class ColumnConfigUtilsTest(unittest.TestCase):
                     },
                 },
             )
+
+
+class RegisterButtonColumnWidgetsTest(DeltaGeneratorTestCase):
+    """Tests for registering interactive button-column widgets."""
+
+    def test_register_button_column_widgets_attaches_widget_ids(self) -> None:
+        """Each ButtonColumn is registered and mapped onto the dataframe proto."""
+        button_col = ButtonColumn("Actions", key="action_click")
+        proto = DataframeProto()
+        register_button_column_widgets(
+            dg=st._main,
+            proto=proto,
+            button_columns={"actions": button_col},
+            ctx=self.script_run_ctx,
+        )
+
+        widget_id = proto.button_click_widgets["actions"]
+        assert widget_id
+        assert widget_id in self.script_run_ctx.shared.widget_ids_this_run

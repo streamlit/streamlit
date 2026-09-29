@@ -77,10 +77,10 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid height value (not "stretch", "content", or int)
-    code("print('Hello')", height="auto")  # type: ignore[arg-type]
+    code("print('Hello')", height="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid width value (not "stretch", "content", or int)
-    code("print('Hello')", width="auto")  # type: ignore[arg-type]
+    code("print('Hello')", width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing line_numbers as positional argument (should be keyword-only)
-    code("print('Hello')", "python", True)  # type: ignore[misc]
+    code("print('Hello')", "python", True)  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

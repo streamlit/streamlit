@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import streamlit as st
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 st.header("st.iframe examples")
 
@@ -109,3 +113,17 @@ st.iframe(
     width="content",
     height="content",
 )
+
+# Example 8: String file path migration warning
+st.subheader("String file path")
+st.iframe(str(STATIC_DIR / "test_div.html"), height=80)
+
+# Keyed so tests can target these without shifting earlier index-based locators.
+with st.container(key="iframe_alt"):
+    st.iframe(
+        "<p style='margin:0;padding:8px;'>Named embed</p>",
+        height=60,
+        alt="Named embed demo content",
+    )
+with st.container(key="iframe_no_alt"):
+    st.iframe("<p style='margin:0;padding:8px;'>Unnamed embed</p>", height=60)

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { GridCell } from "@glideapps/glide-data-grid"
+import type { GridCell } from "@glideapps/glide-data-grid"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   isMissingValueCell,
 } from "~lib/components/widgets/DataFrame/columns"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
@@ -277,6 +277,46 @@ class EditingState {
   }
 
   /**
+   * Clears an edited cell from the editing state for the given column and row.
+   *
+   * @param col - The column index
+   * @param row - The row index
+   */
+  clearCell(col: number, row: number): void {
+    if (this.isAddedRow(row)) {
+      // Added rows have their own state and don't have source data to compare.
+      return
+    }
+
+    const rowCache = this.editedCells.get(row)
+    if (isNullOrUndefined(rowCache)) {
+      return
+    }
+
+    rowCache.delete(col)
+    if (rowCache.size === 0) {
+      this.editedCells.delete(row)
+    }
+  }
+
+  /**
+   * Iterates over all edited cells.
+   *
+   * @param callback - The callback to call for each edited cell
+   */
+  forEachEditedCell(
+    callback: (col: number, row: number, cell: GridCell) => void
+  ): void {
+    // Snapshot the entries so the callback can safely clear cells (which
+    // mutates the underlying maps) while we iterate over them.
+    Array.from(this.editedCells.entries()).forEach(([row, rowCache]) => {
+      Array.from(rowCache.entries()).forEach(([col, cell]) => {
+        callback(col, row, cell)
+      })
+    })
+  }
+
+  /**
    * Adds a new row to the editing state.
    *
    * @param rowCells - The cells of the row to add
@@ -287,13 +327,14 @@ class EditingState {
 
   /**
    * Deletes the given rows from the editing state.
+   * Does not mutate the input array.
    *
    * @param rows - The rows to delete
    */
   deleteRows(rows: number[]): void {
     // Delete row one by one starting from the row with the highest index
     rows
-      .sort((a, b) => b - a)
+      .toSorted((a, b) => b - a)
       .forEach(row => {
         this.deleteRow(row)
       })
@@ -321,7 +362,7 @@ class EditingState {
       // Add to the set
       this.deletedRows.push(row)
       // Sort the deleted rows (important for calculation of the original row index)
-      this.deletedRows = this.deletedRows.sort((a, b) => a - b)
+      this.deletedRows = this.deletedRows.toSorted((a, b) => a - b)
     }
 
     // Remove all cells from cell state associated with this row:

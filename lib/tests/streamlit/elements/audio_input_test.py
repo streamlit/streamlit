@@ -21,7 +21,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.audio_input import AudioInputSerde
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidWidthError,
+    StreamlitValueError,
+)
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.uploaded_file_manager import (
@@ -61,12 +65,12 @@ class AudioInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.audio_input("the label", label_visibility="wrong_value")
 
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_width_config_stretch(self):
@@ -190,10 +194,9 @@ class AudioInputTest(DeltaGeneratorTestCase):
     )
     def test_invalid_sample_rates(self, sample_rate):
         """Test that invalid sample rates raise an exception."""
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.audio_input("the label", sample_rate=sample_rate)
-        assert "Invalid sample_rate" in str(e.value)
-        assert "Must be one of" in str(e.value)
+        assert "Invalid `sample_rate` value" in str(e.value)
 
     @patch("streamlit.elements.widgets.audio_input._get_upload_files")
     def test_not_allowed_file_extension_raise_an_exception_for_camera_input(

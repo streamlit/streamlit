@@ -16,42 +16,35 @@
 
 import { screen } from "@testing-library/react"
 
-import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
-
 import { render } from "~lib/test_util"
 
 import { Skeleton } from "./Skeleton"
 
 describe("Skeleton element", () => {
-  it("renders without delay", () => {
-    const props = SkeletonProto.create()
-    render(<Skeleton element={props} />)
+  it("uses the default element height when no container height is set", () => {
+    render(<Skeleton />)
 
-    // Render the skeleton immediately, without any sort of delay.
-    // (This is normal React behavior, but different from AppSkeleton, so I'm
-    // writing a very trivial test for it.)
-    const skeletonElement = screen.getByTestId("stSkeleton")
+    const skeletonElement = screen.getByTestId("stSkeletonElement")
     expect(skeletonElement).toBeVisible()
     expect(skeletonElement).toHaveClass("stSkeleton")
+    // Falls back to the standard element height (theme.sizes.minElementHeight)
+    // rather than collapsing inside an auto-height container.
+    expect(skeletonElement).toHaveStyle({ height: "2.5rem", width: "100%" })
   })
 
-  it("converts properties appropriately", () => {
-    const props = SkeletonProto.create({ height: 5 })
+  it("fills the container height when an explicit height is provided", () => {
+    render(<Skeleton fillContainerHeight={true} />)
 
-    render(<Skeleton element={props} />)
-
-    const testSkeleton = screen.getByTestId("stSkeleton")
-    expect(testSkeleton).toHaveAttribute("height", "5px")
-    expect(testSkeleton).not.toHaveAttribute("width")
+    const skeletonElement = screen.getByTestId("stSkeletonElement")
+    expect(skeletonElement).toHaveStyle({ height: "100%", width: "100%" })
   })
 
-  it("renders app skeleton", async () => {
-    const props = SkeletonProto.create({
-      style: SkeletonProto.SkeletonStyle.APP,
-    })
-    render(<Skeleton element={props} />)
+  it("is hidden from assistive technologies (decorative placeholder)", () => {
+    render(<Skeleton />)
 
-    // Await the skeleton to appear.
-    expect(await screen.findByTestId("stAppSkeleton")).toBeVisible()
+    const skeletonElement = screen.getByTestId("stSkeletonElement")
+    expect(skeletonElement).toHaveAttribute("aria-hidden", "true")
+    // It must not be announced as a live status region.
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
   })
 })

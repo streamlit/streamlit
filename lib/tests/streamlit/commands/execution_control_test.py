@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -23,10 +25,21 @@ from streamlit.commands.execution_control import (
     rerun,
     switch_page,
 )
-from streamlit.errors import NoSessionContext, StreamlitAPIException
-from streamlit.navigation.page import StreamlitPage
-from streamlit.runtime.scriptrunner import RerunData
-from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitPageNotFoundError,
+    StreamlitValueError,
+)
+from streamlit.navigation.page import Page
+from streamlit.runtime.scriptrunner import RerunData, RerunException
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
+    ThreadState,
+)
+from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class NewFragmentIdQueueTest(unittest.TestCase):
@@ -37,7 +50,7 @@ class NewFragmentIdQueueTest(unittest.TestCase):
         ctx = MagicMock()
         ctx.fragment_ids_this_run = []
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidLayoutContextError):
             _new_fragment_id_queue(ctx, scope="fragment")
 
     def test_asserts_if_curr_id_not_in_queue(self):
@@ -74,6 +87,7 @@ class NewFragmentIdQueueTest(unittest.TestCase):
 def test_st_rerun_is_fragment_scoped_rerun_flag_false(patched_get_script_run_ctx):
     ctx = MagicMock()
     patched_get_script_run_ctx.return_value = ctx
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
     rerun(scope="app")
 
@@ -97,6 +111,7 @@ def test_st_rerun_is_fragment_scoped_rerun_flag_false(patched_get_script_run_ctx
 def test_st_rerun_is_fragment_scoped_rerun_flag_true(patched_get_script_run_ctx):
     ctx = MagicMock()
     patched_get_script_run_ctx.return_value = ctx
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
     rerun(scope="fragment")
 
@@ -112,9 +127,229 @@ def test_st_rerun_is_fragment_scoped_rerun_flag_true(patched_get_script_run_ctx)
     )
 
 
-def test_st_rerun_invalid_scope_throws_error():
-    with pytest.raises(StreamlitAPIException):
-        rerun(scope="foo")
+def test_st_rerun_scope_positional() -> None:
+    """scope can be passed positionally, not just as a keyword argument."""
+    with patch(
+        "streamlit.commands.execution_control.get_script_run_ctx"
+    ) as mock_ctx_fn:
+        ctx = MagicMock()
+        mock_ctx_fn.return_value = ctx
+        ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+        rerun("app")
+        ctx.script_requests.request_rerun.assert_called_once()
+        call = ctx.script_requests.request_rerun.call_args[0][0]
+        assert call.is_fragment_scoped_rerun is False
+
+
+def test_st_rerun_empty_string_raises() -> None:
+    """st.rerun('') raises StreamlitValueError."""
+    with pytest.raises(StreamlitValueError, match="empty string"):
+        rerun("")
+
+
+def test_st_rerun_empty_list_raises() -> None:
+    """st.rerun([]) raises StreamlitValueError."""
+    with pytest.raises(StreamlitValueError, match="empty list"):
+        rerun([])
+
+
+@pytest.mark.parametrize("reserved", ["app", "fragment"])
+def test_st_rerun_list_with_reserved_name_raises(reserved: str) -> None:
+    """st.rerun([<reserved>]) raises StreamlitValueError for reserved names."""
+    with pytest.raises(StreamlitValueError, match="reserved scope name"):
+        rerun([reserved])
+
+
+def test_st_rerun_list_with_empty_string_raises() -> None:
+    """st.rerun(["charts", ""]) raises StreamlitValueError for empty string items."""
+    with pytest.raises(StreamlitValueError, match="empty string"):
+        rerun(["charts", ""])
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_list_with_int_items_normalizes(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """st.rerun([1, 2]) normalizes int items to strings and resolves them."""
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.return_value = ["frag_1", "frag_2"]
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize(run_location=RunLocation.CALLBACK)
+
+    with pytest.raises(RerunException) as exc_info:
+        rerun([1, 2])
+
+    ctx.fragment_storage.resolve_target.assert_called_once_with(["1", "2"])
+    data = exc_info.value.rerun_data
+    assert data.fragment_id_queue == ["frag_1", "frag_2"]
+
+
+def test_st_rerun_list_with_invalid_type_raises() -> None:
+    """st.rerun([3.14]) raises StreamlitInvalidParameterTypeError for non-string/non-int items."""
+    with pytest.raises(StreamlitInvalidParameterTypeError):
+        rerun([3.14])
+
+
+def test_st_rerun_invalid_scope_type_raises() -> None:
+    """st.rerun(scope=3.14) raises StreamlitInvalidParameterTypeError for unsupported types."""
+    with pytest.raises(StreamlitInvalidParameterTypeError):
+        rerun(3.14)
+
+
+def test_st_rerun_bytes_scope_raises() -> None:
+    """st.rerun(b"charts") raises StreamlitInvalidParameterTypeError."""
+    with pytest.raises(StreamlitInvalidParameterTypeError):
+        rerun(b"charts")
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_rerun_int_scope_normalizes(patched_get_script_run_ctx: MagicMock) -> None:
+    """st.rerun(scope=42) normalizes the int to '42' and resolves it."""
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.return_value = ["frag_42"]
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize(run_location=RunLocation.CALLBACK)
+
+    with pytest.raises(RerunException) as exc_info:
+        rerun(42)
+
+    ctx.fragment_storage.resolve_target.assert_called_once_with("42")
+    data = exc_info.value.rerun_data
+    assert data.fragment_id_queue == ["frag_42"]
+    assert data.is_fragment_scoped_rerun is True
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_key_scope_resolves_target_without_queueing(patched_get_script_run_ctx) -> None:
+    """st.rerun('charts') resolves the key via fragment_storage but does not
+    call request_rerun — the request is deferred to _call_callbacks."""
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.return_value = ["frag_id_1"]
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize(run_location=RunLocation.CALLBACK)
+
+    with pytest.raises(RerunException) as exc_info:
+        rerun("charts")
+
+    ctx.fragment_storage.resolve_target.assert_called_once_with("charts")
+    ctx.script_requests.request_rerun.assert_not_called()
+    data = exc_info.value.rerun_data
+    assert data.fragment_id_queue == ["frag_id_1"]
+    assert data.is_fragment_scoped_rerun is True
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_key_scope_from_fragment_callback_preempts(
+    patched_get_script_run_ctx,
+) -> None:
+    """st.rerun('charts') from a fragment widget sets is_fragment_scoped_rerun=True.
+
+    A keyed target always replaces the interaction's default rerun, regardless of
+    whether the triggering widget lives in the main script or inside a fragment.
+    """
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.return_value = ["frag_id_1"]
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize(run_location=RunLocation.CALLBACK, fragment_id="enclosing")
+
+    with pytest.raises(RerunException) as exc_info:
+        rerun("charts")
+
+    ctx.script_requests.request_rerun.assert_not_called()
+    data = exc_info.value.rerun_data
+    assert data.fragment_id_queue == ["frag_id_1"]
+    assert data.is_fragment_scoped_rerun is True
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_callback_rerun_always_raises_rerun_exception(
+    patched_get_script_run_ctx,
+) -> None:
+    """st.rerun() from a callback raises RerunException directly for all scopes.
+
+    This ensures the callback halts immediately and _run_callback_and_record_rerun
+    can classify the request, regardless of the compose/preempt flag.
+    """
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.return_value = ["frag_id"]
+    patched_get_script_run_ctx.return_value = ctx
+
+    for scope, fragment_id in [
+        ("app", None),
+        ("charts", None),
+        ("charts", "enclosing"),
+    ]:
+        ThreadState.initialize(
+            run_location=RunLocation.CALLBACK, fragment_id=fragment_id
+        )
+        with pytest.raises(RerunException):
+            rerun(scope)
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_list_scope_delegates_to_resolve_target(patched_get_script_run_ctx) -> None:
+    """st.rerun(['charts', 'table']) passes the list to resolve_target."""
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.return_value = ["frag_1", "frag_2"]
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize(run_location=RunLocation.CALLBACK)
+
+    with pytest.raises(RerunException) as exc_info:
+        rerun(["charts", "table"])
+
+    ctx.fragment_storage.resolve_target.assert_called_once_with(["charts", "table"])
+    ctx.script_requests.request_rerun.assert_not_called()
+    data = exc_info.value.rerun_data
+    assert data.fragment_id_queue == ["frag_1", "frag_2"]
+    assert data.is_fragment_scoped_rerun is True
+
+
+def test_key_scope_raises_outside_callback() -> None:
+    """Passing a fragment key from the main script body raises StreamlitAPIException."""
+    with patch(
+        "streamlit.commands.execution_control.get_script_run_ctx"
+    ) as mock_ctx_fn:
+        ctx = MagicMock()
+        mock_ctx_fn.return_value = ctx
+        ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+
+        with pytest.raises(StreamlitAPIException, match="widget callback"):
+            rerun("charts")
+
+
+def test_key_scope_raises_from_fragment_body() -> None:
+    """Passing a fragment key from inside a fragment body raises StreamlitAPIException."""
+    with patch(
+        "streamlit.commands.execution_control.get_script_run_ctx"
+    ) as mock_ctx_fn:
+        ctx = MagicMock()
+        mock_ctx_fn.return_value = ctx
+        ThreadState.initialize(run_location=RunLocation.FRAGMENT)
+
+        with pytest.raises(StreamlitAPIException, match="widget callback"):
+            rerun("charts")
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_key_scope_unknown_name_propagates_exception(
+    patched_get_script_run_ctx,
+) -> None:
+    """resolve_target's StreamlitAPIException propagates uncaught from st.rerun()."""
+    ctx = MagicMock()
+    ctx.fragment_storage.resolve_target.side_effect = StreamlitAPIException(
+        "No fragment found for target 'unknown'"
+    )
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize(run_location=RunLocation.CALLBACK)
+
+    with pytest.raises(StreamlitAPIException, match="No fragment found"):
+        rerun("unknown")
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
@@ -138,8 +373,8 @@ def test_st_switch_page_context_info(patched_get_script_run_ctx):
 
     patched_get_script_run_ctx.return_value = ctx
 
-    # Mock the StreamlitPage object and its _script_hash attribute
-    mock_page = MagicMock(spec=StreamlitPage)
+    # Mock the Page object and its _script_hash attribute
+    mock_page = MagicMock(spec=Page)
     mock_page._script_hash = "target_page_hash"
     mock_page.is_external = False
 
@@ -163,7 +398,7 @@ def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
     """Test that providing query_params sets them before rerunning."""
     ctx = MagicMock()
     ctx.query_string = ""
-    ctx.cached_message_hashes = set()
+    ctx.cached_message_hashes = frozenset()
     ctx.context_info = {"foo": "bar"}
     ctx.script_requests = MagicMock()
     ctx.session_state = MagicMock()
@@ -180,7 +415,7 @@ def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
 
     mock_query_params.from_dict.side_effect = _from_dict_side_effect
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
     mocked_page.is_external = False
 
@@ -203,7 +438,7 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
     """Test that tuple-based query_params are accepted."""
     ctx = MagicMock()
     ctx.query_string = ""
-    ctx.cached_message_hashes = set()
+    ctx.cached_message_hashes = frozenset()
     ctx.context_info = {}
     ctx.script_requests = MagicMock()
     ctx.session_state = MagicMock()
@@ -225,7 +460,7 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
 
     mock_query_params.from_dict.side_effect = _from_dict_side_effect
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
     mocked_page.is_external = False
 
@@ -245,12 +480,12 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
 def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx):
-    """Test that invalid query_params types raise a StreamlitAPIException."""
+    """Invalid query_params types raise StreamlitInvalidParameterTypeError."""
     ctx = MagicMock()
     ctx.session_state = MagicMock()
     ctx.script_requests = MagicMock()
     ctx.query_string = ""
-    ctx.cached_message_hashes = set()
+    ctx.cached_message_hashes = frozenset()
     ctx.context_info = {}
 
     query_params_cm = MagicMock()
@@ -261,11 +496,13 @@ def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx)
 
     patched_get_script_run_ctx.return_value = ctx
 
-    mocked_page = MagicMock(spec=StreamlitPage)
+    mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
     mocked_page.is_external = False
 
-    with pytest.raises(StreamlitAPIException, match=r"`query_params` must be"):
+    with pytest.raises(
+        StreamlitInvalidParameterTypeError, match=r"Invalid `query_params` type"
+    ):
         switch_page(mocked_page, query_params="not valid")  # type: ignore[arg-type]
 
     ctx.script_requests.request_rerun.assert_not_called()
@@ -280,13 +517,10 @@ def test_st_switch_page_raises_for_external_page(patched_get_script_run_ctx):
     ctx.script_requests = MagicMock()
     patched_get_script_run_ctx.return_value = ctx
 
-    mock_page = MagicMock(spec=StreamlitPage)
+    mock_page = MagicMock(spec=Page)
     mock_page.is_external = True
 
-    with pytest.raises(
-        StreamlitAPIException,
-        match=r"Cannot use st\.switch_page with external URL pages",
-    ):
+    with pytest.raises(StreamlitAPIException, match=r"external URL pages"):
         switch_page(mock_page)
 
     ctx.script_requests.request_rerun.assert_not_called()
@@ -314,6 +548,19 @@ def test_st_switch_page_raises_no_session_context_when_ctx_has_no_requests(
 
     with pytest.raises(NoSessionContext):
         switch_page("any_page.py")
+
+
+def test_switch_page_raises_from_parallel_worker() -> None:
+    """st.switch_page raises StreamlitAPIException when called from a parallel worker."""
+    ThreadState.initialize(is_parallel_worker=True)
+    try:
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            switch_page("pages/test.py")
+
+        assert "st.switch_page" in str(exc_info.value)
+        assert "parallel fragment" in str(exc_info.value)
+    finally:
+        ThreadState.initialize(is_parallel_worker=False)
 
 
 def _make_pages_lookup_ctx(resolved_script_path: str) -> MagicMock:
@@ -386,12 +633,79 @@ def test_st_switch_page_string_path_unknown_page_raises(
     _patched_get_main_script_directory,
     patched_normalize_path_join,
 ):
-    """``switch_page`` raises ``StreamlitAPIException`` if the resolved path is unknown."""
+    """``switch_page`` raises ``StreamlitPageNotFoundError`` if the resolved path is unknown."""
     patched_normalize_path_join.return_value = "/some/path/missing.py"
     ctx = _make_pages_lookup_ctx("/some/path/pages/page_1.py")
     patched_get_script_run_ctx.return_value = ctx
 
-    with pytest.raises(StreamlitAPIException, match=r"Could not find page"):
+    with pytest.raises(StreamlitPageNotFoundError, match=r"Could not find page"):
         switch_page("missing.py")
 
     ctx.script_requests.request_rerun.assert_not_called()
+
+
+@patch("pathlib.Path.is_file", MagicMock(return_value=True))
+class SwitchPagePageValidationTest(DeltaGeneratorTestCase):
+    """Test that ``st.switch_page`` validates a passed ``Page`` against
+    pages registered with ``st.navigation`` and raises when the source does not
+    match the registered page sharing the same URL pathname.
+
+    Regression coverage for https://github.com/streamlit/streamlit/issues/10572.
+    """
+
+    def test_page_with_mismatched_file_path_raises(self) -> None:
+        """Switching to a ``Page`` whose file path does not match the
+        page registered under the same ``url_path`` raises."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        bad_page = st.Page("other.py", url_path="foo")
+        with pytest.raises(StreamlitAPIException, match=r"different page is "):
+            st.switch_page(bad_page)
+
+    def test_page_with_inferred_url_path_mismatch_raises(self) -> None:
+        """Switching to ``st.Page("foo.py")`` (url_path inferred as ``foo``)
+        raises when a different file is registered under ``url_path="foo"``."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        with pytest.raises(StreamlitAPIException, match=r"different page is "):
+            st.switch_page(st.Page("foo.py"))
+
+    def test_page_callable_with_file_registered_raises(self) -> None:
+        """Switching to a callable-based ``Page`` raises when the
+        registered page sharing its ``url_path`` is file-based."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        def some_callable() -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException, match=r"is a callable"):
+            st.switch_page(st.Page(some_callable, url_path="foo"))
+
+    def test_page_matching_source_does_not_raise(self) -> None:
+        """A ``Page`` whose source matches the registered page is
+        accepted by validation (no ``StreamlitAPIException`` raised)."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        matching = st.Page("page1.py", url_path="foo")
+        # Validation passes — the rerun side effect is harmless for this test.
+        st.switch_page(matching)
+
+    def test_page_unregistered_url_path_does_not_raise(self) -> None:
+        """If no page with the given ``url_path`` is registered (no hash
+        collision), validation is skipped — preserving previous behavior for
+        apps that don't use ``st.navigation``."""
+        import streamlit as st
+
+        st.navigation([st.Page("page1.py", url_path="foo")])
+
+        # url_path "bar" is not registered; hash lookup misses, so the
+        # validator silently passes and the rerun side effect proceeds.
+        st.switch_page(st.Page("other.py", url_path="bar"))

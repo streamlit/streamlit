@@ -252,10 +252,11 @@ def test_color_picker_query_param_default_custom(page: Page, app_base_url: str):
 
     # Change back to default (red) - use lowercase since react-color outputs lowercase
     color_picker = get_color_picker(page, "Bound color (default red)")
-    color_picker.get_by_test_id("stColorPickerBlock").click()
+    color_block = color_picker.get_by_test_id("stColorPickerBlock")
+    color_block.click()
     text_input = page.get_by_test_id("stColorPickerPopover").locator("input")
     text_input.fill("#ff0000")
-    page.get_by_text("Bound color (default red)").click()
+    color_block.click()
     wait_for_app_run(page)
 
     # Query param should be removed since value is back to default (red)

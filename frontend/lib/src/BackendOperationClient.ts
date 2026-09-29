@@ -15,13 +15,14 @@
  */
 
 import { getLogger } from "loglevel"
-import { v4 as uuidv4 } from "uuid"
 
 import {
   BackendOperationRequest,
-  IBackendOperationRequest,
-  IBackendOperationResponse,
+  type BackendOperationResponse,
+  type DataframeChunkRequestPayload,
+  type DataframeChunkResponsePayload,
 } from "@streamlit/protobuf"
+import { generateUuid } from "@streamlit/utils"
 
 const LOG = getLogger("BackendOperationClient")
 
@@ -30,6 +31,71 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
 
 /** Timeout for deferred file requests (3 minutes). */
 const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 180_000
+
+/** Timeout for lazy dataframe chunk requests (2 minutes). */
+const DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS = 120_000
+
+/**
+ * Timeout for skills-install requests (3 minutes).
+ *
+ * The default 30s is too short here: an install does real filesystem I/O -
+ * copying the bundled meta-skill/content skills into project or home dirs -
+ * which can be slow on locked-down machines (antivirus scans, networked or
+ * OneDrive-backed home directories). A too-short timeout would surface a
+ * spurious "install failed" in the toast while the server keeps installing.
+ * We use the same generous budget as deferred files.
+ */
+const INSTALL_SKILLS_REQUEST_TIMEOUT_MS = 180_000
+
+/**
+ * Rejection message used when pending requests are cleaned up on
+ * disconnect/session reset. Exported so callers can match on it (e.g. App's
+ * skills-install retry copy) without duplicating the literal.
+ */
+export const CONNECTION_CLOSED_MESSAGE = "Connection closed"
+
+/** Rejection message used when a request exceeds its timeout. */
+export const REQUEST_TIMED_OUT_MESSAGE = "Request timed out"
+
+/**
+ * Error a backend operation rejects with when the server returns a failure.
+ * Carries the server's machine-readable `reason` (e.g. the skills-install
+ * failure cause) alongside the human-readable message, so callers can route it
+ * to telemetry without parsing the message text. Read it via
+ * {@link getBackendOperationReason} rather than exporting the class, which keeps
+ * the throw site inside this module and gives callers a typed accessor instead of
+ * a hand-written structural cast.
+ */
+class BackendOperationError extends Error {
+  public readonly reason?: string
+
+  constructor(message: string, reason?: string) {
+    super(message)
+    this.name = "BackendOperationError"
+    this.reason = reason || undefined
+  }
+}
+
+/**
+ * Return the server's machine-readable failure reason from a rejected backend
+ * operation, or `undefined` for any other error.
+ *
+ * The reason is a bounded server-side vocabulary (never user input), so callers
+ * may safely use it as a telemetry label suffix.
+ *
+ * Reads the property structurally rather than via `instanceof
+ * BackendOperationError`, deliberately. The class is thrown inside
+ * `@streamlit/lib` and read in `@streamlit/app`, and an `instanceof` across that
+ * boundary is only sound while both sides resolve to one class identity — which
+ * bundling and test mocks do not guarantee. What this accessor buys is the thing
+ * that matters: callers no longer hand-write `(error as { reason?: string })`, and
+ * renaming the property is a one-line change here instead of a silent `undefined`
+ * at every call site.
+ */
+export function getBackendOperationReason(error: unknown): string | undefined {
+  const reason = (error as { reason?: unknown } | null | undefined)?.reason
+  return typeof reason === "string" && reason ? reason : undefined
+}
 
 /** Information about a pending request. */
 interface PendingRequest<T> {
@@ -75,11 +141,17 @@ export class BackendOperationClient {
    * Send a backend operation request to the server.
    */
   public request<TResponse>(
-    payloadField: keyof Pick<IBackendOperationRequest, "deferredFile">,
-    payload: IBackendOperationRequest[typeof payloadField],
+    payloadField: keyof Pick<
+      BackendOperationRequest.$Properties,
+      | "deferredFile"
+      | "dataframeChunk"
+      | "installSkills"
+      | "dismissSkillsNudge"
+    >,
+    payload: BackendOperationRequest.$Properties[typeof payloadField],
     timeoutMs?: number
   ): Promise<TResponse> {
-    const requestId = uuidv4()
+    const requestId = generateUuid()
     const effectiveTimeout = timeoutMs ?? this.timeoutMs
 
     const resolver = Promise.withResolvers<TResponse>()
@@ -140,10 +212,56 @@ export class BackendOperationClient {
   }
 
   /**
+   * Request a chunk of rows for a lazy dataframe source.
+   *
+   * @param payload - The chunk request (source id, offset, limit, sort)
+   * @param timeoutMs - Optional timeout override
+   * @returns A promise that resolves with the chunk response payload
+   */
+  public requestDataframeChunk(
+    payload: DataframeChunkRequestPayload.$Properties,
+    timeoutMs?: number
+  ): Promise<DataframeChunkResponsePayload.$Properties> {
+    return this.request<DataframeChunkResponsePayload.$Properties>(
+      "dataframeChunk",
+      payload,
+      timeoutMs ?? DATAFRAME_CHUNK_REQUEST_TIMEOUT_MS
+    )
+  }
+
+  /**
+   * Request a one-click install of the bundled Streamlit agent skills.
+   *
+   * @returns A promise that resolves with an optional outcome detail and a
+   * `fallbackReason` naming why a project install was rerouted to a global copy
+   * (empty when it wasn't), or rejects with a {@link BackendOperationError} whose
+   * `reason` classifies the failure for telemetry.
+   */
+  public requestInstallSkills(): Promise<{
+    detail?: string | null
+    fallbackReason?: string | null
+  }> {
+    return this.request<{
+      detail?: string | null
+      fallbackReason?: string | null
+    }>("installSkills", {}, INSTALL_SKILLS_REQUEST_TIMEOUT_MS)
+  }
+
+  /**
+   * Permanently dismiss the in-app "install skills" nudge. The server writes
+   * a marker so the nudge is not shown again.
+   *
+   * @returns A promise that resolves once the dismissal has been persisted.
+   */
+  public requestDismissSkillsNudge(): Promise<unknown> {
+    return this.request<unknown>("dismissSkillsNudge", {})
+  }
+
+  /**
    * Handle a response from the server. Called by App.tsx when a
    * BackendOperationResponse ForwardMsg is received.
    */
-  public onResponse(response: IBackendOperationResponse): void {
+  public onResponse(response: BackendOperationResponse.$Properties): void {
     const requestId = response.requestId as string
     const pending = this.pendingRequests.get(requestId)
 
@@ -155,7 +273,12 @@ export class BackendOperationClient {
     this.cleanupRequest(requestId)
 
     if (response.errorMsg) {
-      pending.resolver.reject(new Error(response.errorMsg))
+      pending.resolver.reject(
+        new BackendOperationError(
+          response.errorMsg,
+          response.errorReason ?? undefined
+        )
+      )
     } else {
       try {
         const payload = this.extractResponsePayload(response)
@@ -173,7 +296,7 @@ export class BackendOperationClient {
   public cleanup(): void {
     for (const [requestId, pending] of this.pendingRequests) {
       clearTimeout(pending.timeoutId)
-      pending.resolver.reject(new Error("Connection closed"))
+      pending.resolver.reject(new Error(CONNECTION_CLOSED_MESSAGE))
       LOG.debug(`Cleaned up pending request ${requestId}`)
     }
     this.pendingRequests.clear()
@@ -189,7 +312,7 @@ export class BackendOperationClient {
     if (pending) {
       LOG.warn(`Request ${requestId} (${pending.requestType}) timed out`)
       this.pendingRequests.delete(requestId)
-      pending.resolver.reject(new Error("Request timed out"))
+      pending.resolver.reject(new Error(REQUEST_TIMED_OUT_MESSAGE))
     }
   }
 
@@ -202,11 +325,13 @@ export class BackendOperationClient {
   }
 
   private extractResponsePayload(
-    response: IBackendOperationResponse
+    response: BackendOperationResponse.$Properties
   ): unknown {
-    // Return the first non-null payload field
+    // Return the first recognized non-null payload field
     if (response.deferredFile) return response.deferredFile
-    // Future: Add other payload types here
+    if (response.dataframeChunk) return response.dataframeChunk
+    if (response.installSkills) return response.installSkills
+    if (response.dismissSkillsNudge) return response.dismissSkillsNudge
 
     LOG.warn("Response contained no recognized payload", response)
     throw new Error("Response contained no recognized payload")

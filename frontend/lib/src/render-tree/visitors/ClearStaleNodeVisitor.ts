@@ -123,6 +123,21 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
   }
 
   visitElementNode(node: ElementNode): AppNode | undefined {
+    // Toasts are fire-and-forget event notifications whose lifetime is governed
+    // by the frontend toast queue (react-aria timeout / manual dismissal), not
+    // by the element tree. Never treat them as stale: a toast emitted in a run
+    // that is interrupted by st.rerun() carries the interrupted run's
+    // scriptRunId, so pruning it here can remove its node before the Toast
+    // component mounts and registers it with the queue - which, when the
+    // retained delta and the next run's messages are applied in a single React
+    // batch, means the toast would never show at all (issue #7740). The node
+    // renders nothing on its own (the visible toast lives in a portal), so
+    // keeping it is safe; it is overwritten in place when a toast is re-emitted
+    // at the same delta path.
+    if (node.element.type === "toast") {
+      return node
+    }
+
     if (this.isFragmentRun) {
       // If we're currently running a fragment, nodes unrelated to the fragment
       // shouldn't be cleared. This can happen when,

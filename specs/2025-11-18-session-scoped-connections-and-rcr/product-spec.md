@@ -87,12 +87,13 @@ OnRelease: TypeAlias = Callable[[Any], None]
 
 # This is showing the cache_resource example, but cache_data will be identical.
 
+
 # Actually called _decorator in CacheResourceAPI.
 def cache_resource(
     self,
     # Existing args omitted for clarity.
     scope: Literal["global", "session"] = "global",
-    on_release: OnRelease | None = None
+    on_release: OnRelease | None = None,
 ) -> CachedFunc[P, R] | Callable[[Callable[P, R]], CachedFunc[P, R]]:
     """
     scope : Literal["global", "session"]
@@ -128,6 +129,7 @@ def scope(self) -> Literal["global", "session"]:
     created once per session.
     """
     return "global"
+
 
 def close(self) -> None:
     """A function to invoke when this connection is removed from the session cache.

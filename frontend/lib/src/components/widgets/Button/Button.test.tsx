@@ -20,6 +20,11 @@ import { vi } from "vitest"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -30,7 +35,7 @@ vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
   formatShortcutForDisplay: vi.fn(
     (shortcut: string | null | undefined) =>
-      shortcut?.replace(/\+/g, " + ") || undefined
+      shortcut?.replaceAll("+", " + ") || undefined
   ),
 }))
 vi.mock("~lib/WidgetStateManager")
@@ -95,9 +100,8 @@ describe("Button widget", () => {
       await user.click(buttonWidget)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        { fromUi: true },
-        undefined
+        props.element.id,
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -112,9 +116,12 @@ describe("Button widget", () => {
       await user.click(buttonWidget)
 
       expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-        props.element,
-        { fromUi: true },
-        "myFragmentId"
+        props.element.id,
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: true,
+        }
       )
     })
 
@@ -130,7 +137,6 @@ describe("Button widget", () => {
 
   it("renders with help properly", async () => {
     const user = userEvent.setup()
-    // Hover to see tooltip content
     render(<Button {...getProps({ help: "mockHelpText" })} />)
 
     // Ensure both the button and the tooltip target have the correct width.
@@ -141,7 +147,6 @@ describe("Button widget", () => {
     const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
     expect(tooltipTarget).toHaveStyle("width: 100%")
 
-    // Ensure the tooltip content is visible and has the correct text
     await user.hover(tooltipTarget)
 
     const tooltipContent = await screen.findByTestId("stTooltipContent")
@@ -165,9 +170,8 @@ describe("Button widget", () => {
     onActivate()
 
     expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-      props.element,
-      { fromUi: true },
-      undefined
+      props.element.id,
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -181,5 +185,70 @@ describe("Button widget", () => {
     onActivate()
 
     expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["primary", "stBaseButton-primary"],
+    ["tertiary", "stBaseButton-tertiary"],
+    ["secondary", "stBaseButton-secondary"],
+  ])("applies the correct button kind for the %s type", (type, testId) => {
+    const props = getProps({ type })
+    render(<Button {...props} />)
+    const matches = screen.getAllByTestId(testId)
+    expect(matches.length).toBeGreaterThan(0)
+    expect(matches[0]).toBeVisible()
+  })
+
+  describe("wrap", () => {
+    const horizontalContext: IFlexContext = {
+      direction: Direction.HORIZONTAL,
+      isInHorizontalLayout: true,
+      isDirectlyInColumn: false,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
+    it("sets a native title with the full label when wrap is false", () => {
+      render(
+        <Button {...getProps({ wrap: false, label: "A very long label" })} />
+      )
+      expect(screen.getByTitle("A very long label")).toBeVisible()
+    })
+
+    it("does not set a title by default outside a horizontal layout", () => {
+      render(<Button {...getProps({ label: "A very long label" })} />)
+      expect(screen.queryByTitle("A very long label")).not.toBeInTheDocument()
+    })
+
+    it("auto default sets a title inside a horizontal layout", () => {
+      render(
+        <FlexContext.Provider value={horizontalContext}>
+          <Button {...getProps({ label: "A very long label" })} />
+        </FlexContext.Provider>
+      )
+      expect(screen.getByTitle("A very long label")).toBeVisible()
+    })
+
+    it("explicit wrap=true keeps wrapping inside a horizontal layout", () => {
+      render(
+        <FlexContext.Provider value={horizontalContext}>
+          <Button {...getProps({ wrap: true, label: "A very long label" })} />
+        </FlexContext.Provider>
+      )
+      expect(screen.queryByTitle("A very long label")).not.toBeInTheDocument()
+    })
+
+    it("does not set a title when help is set (help tooltip takes over)", () => {
+      render(
+        <Button
+          {...getProps({
+            wrap: false,
+            label: "A very long label",
+            help: "Help wins",
+          })}
+        />
+      )
+      expect(screen.queryByTitle("A very long label")).not.toBeInTheDocument()
+    })
   })
 })

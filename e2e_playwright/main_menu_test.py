@@ -17,7 +17,12 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_until,
+)
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
 def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -152,9 +157,9 @@ def test_keyboard_activates_menu_item(app: Page):
 
 
 # WebKit (Safari) does not allow programmatic .focus() on buttons outside a
-# user-activation context. Our focus-return fires from react-focus-lock's
-# returnFocus callback (after BaseWeb's close animation timer), which
-# Chromium/Firefox accept but WebKit silently ignores.
+# user-activation context. Our focus-return fires from a useLayoutEffect
+# (synchronously after the popover unmounts), which Chromium/Firefox accept
+# but WebKit silently ignores.
 @pytest.mark.skip_browser("webkit")
 def test_focus_returns_to_menu_button_after_close(app: Page):
     """Test that focus returns to the menu button after the popover closes."""
@@ -175,7 +180,7 @@ def test_tab_closes_menu(app: Page):
     """Test that pressing Tab from the menu eventually closes the popover.
 
     The first Tab moves focus from the menu items to the version CopyButton
-    (which lives outside role="menu" but inside the popover's focus-lock).
+    (which lives outside role="menu" but inside the popover's focus cycle).
     The second Tab closes the popover and advances focus.
     """
     menu_button = app.get_by_test_id("stMainMenuButton")
@@ -325,6 +330,27 @@ def test_auto_rerun_toggle_changes_state(app: Page):
     expect(popover).to_be_visible()
 
 
+def test_auto_rerun_toggle_with_custom_border_color(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Auto-rerun off track must not follow a custom opaque theme.borderColor.
+
+    The unchecked track is a surface filled with `fadedText10`, not a border, so
+    it must stay neutral even when the theme sets an opaque `borderColor`
+    (same rule as `st.toggle`).
+    """
+    apply_theme_via_window(app, base="light", borderColor="#00008B")
+    app.reload()
+    wait_for_app_loaded(app)
+
+    app.get_by_test_id("stMainMenu").click()
+    toggle = app.get_by_test_id("stMainMenuItem-autoRerun")
+    expect(toggle).to_be_visible()
+    expect(toggle).to_have_attribute("aria-checked", "false")
+
+    assert_snapshot(toggle, name="main_menu-auto_rerun-custom-theme")
+
+
 def test_rerun_visible_in_dev_mode(app: Page):
     """Test that the Rerun menu item is visible in dev mode (default for local dev)."""
     app.get_by_test_id("stMainMenu").click()
@@ -378,3 +404,21 @@ def test_main_menu_version_footer_copies_version(app: Page):
     copied_text = app.evaluate("navigator.clipboard.readText()")
     assert copied_text
     assert re.match(r"^\d+(?:\.\d+){2}.*$", copied_text)
+
+
+def test_clear_cache_dialog_dismisses(app: Page):
+    """Test that the clear cache dialog can be dismissed via Escape key and close button."""
+    # Dismiss via Escape key
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Clear cache").click()
+    dialog = app.get_by_test_id("stDialog")
+    expect(dialog).to_be_visible()
+    app.keyboard.press("Escape")
+    expect(dialog).not_to_be_visible()
+
+    # Re-open and dismiss via close button
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Clear cache").click()
+    expect(dialog).to_be_visible()
+    dialog.get_by_role("dialog").get_by_label("Close").click()
+    expect(dialog).not_to_be_visible()

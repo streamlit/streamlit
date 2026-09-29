@@ -17,14 +17,17 @@ import re
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     expand_sidebar,
+    expect_font,
     expect_help_tooltip,
+    expect_label_truncated,
     get_caption,
     get_element_by_key,
     get_markdown,
+    reset_hovering,
     tab_until_focused,
     wait_for_all_images_to_be_loaded,
 )
@@ -142,6 +145,49 @@ def test_header_attributes(app: Page):
     expect(h4).to_have_count(7)
     expect(h5).to_have_count(7)
     expect(h6).to_have_count(7)
+
+
+def test_markdown_anchors_hides_anchor_icons(app: Page):
+    """anchors=False hides the anchor link icon but keeps heading IDs for
+    URL fragment deep-linking.
+    """
+    default_block = get_element_by_key(app, "markdown_anchors_default")
+    disabled_block = get_element_by_key(app, "markdown_anchors_disabled")
+
+    # IDs are present in both cases so deep-linking still works.
+    expect(default_block.locator("h1#anchors-default-heading")).to_have_count(1)
+    expect(default_block.locator("h2#anchors-default-subheading")).to_have_count(1)
+    expect(disabled_block.locator("h1#anchors-disabled-heading")).to_have_count(1)
+    expect(disabled_block.locator("h2#anchors-disabled-subheading")).to_have_count(1)
+
+    # The anchor link is rendered (hover-revealed) by default, but absent when
+    # anchors=False.
+    expect(default_block.get_by_role("link", name="Link to heading")).to_have_count(2)
+    expect(disabled_block.get_by_role("link", name="Link to heading")).to_have_count(0)
+
+
+def test_markdown_anchors_visual(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the hovered heading state: the anchor icon appears next to the
+    default heading but not when anchors=False.
+    """
+    default_heading = themed_app.locator("h1#anchors-default-heading")
+    disabled_heading = themed_app.locator("h1#anchors-disabled-heading")
+
+    reset_hovering(themed_app)
+    default_heading.hover()
+    assert_snapshot(
+        get_element_by_key(themed_app, "markdown_anchors_default"),
+        name="st_markdown-anchors_default_hovered",
+    )
+
+    reset_hovering(themed_app)
+    disabled_heading.hover()
+    assert_snapshot(
+        get_element_by_key(themed_app, "markdown_anchors_disabled"),
+        name="st_markdown-anchors_disabled_hovered",
+    )
 
 
 def test_match_snapshot_for_headers_in_sidebar(
@@ -303,6 +349,13 @@ def test_shimmer_directive(app: Page):
     normal_text = shimmer_container.get_by_text("Normal text before")
     expect(normal_text).not_to_have_class(re.compile(r"stMarkdownShimmer"))
 
+    # :red[:shimmer[...]] — inherit the surrounding color rather than pinning
+    # fadedText60, so the mask peak can reach the parent color.
+    parent_color = shimmer_element.evaluate(
+        "el => getComputedStyle(el.parentElement).color"
+    )
+    expect(shimmer_element).to_have_css("color", parent_color)
+
 
 def test_shimmer_directive_reduced_motion(
     themed_app: Page, assert_snapshot: ImageCompareFunction
@@ -324,9 +377,13 @@ def test_shimmer_directive_reduced_motion(
     shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
     expect(shimmer_element).to_be_visible()
 
-    # In reduced motion mode, the shimmer should have no animation
-    # and should display with the theme's fadedText60 color
+    # In reduced motion mode, the shimmer should have no animation.
+    # Color still inherits from the surrounding :red[] directive.
     expect(shimmer_element).to_have_css("animation-duration", "0s")
+    parent_color = shimmer_element.evaluate(
+        "el => getComputedStyle(el.parentElement).color"
+    )
+    expect(shimmer_element).to_have_css("color", parent_color)
 
     # Take snapshot with reduced motion to verify visual appearance
     assert_snapshot(shimmer_container, name="st_markdown-shimmer_reduced_motion")
@@ -471,11 +528,96 @@ def test_unsafe_allow_html(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(markdown_element, name="st_markdown-unsafe_allow_html")
 
 
+def test_unsafe_allow_html_with_help(app: Page, assert_snapshot: ImageCompareFunction):
+    """Regression test for gh-15211: help icon must render next to single-line HTML.
+
+    CommonMark's HTML-block rule consumes single-line block-level HTML as a raw
+    HTML block, swallowing any trailing ``:help[]`` directive. The fix renders
+    the tooltip icon directly instead of relying on the directive.
+    """
+    container = get_element_by_key(app, "markdown_html_help")
+    container.scroll_into_view_if_needed()
+    expect(container).to_be_visible()
+
+    expect(container).not_to_contain_text(":help[]")
+    expect_help_tooltip(app, container, "HTML help tooltip!")
+
+    assert_snapshot(container, name="st_markdown-unsafe_allow_html_with_help")
+
+
+def test_unsafe_allow_html_multiline_with_help(app: Page):
+    """Regression test for gh-15211: help icon also renders for multi-line HTML."""
+    container = get_element_by_key(app, "markdown_multiline_html_help")
+    container.scroll_into_view_if_needed()
+    expect(container).to_be_visible()
+
+    expect(container).not_to_contain_text(":help[]")
+    expect_help_tooltip(app, container, "HTML help tooltip!")
+
+
 def test_long_word_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that a long word in a container is displayed correctly (doesn't overflow the container)."""
     container = get_element_by_key(app, "long_word")
     expect(container).to_be_visible()
     assert_snapshot(container, name="st_markdown-long_word_in_container")
+
+
+def test_long_word_in_list_does_not_overflow_container(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Regression test for gh-16618: a list item wider than its container wraps
+    instead of spilling out of it.
+
+    Element screenshots clip to the container, so the overflow is cropped out of
+    the snapshot. The geometry assertions catch the overflow; the snapshot guards
+    the wrapped rendering.
+    """
+    container = get_element_by_key(app, "long_word_in_list")
+    expect(container).to_be_visible()
+
+    # Text measurements need the real body font. Gate on the font, not on the
+    # wrapping itself, so a genuine regression fails an assertion instead of
+    # timing out.
+    expect_font(app, "Source Sans")
+
+    # The single-line item is the reference height for "did not wrap".
+    short_box = (
+        container.get_by_role("listitem").filter(has_text="short item").bounding_box()
+    )
+    assert short_box is not None
+
+    # These two need CSS selectors to tell the unordered and ordered lists apart.
+    for long_item in (
+        container.locator("ul li").filter(has_text="bucket1/"),
+        container.locator("ol li").filter(has_text="bucket2/"),
+    ):
+        long_box = long_item.bounding_box()
+        assert long_box is not None
+        # 1.5x the single-line height means at least two lines, with slack for
+        # line-height rounding.
+        assert long_box["height"] > short_box["height"] * 1.5, (
+            "Long list item did not wrap onto a second line"
+        )
+
+    markdown_box = container.get_by_test_id("stMarkdownContainer").bounding_box()
+    assert markdown_box is not None
+    right_edge = markdown_box["x"] + markdown_box["width"]
+
+    for list_locator in (container.locator("ul"), container.locator("ol")):
+        list_box = list_locator.bounding_box()
+        assert list_box is not None
+        # Checked by hand rather than with `is_child_bounding_box_inside_parent`,
+        # which has no tolerance for the fractional layout widths involved here.
+        assert list_box["x"] + list_box["width"] <= right_edge + 1, (
+            "List overflows the right edge of its markdown container"
+        )
+
+    # Must NOT happen: any descendant, not just the list, escaping the container.
+    assert container.evaluate("el => el.scrollWidth <= el.clientWidth + 1"), (
+        "Content overflows the container horizontally (scrollWidth exceeds clientWidth)"
+    )
+
+    assert_snapshot(container, name="st_markdown-long_word_in_list")
 
 
 @pytest.mark.parametrize(
@@ -594,8 +736,12 @@ def test_tooltip_with_newlines_gh_13339(
     expect(element).not_to_contain_text("Line 2")
     expect(element).not_to_contain_text("Line 3")
 
-    # Hover to show tooltip
+    # Hover to show tooltip.
+    # reset_hovering primes the interaction modality to 'pointer' first — React Aria
+    # requires a document-level pointermove before pointerenter to register hover
+    # intent; Playwright teleports the cursor when the mouse starts "off-page".
     hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    reset_hovering(app)
     hover_target.hover()
 
     # Verify tooltip is visible and contains the multiline content
@@ -636,7 +782,9 @@ def test_tooltip_with_complex_markdown_gh_13339(
     expect(element).not_to_contain_text("array[index]")
     expect(element).not_to_contain_text("Streamlit")
 
+    # reset_hovering primes interaction modality to 'pointer' before hover.
     hover_target = element_container.get_by_test_id("stTooltipHoverTarget")
+    reset_hovering(app)
     hover_target.hover()
 
     tooltip_content = app.get_by_test_id("stTooltipContent")
@@ -659,3 +807,131 @@ def test_tooltip_with_complex_markdown_gh_13339(
     assert_snapshot(
         tooltip_content, name="st_markdown-complex_tooltip_with_markdown_formatting"
     )
+
+
+# Mermaid chart tests
+
+
+def test_mermaid_charts_render(app: Page):
+    """Test that mermaid charts are rendered correctly within markdown."""
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+    expect(mermaid_charts).to_have_count(3)
+    # Negative assertion: only 1 error element should exist (from the invalid syntax block)
+    error = mermaid_container.get_by_test_id("stMermaidError")
+    expect(error).to_have_count(1)
+
+
+def test_mermaid_charts_contain_rendered_image(app: Page):
+    """Test that rendered mermaid charts contain rendered image content.
+
+    MermaidChart renders diagrams as <img> tags with blob URLs for security
+    sandboxing, rather than inline SVG elements.
+    """
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+
+    # Check that the first 2 valid diagrams contain img elements with blob URLs
+    for i in range(2):
+        img = mermaid_charts.nth(i).locator("img")
+        expect(img).to_be_visible()
+        # Verify the img has a blob URL src (security sandboxing)
+        expect(img).to_have_attribute("src", re.compile(r"^blob:"))
+
+
+def test_mermaid_invalid_syntax_shows_error(app: Page):
+    """Test that invalid mermaid syntax shows an error message."""
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    error = mermaid_container.get_by_test_id("stMermaidError")
+    expect(error).to_be_visible()
+    expect(error).to_contain_text("Mermaid diagram error")
+    # Negative assertion: error chart should not contain an img element
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+    # The error chart is the 3rd one (index 2)
+    error_chart = mermaid_charts.nth(2)
+    expect(error_chart.locator("img")).to_have_count(0)
+
+
+WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+WRAPPED_HEIGHT_MARGIN = 4
+
+
+def test_wrap_false_ellipsizes_markdown_and_sets_title(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """wrap=False keeps markdown on one line, ellipsizes overflow, and exposes
+    the full text via a native title. wrap=True wraps and has no title.
+    """
+    no_wrap_container = get_element_by_key(app, "wrap_false_markdown")
+    wrap_container = get_element_by_key(app, "wrap_true_markdown")
+    no_wrap = no_wrap_container.get_by_test_id("stMarkdown")
+    wraps = wrap_container.get_by_test_id("stMarkdown")
+
+    expect(no_wrap_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
+    expect(wrap_container.get_by_title(WRAP_TEXT, exact=True)).to_have_count(0)
+    expect_label_truncated(no_wrap)
+
+    help_container = get_element_by_key(app, "wrap_false_markdown_help")
+    help_md = help_container.get_by_test_id("stMarkdown")
+    expect(help_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
+    expect_label_truncated(help_md)
+    expect(help_md.get_by_test_id("stTooltipHoverTarget")).to_be_visible()
+    expect_help_tooltip(app, help_md, "wrap help text")
+
+    horizontal_container = get_element_by_key(app, "wrap_false_horizontal_markdown")
+    horizontal = horizontal_container.get_by_test_id("stMarkdown")
+    expect(horizontal_container.get_by_title(WRAP_TEXT, exact=True)).to_be_visible()
+    expect_label_truncated(horizontal)
+
+    false_box = no_wrap.bounding_box()
+    true_box = wraps.bounding_box()
+    assert false_box is not None
+    assert true_box is not None
+    assert true_box["height"] > false_box["height"] + WRAPPED_HEIGHT_MARGIN
+    assert_snapshot(no_wrap_container, name="st_markdown-wrap_false")
+
+
+def test_wrap_false_keeps_block_markdown_on_one_line(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """wrap=False label-mode markdown stays one line even with headings, tables,
+    and fenced code. Block tags are omitted or unwrapped; height matches a
+    single-sentence wrap=False markdown element.
+    """
+    block_container = get_element_by_key(app, "wrap_false_block_markdown")
+    block = block_container.get_by_test_id("stMarkdown")
+    single = get_element_by_key(app, "wrap_false_markdown").get_by_test_id("stMarkdown")
+
+    expect(block.get_by_test_id("stMarkdownPre")).to_have_count(0)
+    expect(block.get_by_role("heading")).to_have_count(0)
+    expect(block.locator("table")).to_have_count(0)
+    expect(block.locator("ul")).to_have_count(0)
+
+    block_box = block.bounding_box()
+    single_box = single.bounding_box()
+    assert block_box is not None
+    assert single_box is not None
+    assert abs(block_box["height"] - single_box["height"]) < WRAPPED_HEIGHT_MARGIN
+    assert_snapshot(block_container, name="st_markdown-wrap_false_block")
+
+
+def test_badge_with_help_stays_in_container(app: Page):
+    """A long badge with help ellipsizes the chip and stays inside the parent
+    instead of overflowing.
+    """
+    container = get_element_by_key(app, "badge_help")
+    badge = container.get_by_test_id("stMarkdown")
+
+    expect_help_tooltip(app, badge, "wrap help text")
+
+    chip = badge.locator(".stMarkdownBadge").first
+    wait_until(
+        app,
+        lambda: chip.evaluate("el => el.scrollWidth > el.clientWidth"),
+    )
+
+    container_box = container.bounding_box()
+    badge_box = badge.bounding_box()
+    assert container_box is not None
+    assert badge_box is not None
+    assert badge_box["width"] <= container_box["width"] + 1

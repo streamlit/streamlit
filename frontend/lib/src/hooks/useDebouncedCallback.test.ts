@@ -73,6 +73,67 @@ describe("useDebouncedCallback hook", () => {
     expect(callback).not.toHaveBeenCalled()
   })
 
+  it("should immediately invoke a pending callback when flush is called", () => {
+    const callback = vi.fn()
+    const delay = 100
+
+    const { result } = renderHook(() => useDebouncedCallback(callback, delay))
+    const { debouncedCallback, flush } = result.current
+
+    debouncedCallback("test")
+    flush()
+
+    expect(callback).toHaveBeenCalledOnce()
+    expect(callback).toHaveBeenCalledWith("test")
+
+    vi.advanceTimersByTime(delay)
+    expect(callback).toHaveBeenCalledOnce()
+  })
+
+  it("should do nothing when flush is called without a pending callback", () => {
+    const callback = vi.fn()
+    const { result } = renderHook(() => useDebouncedCallback(callback, 100))
+
+    result.current.flush()
+
+    expect(callback).not.toHaveBeenCalled()
+  })
+
+  it("should do nothing when flush is called after cancel", () => {
+    const callback = vi.fn()
+    const delay = 100
+
+    const { result } = renderHook(() => useDebouncedCallback(callback, delay))
+    const { debouncedCallback, cancel, flush } = result.current
+
+    debouncedCallback("test")
+    cancel()
+    flush()
+
+    expect(callback).not.toHaveBeenCalled()
+  })
+
+  it("should invoke the latest callback when flushed after the callback changes", () => {
+    const callback1 = vi.fn()
+    const callback2 = vi.fn()
+    let callback = callback1
+    const delay = 100
+
+    const { result, rerender } = renderHook(() =>
+      useDebouncedCallback(callback, delay)
+    )
+
+    result.current.debouncedCallback("test")
+
+    // Swap callback before flushing
+    callback = callback2
+    rerender()
+
+    result.current.flush()
+    expect(callback1).not.toHaveBeenCalled()
+    expect(callback2).toHaveBeenCalledWith("test")
+  })
+
   it("should handle multiple arguments correctly", () => {
     const callback = vi.fn()
     const delay = 100

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { compile, type TopLevelSpec } from "vega-lite"
+
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
 import { lightTheme } from "~lib/theme/themeConfigs"
 
@@ -595,6 +597,161 @@ describe("useVegaElementPreprocessor", () => {
     })
   })
 
+  describe("baseSpecKey", () => {
+    const renderWithDimensions = (
+      element: VegaLiteChartElement,
+      useWidth: boolean,
+      useHeight: boolean
+    ): ReturnType<
+      typeof renderHook<
+        { containerWidth: number; containerHeight: number },
+        ReturnType<typeof useVegaElementPreprocessor>
+      >
+    > =>
+      renderHook(
+        ({
+          containerWidth,
+          containerHeight,
+        }: {
+          containerWidth: number
+          containerHeight: number
+        }) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useWidth,
+            useHeight
+          ),
+        {
+          initialProps: { containerWidth: 100, containerHeight: 100 },
+        }
+      )
+
+    it("stays stable across container dimension changes for a single-view chart", () => {
+      const { result, rerender } = renderWithDimensions(
+        getElement({
+          useContainerWidth: true,
+          spec: JSON.stringify({
+            mark: "bar",
+            encoding: { x: { field: "a" } },
+          }),
+        }),
+        true,
+        true
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender({ containerWidth: 800, containerHeight: 600 })
+
+      // The native resize path handles dimension changes, so the structural key
+      // must not change (otherwise the view would be recreated unnecessarily).
+      expect(result.current.baseSpecKey).toBe(initialKey)
+    })
+
+    it("changes when the structural spec changes", () => {
+      const { result, rerender } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, 100, 100, false, false),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              mark: "bar",
+              encoding: { x: { field: "a" } },
+            }),
+          }),
+        }
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender(
+        getElement({
+          spec: JSON.stringify({
+            mark: "line",
+            encoding: { x: { field: "a" } },
+          }),
+        })
+      )
+
+      expect(result.current.baseSpecKey).not.toBe(initialKey)
+    })
+
+    it("changes when a fixed (non-container) dimension changes", () => {
+      const { result, rerender } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, 100, 100, false, false),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({ mark: "bar", width: 200 }),
+          }),
+        }
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender(
+        getElement({ spec: JSON.stringify({ mark: "bar", width: 400 }) })
+      )
+
+      expect(result.current.baseSpecKey).not.toBe(initialKey)
+    })
+
+    it("changes when the container sizing mode toggles", () => {
+      const element = getElement({
+        spec: JSON.stringify({ mark: "bar", encoding: { x: { field: "a" } } }),
+      })
+      const { result, rerender } = renderHook(
+        ({ useWidth }: { useWidth: boolean }) =>
+          useVegaElementPreprocessor(element, 100, 100, useWidth, false),
+        {
+          initialProps: { useWidth: false },
+        }
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender({ useWidth: true })
+
+      expect(result.current.baseSpecKey).not.toBe(initialKey)
+    })
+
+    it("changes on container width change for a concat chart (forces recreation)", () => {
+      const { result, rerender } = renderWithDimensions(
+        getElement({
+          useContainerWidth: true,
+          spec: JSON.stringify({
+            vconcat: [{ mark: "bar" }, { mark: "point" }],
+          }),
+        }),
+        true,
+        false
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender({ containerWidth: 800, containerHeight: 100 })
+
+      // Concat charts bake per-child widths, so a width change must recreate the
+      // view (the native resize API cannot update them).
+      expect(result.current.baseSpecKey).not.toBe(initialKey)
+    })
+
+    it("stays stable for a concat chart that does not use container width", () => {
+      const { result, rerender } = renderWithDimensions(
+        getElement({
+          useContainerWidth: false,
+          spec: JSON.stringify({
+            vconcat: [{ mark: "bar" }, { mark: "point" }],
+          }),
+        }),
+        false,
+        false
+      )
+
+      const initialKey = result.current.baseSpecKey
+      rerender({ containerWidth: 800, containerHeight: 600 })
+
+      expect(result.current.baseSpecKey).toBe(initialKey)
+    })
+  })
+
   describe("builtin color name resolution", () => {
     const themeColors = lightTheme.emotion.colors
 
@@ -757,6 +914,353 @@ describe("useVegaElementPreprocessor", () => {
         encoding: { color: { value: string } }
       }
       expect(spec.encoding.color.value).toBe(themeColors.primary)
+    })
+  })
+
+  describe("selection mode parameter preparation", () => {
+    type SelectParam = {
+      name: string
+      select?:
+        | string
+        | {
+            type?: string
+            encodings?: string[]
+            fields?: string[]
+            [key: string]: unknown
+          }
+      bind?: unknown
+      value?: unknown
+    }
+
+    const renderSpecWithParams = (
+      params: SelectParam[],
+      selectionMode: string[] = ["point"]
+    ): VegaLiteSpec => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            selectionMode,
+            spec: JSON.stringify({
+              mark: "point",
+              encoding: { x: { field: "a" }, y: { field: "b" } },
+              params,
+            }),
+          }),
+        }
+      )
+      return result.current.spec as unknown as VegaLiteSpec
+    }
+
+    const renderWithParams = (
+      params: SelectParam[],
+      selectionMode: string[] = ["point"]
+    ): SelectParam[] =>
+      renderSpecWithParams(params, selectionMode).params as SelectParam[]
+
+    it("adds all chart encodings to shorthand point selections", () => {
+      const [param] = renderWithParams([{ name: "pt", select: "point" }])
+      expect(param.select).toEqual({ type: "point", encodings: ["x", "y"] })
+    })
+
+    it("converts shorthand interval selections without adding encodings", () => {
+      const [param] = renderWithParams([{ name: "iv", select: "interval" }])
+      expect(param.select).toEqual({ type: "interval" })
+    })
+
+    it("preserves user-specified encodings on point selections", () => {
+      const [param] = renderWithParams([
+        { name: "pt", select: { type: "point", encodings: ["x"] } },
+      ])
+      expect(param.select).toEqual({ type: "point", encodings: ["x"] })
+    })
+
+    it("skips params without a select property", () => {
+      const [param] = renderWithParams([{ name: "slider", value: 5 }])
+      expect(param.select).toBeUndefined()
+      expect(param.value).toBe(5)
+    })
+
+    it("leaves unknown string selections untouched", () => {
+      const [param] = renderWithParams([{ name: "weird", select: "unknown" }])
+      expect(param.select).toBe("unknown")
+    })
+
+    it("skips select objects that are missing a type", () => {
+      const [param] = renderWithParams([
+        { name: "no_type", select: { foo: "bar" } },
+      ])
+      expect(param.select).toEqual({ foo: "bar" })
+    })
+
+    it("does not transform params when selectionMode is empty", () => {
+      const [param] = renderWithParams([{ name: "pt", select: "point" }], [])
+      // With an empty selection mode, prepareSpecForSelections is skipped, so the
+      // shorthand string is left as-is.
+      expect(param.select).toBe("point")
+    })
+
+    it("does not add encodings to point selections that already specify fields", () => {
+      const [param] = renderWithParams([
+        { name: "pt", select: { type: "point", fields: ["Origin"] } },
+      ])
+      expect(param.select).toEqual({ type: "point", fields: ["Origin"] })
+      expect(param.select).not.toHaveProperty("encodings")
+    })
+
+    it("does not add encodings to point selections with fields and a radio bind", () => {
+      // Issue #8765: Altair radio binds set fields, not encodings.
+      const bind = {
+        input: "radio",
+        options: ["USA", "Europe", "Japan"],
+        name: "Region: ",
+      }
+      const spec = renderSpecWithParams([
+        {
+          name: "og_select",
+          select: { type: "point", fields: ["Origin"], toggle: false },
+          bind,
+          value: "USA",
+        },
+      ])
+      const [param] = spec.params as SelectParam[]
+      expect(param.select).toEqual({
+        type: "point",
+        fields: ["Origin"],
+        toggle: false,
+      })
+      expect(param.select).not.toHaveProperty("encodings")
+      expect(param.bind).toEqual(bind)
+
+      const { spec: compiledSpec } = compile(spec as unknown as TopLevelSpec)
+      const radioBinds = (compiledSpec.signals ?? []).filter(signal => {
+        if (!("bind" in signal)) {
+          return false
+        }
+        const signalBind = signal.bind as { input?: string } | undefined
+        return signalBind?.input === "radio"
+      })
+      expect(radioBinds).toHaveLength(1)
+    })
+
+    it("does not add encodings when fields and a scalar value are set", () => {
+      // Issue #10308: fields plus a scalar value must stay fields-only.
+      const [param] = renderWithParams([
+        { name: "pt", select: { type: "point", fields: ["index"] }, value: 3 },
+      ])
+      expect(param.select).toEqual({ type: "point", fields: ["index"] })
+      expect(param.select).not.toHaveProperty("encodings")
+      expect(param.value).toBe(3)
+    })
+  })
+
+  describe("legacy and edge-case spec handling", () => {
+    const renderSpec = (
+      specInput: Record<string, unknown>,
+      overrides: {
+        vegaLiteTheme?: string
+        useWidth?: boolean
+        alt?: string
+      } = {}
+    ): Record<string, unknown> => {
+      const useWidth = overrides.useWidth ?? useContainerWidth
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            vegaLiteTheme: overrides.vegaLiteTheme ?? "streamlit",
+            useContainerWidth: useWidth,
+            spec: JSON.stringify(specInput),
+            alt: overrides.alt,
+          }),
+        }
+      )
+      return result.current.spec as unknown as Record<string, unknown>
+    }
+
+    it.each([
+      { name: "zero height", key: "height", value: 0 },
+      { name: "negative height", key: "height", value: -10 },
+      { name: "zero width", key: "width", value: 0 },
+      { name: "negative width", key: "width", value: -10 },
+    ])("removes non-positive $name from the spec", ({ key, value }) => {
+      const spec = renderSpec({ mark: "bar", [key]: value })
+      expect(spec[key]).toBeUndefined()
+    })
+
+    it("applies the streamlit theme from usermeta embedOptions", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: { embedOptions: { theme: "streamlit" } },
+        },
+        { vegaLiteTheme: "default" }
+      )
+      // The streamlit theme is applied to config...
+      expect(spec.config).toBeDefined()
+      // ...and the embed options are cleared so vega-embed doesn't re-apply them.
+      expect((spec.usermeta as { embedOptions?: unknown }).embedOptions).toBe(
+        undefined
+      )
+    })
+
+    it("preserves safe vega-embed options while removing risky embedOptions", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              theme: "dark",
+              renderer: "canvas",
+              padding: 12,
+              actions: true,
+              sourceHeader: "<script>window.evil = true</script>",
+              sourceFooter: "<img src=x onerror=window.evil = true>",
+              editorUrl: "https://example.com/editor/",
+              loader: { http: { credentials: "include" } },
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
+      expect(
+        (spec.usermeta as { embedOptions?: unknown }).embedOptions
+      ).toEqual({ theme: "dark", renderer: "canvas", padding: 12 })
+    })
+
+    it("preserves vega-embed padding side objects", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              renderer: "svg",
+              padding: {
+                left: 1,
+                right: 2,
+                top: 3,
+                bottom: 4,
+                unknown: 5,
+              },
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
+      expect(
+        (spec.usermeta as { embedOptions?: unknown }).embedOptions
+      ).toEqual({
+        renderer: "svg",
+        padding: { left: 1, right: 2, top: 3, bottom: 4 },
+      })
+    })
+
+    it("preserves a null vega-embed theme for backwards compatibility", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              theme: null,
+              actions: true,
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
+      expect(
+        (spec.usermeta as { embedOptions?: unknown }).embedOptions
+      ).toEqual({ theme: null })
+    })
+
+    it("removes invalid renderer and padding embedOptions", () => {
+      const spec = renderSpec(
+        {
+          mark: "bar",
+          usermeta: {
+            embedOptions: {
+              renderer: "none",
+              padding: {
+                left: "1",
+                right: -2,
+                top: null,
+                bottom: [],
+              },
+              actions: true,
+            },
+          },
+        },
+        { vegaLiteTheme: "default" }
+      )
+
+      expect((spec.usermeta as { embedOptions?: unknown }).embedOptions).toBe(
+        undefined
+      )
+    })
+
+    it("skips null children when spreading container width across vconcat", () => {
+      const spec = renderSpec(
+        { vconcat: [null, { mark: "bar" }] },
+        { useWidth: true }
+      )
+      const [first, second] = spec.vconcat as (Record<
+        string,
+        unknown
+      > | null)[]
+      expect(first).toBeNull()
+      expect((second as { width?: number }).width).toBe(containerWidth)
+    })
+
+    it("preserves datasets included in the spec", () => {
+      const datasets = {
+        foo: { type: "FeatureCollection", features: [] },
+      }
+      const spec = renderSpec({ mark: "bar", datasets })
+      expect(spec.datasets).toEqual(datasets)
+
+      const specWithoutDatasets = renderSpec({ mark: "bar" })
+      expect(specWithoutDatasets).not.toHaveProperty("datasets")
+    })
+
+    it("sets description from alt when alt is non-empty", () => {
+      const spec = renderSpec(
+        { mark: "bar" },
+        { alt: "Accessible chart name" }
+      )
+      expect(spec.description).toBe("Accessible chart name")
+    })
+
+    it("preserves author description when alt is unset", () => {
+      const spec = renderSpec({
+        mark: "bar",
+        description: "Author description",
+      })
+      expect(spec.description).toBe("Author description")
+    })
+
+    it("overrides author description when alt is set", () => {
+      const spec = renderSpec(
+        { mark: "bar", description: "Author description" },
+        { alt: "Streamlit alt" }
+      )
+      expect(spec.description).toBe("Streamlit alt")
     })
   })
 })

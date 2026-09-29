@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, within } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
   mockEndpoints,
+  mockTheme,
   NavigationContextProps,
   SidebarConfigContextProps,
 } from "@streamlit/lib"
@@ -30,6 +31,12 @@ import {
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
 import Sidebar, { SidebarProps } from "./Sidebar"
+import { getSidebarWidthLimits } from "./utils"
+
+const { minWidthPx, maxWidthPx, defaultWidthPx } = getSidebarWidthLimits(
+  mockTheme.emotion.sizes,
+  mockTheme.emotion.fontSizes.baseFontSize
+)
 
 // Mock for controlling window dimensions in tests
 const mockWindowDimensions = {
@@ -204,6 +211,62 @@ describe("Sidebar Component", () => {
       // Visible when hovering over header
       await user.hover(screen.getByTestId("stSidebarHeader"))
       expect(collapseButton).toHaveStyle("visibility: visible")
+    })
+
+    it("removes the collapse button entirely when sidebar is locked on desktop", async () => {
+      const user = userEvent.setup()
+      // Default viewport is 1024px (desktop) — lock is fully in effect
+      renderSidebar(
+        {},
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.LOCKED,
+          },
+          navigationContext: { appPages: SAMPLE_PAGES },
+        }
+      )
+
+      // Button must not be in the DOM at all — locked desktop sidebar cannot be collapsed
+      expect(
+        screen.queryByTestId("stSidebarCollapseButton")
+      ).not.toBeInTheDocument()
+
+      // Confirm it also stays absent after hover (no interaction can reveal it)
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+      expect(
+        screen.queryByTestId("stSidebarCollapseButton")
+      ).not.toBeInTheDocument()
+    })
+
+    it("shows the collapse button on mobile even when sidebar is locked", async () => {
+      // Set a mobile viewport before rendering so the WindowDimensionsProvider's
+      // useLayoutEffect measures it on mount and the component renders with innerWidth=500.
+      Object.defineProperty(window, "innerWidth", {
+        value: 500,
+        writable: true,
+        configurable: true,
+      })
+      const user = userEvent.setup()
+      renderSidebar(
+        {},
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.LOCKED,
+          },
+          navigationContext: { appPages: SAMPLE_PAGES },
+        }
+      )
+
+      // Button must be present — lock degrades on mobile so users aren't trapped
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+      expect(screen.getByTestId("stSidebarCollapseButton")).toBeInTheDocument()
+
+      // Restore desktop viewport
+      Object.defineProperty(window, "innerWidth", {
+        value: 1024,
+        writable: true,
+        configurable: true,
+      })
     })
   })
 
@@ -438,7 +501,7 @@ describe("Sidebar Component", () => {
       expect(sidebarLogo).toBeInTheDocument()
 
       // Trigger the onerror event for the logo
-      fireEvent.error(sidebarLogo)
+      sidebarLogo.dispatchEvent(new Event("error"))
 
       expect(sendClientErrorToHost).toHaveBeenCalledWith(
         "Sidebar Logo",
@@ -458,7 +521,7 @@ describe("Sidebar Component", () => {
       renderSidebar()
 
       const sidebar = screen.getByTestId("stSidebar")
-      expect(sidebar).toHaveStyle("width: 300px")
+      expect(sidebar).toHaveStyle(`width: ${defaultWidthPx}px`)
     })
 
     it("should initialize with saved width when localStorage value exists", () => {
@@ -482,7 +545,7 @@ describe("Sidebar Component", () => {
           description: "uses default when no cached and no initial",
           cached: null,
           initial: undefined,
-          expected: "300px",
+          expected: `${defaultWidthPx}px`,
         },
         {
           description: "uses cached when cached exists",
@@ -524,10 +587,22 @@ describe("Sidebar Component", () => {
 
     describe("Width Clamping", () => {
       it.each([
-        { initial: 150, expected: "200px", description: "clamps to minimum" },
-        { initial: 800, expected: "600px", description: "clamps to maximum" },
+        {
+          initial: 150,
+          expected: `${minWidthPx}px`,
+          description: "clamps to minimum",
+        },
+        {
+          initial: 800,
+          expected: `${maxWidthPx}px`,
+          description: "clamps to maximum",
+        },
         { initial: 400, expected: "400px", description: "uses value as-is" },
-        { initial: NaN, expected: "300px", description: "handles NaN" },
+        {
+          initial: Number.NaN,
+          expected: `${defaultWidthPx}px`,
+          description: "handles NaN",
+        },
       ])("$description", ({ initial, expected }) => {
         renderSidebar(
           {},
@@ -544,12 +619,12 @@ describe("Sidebar Component", () => {
       it.each([
         {
           cached: "1000",
-          expected: "600px",
+          expected: `${maxWidthPx}px`,
           description: "clamps cached value exceeding maximum",
         },
         {
           cached: "100",
-          expected: "200px",
+          expected: `${minWidthPx}px`,
           description: "clamps cached value below minimum",
         },
         {
@@ -558,18 +633,18 @@ describe("Sidebar Component", () => {
           description: "uses cached value within valid range",
         },
         {
-          cached: "200",
-          expected: "200px",
+          cached: String(minWidthPx),
+          expected: `${minWidthPx}px`,
           description: "uses cached value at minimum boundary",
         },
         {
-          cached: "600",
-          expected: "600px",
+          cached: String(maxWidthPx),
+          expected: `${maxWidthPx}px`,
           description: "uses cached value at maximum boundary",
         },
         {
           cached: "invalid",
-          expected: "300px",
+          expected: `${defaultWidthPx}px`,
           description: "falls back to default when cached value is invalid",
         },
       ])("$description", ({ cached, expected }) => {
@@ -599,7 +674,8 @@ describe("Sidebar Component", () => {
       mockWindowDimensions.innerWidth = 1024
     })
 
-    it("does not collapse sidebar when clicking outside on desktop viewport", () => {
+    it("does not collapse sidebar when clicking outside on desktop viewport", async () => {
+      const user = userEvent.setup()
       // Temporarily set to desktop viewport
       mockWindowDimensions.innerWidth = 1024
 
@@ -612,13 +688,13 @@ describe("Sidebar Component", () => {
 
       // Click on main app area - should NOT collapse on desktop
       const mainApp = screen.getByTestId("stApp")
-      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
-      fireEvent.mouseDown(mainApp)
+      await user.pointer({ target: mainApp, keys: "[MouseLeft]" })
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
     })
 
-    it("does not collapse sidebar when clicking inside sidebar", () => {
+    it("does not collapse sidebar when clicking inside sidebar", async () => {
+      const user = userEvent.setup()
       const mockOnToggleCollapse = vi.fn()
 
       renderSidebar({
@@ -627,8 +703,10 @@ describe("Sidebar Component", () => {
       })
 
       // Click inside sidebar
-      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
-      fireEvent.mouseDown(screen.getByTestId("stSidebarContent"))
+      await user.pointer({
+        target: screen.getByTestId("stSidebarContent"),
+        keys: "[MouseLeft]",
+      })
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
     })
@@ -639,7 +717,8 @@ describe("Sidebar Component", () => {
     // renderWithContexts. The critical behavior (NOT collapsing on portaled elements like
     // dropdowns) is validated by the negative tests below.
 
-    it("does not collapse sidebar when clicking outside the main app container (portaled elements)", () => {
+    it("does not collapse sidebar when clicking outside the main app container (portaled elements)", async () => {
+      const user = userEvent.setup()
       const mockOnToggleCollapse = vi.fn()
 
       renderSidebar({
@@ -653,13 +732,13 @@ describe("Sidebar Component", () => {
       document.body.appendChild(portalElement)
 
       // Click on element outside the main app container - should NOT collapse
-      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
-      fireEvent.mouseDown(portalElement)
+      await user.pointer({ target: portalElement, keys: "[MouseLeft]" })
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
     })
 
-    it("does not collapse when sidebar is already collapsed", () => {
+    it("does not collapse when sidebar is already collapsed", async () => {
+      const user = userEvent.setup()
       const mockOnToggleCollapse = vi.fn()
 
       renderSidebar({
@@ -669,10 +748,45 @@ describe("Sidebar Component", () => {
 
       // Click on main app area
       const mainApp = screen.getByTestId("stApp")
-      // eslint-disable-next-line testing-library/prefer-user-event -- testing mousedown event handler directly, not general click behavior
-      fireEvent.mouseDown(mainApp)
+      await user.pointer({ target: mainApp, keys: "[MouseLeft]" })
 
       expect(mockOnToggleCollapse).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("Resize handle", () => {
+    beforeEach(() => {
+      window.localStorage.clear()
+    })
+
+    it("resets to the default width on double-click and persists it", async () => {
+      const user = userEvent.setup()
+      window.localStorage.setItem("sidebarWidth", "450")
+      renderSidebar()
+
+      expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 450px")
+
+      await user.dblClick(screen.getByTestId("stSidebarResizeHandle"))
+
+      expect(screen.getByTestId("stSidebar")).toHaveStyle(
+        `width: ${defaultWidthPx}px`
+      )
+      expect(window.localStorage.getItem("sidebarWidth")).toBe(
+        String(defaultWidthPx)
+      )
+    })
+
+    it("resets to the configured initial width on double-click", async () => {
+      const user = userEvent.setup()
+      window.localStorage.setItem("sidebarWidth", "500")
+      renderSidebar({}, { sidebarConfigContext: { initialSidebarWidth: 400 } })
+
+      expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 500px")
+
+      await user.dblClick(screen.getByTestId("stSidebarResizeHandle"))
+
+      expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 400px")
+      expect(window.localStorage.getItem("sidebarWidth")).toBe("400")
     })
   })
 })

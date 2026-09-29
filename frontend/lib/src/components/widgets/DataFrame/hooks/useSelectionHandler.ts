@@ -16,12 +16,15 @@
 
 import { useCallback, useState } from "react"
 
-import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
+import {
+  CompactSelection,
+  type GridSelection,
+} from "@glideapps/glide-data-grid"
 import { isEqual } from "lodash-es"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 
 type SelectionHandlerReturn = {
   // The current selection state
@@ -53,6 +56,7 @@ type SelectionHandlerReturn = {
     newSelection: GridSelection,
     options?: {
       shouldSync?: boolean
+      forceSync?: boolean
     }
   ) => void
 }
@@ -142,9 +146,17 @@ function useSelectionHandler(
       newSelection: GridSelection,
       options: {
         shouldSync?: boolean
+        forceSync?: boolean
       } = {}
     ) => {
-      const { shouldSync = true } = options
+      // forceSync bypasses the display-selection change detection below and
+      // always syncs (as long as shouldSync is true). This is required for the
+      // post-sort remap: a pending debounced sync may have been cancelled, so
+      // the widget state can be stale even when the display selection is
+      // unchanged. The lower-level sync (createSyncSelectionState) still
+      // deduplicates against the serialized widget value, so this does not
+      // cause spurious reruns when the underlying selection is unchanged.
+      const { shouldSync = true, forceSync = false } = options
       const rowSelectionChanged = !isEqual(
         newSelection.rows.toArray(),
         gridSelection.rows.toArray()
@@ -163,7 +175,8 @@ function useSelectionHandler(
       // A flag to determine if the selection should be synced with the widget state
       const syncSelection =
         shouldSync &&
-        ((isRowSelectionActivated && rowSelectionChanged) ||
+        (forceSync ||
+          (isRowSelectionActivated && rowSelectionChanged) ||
           (isColumnSelectionActivated && columnSelectionChanged) ||
           (isCellSelectionActivated && cellSelectionChanged))
 
@@ -207,10 +220,12 @@ function useSelectionHandler(
       setGridSelection(updatedSelection)
 
       // Sync if there are actual changes to sync. When row clearing is prevented,
-      // we still need to sync if column or cell selection changed.
+      // we still need to sync if column or cell selection changed (or when the
+      // caller forces a sync).
       const actualSyncNeeded =
         syncSelection &&
-        (!rowSelectionPrevented ||
+        (forceSync ||
+          !rowSelectionPrevented ||
           columnSelectionChanged ||
           cellSelectionChanged)
       if (actualSyncNeeded) {

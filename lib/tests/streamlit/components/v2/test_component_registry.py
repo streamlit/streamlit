@@ -31,7 +31,10 @@ from streamlit.components.v2.component_registry import (
     BidiComponentRegistry,
 )
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
-from streamlit.errors import StreamlitAPIException, StreamlitComponentRegistryError
+from streamlit.errors import (
+    StreamlitComponentRegistryError,
+    StreamlitInvalidParameterTypeError,
+)
 
 
 def _mk_file(path: os.PathLike[str] | str, content: bytes | str = b"x") -> str:
@@ -312,6 +315,38 @@ def test_update_component_raises_for_unregistered_definition() -> None:
         reg.update_component(d)
 
 
+def test_definition_raises_for_nonexistent_absolute_path(tmp_path: Path) -> None:
+    """Verify the definition raises ValueError when an absolute file path does not exist."""
+    missing_path = os.fspath(tmp_path / "does_not_exist.js")
+    with pytest.raises(ValueError, match=r"^File does not exist:"):
+        BidiComponentDefinition(name="c", js=missing_path)
+
+
+def test_register_components_from_definitions_missing_name_raises() -> None:
+    """Verify register_components_from_definitions raises on missing name field."""
+    reg = BidiComponentRegistry()
+    with pytest.raises(ValueError, match="missing required 'name' field"):
+        reg.register_components_from_definitions({"comp_key": {"html": "<div/>"}})
+
+
+def test_unregister_removes_component() -> None:
+    """Verify unregister removes a registered component from the registry."""
+    reg = BidiComponentRegistry()
+    definition = BidiComponentDefinition(name="comp", html="<div/>")
+    reg.register(definition)
+    assert reg.get("comp") is not None
+
+    reg.unregister("comp")
+    assert reg.get("comp") is None
+
+
+def test_unregister_missing_component_is_noop() -> None:
+    """Verify unregister silently handles a missing component name."""
+    reg = BidiComponentRegistry()
+    reg.unregister("never_registered")
+    assert reg.get("never_registered") is None
+
+
 @pytest.fixture
 def temp_test_files() -> dict:
     """Create a temporary directory with test files for definition tests."""
@@ -447,23 +482,23 @@ def test_public_api_path_object_rejection() -> None:
     """Verify the public API rejects non-string path-like objects."""
     from pathlib import Path
 
-    with pytest.raises(StreamlitAPIException) as exc_info:
+    with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
         component("test", js=Path("test.js"))
     msg = str(exc_info.value)
-    assert "string or None" in msg
+    assert "Expected one of: str, None" in msg
     assert "string path or glob" in msg
 
-    with pytest.raises(StreamlitAPIException) as exc_info:
+    with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
         component("test", css=Path("test.css"))
     msg = str(exc_info.value)
-    assert "string or None" in msg
+    assert "Expected one of: str, None" in msg
     assert "string path or glob" in msg
 
     # Still raise for other invalid types
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitInvalidParameterTypeError):
         component("test", js=123)  # Integer instead of string/Path
 
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitInvalidParameterTypeError):
         component("test", css=["invalid", "list"])  # List instead of string/Path
 
 
@@ -764,7 +799,7 @@ def test_resolve_glob_pattern_direct() -> None:
 
         # Test successful resolution
         resolved = ComponentPathUtils.resolve_glob_pattern("test-*.js", package_root)
-        assert str(resolved.resolve()) == Path(test_file).resolve().as_posix()
+        assert resolved.resolve() == Path(test_file).resolve()
 
         # Test no matches
         with pytest.raises(StreamlitComponentRegistryError) as exc_info:

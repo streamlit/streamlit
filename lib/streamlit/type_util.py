@@ -219,11 +219,19 @@ def is_keras_model(obj: object) -> bool:
 
 # We use a regex here to allow potential changes in the module path in the future.
 _OPENAI_CHUNK_RE: Final = re.compile(r"^openai\..+\.ChatCompletionChunk$")
+# Only anchor to the `openai` package and the `Response...Event` class name so
+# detection survives potential future restructuring of the intermediate module path.
+_OPENAI_RESPONSE_EVENT_RE: Final = re.compile(r"^openai\..+\.Response.+Event$")
 
 
 def is_openai_chunk(obj: object) -> bool:
     """True if input looks like an OpenAI chat completion chunk."""
     return is_type(obj, _OPENAI_CHUNK_RE)
+
+
+def is_openai_response_event(obj: object) -> bool:
+    """True if input looks like an OpenAI Responses API stream event."""
+    return is_type(obj, _OPENAI_RESPONSE_EVENT_RE)
 
 
 def is_plotly_chart(obj: object) -> TypeGuard[Figure | list[Any] | dict[str, Any]]:
@@ -444,7 +452,8 @@ def check_python_comparable(seq: Sequence[Any]) -> None:
             "Invalid option type provided. Options must be comparable, returning a "
             f"boolean when used with *==*. \n\nGot **{type(seq[0]).__name__}**, "
             "which cannot be compared. Refactor your code to use elements of "
-            "comparable types as options, e.g. use indices instead."
+            "comparable types as options, e.g. use indices instead.",
+            error_id="incomparable-select-options",
         )
 
 

@@ -25,6 +25,23 @@ config.set_option("server.maxUploadSize", 1)
 # If no key is specified, show all chat inputs
 key = st.query_params.get("key")
 
+if key == "initial_scroll":
+    st.title("Dashboard heading")
+
+    if st.query_params.get("messages") == "true":
+        for number in range(30):
+            with st.chat_message("assistant"):
+                st.write(f"Transcript message {number}")
+    else:
+        for number in range(30):
+            st.write(f"Dashboard row {number}")
+
+    if st.query_params.get("placement") == "automatic":
+        st.chat_input("Ask about the dashboard", key="initial_scroll")
+    else:
+        with st.bottom:
+            st.chat_input("Ask about the dashboard", key="initial_scroll")
+
 if key is None or key == "inline":
     inline_value = st.container().chat_input("Chat input (inline)", key="inline")
     st.write("inline - value:", inline_value)
@@ -317,3 +334,46 @@ if key is None or key == "audio_sample_rate":
 
             # Play the audio
             st.audio(audio_sample_rate_value.audio)
+
+if key is None or key == "submit_mode_disable":
+    import time
+
+    submit_mode_disable_value = st.container().chat_input(
+        "Chat input (submit_mode=disable)",
+        submit_mode="disable",
+        key="submit_mode_disable",
+    )
+    if submit_mode_disable_value:
+        st.write(f"submit_mode_disable - value: {submit_mode_disable_value}")
+        time.sleep(2)
+        st.write("submit_mode_disable - processing complete")
+
+if key is None or key == "submit_mode_stop":
+    import time
+
+    submit_mode_stop_value = st.container().chat_input(
+        "Chat input (submit_mode=stop)",
+        submit_mode="stop",
+        key="submit_mode_stop",
+    )
+    if submit_mode_stop_value:
+        st.write(f"submit_mode_stop - value: {submit_mode_stop_value}")
+        time.sleep(5)
+        st.write("submit_mode_stop - processing complete")
+
+if key is None or key == "submit_mode_fragment":
+    import time
+
+    @st.fragment
+    def submit_mode_fragment():
+        fragment_value = st.chat_input(
+            "Chat input (submit_mode=disable in fragment)",
+            submit_mode="disable",
+            key="submit_mode_fragment",
+        )
+        if fragment_value:
+            st.write(f"submit_mode_fragment - value: {fragment_value}")
+            time.sleep(2)
+            st.write("submit_mode_fragment - processing complete")
+
+    submit_mode_fragment()

@@ -31,25 +31,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Set Python version vars
-        uses: ./.github/actions/build_info
-
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-
-      - name: Install Python deps for release automation
-        run: |
-          uv pip install --system packaging semver requests
+      # Sync before checking out the base tag. The selected tag may predate
+      # this automation group, so later Python commands use --no-sync.
+      - name: Setup Python automation environment
+        uses: ./.github/actions/setup_automation
 
       - name: Configure Git
         env:
@@ -127,6 +117,16 @@ jobs:
         run: |
           git fetch --prune --tags --force origin
 
+      # Save the current (develop) release script before checking out the base
+      # tag. The base tag may predate the uv.lock migration, so its historical
+      # copy of create_release_branch.sh would lack the `uv lock` / `git add
+      # uv.lock` steps. Running the preserved copy guarantees the patch branch
+      # always gets a freshly generated lock.
+      - name: Preserve current release script
+        run: |
+          set -euo pipefail
+          cp scripts/create_release_branch.sh "${RUNNER_TEMP}/create_release_branch.sh"
+
       - name: Checkout base tag (detached HEAD)
         env:
           BASE_TAG: ${{ inputs.base_tag }}
@@ -141,11 +141,11 @@ jobs:
           PATCH_VERSION: ${{ inputs.patch_version }}
         run: |
           set -euo pipefail
-          chmod +x scripts/create_release_branch.sh
+          chmod +x "${RUNNER_TEMP}/create_release_branch.sh"
           if [ "$DRY_RUN" = "true" ]; then
-            echo "[DRY RUN] Would run: ./scripts/create_release_branch.sh $PATCH_VERSION"
+            echo "[DRY RUN] Would run: scripts/create_release_branch.sh $PATCH_VERSION"
           else
-            bash scripts/create_release_branch.sh "$PATCH_VERSION"
+            bash "${RUNNER_TEMP}/create_release_branch.sh" "$PATCH_VERSION"
           fi
 
       - name: Write step summary
@@ -175,4 +175,4 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RELEASE_BASE_REF: ${{ inputs.base_tag }}
         run: |
-          python scripts/slack_notifications.py release_automation branch_created
+          uv run --no-sync python scripts/slack_notifications.py release_automation branch_created

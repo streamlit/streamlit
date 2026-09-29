@@ -9,7 +9,7 @@ Custom Components **v1 is legacy and superseded by v2**. The `st.components.v1` 
 
 **Banned Python APIs (v1 — do not use for new components):**
 - `components.declare_component()` — v1 registration; use `st.components.v2.component()` instead
-- `components.v1.html()` — deprecated; use `st.iframe()` instead
+- `components.v1.html()` — deprecated; use `st.iframe()` for the same iframe-based behavior, or `st.html()` to insert static HTML/CSS directly into the app
 - `components.v1.iframe()` — deprecated; use `st.iframe()` instead
 
 **Banned JavaScript patterns (v1):**
@@ -163,7 +163,9 @@ result = my_text_input(
     key=KEY,
     data={"value": value},
     on_value_change=lambda: None,  # optional; include to always get `result.value`
-    on_submitted_change=lambda: None,  # optional; include to always get `result.submitted`
+    on_submitted_change=lambda: (
+        None
+    ),  # optional; include to always get `result.submitted`
 )
 
 st.write("value (state):", result.value)

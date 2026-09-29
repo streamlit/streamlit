@@ -24,7 +24,6 @@ from streamlit import config
 from streamlit.elements.lib.policies import (
     check_cache_replay_rules,
     check_callback_rules,
-    check_fragment_path_policy,
     check_session_state_rules,
     check_widget_policies,
 )
@@ -33,7 +32,6 @@ from streamlit.errors import (
     StreamlitValueAssignmentNotAllowedError,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    ThreadState,
     in_cached_function,
 )
 
@@ -124,8 +122,14 @@ class CheckSessionStateRules(ElementPoliciesTest):
         mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        with pytest.raises(StreamlitValueAssignmentNotAllowedError):
+        with pytest.raises(StreamlitValueAssignmentNotAllowedError) as e:
             check_session_state_rules(5, key=_KEY, writes_allowed=False)
+
+        message = str(e.value)
+        assert f"`st.session_state[{_KEY!r}]`" in message
+        assert f"st.session_state.{_KEY}" not in message
+        assert "different session state key" in message
+        assert "event widget" not in message.lower()
 
 
 class SpecialSessionStatesTest(ElementPoliciesTest):
@@ -187,80 +191,24 @@ class CheckCacheReplayTest(ElementPoliciesTest):
         patched_st_exception.assert_not_called()
 
     @patch("streamlit.exception")
-    def test_cache_replay_rules_fails(self, patched_st_exception):
+    @patch("streamlit.elements.lib.policies._LOGGER")
+    def test_cache_replay_rules_fails(self, patched_logger, patched_st_exception):
         in_cached_function.set(True)
         check_cache_replay_rules()
         patched_st_exception.assert_called()
+        patched_logger.warning.assert_called_once()
+        _, kwargs = patched_logger.warning.call_args
+        assert kwargs.get("stack_info") is True
         # Reset the global flag to avoid affecting other tests
         in_cached_function.set(False)
-
-
-class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
-    def setUp(self):
-        ctx = MagicMock()
-        ThreadState.initialize(
-            fragment_id="my_fragment_id",
-            delta_path=(0, 1, 2),
-        )
-        self.ctx = ctx
-
-    @patch("streamlit.elements.lib.policies.get_script_run_ctx")
-    def test_when_element_delta_path_length_is_smaller_than_parent_then_raise(
-        self, patched_get_script_run_ctx: MagicMock
-    ):
-        patched_get_script_run_ctx.return_value = self.ctx
-        dg = MagicMock()
-        dg._active_dg._cursor = MagicMock()
-        dg._active_dg._cursor.delta_path = [0, 1]
-        with pytest.raises(StreamlitAPIException):
-            check_fragment_path_policy(dg)
-
-    @patch("streamlit.elements.lib.policies.get_script_run_ctx")
-    def test_when_element_delta_path_is_not_in_parent_delta_path_then_raise(
-        self, patched_get_script_run_ctx: MagicMock
-    ):
-        patched_get_script_run_ctx.return_value = self.ctx
-        dg = MagicMock()
-        dg._active_dg._cursor = MagicMock()
-        dg._active_dg._cursor.delta_path = [0, 2, 0]
-        with pytest.raises(StreamlitAPIException):
-            check_fragment_path_policy(dg)
-
-    @patch("streamlit.elements.lib.policies.get_script_run_ctx")
-    def test_when_element_delta_path_is_in_parent_delta_path_then_dont_raise(
-        self, patched_get_script_run_ctx: MagicMock
-    ):
-        patched_get_script_run_ctx.return_value = self.ctx
-        dg = MagicMock()
-        dg._active_dg._cursor = MagicMock()
-        dg._active_dg._cursor.delta_path = [0, 1, 2, 0]
-        check_fragment_path_policy(dg)
-
-    @patch("streamlit.elements.lib.policies.get_script_run_ctx")
-    def test_when_fragment_id_set_but_delta_path_is_none_then_dont_raise(
-        self, patched_get_script_run_ctx: MagicMock
-    ):
-        """``check_fragment_path_policy`` must not raise when ``delta_path``
-        is ``None`` — the brief window between entering
-        ``ThreadState.scoped(fragment_id=...)`` and the subsequent
-        ``ThreadState.update(delta_path=...)`` inside the fragment wrapper.
-        """
-        patched_get_script_run_ctx.return_value = self.ctx
-        ThreadState.update(delta_path=None)
-        dg = MagicMock()
-        dg._active_dg._cursor = MagicMock()
-        dg._active_dg._cursor.delta_path = [0, 1, 2, 0]
-        check_fragment_path_policy(dg)
 
 
 @patch("streamlit.elements.lib.policies.check_session_state_rules")
 @patch("streamlit.elements.lib.policies.check_callback_rules")
 @patch("streamlit.elements.lib.policies.check_cache_replay_rules")
-@patch("streamlit.elements.lib.policies.check_fragment_path_policy")
 class CheckWidget(ElementPoliciesTest):
     def test_all_relevant_policies_are_called(
         self,
-        patched_check_fragment_path_policy,
         patched_check_cache_replay_rules,
         patched_check_callback_rules,
         patched_check_session_state_rules,
@@ -272,7 +220,6 @@ class CheckWidget(ElementPoliciesTest):
         key = "my_key"
         default_value = 5
         check_widget_policies(dg, key, on_change, default_value=default_value)
-        patched_check_fragment_path_policy.assert_called_once()
         patched_check_cache_replay_rules.assert_called_once()
         patched_check_callback_rules.assert_called_once_with(dg, on_change)
         patched_check_session_state_rules.assert_called_once_with(
@@ -281,7 +228,6 @@ class CheckWidget(ElementPoliciesTest):
 
     def test_check_callback_rules_is_not_called(
         self,
-        patched_check_fragment_path_policy,
         patched_check_cache_replay_rules,
         patched_check_callback_rules,
         patched_check_session_state_rules,
@@ -289,14 +235,12 @@ class CheckWidget(ElementPoliciesTest):
         check_widget_policies(
             MagicMock(), None, None, enable_check_callback_rules=False
         )
-        patched_check_fragment_path_policy.assert_called_once()
         patched_check_cache_replay_rules.assert_called_once()
         patched_check_callback_rules.assert_not_called()
         patched_check_session_state_rules.assert_called_once()
 
     def test_writes_allowed_can_be_disabled(
         self,
-        patched_check_fragment_path_policy,
         patched_check_cache_replay_rules,
         patched_check_callback_rules,
         patched_check_session_state_rules,
@@ -304,7 +248,6 @@ class CheckWidget(ElementPoliciesTest):
         dg = MagicMock()
         key = "my_key"
         check_widget_policies(dg, key, None, writes_allowed=False)
-        patched_check_fragment_path_policy.assert_called_once()
         patched_check_cache_replay_rules.assert_called_once()
         patched_check_callback_rules.assert_called_once()
         patched_check_session_state_rules.assert_called_once_with(

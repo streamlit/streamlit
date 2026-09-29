@@ -57,7 +57,11 @@ MULTI_SELECTION = (
 
 FIRST_POINT_COORDS: Position = {"x": 344.0, "y": 201.0}
 SECOND_POINT_COORDS: Position = {"x": 417.0, "y": 229.0}
-DESELECT_COORDS: Position = {"x": 0.0, "y": 0.0}
+# A spot on the map that holds no object in any layer. Kept inset from the
+# top-left corner because the chart is laid out at a fractional y offset, and
+# Chromium 151+ hit-tests points within ~1px of that edge to the wrapper div
+# instead of deck.gl's view div, so a click at (0, 0) never reaches the chart.
+DESELECT_COORDS: Position = {"x": 20.0, "y": 20.0}
 SCATTERPLOT_POINT_COORDS: Position = {"x": 279.0, "y": 331.0}
 # Coordinates for the form test (slightly different from FIRST_POINT_COORDS)
 FORM_POINT_COORDS: Position = {"x": 326.0, "y": 208.0}
@@ -84,8 +88,10 @@ def _select_chart_type(app: Page, chart_type: str):
 def _set_selection_mode(app: Page, mode: Literal["single-object", "multi-object"]):
     """Set the selection mode for the PyDeck chart."""
     app.get_by_test_id("stSelectbox").nth(0).locator("input").click()
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.locator("li").nth(1 if mode == "multi-object" else 0).click()
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    selection_dropdown.get_by_role("option").nth(
+        1 if mode == "multi-object" else 0
+    ).click()
 
     # click elsewhere to close the dropdown
     app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})

@@ -101,6 +101,9 @@ def is_url(
 
     except ValueError:
         return False
+    # Fallback for schemes accepted by allowed_schemas but not in our
+    # known scheme-handling branches above (e.g. off-spec callers passing
+    # a scheme outside the UrlSchema literal type).
     return False
 
 

@@ -77,8 +77,17 @@ const MOCK_COLUMNS: BaseColumn[] = [
   }),
 ]
 
+// Checkbox columns render their own missing-value state, so the placeholder
+// path is skipped. drawCell only branches on `column.kind`, so we reuse a real
+// column and override its kind to one of the excluded kinds.
+const MOCK_EXCLUDED_COLUMN = {
+  ...MOCK_COLUMNS[1],
+  kind: "checkbox",
+} as BaseColumn
+
 const MOCK_THEME: Partial<GlideTheme> = {
   cellHorizontalPadding: 8,
+  cellVerticalPadding: 3,
   accentColor: "#ff0000",
   textDark: "#000000",
   textLight: "#888888",
@@ -96,12 +105,29 @@ const createMockCanvasContext = (): CanvasRenderingContext2D => {
     moveTo: vi.fn(),
     lineTo: vi.fn(),
     fill: vi.fn(),
+    fillText: vi.fn(),
+    rect: vi.fn(),
+    clip: vi.fn(),
+    // drawTextCell (used by the missing-value placeholder) needs measureText
+    // to return real font metrics to compute the vertical text bias.
+    measureText: vi.fn((text: string) => ({
+      width: (text?.length ?? 0) * 8,
+      actualBoundingBoxAscent: 8,
+      actualBoundingBoxDescent: 2,
+    })),
     fillStyle: "",
   } as unknown as CanvasRenderingContext2D
 }
 
-// Note: drawMissingPlaceholder is not unit-testable because it requires
-// a complete canvas context with measureText. Coverage is via E2E tests.
+/** Builds a missing-value grid cell of the given kind for drawCell tests. */
+const createMissingCell = (kind: GridCellKind): object => ({
+  kind,
+  data: undefined,
+  displayData: "",
+  allowOverlay: true,
+  contentAlign: "left",
+  isMissingValue: true,
+})
 
 describe("useCustomRenderer hook", () => {
   it("returns correct initial state", () => {
@@ -181,13 +207,147 @@ describe("useCustomRenderer hook", () => {
       expect(drawMock).toHaveBeenCalled()
     })
 
-    it("accepts custom missing placeholder parameter without error", () => {
-      const customPlaceholder = "N/A"
-      // Verify hook initializes successfully with custom placeholder
-      // Full rendering behavior is covered by E2E tests
-      expect(() => {
-        renderHook(() => useCustomRenderer(MOCK_COLUMNS, customPlaceholder))
-      }).not.toThrow()
+    it("draws a faded placeholder for missing values of non-excluded columns", () => {
+      const { result } = renderHook(() => {
+        return useCustomRenderer(MOCK_COLUMNS)
+      })
+
+      const drawMock = vi.fn()
+      const ctx = createMockCanvasContext()
+
+      const args = {
+        // column_2 (index 1) is a non-required text column.
+        cell: createMissingCell(GridCellKind.Text),
+        theme: MOCK_THEME as GlideTheme,
+        ctx,
+        rect: { x: 0, y: 0, width: 100, height: 35 },
+        col: 1,
+        row: 0,
+      }
+
+      result.current.drawCell?.(args as never, drawMock)
+
+      // The placeholder text is rendered instead of the cell's own content.
+      expect(ctx.fillText).toHaveBeenCalledWith(
+        "None",
+        expect.any(Number),
+        expect.any(Number)
+      )
+      // A non-required column must not get the red required indicator...
+      expect(ctx.fill).not.toHaveBeenCalled()
+      // ...and the default draw() must be skipped for placeholder cells.
+      expect(drawMock).not.toHaveBeenCalled()
+    })
+
+    it("uses a custom missing placeholder token when provided", () => {
+      const { result } = renderHook(() => {
+        return useCustomRenderer(MOCK_COLUMNS, "N/A")
+      })
+
+      const drawMock = vi.fn()
+      const ctx = createMockCanvasContext()
+
+      const args = {
+        cell: createMissingCell(GridCellKind.Text),
+        theme: MOCK_THEME as GlideTheme,
+        ctx,
+        rect: { x: 0, y: 0, width: 100, height: 35 },
+        col: 1,
+        row: 0,
+      }
+
+      result.current.drawCell?.(args as never, drawMock)
+
+      expect(ctx.fillText).toHaveBeenCalledWith(
+        "N/A",
+        expect.any(Number),
+        expect.any(Number)
+      )
+      expect(ctx.fillText).not.toHaveBeenCalledWith(
+        "None",
+        expect.any(Number),
+        expect.any(Number)
+      )
+    })
+
+    it("draws the required indicator for missing values of required editable columns", () => {
+      const { result } = renderHook(() => {
+        return useCustomRenderer(MOCK_COLUMNS)
+      })
+
+      const drawMock = vi.fn()
+      const ctx = createMockCanvasContext()
+
+      const args = {
+        // column_1 (index 0) is a required + editable number column.
+        cell: createMissingCell(GridCellKind.Number),
+        theme: MOCK_THEME as GlideTheme,
+        ctx,
+        rect: { x: 0, y: 0, width: 100, height: 35 },
+        col: 0,
+        row: 0,
+      }
+
+      result.current.drawCell?.(args as never, drawMock)
+
+      // Placeholder is still drawn...
+      expect(ctx.fillText).toHaveBeenCalledWith(
+        "None",
+        expect.any(Number),
+        expect.any(Number)
+      )
+      // ...plus the red attention indicator triangle (uses fill()).
+      expect(ctx.fill).toHaveBeenCalled()
+      expect(drawMock).not.toHaveBeenCalled()
+    })
+
+    it("delegates missing-value rendering to the cell for excluded column kinds", () => {
+      const { result } = renderHook(() => {
+        return useCustomRenderer([MOCK_EXCLUDED_COLUMN])
+      })
+
+      const drawMock = vi.fn()
+      const ctx = createMockCanvasContext()
+
+      const args = {
+        cell: createMissingCell(GridCellKind.Boolean),
+        theme: MOCK_THEME as GlideTheme,
+        ctx,
+        rect: { x: 0, y: 0, width: 100, height: 35 },
+        col: 0,
+        row: 0,
+      }
+
+      result.current.drawCell?.(args as never, drawMock)
+
+      // Checkbox columns render their own missing state, so draw() is used...
+      expect(drawMock).toHaveBeenCalled()
+      // ...and no faded placeholder text is drawn.
+      expect(ctx.fillText).not.toHaveBeenCalled()
+    })
+
+    it("does not draw a placeholder when the column index is out of range", () => {
+      const { result } = renderHook(() => {
+        return useCustomRenderer(MOCK_COLUMNS)
+      })
+
+      const drawMock = vi.fn()
+      const ctx = createMockCanvasContext()
+
+      const args = {
+        cell: createMissingCell(GridCellKind.Text),
+        theme: MOCK_THEME as GlideTheme,
+        ctx,
+        rect: { x: 0, y: 0, width: 100, height: 35 },
+        // Out-of-range column index -> falls through to the default draw().
+        col: 99,
+        row: 0,
+      }
+
+      result.current.drawCell?.(args as never, drawMock)
+
+      expect(drawMock).toHaveBeenCalled()
+      expect(ctx.fillText).not.toHaveBeenCalled()
     })
   })
 })

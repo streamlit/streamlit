@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useEffect,
   useMemo,
   useRef,
@@ -27,16 +27,15 @@ import { getLogger } from "loglevel"
 import queryString from "query-string"
 import { flushSync } from "react-dom"
 
-import {
+import type {
   ComponentInstance as ComponentInstanceProto,
-  ISpecialArg,
-  Skeleton as SkeletonProto,
+  SpecialArg,
 } from "@streamlit/protobuf"
 import { StreamlitConfig } from "@streamlit/utils"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
-import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
 import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -48,14 +47,14 @@ import {
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "~lib/util/IFrameUtil"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { ComponentRegistry } from "./ComponentRegistry"
+import type { ComponentRegistry } from "./ComponentRegistry"
 import {
-  Args,
+  type Args,
   createIframeMessageHandler,
-  DataframeArg,
-  IframeMessageHandlerProps,
+  type DataframeArg,
+  type IframeMessageHandlerProps,
   parseArgs,
   sendRenderMessage,
 } from "./componentUtils"
@@ -138,7 +137,7 @@ function getWarnMessage(componentName: string, url?: string): string {
 
 function tryParseArgs(
   jsonArgs: string,
-  specialArgs: ISpecialArg[],
+  specialArgs: SpecialArg.$Properties[],
   setComponentError: (e: Error) => void,
   componentError?: Error
 ): [newArgs: Args, dataframeArgs: DataframeArg[]] {
@@ -227,13 +226,19 @@ function ComponentInstance(props: Props): ReactElement {
   parsedArgsRef.current.dataframeArgs = parsedDataframeArgs
 
   const [isReadyTimeout, setIsReadyTimeout] = useState<boolean>()
-  // By passing the args.height here, we can derive the initial height for
-  // custom components that define a height property, e.g. in Python
-  // my_custom_component(height=100). undefined means no explicit height
-  // was specified, but will be set to the default height of 0.
+  // Initial iframe height comes from args.height, e.g. my_custom_component(height=100)
+  // or st.pdf, which sends a numeric string. Numbers and numeric strings are used;
+  // "stretch", empty, boolean, and missing values are unspecified and the iframe
+  // falls back to height 0 until setFrameHeight.
   const [frameHeight, setFrameHeight] = useState<number | undefined>(() => {
-    const height = parsedNewArgs.height as number | undefined
-    return height === undefined || isNaN(height) ? undefined : height
+    const height = parsedNewArgs.height
+    const numericHeight =
+      typeof height === "number"
+        ? height
+        : typeof height === "string" && height.trim() !== ""
+          ? Number(height)
+          : Number.NaN
+    return Number.isFinite(numericHeight) ? numericHeight : undefined
   })
 
   // Use a ref for the ready-state so that we can differentiate between sending renderMessages due to props-changes
@@ -411,11 +416,10 @@ function ComponentInstance(props: Props): ReactElement {
     // if height is explicitly set to 0, we don’t want to show the skeleton at all
     frameHeight !== 0 && (
       // Skeletons will have a default height if no frameHeight was specified
-      <Skeleton
-        element={SkeletonProto.create({
-          height: frameHeight,
-          style: SkeletonProto.SkeletonStyle.ELEMENT,
-        })}
+      <SquareSkeleton
+        data-testid="stSkeleton"
+        height={frameHeight ? `${frameHeight}px` : undefined}
+        aria-hidden="true"
       />
     )
 
@@ -436,6 +440,8 @@ function ComponentInstance(props: Props): ReactElement {
   // Without this, there is a potential for a scrollbar to
   // appear for a brief moment after an iframe's content gets bigger,
   // and before it sends the "setFrameHeight" message back to Streamlit.
+  // CSS overflow on the iframe does not reliably disable inner-document
+  // scrolling, so the deprecated scrolling attribute stays.
   //
   // We may ultimately want to give components control over the "scrolling"
   // property.
@@ -456,6 +462,7 @@ function ComponentInstance(props: Props): ReactElement {
         width={width}
         // for undefined height we set the height to 0 to avoid inconsistent behavior
         height={frameHeight ?? 0}
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         scrolling="no"
         sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
         title={componentName}

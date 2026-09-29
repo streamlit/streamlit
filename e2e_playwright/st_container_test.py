@@ -44,9 +44,7 @@ def test_persists_widget_state_across_reruns(app: Page):
     click_button(app, "Step 2: Press me")
 
     expect(app.locator("h2").first).to_have_text("Pressed!")
-    expect(get_checkbox(app, "Step 1: Check me").locator("input")).to_have_attribute(
-        "aria-checked", "true"
-    )
+    expect(get_checkbox(app, "Step 1: Check me").locator("input")).to_be_checked()
 
 
 def test_renders_container_with_border(

@@ -21,7 +21,9 @@ import { SessionInfo } from "./SessionInfo"
 
 it("Throws an error when used before initialization", () => {
   const sessionInfo = new SessionInfo()
-  expect(() => sessionInfo.current).toThrow()
+  expect(() => sessionInfo.current).toThrow(
+    "Tried to use SessionInfo before it was initialized"
+  )
 })
 
 describe("SessionInfo.setCurrent", () => {
@@ -56,6 +58,28 @@ describe("SessionInfo.isHello", () => {
 
     sessionInfo.setCurrent(mockSessionInfoProps({ isHello: false }))
     expect(sessionInfo.isHello).toBe(false)
+  })
+})
+
+describe("SessionInfo.disconnect", () => {
+  it("marks the current session as not connected and preserves prior props as `last`", () => {
+    const sessionInfo = new SessionInfo()
+    sessionInfo.setCurrent(mockSessionInfoProps({ isConnected: true }))
+
+    sessionInfo.disconnect()
+
+    expect(sessionInfo.current.isConnected).toBe(false)
+    expect(sessionInfo.last).toEqual(
+      mockSessionInfoProps({ isConnected: true })
+    )
+  })
+
+  it("is a no-op when there is no current session", () => {
+    const sessionInfo = new SessionInfo()
+    sessionInfo.disconnect()
+
+    expect(sessionInfo.isSet).toBe(false)
+    expect(sessionInfo.last).toBeUndefined()
   })
 })
 

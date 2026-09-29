@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-import { lightThemePrimitives } from "baseui"
-
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
-import { baseuiLightTheme } from "./baseui"
 import emotionBaseTheme from "./emotionBaseTheme"
 import {
   OptionalThemeColors,
@@ -26,7 +23,7 @@ import {
 } from "./emotionBaseTheme/themeColors"
 import { ThemeShadows } from "./getShadows"
 import type { NamedColor } from "./namedColors"
-import { type PrimitiveColors } from "./primitives/colors"
+import type { PrimitiveColors } from "./primitives/colors"
 
 /**
  * Comprehensive type for emotion theme colors.
@@ -65,6 +62,7 @@ export type DerivedColors = {
 
   bgMix: string
   darkenedBgMix100: string
+  darkenedBgMix40: string
   darkenedBgMix25: string
   darkenedBgMix15: string
   lightenedBg05: string
@@ -112,11 +110,6 @@ export type ThemeConfig = {
   // Allows custom themes to still show as "Light", "Dark", or "Use System Setting"
   displayName?: string
   emotion: EmotionTheme
-  // For use with Baseweb's ThemeProvider. This is required in order for us to
-  // create separate themes for in the children. Currently required to accommodate
-  // sidebar theming.
-  basewebTheme: typeof baseuiLightTheme
-  primitives: typeof lightThemePrimitives
   themeInput?: Partial<CustomThemeConfig>
 }
 
@@ -128,6 +121,12 @@ type IconSizes = typeof emotionBaseTheme.iconSizes
 type ThemeSpacings = typeof emotionBaseTheme.spacing
 
 export type IconSize = keyof IconSizes
+
+/**
+ * Icon size token, or `"inherit"` to match the parent font-size (`1em`).
+ * Use inherit for inline contexts such as heading icons.
+ */
+export type IconSizeProp = IconSize | "inherit"
 export type ThemeSpacing = keyof ThemeSpacings
 export type PresetThemeName = "Light" | "Dark"
 

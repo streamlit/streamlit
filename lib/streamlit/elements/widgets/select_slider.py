@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -48,17 +47,21 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitMissingRequiredParameterError
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    OnChangeMode,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
+from streamlit.string_util import to_help_str
 from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
@@ -166,7 +169,7 @@ class SelectSliderMixin:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -174,6 +177,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> tuple[T, T]: ...
 
     @overload
@@ -185,7 +189,7 @@ class SelectSliderMixin:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -193,6 +197,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T: ...
 
     @gather_metrics("select_slider")
@@ -204,7 +209,7 @@ class SelectSliderMixin:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -212,6 +217,7 @@ class SelectSliderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | tuple[T, T]:
         r"""
         Display a slider widget to select items from a list.
@@ -294,8 +300,29 @@ class SelectSliderMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this select_slider's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the select slider should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the select slider. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (releasing a drag, clicking the
+              track, or using the arrow keys).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The select slider still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -342,6 +369,26 @@ class SelectSliderMixin:
             Invalid query parameter values are ignored and removed
             from the URL. Range select sliders use repeated parameters
             (e.g., ``?color=red&color=blue``).
+
+            When ``on_change="ignore"``, select slider interactions still update
+            the URL immediately, the same as widgets inside a form. Python
+            receives the new value on the next rerun. A page load or share
+            uses the updated URL value.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
 
         Returns
         -------
@@ -409,6 +456,7 @@ class SelectSliderMixin:
             ctx=ctx,
             width=width,
             bind=bind,
+            persist_state=persist_state,
         )
 
     def _select_slider(
@@ -419,7 +467,7 @@ class SelectSliderMixin:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -427,22 +475,30 @@ class SelectSliderMixin:
         ctx: ScriptRunContext | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | tuple[T, T]:
         key = to_key(key)
+
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
 
         if len(opt) == 0:
-            raise StreamlitAPIException("The `options` argument needs to be non-empty")
+            raise StreamlitMissingRequiredParameterError(
+                "options", detail="Provide at least one option."
+            )
 
         def as_index_list(v: Any) -> list[int]:
             if _is_range_value(v):
@@ -497,10 +553,13 @@ class SelectSliderMixin:
             label_visibility
         )
         if help is not None:
-            slider_proto.help = dedent(help)
+            slider_proto.help = to_help_str(help)
 
         if bind and key:
             slider_proto.query_param_key = str(key)
+
+        if isinstance(on_change, str) and on_change == "ignore":
+            slider_proto.ignore_rerun = True
 
         layout_config = create_layout_config(width=width)
 
@@ -513,14 +572,16 @@ class SelectSliderMixin:
 
         widget_state = register_widget(
             slider_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             # Select sliders always have a value (no empty/cleared state in
             # the UI), so disallow empty URL params (e.g., ?key=).
             clearable=False,
@@ -587,5 +648,5 @@ class SelectSliderMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

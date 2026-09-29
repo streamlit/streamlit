@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-import { act, screen, within } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
-import { mockConvertRemToPx } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
-import * as Utils from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Selectbox, { Props } from "./Selectbox"
@@ -46,16 +44,17 @@ const getProps = (
 })
 
 const pickOption = async (
-  selectbox: HTMLElement,
+  _selectbox: HTMLElement,
   value: string
 ): Promise<void> => {
   const user = userEvent.setup()
-  // Click on the selectbox to open the dropdown
-  await user.click(selectbox)
-  // Find the desired option and click on it to select
-  const valueElement = screen.getByText(value)
+  // Click the open button to open the dropdown
+  const openButton = screen.getByRole("button", { name: "Open" })
+  await user.click(openButton)
+  // Find the desired option by role and click it
+  const valueElement = screen.getByRole("option", { name: value })
   await user.click(valueElement)
-  // Select outside the widget to close the dropdown
+  // Click outside the widget to close the dropdown
   await user.click(document.body)
 }
 
@@ -78,10 +77,9 @@ describe("Selectbox widget", () => {
 
     render(<Selectbox {...props} />)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.options[props.element.default ?? 0],
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -92,8 +90,7 @@ describe("Selectbox widget", () => {
     })
     render(<Selectbox {...props} />)
 
-    const selectbox = screen.getByTestId("stSelectbox")
-    expect(within(selectbox).getByText("c")).toBeVisible()
+    expect(screen.getByDisplayValue("c")).toBeVisible()
   })
 
   it("can pass fragmentId to setStringValue", () => {
@@ -102,17 +99,19 @@ describe("Selectbox widget", () => {
 
     render(<Selectbox {...props} />)
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       props.element.options[props.element.default ?? 0],
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
   it("handles the onChange event", async () => {
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringValue")
-    vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
 
     render(<Selectbox {...props} />)
 
@@ -121,13 +120,11 @@ describe("Selectbox widget", () => {
     await pickOption(selectbox, "b")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
-    expect(screen.queryByText("a")).not.toBeInTheDocument()
-    expect(screen.getByText("b")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("b")).toBeVisible()
   })
 
   it("resets its value when form is cleared", async () => {
@@ -136,7 +133,6 @@ describe("Selectbox widget", () => {
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
     vi.spyOn(props.widgetMgr, "setStringValue")
-    vi.spyOn(Utils, "convertRemToPx").mockImplementation(mockConvertRemToPx)
 
     render(<Selectbox {...props} />)
 
@@ -144,10 +140,9 @@ describe("Selectbox widget", () => {
     await pickOption(selectbox, "b")
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // "Submit" the form
@@ -156,15 +151,14 @@ describe("Selectbox widget", () => {
     })
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(screen.getByText("a")).toBeInTheDocument()
-    expect(screen.queryByText("b")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("a")).toBeVisible()
+    })
+    expect(screen.queryByDisplayValue("b")).not.toBeInTheDocument()
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       props.element.options[props.element.default ?? 0],
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -175,7 +169,9 @@ describe("Selectbox widget", () => {
     })
     render(<Selectbox {...props} />)
 
-    expect(screen.getByText("Please select an option...")).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText("Please select an option...")
+    ).toBeInTheDocument()
   })
 })
 
@@ -238,5 +234,196 @@ describe("Selectbox query param binding", () => {
       true,
       undefined
     )
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Selectbox {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const selectbox = screen.getByRole("combobox")
+    await pickOption(selectbox, "b")
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "b", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: false }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Selectbox {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const selectbox = screen.getByRole("combobox")
+    await pickOption(selectbox, "b")
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "b", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+      },
+      { widgetMgr }
+    )
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Selectbox {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const selectbox = screen.getByRole("combobox")
+    await pickOption(selectbox, "b")
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "b", {
+      formId: "testForm",
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ ignoreRerun: true })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Selectbox {...props} />)
+    setStringValueSpy.mockClear()
+
+    const selectbox = screen.getByRole("combobox")
+    await user.click(selectbox)
+    await user.type(selectbox, "b")
+
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when clear is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true, default: null }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Selectbox {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const selectbox = screen.getByRole("combobox")
+    await pickOption(selectbox, "a")
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Clear value" }))
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      null,
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a new option is committed with Enter", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        acceptNewOptions: true,
+        default: null,
+      },
+      { widgetMgr }
+    )
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Selectbox {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const selectboxInput = screen.getByRole("combobox")
+    await user.type(selectboxInput, "hello world!")
+    await user.keyboard("{enter}")
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      "hello world!",
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })

@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 from typing_extensions import Never
@@ -42,21 +41,26 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    OnChangeMode,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     get_session_state,
     register_widget,
+    validate_on_change_mode,
 )
-from streamlit.type_util import (
-    check_python_comparable,
-)
+from streamlit.string_util import to_help_str
+from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -146,7 +150,7 @@ class RadioMixin:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only args:
@@ -156,6 +160,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> None: ...
 
     @overload
@@ -167,7 +172,7 @@ class RadioMixin:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only args:
@@ -177,6 +182,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T: ...
 
     @overload
@@ -188,7 +194,7 @@ class RadioMixin:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only args:
@@ -198,6 +204,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | None: ...
 
     @gather_metrics("radio")
@@ -209,7 +216,7 @@ class RadioMixin:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only args:
@@ -219,6 +226,7 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> T | None:
         r"""Display a radio button widget.
 
@@ -289,8 +297,29 @@ class RadioMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this radio's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the radio should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the radio. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (clicking an option or changing the
+              selection with the arrow keys).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The radio still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -307,8 +336,13 @@ class RadioMixin:
             The default is false (vertical buttons).
 
         captions : iterable of str or None
-            A list of captions to show below each radio button. If None (default),
-            no captions are shown.
+            A list of captions to show below each radio button. If this is
+            ``None`` (default), no captions are shown.
+
+            Captions are matched to ``options`` by position. To caption only
+            some options, use ``None`` or an empty string for the others. If
+            this list is shorter than ``options``, the remaining options have no
+            caption. Any captions after the last option are ignored.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -348,6 +382,28 @@ class RadioMixin:
             Invalid query parameter values are ignored and removed
             from the URL. If ``index`` is ``None``, an empty query
             parameter (e.g., ``?my_key=``) clears the widget.
+
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (clicking an option or changing the selection
+            with the arrow keys). As with widgets inside a form, the URL can
+            show a value that Python hasn't received yet. Python receives
+            the new value on the next rerun, so a page load or share uses
+            the updated URL value.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
 
         Returns
         -------
@@ -412,6 +468,7 @@ class RadioMixin:
             captions=captions,
             label_visibility=label_visibility,
             bind=bind,
+            persist_state=persist_state,
             ctx=ctx,
             width=width,
         )
@@ -424,7 +481,7 @@ class RadioMixin:
         format_func: Callable[[Any], Any] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only args:
@@ -433,18 +490,23 @@ class RadioMixin:
         label_visibility: LabelVisibility = "visible",
         captions: Sequence[str] | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
     ) -> T | None:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None if index == 0 else index,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
@@ -469,23 +531,25 @@ class RadioMixin:
             width=width,
         )
 
-        if not isinstance(index, int) and index is not None:
-            raise StreamlitAPIException(
-                f"Radio Value has invalid type: {type(index).__name__}"
+        if index is not None and not isinstance(index, int):
+            raise StreamlitInvalidParameterTypeError(
+                "index",
+                type(index).__name__,
+                ["int", "None"],
             )
 
         if index is not None and len(opt) > 0 and not 0 <= index < len(opt):
-            raise StreamlitAPIException(
-                "Radio index must be between 0 and length of options"
-            )
+            raise StreamlitValueOutOfRangeError("index", index, 0, len(opt) - 1)
 
         def handle_captions(caption: str | None) -> str:
             if caption is None:
                 return ""
             if isinstance(caption, str):
                 return caption
-            raise StreamlitAPIException(
-                f"Radio captions must be strings. Passed type: {type(caption).__name__}"
+            raise StreamlitInvalidParameterTypeError(
+                "captions",
+                type(caption).__name__,
+                ["str", "None"],
             )
 
         session_state = get_session_state().filtered_state
@@ -509,11 +573,14 @@ class RadioMixin:
             radio_proto.captions[:] = map(handle_captions, captions)
 
         if help is not None:
-            radio_proto.help = dedent(help)
+            radio_proto.help = to_help_str(help)
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
             radio_proto.query_param_key = str(key)
+
+        if isinstance(on_change, str) and on_change == "ignore":
+            radio_proto.ignore_rerun = True
 
         serde = RadioSerde(
             opt,
@@ -525,14 +592,16 @@ class RadioMixin:
 
         widget_state = register_widget(
             radio_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             # Clearable when index=None: the widget can be in an empty state,
             # so ?key= (empty URL param) should clear the widget to None.
             clearable=(index is None),
@@ -570,5 +639,5 @@ class RadioMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

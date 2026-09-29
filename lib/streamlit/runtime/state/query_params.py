@@ -22,11 +22,14 @@ from typing import TYPE_CHECKING, Any, Final, cast
 from urllib import parse
 
 from streamlit.errors import StreamlitAPIException, StreamlitQueryParamDictValueError
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 
 if TYPE_CHECKING:
     from _typeshed import SupportsKeysAndGetItem
+
+_LOGGER: Final = get_logger(__name__)
 
 QueryParamValue = str | Iterable[str]
 QueryParamsInput = Mapping[str, QueryParamValue] | Iterable[tuple[str, QueryParamValue]]
@@ -43,6 +46,43 @@ EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
 PROTECTED_QUERY_PARAMS: Final[frozenset[str]] = frozenset(
     [EMBED_QUERY_PARAM, EMBED_OPTIONS_QUERY_PARAM]
 )
+_CLIENT_STATE_QUERY_STRING_MAX_LENGTH: Final[int] = 512 * 1024  # 512Ki characters
+_CLIENT_STATE_QUERY_STRING_MAX_FIELDS: Final[int] = 1000
+
+
+def sanitize_query_string(query_string: str) -> str:
+    """Return an empty query string when client input exceeds safe limits."""
+    if not query_string:
+        return ""
+
+    if len(query_string) > _CLIENT_STATE_QUERY_STRING_MAX_LENGTH:
+        _LOGGER.warning(
+            "Ignoring query string with %d characters because it exceeds the "
+            "%d character limit.",
+            len(query_string),
+            _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+        )
+        return ""
+
+    num_fields = query_string.count("&") + 1
+    if num_fields > _CLIENT_STATE_QUERY_STRING_MAX_FIELDS:
+        _LOGGER.warning(
+            "Ignoring query string with %d parameters because it exceeds the "
+            "%d parameter limit.",
+            num_fields,
+            _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+        )
+        return ""
+
+    return query_string
+
+
+def _parse_query_string(query_string: str) -> dict[str, list[str]]:
+    """Parse a query string into a dict, ignoring input that exceeds safe limits."""
+    query_string = sanitize_query_string(query_string)
+    if not query_string:
+        return {}
+    return parse.parse_qs(query_string, keep_blank_values=True)
 
 
 @dataclass
@@ -324,7 +364,8 @@ class QueryParams(MutableMapping[str, str]):
         if self.is_bound(key):
             raise StreamlitAPIException(
                 f"Cannot directly set query parameter '{key}' - "
-                f"it is bound to a widget. Modify the widget value instead."
+                f"it is bound to a widget. Modify the widget value instead.",
+                error_id="query-param-bound-cannot-set",
             )
         self._set_item_internal(key, value)
         self._send_query_param_msg()
@@ -339,7 +380,8 @@ class QueryParams(MutableMapping[str, str]):
         if self.is_bound(key):
             raise StreamlitAPIException(
                 f"Cannot directly delete query parameter '{key}' - "
-                f"it is bound to a widget. Modify the widget value instead."
+                f"it is bound to a widget. Modify the widget value instead.",
+                error_id="query-param-bound-cannot-delete",
             )
         try:
             del self._query_params[key]
@@ -378,7 +420,8 @@ class QueryParams(MutableMapping[str, str]):
             if self.is_bound(key):
                 raise StreamlitAPIException(
                     f"Cannot directly set query parameter '{key}' - "
-                    f"it is bound to a widget. Modify the widget value instead."
+                    f"it is bound to a widget. Modify the widget value instead.",
+                    error_id="query-param-bound-cannot-set",
                 )
 
         # Now apply the updates
@@ -425,7 +468,8 @@ class QueryParams(MutableMapping[str, str]):
             raise StreamlitAPIException(
                 f"Cannot clear query parameters - the following are bound to widgets: "
                 f"{', '.join(repr(k) for k in bound_params)}. "
-                f"Modify the widget values instead, or remove the bind parameter."
+                f"Modify the widget values instead, or remove the bind parameter.",
+                error_id="query-param-bound-cannot-clear",
             )
         self.clear_with_no_forward_msg(preserve_embed=True)
         self._send_query_param_msg()
@@ -495,7 +539,8 @@ class QueryParams(MutableMapping[str, str]):
             raise StreamlitAPIException(
                 f"Cannot bind to reserved query parameter '{param_key}'. "
                 f"'{EMBED_QUERY_PARAM}' and '{EMBED_OPTIONS_QUERY_PARAM}' are "
-                f"used internally for Streamlit's embed functionality."
+                f"used internally for Streamlit's embed functionality.",
+                error_id="query-param-reserved-cannot-bind",
             )
 
         # Clean up old binding if a different widget was bound to this param
@@ -645,7 +690,7 @@ class QueryParams(MutableMapping[str, str]):
         query_string : str
             The URL query string (without the leading '?').
         """
-        parsed = parse.parse_qs(query_string, keep_blank_values=True)
+        parsed = _parse_query_string(query_string)
         self._initial_query_params = parsed
 
     def set_initial_query_params_from_current(self) -> None:
@@ -741,7 +786,7 @@ class QueryParams(MutableMapping[str, str]):
             Params bound to other pages are filtered out.
             If None, all params are kept (no filtering).
         """
-        parsed_query_params = parse.parse_qs(query_string, keep_blank_values=True)
+        parsed_query_params = _parse_query_string(query_string)
 
         self.clear_with_no_forward_msg()
         stale_widget_ids: list[str] = []
@@ -843,7 +888,8 @@ def _set_item_in_dict(
 
     if key.lower() in EMBED_QUERY_PARAMS_KEYS:
         raise StreamlitAPIException(
-            "Query param embed and embed_options (case-insensitive) cannot be set programmatically."
+            "Query param embed and embed_options (case-insensitive) cannot be set programmatically.",
+            error_id="query-param-embed-cannot-set",
         )
     # Type checking users should handle the string serialization themselves
     # We will accept any type for the list and serialize to str just in case

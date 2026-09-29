@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
+import type { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
 import {
   LabelVisibilityOptions,

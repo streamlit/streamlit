@@ -16,11 +16,11 @@
 
 import { useCallback } from "react"
 
-import { DataEditorProps } from "@glideapps/glide-data-grid"
+import type { DataEditorProps } from "@glideapps/glide-data-grid"
 import { getLogger } from "loglevel"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   toSafeString,
 } from "~lib/components/widgets/DataFrame/columns"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
@@ -63,7 +63,7 @@ function escapeValue(value: unknown): string {
   // Special chars need to be escaped:
   if (CSV_SPECIAL_CHARS_REGEX.test(strValue)) {
     // Add quotes around the value:
-    return `${CSV_QUOTE_CHAR}${strValue.replace(
+    return `${CSV_QUOTE_CHAR}${strValue.replaceAll(
       // Escape all quote chars if inside a quoted string:
       new RegExp(CSV_QUOTE_CHAR, "g"),
       CSV_ESCAPE_CHAR + CSV_QUOTE_CHAR
@@ -102,13 +102,19 @@ async function writeCsv(
   // Write UTF-8 BOM for excel compatibility:
   await writable.write(textEncoder.encode(CSV_UTF8_BOM))
 
-  // Write headers:
-  const headers: string[] = columns.map(column => column.name)
+  // Write headers (skip button columns as they are not exportable):
+  const headers: string[] = columns
+    .filter(column => column.kind !== "button")
+    .map(column => column.name)
   await writable.write(textEncoder.encode(toCsvRow(headers)))
 
   for (let row = 0; row < numRows; row++) {
     const rowData: unknown[] = []
-    columns.forEach((column: BaseColumn, col: number, _map) => {
+    // Button columns are skipped because they are not exportable, but we still
+    // iterate the full columns array so the loop index stays aligned with the
+    // positions getCellContent expects.
+    columns.forEach((column: BaseColumn, col: number) => {
+      if (column.kind === "button") return
       rowData.push(column.getCellValue(getCellContent([col, row])))
     })
     // Write row to CSV:

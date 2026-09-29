@@ -25,22 +25,28 @@ vi.mock("@streamlit/utils", async () => {
   }
 })
 
-import { zip } from "lodash-es"
 import { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
-import { BackMsg } from "@streamlit/protobuf"
+import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   MAX_RETRIES_BEFORE_CLIENT_ERROR,
   PING_MINIMUM_RETRY_PERIOD_MS,
+  RECONNECT_BASE_RETRY_PERIOD_MS,
+  RECONNECT_MAXIMUM_RETRY_PERIOD_MS,
+  RECONNECT_MINIMUM_RETRY_PERIOD_MS,
 } from "./constants"
-import { doInitPings } from "./DoInitPings"
+import { doInitPings, PingCancelledError } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
 import { ErrorDetails, OnRetry } from "./types"
 import { Args, WebsocketConnection } from "./WebsocketConnection"
+
+const expectedFirstReconnectDelayMs =
+  RECONNECT_MINIMUM_RETRY_PERIOD_MS +
+  (RECONNECT_BASE_RETRY_PERIOD_MS - RECONNECT_MINIMUM_RETRY_PERIOD_MS) * 0.5
 
 const MOCK_ALLOWED_ORIGINS_CONFIG = {
   allowedOrigins: ["list", "of", "allowed", "origins"],
@@ -70,6 +76,18 @@ function createErrorResponse(
   statusText: string,
   data?: unknown
 ): Response {
+  // DoInitPings treats status 0 as "no response", but `new Response()` rejects
+  // that status. Use a stand-in so this path can still be tested.
+  if (status === 0) {
+    return {
+      ok: false,
+      status: 0,
+      statusText,
+      json: () => Promise.resolve(data ?? null),
+      text: () => Promise.resolve(data ? JSON.stringify(data) : ""),
+    } as Response
+  }
+
   return new Response(data ? JSON.stringify(data) : "", {
     status,
     statusText,
@@ -94,28 +112,26 @@ function createNetworkError(message = "Failed to fetch"): TypeError {
 // Sets up fetch mock to fail a specific number of times before succeeding
 function setupFetchMockWithFailures(
   retryCount: number,
-  errorType: "response" | "network" | "timeout",
-  responseOptions?: { status: number; statusText: string; data?: unknown }
+  errorType: "response" | "network" | "timeout" | "error",
+  responseOptions?: { status: number; statusText: string; data?: unknown },
+  error?: Error
 ): typeof fetch {
-  const mock = vi.fn()
+  const mock = vi.fn<typeof fetch>()
 
   // Each "totalTries" increment involves cycling through all URIs
   // Each URI requires 2 fetch calls (health + config)
   // So total failed calls needed = retryCount * numUris * 2
   const totalFailedCalls = retryCount * 2 * 2
 
-  // Setup all the rejected/error calls
   for (let i = 0; i < totalFailedCalls; i++) {
     if (errorType === "timeout") {
-      ;(mock as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        createAbortError()
-      )
+      mock.mockRejectedValueOnce(createAbortError())
     } else if (errorType === "network") {
-      ;(mock as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        createNetworkError()
-      )
-    } else if (errorType === "response" && responseOptions) {
-      ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      mock.mockRejectedValueOnce(createNetworkError())
+    } else if (errorType === "error") {
+      mock.mockRejectedValueOnce(error ?? new Error("request setup failed"))
+    } else if (responseOptions) {
+      mock.mockResolvedValueOnce(
         createErrorResponse(
           responseOptions.status,
           responseOptions.statusText,
@@ -125,13 +141,8 @@ function setupFetchMockWithFailures(
     }
   }
 
-  // Add final successful calls to break the loop
-  ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-    createSuccessResponse(MOCK_HEALTH_RESPONSE)
-  ) // healthzUri success
-  ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-    createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE)
-  ) // hostConfigUri success
+  mock.mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
+  mock.mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
   return mock
 }
@@ -229,6 +240,9 @@ describe("doInitPings", () => {
     vi.useRealTimers()
     globalThis.fetch = originalFetch
     globalThis.__mockStreamlitConfig = {}
+    // Restore any spies (e.g. Math.random) so a test that throws before its
+    // own restore call can't leak a mocked implementation into later tests.
+    vi.restoreAllMocks()
   })
 
   it("uses fast-path to connect immediately when enableBypass is true", () => {
@@ -670,6 +684,11 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   it("has increasing but capped retry backoff", async () => {
+    // Pin Math.random so the backoff jitter is deterministic. The spy is
+    // restored in afterEach via vi.restoreAllMocks() so it can't leak into
+    // other tests even if an await below throws.
+    vi.spyOn(Math, "random").mockReturnValue(0.5)
+
     globalThis.fetch = vi
       .fn()
       // First Connection attempt
@@ -722,16 +741,11 @@ If you are trying to access a Streamlit app running on another server, this coul
     await vi.runAllTimersAsync()
     await promise
 
-    expect(timeouts.length).toEqual(5)
-    expect(timeouts[0]).toEqual(10)
-    expect(timeouts[4]).toEqual(100)
-    // timeouts should be monotonically increasing until they hit the cap
-    expect(
-      zip(timeouts.slice(0, -1), timeouts.slice(1)).every(
-        // @ts-expect-error
-        timePair => timePair[0] < timePair[1] || timePair[0] === 100
-      )
-    ).toEqual(true)
+    // With Math.random() pinned to 0.5 the jitter multiplier is
+    // 0.7 + 0.5 * 0.3 = 0.85. The capped windows are 10, 20, 40, 80, and 100 ms
+    // (the last capped down from 160 ms). The first attempt is not jittered; the
+    // rest are floored after the 0.85 multiplier -> [10, 17, 34, 68, 85].
+    expect(timeouts).toEqual([10, 17, 34, 68, 85])
   })
 
   it("backs off independently for each target url", async () => {
@@ -877,101 +891,202 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   describe("calls sendClientError when we've reached connection error threshold", () => {
-    it("with status = 403 response", async () => {
-      const sendClientErrorSpy = vi.fn()
+    it.each([
+      {
+        name: "with status = 403 response",
+        errorType: "response" as const,
+        responseOptions: { status: 403, statusText: "Forbidden" },
+        expectedError: 403,
+        expectedMessage: "Forbidden",
+      },
+      {
+        name: "with status = 500 response",
+        errorType: "response" as const,
+        responseOptions: {
+          status: 500,
+          statusText: "Internal Server Error",
+        },
+        expectedError: 500,
+        expectedMessage: "Internal Server Error",
+      },
+      {
+        name: "with network error",
+        errorType: "network" as const,
+        expectedError: "No response received from server",
+        expectedMessage: "Network error",
+      },
+      {
+        name: "with timeout",
+        errorType: "timeout" as const,
+        expectedError: "DoInitPings timed out",
+        expectedMessage: "Connection timed out - ECONNABORTED",
+      },
+      {
+        name: "with HTTP status 0",
+        errorType: "response" as const,
+        responseOptions: { status: 0, statusText: "No Response" },
+        expectedError: "Response received with status 0",
+        expectedMessage: "No Response",
+      },
+      {
+        name: "with a generic request setup error",
+        errorType: "error" as const,
+        error: new Error("request setup failed"),
+        expectedError: "Error setting up request to server",
+        expectedMessage: "request setup failed",
+      },
+    ])(
+      "$name",
+      async ({
+        errorType,
+        responseOptions,
+        error,
+        expectedError,
+        expectedMessage,
+      }) => {
+        const sendClientErrorSpy = vi.fn()
 
-      // We need to mock fetch to simulate connection error threshold
-      globalThis.fetch = setupFetchMockWithFailures(
-        MAX_RETRIES_BEFORE_CLIENT_ERROR,
-        "response",
-        { status: 403, statusText: "Forbidden" }
-      )
+        globalThis.fetch = setupFetchMockWithFailures(
+          MAX_RETRIES_BEFORE_CLIENT_ERROR,
+          errorType,
+          responseOptions,
+          error
+        )
 
-      const retryCallback = createTimerAdvancingRetryCallback()
+        const retryCallback = createTimerAdvancingRetryCallback()
 
-      const { promise } = doInitPings(
-        MOCK_PING_DATA.uri,
-        MOCK_PING_DATA.timeoutMs,
-        MOCK_PING_DATA.maxTimeoutMs,
-        retryCallback,
-        sendClientErrorSpy,
-        MOCK_PING_DATA.setAllowedOrigins
-      )
+        const { promise } = doInitPings(
+          MOCK_PING_DATA.uri,
+          MOCK_PING_DATA.timeoutMs,
+          MOCK_PING_DATA.maxTimeoutMs,
+          retryCallback,
+          sendClientErrorSpy,
+          MOCK_PING_DATA.setAllowedOrigins
+        )
 
-      // Run any remaining timers to complete the ping process
-      await vi.runAllTimersAsync()
-      await promise
+        await vi.runAllTimersAsync()
+        await promise
 
-      expect(sendClientErrorSpy).toHaveBeenCalledWith(
-        403,
-        "Forbidden",
-        expect.any(String)
-      )
+        expect(sendClientErrorSpy).toHaveBeenCalledWith(
+          expectedError,
+          expectedMessage,
+          expect.any(String)
+        )
+      }
+    )
+  })
+
+  it("stops the loop on cancel and does not resurrect when an in-flight request settles", async () => {
+    // Simulate a hanging request that we can settle manually AFTER cancel(),
+    // reproducing the scenario where cancellation lands mid-request.
+    let rejectInFlight: ((reason?: unknown) => void) | undefined
+    const fetchMock = vi.fn().mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectInFlight = reject
+        })
+    )
+    globalThis.fetch = fetchMock
+
+    const { promise, cancel } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins
+    )
+
+    // Let connect() fire the first health + host-config requests.
+    await vi.advanceTimersByTimeAsync(0)
+    const callsWhileInFlight = fetchMock.mock.calls.length
+    expect(callsWhileInFlight).toBeGreaterThan(0)
+
+    // Cancel while the requests are still in-flight.
+    cancel()
+    await expect(promise).rejects.toBeInstanceOf(PingCancelledError)
+
+    // Settle the in-flight request as a failure. Previously this would re-arm
+    // the retry loop, resurrecting a cancelled (and now untracked) ping loop.
+    rejectInFlight?.(new TypeError("Network error"))
+    await vi.advanceTimersByTimeAsync(MOCK_PING_DATA.maxTimeoutMs + 100)
+
+    // No new requests fired, no retry scheduled, and no config applied after
+    // cancellation.
+    expect(fetchMock.mock.calls.length).toBe(callsWhileInFlight)
+    expect(MOCK_PING_DATA.retryCallback).not.toHaveBeenCalled()
+    expect(MOCK_PING_DATA.setAllowedOrigins).not.toHaveBeenCalled()
+  })
+
+  it("does not apply config or resolve when an in-flight request settles successfully after cancel", async () => {
+    // Companion to the failure-path test above: exercises the success guard in
+    // the Promise.all .then, ensuring a cancelled loop can't apply host config
+    // or resolve when the in-flight requests settle successfully post-cancel.
+    const resolveInFlight: Array<(value: unknown) => void> = []
+    const fetchMock = vi.fn().mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveInFlight.push(resolve)
+        })
+    )
+    globalThis.fetch = fetchMock
+
+    const { promise, cancel } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      MOCK_PING_DATA.retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins
+    )
+
+    // Let connect() fire the health + host-config requests in parallel.
+    await vi.advanceTimersByTimeAsync(0)
+    expect(resolveInFlight.length).toBe(2)
+
+    // Cancel while both requests are still in-flight.
+    cancel()
+    await expect(promise).rejects.toBeInstanceOf(PingCancelledError)
+
+    // Settle BOTH requests successfully. The .then guard must prevent
+    // onHostConfigResp from firing and the promise from resolving.
+    resolveInFlight.forEach(resolve => resolve(createSuccessResponse({})))
+    await vi.advanceTimersByTimeAsync(MOCK_PING_DATA.maxTimeoutMs + 100)
+
+    expect(MOCK_PING_DATA.setAllowedOrigins).not.toHaveBeenCalled()
+    expect(MOCK_PING_DATA.retryCallback).not.toHaveBeenCalled()
+  })
+
+  it("does not schedule another ping after cancel is called from the retry callback", async () => {
+    // Extra success responses would be consumed if cancel failed to stop the loop.
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+
+    let cancelPing: (() => void) | undefined = undefined
+    const retryCallback: OnRetry = vi.fn(() => {
+      cancelPing?.()
     })
 
-    it("with status = 500 response", async () => {
-      const sendClientErrorSpy = vi.fn()
+    const { promise, cancel } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins
+    )
+    cancelPing = cancel
 
-      // We need to mock fetch to simulate connection error threshold
-      globalThis.fetch = setupFetchMockWithFailures(
-        MAX_RETRIES_BEFORE_CLIENT_ERROR,
-        "response",
-        { status: 500, statusText: "Internal Server Error" }
-      )
+    await expect(promise).rejects.toBeInstanceOf(PingCancelledError)
 
-      const retryCallback = createTimerAdvancingRetryCallback()
+    await vi.advanceTimersByTimeAsync(MOCK_PING_DATA.maxTimeoutMs + 100)
 
-      const { promise } = doInitPings(
-        MOCK_PING_DATA.uri,
-        MOCK_PING_DATA.timeoutMs,
-        MOCK_PING_DATA.maxTimeoutMs,
-        retryCallback,
-        sendClientErrorSpy,
-        MOCK_PING_DATA.setAllowedOrigins
-      )
-
-      // Run any remaining timers to complete the ping process
-      await vi.runAllTimersAsync()
-      await promise
-
-      expect(sendClientErrorSpy).toHaveBeenCalledWith(
-        500,
-        "Internal Server Error",
-        expect.any(String)
-      )
-    })
-
-    it("with network error", async () => {
-      const sendClientErrorSpy = vi.fn()
-
-      // We need to mock fetch to simulate connection error threshold
-      globalThis.fetch = setupFetchMockWithFailures(
-        MAX_RETRIES_BEFORE_CLIENT_ERROR,
-        "network",
-        undefined
-      )
-
-      const retryCallback = createTimerAdvancingRetryCallback()
-
-      const { promise } = doInitPings(
-        MOCK_PING_DATA.uri,
-        MOCK_PING_DATA.timeoutMs,
-        MOCK_PING_DATA.maxTimeoutMs,
-        retryCallback,
-        sendClientErrorSpy,
-        MOCK_PING_DATA.setAllowedOrigins
-      )
-
-      // Run any remaining timers to complete the ping process
-      await vi.runAllTimersAsync()
-      await promise
-
-      expect(sendClientErrorSpy).toHaveBeenCalledWith(
-        "No response received from server",
-        "Network error",
-        expect.any(String)
-      )
-    })
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(2)
+    expect(MOCK_PING_DATA.setAllowedOrigins).not.toHaveBeenCalled()
   })
 })
 
@@ -1024,12 +1139,326 @@ describe("WebsocketConnection", () => {
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
   })
 
+  it("delays health pings when reconnecting after a websocket disconnect", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    await vi.runAllTimersAsync()
+    await server.connected
+    vi.mocked(globalThis.fetch).mockClear()
+
+    client.reconnect()
+
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(expectedFirstReconnectDelayMs - 1)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+
+    randomSpy.mockRestore()
+  })
+
+  it("grows the reconnect backoff window on consecutive disconnects", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    await vi.runAllTimersAsync()
+    await server.connected
+    vi.mocked(globalThis.fetch).mockClear()
+
+    // First disconnect: window is 250-500ms, so 0.5 jitter -> 375ms.
+    client.reconnect()
+    await vi.advanceTimersByTimeAsync(expectedFirstReconnectDelayMs - 1)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    // Force a second consecutive disconnect without a successful connect in
+    // between (assigning the state directly avoids resetting the attempt
+    // counter). This also cancels the still-pending first-attempt ping.
+    // @ts-expect-error - accessing private property for testing
+    client.state = ConnectionState.CONNECTED
+    client.reconnect()
+
+    // The window now doubles to 500-1000ms, so 0.5 jitter -> 750ms. The
+    // previously scheduled ping was cancelled, so nothing fires before then.
+    await vi.advanceTimersByTimeAsync(RECONNECT_BASE_RETRY_PERIOD_MS * 1.5 - 1)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+
+    randomSpy.mockRestore()
+  })
+
+  it("cancels the pending reconnect ping when disconnected during the delay", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    await vi.runAllTimersAsync()
+    await server.connected
+    vi.mocked(globalThis.fetch).mockClear()
+
+    client.reconnect()
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+
+    client.disconnect()
+
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.DISCONNECTED_FOREVER)
+
+    // The scheduled ping should never fire after a permanent disconnect.
+    await vi.runAllTimersAsync()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    randomSpy.mockRestore()
+  })
+
+  it("resets the reconnect backoff window after a successful reconnect", async () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    await vi.runAllTimersAsync()
+    await server.connected
+
+    // First disconnect bumps the attempt counter and schedules a delayed ping.
+    client.reconnect()
+    // @ts-expect-error - accessing private property for testing
+    expect(client.reconnectAttempt).toBe(1)
+
+    // Completing the reconnect cycle returns the client to CONNECTED, which
+    // resets the attempt counter back to zero.
+    await vi.runAllTimersAsync()
+    await server.connected
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.CONNECTED)
+    // @ts-expect-error - accessing private property for testing
+    expect(client.reconnectAttempt).toBe(0)
+
+    vi.mocked(globalThis.fetch).mockClear()
+
+    // The next disconnect must start from the base window again (375ms with
+    // 0.5 jitter), proving the window was not left inflated.
+    client.reconnect()
+    await vi.advanceTimersByTimeAsync(expectedFirstReconnectDelayMs - 1)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+
+    randomSpy.mockRestore()
+  })
+
+  it("caps the reconnect backoff window at the configured maximum", () => {
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.5)
+
+    // Simulate a long streak of consecutive failed reconnects so the
+    // exponential window would far exceed the cap if left unbounded.
+    // @ts-expect-error - accessing private property for testing
+    client.reconnectAttempt = 20
+
+    // @ts-expect-error - accessing private method for testing
+    const delayMs = client.nextReconnectDelayMs()
+
+    // With a maxed-out window the equal-jitter delay is window/2 + 0.5*window/2
+    // = 0.75 * window, and the window itself is clamped to the maximum.
+    expect(delayMs).toBe(RECONNECT_MAXIMUM_RETRY_PERIOD_MS * 0.75)
+    // @ts-expect-error - accessing private method for testing
+    expect(client.nextReconnectDelayMs()).toBeLessThanOrEqual(
+      RECONNECT_MAXIMUM_RETRY_PERIOD_MS
+    )
+
+    randomSpy.mockRestore()
+  })
+
+  it("probes the health endpoint immediately on the initial connection", async () => {
+    // The beforeEach constructs `client`, which transitions INITIAL ->
+    // PINGING_SERVER on INITIALIZED. This initial path must not apply any
+    // reconnect backoff: the attempt counter stays at zero, no reconnect delay
+    // timer is scheduled, and the health probe is dispatched immediately.
+    // @ts-expect-error - accessing private property for testing
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+    // @ts-expect-error - accessing private property for testing
+    expect(client.reconnectAttempt).toBe(0)
+    // @ts-expect-error - accessing private property for testing
+    expect(client.reconnectDelayTimeout).toBeUndefined()
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(globalThis.fetch).toHaveBeenCalled()
+  })
+
   it("reconnect does nothing if not connected", () => {
     // @ts-expect-error - accessing private property for testing
     client.state = ConnectionState.PINGING_SERVER
     client.reconnect()
     // @ts-expect-error
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+  })
+
+  it("pins to the connected URI so reconnects skip path discovery", () => {
+    const baseUriPartsList = [
+      {
+        protocol: "http:",
+        hostname: "a.example.com",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+      {
+        protocol: "http:",
+        hostname: "b.example.com",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+    ]
+    const ws = new WebsocketConnection(createMockArgs({ baseUriPartsList }))
+
+    // Before connecting, all candidate URIs are probed (path discovery).
+    // @ts-expect-error - accessing private method for testing
+    expect(ws.getBaseUrisToProbe()).toEqual(baseUriPartsList)
+
+    // Simulate a successful WebSocket connection on the second URI.
+    // @ts-expect-error - accessing private property for testing
+    ws.uriIndex = 1
+    // @ts-expect-error - accessing private property for testing
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - accessing private method for testing
+    ws.stepFsm("CONNECTION_SUCCEEDED")
+
+    // Entering CONNECTED records the working URI...
+    // @ts-expect-error - accessing private property for testing
+    expect(ws.connectedUriIndex).toBe(1)
+    // ...so reconnects probe only that URI.
+    // @ts-expect-error - accessing private method for testing
+    expect(ws.getBaseUrisToProbe()).toEqual([baseUriPartsList[1]])
+
+    ws.disconnect()
+  })
+
+  it("pins the connected index to the socket's URI even if uriIndex changed (bypass)", () => {
+    const baseUriPartsList = [
+      {
+        protocol: "http:",
+        hostname: "a.example.com",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+      {
+        protocol: "http:",
+        hostname: "b.example.com",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+    ]
+    // Pending fetch so the initial ping can't resolve and interfere.
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
+    const ws = new WebsocketConnection(createMockArgs({ baseUriPartsList }))
+
+    // Simulate bypass mode: the socket was created from index 0, but a
+    // background ping has since overwritten uriIndex to a different candidate.
+    // @ts-expect-error - accessing private property for testing
+    ws.socketUriIndex = 0
+    // @ts-expect-error - accessing private property for testing
+    ws.uriIndex = 1
+    // @ts-expect-error - accessing private property for testing
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - accessing private method for testing
+    ws.stepFsm("CONNECTION_SUCCEEDED")
+
+    // The pin must follow the URI the socket actually used (0), not the
+    // clobbered uriIndex, and uriIndex is realigned to match.
+    // @ts-expect-error - accessing private property for testing
+    expect(ws.connectedUriIndex).toBe(0)
+    // @ts-expect-error - accessing private property for testing
+    expect(ws.uriIndex).toBe(0)
+
+    ws.disconnect()
+  })
+
+  it("remaps the resolved ping index back to the pinned URI on reconnect", async () => {
+    const baseUriPartsList = [
+      {
+        protocol: "http:",
+        hostname: "other.example.com",
+        port: "9999",
+        pathname: "/",
+      } as URL,
+      {
+        protocol: "http:",
+        hostname: "localhost",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+    ]
+    // Pending fetch so the constructor's ping can't resolve; cancel it so it
+    // can't retry-loop during teardown.
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
+    const ws = new WebsocketConnection(createMockArgs({ baseUriPartsList }))
+    // @ts-expect-error - cancelling the constructor's auto-started ping loop
+    ws.pingRequest?.cancel()
+
+    // Simulate a prior successful connection pinned to index 1.
+    // @ts-expect-error - accessing private property for testing
+    ws.connectedUriIndex = 1
+    // @ts-expect-error - accessing private property for testing
+    ws.uriIndex = 1
+
+    // A reconnect ping probes only the pinned single-URI list, so doInitPings
+    // resolves index 0, which must be remapped back to the real index (1).
+    globalThis.fetch = createFetchMock()
+    // @ts-expect-error - accessing private property for testing
+    ws.state = ConnectionState.PINGING_SERVER
+    // @ts-expect-error - accessing private method for testing
+    const pingPromise = ws.pingServer()
+    // Advance well past any scheduled initial reconnect delay before the first
+    // ping fires (reconnect pings may be delayed up to a few seconds).
+    await vi.advanceTimersByTimeAsync(4000)
+    await pingPromise
+
+    // @ts-expect-error - accessing private property for testing
+    expect(ws.uriIndex).toBe(1)
+
+    ws.disconnect()
+  })
+
+  it("does not overwrite the pinned URI index when a background ping resolves", async () => {
+    const baseUriPartsList = [
+      {
+        protocol: "http:",
+        hostname: "localhost",
+        port: "1234",
+        pathname: "/",
+      } as URL,
+      {
+        protocol: "http:",
+        hostname: "other.example.com",
+        port: "9999",
+        pathname: "/",
+      } as URL,
+    ]
+    // Pending fetch so the constructor's ping can't resolve; cancel it so it
+    // can't retry-loop during teardown.
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
+    const ws = new WebsocketConnection(createMockArgs({ baseUriPartsList }))
+    // @ts-expect-error - cancelling the constructor's auto-started ping loop
+    ws.pingRequest?.cancel()
+
+    // Simulate an already-connected, pinned-to-index-1 state.
+    // @ts-expect-error - accessing private property for testing
+    ws.connectedUriIndex = 1
+    // @ts-expect-error - accessing private property for testing
+    ws.uriIndex = 1
+
+    // The background ping resolves (index 0) but the guard must keep the pinned
+    // index rather than clobbering it.
+    globalThis.fetch = createFetchMock()
+    // @ts-expect-error - accessing private method for testing
+    const bgPromise = ws.pingServerInBackground()
+    await vi.advanceTimersByTimeAsync(4000)
+    await bgPromise
+
+    // @ts-expect-error - accessing private property for testing
+    expect(ws.uriIndex).toBe(1)
+
+    ws.disconnect()
   })
 
   it("increments message cache run count", () => {
@@ -1082,6 +1511,56 @@ describe("WebsocketConnection", () => {
     )
 
     expect(sendSpy).toHaveBeenCalledWith(encodedMessage)
+  })
+
+  it("dispatches queued messages in arrival order if a later payload resolves first", async () => {
+    // @ts-expect-error - private args for test
+    const onMessage = client.args.onMessage as ReturnType<typeof vi.fn>
+    onMessage.mockClear()
+
+    const firstPayload = Promise.withResolvers<ForwardMsg>()
+    const secondPayload = Promise.withResolvers<ForwardMsg>()
+    const payloads = [firstPayload, secondPayload]
+    let callIndex = 0
+
+    // @ts-expect-error - private cache for test
+    vi.spyOn(client.cache, "processMessagePayload").mockImplementation(
+      async () => {
+        const deferred = payloads[callIndex]
+        callIndex += 1
+        return deferred.promise
+      }
+    )
+
+    const firstMsg = ForwardMsg.fromObject({ hash: "msg-0" })
+    const secondMsg = ForwardMsg.fromObject({ hash: "msg-1" })
+    const encode = (msg: ForwardMsg): ArrayBuffer => {
+      const bytes = ForwardMsg.encode(msg).finish()
+      const copy = new Uint8Array(bytes.byteLength)
+      copy.set(bytes)
+      return copy.buffer
+    }
+
+    // @ts-expect-error - private handleMessage for test
+    const firstHandle = client.handleMessage(encode(firstMsg))
+    // @ts-expect-error - private handleMessage for test
+    const secondHandle = client.handleMessage(encode(secondMsg))
+
+    secondPayload.resolve(secondMsg)
+    await secondHandle
+    expect(onMessage).not.toHaveBeenCalled()
+    // @ts-expect-error - private messageQueue for test
+    expect(client.messageQueue.size).toBe(1)
+
+    firstPayload.resolve(firstMsg)
+    await firstHandle
+
+    expect(onMessage.mock.calls.map(call => call[0].hash)).toEqual([
+      "msg-0",
+      "msg-1",
+    ])
+    // @ts-expect-error - private messageQueue for test
+    expect(client.messageQueue.size).toBe(0)
   })
 
   describe("getBaseUriParts", () => {
@@ -1419,17 +1898,15 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
   })
 
   it("handles background ping cancellation gracefully on disconnect", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockImplementation(
-        () =>
-          new Promise(resolve =>
-            setTimeout(
-              () => resolve(createSuccessResponse(MOCK_HEALTH_RESPONSE)),
-              1000
-            )
+    globalThis.fetch = vi.fn().mockImplementation(
+      () =>
+        new Promise(resolve => {
+          setTimeout(
+            () => resolve(createSuccessResponse(MOCK_HEALTH_RESPONSE)),
+            1000
           )
-      )
+        })
+    )
 
     const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)

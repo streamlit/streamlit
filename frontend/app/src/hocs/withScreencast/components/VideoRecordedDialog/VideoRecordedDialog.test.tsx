@@ -16,7 +16,6 @@
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { BaseProvider, LightTheme } from "baseui"
 
 import { render } from "@streamlit/lib/testing"
 
@@ -35,30 +34,18 @@ describe("VideoRecordedDialog", () => {
   const props = getProps()
 
   it("renders without crashing", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <VideoRecordedDialog {...props} />
-      </BaseProvider>
-    )
+    render(<VideoRecordedDialog {...props} />)
     expect(screen.getByTestId("stDialog")).toBeInTheDocument()
     expect(screen.getByTestId("stVideoRecordedDialog")).toBeInTheDocument()
   })
 
   it("should render a header", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <VideoRecordedDialog {...props} />
-      </BaseProvider>
-    )
+    render(<VideoRecordedDialog {...props} />)
     expect(screen.getByText("Next steps")).toHaveStyle("font-weight: 600")
   })
 
   it("should render a video", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <VideoRecordedDialog {...props} />
-      </BaseProvider>
-    )
+    render(<VideoRecordedDialog {...props} />)
     expect(screen.getByTestId("stVideoRecordedDialog")).toBeInTheDocument()
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
@@ -72,11 +59,7 @@ describe("VideoRecordedDialog", () => {
     const anchorClickSpy = vi
       .spyOn(HTMLAnchorElement.prototype, "click")
       .mockImplementation(() => {})
-    render(
-      <BaseProvider theme={LightTheme}>
-        <VideoRecordedDialog {...props} />
-      </BaseProvider>
-    )
+    render(<VideoRecordedDialog {...props} />)
     const downloadButton = screen.getByRole("button", {
       name: "Save video to disk",
     })

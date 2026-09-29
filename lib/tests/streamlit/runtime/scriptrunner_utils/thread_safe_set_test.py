@@ -214,35 +214,35 @@ def _make_ctx() -> ScriptRunContext:
 def test_fields_are_thread_safe_set_instances() -> None:
     """Verify ScriptRunContext registration fields are ThreadSafeSet instances."""
     ctx = _make_ctx()
-    assert isinstance(ctx.widget_ids_this_run, ThreadSafeSet)
-    assert isinstance(ctx.widget_user_keys_this_run, ThreadSafeSet)
-    assert isinstance(ctx.form_ids_this_run, ThreadSafeSet)
+    assert isinstance(ctx.shared.widget_ids_this_run, ThreadSafeSet)
+    assert isinstance(ctx.shared.widget_user_keys_this_run, ThreadSafeSet)
+    assert isinstance(ctx.shared.form_ids_this_run, ThreadSafeSet)
 
 
 def test_reset_clears_thread_safe_sets() -> None:
     """Verify reset() clears ThreadSafeSet fields in place."""
     ctx = _make_ctx()
-    ctx.widget_ids_this_run.check_and_add("old_id")
-    ctx.widget_user_keys_this_run.check_and_add("old_key")
-    ctx.form_ids_this_run.check_and_add("old_form")
+    ctx.shared.widget_ids_this_run.check_and_add("old_id")
+    ctx.shared.widget_user_keys_this_run.check_and_add("old_key")
+    ctx.shared.form_ids_this_run.check_and_add("old_form")
 
     ctx.reset()
 
-    assert isinstance(ctx.widget_ids_this_run, ThreadSafeSet)
-    assert isinstance(ctx.widget_user_keys_this_run, ThreadSafeSet)
-    assert isinstance(ctx.form_ids_this_run, ThreadSafeSet)
-    assert "old_id" not in ctx.widget_ids_this_run
-    assert "old_key" not in ctx.widget_user_keys_this_run
-    assert "old_form" not in ctx.form_ids_this_run
+    assert isinstance(ctx.shared.widget_ids_this_run, ThreadSafeSet)
+    assert isinstance(ctx.shared.widget_user_keys_this_run, ThreadSafeSet)
+    assert isinstance(ctx.shared.form_ids_this_run, ThreadSafeSet)
+    assert "old_id" not in ctx.shared.widget_ids_this_run
+    assert "old_key" not in ctx.shared.widget_user_keys_this_run
+    assert "old_form" not in ctx.shared.form_ids_this_run
 
 
 def test_on_script_finished_receives_frozenset() -> None:
     """Verify the snapshot passed to on_script_finished is a frozenset."""
     ctx = _make_ctx()
-    ctx.widget_ids_this_run.check_and_add("w1")
-    ctx.widget_ids_this_run.check_and_add("w2")
+    ctx.shared.widget_ids_this_run.check_and_add("w1")
+    ctx.shared.widget_ids_this_run.check_and_add("w2")
 
-    snap = ctx.widget_ids_this_run.snapshot()
+    snap = ctx.shared.widget_ids_this_run.snapshot()
     assert isinstance(snap, frozenset)
     assert snap == frozenset({"w1", "w2"})
 

@@ -29,7 +29,7 @@ def test_maintains_selection_when_other_tab_added(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test st.tabs maintains selected tab if additional tab added."""
-    tab_buttons = app.get_by_test_id("stTabs").locator("button[role=tab]")
+    tab_buttons = app.get_by_test_id("stTabs").get_by_role("tab")
     # Select Tab 2
     tab_buttons.nth(1).click()
 
@@ -48,7 +48,7 @@ def test_maintains_selection_when_other_tab_removed(
     click_button(app, "Add Tab 3")
 
     # Select Tab 3
-    tab_buttons = app.get_by_test_id("stTabs").locator("button[role=tab]")
+    tab_buttons = app.get_by_test_id("stTabs").get_by_role("tab")
     tab_buttons.nth(2).click()
 
     click_button(app, "Remove Tab 1")
@@ -67,7 +67,7 @@ def test_resets_selection_when_selected_tab_removed(
 
     wait_for_app_run(app)
     # Select Tab 2
-    tab_buttons = app.get_by_test_id("stTabs").locator("button[role=tab]")
+    tab_buttons = app.get_by_test_id("stTabs").get_by_role("tab")
     tab_buttons.nth(1).click()
 
     click_button(app, "Remove Tab 2")
@@ -85,23 +85,11 @@ def test_maintains_selection_when_same_name_exists(
     click_button(app, "Reset Tabs")
     click_button(app, "Add Tab 3")
 
-    tab_buttons = app.get_by_test_id("stTabs").locator("button[role=tab]")
+    tab_buttons = app.get_by_test_id("stTabs").get_by_role("tab")
     tab_buttons.nth(1).click()
 
-    # Ensure that the click worked and the highlight animation finished
-    # to avoid issues with the snapshot later. The 'tab-highlight' element
-    # is always visible for the selected tab and its always the same element
-    # that simply changes the position using CSS transform.
+    # Ensure that the click worked before taking the snapshot
     expect(tab_buttons.nth(1)).to_have_attribute("aria-selected", "true")
-    tab_highlight_element = app.locator("[data-baseweb='tab-highlight']")
-    expect(tab_highlight_element).to_be_visible()
-    tab_highlight_element.evaluate(
-        """
-        element => Promise.all(
-                element.getAnimations().map((animation) => animation.finished)
-            )
-        """
-    )
 
     # Change Tab 1 & 3 Names
     click_button(app, "Change Tab 1 & 3")
@@ -119,7 +107,7 @@ def test_resets_selection_when_tab_names_change(
 
     wait_for_app_run(app)
     # Select Tab 2
-    tab_buttons = app.get_by_test_id("stTabs").locator("button[role=tab]")
+    tab_buttons = app.get_by_test_id("stTabs").get_by_role("tab")
     tab_buttons.nth(1).click()
 
     click_button(app, "Change All Tabs")

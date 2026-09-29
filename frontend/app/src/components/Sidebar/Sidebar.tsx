@@ -19,6 +19,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -58,7 +59,11 @@ import {
   StyledSidebarHeaderContainer,
   StyledSidebarUserContent,
 } from "./styled-components"
-import { clampSidebarWidth, DEFAULT_WIDTH } from "./utils"
+import {
+  calculateMaxBreakpoint,
+  clampSidebarWidth,
+  getSidebarWidthLimits,
+} from "./utils"
 
 export interface SidebarProps {
   endpoints: StreamlitEndpoints
@@ -67,11 +72,6 @@ export interface SidebarProps {
   isCollapsed: boolean
   onToggleCollapse: (collapsed: boolean, shouldPersist?: boolean) => void
   widgetsDisabled: boolean
-}
-
-function calculateMaxBreakpoint(value: string): number {
-  // We subtract a margin of 0.02 to use as a max-width
-  return parseInt(value, 10) - 0.02
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -84,12 +84,23 @@ const Sidebar: React.FC<SidebarProps> = ({
 }): ReactElement => {
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
+  const sidebarWidthLimits = useMemo(
+    () => getSidebarWidthLimits(theme.sizes, theme.fontSizes.baseFontSize),
+    [theme.sizes, theme.fontSizes.baseFontSize]
+  )
   const { innerWidth } = useWindowDimensionsContext()
 
   const { appPages } = useContext(NavigationContext)
 
-  const { hideSidebarNav, appLogo, initialSidebarWidth, appRootRef } =
-    useContext(SidebarConfigContext)
+  const {
+    hideSidebarNav,
+    appLogo,
+    initialSidebarWidth,
+    appRootRef,
+    isSidebarLocked,
+  } = useContext(SidebarConfigContext)
+
+  const isMobileViewport = innerWidth > 0 && innerWidth <= mediumBreakpointPx
 
   const scrollbarGutterSize = useScrollbarGutterSize()
 
@@ -105,7 +116,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         const cached = Number.parseInt(cachedSidebarWidth, 10)
         return Number.isNaN(cached)
           ? null
-          : clampSidebarWidth(cached).toString()
+          : clampSidebarWidth(cached, sidebarWidthLimits).toString()
       }
       return null
     }
@@ -117,10 +128,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
 
     if (notNullOrUndefined(initialSidebarWidth)) {
-      return clampSidebarWidth(initialSidebarWidth).toString()
+      return clampSidebarWidth(
+        initialSidebarWidth,
+        sidebarWidthLimits
+      ).toString()
     }
 
-    return DEFAULT_WIDTH
+    return sidebarWidthLimits.defaultWidthPx.toString()
   })
 
   const [lastInnerWidth, setLastInnerWidth] = useState<number>(
@@ -139,16 +153,19 @@ const Sidebar: React.FC<SidebarProps> = ({
     setShowSidebarCollapse(false)
   }, [])
 
-  const initializeSidebarWidth = useCallback((width: number): void => {
-    const clampedWidth = clampSidebarWidth(width)
-    const newWidth = clampedWidth.toString()
+  const initializeSidebarWidth = useCallback(
+    (width: number): void => {
+      const clampedWidth = clampSidebarWidth(width, sidebarWidthLimits)
+      const newWidth = clampedWidth.toString()
 
-    setSidebarWidth(newWidth)
+      setSidebarWidth(newWidth)
 
-    if (localStorageAvailable()) {
-      window.localStorage.setItem("sidebarWidth", newWidth)
-    }
-  }, [])
+      if (localStorageAvailable()) {
+        window.localStorage.setItem("sidebarWidth", newWidth)
+      }
+    },
+    [sidebarWidthLimits]
+  )
 
   const onResizeStop = useCallback<ResizeCallback>(
     (
@@ -220,8 +237,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   function resetSidebarWidth(): void {
     // Double clicking on the resize handle resets sidebar to initial width or default
     const resetWidth = notNullOrUndefined(initialSidebarWidth)
-      ? clampSidebarWidth(initialSidebarWidth).toString()
-      : DEFAULT_WIDTH
+      ? clampSidebarWidth(initialSidebarWidth, sidebarWidthLimits).toString()
+      : sidebarWidthLimits.defaultWidthPx.toString()
     setSidebarWidth(resetWidth)
     if (localStorageAvailable()) {
       window.localStorage.setItem("sidebarWidth", resetWidth)
@@ -270,7 +287,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         },
       }}
       handleComponent={{
-        right: <StyledResizeHandle onDoubleClick={resetSidebarWidth} />,
+        right: (
+          <StyledResizeHandle
+            data-testid="stSidebarResizeHandle"
+            onDoubleClick={resetSidebarWidth}
+          />
+        ),
       }}
       size={{
         width: sidebarWidth,
@@ -293,21 +315,23 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
           {renderLogoContent()}
-          <StyledCollapseSidebarButton
-            showSidebarCollapse={showSidebarCollapse}
-            data-testid="stSidebarCollapseButton"
-          >
-            <BaseButton
-              kind={BaseButtonKind.HEADER_NO_PADDING}
-              onClick={toggleCollapse}
+          {(!isSidebarLocked || isMobileViewport) && (
+            <StyledCollapseSidebarButton
+              showSidebarCollapse={showSidebarCollapse}
+              data-testid="stSidebarCollapseButton"
             >
-              <DynamicIcon
-                size="xl"
-                iconValue=":material/keyboard_double_arrow_left:"
-                color={theme.colors.fadedText60}
-              />
-            </BaseButton>
-          </StyledCollapseSidebarButton>
+              <BaseButton
+                kind={BaseButtonKind.HEADER_NO_PADDING}
+                onClick={toggleCollapse}
+              >
+                <DynamicIcon
+                  size="xl"
+                  iconValue=":material/keyboard_double_arrow_left:"
+                  color={theme.colors.fadedText60}
+                />
+              </BaseButton>
+            </StyledCollapseSidebarButton>
+          )}
         </StyledSidebarHeaderContainer>
         {hasPageNavAbove && (
           <SidebarNav

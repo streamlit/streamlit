@@ -29,8 +29,8 @@ np.random.seed(42)
 df = pd.DataFrame(
     {
         "x": range(10),
-        "series1": np.random.randn(10).cumsum(),
-        "series2": np.random.randn(10).cumsum(),
+        "series1": np.cumsum(np.random.randn(10)),
+        "series2": np.cumsum(np.random.randn(10)),
     }
 )
 

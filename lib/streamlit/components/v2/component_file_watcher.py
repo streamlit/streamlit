@@ -204,7 +204,7 @@ class ComponentFileWatcher:
                     self._commit_watch_state(
                         new_watchers, new_watched_dirs, asset_watch_roots
                     )
-                else:
+                else:  # pragma: no cover - defensive, non-empty roots always produce a watcher
                     _LOGGER.debug("No directories were watched; staying inactive")
             except Exception:
                 _LOGGER.exception("Failed to start file watching")

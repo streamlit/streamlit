@@ -135,9 +135,9 @@ selected = st.selectbox(
 **Empty input:** All modes show all options when the input is empty.
 
 **`filter_mode=None`:**
-- Input field is read-only (user cannot type)
+- Typing is disabled (keyboard, paste, and IME input are ignored)
 - On mobile, keyboard does not appear
-- Arrow keys still work for navigation
+- Input stays focusable, so arrow keys still work for navigation
 - Dropdown opens on click/focus
 
 ### Interaction with `accept_new_options`

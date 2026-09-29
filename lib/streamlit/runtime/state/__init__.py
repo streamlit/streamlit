@@ -14,9 +14,12 @@
 
 from streamlit.runtime.state.common import (
     BindOption,
+    OnChangeMode,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    validate_on_change_mode,
 )
 from streamlit.runtime.state.query_params_proxy import QueryParamsProxy
 from streamlit.runtime.state.safe_session_state import SafeSessionState
@@ -34,6 +37,8 @@ from streamlit.runtime.state.widgets import register_widget
 __all__ = [
     "SCRIPT_RUN_WITHOUT_ERRORS_KEY",
     "BindOption",
+    "OnChangeMode",
+    "PersistStateOption",
     "QueryParamsProxy",
     "SafeSessionState",
     "SessionState",
@@ -44,4 +49,5 @@ __all__ = [
     "WidgetKwargs",
     "get_session_state",
     "register_widget",
+    "validate_on_change_mode",
 ]

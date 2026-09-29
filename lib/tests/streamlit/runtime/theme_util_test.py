@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitInvalidThemeOptionError
 from streamlit.proto.NewSession_pb2 import CustomThemeConfig
 from streamlit.runtime.theme_util import parse_fonts_with_source
 
@@ -116,7 +116,7 @@ class TestParseFontsWithSource:
     def test_parse_font_with_empty_name_raises_exception(self):
         """Test parsing font config with empty name but valid source raises exception."""
         msg = CustomThemeConfig()
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitInvalidThemeOptionError) as exc_info:
             parse_fonts_with_source(
                 msg,
                 body_font_config=":https://fonts.googleapis.com/css2?family=Inter&display=swap",
@@ -184,9 +184,9 @@ class TestParseFontsWithSource:
         assert updated_msg.font_sources[0].config_name == "codeFont"
 
     def test_body_font_multiple_families_raises_exception(self):
-        """Test that multiple fonts in body font source raises StreamlitAPIException."""
+        """Test that multiple fonts in body font source raises StreamlitInvalidThemeOptionError."""
         msg = CustomThemeConfig()
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitInvalidThemeOptionError) as exc_info:
             parse_fonts_with_source(
                 msg,
                 body_font_config="Inter:https://fonts.googleapis.com/css2?family=Inter&family=Roboto&display=swap",
@@ -202,9 +202,9 @@ class TestParseFontsWithSource:
         )
 
     def test_code_font_multiple_families_raises_exception(self):
-        """Test that multiple fonts in code font source raises StreamlitAPIException."""
+        """Test that multiple fonts in code font source raises StreamlitInvalidThemeOptionError."""
         msg = CustomThemeConfig()
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitInvalidThemeOptionError) as exc_info:
             parse_fonts_with_source(
                 msg,
                 body_font_config=None,
@@ -220,9 +220,9 @@ class TestParseFontsWithSource:
         )
 
     def test_heading_font_multiple_families_raises_exception(self):
-        """Test that multiple fonts in heading font source raises StreamlitAPIException."""
+        """Test that multiple fonts in heading font source raises StreamlitInvalidThemeOptionError."""
         msg = CustomThemeConfig()
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitInvalidThemeOptionError) as exc_info:
             parse_fonts_with_source(
                 msg,
                 body_font_config=None,

@@ -19,6 +19,7 @@ import {
   CSSProperties,
   type FC,
   type HTMLProps,
+  type JSX,
   lazy,
   memo,
   type ReactElement,
@@ -27,13 +28,15 @@ import {
   useCallback,
   useContext,
   useId,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
 import slugify from "@sindresorhus/slugify"
 import { parseToRgba } from "color2k"
-import { type Element, type Root as HastRoot } from "hast"
+import type { Element, Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
 import type { Root as MdastRoot, Text } from "mdast"
 import { findAndReplace } from "mdast-util-find-and-replace"
@@ -50,26 +53,27 @@ import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
 
-import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
-
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 import {
   getMarkdownTextColors,
   getThemeBackgroundColors,
 } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
+import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 
 import {
   StyledHeadingActionElements,
+  StyledHeadingText,
   StyledHeadingWithActionElements,
   StyledHelpIconWrapper,
   StyledLinkIcon,
@@ -93,6 +97,12 @@ import {
 
 const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
+)
+
+const MermaidChart = lazy(() =>
+  import("./MermaidChart").then(module => ({
+    default: module.MermaidChart,
+  }))
 )
 
 /**
@@ -169,6 +179,11 @@ export interface Props {
   inheritFont?: boolean
 
   /**
+   * Inherit line height from parent when truncating text
+   */
+  inheritLineHeight?: boolean
+
+  /**
    * Optional help text for inline help tooltips.
    * When present, :help[] markers in the source will use this text.
    */
@@ -184,6 +199,12 @@ export interface Props {
    * Enables unterminated markdown completion (via remend) during streaming.
    */
   unterminatedParsing?: boolean
+
+  /**
+   * When true, headers (h1-h6) keep their `id` for deep linking but the
+   * visible anchor link icon is not rendered.
+   */
+  hideAnchors?: boolean
 }
 
 /**
@@ -255,15 +276,6 @@ export function createAnchorFromText(text: string | null): string {
   return xxhash.h32(text, 0xabcd).toString(16)
 }
 
-// Dangerous URL schemes that can execute arbitrary code when clicked
-const DANGEROUS_URL_SCHEMES = ["javascript:", "vbscript:"]
-
-// C0 control characters (U+0000-U+001F) that browsers silently strip from URLs
-// per the WHATWG URL spec. These must be removed before checking schemes to
-// prevent bypass attacks like "\x01javascript:alert(1)".
-// eslint-disable-next-line no-control-regex
-const C0_CONTROL_CHARS_REGEX = /[\x00-\x1F]/g
-
 /**
  * Transforms link URIs for markdown rendering.
  *
@@ -272,34 +284,21 @@ const C0_CONTROL_CHARS_REGEX = /[\x00-\x1F]/g
  * custom schemes that Streamlit users rely on (e.g., inline images, PDFs).
  * Only explicitly dangerous schemes (javascript:, vbscript:) are blocked.
  *
- * Note: data:text/html URLs can execute JavaScript but run in a sandboxed
- * null-origin context, making them less dangerous than javascript: URLs.
- *
- * Blocked URLs return "#" instead of "" to prevent navigation. An empty href
- * combined with target="_blank" would open the current page in a new tab.
+ * Blocked URLs return "#" (BLOCKED_LINK_URI) instead of "" to prevent
+ * navigation. An empty href combined with target="_blank" would open the
+ * current page in a new tab.
  */
 function transformLinkUri(href: string): string {
-  // Strip C0 control characters and whitespace, then lowercase for comparison.
-  // Browsers strip C0 chars per WHATWG URL spec, so we must normalize first
-  // to prevent bypass attacks like "\x01javascript:alert(1)".
-  const normalizedHref = href
-    .replace(C0_CONTROL_CHARS_REGEX, "")
-    .toLowerCase()
-    .trim()
-  if (
-    DANGEROUS_URL_SCHEMES.some(scheme => normalizedHref.startsWith(scheme))
-  ) {
-    // Return "#" instead of "" to prevent navigation. Empty href with
-    // target="_blank" would open the current page in a new tab.
-    return "#"
-  }
-  return href
+  return isDangerousLinkUri(href) ? BLOCKED_LINK_URI : href
 }
 
 // wrapping in `once` ensures we only scroll once
 const scrollNodeIntoView = once((node: HTMLElement): void => {
   node.scrollIntoView(true)
 })
+
+/** Selects the heading body text used for aria-labelledby and auto-anchor slugs. */
+const HEADING_TEXT_SELECTOR = "[data-heading-text]"
 
 interface HeadingActionElements {
   elementId?: string
@@ -314,7 +313,7 @@ const HeaderActionElements: FC<HeadingActionElements> = ({
 }) => {
   const theme = useEmotionTheme()
   if (!help && hideAnchor) {
-    return <></>
+    return null
   }
 
   return (
@@ -341,6 +340,13 @@ interface HeadingWithActionElementsProps {
   children: ReactNode[] | ReactNode
   tagProps?: HTMLProps<HTMLHeadingElement>
   help?: string
+  /** Optional decorative leading icon rendered inside the heading tag. */
+  icon?: ReactNode
+  /**
+   * When true, the heading text stays on one line and ellipsizes.
+   * Action icons remain visible.
+   */
+  truncate?: boolean
 }
 
 export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
@@ -350,18 +356,28 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   hideAnchor,
   children,
   tagProps,
+  icon,
+  truncate = false,
 }) => {
   const isInSidebar = useContext(IsSidebarContext)
   const isInDialog = useContext(IsDialogContext)
   const [elementId, setElementId] = useState(propsAnchor)
+  const nodeRef = useRef<HTMLElement | null>(null)
 
-  const ref = useCallback(
-    (node: HTMLElement | null) => {
-      if (node === null) {
-        return
-      }
-
-      const anchor = propsAnchor || createAnchorFromText(node.textContent)
+  /**
+   * Set the heading id from `propsAnchor` or the node's textContent, then scroll
+   * the node into view if that id matches the current URL hash. Shared by the
+   * mount-time ref callback and the rerun effect below so the two paths cannot
+   * drift apart.
+   *
+   * Use the body-text span so a decorative leading icon or action icons do
+   * not affect the auto-generated anchor slug.
+   */
+  const applyAnchor = useCallback(
+    (node: HTMLElement): void => {
+      const textSource = node.querySelector<HTMLElement>(HEADING_TEXT_SELECTOR)
+      const anchor =
+        propsAnchor || createAnchorFromText(textSource?.textContent ?? null)
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
       if (windowHash && windowHash === anchor) {
@@ -371,7 +387,42 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     [propsAnchor]
   )
 
+  const ref = useCallback(
+    (node: HTMLElement | null) => {
+      nodeRef.current = node
+      if (node === null) {
+        return
+      }
+      applyAnchor(node)
+    },
+    [applyAnchor]
+  )
+
+  // Re-derive the anchor when heading text changes across reruns. The ref
+  // callback only fires on mount or when propsAnchor changes; when only the text
+  // content changes, React reuses the DOM node and the callback never re-fires.
+  // Skipped when propsAnchor is set, since an explicit anchor never depends on
+  // the text.
+  //
+  // useLayoutEffect (not useEffect) so the re-derived id is committed before
+  // paint; otherwise a frame can render with the previous hash link.
+  useLayoutEffect(() => {
+    const node = nodeRef.current
+    if (!node || propsAnchor) {
+      return
+    }
+    applyAnchor(node)
+  }, [children, propsAnchor, applyAnchor])
+
   const isInSidebarOrDialog = isInSidebar || isInDialog
+  // Title is derived from the rendered DOM (children are React nodes).
+  // Pass `tag` as the identity key so a same-path title→header swap
+  // (h1→h2) re-attaches the observer to the new heading node.
+  const { titleRef, labelTextRef } = useLabelTitleTooltip<HTMLSpanElement>(
+    truncate,
+    tag
+  )
+
   const actionElements = (
     <HeaderActionElements
       elementId={elementId}
@@ -381,20 +432,21 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   )
 
   // Accessibility:
-  // Headings can contain action elements (help tooltip icon, anchor link icon).
-  // Those elements are rendered inside the <h*> for layout reasons, but they
-  // can accidentally become part of the heading's computed accessible name.
+  // Headings can contain action elements (help tooltip, anchor link) and an
+  // optional decorative leading icon. Those are rendered inside the <h*> for
+  // layout, but must not become part of the heading's accessible name.
   //
-  // To keep the heading name stable (visible heading text only), we use
-  // aria-labelledby to point at a span that wraps only the text content.
+  // The body is always wrapped in a data-heading-text span so auto-anchor
+  // slugs ignore the icon and action elements. aria-labelledby points at that
+  // span when action elements are present so the accessible name stays the
+  // visible heading text. The leading icon is aria-hidden, so it is not part
+  // of this condition.
   //
-  // We generate the label span id with useId() to ensure uniqueness even if
-  // multiple headings end up sharing the same anchor slug.
+  // useId() keeps the label span id unique even when headings share an anchor slug.
   //
-  // Only set aria-labelledby when action elements are present:
-  // - help: tooltip icon can be present even in sidebar/dialog (where we don't
-  //   set a heading id/anchor)
-  // - anchor icon: only present when we have an elementId and it's not hidden
+  // Set aria-labelledby when action elements are present:
+  // - help: tooltip can appear even in sidebar/dialog (no heading id/anchor)
+  // - anchor icon: only when we have an elementId and it's not hidden
   const rawHeadingTextId = useId()
   const headingTextId =
     help || (elementId && !hideAnchor && !isInSidebarOrDialog)
@@ -410,23 +462,50 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     ...ariaLabelledbyAttribute,
   }
   const Tag = tag
+  const headingText = (
+    <StyledHeadingText
+      id={headingTextId}
+      ref={titleRef}
+      $truncate={truncate}
+      data-heading-text=""
+    >
+      {truncate ? (
+        <span ref={labelTextRef} style={{ display: "contents" }}>
+          {children}
+        </span>
+      ) : (
+        children
+      )}
+    </StyledHeadingText>
+  )
   // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
+  //
+  // On the wrapping path the leading icon is inline so wrapping and
+  // text-align match markdown icons. wrap=False makes the heading a flex
+  // row: the icon stays start-chrome, the body ellipsizes, and actions
+  // stay trailing. The labelled body span keeps the glyph out of the
+  // accessible name and auto-anchor slug.
   const headerElementWithActions = (
     <Tag {...tagProps} {...mergedAttributes}>
-      {headingTextId ? <span id={headingTextId}>{children}</span> : children}
+      {icon}
+      {headingText}
       {actionElements}
     </Tag>
   )
 
-  // we don't want to apply styling, so return the "raw" header
-  if (isInSidebarOrDialog) {
+  // Truncated headings need this wrapper to ellipsize, including in the
+  // sidebar and dialog. Skip it otherwise so those contexts stay unstyled.
+  if (isInSidebarOrDialog && !truncate) {
     return headerElementWithActions
   }
 
   return (
-    <StyledHeadingWithActionElements data-testid="stHeadingWithActionElements">
+    <StyledHeadingWithActionElements
+      $truncate={truncate}
+      data-testid="stHeadingWithActionElements"
+    >
       {headerElementWithActions}
     </StyledHeadingWithActionElements>
   )
@@ -439,12 +518,38 @@ type HeadingProps = JSX.IntrinsicElements["h1"] &
     node: Element
   }
 
+/**
+ * Context to indicate if markdown is being streamed (unterminatedParsing mode).
+ * When true, mermaid code blocks render as syntax-highlighted code instead of diagrams.
+ * This prevents flickering and error states from partial/incomplete diagram source.
+ */
+const StreamingContext = createContext<boolean>(false)
+StreamingContext.displayName = "StreamingContext"
+
+/**
+ * Context that controls whether anchor link icons render next to markdown
+ * headings. Heading `id` attributes are still set when this is true, so URL
+ * fragment deep links keep working.
+ */
+const HideAnchorsContext = createContext<boolean>(false)
+HideAnchorsContext.displayName = "HideAnchorsContext"
+
+/**
+ * True when markdown is truncated to one line. Fenced code must stay inline
+ * so it cannot grow into a syntax highlighter or mermaid diagram. Widget
+ * labels that are not truncating keep fenced-code rendering unchanged.
+ */
+const TruncateContext = createContext(false)
+TruncateContext.displayName = "TruncateContext"
+
 const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
+  const hideAnchor = useContext(HideAnchorsContext)
   return (
     <HeadingWithActionElements
       tag={node.tagName}
       anchor={anchor}
+      hideAnchor={hideAnchor}
       tagProps={rest}
     >
       {children}
@@ -485,6 +590,18 @@ interface RenderedMarkdownProps {
    * Enables unterminated markdown completion (via remend) during streaming.
    */
   unterminatedParsing?: boolean
+
+  /**
+   * When true, headers (h1-h6) keep their `id` for deep linking but the
+   * visible anchor link icon is not rendered.
+   */
+  hideAnchors?: boolean
+
+  /**
+   * Truncate to one line. When set with isLabel, fenced code is unwrapped
+   * so the element cannot grow into a syntax-highlighted block.
+   */
+  truncate?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -492,6 +609,7 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
 
 /**
  * Renders code tag with highlighting based on requested language.
+ * Mermaid code blocks are rendered as diagrams (unless streaming is in progress).
  */
 export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   inline,
@@ -500,21 +618,47 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   ...props
 }) => {
   const match = /language-(\w+)/.exec(className || "")
+  const isStreaming = useContext(StreamingContext)
+  const truncate = useContext(TruncateContext)
 
   const codeText = String(children ?? "")
     .replace(/^\n/, "")
     .replace(/\n$/, "")
 
   const language = match?.[1] || ""
-  return !inline ? (
+
+  // Truncated text stays inline: fenced blocks must not grow into syntax
+  // highlighters or mermaid diagrams. Non-truncated labels keep fenced-code
+  // highlighting.
+  if (inline || truncate) {
+    return (
+      <StyledInlineCode className={className} {...omit(props, "node")}>
+        {children}
+      </StyledInlineCode>
+    )
+  }
+
+  // Handle mermaid code blocks: render as a diagram unless streaming
+  // (see StreamingContext for rationale).
+  if (language.toLowerCase() === "mermaid" && !isStreaming) {
+    return (
+      <ErrorBoundary>
+        <Suspense
+          fallback={
+            <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
+          }
+        >
+          <MermaidChart source={codeText} />
+        </Suspense>
+      </ErrorBoundary>
+    )
+  }
+
+  return (
     <ErrorBoundary>
       <Suspense
         fallback={
-          <Skeleton
-            element={SkeletonProto.create({
-              style: SkeletonProto.SkeletonStyle.ELEMENT,
-            })}
-          />
+          <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
         }
       >
         <StreamlitSyntaxHighlighter
@@ -525,10 +669,6 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
         </StreamlitSyntaxHighlighter>
       </Suspense>
     </ErrorBoundary>
-  ) : (
-    <StyledInlineCode className={className} {...omit(props, "node")}>
-      {children}
-    </StyledInlineCode>
   )
 }
 
@@ -710,7 +850,7 @@ function createRemarkColoringAndSmall(
         const data = node.data || (node.data = {})
         data.hName = "span"
         data.hProperties = data.hProperties || {}
-        data.hProperties.className = "stMarkdownShimmer"
+        data.hProperties.className = ["stMarkdownShimmer"]
         return
       }
 
@@ -750,7 +890,7 @@ function createRemarkColoringAndSmall(
             : "stMarkdownColoredText"
 
           data.hProperties.style = styles.join("; ")
-          data.hProperties.className = className
+          data.hProperties.className = [className]
         }
         // When both colors are invalid, render as plain span (no style)
         // to preserve the content text rather than falling through to
@@ -781,7 +921,7 @@ function createRemarkColoringAndSmall(
           const data = node.data || (node.data = {})
           data.hName = "span"
           data.hProperties = data.hProperties || {}
-          data.hProperties.className = "stMarkdownBadge"
+          data.hProperties.className = ["stMarkdownBadge"]
           data.hProperties.style = `${bgColor}; ${textColor}; font-size: ${theme.fontSizes.sm};`
           return
         }
@@ -796,13 +936,13 @@ function createRemarkColoringAndSmall(
         data.hProperties.style = style
         // Add class name specific to colored text used for button hover selector
         // to override text color
-        data.hProperties.className = "stMarkdownColoredText"
+        data.hProperties.className = ["stMarkdownColoredText"]
         // Add class for background color for custom styling
         if (
           style &&
           (/background-color:/.test(style) || /background:/.test(style))
         ) {
-          data.hProperties.className = "stMarkdownColoredBackground"
+          data.hProperties.className = ["stMarkdownColoredBackground"]
         }
         return
       }
@@ -1034,8 +1174,10 @@ const BASE_REMARK_PLUGINS = [
 
 // Sets disallowed markdown for widget labels
 const LABEL_DISALLOWED_ELEMENTS = [
-  // Restricts table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
-  // Note that images are allowed but have a max height equal to the text height
+  // Restricts table elements, headings, unordered/ordered lists, task lists,
+  // horizontal rules, and blockquotes. Images are allowed but have a max height
+  // equal to the text height. Fenced `pre` stays allowed so labels keep
+  // syntax-highlighted code; truncation unwraps it separately.
   "table",
   "thead",
   "tbody",
@@ -1056,8 +1198,15 @@ const LABEL_DISALLOWED_ELEMENTS = [
   "blockquote",
 ]
 
+// Truncation also unwraps fenced code so wrap=False text stays one line.
+const TRUNCATE_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "pre"]
+
 // Add link disallowing to the base disallowed elements
 const LINKS_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "a"]
+const TRUNCATE_LINKS_DISALLOWED_ELEMENTS = [
+  ...TRUNCATE_DISALLOWED_ELEMENTS,
+  "a",
+]
 
 interface LinkProps {
   node?: Element
@@ -1100,6 +1249,8 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   disableLinks,
   helpText,
   unterminatedParsing,
+  hideAnchors,
+  truncate,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1216,12 +1367,15 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       //
       // Unordered lists (-, +, *), headings (#), and blockquotes (>)
       // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
-      processed = processed.replace(
+      processed = processed.replaceAll(
         /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
         "$1\\$2"
       )
       // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
-      processed = processed.replace(/^(\s*)(\d+)([.)])(?=\s|$)/gm, "$1$2\\$3")
+      processed = processed.replaceAll(
+        /^(\s*)(\d+)([.)])(?=\s|$)/gm,
+        "$1$2\\$3"
+      )
     }
 
     // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
@@ -1236,8 +1390,13 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
+    if (truncate) {
+      return disableLinks
+        ? TRUNCATE_LINKS_DISALLOWED_ELEMENTS
+        : TRUNCATE_DISALLOWED_ELEMENTS
+    }
     return disableLinks ? LINKS_DISALLOWED_ELEMENTS : LABEL_DISALLOWED_ELEMENTS
-  }, [isLabel, disableLinks])
+  }, [isLabel, truncate, disableLinks])
 
   // Show skeleton while required plugins are still loading
   // A plugin is "loading" if it's needed but state is still null (not loaded, not failed)
@@ -1249,31 +1408,41 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   if (isLoadingPlugins) {
     return (
       <ErrorBoundary>
-        <Skeleton
-          element={SkeletonProto.create({
-            style: SkeletonProto.SkeletonStyle.ELEMENT,
-          })}
-        />
+        <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
       </ErrorBoundary>
     )
   }
 
+  const markdown = (
+    <ReactMarkdown
+      remarkPlugins={remarkPlugins}
+      rehypePlugins={rehypePlugins}
+      components={renderers}
+      urlTransform={transformLinkUri}
+      disallowedElements={disallowed}
+      // unwrap and render children from invalid markdown
+      unwrapDisallowed={true}
+    >
+      {processedSource}
+    </ReactMarkdown>
+  )
+
   return (
-    <HelpTextContext.Provider value={helpText}>
-      <ErrorBoundary>
-        <ReactMarkdown
-          remarkPlugins={remarkPlugins}
-          rehypePlugins={rehypePlugins}
-          components={renderers}
-          urlTransform={transformLinkUri}
-          disallowedElements={disallowed}
-          // unwrap and render children from invalid markdown
-          unwrapDisallowed={true}
-        >
-          {processedSource}
-        </ReactMarkdown>
-      </ErrorBoundary>
-    </HelpTextContext.Provider>
+    <StreamingContext.Provider value={Boolean(unterminatedParsing)}>
+      <HelpTextContext.Provider value={helpText}>
+        <HideAnchorsContext.Provider value={Boolean(hideAnchors)}>
+          <ErrorBoundary>
+            {truncate ? (
+              <TruncateContext.Provider value={true}>
+                {markdown}
+              </TruncateContext.Provider>
+            ) : (
+              markdown
+            )}
+          </ErrorBoundary>
+        </HideAnchorsContext.Provider>
+      </HelpTextContext.Provider>
+    </StreamingContext.Provider>
   )
 })
 
@@ -1291,9 +1460,11 @@ const StreamlitMarkdown: FC<Props> = ({
   disableLinks,
   isToast,
   inheritFont,
+  inheritLineHeight,
   helpText,
   truncate,
   unterminatedParsing,
+  hideAnchors,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1303,6 +1474,7 @@ const StreamlitMarkdown: FC<Props> = ({
       isInDialog={isInDialog}
       isLabel={isLabel}
       inheritFont={inheritFont}
+      inheritLineHeight={inheritLineHeight}
       boldLabel={boldLabel}
       isToast={isToast}
       truncate={truncate}
@@ -1316,6 +1488,8 @@ const StreamlitMarkdown: FC<Props> = ({
         disableLinks={disableLinks}
         helpText={helpText}
         unterminatedParsing={unterminatedParsing}
+        hideAnchors={hideAnchors}
+        truncate={truncate}
       />
     </StyledStreamlitMarkdown>
   )

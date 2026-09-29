@@ -524,6 +524,38 @@ result = st.data_editor(
 
 st.write("Multiselect column return:", str(result))
 
+st.header("Markdown column:")
+
+markdown_result = st.data_editor(
+    pd.DataFrame(
+        {
+            "col_0": [
+                "**Bold** and *italic*",
+                "# Header\nSome text",
+                "[Link](https://streamlit.io)",
+                None,
+            ],
+            "col_1": ["Simple text", "Another text", "", None],
+        }
+    ),
+    column_config={
+        "col_0": st.column_config.MarkdownColumn(
+            "Markdown column",
+            width="medium",
+            help="This is a markdown column",
+            required=True,
+            disabled=False,
+            default="**default**",
+        ),
+        "col_1": st.column_config.MarkdownColumn(),
+    },
+    width="content",
+    hide_index=True,
+    key="markdown-column",
+)
+
+st.write("Markdown column return:", str(markdown_result.to_dict()))
+
 st.header("Missing placeholder:")
 st.data_editor(
     pd.DataFrame(

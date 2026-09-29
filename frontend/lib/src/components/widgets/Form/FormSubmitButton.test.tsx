@@ -35,7 +35,7 @@ vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
   formatShortcutForDisplay: vi.fn(
     (shortcut: string | null | undefined) =>
-      shortcut?.replace(/\+/g, " + ") || undefined
+      shortcut?.replaceAll("+", " + ") || undefined
   ),
 }))
 
@@ -241,5 +241,32 @@ describe("FormSubmitButton", () => {
       props.fragmentId,
       props.element
     )
+  })
+
+  it.each([
+    ["primary", "stBaseButton-primaryFormSubmit"],
+    ["tertiary", "stBaseButton-tertiaryFormSubmit"],
+    ["secondary", "stBaseButton-secondaryFormSubmit"],
+  ])(
+    "applies the correct button kind for the %s type",
+    (type, expectedTestId) => {
+      renderWithContexts(<FormSubmitButton {...getProps({}, { type })} />)
+      const matches = screen.getAllByTestId(expectedTestId)
+      expect(matches.length).toBeGreaterThan(0)
+      expect(matches[0]).toBeVisible()
+    }
+  )
+
+  it("does not submit when the shortcut fires while disabled", () => {
+    const props = getProps({ disabled: true }, { shortcut: "Ctrl+Enter" })
+    const submitSpy = vi.spyOn(props.widgetMgr, "submitForm")
+    const useRegisterShortcutMock = vi.mocked(useRegisterShortcut)
+
+    renderWithContexts(<FormSubmitButton {...props} />)
+
+    const { onActivate } = useRegisterShortcutMock.mock.calls[0][0]
+    onActivate()
+
+    expect(submitSpy).not.toHaveBeenCalled()
   })
 })

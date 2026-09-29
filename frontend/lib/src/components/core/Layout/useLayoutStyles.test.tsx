@@ -18,10 +18,14 @@ import { ReactNode } from "react"
 import { renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { Element, IAlert, streamlit } from "@streamlit/protobuf"
+import { type Alert, Element, streamlit } from "@streamlit/protobuf"
 
 import { FlexContextProvider } from "./FlexContext"
-import { useLayoutStyles, UseLayoutStylesShape } from "./useLayoutStyles"
+import {
+  extractLayoutSubElement,
+  useLayoutStyles,
+  UseLayoutStylesShape,
+} from "./useLayoutStyles"
 import { Direction, MinFlexElementWidth } from "./utils"
 
 function withFlexContextProvider(
@@ -76,7 +80,7 @@ describe("#useLayoutStyles", () => {
         [undefined, getDefaultStyles({})],
         [0, getDefaultStyles({})],
         [-100, getDefaultStyles({})],
-        [NaN, getDefaultStyles({})],
+        [Number.NaN, getDefaultStyles({})],
         [100, getDefaultStyles({ width: "100px" })],
       ])("and with a width value of %s, returns %o", (width, expected) => {
         const element = new MockElement()
@@ -95,7 +99,7 @@ describe("#useLayoutStyles", () => {
         [undefined, getDefaultStyles({ width: "100%" })],
         [0, getDefaultStyles({ width: "100%" })],
         [-100, getDefaultStyles({ width: "100%" })],
-        [NaN, getDefaultStyles({ width: "100%" })],
+        [Number.NaN, getDefaultStyles({ width: "100%" })],
         [100, getDefaultStyles({ width: "100%" })],
       ])("and with a width value of %s, returns %o", (width, expected) => {
         const element = new MockElement()
@@ -174,10 +178,10 @@ describe("#useLayoutStyles", () => {
     describe("that has widthConfig set to invalid pixelWidth values", () => {
       it.each([
         [-100, false, getDefaultStyles({})],
-        [NaN, false, getDefaultStyles({})],
+        [Number.NaN, false, getDefaultStyles({})],
         [100, false, getDefaultStyles({ width: "100px" })],
         [-100, true, getDefaultStyles({ width: "100%" })],
-        [NaN, true, getDefaultStyles({ width: "100%" })],
+        [Number.NaN, true, getDefaultStyles({ width: "100%" })],
         [100, true, getDefaultStyles({ width: "100%" })],
       ])(
         "and with a pixelWidth value of %s and useContainerWidth %s, returns %o",
@@ -268,7 +272,7 @@ describe("#useLayoutStyles", () => {
         ],
         [
           {
-            widthConfig: new streamlit.WidthConfig({ pixelWidth: NaN }),
+            widthConfig: new streamlit.WidthConfig({ pixelWidth: Number.NaN }),
             width: 100,
           },
           false,
@@ -396,7 +400,7 @@ describe("#useLayoutStyles", () => {
     describe("that has heightConfig set to invalid pixelHeight values", () => {
       it.each([
         [-100, getDefaultStyles({})],
-        [NaN, getDefaultStyles({})],
+        [Number.NaN, getDefaultStyles({})],
       ])(
         "and with a pixelHeight value of %s, returns %o",
         (pixelHeight, expected) => {
@@ -431,7 +435,7 @@ describe("#useLayoutStyles", () => {
         ],
         [0, null, getDefaultStyles({})],
         [-100, null, getDefaultStyles({})],
-        [NaN, null, getDefaultStyles({})],
+        [Number.NaN, null, getDefaultStyles({})],
         [
           100,
           undefined,
@@ -452,7 +456,7 @@ describe("#useLayoutStyles", () => {
         ],
         [0, undefined, getDefaultStyles({})],
         [-100, undefined, getDefaultStyles({})],
-        [NaN, undefined, getDefaultStyles({})],
+        [Number.NaN, undefined, getDefaultStyles({})],
       ])(
         "and with a height value of %s and heightConfig %s, returns %o",
         (height, heightConfig, expected) => {
@@ -498,7 +502,7 @@ describe("#useLayoutStyles", () => {
         it.each([
           [0, getDefaultStyles({})],
           [-100, getDefaultStyles({})],
-          [NaN, getDefaultStyles({})],
+          [Number.NaN, getDefaultStyles({})],
         ])("and with a height value of %s, returns %o", (height, expected) => {
           const element = new MockElement()
           const subElement = { height }
@@ -576,7 +580,9 @@ describe("#useLayoutStyles", () => {
           ],
           [
             {
-              heightConfig: new streamlit.HeightConfig({ pixelHeight: NaN }),
+              heightConfig: new streamlit.HeightConfig({
+                pixelHeight: Number.NaN,
+              }),
               height: 100,
             },
             getDefaultStyles({}),
@@ -706,7 +712,7 @@ describe("#useLayoutStyles", () => {
           // Use type assertion to bypass TypeScript checks
           const subElement = {
             widthConfig: props.subElementWidthConfig,
-          } as IAlert
+          } as Alert.$Properties
 
           const { result } = renderHook(() =>
             useLayoutStyles({
@@ -1148,6 +1154,134 @@ describe("#useLayoutStyles", () => {
           textAlign: "right", // Override value
         })
       })
+    })
+
+    describe("without an element", () => {
+      it("returns default auto styles when element is nullish", () => {
+        const { result } = renderHook(() =>
+          useLayoutStyles({ element: undefined as unknown as Element })
+        )
+        expect(result.current).toEqual(getDefaultStyles({}))
+      })
+    })
+
+    describe("min-width protection in content-width containers", () => {
+      function withContentWidthContainer(parentWidth?: number) {
+        return function Wrapper({ children }: { children: ReactNode }) {
+          return (
+            <FlexContextProvider
+              direction={Direction.HORIZONTAL}
+              hasContentWidth={true}
+              parentWidth={parentWidth}
+            >
+              {children}
+            </FlexContextProvider>
+          )
+        }
+      }
+
+      const stretchElement = (): MockElement =>
+        new MockElement({
+          widthConfig: new streamlit.WidthConfig({ useStretch: true }),
+        })
+
+      it("uses the raw minStretchBehavior when there is no parent width", () => {
+        const { result } = renderHook(
+          () =>
+            useLayoutStyles({
+              element: stretchElement(),
+              minStretchBehavior: "14rem",
+            }),
+          { wrapper: withContentWidthContainer(undefined) }
+        )
+        expect(result.current.minWidth).toBe("14rem")
+      })
+
+      it("uses fit-content minStretchBehavior unchanged", () => {
+        const { result } = renderHook(
+          () =>
+            useLayoutStyles({
+              element: stretchElement(),
+              minStretchBehavior: "fit-content",
+            }),
+          { wrapper: withContentWidthContainer(500) }
+        )
+        expect(result.current.minWidth).toBe("fit-content")
+      })
+
+      it("clamps min-width to parent width minus buffer when the parent is too narrow", () => {
+        const { result } = renderHook(
+          () =>
+            useLayoutStyles({
+              element: stretchElement(),
+              minStretchBehavior: "14rem",
+            }),
+          { wrapper: withContentWidthContainer(100) }
+        )
+        // 14rem resolves to 224px (> parentWidth of 100), and 100 exceeds the
+        // 32px buffer, so the min-width clamps to parentWidth - 32 = 68px.
+        expect(result.current.minWidth).toBe("68px")
+      })
+
+      it("keeps the raw minStretchBehavior when the parent is wide enough", () => {
+        const { result } = renderHook(
+          () =>
+            useLayoutStyles({
+              element: stretchElement(),
+              minStretchBehavior: "14rem",
+            }),
+          { wrapper: withContentWidthContainer(5000) }
+        )
+        expect(result.current.minWidth).toBe("14rem")
+      })
+
+      it("does not set a min-width outside of content-width containers", () => {
+        const { result } = renderHook(
+          () =>
+            useLayoutStyles({
+              element: stretchElement(),
+              minStretchBehavior: "14rem",
+            }),
+          { wrapper: withFlexContextProvider(Direction.HORIZONTAL) }
+        )
+        expect(result.current.minWidth).toBeUndefined()
+      })
+    })
+  })
+
+  describe("extractLayoutSubElement", () => {
+    it("extracts layout props from the nested type field", () => {
+      const element = {
+        type: "dataframe",
+        dataframe: { useContainerWidth: true, height: 100, width: 50 },
+      } as unknown as Element
+      expect(extractLayoutSubElement(element)).toEqual({
+        useContainerWidth: true,
+        height: 100,
+        width: 50,
+        widthConfig: undefined,
+      })
+    })
+
+    it("returns undefined when the nested type field is not an object", () => {
+      const element = {
+        type: "dataframe",
+        dataframe: undefined,
+      } as unknown as Element
+      expect(extractLayoutSubElement(element)).toBeUndefined()
+    })
+
+    it("returns undefined when the element has no type", () => {
+      const element = {} as unknown as Element
+      expect(extractLayoutSubElement(element)).toBeUndefined()
+    })
+
+    it("returns undefined when the nested object has no layout props", () => {
+      const element = {
+        type: "dataframe",
+        dataframe: { foo: "bar" },
+      } as unknown as Element
+      expect(extractLayoutSubElement(element)).toBeUndefined()
     })
   })
 })

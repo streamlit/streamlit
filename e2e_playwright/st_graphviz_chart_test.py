@@ -15,7 +15,11 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
-from e2e_playwright.shared.app_utils import check_top_level_class, get_radio_option
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_element_by_key,
+    get_radio_option,
+)
 
 
 def get_first_graph_svg(app: Page) -> Locator:
@@ -64,9 +68,34 @@ def exit_fullscreen(app: Page) -> None:
 
 def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
+    # 15 baseline + 3 alt fixtures (both SIMPLE_ALT_DOT digraphs are named
+    # AltHelloWorld, plus the linked chart) = 18 titled SVGs.
     expect(
         app.get_by_test_id("stGraphVizChart").locator("svg > g > title")
-    ).to_have_count(14)
+    ).to_have_count(18)
+
+
+def test_graphviz_chart_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the GraphViz chart container's accessible name."""
+    labeled = get_element_by_key(app, "c_graphviz_alt").get_by_test_id(
+        "stGraphVizChart"
+    )
+    expect(labeled).to_have_attribute("role", "figure")
+    expect(labeled).to_have_accessible_name("Directed graph of Hello to World")
+
+    unlabeled = get_element_by_key(app, "c_graphviz_no_alt").get_by_test_id(
+        "stGraphVizChart"
+    )
+    expect(unlabeled).not_to_have_attribute("role")
+    expect(unlabeled).not_to_have_attribute("aria-label")
+    expect(unlabeled).to_have_accessible_name("")
+
+    # role=figure (not img) keeps GraphViz URL nodes in the a11y tree.
+    linked = get_element_by_key(app, "c_graphviz_alt_link").get_by_test_id(
+        "stGraphVizChart"
+    )
+    expect(linked).to_have_attribute("role", "figure")
+    expect(linked.get_by_role("link")).to_be_visible()
 
 
 def test_shows_left_and_right_graph(app: Page):
@@ -262,3 +291,29 @@ def test_width_height_combined(app: Page, assert_snapshot: ImageCompareFunction)
         combined_chart.locator("svg"),
         name="st_graphviz_chart_width_height_combined",
     )
+
+
+def test_sanitizes_dangerous_link_urls(app: Page):
+    """Test that dangerous javascript: link URLs are neutralized to '#'.
+
+    This relies on real-browser URL normalization that jsdom cannot fully
+    replicate, so it complements the frontend unit tests.
+    """
+    malicious_chart = app.get_by_test_id("stGraphVizChart").nth(14)
+    link = malicious_chart.locator("a").first
+    expect(link).to_be_attached()
+
+    def link_is_sanitized() -> bool:
+        # Graphviz may emit the link target as "href" and/or "xlink:href"
+        # depending on version; all present values must be neutralized to "#".
+        values = [
+            value
+            for value in (
+                link.get_attribute("href"),
+                link.get_attribute("xlink:href"),
+            )
+            if value is not None
+        ]
+        return len(values) > 0 and all(value == "#" for value in values)
+
+    wait_until(app, link_is_sanitized)

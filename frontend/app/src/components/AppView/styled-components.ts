@@ -238,3 +238,22 @@ export const StyledMainContent = styled.div(({ theme }) => ({
     position: "relative",
   },
 }))
+
+/**
+ * Fixed top-right anchor for the framework "install skills" nudge, pinned just
+ * below the header at the same right edge as the toast region. The toast region
+ * (which portals to the document body and is positioned independently) is
+ * pushed down by this nudge's measured height in ``AppView`` so app toasts
+ * stack beneath the persistent nudge rather than overlapping it.
+ */
+export const StyledSkillsNudgeAnchor = styled.div(({ theme }) => ({
+  position: "fixed",
+  top: theme.sizes.headerHeight,
+  right: 0,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-end",
+  zIndex: theme.zIndices.toast,
+  marginLeft: theme.spacing.lg,
+  marginRight: theme.spacing.lg,
+}))

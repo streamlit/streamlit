@@ -35,10 +35,14 @@ const RawAppSkeleton: FC<React.PropsWithChildren<unknown>> = () => {
     setVisible(true)
   }, SHOW_DELAY_MS)
 
-  if (!visible) return <></>
+  if (!visible) return null
 
   return (
-    <StyledSkeleton className="stAppSkeleton" data-testid="stAppSkeleton">
+    <StyledSkeleton
+      className="stAppSkeleton"
+      data-testid="stAppSkeleton"
+      aria-hidden="true"
+    >
       <TitleSkeleton />
       <ParagraphSkeleton>
         <TextLineSkeleton width="98%" />

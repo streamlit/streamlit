@@ -42,7 +42,7 @@ function parseLinks(text: string): ReactNode[] {
     if (match.index > currentIndex) {
       parts.push(
         <Fragment key={key++}>
-          {text.substring(currentIndex, match.index)}
+          {text.slice(currentIndex, match.index)}
         </Fragment>
       )
     }
@@ -59,7 +59,7 @@ function parseLinks(text: string): ReactNode[] {
 
   // Add remaining text
   if (currentIndex < text.length) {
-    parts.push(<Fragment key={key}>{text.substring(currentIndex)}</Fragment>)
+    parts.push(<Fragment key={key}>{text.slice(currentIndex)}</Fragment>)
   }
 
   return parts

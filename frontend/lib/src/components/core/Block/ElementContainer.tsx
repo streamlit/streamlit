@@ -16,13 +16,9 @@
 
 import { memo, ReactElement, ReactNode, Suspense, useContext } from "react"
 
-import classNames from "classnames"
-
-import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
-
 import { ElementNode } from "~lib/AppNode"
 import { ViewStateContext } from "~lib/components/core/ViewStateContext"
-import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { getElementId } from "~lib/util/utils"
 
@@ -79,11 +75,13 @@ export const ElementContainer = memo(function ElementContainer({
 
   return (
     <StyledElementContainerLayoutWrapper
-      className={classNames(
+      className={[
         "stElementContainer",
         "element-container",
-        convertKeyToClassName(userKey)
-      )}
+        convertKeyToClassName(userKey),
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-testid="stElementContainer"
       data-stale={isStale}
       isStale={isStale && !isFullScreen}
@@ -94,11 +92,7 @@ export const ElementContainer = memo(function ElementContainer({
       <ErrorBoundary>
         <Suspense
           fallback={
-            <Skeleton
-              element={SkeletonProto.create({
-                style: SkeletonProto.SkeletonStyle.ELEMENT,
-              })}
-            />
+            <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
           }
         >
           {children}

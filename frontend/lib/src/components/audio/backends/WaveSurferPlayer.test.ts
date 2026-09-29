@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type WaveSurfer from "wavesurfer.js"
 
 import { WaveSurferPlayer } from "./WaveSurferPlayer"
@@ -29,6 +29,7 @@ interface WaveSurferMock {
   pause: () => void
   getDuration: () => number
   getCurrentTime: () => number
+  seekTo: (progress: number) => void
   empty: () => void
 }
 
@@ -68,6 +69,7 @@ describe("WaveSurferPlayer", () => {
       pause: vi.fn<() => void>(),
       getDuration: vi.fn<() => number>().mockReturnValue(10),
       getCurrentTime: vi.fn<() => number>().mockReturnValue(5),
+      seekTo: vi.fn<(progress: number) => void>(),
       empty: vi.fn<() => void>(),
     }
 
@@ -161,5 +163,144 @@ describe("WaveSurferPlayer", () => {
     // Restore
     global.URL.createObjectURL = originalCreateObjectURL
     global.URL.revokeObjectURL = originalRevokeObjectURL
+  })
+
+  it("forwards play, pause, finish and ready events and tracks playing state", () => {
+    const onPlay = vi.fn()
+    const onPause = vi.fn()
+    const onFinish = vi.fn()
+    const onReady = vi.fn()
+    player.setEventHandlers({ onPlay, onPause, onFinish, onReady })
+    player.initialize(mockWaveSurferInstance)
+
+    expect(player.getIsPlaying()).toBe(false)
+
+    mockEventHandlers.get("play")?.[0]()
+    expect(onPlay).toHaveBeenCalledTimes(1)
+    expect(player.getIsPlaying()).toBe(true)
+
+    mockEventHandlers.get("pause")?.[0]()
+    expect(onPause).toHaveBeenCalledTimes(1)
+    expect(player.getIsPlaying()).toBe(false)
+
+    // Playing again then finishing should reset the playing state.
+    mockEventHandlers.get("play")?.[0]()
+    expect(player.getIsPlaying()).toBe(true)
+    mockEventHandlers.get("finish")?.[0]()
+    expect(onFinish).toHaveBeenCalledTimes(1)
+    expect(player.getIsPlaying()).toBe(false)
+
+    mockEventHandlers.get("ready")?.[0]()
+    expect(onReady).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not throw when events fire without registered handlers", () => {
+    player.initialize(mockWaveSurferInstance)
+
+    expect(() => {
+      mockEventHandlers.get("play")?.[0]()
+      mockEventHandlers.get("pause")?.[0]()
+      mockEventHandlers.get("finish")?.[0]()
+      mockEventHandlers.get("ready")?.[0]()
+      mockEventHandlers.get("timeupdate")?.[0](1)
+    }).not.toThrow()
+    expect(player.getIsPlaying()).toBe(false)
+  })
+
+  describe("load", () => {
+    let originalCreateObjectURL: typeof global.URL.createObjectURL
+    let originalRevokeObjectURL: typeof global.URL.revokeObjectURL
+
+    beforeEach(() => {
+      originalCreateObjectURL = global.URL.createObjectURL
+      originalRevokeObjectURL = global.URL.revokeObjectURL
+      global.URL.createObjectURL = vi.fn().mockReturnValue("blob:test")
+      global.URL.revokeObjectURL = vi.fn()
+    })
+
+    afterEach(() => {
+      global.URL.createObjectURL = originalCreateObjectURL
+      global.URL.revokeObjectURL = originalRevokeObjectURL
+    })
+
+    it("creates a blob URL when loading an ArrayBuffer", async () => {
+      player.initialize(mockWaveSurferInstance)
+
+      const buffer = new ArrayBuffer(8)
+      await player.load(buffer)
+
+      expect(global.URL.createObjectURL).toHaveBeenCalledTimes(1)
+      expect(mockWaveSurfer.load).toHaveBeenCalledWith("blob:test")
+    })
+
+    it("loads a string URL directly without creating a blob URL", async () => {
+      player.initialize(mockWaveSurferInstance)
+
+      await player.load("https://example.com/audio.wav")
+
+      expect(global.URL.createObjectURL).not.toHaveBeenCalled()
+      expect(mockWaveSurfer.load).toHaveBeenCalledWith(
+        "https://example.com/audio.wav"
+      )
+    })
+
+    it("revokes the created blob URL and rethrows when load fails", async () => {
+      player.initialize(mockWaveSurferInstance)
+      mockWaveSurfer.load = vi
+        .fn<(url: string) => Promise<void>>()
+        .mockRejectedValueOnce(new Error("load failed"))
+
+      await expect(player.load(new Blob(["data"]))).rejects.toThrow(
+        "load failed"
+      )
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith("blob:test")
+    })
+
+    it("throws when loading before initialization", async () => {
+      await expect(player.load("audio.wav")).rejects.toThrow(
+        "WaveSurfer not initialized"
+      )
+    })
+  })
+
+  describe("playback controls when initialized", () => {
+    beforeEach(() => {
+      player.initialize(mockWaveSurferInstance)
+    })
+
+    it("delegates play to WaveSurfer", async () => {
+      await player.play()
+      expect(mockWaveSurfer.play).toHaveBeenCalledTimes(1)
+    })
+
+    it("delegates pause to WaveSurfer", () => {
+      player.pause()
+      expect(mockWaveSurfer.pause).toHaveBeenCalledTimes(1)
+    })
+
+    it("converts duration and current time to milliseconds", () => {
+      expect(player.getDuration()).toBe(10000)
+      expect(player.getCurrentTime()).toBe(5000)
+    })
+
+    it("seeks to the start of the track", () => {
+      player.seekToStart()
+      expect(mockWaveSurfer.seekTo).toHaveBeenCalledWith(0)
+    })
+  })
+
+  describe("controls before initialization", () => {
+    it("throws when calling play", async () => {
+      await expect(player.play()).rejects.toThrow("WaveSurfer not initialized")
+    })
+
+    it("returns safe defaults and no-ops for read/seek helpers", () => {
+      expect(player.getDuration()).toBe(0)
+      expect(player.getCurrentTime()).toBe(0)
+      expect(() => player.pause()).not.toThrow()
+      expect(() => player.seekToStart()).not.toThrow()
+      expect(mockWaveSurfer.pause).not.toHaveBeenCalled()
+      expect(mockWaveSurfer.seekTo).not.toHaveBeenCalled()
+    })
   })
 })

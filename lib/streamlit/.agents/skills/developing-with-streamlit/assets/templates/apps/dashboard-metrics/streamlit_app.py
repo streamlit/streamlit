@@ -19,6 +19,10 @@ Demonstrates:
 - Metric cards with chart/table toggle and popover filters
 - Time range filtering (1M, 6M, 1Y, QTD, YTD, All)
 - Line options (Daily, 7-day MA)
+- ``@st.cache_data(ttl=...)`` per-metric loaders to keep data fresh and bounded
+- ``@st.fragment(parallel=True)`` cards that load concurrently on full reruns
+  and rerun in isolation on widget interactions
+- ``st.skeleton`` placeholders so each card fills in as soon as its data is ready
 
 This template uses synthetic data. Replace the ``generate_*_data()`` functions
 with your own data sources (e.g., Snowflake queries, APIs, etc.).
@@ -46,6 +50,14 @@ st.set_page_config(
 
 TIME_RANGES = ["1M", "6M", "1Y", "QTD", "YTD", "All"]
 CHART_HEIGHT = 300
+
+# Per-metric generation settings. Replace with the metrics you actually track.
+METRIC_CONFIG: dict[str, dict[str, float]] = {
+    "users": {"base_value": 5000, "growth_rate": 0.002},
+    "sessions": {"base_value": 15000, "growth_rate": 0.003},
+    "revenue": {"base_value": 50000, "growth_rate": 0.001},
+    "conversions": {"base_value": 500, "growth_rate": 0.0015},
+}
 
 
 # =============================================================================
@@ -98,26 +110,20 @@ def generate_metric_data(
     return df
 
 
-@st.cache_data(ttl=3600)
-def load_all_metrics() -> dict[str, pd.DataFrame]:
-    """Load all metrics data. Replace with your data loading logic."""
+@st.cache_data(ttl="1h", show_spinner=False)
+def load_metric(metric_name: str) -> pd.DataFrame:
+    """Load a single metric's time series (cached per metric).
+
+    Each metric is cached on its own so the metric cards can load
+    concurrently as parallel fragments. Replace the body with your data
+    source (Snowflake query, API call, etc.). The ``ttl`` keeps the cache
+    fresh; add ``max_entries`` if the set of metric names can grow large so
+    the cache stays bounded.
+    """
     end_date = date.today() - timedelta(days=1)
     start_date = end_date - timedelta(days=730)  # 2 years of data
-
-    return {
-        "users": generate_metric_data(
-            "users", start_date, end_date, base_value=5000, growth_rate=0.002
-        ),
-        "sessions": generate_metric_data(
-            "sessions", start_date, end_date, base_value=15000, growth_rate=0.003
-        ),
-        "revenue": generate_metric_data(
-            "revenue", start_date, end_date, base_value=50000, growth_rate=0.001
-        ),
-        "conversions": generate_metric_data(
-            "conversions", start_date, end_date, base_value=500, growth_rate=0.0015
-        ),
-    }
+    config = METRIC_CONFIG[metric_name]
+    return generate_metric_data(metric_name, start_date, end_date, **config)
 
 
 # =============================================================================
@@ -299,22 +305,26 @@ def render_point_chart(
 # =============================================================================
 
 
+@st.fragment(parallel=True)
 def metric_card(
     title: str,
-    df: pd.DataFrame,
-    key_prefix: str,
+    metric_name: str,
     chart_type: str = "line",
 ) -> None:
     """Display a metric card with chart/table toggle and popover filters.
+
+    The card is a parallel fragment: on a full app rerun every card loads its
+    own data concurrently, and on widget interactions (view toggle, filters)
+    only this card reruns. The card's data is loaded inside ``st.skeleton`` so
+    the title and controls stay stable while the chart fills in.
 
     Parameters
     ----------
     title : str
         Card title.
-    df : pd.DataFrame
-        DataFrame with ``ds``, ``daily_value``, ``value_7d_ma`` columns.
-    key_prefix : str
-        Unique prefix for widget keys.
+    metric_name : str
+        Key into ``METRIC_CONFIG`` used to load this card's data and namespace
+        this card's widget state.
     chart_type : str
         One of ``"line"``, ``"area"``, ``"bar"``, ``"point"``.
     """
@@ -327,7 +337,8 @@ def metric_card(
     render_chart = chart_renderers.get(chart_type, render_line_chart)
 
     with st.container(border=True):
-        # Header row with title, view toggle, and filters
+        # Header row with title, view toggle, and filters. Keep it outside the
+        # skeleton so the controls stay put while the chart loads.
         with st.container(
             horizontal=True,
             horizontal_alignment="distribute",
@@ -339,7 +350,7 @@ def metric_card(
                 "View",
                 options=[":material/show_chart:", ":material/table:"],
                 default=":material/show_chart:",
-                key=f"{key_prefix}_view",
+                key=f"{metric_name}_view",
                 label_visibility="collapsed",
             )
 
@@ -349,42 +360,48 @@ def metric_card(
                     options=["Daily", "7-day MA"],
                     default=["Daily", "7-day MA"],
                     selection_mode="multi",
-                    key=f"{key_prefix}_lines",
+                    key=f"{metric_name}_lines",
                 )
                 time_range = st.segmented_control(
                     "Time range",
                     options=TIME_RANGES,
                     default="All",
-                    key=f"{key_prefix}_time",
+                    key=f"{metric_name}_time",
                 )
 
-        # Apply filters
-        line_options = line_options or ["7-day MA"]
-        filtered_df = filter_by_time_range(df, "ds", time_range or "All")
+        # Load this card's data and render inside a skeleton placeholder. The
+        # skeleton shows while the (cached) loader runs, then clears once the
+        # chart or table is rendered.
+        with st.skeleton(height=CHART_HEIGHT):
+            df = load_metric(metric_name)
 
-        # Determine which columns to show
-        y_cols = []
-        labels = []
-        if "Daily" in line_options:
-            y_cols.append("daily_value")
-            labels.append("Daily")
-        if "7-day MA" in line_options:
-            y_cols.append("value_7d_ma")
-            labels.append("7-day MA")
+            # Apply filters
+            line_options = line_options or ["7-day MA"]
+            filtered_df = filter_by_time_range(df, "ds", time_range or "All")
 
-        # Render view
-        if "table" in (view_mode or ""):
-            st.dataframe(
-                filtered_df,
-                height=CHART_HEIGHT,
-                hide_index=True,
-            )
-        elif y_cols:
-            st.altair_chart(
-                render_chart(filtered_df, "ds", y_cols, labels),
-            )
-        else:
-            st.info("Select at least one line option.")
+            # Determine which columns to show
+            y_cols = []
+            labels = []
+            if "Daily" in line_options:
+                y_cols.append("daily_value")
+                labels.append("Daily")
+            if "7-day MA" in line_options:
+                y_cols.append("value_7d_ma")
+                labels.append("7-day MA")
+
+            # Render view
+            if "table" in (view_mode or ""):
+                st.dataframe(
+                    filtered_df,
+                    height=CHART_HEIGHT,
+                    hide_index=True,
+                )
+            elif y_cols:
+                st.altair_chart(
+                    render_chart(filtered_df, "ds", y_cols, labels),
+                )
+            else:
+                st.info("Select at least one line option.")
 
 
 # =============================================================================
@@ -407,28 +424,26 @@ def render_page_header(title: str) -> None:
 # Page Layout
 # =============================================================================
 
-# Load data (cached)
-metrics_data = load_all_metrics()
-
 # Page header
 render_page_header("# :material/monitoring: Metrics Dashboard")
+
+# Each card loads its own data; as parallel fragments they load concurrently on
+# the first run instead of blocking on each other.
 
 # Row 1: Users and Sessions
 row1 = st.columns(2)
 
 with row1[0]:
-    metric_card("Active Users", metrics_data["users"], "users", chart_type="line")
+    metric_card("Active users", "users", chart_type="line")
 
 with row1[1]:
-    metric_card("Sessions", metrics_data["sessions"], "sessions", chart_type="area")
+    metric_card("Sessions", "sessions", chart_type="area")
 
 # Row 2: Revenue and Conversions
 row2 = st.columns(2)
 
 with row2[0]:
-    metric_card("Revenue", metrics_data["revenue"], "revenue", chart_type="bar")
+    metric_card("Revenue", "revenue", chart_type="bar")
 
 with row2[1]:
-    metric_card(
-        "Conversions", metrics_data["conversions"], "conversions", chart_type="point"
-    )
+    metric_card("Conversions", "conversions", chart_type="point")

@@ -27,14 +27,17 @@ from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.selectbox import SelectboxSerde
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
+from streamlit.runtime.state.widgets import register_widget_from_metadata
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -175,32 +178,31 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     def test_filter_mode_none_with_accept_new_options_raises_exception(self):
         """Test that filter_mode=None is incompatible with accept_new_options=True."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be None when `accept_new_options=True`",
-        ):
+        with pytest.raises(StreamlitIncompatibleParametersError):
             st.selectbox(
                 "the label", ("m", "f"), filter_mode=None, accept_new_options=True
             )
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match=r"Expected one of: int, None\. Provided type: str\.",
+        ):
             st.selectbox("the label", ("m", "f"), "1")
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueOutOfRangeError):
             st.selectbox("the label", ("m", "f"), 2)
 
-    def test_raises_exception_of_index_larger_than_options(self):
-        """Test that it raises an exception if index is larger than options."""
-        with pytest.raises(StreamlitAPIException) as ex:
+    def test_index_out_of_range_error_message(self):
+        """Out-of-range index names the closed interval in StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as ex:
             st.selectbox("Test box", ["a"], index=1)
 
-        assert (
-            str(ex.value)
-            == "Selectbox index must be greater than or equal to 0 and less than the length of options."
+        assert str(ex.value) == (
+            "The `index` parameter, set to 1, is outside the required range [0, 0]."
         )
 
     def test_outside_form(self):
@@ -240,11 +242,11 @@ class SelectboxTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.selectbox("the label", ("m", "f"), label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_placeholder(self):
@@ -624,6 +626,79 @@ def test_selectbox_enum_coercion():
         test_enum()
 
 
+def test_selectbox_keeps_selection_with_identity_dependent_format_func():
+    """Selection persists when format_func does an identity-dependent lookup.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15618.
+    The option class is defined at module scope (redefined every rerun), so the
+    stored value is an instance of a previous run's class. A format_func that
+    looks the option up in a dict keyed on the current options would raise for
+    that stale instance; the label-based resolver avoids calling format_func on
+    the stored value and keeps the selection.
+    """
+
+    def script():
+        from dataclasses import dataclass
+
+        import streamlit as st
+
+        @dataclass(frozen=True)
+        class MyDataClass:
+            id: int
+            name: str
+
+        a = MyDataClass(1, "one")
+        b = MyDataClass(2, "two")
+        lookup = {a: "I", b: "II"}
+
+        def format_func(option: MyDataClass) -> str:
+            _ = lookup[option]
+            return option.name
+
+        selected = st.selectbox("selectbox", [a, b], format_func=format_func, key="sb")
+        st.text(f"Selected: {selected.name}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "Selected: one"
+
+    at = at.selectbox[0].set_value("two").run()
+    assert at.text[0].value == "Selected: two"
+
+
+def test_selectbox_keeps_enum_selection_with_identity_dependent_format_func():
+    """Enum options keep their selection with an identity-dependent format_func.
+
+    Regression test for the gap where ``maybe_coerce_enum`` dropped the stored
+    wire label. With ``runner.enumCoercion="off"`` the stored value is a stale
+    enum member, so an identity-dependent ``format_func`` raises; the wire label
+    must still be available to keep the selection instead of resetting.
+    """
+
+    def script():
+        from enum import Enum
+
+        import streamlit as st
+
+        class Color(Enum):
+            RED = 1
+            GREEN = 2
+
+        labels = {Color.RED: "I", Color.GREEN: "II"}
+
+        def format_func(color: Color) -> str:
+            return labels[color]
+
+        selected = st.selectbox("color", list(Color), format_func=format_func, key="c")
+        st.text(f"Selected: {selected.name}")
+
+    with patch_config_options({"runner.enumCoercion": "off"}):
+        at = AppTest.from_function(script).run()
+        assert at.text[0].value == "Selected: RED"
+
+        at = at.selectbox[0].set_value("II").run()
+        assert at.text[0].value == "Selected: GREEN"
+
+
 def test_None_session_state_value_retained():
     def script():
         import streamlit as st
@@ -663,6 +738,27 @@ class TestSelectboxSerde:
 
         res = serde.serialize(None)
         assert res is None
+
+    def test_serialize_falls_back_to_str_when_format_func_raises(self):
+        """When format_func raises, serialize falls back to str(value)."""
+        options = [{"id": "a"}, {"id": "b"}]
+
+        def format_func(x):
+            return x["id"]
+
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = SelectboxSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
+        )
+
+        # A bare string value makes format_func raise a TypeError, triggering the
+        # str(value) fallback path.
+        assert serde.serialize("free text") == "free text"
 
     def test_serialize_empty_options(self):
         """Test serializing with empty options.
@@ -917,9 +1013,27 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.selectbox("the label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_persist_state_passed_to_metadata(self) -> None:
+        """Test that persist_state is threaded onto the widget's WidgetMetadata."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched:
+            st.selectbox(
+                "the label", ["a", "b", "c"], key="my_key", persist_state="session"
+            )
+
+        metadata = patched.call_args[0][0]
+        assert metadata.persist_state == "session"
+
+    def test_persist_state_without_key_raises(self) -> None:
+        """Test that persist_state without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.selectbox("the label", ["a", "b", "c"], persist_state="session")
 
     def test_bind_with_format_func(self):
         """Test that bind works with format_func."""
@@ -962,3 +1076,50 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.selectbox
         assert c.query_param_key == "my_key"
         assert c.accept_new_options
+
+
+class SelectboxOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.selectbox("the label", ("a", "b"), on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.selectbox("the label", ("a", "b"), on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.selectbox("the label", ("a", "b"), on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.selectbox("the label", ("a", "b"), on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.selectbox
+        assert c.ignore_rerun is True

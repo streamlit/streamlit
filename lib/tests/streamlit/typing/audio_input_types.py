@@ -22,7 +22,7 @@ from typing_extensions import assert_type
 # The return type is always UploadedFile | None
 if TYPE_CHECKING:
     from streamlit.elements.widgets.audio_input import AudioInputMixin
-    from streamlit.runtime.uploaded_file_manager import UploadedFile
+    from streamlit.typing import UploadedFile
 
     audio_input = AudioInputMixin().audio_input
 

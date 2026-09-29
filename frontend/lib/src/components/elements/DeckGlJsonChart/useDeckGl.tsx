@@ -51,7 +51,17 @@ import {
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
 } from "./utils/colors"
-import { jsonConverter } from "./utils/jsonConverter"
+import { convertDeckJson } from "./utils/jsonConverter"
+import {
+  getProvidedViews,
+  isMapCompatibleViewSpec,
+  PYDECK_UNSET_MAP_STYLE,
+  sanitizeDeckParameters,
+  withDefaultMapViewIds,
+} from "./utils/mapShell"
+
+// Manually created by Carto for Streamlit stats only — not a paid/secure key.
+const CARTO_STREAMLIT_API_KEY = "x7g2plm9yq8vfrc"
 
 /**
  * Extracted type from the DeckGL library since it is not exported correctly.
@@ -77,6 +87,30 @@ type UseDeckGlShape = {
   width: number | string
 }
 
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#x27;",
+}
+
+/**
+ * Escapes HTML-significant characters in a value so it can be safely embedded
+ * as text content or a quoted attribute value in an HTML tooltip template.
+ *
+ * This prevents XSS from untrusted data values interpolated into `tooltip.html`.
+ * It is only safe for element content and quoted attribute contexts. Values must
+ * not be placed by the template into unquoted attributes, URL attributes such as
+ * `href`/`src` (where a `javascript:` scheme would survive escaping), or inside
+ * `<script>`/`<style>` blocks.
+ *
+ * @param {unknown} value - The value to coerce to a string and escape.
+ * @returns {string} - The HTML-escaped string.
+ */
+const escapeHtml = (value: unknown): string =>
+  String(value).replaceAll(/[&<>"']/g, char => HTML_ESCAPE_MAP[char])
+
 export type UseDeckGlProps = Omit<DeckGLProps, "width"> & {
   isLightTheme: boolean
   theme: EmotionTheme
@@ -99,22 +133,37 @@ export const EMPTY_STATE: DeckGlElementState = {
  *
  * @param {PickingInfo} info - The object containing the data to interpolate into the string.
  * @param {string} body - The string containing placeholders in the format `{variable}`.
+ * @param {boolean} shouldEscapeHtml - Whether interpolated values should be HTML-escaped.
+ *   Enable this when `body` is rendered as HTML (see {@link escapeHtml} for the
+ *   contexts in which escaping is safe).
  * @returns {string} - The interpolated string with placeholders replaced by actual values.
  */
-const interpolate = (info: PickingInfo, body: string): string => {
+const interpolate = (
+  info: PickingInfo,
+  body: string,
+  shouldEscapeHtml = false
+): string => {
   const matchedVariables = body.match(/{(.*?)}/g)
   if (matchedVariables) {
     matchedVariables.forEach((match: string) => {
-      const variable = match.substring(1, match.length - 1)
+      const variable = match.slice(1, match.length - 1)
 
+      let rawValue: unknown
       if (Object.hasOwn(info.object, variable)) {
-        body = body.replace(match, info.object[variable])
+        rawValue = info.object[variable]
       } else if (
         Object.hasOwn(info.object, "properties") &&
         Object.hasOwn(info.object.properties, variable)
       ) {
-        body = body.replace(match, info.object.properties[variable])
+        rawValue = info.object.properties[variable]
+      } else {
+        return
       }
+
+      const value = shouldEscapeHtml ? escapeHtml(rawValue) : String(rawValue)
+      // Use a replacer function so `$` sequences in the value are inserted
+      // literally rather than treated as replacement patterns.
+      body = body.replace(match, () => value)
     })
   }
   return body
@@ -162,12 +211,11 @@ function updateWidgetMgrState(
     return
   }
 
-  widgetMgr.setStringValue(
-    element,
-    JSON.stringify(vws.value),
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, JSON.stringify(vws.value), {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+  })
 }
 
 type LayerDataInfo = {
@@ -379,7 +427,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
     if (sanitized.changed) {
       setSelection({
-        fromUi: false,
+        fromUser: false,
         value: {
           selection: {
             indices: sanitized.indices,
@@ -392,24 +440,21 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
+    jsonCopy.views = withDefaultMapViewIds(jsonCopy.views)
 
-    // If unset, use either the light or dark style based on Streamlit's theme.
-    if (!jsonCopy.mapStyle) {
-      jsonCopy.mapStyle = isLightTheme
-        ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-        : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+    // pydeck map_provider=None writes this sentinel instead of omitting mapStyle.
+    const hadUnsetMapStyleSentinel =
+      jsonCopy.mapStyle === PYDECK_UNSET_MAP_STYLE
+    if (hadUnsetMapStyleSentinel) {
+      delete jsonCopy.mapStyle
     }
 
     const isUsingCarto =
-      jsonCopy?.mapProvider == "carto" ||
-      (jsonCopy?.mapStyle && jsonCopy.mapStyle?.indexOf("cartocdn") >= 0)
+      jsonCopy?.mapProvider === "carto" ||
+      (jsonCopy?.mapStyle && jsonCopy.mapStyle?.includes("cartocdn") === true)
 
     if (isUsingCarto && !jsonCopy.cartoKey) {
-      // This key was manually created by Carto just for Streamlit. It is NOT
-      // connected to any paid accounts, or secure API access, or anything of
-      // the sort. It's is just used for Carto to be able to separate Streamlit
-      // usage from other types in their own internal stats.
-      jsonCopy.cartoKey = "x7g2plm9yq8vfrc"
+      jsonCopy.cartoKey = CARTO_STREAMLIT_API_KEY
     }
 
     if (jsonCopy.layers) {
@@ -530,9 +575,36 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       })
     }
 
-    delete jsonCopy?.views // We are not using views. This avoids a console warning.
+    const converted = convertDeckJson(jsonCopy) as DeckObject
+    const providedViews = getProvidedViews(converted.views)
 
-    return jsonConverter.convert(jsonCopy) as DeckObject
+    // Carto after convert so unknown @@type (null → MapView) still gets tiles.
+    let { mapStyle, cartoKey } = converted
+    if (
+      !hadUnsetMapStyleSentinel &&
+      !mapStyle &&
+      isMapCompatibleViewSpec(providedViews)
+    ) {
+      mapStyle = isLightTheme
+        ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+    }
+
+    if (
+      !cartoKey &&
+      typeof mapStyle === "string" &&
+      mapStyle.includes("cartocdn")
+    ) {
+      cartoKey = CARTO_STREAMLIT_API_KEY
+    }
+
+    return {
+      ...converted,
+      views: providedViews,
+      mapStyle,
+      cartoKey,
+      parameters: sanitizeDeckParameters(converted.parameters),
+    }
   }, [
     data.selection.indices,
     isLightTheme,
@@ -554,10 +626,8 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
           return diffArg
         }
 
-        return {
-          ...diffArg,
-          [key]: deck.initialViewState[key],
-        }
+        diffArg[key] = deck.initialViewState[key]
+        return diffArg
       }, {})
 
       setViewState(existing => ({ ...existing, ...diff }))
@@ -574,7 +644,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       const parsedTooltip = JSON5.parse(tooltip)
 
       if (parsedTooltip.html) {
-        parsedTooltip.html = interpolate(info, parsedTooltip.html)
+        parsedTooltip.html = interpolate(info, parsedTooltip.html, true)
       } else {
         parsedTooltip.text = interpolate(info, parsedTooltip.text)
       }

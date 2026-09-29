@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import streamlit as st
 
 if TYPE_CHECKING:
-    from streamlit.navigation.page import StreamlitPage
+    from streamlit.navigation.page import Page
 
 # Check for query parameter to determine navigation position
 nav_position = st.query_params.get("nav_position", "sidebar")
@@ -63,7 +63,7 @@ def home():
 
 home_page = st.Page(home, title="Home", default=True)
 
-pages: list[StreamlitPage] | dict[str, list[StreamlitPage]]
+pages: list[Page] | dict[str, list[Page]]
 if single_visible:
     # Only home page is visible, all others are hidden
     about_hidden = st.Page(

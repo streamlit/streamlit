@@ -497,6 +497,15 @@ text justification properly. The text stretches to fill the available width.""",
     help="This is a help tooltip!",
 )
 
+# anchors=False hides the anchor link icon while preserving heading IDs so URL
+# fragments still deep-link.
+st.container(key="markdown_anchors_default").markdown(
+    "# Anchors Default Heading\n## Anchors Default Subheading"
+)
+st.container(key="markdown_anchors_disabled").markdown(
+    "# Anchors Disabled Heading\n## Anchors Disabled Subheading", anchors=False
+)
+
 # Test for gh-13339: Tooltip with newlines should render correctly
 st.header("Tooltip with Newlines (gh-13339)")
 
@@ -526,6 +535,20 @@ st.container(key="markdown_bracket_in_tooltip").markdown(
     help="Line 1 ] Line 2 ] Line 3",
 )
 
+# Regression test for gh-15211: help icon must render next to single-line HTML
+# instead of leaking the literal `:help[]` directive text into the output.
+st.container(key="markdown_html_help").markdown(
+    "<p>an example</p>",
+    unsafe_allow_html=True,
+    help="HTML help tooltip!",
+)
+
+st.container(key="markdown_multiline_html_help").markdown(
+    "<div><p>line one</p><p>line two</p></div>",
+    unsafe_allow_html=True,
+    help="HTML help tooltip!",
+)
+
 # Complex markdown in tooltip - comprehensive test
 st.header("Complex Tooltip Case")
 
@@ -543,3 +566,90 @@ with st.container(key="shimmer_elements"):
     st.markdown(
         "Normal text before :red[:shimmer[:material/hourglass_empty: :blue[Please] **wait**...]] and after"
     )
+
+# Mermaid diagram support tests - verifies mermaid works within markdown context
+st.header("Mermaid Charts")
+
+with st.container(key="mermaid_elements"):
+    # Markdown with mermaid embedded - tests that markdown before/after mermaid works
+    st.markdown(
+        """
+Here is a **flowchart** showing a simple decision process:
+
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[OK]
+    B -->|No| D[Cancel]
+```
+
+The diagram above demonstrates mermaid rendering within markdown.
+"""
+    )
+
+    # Second mermaid type to verify different diagram types work
+    st.markdown(
+        """
+```mermaid
+sequenceDiagram
+    User->>App: Click
+    App-->>User: Response
+```
+"""
+    )
+
+    # Invalid mermaid syntax (should show error)
+    st.markdown(
+        """
+```mermaid
+this is not valid mermaid syntax
+```
+"""
+    )
+
+# Appended at the end on purpose: inserting an element mid-script shifts every
+# fixture below it, which perturbs the sub-pixel placement of their snapshots.
+with st.container(border=True, width=150, key="long_word_in_list"):
+    st.markdown(
+        """
+- bucket1/awesome_zoom_background.jpg
+- short item
+
+1. bucket2/folder1/folder2/lenna.png
+"""
+    )
+
+_WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+
+with st.container(key="wrap_false_markdown", width=200):
+    st.markdown(_WRAP_TEXT, wrap=False)
+with st.container(key="wrap_true_markdown", width=200):
+    st.markdown(_WRAP_TEXT, wrap=True)
+with st.container(key="badge_help", width=200):
+    st.badge(_WRAP_TEXT, width="stretch", help="wrap help text")
+with st.container(
+    key="wrap_false_horizontal_markdown",
+    horizontal=True,
+    wrap=False,
+    width=200,
+):
+    st.markdown(_WRAP_TEXT, wrap=False, width="stretch")
+
+_WRAP_BLOCK_MD = """# Heading
+
+- item
+
+| a | b |
+| - | - |
+| 1 | 2 |
+
+```
+code block
+```
+"""
+
+with st.container(key="wrap_false_block_markdown", width=200):
+    st.markdown(_WRAP_BLOCK_MD, wrap=False)
+
+with st.container(key="wrap_false_markdown_help", width=200):
+    st.markdown(_WRAP_TEXT, wrap=False, help="wrap help text")

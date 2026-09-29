@@ -26,7 +26,10 @@ from streamlit import config
 from streamlit.auth_util import get_cookie_with_chunks, get_expose_tokens_config
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.runtime.runtime_util import serialize_forward_msg
+from streamlit.runtime.runtime_util import (
+    get_max_widget_state_size_bytes,
+    serialize_forward_msg,
+)
 from streamlit.runtime.session_manager import (
     ClientContext,
     SessionClient,
@@ -101,10 +104,52 @@ def _gather_user_info(headers: Headers) -> dict[str, str | bool | None]:
     return user_info
 
 
+def _is_host_allowed(host: str | None) -> bool:
+    """Check the request Host header against the configured allow-list."""
+    allowed_hosts: list[str] = config.get_option("server.allowedHosts")
+    if not allowed_hosts:
+        return True
+
+    if host is None:
+        return False
+
+    try:
+        parsed_host = urlparse(f"//{host}")
+        hostname = parsed_host.hostname
+        # Accessing port also validates that a supplied port is numeric and in range.
+        _ = parsed_host.port
+    except ValueError:
+        return False
+
+    if (
+        hostname is None
+        or parsed_host.username is not None
+        or parsed_host.password is not None
+        or parsed_host.path
+        or parsed_host.query
+        or parsed_host.fragment
+    ):
+        return False
+
+    hostname = hostname.lower().rstrip(".")
+    for allowed_host in allowed_hosts:
+        pattern = allowed_host.strip().lower().rstrip(".")
+        if pattern == "*":
+            return True
+        if pattern.startswith("*."):
+            if hostname.endswith(pattern[1:]):
+                return True
+        elif hostname == pattern:
+            return True
+
+    return False
+
+
 def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
     """Check if the WebSocket Origin header is allowed.
 
-    Allows same-origin connections by default and delegates to
+    Validates the Host header when server.allowedHosts is configured, allows
+    same-origin connections by default, and delegates to
     is_url_from_allowed_origins for cross-origin requests.
 
     Parameters
@@ -118,11 +163,14 @@ def _is_origin_allowed(origin: str | None, host: str | None) -> bool:
     Returns
     -------
     bool
-        True if:
+        False if the Host header is disallowed. Otherwise, True if:
         - The origin is None (browser didn't send Origin header, allowed per spec)
         - The origin matches the host (same-origin request)
         - The origin is in the allowed origins list (is_url_from_allowed_origins)
     """
+    if not _is_host_allowed(host):
+        return False
+
     # If no Origin header is present, allow the connection.
     # Per the WebSocket spec, browsers should always send Origin, but non-browser
     # clients may not. Connections without Origin are allowed by default.
@@ -341,7 +389,7 @@ class StarletteSessionClient(SessionClient):
 
     @property
     def client_context(self) -> ClientContext:
-        """Return the client's connection context."""
+        """The client's connection context."""
         return self._client_context
 
     async def aclose(self) -> None:
@@ -381,8 +429,6 @@ def create_websocket_handler(runtime: Runtime) -> Any:
     """
     from starlette.websockets import WebSocketDisconnect
 
-    expose_tokens = get_expose_tokens_config()
-
     async def _websocket_endpoint(websocket: WebSocket) -> None:
         # Validate origin before accepting the connection to prevent
         # cross-site WebSocket hijacking.
@@ -390,7 +436,10 @@ def create_websocket_handler(runtime: Runtime) -> Any:
         host = websocket.headers.get("Host")
         if not _is_origin_allowed(origin, host):
             _LOGGER.warning(
-                "Rejecting WebSocket connection from disallowed origin: %s", origin
+                "Rejecting WebSocket connection with disallowed Origin or Host "
+                "header: origin=%s, host=%s",
+                origin,
+                host,
             )
             await websocket.close(code=1008)  # 1008 = Policy Violation
             return
@@ -413,6 +462,16 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                 if origin_header and starlette_app_utils.validate_xsrf_token(
                     xsrf_token, xsrf_cookie
                 ):
+                    # Read expose_tokens lazily on connect (rather than once at
+                    # handler creation) so programmatic secrets from
+                    # ``st.App(secrets=...)``, which are merged during the ASGI
+                    # lifespan after routes are built, are honored. Resolve it
+                    # outside the defensive cookie-parsing block below so an
+                    # invalid ``expose_tokens`` config surfaces as a clear error
+                    # instead of being silently swallowed as a cookie-parsing
+                    # failure.
+                    expose_tokens = get_expose_tokens_config()
+
                     try:
                         raw_auth_cookie = _get_signed_cookie_with_chunks(
                             websocket.cookies, USER_COOKIE_NAME
@@ -468,16 +527,34 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                         "Expected binary protobufs."
                     )
 
+                # The same config value bounds both the raw inbound frame here and
+                # the parsed aggregate widget state in the runtime layer. Applied to
+                # the raw BackMsg frame, this transport check is slightly stricter
+                # than the runtime check (the frame includes the BackMsg envelope),
+                # which is an intentional defense-in-depth tradeoff.
+                max_client_msg_size = get_max_widget_state_size_bytes()
+                if len(data) > max_client_msg_size:
+                    _LOGGER.warning(
+                        "Client WebSocket message size %s bytes exceeds the limit of "
+                        "%s bytes; closing connection.",
+                        len(data),
+                        max_client_msg_size,
+                    )
+                    await websocket.close(code=1009)  # 1009 = Message Too Big
+                    break
+
                 back_msg = BackMsg()
                 try:
                     back_msg.ParseFromString(data)
                 except Exception as exc:
-                    _LOGGER.exception("Error deserializing back message")
-                    if session_id is not None:
-                        runtime.handle_backmsg_deserialization_exception(
-                            session_id, exc
-                        )
-                    continue
+                    # Treat a frame that is not a valid BackMsg as a protocol
+                    # violation: close with 1002 and keep the traceback on the
+                    # server only. A traceback that goes to the client exposes
+                    # internal file paths at every client.showErrorDetails
+                    # setting.
+                    _LOGGER.warning("Error deserializing back message", exc_info=exc)
+                    await websocket.close(code=1002)  # 1002 = Protocol Error
+                    break
 
                 msg_type = back_msg.WhichOneof("type")
 
@@ -507,7 +584,7 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                     )
                     continue
 
-                runtime.handle_backmsg(session_id, back_msg)
+                runtime.handle_backmsg(session_id, back_msg, client=client)
 
         except WebSocketDisconnect:
             # The websocket was closed by the client,
@@ -516,7 +593,7 @@ def create_websocket_handler(runtime: Runtime) -> Any:
         finally:
             try:
                 if session_id is not None:
-                    runtime.disconnect_session(session_id)
+                    runtime.disconnect_session(session_id, client=client)
             finally:
                 # Ensure client cleanup happens even if disconnect_session raises.
                 await client.aclose()

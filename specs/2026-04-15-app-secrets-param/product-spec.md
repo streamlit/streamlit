@@ -46,7 +46,7 @@ Add a `secrets` parameter to `st.App`:
 
 ```python
 # Type alias for documentation
-SecretsValue = str | int | float | bool | dict[str, "SecretsValue"]
+SecretsValue = str | int | float | bool | list["SecretsValue"] | dict[str, "SecretsValue"]
 
 class App:
     def __init__(
@@ -67,9 +67,10 @@ class App:
 - `secrets : Mapping[str, SecretsValue] | None`
   A dictionary of secrets to make available via `st.secrets`. Supported value types:
   - `str`, `int`, `float`, `bool` — scalar values
+  - `list[SecretsValue]` — lists of values (recursive)
   - `dict[str, SecretsValue]` — nested sections (recursive)
 
-  Unsupported types (e.g., `list`, `datetime`, custom objects) raise `TypeError` at `App`
+  Unsupported types (e.g., `datetime`, custom objects) raise `TypeError` at `App`
   construction.
 
   When provided, these secrets are **shallow-merged** with file-based secrets: entire top-level
@@ -86,8 +87,8 @@ class App:
    3. Script-level `.streamlit/secrets.toml` (located alongside the main script)
    4. `secrets` parameter passed to `st.App`
 
-2. **Type preservation:** Values retain their Python types (strings, ints, bools, nested dicts).
-   No TOML parsing required.
+2. **Type preservation:** Values retain their Python types (strings, ints, bools, lists, nested
+   dicts). No TOML parsing required.
 
 3. **Environment variable promotion:** Top-level string/int/float secrets are promoted to
    `os.environ` as strings (same behavior as file-based secrets). Note: `int` and `float` values
@@ -114,7 +115,7 @@ app = st.App(
             "host": os.environ["DB_HOST"],
             "password": os.environ["DB_PASSWORD"],
         }
-    }
+    },
 )
 ```
 
@@ -125,10 +126,12 @@ import boto3
 import json
 import streamlit as st
 
+
 def load_secrets():
     client = boto3.client("secretsmanager")
     response = client.get_secret_value(SecretId="my-streamlit-app")
     return json.loads(response["SecretString"])
+
 
 app = st.App("main.py", secrets=load_secrets())
 ```
@@ -152,7 +155,7 @@ app = st.App(
             "client_id": os.environ["OAUTH_CLIENT_ID"],
             "client_secret": os.environ["OAUTH_CLIENT_SECRET"],
         }
-    }
+    },
 )
 
 # In the Streamlit script:

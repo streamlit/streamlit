@@ -51,6 +51,10 @@ import {
   SidebarConfigContextProps,
 } from "./components/core/SidebarConfigContext"
 import {
+  SkillsInstallContext,
+  SkillsInstallContextProps,
+} from "./components/core/SkillsInstallContext"
+import {
   ThemeContext,
   ThemeContextProps,
 } from "./components/core/ThemeContext"
@@ -67,6 +71,7 @@ import { createFormsData } from "./WidgetStateManager"
 const flexContextValue = {
   direction: Direction.VERTICAL,
   isInHorizontalLayout: false,
+  isDirectlyInColumn: false,
   isInRoot: false,
   isInContentWidthContainer: false,
 }
@@ -77,6 +82,7 @@ const defaultLibConfigContextValue = {
   enforceDownloadInNewTab: undefined,
   resourceCrossOriginMode: undefined,
   showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+  disableDataExport: false,
 }
 
 const defaultSidebarConfigContextValue = {
@@ -85,6 +91,7 @@ const defaultSidebarConfigContextValue = {
   sidebarChevronDownshift: 0,
   expandSidebarNav: false,
   hideSidebarNav: false,
+  isSidebarLocked: false,
 }
 
 const defaultThemeContextValue = {
@@ -107,9 +114,12 @@ const defaultViewStateContextValue = {
 }
 
 const defaultScriptRunContextValue = {
+  stopScript: () => {},
   scriptRunState: ScriptRunState.NOT_RUNNING,
   scriptRunId: "script run 123",
   fragmentIdsThisRun: [],
+  scriptRunFinishedSequence: 0,
+  scriptRunFinishedFragmentIds: [],
 }
 
 const defaultBackendOperationContextValue = {
@@ -172,10 +182,14 @@ export function mockWindowLocation(hostname: string): void {
   // @ts-expect-error
   delete window.location
 
+  const hasScheme = /^https?:\/\//.test(hostname)
+  const origin = hasScheme ? new URL(hostname).origin : `https://${hostname}`
+
   // @ts-expect-error
   window.location = {
     assign: vi.fn(),
-    hostname: hostname,
+    hostname: hasScheme ? new URL(hostname).hostname : hostname,
+    origin,
   }
 }
 
@@ -192,7 +206,7 @@ export interface RenderWithContextsOptions {
    * provides the ref through context (mirroring App.tsx behavior).
    */
   sidebarConfigContext?: Partial<
-    Omit<SidebarConfigContextProps, "appRootRef">
+    Omit<SidebarConfigContextProps, "appRootRef" | "isSidebarLocked">
   > & {
     appRootRef?: boolean
   }
@@ -201,6 +215,7 @@ export interface RenderWithContextsOptions {
   formsContext?: Partial<FormsContextProps>
   scriptRunContext?: Partial<ScriptRunContextProps>
   backendOperationContext?: Partial<BackendOperationContextProps>
+  skillsInstallContext?: Partial<SkillsInstallContextProps>
 }
 
 /**
@@ -255,6 +270,7 @@ export const renderWithContexts = (
     enforceDownloadInNewTab: undefined,
     resourceCrossOriginMode: undefined,
     showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+    disableDataExport: false,
     ...options.libConfigContext,
   }
 
@@ -272,6 +288,11 @@ export const renderWithContexts = (
           )
         )
       : {}),
+    // Derive isSidebarLocked from initialSidebarState so tests can't provide
+    // an inconsistent context value.
+    isSidebarLocked:
+      (options.sidebarConfigContext?.initialSidebarState ??
+        PageConfig.SidebarState.AUTO) === PageConfig.SidebarState.LOCKED,
   }
 
   // Track whether we should create an app root wrapper
@@ -303,6 +324,9 @@ export const renderWithContexts = (
     scriptRunState: ScriptRunState.NOT_RUNNING,
     scriptRunId: "script run 123",
     fragmentIdsThisRun: [],
+    scriptRunFinishedSequence: 0,
+    scriptRunFinishedFragmentIds: [],
+    stopScript: vi.fn(),
     ...options.scriptRunContext,
   }
 
@@ -314,6 +338,28 @@ export const renderWithContexts = (
   let currentBackendOperationContextProps: BackendOperationContextProps = {
     backendOperationClient: undefined,
     ...options.backendOperationContext,
+  }
+
+  // Shared single callout slot so the dedup behavior (first eligible
+  // ExceptionElement wins) matches production when several are rendered.
+  let skillsCalloutOwner: symbol | null = null
+  let currentSkillsInstallContextProps: SkillsInstallContextProps = {
+    enabled: false,
+    onInstall: () => Promise.resolve(undefined),
+    onShown: vi.fn(),
+    claimCallout: (token: symbol): boolean => {
+      if (skillsCalloutOwner === null || skillsCalloutOwner === token) {
+        skillsCalloutOwner = token
+        return true
+      }
+      return false
+    },
+    releaseCallout: (token: symbol): void => {
+      if (skillsCalloutOwner === token) {
+        skillsCalloutOwner = null
+      }
+    },
+    ...options.skillsInstallContext,
   }
 
   const Wrapper: FC<PropsWithChildren> = ({ children }) => {
@@ -359,7 +405,11 @@ export const renderWithContexts = (
                           <FormsContext.Provider
                             value={currentFormsContextProps}
                           >
-                            {content}
+                            <SkillsInstallContext.Provider
+                              value={currentSkillsInstallContextProps}
+                            >
+                              {content}
+                            </SkillsInstallContext.Provider>
                           </FormsContext.Provider>
                         </BackendOperationContext.Provider>
                       </ScriptRunContext.Provider>
@@ -404,9 +454,15 @@ export const renderWithContexts = (
             ([key]) => key !== "appRootRef"
           )
         )
+        const newInitialSidebarState =
+          newOptions.sidebarConfigContext.initialSidebarState ??
+          currentSidebarConfigContextProps.initialSidebarState
         currentSidebarConfigContextProps = {
           ...currentSidebarConfigContextProps,
           ...filteredSidebarConfig,
+          // Re-derive so it stays consistent with initialSidebarState.
+          isSidebarLocked:
+            newInitialSidebarState === PageConfig.SidebarState.LOCKED,
         }
       }
       if (newOptions?.themeContext) {
@@ -437,6 +493,12 @@ export const renderWithContexts = (
         currentScriptRunContextProps = {
           ...currentScriptRunContextProps,
           ...newOptions.scriptRunContext,
+        }
+      }
+      if (newOptions?.skillsInstallContext) {
+        currentSkillsInstallContextProps = {
+          ...currentSkillsInstallContextProps,
+          ...newOptions.skillsInstallContext,
         }
       }
       // Use the original rerender with the wrapper

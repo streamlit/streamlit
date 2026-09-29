@@ -32,9 +32,10 @@ if TYPE_CHECKING:
     # st.expander returns ExpanderContainer
     assert_type(expander("Test"), ExpanderContainer)
 
-    # ExpanderContainer is a DeltaGenerator (Liskov substitution)
-    exp: DeltaGenerator = expander("Test")
-    assert_type(exp, DeltaGenerator)
+    # Check that the container is usable anywhere a DeltaGenerator is expected.
+    # The annotated assignment is the subtype check: assert_type here would only
+    # see the DeltaGenerator annotation, so it could never fail.
+    _expander_as_delta_generator: DeltaGenerator = expander("Test")
 
     # Context manager returns Self
     with expander("Test") as ctx:
@@ -46,6 +47,9 @@ if TYPE_CHECKING:
     # on_change accepts string literals
     assert_type(expander("Test", on_change="rerun"), ExpanderContainer)
     assert_type(expander("Test", on_change="ignore"), ExpanderContainer)
+
+    # bind accepts query-params binding
+    assert_type(expander("Test", key="qp_exp", bind="query-params"), ExpanderContainer)
 
     # on_change accepts callable with key
     def _noop() -> None: ...
@@ -66,6 +70,7 @@ if TYPE_CHECKING:
         ExpanderContainer,
     )
 
-    # type parameter accepts "default" or "compact"
+    # type parameter accepts "default", "compact", or "step"
     assert_type(expander("Test", type="default"), ExpanderContainer)
     assert_type(expander("Test", type="compact"), ExpanderContainer)
+    assert_type(expander("Test", type="step"), ExpanderContainer)

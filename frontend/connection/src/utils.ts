@@ -159,12 +159,20 @@ export class FetchError extends Error {
 
   isNetworkError: boolean
 
+  /**
+   * True when the request was aborted via a caller-supplied external signal
+   * (e.g. a cancelled ping loop) rather than the internal timeout. Lets callers
+   * distinguish an intentional cancellation from a genuine timeout.
+   */
+  isAborted: boolean
+
   constructor(
     message: string,
     url: string,
     options: {
       isTimeout?: boolean
       isNetworkError?: boolean
+      isAborted?: boolean
       response?: { status: number; statusText: string; data: unknown }
     } = {}
   ) {
@@ -173,6 +181,7 @@ export class FetchError extends Error {
     this.url = url
     this.isTimeout = options.isTimeout ?? false
     this.isNetworkError = options.isNetworkError ?? false
+    this.isAborted = options.isAborted ?? false
     this.response = options.response
   }
 }
@@ -180,18 +189,37 @@ export class FetchError extends Error {
 /**
  * Fetch with timeout support using AbortController.
  * Normalizes different error types (timeout, network, HTTP errors) into FetchError.
+ *
+ * An optional `externalSignal` allows callers to abort the in-flight request
+ * (e.g. when a ping loop is cancelled on reconnect) in addition to the internal
+ * timeout, so we don't leave orphaned requests running against the server.
  */
 export async function fetchWithTimeout(
   url: string,
-  timeoutMs: number
+  timeoutMs: number,
+  externalSignal?: AbortSignal
 ): Promise<{ data: unknown; url: string }> {
   const controller = new AbortController()
   // eslint-disable-next-line no-restricted-globals -- Network timeout utility runs outside React and cannot use hooks.
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
+  const onExternalAbort = (): void => controller.abort()
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort()
+    } else {
+      externalSignal.addEventListener("abort", onExternalAbort)
+    }
+  }
+
+  const cleanup = (): void => {
+    clearTimeout(timeoutId)
+    externalSignal?.removeEventListener("abort", onExternalAbort)
+  }
+
   try {
     const response = await fetch(url, { signal: controller.signal })
-    clearTimeout(timeoutId)
+    cleanup()
 
     if (!response.ok) {
       // Server responded with error status
@@ -228,15 +256,21 @@ export async function fetchWithTimeout(
       return { data: text, url }
     }
   } catch (error) {
-    clearTimeout(timeoutId)
+    cleanup()
 
     // Re-throw FetchError as-is
     if (error instanceof FetchError) {
       throw error
     }
 
-    // Handle AbortController timeout
+    // Handle AbortController abort. This fires for both the internal timeout and
+    // a caller-supplied external signal, which produce the same AbortError. We
+    // check the external signal first so a caller-initiated cancellation is
+    // reported as an abort rather than being misclassified as a timeout.
     if (error instanceof DOMException && error.name === "AbortError") {
+      if (externalSignal?.aborted) {
+        throw new FetchError("Request aborted", url, { isAborted: true })
+      }
       throw new FetchError("Connection timed out", url, { isTimeout: true })
     }
 

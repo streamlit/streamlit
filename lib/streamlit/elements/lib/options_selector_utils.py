@@ -14,23 +14,29 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from enum import Enum, EnumMeta
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, cast, overload
 
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitDefaultNotInOptionsError,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
 from streamlit.runtime.state import get_session_state
-from streamlit.runtime.state.common import RegisterWidgetResult
 from streamlit.type_util import (
     check_python_comparable,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence
+
+    from streamlit.runtime.state.common import RegisterWidgetResult
 
 _LOGGER: Final = logger.get_logger(__name__)
 
@@ -55,7 +61,6 @@ def validate_select_widget_filter_mode(
     filter_mode: SelectWidgetFilterMode,
     *,
     accept_new_options: bool,
-    command: Literal["st.selectbox", "st.multiselect"],
 ) -> ProtoSelectWidgetFilterMode.ValueType:
     """Validate ``filter_mode`` and return the protobuf enum value."""
     try:
@@ -70,9 +75,13 @@ def validate_select_widget_filter_mode(
         )
 
     if filter_mode is None and accept_new_options:
-        raise StreamlitAPIException(
-            f"The `filter_mode` argument to `{command}` cannot be None when "
-            "`accept_new_options=True`."
+        raise StreamlitIncompatibleParametersError(
+            "filter_mode=None",
+            "accept_new_options=True",
+            explanation=(
+                "`filter_mode` cannot be `None` when `accept_new_options=True`. "
+                "Set `filter_mode` to `fuzzy`, `contains`, or `prefix`."
+            ),
         )
 
     return _SELECT_WIDGET_FILTER_MODE_PROTO_MAP[filter_mode]
@@ -117,10 +126,7 @@ def check_and_convert_to_indices(
 
     for value in default_values:
         if value not in opt:
-            raise StreamlitAPIException(
-                f"The default value '{value}' is not part of the options. "
-                "Please make sure that every default values also exists in the options."
-            )
+            raise StreamlitDefaultNotInOptionsError(value)
 
     return [opt.index(value) for value in default_values]
 
@@ -164,10 +170,9 @@ def _coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
 
     coercion_type = config.get_option("runner.enumCoercion")
     if coercion_type not in _ALLOWED_ENUM_COERCION_CONFIG_SETTINGS:
-        raise StreamlitAPIException(
-            "Invalid value for config option runner.enumCoercion. "
-            f"Expected one of {_ALLOWED_ENUM_COERCION_CONFIG_SETTINGS}, "
-            f"but got '{coercion_type}'."
+        raise StreamlitValueError(
+            "runner.enumCoercion",
+            [f"'{v}'" for v in _ALLOWED_ENUM_COERCION_CONFIG_SETTINGS],
         )
     if coercion_type == "off":
         return from_enum_value  # do not attempt to coerce
@@ -238,8 +243,10 @@ def maybe_coerce_enum(
     the original RegisterWidgetResult.
     """
 
-    # If the value is not a Enum, return early
-    if not isinstance(register_widget_result.value, Enum):
+    value = register_widget_result.value
+
+    # If the value is not an Enum, return early
+    if not isinstance(value, Enum):
         return register_widget_result
 
     coerce_class: EnumMeta | None
@@ -249,10 +256,13 @@ def maybe_coerce_enum(
         coerce_class = _extract_common_class_from_iter(opt_sequence)
         if coerce_class is None:
             return register_widget_result
+    enum_class = cast("type[Enum]", coerce_class)
 
-    return RegisterWidgetResult(
-        _coerce_enum(register_widget_result.value, coerce_class),
-        register_widget_result.value_changed,
+    # Use replace so other fields (e.g. incoming_serialized_value) are preserved
+    # rather than dropped when only the value is coerced.
+    return replace(
+        register_widget_result,
+        value=_coerce_enum(value, enum_class),
     )
 
 
@@ -296,13 +306,16 @@ def maybe_coerce_enum_sequence(
         coerce_class = _extract_common_class_from_iter(opt_sequence)
         if coerce_class is None:
             return register_widget_result
+    enum_class = cast("type[Enum]", coerce_class)
 
-    # Return a new RegisterWidgetResult with the coerced enum values sequence
-    return RegisterWidgetResult(
-        type(register_widget_result.value)(
-            _coerce_enum(val, coerce_class) for val in register_widget_result.value
+    # Return a new RegisterWidgetResult with the coerced enum values sequence.
+    # Use replace so other fields (e.g. incoming_serialized_value) are preserved.
+    return replace(
+        register_widget_result,
+        value=type(register_widget_result.value)(
+            _coerce_enum(cast("Enum", val), enum_class)
+            for val in register_widget_result.value
         ),
-        register_widget_result.value_changed,
     )
 
 
@@ -389,6 +402,90 @@ def validate_and_sync_value_with_options(
         # Update session_state so subsequent accesses in this run
         # return the corrected value. Use reset_state_value to avoid
         # the "cannot be modified after widget instantiated" error.
+        get_session_state().reset_state_value(str(key), new_value)
+
+    return new_value, True
+
+
+def resolve_value_against_options(
+    current_value: T | None,
+    opt: Sequence[T],
+    formatted_option_to_option_index: dict[str, int],
+    default_index: int | None,
+    key: str | int | None,
+    format_func: Callable[[Any], str] = str,
+    incoming_serialized_value: str | None = None,
+) -> tuple[T | None, bool]:
+    """Like :func:`validate_and_sync_value_with_options`, but falls back to the
+    stored wire label when ``format_func`` raises on the current value.
+
+    Membership is decided primarily by ``format_func``: the value is valid if
+    its formatted label is among the options. This preserves correct behavior
+    when ``format_func`` changes between runs or when the value was set
+    programmatically.
+
+    If ``format_func`` raises on ``current_value`` -- which happens when it
+    performs an identity- or class-dependent operation (e.g. a dict lookup) and
+    the value is a deepcopy stored from an earlier run -- the stored wire label
+    ``incoming_serialized_value`` is used instead to decide membership. On a
+    match, the matching *current* option instance is returned so the value
+    always belongs to the current run rather than a stale deepcopy.
+
+    Has the same session-state side effect as
+    :func:`validate_and_sync_value_with_options`: when the value is reset and a
+    key is provided, session state is updated with the new value.
+
+    Parameters
+    ----------
+    current_value
+        The current widget value to validate.
+    opt
+        The sequence of valid options.
+    formatted_option_to_option_index
+        Mapping from formatted option labels to their index in ``opt``.
+    default_index
+        The default index to reset to if the value is invalid.
+    key
+        The widget key for session state updates.
+    format_func
+        Used to compute the value's label for membership. May raise on a stale
+        value, which triggers the wire-label fallback.
+    incoming_serialized_value
+        The widget's stored wire label, used as a fallback identity when
+        ``format_func`` raises on ``current_value``. ``None`` if unavailable.
+
+    Returns
+    -------
+    tuple[T | None, bool]
+        A tuple of (validated_value, value_was_reset).
+    """
+    if current_value is None:
+        return current_value, False
+
+    try:
+        formatted_value = format_func(current_value)
+        if formatted_value in formatted_option_to_option_index:
+            return current_value, False
+    except Exception:
+        # format_func can't handle the stored value (e.g. it's identity- or
+        # class-dependent and the value is a deepcopy from an earlier run). Use
+        # the stored wire label as the identity instead, and return the current
+        # option instance so we never hand back a stale deepcopy.
+        option_index = (
+            formatted_option_to_option_index.get(incoming_serialized_value)
+            if incoming_serialized_value is not None
+            else None
+        )
+        if option_index is not None and 0 <= option_index < len(opt):
+            return opt[option_index], False
+
+    # Value not in options - reset to default.
+    if default_index is not None and len(opt) > 0:
+        new_value: T | None = opt[default_index]
+    else:
+        new_value = None
+
+    if key is not None:
         get_session_state().reset_state_value(str(key), new_value)
 
     return new_value, True

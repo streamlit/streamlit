@@ -34,6 +34,7 @@ from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.components.v2.component_registry import BidiComponentDefinition
 from streamlit.errors import (
     BidiComponentInvalidCallbackNameError,
+    BidiComponentUnserializableDataError,
     StreamlitAPIException,
 )
 from streamlit.proto.BidiComponent_pb2 import BidiComponent as BidiComponentProto
@@ -78,6 +79,17 @@ def test_make_trigger_id_validates_event_delimiter() -> None:
     """Test that _make_trigger_id raises exception if event contains delimiter."""
     with pytest.raises(StreamlitAPIException, match="delimiter sequence"):
         _make_trigger_id("normal_base", "click__event")
+
+
+def test_bidi_component_without_script_run_ctx_returns_empty_result() -> None:
+    """Without a ScriptRunContext, bidi components return empty state and triggers."""
+    mixin = BidiComponentMixin()
+    with patch(
+        "streamlit.components.v2.bidi_component.main.get_script_run_ctx",
+        return_value=None,
+    ):
+        result = mixin._bidi_component("my_component")
+    assert dict(result) == {}
 
 
 def test_make_trigger_id_creates_internal_key() -> None:
@@ -311,7 +323,7 @@ class BidiComponentMixinTest(DeltaGeneratorTestCase):
         # Compute expected aggregator trigger id
         base_id = next(
             wid
-            for wid in ctx.widget_ids_this_run.snapshot()
+            for wid in ctx.shared.widget_ids_this_run.snapshot()
             if wid.startswith("$$ID") and EVENT_DELIM not in wid
         )
         aggregator_id = _make_trigger_id(base_id, "events")
@@ -476,11 +488,12 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         assert bidi_component_proto.js_content == ""
         assert bidi_component_proto.html_content == ""
 
-    def test_unregistered_component_raises_value_error(self):
-        """Test that calling an unregistered component raises ValueError."""
+    def test_unregistered_component_raises_api_exception(self):
+        """Calling an unregistered component raises StreamlitAPIException."""
         # Call a component that doesn't exist
         with pytest.raises(
-            ValueError, match="Component 'nonexistent_component' is not registered"
+            StreamlitAPIException,
+            match="Component 'nonexistent_component' is not registered",
         ):
             st._bidi_component("nonexistent_component")
 
@@ -590,6 +603,48 @@ class BidiComponentTest(DeltaGeneratorTestCase):
         assert bidi_component_proto.component_name == "bytes_data_component"
         assert bidi_component_proto.WhichOneof("data") == "bytes"
         assert bidi_component_proto.bytes == binary_payload
+
+    def test_component_with_json_scalar_data(self) -> None:
+        """Non-mapping scalar data that is JSON-serializable is sent as JSON."""
+        self.mock_component_manager.register(
+            BidiComponentDefinition(
+                name="json_scalar_component",
+                js="console.log('hello world');",
+            )
+        )
+        st._bidi_component("json_scalar_component", data=123)
+        proto = self.get_delta_from_queue().new_element.bidi_component
+        assert proto.WhichOneof("data") == "json"
+        assert proto.json == "123"
+
+    def test_component_unserializable_data_raises(self) -> None:
+        """Data that cannot be Arrow- or JSON-serialized raises an API error."""
+        self.mock_component_manager.register(
+            BidiComponentDefinition(
+                name="bad_data_component",
+                js="console.log('hello world');",
+            )
+        )
+        with pytest.raises(BidiComponentUnserializableDataError):
+            st._bidi_component("bad_data_component", data=object())
+
+    def test_non_callback_kwargs_are_ignored(self) -> None:
+        """Only callable ``on_*_change`` kwargs register component events."""
+        self.mock_component_manager.register(
+            BidiComponentDefinition(
+                name="ignore_kwargs_component",
+                js="console.log('hello world');",
+            )
+        )
+        result = st._bidi_component(
+            "ignore_kwargs_component",
+            unused=123,
+            extra_cb=MagicMock(),
+            on_hover_change=MagicMock(),
+        )
+        assert "hover" in result
+        assert "extra_cb" not in result
+        assert "unused" not in result
 
     def test_component_with_callbacks(self):
         """Test component with callback handlers."""
@@ -1031,8 +1086,8 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         """Allow re-registering the same id within the same run for testing keyed stability."""
         ctx = get_script_run_ctx()
         assert ctx is not None
-        ctx.widget_user_keys_this_run.clear()
-        ctx.widget_ids_this_run.clear()
+        ctx.shared.widget_user_keys_this_run.clear()
+        ctx.shared.widget_ids_this_run.clear()
 
     def _render_and_get_id(self) -> str:
         delta = self.get_delta_from_queue()
@@ -1444,6 +1499,41 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
 
             # Verify the slow path WAS called
             mock_digest.assert_called_once()
+
+
+def test_canonicalize_json_returns_payload_when_empty() -> None:
+    """An empty payload is returned without parsing."""
+    mixin = BidiComponentMixin()
+    assert mixin._canonicalize_json_for_identity("") == ""
+
+
+def test_canonicalize_json_returns_payload_when_invalid_json() -> None:
+    """Invalid JSON payloads are returned as-is."""
+    mixin = BidiComponentMixin()
+    payload = "not-a-valid-json{"
+    assert mixin._canonicalize_json_for_identity(payload) == payload
+
+
+def test_canonicalize_json_returns_payload_when_unserializable() -> None:
+    """Payloads that parse but can't be re-serialized fall back to the original."""
+    mixin = BidiComponentMixin()
+    payload = '{"a": 1}'
+
+    with patch(
+        "streamlit.components.v2.bidi_component.main.json.dumps",
+        side_effect=TypeError("not serializable"),
+    ):
+        assert mixin._canonicalize_json_for_identity(payload) == payload
+
+
+def test_bidi_component_mixin_dg_returns_self() -> None:
+    """`BidiComponentMixin.dg` returns the mixin instance."""
+
+    class _OnlyBidi(BidiComponentMixin):
+        pass
+
+    bidi_mixin = _OnlyBidi()
+    assert bidi_mixin.dg is bidi_mixin
 
 
 class BidiComponentStateCallbackTest(DeltaGeneratorTestCase):

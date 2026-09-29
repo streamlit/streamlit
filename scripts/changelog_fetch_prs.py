@@ -20,8 +20,9 @@ Usage:
 
 Extracts PR numbers from `git log`, batches them into GraphQL queries
 (50 per batch), and writes a JSON array of
-{number, title, labels, author, related_issues, related_issues_truncated}
-objects sorted by PR number.
+{number, title, body, labels, author, related_issues, related_issues_truncated}
+objects sorted by PR number. The `body` field is truncated to
+_BODY_MAX_CHARS characters to keep the output file manageable.
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ import sys
 from typing import Any
 
 _BATCH_SIZE = 50
+_BODY_MAX_CHARS = 2500
 
 
 def _run(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
@@ -69,7 +71,7 @@ def _build_graphql_query(pr_numbers: list[int]) -> str:
     for pr in pr_numbers:
         fields.append(
             f"pr{pr}: pullRequest(number:{pr}) {{ "
-            f"number title labels(first:100) {{ nodes {{ name }} }} "
+            f"number title body labels(first:100) {{ nodes {{ name }} }} "
             f"author {{ login }} "
             f"closingIssuesReferences(first:10) {{ "
             f"nodes {{ number reactions(content:THUMBS_UP) {{ totalCount }} }} "
@@ -104,10 +106,12 @@ def _parse_graphql_response(stdout: str) -> list[dict[str, Any]]:
                 }
             )
 
+        raw_body = pr_data.get("body") or ""
         prs.append(
             {
                 "number": pr_data["number"],
                 "title": pr_data["title"],
+                "body": raw_body[:_BODY_MAX_CHARS],
                 "labels": [
                     n["name"] for n in pr_data.get("labels", {}).get("nodes", [])
                 ],

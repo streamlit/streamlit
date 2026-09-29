@@ -16,12 +16,18 @@ import re
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_checkbox,
+    expect_label_truncated,
     expect_markdown,
     get_element_by_key,
+    reset_hovering,
 )
 
 
@@ -49,7 +55,7 @@ def select_menu_option(page: Page, label: str, option: str):
     wait_for_app_run(page)
 
 
-TOTAL_MENU_BUTTONS = 19  # Including sidebar, fragment, and menu-style icons
+TOTAL_MENU_BUTTONS = 20  # Including sidebar, fragment, and menu-style icons
 
 
 def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -172,6 +178,7 @@ def test_menu_button_help_tooltip(app: Page):
     """Test that help tooltip shows on hover."""
     menu_button = get_menu_button(app, "Button with Help")
     # Use first button due to duplicate rendering for mobile/desktop tooltip views
+    reset_hovering(app)
     menu_button.get_by_test_id("stMenuButtonButton").first.hover()
 
     expect(app.get_by_test_id("stTooltipContent")).to_have_text("This is helpful text")
@@ -213,6 +220,17 @@ def test_menu_button_in_columns(app: Page, assert_snapshot: ImageCompareFunction
     columns_container = get_element_by_key(app, "columns_container")
     expect(columns_container.get_by_test_id("stMenuButton")).to_have_count(2)
 
+    # Auto no-wrap must not ellipsize a content-width trigger whose label fits.
+    # Measure the markdown container: wrap=False inlines leftover <p> boxes,
+    # so the paragraph itself is not the overflow box.
+    content_width_label = get_element_by_key(app, "col2_menu").get_by_test_id(
+        "stMarkdownContainer"
+    )
+    wait_until(
+        app,
+        lambda: content_width_label.evaluate("el => el.scrollWidth <= el.clientWidth"),
+    )
+
     assert_snapshot(columns_container, name="st_menu_button-in_columns")
 
 
@@ -246,9 +264,9 @@ def test_menu_button_short_options(app: Page, assert_snapshot: ImageCompareFunct
     expect(menu_body).to_be_visible()
 
     # Check that short options are visible (not exact match due to markdown rendering)
-    expect(menu_body.locator("li").filter(has_text="A")).to_be_visible()
-    expect(menu_body.locator("li").filter(has_text="B")).to_be_visible()
-    expect(menu_body.locator("li").filter(has_text="C")).to_be_visible()
+    expect(menu_body.get_by_role("menuitem").filter(has_text="A")).to_be_visible()
+    expect(menu_body.get_by_role("menuitem").filter(has_text="B")).to_be_visible()
+    expect(menu_body.get_by_role("menuitem").filter(has_text="C")).to_be_visible()
 
     # Menu should be narrower than default
     assert_snapshot(menu_body, name="st_menu_button-short_options")
@@ -293,3 +311,19 @@ def test_menu_button_menu_style_icons_hide_chevron(
 
     # Snapshot the container with all three menu-style icon buttons
     assert_snapshot(container, name="st_menu_button-menu_style_icons")
+
+
+def test_wrap_false_truncates_sets_title_and_keeps_chevron(app: Page):
+    """wrap=False ellipsizes the trigger label, exposes the full label via a
+    native title, and keeps the expansion chevron visible.
+    """
+    container = get_element_by_key(app, "wrap_false_menu_button")
+    expect_label_truncated(container)
+    expect(
+        container.get_by_title(
+            "Regenerate the complete quarterly report now", exact=True
+        )
+    ).to_be_visible()
+    expect(container.get_by_test_id("stMenuButtonButton")).to_contain_text(
+        "expand_more"
+    )

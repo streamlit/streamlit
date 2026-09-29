@@ -234,6 +234,10 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
         "plotly_chart",
         lambda: st.plotly_chart(px.line(_CHART_DATA), on_select="ignore"),
     ),
+    (
+        "echarts_chart",
+        lambda: st.echarts_chart({"series": [{"type": "bar", "data": [1, 2, 3]}]}),
+    ),
     ("pydeck_chart", lambda: st.pydeck_chart(pdk.Deck())),
     (
         "map",
@@ -247,14 +251,11 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     }
     """),
     ),
-    ("pyplot", lambda: st.pyplot(plt.figure())),
     (
-        "bokeh_chart",
-        lambda: (
-            # Ignore bokeh chart since it requires outdated dependencies:
-            st.write("")
-        ),
+        "mermaid_chart",
+        lambda: st.mermaid_chart("graph LR\n    A --> B"),
     ),
+    ("pyplot", lambda: st.pyplot(plt.figure())),
     # utilities
     ("help", lambda: st.help("Hello")),
     ("echo", lambda: st.echo()),
@@ -273,6 +274,7 @@ CONTAINER_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("status", lambda: st.status("Status")),
     ("form", lambda: st.form("Form")),
     ("empty", lambda: st.empty()),
+    ("skeleton", lambda: st.skeleton()),
     ("dialog", lambda: st.dialog("Dialog")),
     ("grid", lambda: st.grid()),
 ]

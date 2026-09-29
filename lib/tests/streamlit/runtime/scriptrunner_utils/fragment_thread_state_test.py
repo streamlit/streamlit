@@ -25,6 +25,7 @@ from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ScriptRunContext,
     ThreadState,
 )
@@ -46,12 +47,13 @@ class ThreadStateUnitTest(unittest.TestCase):
         ThreadState.initialize(
             fragment_id="frag-1",
             delta_path=(0, 1, 2),
-            in_fragment_callback=True,
+            run_location=RunLocation.CALLBACK,
             active_script_hash="hash123",
         )
         ts = ThreadState.get()
         assert ts.fragment_id == "frag-1"
         assert ts.delta_path == (0, 1, 2)
+        assert ts.run_location is RunLocation.CALLBACK
         assert ts.in_fragment_callback is True
         assert ts.active_script_hash == "hash123"
 

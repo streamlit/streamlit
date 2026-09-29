@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback } from "react"
+import { type FC, memo, useCallback } from "react"
 
-import { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
+import type { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
 
 import BaseColorPicker from "~lib/components/shared/BaseColorPicker/BaseColorPicker"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
@@ -68,12 +68,11 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<ColorPickerValue>,
   fragmentId: string | undefined
 ): void => {
-  widgetMgr.setStringValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 const ColorPicker: FC<Props> = ({
@@ -108,7 +107,7 @@ const ColorPicker: FC<Props> = ({
 
   const handleColorClose = useCallback(
     (color: string): void => {
-      setValueWithSource({ value: color, fromUi: true })
+      setValueWithSource({ value: color, fromUser: true })
     },
     [setValueWithSource]
   )

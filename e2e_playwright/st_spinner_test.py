@@ -41,6 +41,28 @@ def test_spinner_time(app: Page):
     updated_text = app.get_by_test_id("stSpinner").text_content()
     assert initial_text != updated_text
 
+    # The label sits in a live region; the elapsed time deliberately does not,
+    # since it is rewritten every 100ms.
+    status = app.get_by_test_id("stSpinner").get_by_role("status")
+    expect(status).to_have_text("Loading...")
+    expect(status).not_to_contain_text("seconds")
+
+
+def test_spinner_slows_but_keeps_animating_under_reduced_motion(app: Page):
+    """The spinner slows down rather than stopping when reduced motion is set.
+
+    Stopping the animation parks the accent segment at its rest angle, which
+    reads as a hung app rather than a working one (see issue #16598).
+    """
+    app.emulate_media(reduced_motion="reduce")
+    get_button(app, "Run spinner basic").click()
+
+    spinner_icon = app.get_by_test_id("stSpinnerIcon")
+    expect(spinner_icon).to_be_visible()
+    expect(spinner_icon).to_have_css("animation-duration", "1.8s")
+    expect(spinner_icon).to_have_css("animation-iteration-count", "infinite")
+    expect(spinner_icon).not_to_have_css("animation-name", "none")
+
 
 def test_double_spinner(app: Page):
     """Test that nested spinners appear in the correct order."""
@@ -245,13 +267,21 @@ def test_spinner_before_tabs_preserves_active_tab_and_increments_number_input(
     """
     get_button(app, "Enable spinner before tabs scenario").click()
 
-    # Spinner appears while the scenario is initializing.
-    expect(app.get_by_test_id("stSpinner")).to_be_visible()
+    # A spinner ("Starting up...") shows before the tabs, but only for a short
+    # window: st.spinner delays rendering by ~0.5s, so it appears for roughly the
+    # back half of the app's 1s sleep and is then immediately replaced by the
+    # tabs. That window can close before Playwright polls it, causing flakiness
+    # (especially on Firefox). Wait for the run to finish and assert on the
+    # resulting tabs instead.
     wait_for_app_run(app)
 
     tab_one = app.get_by_role("tab", name="tab_one")
     tab_two = app.get_by_role("tab", name="tab_two")
     number_input = app.get_by_role("spinbutton", name="number in tab")
+
+    # Tabs (rendered after the spinner context) should be present after the rerun.
+    expect(tab_one).to_be_visible()
+    expect(tab_two).to_be_visible()
 
     tab_two.click()
     expect(tab_two).to_have_attribute("aria-selected", "true")

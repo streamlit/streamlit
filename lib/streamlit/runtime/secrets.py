@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import threading
-from collections.abc import Callable, ItemsView, Iterator, KeysView, Mapping, ValuesView
+from collections.abc import ItemsView, Iterator, KeysView, Mapping, ValuesView
 from copy import deepcopy
 from typing import (
     Any,
@@ -24,18 +24,19 @@ from typing import (
     NoReturn,
 )
 
-from blinker import Signal
-
 import streamlit.watcher.path_watcher
 from streamlit import config, runtime
 from streamlit.errors import StreamlitMaxRetriesError, StreamlitSecretNotFoundError
 from streamlit.logger import get_logger
+from streamlit.signal_util import Signal
 
 _LOGGER: Final = get_logger(__name__)
 
 # Type alias for programmatic secrets values.
-# Supported types: str, int, float, bool, and nested dicts.
-SecretsValue = str | int | float | bool | dict[str, "SecretsValue"]
+# Supported types: str, int, float, bool, lists, and nested dicts.
+SecretsValue = (
+    str | int | float | bool | list["SecretsValue"] | dict[str, "SecretsValue"]
+)
 
 # Allowed scalar types for secrets values
 _ALLOWED_SCALAR_TYPES: Final[frozenset[type]] = frozenset({str, int, float, bool})
@@ -49,7 +50,9 @@ def _validate_secrets_value(value: Any, path: str = "") -> None:
     value
         The value to validate.
     path
-        The dotted path to this value (for error messages).
+        The path to this value (for error messages). Dict keys use dotted
+        notation (e.g. ``outer.inner``) and list elements use bracket indexing
+        (e.g. ``outer.inner[2]``).
 
     Raises
     ------
@@ -66,6 +69,10 @@ def _validate_secrets_value(value: Any, path: str = "") -> None:
                 )
             nested_path = f"{path}.{key}" if path else key
             _validate_secrets_value(nested_value, nested_path)
+    elif isinstance(value, list):
+        for index, nested_value in enumerate(value):
+            nested_path = f"{path}[{index}]" if path else f"[{index}]"
+            _validate_secrets_value(nested_value, nested_path)
     # Use type() instead of isinstance() because bool is a subclass of int,
     # and we need to distinguish them for os.environ promotion (bool excluded).
     elif type(value) not in _ALLOWED_SCALAR_TYPES:
@@ -73,102 +80,8 @@ def _validate_secrets_value(value: Any, path: str = "") -> None:
         path_info = f" at '{path}'" if path else ""
         raise TypeError(
             f"Unsupported type '{type_name}'{path_info} in secrets. "
-            f"Allowed types are: str, int, float, bool, and nested dicts."
+            f"Allowed types are: str, int, float, bool, lists, and nested dicts."
         )
-
-
-class SecretErrorMessages:
-    """SecretErrorMessages stores all error messages we use for secrets to allow customization
-    for different environments.
-
-    For example Streamlit Cloud can customize the message to be different than the open source.
-
-    For internal use, may change in future releases without notice.
-    """
-
-    def __init__(self) -> None:
-        self.missing_attr_message: Callable[[str], str] = lambda attr_name: (
-            f'st.secrets has no attribute "{attr_name}". '
-            "Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings "
-            "on Streamlit Cloud? More info: "
-            "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
-        )
-        self.missing_key_message: Callable[[str], str] = lambda key: (
-            f'st.secrets has no key "{key}". '
-            "Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings "
-            "on Streamlit Cloud? More info: "
-            "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
-        )
-        self.no_secrets_found: Callable[[list[str]], str] = lambda file_paths: (
-            f"No secrets found. Valid paths for a secrets.toml file or secret directories are: {', '.join(file_paths)}"
-        )
-        self.error_parsing_file_at_path: Callable[[str, Exception], str] = (
-            lambda path, ex: f"Error parsing secrets file at {path}: {ex}"
-        )
-        self.subfolder_path_is_not_a_folder: Callable[[str], str] = (
-            lambda sub_folder_path: (
-                f"{sub_folder_path} is not a folder. "
-                "To use directory based secrets, mount every secret in a subfolder under the secret directory"
-            )
-        )
-        self.invalid_secret_path: Callable[[str], str] = lambda path: (
-            f"Invalid secrets path: {path}: path is not a .toml file or a directory"
-        )
-
-    def set_missing_attr_message(self, message: Callable[[str], str]) -> None:
-        """Set the missing attribute error message."""
-        self.missing_attr_message = message
-
-    def set_missing_key_message(self, message: Callable[[str], str]) -> None:
-        """Set the missing key error message."""
-        self.missing_key_message = message
-
-    def set_no_secrets_found_message(self, message: Callable[[list[str]], str]) -> None:
-        """Set the no secrets found error message."""
-        self.no_secrets_found = message
-
-    def set_error_parsing_file_at_path_message(
-        self, message: Callable[[str, Exception], str]
-    ) -> None:
-        """Set the error parsing file at path error message."""
-        self.error_parsing_file_at_path = message
-
-    def set_subfolder_path_is_not_a_folder_message(
-        self, message: Callable[[str], str]
-    ) -> None:
-        """Set the subfolder path is not a folder error message."""
-        self.subfolder_path_is_not_a_folder = message
-
-    def set_invalid_secret_path_message(self, message: Callable[[str], str]) -> None:
-        """Set the invalid secret path error message."""
-        self.invalid_secret_path = message
-
-    def get_missing_attr_message(self, attr_name: str) -> str:
-        """Get the missing attribute error message."""
-        return self.missing_attr_message(attr_name)
-
-    def get_missing_key_message(self, key: str) -> str:
-        """Get the missing key error message."""
-        return self.missing_key_message(key)
-
-    def get_no_secrets_found_message(self, file_paths: list[str]) -> str:
-        """Get the no secrets found error message."""
-        return self.no_secrets_found(file_paths)
-
-    def get_error_parsing_file_at_path_message(self, path: str, ex: Exception) -> str:
-        """Get the error parsing file at path error message."""
-        return self.error_parsing_file_at_path(path, ex)
-
-    def get_subfolder_path_is_not_a_folder_message(self, sub_folder_path: str) -> str:
-        """Get the subfolder path is not a folder error message."""
-        return self.subfolder_path_is_not_a_folder(sub_folder_path)
-
-    def get_invalid_secret_path_message(self, path: str) -> str:
-        """Get the invalid secret path error message."""
-        return self.invalid_secret_path(path)
-
-
-secret_error_messages_singleton: Final = SecretErrorMessages()
 
 
 def _convert_to_dict(obj: Mapping[str, Any] | AttrDict) -> dict[str, Any]:
@@ -178,12 +91,19 @@ def _convert_to_dict(obj: Mapping[str, Any] | AttrDict) -> dict[str, Any]:
     return {k: v.to_dict() if isinstance(v, AttrDict) else v for k, v in obj.items()}
 
 
+_MISSING_ENTRY_HINT: Final = (
+    "Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings "
+    "on Streamlit Cloud? More info: "
+    "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
+)
+
+
 def _missing_attr_error_message(attr_name: str) -> str:
-    return secret_error_messages_singleton.get_missing_attr_message(attr_name)
+    return f'st.secrets has no attribute "{attr_name}". {_MISSING_ENTRY_HINT}'
 
 
 def _missing_key_error_message(key: str) -> str:
-    return secret_error_messages_singleton.get_missing_key_message(key)
+    return f'st.secrets has no key "{key}". {_MISSING_ENTRY_HINT}'
 
 
 class AttrDict(Mapping[str, Any]):
@@ -248,9 +168,8 @@ class Secrets(Mapping[str, Any]):
         # Store programmatic secrets separately so they survive file-change reloads
         self._programmatic_secrets: Mapping[str, SecretsValue] | None = None
 
-        self.file_change_listener = Signal(
-            doc="Emitted when a `secrets.toml` file has been changed."
-        )
+        # Fires when a `secrets.toml` file has changed.
+        self.file_change_listener = Signal()
 
     def load_if_toml_exists(self) -> bool:
         """Load secrets.toml files from disk if they exists. If none exist,
@@ -268,13 +187,6 @@ class Secrets(Mapping[str, Any]):
         except StreamlitSecretNotFoundError:
             # No secrets.toml files exist. That's fine.
             return False
-
-    def set_suppress_print_error_on_exception(
-        self, suppress_print_error_on_exception: bool
-    ) -> None:
-        """Left in place for compatibility with integrations until integration
-        code can be updated.
-        """
 
     def _reset(self) -> None:
         """Clear the secrets dictionary and remove any secrets that were
@@ -309,12 +221,12 @@ class Secrets(Mapping[str, Any]):
         try:
             secrets.update(toml.loads(secrets_file_str))
         except (TypeError, toml.TomlDecodeError) as ex:
-            msg = (
-                secret_error_messages_singleton.get_error_parsing_file_at_path_message(
-                    path, ex
-                )
-            )
-            raise StreamlitSecretNotFoundError(msg) from ex
+            raise StreamlitSecretNotFoundError(
+                "Error parsing secrets file at {path}: {error}",
+                path=path,
+                error=str(ex),
+                error_id="failed-parsing-secrets-file",
+            ) from ex
 
         return secrets, found_secrets_file
 
@@ -339,10 +251,12 @@ class Secrets(Mapping[str, Any]):
         for dirname in os.listdir(path):
             sub_folder_path = os.path.join(path, dirname)
             if not os.path.isdir(sub_folder_path):
-                error_msg = secret_error_messages_singleton.get_subfolder_path_is_not_a_folder_message(
-                    sub_folder_path
+                raise StreamlitSecretNotFoundError(
+                    "{sub_folder_path} is not a folder. "
+                    "To use directory based secrets, mount every secret in a subfolder under the secret directory",
+                    sub_folder_path=sub_folder_path,
+                    error_id="secrets-directory-entry-not-folder",
                 )
-                raise StreamlitSecretNotFoundError(error_msg)
             sub_secrets = {}
 
             for filename in os.listdir(sub_folder_path):
@@ -371,10 +285,11 @@ class Secrets(Mapping[str, Any]):
         if os.path.isdir(path):
             return self._parse_directory(path)
 
-        error_msg = secret_error_messages_singleton.get_invalid_secret_path_message(
-            path
+        raise StreamlitSecretNotFoundError(
+            "Invalid secrets path: {path}: path is not a .toml file or a directory",
+            path=path,
+            error_id="invalid-secrets-path",
         )
-        raise StreamlitSecretNotFoundError(error_msg)
 
     def _parse(self) -> Mapping[str, Any]:
         """Parse our secrets.toml files if they're not already parsed.
@@ -406,12 +321,11 @@ class Secrets(Mapping[str, Any]):
                 secrets.update(path_secrets)
 
             if not found_secrets_file:
-                error_msg = (
-                    secret_error_messages_singleton.get_no_secrets_found_message(
-                        file_paths
-                    )
+                raise StreamlitSecretNotFoundError(
+                    "No secrets found. Valid paths for a secrets.toml file or secret directories are: {file_paths}",
+                    file_paths=", ".join(file_paths),
+                    error_id="no-secrets-found",
                 )
-                raise StreamlitSecretNotFoundError(error_msg)
 
             for k, v in secrets.items():
                 self._maybe_set_environment_variable(k, v)
@@ -440,7 +354,9 @@ class Secrets(Mapping[str, Any]):
         ----------
         programmatic_secrets
             A dictionary of secrets to merge. Supported value types are:
-            ``str``, ``int``, ``float``, ``bool``, and nested ``dict``.
+            ``str``, ``int``, ``float``, ``bool``, ``list``, and nested ``dict``.
+            Lists and dicts are validated recursively, so their elements must
+            themselves be supported secrets types.
 
         Raises
         ------
@@ -591,7 +507,6 @@ class Secrets(Mapping[str, Any]):
             "_secrets",
             "_lock",
             "_file_watchers_installed",
-            "_suppress_print_error_on_exception",
             "_programmatic_secrets",
             "file_change_listener",
             "load_if_toml_exists",

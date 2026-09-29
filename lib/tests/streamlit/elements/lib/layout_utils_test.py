@@ -22,7 +22,7 @@ from parameterized import parameterized
 from streamlit.elements.lib.layout_utils import (
     SpaceSize,
     get_align,
-    get_gap_size,
+    get_gap_config,
     get_height_config,
     get_justify,
     get_width_config,
@@ -31,14 +31,12 @@ from streamlit.elements.lib.layout_utils import (
     validate_space_size,
     validate_vertical_alignment,
     validate_width,
+    validate_wrap,
 )
 from streamlit.errors import (
-    StreamlitInvalidColumnGapError,
     StreamlitInvalidHeightError,
-    StreamlitInvalidHorizontalAlignmentError,
-    StreamlitInvalidSizeError,
-    StreamlitInvalidVerticalAlignmentError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.GapSize_pb2 import GapSize
@@ -204,22 +202,56 @@ class LayoutUtilsTest(unittest.TestCase):
 
     @parameterized.expand(
         [
+            ("xxsmall", GapSize.XXSMALL),
+            ("xsmall", GapSize.XSMALL),
             ("small", GapSize.SMALL),
             ("medium", GapSize.MEDIUM),
             ("large", GapSize.LARGE),
+            ("xlarge", GapSize.XLARGE),
+            ("xxlarge", GapSize.XXLARGE),
             (None, GapSize.NONE),
         ]
     )
-    def test_get_gap_size_valid(self, gap: str | None, expected: GapSize.ValueType):
-        """get_gap_size maps valid inputs to GapSize values, None to GapSize.NONE."""
+    def test_get_gap_config_string(self, gap: str | None, expected: GapSize.ValueType):
+        """get_gap_config sets gap_size for string / None inputs."""
 
-        assert get_gap_size(gap, "st.columns") == expected
+        config = get_gap_config(gap)
+        assert config.WhichOneof("gap_spec") == "gap_size"
+        assert config.gap_size == expected
 
-    def test_get_gap_size_invalid(self):
-        """get_gap_size raises for invalid gap strings."""
+    @parameterized.expand(
+        [
+            (0,),
+            (1,),
+            (20,),
+            (100,),
+        ]
+    )
+    def test_get_gap_config_int(self, gap: int):
+        """get_gap_config sets pixel_gap for non-negative integer inputs."""
 
-        with pytest.raises(StreamlitInvalidColumnGapError):
-            get_gap_size("tiny", "st.columns")
+        config = get_gap_config(gap)
+        assert config.WhichOneof("gap_spec") == "pixel_gap"
+        assert config.pixel_gap == gap
+
+    def test_get_gap_config_negative_int_raises(self):
+        """get_gap_config raises for negative integer inputs."""
+
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
+            get_gap_config(-1)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_get_gap_config_bool_raises(self, gap: bool):
+        """get_gap_config rejects boolean inputs even though ``bool`` is a subclass of ``int``."""
+
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
+            get_gap_config(gap)  # type: ignore[arg-type]
+
+    def test_get_gap_config_invalid_string_raises(self):
+        """get_gap_config raises for unknown gap strings."""
+
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
+            get_gap_config("tiny")  # type: ignore[arg-type]
 
     @parameterized.expand(
         [
@@ -237,7 +269,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_horizontal_alignment_invalid(self):
         """validate_horizontal_alignment raises for unknown values."""
 
-        with pytest.raises(StreamlitInvalidHorizontalAlignmentError):
+        with pytest.raises(StreamlitValueError, match=r"`horizontal_alignment`"):
             validate_horizontal_alignment("middle")  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -256,7 +288,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_vertical_alignment_invalid(self):
         """validate_vertical_alignment raises for unknown values."""
 
-        with pytest.raises(StreamlitInvalidVerticalAlignmentError):
+        with pytest.raises(StreamlitValueError, match=r"`vertical_alignment`"):
             validate_vertical_alignment("middle")  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -321,7 +353,7 @@ class LayoutUtilsTest(unittest.TestCase):
     def test_validate_size_invalid(self, size: any):
         """validate_size raises for invalid size values."""
 
-        with pytest.raises(StreamlitInvalidSizeError):
+        with pytest.raises(StreamlitValueError, match=r"`size`"):
             validate_space_size(size)  # type: ignore[arg-type]
 
     @parameterized.expand(
@@ -363,3 +395,14 @@ class LayoutUtilsTest(unittest.TestCase):
         assert not config.use_content
         assert not config.use_stretch
         assert config.pixel_height == 0
+
+    def test_validate_wrap_valid(self):
+        """validate_wrap accepts True and False."""
+        validate_wrap(True)
+        validate_wrap(False)
+
+    @parameterized.expand(["yes", None, 1])
+    def test_validate_wrap_invalid(self, wrap: object):
+        """validate_wrap raises for non-bool values."""
+        with pytest.raises(StreamlitValueError):
+            validate_wrap(wrap)  # type: ignore[arg-type]

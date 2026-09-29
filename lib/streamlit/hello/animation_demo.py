@@ -57,7 +57,7 @@ def animation_demo() -> None:
             n_matrix[m_matrix] = i
 
         # Update the image placeholder by calling the image() function on it.
-        image.image(1.0 - (n_matrix / n_matrix.max()), width="stretch")
+        image.image(1.0 - (n_matrix / np.max(n_matrix)), width="stretch")
 
     # We clear elements by calling empty on them.
     progress_bar.empty()

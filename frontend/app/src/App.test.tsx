@@ -17,17 +17,17 @@
 import { act } from "react"
 
 import {
-  fireEvent,
   render,
   RenderResult,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react"
 import userEvent, {
   PointerEventsCheckLevel,
 } from "@testing-library/user-event"
 import { cloneDeep } from "lodash-es"
-import { type Mock, type MockInstance } from "vitest"
+import type { Mock, MockInstance } from "vitest"
 
 import {
   getMenuLabels,
@@ -41,7 +41,9 @@ import {
   mockEndpoints,
 } from "@streamlit/connection"
 import {
+  BackendOperationClient,
   CachedTheme,
+  CONNECTION_CLOSED_MESSAGE,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
@@ -61,12 +63,15 @@ import {
   RootStyleProvider,
   ScriptRunState,
   SessionInfo,
+  toastQueue,
   toExportedTheme,
   WidgetStateManager,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
 import { mockWindowLocation } from "@streamlit/lib/testing"
 import {
+  type AuthRedirect,
+  type AutoRerun,
   Config,
   CustomThemeConfig,
   Delta,
@@ -74,22 +79,21 @@ import {
   Exception,
   ForwardMsg,
   ForwardMsgMetadata,
-  IAuthRedirect,
-  IAutoRerun,
-  ILogo,
-  INavigation,
-  INewSession,
-  IPageConfig,
-  IPageInfo,
-  IPageNotFound,
-  IParentMessage,
+  type Logo,
   Navigation,
+  type NewSession,
+  type PageConfig,
+  type PageInfo,
+  type PageNotFound,
+  type ParentMessage,
   SessionEvent,
   SessionStatus,
+  type StopAutoRerun,
   TextInput,
 } from "@streamlit/protobuf"
 
 import { App, LOG, Props } from "./App"
+import { SKILLS_NUDGE_SNOOZED_AT_KEY } from "./components/SkillsNudgeToast/skillsNudge"
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
@@ -309,7 +313,7 @@ const getProps = (extend?: Partial<Props>): Props => ({
   ...extend,
 })
 
-const NEW_SESSION_JSON: INewSession = {
+const NEW_SESSION_JSON: NewSession.$Properties = {
   name: "scriptName",
   config: {
     gatherUsageStats: false,
@@ -353,7 +357,7 @@ const NEW_SESSION_JSON: INewSession = {
   fragmentIdsThisRun: [],
 }
 
-const NAVIGATION_JSON: INavigation = {
+const NAVIGATION_JSON: Navigation.$Properties = {
   appPages: [
     {
       pageScriptHash: "page_script_hash",
@@ -401,7 +405,11 @@ function getStoredValue<T>(
   Type: unknown
 ): T {
   const mocked = vi.mocked(Type as (...args: unknown[]) => T)
-  return mocked.mock.results[mocked.mock.results.length - 1].value as T
+  const last = mocked.mock.results.at(-1)
+  if (!last) {
+    throw new Error("Expected a mock result")
+  }
+  return last.value as T
 }
 
 function getMockConnectionManager(isConnected = false): ConnectionManager {
@@ -428,15 +436,16 @@ type ForwardMsgType =
   | boolean // the type of heartbeatAck is just boolean
   | DeltaWithElement
   | ForwardMsg.ScriptFinishedStatus
-  | IAuthRedirect
-  | IAutoRerun
-  | ILogo
-  | INavigation
-  | INewSession
-  | IPageConfig
-  | IPageInfo
-  | IParentMessage
-  | IPageNotFound
+  | AuthRedirect.$Properties
+  | AutoRerun.$Properties
+  | Logo.$Properties
+  | Navigation.$Properties
+  | NewSession.$Properties
+  | PageConfig.$Properties
+  | PageInfo.$Properties
+  | ParentMessage.$Properties
+  | PageNotFound.$Properties
+  | StopAutoRerun.$Properties
   | Omit<SessionEvent, "toJSON">
   | Omit<SessionStatus, "toJSON">
 
@@ -458,17 +467,8 @@ function sendForwardMessage(
 }
 
 async function openCacheModal(): Promise<void> {
-  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-  fireEvent.keyDown(document.body, {
-    key: "c",
-    which: 67,
-  })
-
-  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-  fireEvent.keyUp(document.body, {
-    key: "c",
-    which: 67,
-  })
+  const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
+  await user.keyboard("c")
 
   expect(
     screen.getByText(
@@ -479,6 +479,16 @@ async function openCacheModal(): Promise<void> {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(0)
   })
+}
+
+/**
+ * Advances fake timers when active so userEvent delays don't hang under
+ * vi.useFakeTimers(). Passed as userEvent.setup({ advanceTimers }).
+ */
+function advanceUserEventTimers(delay: number): void {
+  if (vi.isFakeTimers()) {
+    vi.advanceTimersByTime(delay)
+  }
 }
 
 describe("App", () => {
@@ -720,7 +730,8 @@ describe("App", () => {
     expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
   })
 
-  it("reruns when the user presses 'r'", () => {
+  it("reruns when the user presses 'r'", async () => {
+    const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
     renderApp(getProps())
 
     getMockConnectionManager(true)
@@ -729,11 +740,7 @@ describe("App", () => {
       getStoredValue<WidgetStateManager>(WidgetStateManager)
     expect(widgetStateManager.sendUpdateWidgetsMessage).not.toHaveBeenCalled()
 
-    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-    fireEvent.keyDown(document.body, {
-      key: "r",
-      which: 82,
-    })
+    await user.keyboard("r")
 
     expect(widgetStateManager.sendUpdateWidgetsMessage).toHaveBeenCalled()
   })
@@ -1701,7 +1708,7 @@ describe("App", () => {
 
       window.history.back()
       await waitFor(() => {
-        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       })
 
       expect(
@@ -1714,7 +1721,7 @@ describe("App", () => {
 
       window.history.back()
       await waitFor(() => {
-        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       })
 
       expect(
@@ -1730,9 +1737,9 @@ describe("App", () => {
       window.history.pushState({}, "", "#foo_bar")
       const connectionManager = getMockConnectionManager()
 
-      expect(connectionManager.sendMessage).not.toBeCalled()
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
       window.history.back()
-      expect(connectionManager.sendMessage).not.toBeCalled()
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
     })
 
     it("does rerun when we are navigating to a different page and the last window history url contains an anchor", async () => {
@@ -1742,7 +1749,7 @@ describe("App", () => {
       window.history.pushState({}, "", "#foo_bar")
       window.history.back()
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.sendMessage).not.toBeCalled()
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
 
       sendForwardMessage("newSession", {
         ...CURRENT_NEW_SESSION_JSON,
@@ -1755,7 +1762,7 @@ describe("App", () => {
       window.history.back()
 
       await waitFor(() => {
-        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       })
 
       expect(
@@ -1803,7 +1810,7 @@ describe("App", () => {
       })
 
       await waitFor(() => {
-        expect(connectionManager.sendMessage).toBeCalledTimes(1)
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       })
 
       // Verify the query params from the URL are preserved in the rerun message
@@ -1811,6 +1818,165 @@ describe("App", () => {
         // @ts-expect-error
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("mykey=myvalue")
+    })
+
+    it("uses current URL query params when browser history stays on the same page", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "top_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "top_hash",
+      })
+
+      // Simulate stale query params stored from an earlier server update.
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "stale=oldvalue",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      // @ts-expect-error
+      hostCommunicationMgr.sendMessageToHost.mockClear()
+
+      // Simulate browser back/forward changing URL query params on same page.
+      window.history.pushState({}, "", "/?fresh=newvalue")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: "?fresh=newvalue",
+      })
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("fresh=newvalue")
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .pageScriptHash
+      ).toBe("top_hash")
+    })
+
+    it("uses current URL query params when same-page popstate URL has a fragment", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "top_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "top_hash",
+      })
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "stale=oldvalue",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      // @ts-expect-error
+      hostCommunicationMgr.sendMessageToHost.mockClear()
+
+      window.history.pushState({}, "", "/?fresh=newvalue#section")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: "?fresh=newvalue",
+      })
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("fresh=newvalue")
+    })
+
+    it("reruns same-page history before navigation metadata arrives", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      window.history.pushState({}, "", "/?mock_element_id=mock-element-03")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("mock_element_id=mock-element-03")
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .pageScriptHash
+      ).toBe("spa_hash")
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .isHistoryNavigation
+      ).toBe(true)
+    })
+
+    it("does not set isHistoryNavigation on ordinary widget reruns", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .isHistoryNavigation
+      ).toBeFalsy()
     })
   })
 
@@ -1839,15 +2005,18 @@ describe("App", () => {
   // Please see https://github.com/streamlit/streamlit/issues/2887 for more context on this.
   describe("App.handlePageInfoChanged", () => {
     let pushStateSpy: MockInstance
+    let replaceStateSpy: MockInstance
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
 
       pushStateSpy = vi.spyOn(window.history, "pushState")
+      replaceStateSpy = vi.spyOn(window.history, "replaceState")
     })
 
     afterEach(() => {
       pushStateSpy.mockRestore()
+      replaceStateSpy.mockRestore()
       // Reset the value of document.location.pathname.
       window.history.pushState({}, "", "/")
     })
@@ -1871,8 +2040,9 @@ describe("App", () => {
     it("does not override the pathname when resetting query params", () => {
       renderApp(getProps())
       const pathname = "/foo/bar/"
-      // Set the value of document.location.pathname to pathname.
-      window.history.pushState({}, "", pathname)
+      // Seed a query string so that resetting it is an actual URL change.
+      window.history.pushState({}, "", `${pathname}?flying=spaghetti`)
+      pushStateSpy.mockClear()
 
       sendForwardMessage("pageInfoChanged", {
         queryString: "",
@@ -1883,8 +2053,9 @@ describe("App", () => {
 
     it("resets query params as expected when at the root pathname", () => {
       renderApp(getProps())
-      // Note: One would typically set the value of document.location.pathname to '/' here,
-      // However, this is already taking place in beforeEach().
+      // Seed a query string so that resetting it is an actual URL change.
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      pushStateSpy.mockClear()
 
       sendForwardMessage("pageInfoChanged", {
         queryString: "",
@@ -1906,6 +2077,458 @@ describe("App", () => {
 
       const expectedUrl = `/?${queryString}`
       expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", expectedUrl)
+    })
+
+    it("does not push history when the query string is unchanged", () => {
+      renderApp(getProps())
+      const queryString = "flying=spaghetti&monster=omg"
+      window.history.pushState({}, "", `/?${queryString}`)
+      pushStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString,
+      })
+
+      expect(pushStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("does not push history when resetting already-empty query params", () => {
+      renderApp(getProps())
+      pushStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "",
+      })
+
+      expect(pushStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("still sends SET_QUERY_PARAM to the host when the query string is unchanged", () => {
+      renderApp(getProps())
+      const queryString = "flying=spaghetti&monster=omg"
+      window.history.pushState({}, "", `/?${queryString}`)
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString,
+      })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: `?${queryString}`,
+      })
+    })
+
+    it("uses replaceState during a pending history rerun and pushState afterwards", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith({}, "", "/")
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "second=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith({}, "", "/?second=1")
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?after=1")
+      expect(replaceStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("keeps replaceState for history PageInfo after a superseding widget rerun", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      // PageInfo from the still-in-flight history run (before the widget
+      // run's NewSession) must not pushState.
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "from-history=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?from-history=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      // The superseding run's NewSession ends history replaceState so its
+      // own PageInfo can pushState instead of overwriting the restored entry.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "from-widget=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?from-widget=1")
+      expect(replaceStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("keeps replaceState across consecutive history NewSessions", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?first=1")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      window.history.pushState({}, "", "/?second=1")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      // First history NewSession must not end replaceState for the second
+      // history run that was already requested.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      // An interrupt finish from the first run must not drop the epoch for
+      // the still-current second history request.
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-first-ns=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-first-ns=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-second-ns=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-second-ns=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-success=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-success=1"
+      )
+      expect(replaceStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("keeps replaceState across an auto-rerun after history navigation", async () => {
+      vi.useFakeTimers()
+      try {
+        renderApp(getProps())
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        window.history.pushState({}, "", "/?flying=spaghetti")
+        act(() => {
+          window.dispatchEvent(new PopStateEvent("popstate"))
+        })
+
+        const connectionManager = getMockConnectionManager()
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        // A run_every flush after the history BackMsg must not end replaceState.
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "frag",
+        })
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        pushStateSpy.mockClear()
+        replaceStateSpy.mockClear()
+
+        sendForwardMessage("pageInfoChanged", {
+          queryString: "after-auto=1",
+        })
+
+        expect(replaceStateSpy).toHaveBeenLastCalledWith(
+          {},
+          "",
+          "/?after-auto=1"
+        )
+        expect(pushStateSpy).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("does not re-stick replaceState for auto-rerun after a widget supersedes history", async () => {
+      vi.useFakeTimers()
+      try {
+        renderApp(getProps())
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        window.history.pushState({}, "", "/?flying=spaghetti")
+        act(() => {
+          window.dispatchEvent(new PopStateEvent("popstate"))
+        })
+
+        const connectionManager = getMockConnectionManager()
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+        const widgetStateManager =
+          getStoredValue<WidgetStateManager>(WidgetStateManager)
+        widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "frag",
+        })
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        pushStateSpy.mockClear()
+        replaceStateSpy.mockClear()
+
+        sendForwardMessage("pageInfoChanged", {
+          queryString: "from-widget-auto=1",
+        })
+
+        expect(pushStateSpy).toHaveBeenLastCalledWith(
+          {},
+          "",
+          "/?from-widget-auto=1"
+        )
+        expect(replaceStateSpy).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("does not re-stick replaceState for auto-rerun after history NewSession", async () => {
+      vi.useFakeTimers()
+      try {
+        renderApp(getProps())
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        window.history.pushState({}, "", "/?flying=spaghetti")
+        act(() => {
+          window.dispatchEvent(new PopStateEvent("popstate"))
+        })
+
+        const connectionManager = getMockConnectionManager()
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        // History run has started — a later auto-rerun is a separate interrupt,
+        // not a pending coalesce.
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "frag",
+        })
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        pushStateSpy.mockClear()
+        replaceStateSpy.mockClear()
+
+        sendForwardMessage("pageInfoChanged", {
+          queryString: "from-separate-auto=1",
+        })
+
+        expect(pushStateSpy).toHaveBeenLastCalledWith(
+          {},
+          "",
+          "/?from-separate-auto=1"
+        )
+        expect(replaceStateSpy).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 
@@ -1947,7 +2570,7 @@ describe("App", () => {
       const connectionManager = getMockConnectionManager()
 
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
-      expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
         // @ts-expect-error
@@ -1969,7 +2592,7 @@ describe("App", () => {
         .mockReturnValue(["hash1", "hash2"])
 
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
-      expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
         // @ts-expect-error
@@ -1987,7 +2610,7 @@ describe("App", () => {
 
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
       widgetStateManager.sendUpdateWidgetsMessage("myFragmentId")
-      expect(connectionManager.sendMessage).toBeCalledTimes(2)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
 
       expect(
         // @ts-expect-error
@@ -2006,7 +2629,7 @@ describe("App", () => {
       const connectionManager = getMockConnectionManager()
 
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
-      expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
         // @ts-expect-error
@@ -2023,7 +2646,7 @@ describe("App", () => {
       const connectionManager = getMockConnectionManager()
 
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
-      expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
         // @ts-expect-error
@@ -2462,8 +3085,6 @@ describe("App", () => {
           props.theme.activeTheme = {
             name: CUSTOM_THEME_NAME,
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "blue" },
           }
 
@@ -2492,8 +3113,6 @@ describe("App", () => {
             name: CUSTOM_THEME_LIGHT_NAME,
             displayName: "Light",
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "lightblue" },
           }
 
@@ -2573,8 +3192,6 @@ describe("App", () => {
           props.theme.activeTheme = {
             name: CUSTOM_THEME_NAME,
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "blue" },
           }
 
@@ -2609,8 +3226,6 @@ describe("App", () => {
             name: CUSTOM_THEME_LIGHT_NAME,
             displayName: "Light",
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "lightblue" },
           }
 
@@ -2703,8 +3318,6 @@ describe("App", () => {
           props.theme.activeTheme = {
             name: CUSTOM_THEME_NAME,
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "blue" },
           }
 
@@ -2741,8 +3354,6 @@ describe("App", () => {
             name: CUSTOM_THEME_LIGHT_NAME,
             displayName: "Light",
             emotion: { ...lightTheme.emotion },
-            basewebTheme: lightTheme.basewebTheme,
-            primitives: lightTheme.primitives,
             themeInput: { primaryColor: "lightblue" },
           }
 
@@ -2900,8 +3511,6 @@ describe("App", () => {
         name: CUSTOM_THEME_DARK_NAME,
         displayName: "Dark",
         emotion: { ...darkTheme.emotion },
-        basewebTheme: darkTheme.basewebTheme,
-        primitives: darkTheme.primitives,
         themeInput: customTheme,
       }
       renderApp(props)
@@ -3182,7 +3791,9 @@ describe("App", () => {
       )
 
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).not.toHaveBeenCalled()
     })
 
     it("will not increment cache count if session info is not set and the script finished early", () => {
@@ -3194,7 +3805,9 @@ describe("App", () => {
       )
 
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).not.toHaveBeenCalled()
     })
 
     it("will not increment cache count if session info is set and the script finished early", () => {
@@ -3206,7 +3819,9 @@ describe("App", () => {
       )
 
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.incrementMessageCacheRunCount).not.toBeCalled()
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).not.toHaveBeenCalled()
     })
 
     it("will increment cache count if session info is set", () => {
@@ -3218,7 +3833,9 @@ describe("App", () => {
       )
 
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.incrementMessageCacheRunCount).toBeCalled()
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).toHaveBeenCalled()
     })
 
     it("will clear stale nodes if finished successfully", async () => {
@@ -3360,6 +3977,55 @@ describe("App", () => {
           screen.queryByText("Here is some other text")
         ).not.toBeInTheDocument()
       })
+    })
+
+    it("logs a throwing script-finished handler and still runs later handlers", async () => {
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+      try {
+        let appInstance: App | null = null
+
+        render(
+          <RootStyleProvider theme={getDefaultTheme()}>
+            <WindowDimensionsProvider>
+              <App
+                {...getProps()}
+                ref={instance => {
+                  appInstance = instance
+                }}
+              />
+            </WindowDimensionsProvider>
+          </RootStyleProvider>
+        )
+
+        expect(appInstance).not.toBeNull()
+
+        const handlerError = new Error("handler boom")
+        const throwingHandler = vi.fn(() => {
+          throw handlerError
+        })
+        const laterHandler = vi.fn()
+
+        act(() => {
+          appInstance?.addScriptFinishedHandler(throwingHandler)
+          appInstance?.addScriptFinishedHandler(laterHandler)
+        })
+
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
+
+        await waitFor(() => {
+          expect(laterHandler).toHaveBeenCalledTimes(1)
+        })
+        expect(throwingHandler).toHaveBeenCalledTimes(1)
+        expect(logErrorSpy).toHaveBeenCalledWith(
+          "Script finished handler failed",
+          handlerError
+        )
+      } finally {
+        logErrorSpy.mockRestore()
+      }
     })
   })
 
@@ -3908,6 +4574,200 @@ describe("App", () => {
         },
       })
     })
+
+    it("does not accumulate duplicate timers when a fragment re-registers its auto-rerun", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        // Register the same fragment twice, as happens when an ancestor
+        // re-renders a run_every fragment.
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(1000)
+      })
+
+      // Only one interval should be active despite two registrations; without
+      // deduping, two timers would each fire and send two messages per tick.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(1)
+    })
+
+    it("ignores an auto-rerun message without a fragment id", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        // Auto-reruns are always fragment-scoped; a message with no fragment id
+        // must not register a timer (and two of them must not collide under an
+        // empty-string key).
+        sendForwardMessage("autoRerun", { interval: 1.0 })
+        sendForwardMessage("autoRerun", { interval: 1.0 })
+        vi.advanceTimersByTime(2000)
+      })
+
+      // No timer was registered, so no auto-rerun messages are sent.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(0)
+    })
+
+    it("does not reset the countdown when a fragment re-registers with the same interval", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(600)
+        // An ancestor re-render re-sends the same auto-rerun before the interval
+        // elapses. This must not restart the timer.
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(500)
+      })
+
+      // The original countdown was preserved, so it fired ~1000ms after the
+      // first registration. If re-registration had reset it, only 500ms would
+      // have elapsed since the reset and nothing would have fired.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(1)
+    })
+
+    it("restarts a fragment's timer when its interval changes", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        // Start with a long interval, then re-register with a short one.
+        sendForwardMessage("autoRerun", {
+          interval: 10.0,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(500)
+        sendForwardMessage("autoRerun", {
+          interval: 0.1,
+          fragmentId: "myFragmentId",
+        })
+        vi.advanceTimersByTime(250)
+      })
+
+      // The 10s timer was replaced by a 0.1s timer, which then fired. Had the
+      // interval change been ignored, the 10s timer would not have fired yet.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBeGreaterThanOrEqual(1)
+    })
+
+    it("cancels only the targeted fragment's timer on a stopAutoRerun message", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      type SentRerun = { fragmentId?: string; isAutoRerun?: boolean }
+      const autoRerunFragmentIdsSince = (
+        fromIndex: number
+      ): (string | undefined)[] => {
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        const calls = connectionManager.sendMessage.mock.calls as Array<
+          [{ rerunScript?: SentRerun }]
+        >
+        return calls
+          .slice(fromIndex)
+          .map(call => call[0].rerunScript)
+          .filter((rerunScript): rerunScript is SentRerun =>
+            Boolean(rerunScript?.isAutoRerun)
+          )
+          .map(rerunScript => rerunScript.fragmentId)
+      }
+
+      act(() => {
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "fragmentA",
+        })
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "fragmentB",
+        })
+        vi.advanceTimersByTime(1000)
+      })
+      expect(new Set(autoRerunFragmentIdsSince(0))).toEqual(
+        new Set(["fragmentA", "fragmentB"])
+      )
+
+      // The server evicts fragmentA and tells the client to cancel its timer.
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBeforeStop = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("stopAutoRerun", { fragmentIds: ["fragmentA"] })
+        vi.advanceTimersByTime(2000)
+      })
+
+      const idsAfterStop = autoRerunFragmentIdsSince(callsBeforeStop)
+      // fragmentB keeps ticking; fragmentA's timer was cancelled.
+      expect(idsAfterStop.length).toBeGreaterThan(0)
+      expect(idsAfterStop).not.toContain("fragmentA")
+      expect(idsAfterStop.every(id => id === "fragmentB")).toBe(true)
+    })
   })
 
   describe("App.requestFileURLs", () => {
@@ -3971,7 +4831,7 @@ describe("App", () => {
       const connectionManager = getMockConnectionManager()
 
       // No message sent when disconnected
-      expect(connectionManager.sendMessage).not.toBeCalled()
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
 
       // Error response should be sent to reject the pending promise
       expect(onFileURLsResponseSpy).toHaveBeenCalledWith({
@@ -3983,16 +4843,13 @@ describe("App", () => {
   })
 
   describe("Test Main Menu shortcut functionality", () => {
-    it("Tests dev menu shortcuts cannot be accessed as a viewer", () => {
+    it("Tests dev menu shortcuts cannot be accessed as a viewer", async () => {
+      const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
       renderApp(getProps())
 
       getMockConnectionManager(true)
 
-      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-      fireEvent.keyPress(screen.getByTestId("stApp"), {
-        key: "c",
-        which: 67,
-      })
+      await user.keyboard("c")
 
       expect(
         screen.queryByText(
@@ -4021,6 +4878,40 @@ describe("App", () => {
       } finally {
         vi.useRealTimers()
       }
+    })
+
+    it("does not clear caches when the copy modifier is released first", async () => {
+      const user = userEvent.setup({
+        advanceTimers: advanceUserEventTimers,
+      })
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      getMockConnectionManager(true)
+
+      // Hold Cmd+C, then release Cmd before C.
+      await user.keyboard("[MetaLeft>][KeyC>][/MetaLeft][/KeyC]")
+
+      expect(
+        screen.queryByTestId("stClearCacheDialog")
+      ).not.toBeInTheDocument()
+    })
+
+    it("stops screencast recording when Escape is released", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      renderApp(props)
+
+      await user.keyboard("{Escape}")
+
+      expect(props.screenCast.stopRecording).toHaveBeenCalled()
     })
   })
 
@@ -4248,7 +5139,8 @@ describe("App", () => {
       expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalled()
     })
 
-    it("requests script rerun if wasRerunRequested is true", () => {
+    it("requests script rerun if wasRerunRequested is true", async () => {
+      const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
       renderApp(getProps())
       const widgetStateManager =
         getStoredValue<WidgetStateManager>(WidgetStateManager)
@@ -4263,11 +5155,7 @@ describe("App", () => {
 
       // trigger a state transition to RERUN_REQUESTED
       getMockConnectionManager(true)
-      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-      fireEvent.keyDown(document.body, {
-        key: "r",
-        which: 82,
-      })
+      await user.keyboard("r")
 
       act(() => {
         getMockConnectionManagerProp("connectionStateChanged")(
@@ -4468,16 +5356,26 @@ describe("App", () => {
     function fireWindowPostMessage(
       message: DistributiveOmit<IHostToGuestMessage, "stCommVersion">
     ): void {
-      fireEvent(
-        window,
-        new MessageEvent("message", {
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      // The manager registers `receiveHostMessage` as the window "message"
+      // listener and now only accepts trusted events originating from the
+      // direct parent frame. jsdom marks synthetically dispatched events as
+      // untrusted and does not allow overriding `isTrusted`, so we invoke the
+      // handler directly with an event that mimics a genuine host message
+      // (trusted and sourced from the parent frame).
+      act(() => {
+        hostCommunicationMgr.receiveHostMessage({
+          isTrusted: true,
+          source: window.parent,
+          origin: "https://devel.streamlit.test",
           data: {
             stCommVersion: HOST_COMM_VERSION,
             ...message,
           },
-          origin: "https://devel.streamlit.test",
-        })
-      )
+        } as unknown as MessageEvent)
+      })
     }
 
     it("sends SCRIPT_RUN_STATE_CHANGED signal to the host when the app is first rendered", () => {
@@ -4916,7 +5814,7 @@ describe("App", () => {
       }
 
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.sendMessage).toBeCalledTimes(times)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(times)
       // ensure that all calls came from the autoRerun by checking the fragment id
       for (let i = 0; i < times; i++) {
         expect(
@@ -4947,7 +5845,7 @@ describe("App", () => {
       // was called, but this check is more observing the behavior than checking
       // the exact internals.
       const oldCallCountPlusPageChangeRequest = times + 1
-      expect(connectionManager.sendMessage).toBeCalledTimes(
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(
         oldCallCountPlusPageChangeRequest
       )
 
@@ -5162,6 +6060,42 @@ describe("App", () => {
       })
     })
 
+    it("uses host UPDATE_FROM_QUERY_PARAMS for rerun without echoing SET_QUERY_PARAM", async () => {
+      const hostCommunicationMgr = prepareHostCommunicationManager()
+      const connectionManager = getMockConnectionManager(true)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+      })
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "stale=oldvalue",
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      // @ts-expect-error
+      hostCommunicationMgr.sendMessageToHost.mockClear()
+
+      fireWindowPostMessage({
+        type: "UPDATE_FROM_QUERY_PARAMS",
+        queryParams: "?fresh=newvalue",
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("fresh=newvalue")
+
+      const setQueryParamCalls = (
+        hostCommunicationMgr.sendMessageToHost as Mock
+      ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
+      expect(setQueryParamCalls).toHaveLength(0)
+    })
+
     it("properly handles TERMINATE_WEBSOCKET_CONNECTION & RESTART_WEBSOCKET_CONNECTION messages", () => {
       prepareHostCommunicationManager()
       const connectionMgr = getMockConnectionManager()
@@ -5217,7 +6151,7 @@ describe("App", () => {
         })
         sendForwardMessage("sessionEvent", sessionEvent)
 
-        expect(hostCommunicationMgr.sendMessageToHost).toBeCalledWith({
+        expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
           type: "CLIENT_ERROR_DIALOG",
           error: "scriptCompileError",
           message: "random string",
@@ -5232,7 +6166,7 @@ describe("App", () => {
         // @ts-expect-error - send an unknown type of forward message
         sendForwardMessage("randomMessage", {})
 
-        expect(hostCommunicationMgr.sendMessageToHost).toBeCalledWith({
+        expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
           type: "CLIENT_ERROR_DIALOG",
           error: "Bad message format",
           message: 'Cannot handle type "undefined".',
@@ -5247,7 +6181,7 @@ describe("App", () => {
         // send a page not found forward message
         sendForwardMessage("pageNotFound", { pageName: "random page" })
 
-        expect(hostCommunicationMgr.sendMessageToHost).toBeCalledWith({
+        expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
           type: "CLIENT_ERROR_DIALOG",
           error: "Page not found",
           message:
@@ -5267,7 +6201,7 @@ describe("App", () => {
           })
         })
 
-        expect(hostCommunicationMgr.sendMessageToHost).toBeCalledWith({
+        expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
           type: "CLIENT_ERROR_DIALOG",
           error: "Connection error",
           message: "Connection error message.",
@@ -5377,7 +6311,11 @@ describe("App", () => {
       )
     })
 
-    it("retains embed query params even if the page hash is different", () => {
+    it("retains embed query params even if the page hash is different", async () => {
+      const user = userEvent.setup({
+        advanceTimers: advanceUserEventTimers,
+        pointerEventsCheck: PointerEventsCheckLevel.Never,
+      })
       const embedParams =
         "embed=true&embed_options=disable_scrolling&embed_options=show_padding"
       window.history.pushState({}, "", `/?${embedParams}`)
@@ -5423,8 +6361,7 @@ describe("App", () => {
       // Clear only the hostCommunicationMgr mock before navigation
       ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
 
-      // eslint-disable-next-line testing-library/prefer-user-event -- navLinks have pointer-events:none which userEvent.click respects but the real browser click works
-      fireEvent.click(navLinks[1])
+      await user.click(navLinks[1])
 
       expect(
         // @ts-expect-error
@@ -5687,6 +6624,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
   })
 
   it("ensures incrementMessageCacheRunCount is NOT called when hasReceivedNewSession is false", async () => {
+    const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
     renderApp(getProps())
     const connectionManager = getMockConnectionManager(true) // isConnected = true
     const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
@@ -5720,11 +6658,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       scriptIsRunning: false,
     })
 
-    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
-    fireEvent.keyDown(document.body, {
-      key: "r",
-      which: 82, // Key code for 'r'
-    })
+    await user.keyboard("r")
 
     // Wait for state updates from rerunScript to propagate if any were async.
     // sendRerunBackMsg, which sets hasReceivedNewSession to false, is called synchronously in this path.
@@ -5909,7 +6843,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         ).toBeVisible()
       })
 
-      it("does not display error dialog if already dismissed", () => {
+      it("does not display error dialog if already dismissed", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -5922,10 +6857,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -5987,7 +6919,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     })
 
     describe("connection state transitions with error dismissal", () => {
-      it("resets dismissal state when reconnected", () => {
+      it("resets dismissal state when reconnected", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -6000,10 +6933,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -6150,7 +7080,8 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         expect(screen.queryByText(/Error 2/)).toBeNull()
       })
 
-      it("maintains dismissal state across multiple disconnections", () => {
+      it("maintains dismissal state across multiple disconnections", async () => {
+        const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
         renderApp(getProps())
         const connectionManager = getMockConnectionManager(false)
 
@@ -6161,10 +7092,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         // Dismiss the dialog
         const closeButton = screen.getByRole("button", { name: /close/i })
-        act(() => {
-          // eslint-disable-next-line testing-library/prefer-user-event -- userEvent causes timeouts in this test
-          fireEvent.click(closeButton)
-        })
+        await user.click(closeButton)
 
         expect(screen.queryByText("Connection error")).toBeNull()
 
@@ -6820,5 +7748,881 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       )
       expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalled()
     })
+  })
+})
+
+describe("Skills install nudge", () => {
+  beforeEach(() => {
+    // Fake timers so the shared toast queue's close/exit-animation timers
+    // flush deterministically (matches the native toast tests). Date.now() is
+    // frozen, which also keeps the snooze-window math below stable.
+    vi.useFakeTimers()
+    mockWindowLocation("localhost")
+    // The nudge is gated on a non-embedded, top-level app; pin embed off so
+    // each test is explicit (the embedded case is covered by its own test).
+    vi.mocked(isEmbed).mockReturnValue(false)
+    window.localStorage.clear()
+    window.sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    // Drain any app toasts a test enqueued into the shared (module-level)
+    // queue so they can't leak into the next test, flushing exit-animation
+    // timers. (The nudge itself is no longer a queued toast.)
+    act(() => {
+      toastQueue.visibleToasts.forEach(t => toastQueue.close(t.key))
+    })
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    // Restore any prototype spies (clearAllMocks does not undo spyOn).
+    vi.restoreAllMocks()
+  })
+
+  /** Flush the install promise chain's microtasks and re-render. */
+  const flushInstall = async (): Promise<void> => {
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+  }
+
+  const sendRecommendingNewSession = (recommend = true): void => {
+    sendForwardMessage("newSession", {
+      ...NEW_SESSION_JSON,
+      initialize: {
+        ...NEW_SESSION_JSON.initialize,
+        recommendSkillsInstall: recommend,
+      },
+    })
+  }
+
+  it("shows the nudge and tracks an impression when recommended on localhost", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    sendRecommendingNewSession()
+
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "toast",
+    })
+  })
+
+  it.each([
+    // Non-loopback keeps the label it has emitted since 1.59, so the existing
+    // adoption funnel keeps resolving across the upgrade.
+    ["non_loopback_private", "skillsNudgeSuppressedNonLocal:private"],
+    ["non_loopback_unknown", "skillsNudgeSuppressedNonLocal:unknown"],
+    // New reasons get the generic label.
+    ["conflict", "skillsNudgeSuppressed:conflict"],
+    ["check_failed", "skillsNudgeSuppressed:check_failed"],
+  ])(
+    "tracks a suppressed nudge (%s) without showing it",
+    (reason, expectedLabel) => {
+      renderApp(getProps())
+      const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Server says the nudge was eligible but withheld it, and says why.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        initialize: {
+          ...NEW_SESSION_JSON.initialize,
+          recommendSkillsInstall: false,
+          skillsNudgeSuppressedReason: reason,
+        },
+      })
+
+      // The nudge is not shown...
+      expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+      // ...but the reason is recorded, so suppression is measurable instead of
+      // silent. `conflict` matches the install-failure reason of the same cause,
+      // so the two are comparable in one query.
+      expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+        label: expectedLabel,
+        surface: "toast",
+      })
+      // And no (false) impression is logged.
+      expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+        label: "skillsNudgeShown",
+        surface: "toast",
+      })
+    }
+  )
+
+  it("still shows the nudge after an earlier suppression, on reconnect", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    // Connect, and let a transient `check_failed` withhold the nudge.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendForwardMessage("newSession", {
+      ...NEW_SESSION_JSON,
+      initialize: {
+        ...NEW_SESSION_JSON.initialize,
+        recommendSkillsInstall: false,
+        skillsNudgeSuppressedReason: "check_failed",
+      },
+    })
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+
+    // Reconnect re-runs the first-session initialization. `check_failed` is
+    // transient — the eligibility check threw, it did not decide against us — so
+    // a now-eligible session must still be able to surface the nudge. Reusing the
+    // shown-guard for suppression would withhold it until a full page reload.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.PINGING_SERVER
+      )
+    })
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendRecommendingNewSession()
+
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "toast",
+    })
+  })
+
+  it("reports a suppression only once across a reconnect", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    const sendSuppressedNewSession = (): void => {
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        initialize: {
+          ...NEW_SESSION_JSON.initialize,
+          recommendSkillsInstall: false,
+          skillsNudgeSuppressedReason: "conflict",
+        },
+      })
+    }
+
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendSuppressedNewSession()
+
+    // A reconnect re-runs initialization, which must not double-count this
+    // developer in the suppression metric.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.PINGING_SERVER
+      )
+    })
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendSuppressedNewSession()
+
+    const suppressions = (
+      metricsManager.enqueue as ReturnType<typeof vi.fn>
+    ).mock.calls.filter(
+      ([event, payload]) =>
+        event === "menuClick" &&
+        payload?.label === "skillsNudgeSuppressed:conflict"
+    )
+    expect(suppressions).toHaveLength(1)
+  })
+
+  it("tracks the impression only once across a reconnect", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    // Connect and show the nudge (first impression).
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendRecommendingNewSession()
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+
+    // Drop and re-establish the connection. The reconnect re-runs the
+    // first-session initialization, which must NOT re-log the impression.
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.PINGING_SERVER
+      )
+    })
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendRecommendingNewSession()
+
+    const shownImpressions = (
+      metricsManager.enqueue as ReturnType<typeof vi.fn>
+    ).mock.calls.filter(
+      ([event, payload]) =>
+        event === "menuClick" && payload?.label === "skillsNudgeShown"
+    )
+    expect(shownImpressions).toHaveLength(1)
+  })
+
+  it("does not show the nudge when the server does not recommend it", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    sendRecommendingNewSession(false)
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "toast",
+    })
+  })
+
+  it("does not show the nudge when not on localhost", () => {
+    mockWindowLocation("myapp.streamlit.app")
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("does not show the nudge in an embedded app", () => {
+    // Embedded (?embed=true) apps are chromeless and live inside someone
+    // else's page; a pinned CTA card there is inappropriate, so skip it even
+    // on localhost when the server otherwise recommends the install.
+    vi.mocked(isEmbed).mockReturnValue(true)
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "toast",
+    })
+  })
+
+  it("does not show the nudge when localStorage is unavailable", () => {
+    // Fail closed: if we can't remember a snooze / "don't show again", don't
+    // nudge at all. Simulate a locked-down browser (private mode / storage
+    // disabled) by making the probe that localStorageAvailable() uses throw.
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage disabled")
+    })
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("does not show the nudge once permanently dismissed", () => {
+    window.localStorage.setItem("stSkillsNudgeDismissed", "true")
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("does not show the nudge while snoozed within the last 24h", () => {
+    window.localStorage.setItem("stSkillsNudgeSnoozedAt", String(Date.now()))
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("shows the nudge again once the snooze window has lapsed", () => {
+    // A snooze timestamp older than the 24h window must no longer suppress it.
+    const thirtySixHoursMs = 36 * 60 * 60 * 1000
+    window.localStorage.setItem(
+      "stSkillsNudgeSnoozedAt",
+      String(Date.now() - thirtySixHoursMs)
+    )
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+  })
+
+  it("tracks install clicks", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstall",
+      surface: "toast",
+    })
+  })
+
+  it("tracks a successful install and shows where skills landed", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const installSpy = vi
+      .spyOn(BackendOperationClient.prototype, "requestInstallSkills")
+      .mockResolvedValue({ detail: "Installed to .agents/skills" })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    expect(screen.getByText("Skills installed")).toBeVisible()
+    expect(screen.getByText("Installed to .agents/skills")).toBeVisible()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded",
+      surface: "toast",
+    })
+    // The failure outcome must not be reported on success.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+      surface: "toast",
+    })
+    expect(installSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("tracks a failed install and surfaces the error", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(new Error("install blew up"))
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    expect(screen.getByText("install blew up")).toBeVisible()
+    // Failure is a distinct retry state; no success confirmation shows.
+    expect(screen.getByRole("button", { name: "Retry" })).toBeVisible()
+    expect(screen.queryByText("Skills installed")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+      surface: "toast",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded",
+      surface: "toast",
+    })
+  })
+
+  it("appends the server failure reason to the install-failed label", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // The server classifies the failure (e.g. a filesystem write failure on a
+    // locked-down target dir) and the rejected error carries a machine-readable
+    // reason from the fixed vocabulary.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(
+      Object.assign(new Error("Could not write ~/.claude/skills/..."), {
+        reason: "write_failed",
+      })
+    )
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // The reason is a label suffix (mirroring skillsNudgeSuppressedNonLocal:<locality>)
+    // so the funnel can break install failures down by cause.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed:write_failed",
+      surface: "toast",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+      surface: "toast",
+    })
+  })
+
+  it("tags a rerouted install with the server's fallback reason", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // Installs the server reroutes from project mode to a global copy carry WHY.
+    // Symlinks being unavailable machine-wide (Windows without Developer Mode) is a
+    // different problem from a single link failing, so the label keeps them apart.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockResolvedValue({
+      detail: "Installed to ~/.agents/skills",
+      fallbackReason: "symlinks_unsupported",
+    })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded:symlinks_unsupported",
+      surface: "toast",
+    })
+    // The plain success label must not also fire (it would double-count).
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallSucceeded",
+      surface: "toast",
+    })
+  })
+
+  it("tracks a safety-gate refusal as Refused, not Failed", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // The server prefixes gate reasons with `refused:` — the install was declined
+    // before it was attempted, so it must not inflate the install-failure rate.
+    // Label construction is unit-tested in skillsNudge.test.ts; this asserts App
+    // routes a refusal to the distinct EVENT, which is the funnel discontinuity
+    // this PR introduces and the one thing a unit test cannot see.
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(
+      Object.assign(
+        new Error("Skills install is not available in this environment."),
+        { reason: "refused:non_loopback" }
+      )
+    )
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // The prefix is stripped, so the gate name stays readable in the label.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallRefused:non_loopback",
+      surface: "toast",
+    })
+    // A refusal is not a failure and must stay off the failure funnel.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed:refused:non_loopback",
+      surface: "toast",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+      surface: "toast",
+    })
+  })
+
+  it("counts a dropped-connection install separately from a failure", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockRejectedValue(new Error(CONNECTION_CLOSED_MESSAGE))
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+    await flushInstall()
+
+    // A dropped connection may mean the install actually completed, so it is
+    // tracked as a distinct outcome — not a failure (which would over-count the
+    // funnel) — and surfaced with a reassuring, retry-friendly message.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallDropped",
+      surface: "toast",
+    })
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstallFailed",
+      surface: "toast",
+    })
+    expect(screen.getByText(/Lost connection during install/)).toBeVisible()
+    expect(screen.getByRole("button", { name: "Retry" })).toBeVisible()
+  })
+
+  it("snoozes and tracks the dismiss (✕) control", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Close" }))
+    // Flush the toast's exit-animation timer so it leaves the DOM.
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeSnoozed",
+      surface: "toast",
+    })
+    expect(window.localStorage.getItem("stSkillsNudgeSnoozedAt")).toBeTruthy()
+  })
+
+  it("permanently dismisses and tracks Don't show again", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    // Spy on the server-side marker write so we verify the dual-store dismissal:
+    // a cleared localStorage in another browser must still stay suppressed.
+    const dismissSpy = vi
+      .spyOn(BackendOperationClient.prototype, "requestDismissSkillsNudge")
+      .mockResolvedValue(undefined)
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Don't show again" }))
+    // Flush the toast's exit-animation timer so it leaves the DOM.
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeDontShowAgain",
+      surface: "toast",
+    })
+    // Both stores are written: the browser flag AND the server-side marker.
+    expect(window.localStorage.getItem("stSkillsNudgeDismissed")).toBe("true")
+    expect(dismissSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("stays visible while an app toast comes and goes (coexistence)", () => {
+    renderApp(getProps())
+    sendRecommendingNewSession()
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+
+    // The app fires its own st.toast. It must coexist with the nudge, not
+    // replace or suppress it — the nudge outranks transient app toasts.
+    act(() => {
+      toastQueue.add({ body: "app toast message" }, { timeout: 4000 })
+    })
+    expect(screen.getByText("app toast message")).toBeVisible()
+    // The nudge is still there alongside the app toast.
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+
+    // The app toast expires on its own timer; the persistent nudge outlives it
+    // (it never fades on a timer and is only dismissed by an explicit action).
+    act(() => {
+      vi.advanceTimersByTime(8000)
+    })
+    act(() => {
+      vi.runOnlyPendingTimers()
+    })
+    expect(screen.queryByText("app toast message")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+  })
+
+  /** Connect, mark the script running, (optionally) recommend skills, select a page. */
+  const connectRunRecommendNavigate = (recommend = true): void => {
+    act(() => {
+      getMockConnectionManagerProp("connectionStateChanged")(
+        ConnectionState.CONNECTED
+      )
+    })
+    sendForwardMessage("sessionStatusChanged", {
+      runOnSave: false,
+      scriptIsRunning: true,
+    })
+    sendRecommendingNewSession(recommend)
+    sendForwardMessage("navigation", {
+      appPages: [
+        {
+          pageScriptHash: "page_script_hash",
+          pageName: "streamlit app",
+          urlPathname: "streamlit_app",
+          isDefault: true,
+        },
+      ],
+      pageScriptHash: "page_script_hash",
+      position: Navigation.Position.SIDEBAR,
+      sections: [],
+    })
+  }
+
+  /** Render an uncaught-style exception element into the app body. */
+  const sendErrorElement = (deltaPath: number[] = [0, 0]): void => {
+    sendForwardMessage(
+      "delta",
+      {
+        type: "newElement",
+        newElement: {
+          type: "exception",
+          exception: {
+            type: "StreamlitAPIException",
+            message: "boom",
+            stackTrace: ["line 1"],
+            isWarning: false,
+            // Streamlit-raised error: this is what scopes the callout in.
+            isStreamlitException: true,
+          },
+        },
+      },
+      { deltaPath, activeScriptHash: "hash1" }
+    )
+  }
+
+  /**
+   * Snooze the proactive toast so the in-error callout becomes the active
+   * surface. With the toast snoozed it stays hidden (mutual exclusion), while
+   * the callout intentionally ignores the snooze — mirroring the spec: an
+   * error is a higher-intent moment than a snoozed proactive nudge. Call
+   * before renderApp; the snooze is read during session initialization.
+   */
+  const snoozeToastSoCalloutShows = (): void => {
+    window.localStorage.setItem(
+      SKILLS_NUDGE_SNOOZED_AT_KEY,
+      String(Date.now())
+    )
+  }
+
+  it("keeps the callout mutually exclusive with the toast, showing it only once the toast is dismissed", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const installSpy = vi
+      .spyOn(BackendOperationClient.prototype, "requestInstallSkills")
+      .mockResolvedValue({ detail: "Installed to .agents/skills" })
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    // The proactive toast owns the screen; while it's up the in-error callout
+    // is suppressed (mutual exclusion), even on a Streamlit-raised error...
+    const nudge = await screen.findByTestId("stSkillsNudge")
+    expect(nudge).toBeVisible()
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+    // ...and no errorCallout impression is logged while it's hidden.
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "errorCallout",
+    })
+
+    // Dismiss the toast (its ✕ snoozes + closes it). An error is a
+    // higher-intent moment than a snoozed proactive nudge, so — with the toast
+    // gone — the callout now takes over. The 24h snooze does not gate it.
+    await user.click(within(nudge).getByRole("button", { name: "Close" }))
+    const callout = await screen.findByTestId("stSkillsInstallCallout")
+    expect(callout).toBeVisible()
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    // The callout's impression is attributed to the error-callout surface.
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "errorCallout",
+    })
+
+    // Installing from the callout is likewise attributed to errorCallout.
+    await user.click(
+      within(callout).getByRole("button", { name: "Install skills" })
+    )
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstall",
+      surface: "errorCallout",
+    })
+    expect(installSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not show the in-error callout in an embedded app", async () => {
+    // Embedded (?embed=true) apps are chromeless; neither surface should show
+    // even on an error. This specifically guards the callout's !isEmbed gate
+    // (embedding does not affect the exception box's own localhost link gate).
+    vi.mocked(isEmbed).mockReturnValue(true)
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not show the in-error callout when not on localhost", async () => {
+    mockWindowLocation("myapp.streamlit.app")
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not show the in-error callout when the server does not recommend it", async () => {
+    // recommendSkillsInstall is the feature's primary, server-driven gate.
+    // Everything else is eligible (localhost, non-embed, storage available, a
+    // Streamlit-raised error, no prior dismissal), so this isolates that gate:
+    // with recommend=false the callout must stay hidden and log no impression.
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    connectRunRecommendNavigate(false)
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+      surface: "errorCallout",
+    })
+  })
+
+  it("does not show the in-error callout once the nudge was permanently dismissed", async () => {
+    // A prior "Don't show again" must suppress BOTH surfaces. The toast is
+    // gated out by its own dismissal check (so !showSkillsNudge is true and
+    // would otherwise let the callout through), leaving the callout's own
+    // !isSkillsNudgeDismissed() gate as the load-bearing one under test.
+    window.localStorage.setItem("stSkillsNudgeDismissed", "true")
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not show the in-error callout when localStorage is unavailable", async () => {
+    // Fail closed: without storage we can't honor a future dismissal, so the
+    // callout (like the toast) must not appear. Simulate a locked-down browser.
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage disabled")
+    })
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement()
+
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not re-offer the callout after skills are installed this session", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    vi.spyOn(
+      BackendOperationClient.prototype,
+      "requestInstallSkills"
+    ).mockResolvedValue({ detail: "Installed to .agents/skills" })
+    snoozeToastSoCalloutShows()
+    renderApp(getProps())
+    connectRunRecommendNavigate()
+    sendErrorElement([0, 0])
+
+    // Install from the callout (the toast is snoozed, so it's the live surface).
+    const callout = await screen.findByTestId("stSkillsInstallCallout")
+    await user.click(
+      within(callout).getByRole("button", { name: "Install skills" })
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    // The success confirmation lingers, then the callout removes itself.
+    act(() => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+
+    // A later error in the same session must NOT re-offer the install — the
+    // skills are already installed (the server only re-detects next session).
+    //
+    // The first error box has to go FIRST. It's still mounted (only its local
+    // dismissed flag hid the callout) and the shared slot is released on unmount
+    // only — so simply adding a second error would be refused the slot and this
+    // test would pass on that alone, proving nothing about
+    // `skillsInstalledThisSession`.
+    sendForwardMessage(
+      "delta",
+      {
+        type: "newElement",
+        newElement: { type: "text", text: { body: "ok" } },
+      },
+      { deltaPath: [0, 0] }
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(screen.queryByTestId("stException")).not.toBeInTheDocument()
+
+    // Slot is now free, so a fresh eligible error could claim it — and must not.
+    sendErrorElement([0, 1])
+    await act(async () => {
+      await Promise.resolve()
+    })
+    await screen.findByTestId("stException")
+    expect(
+      screen.queryByTestId("stSkillsInstallCallout")
+    ).not.toBeInTheDocument()
+  })
+
+  it("logs the errorCallout impression only once even when the error remounts", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    snoozeToastSoCalloutShows()
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    connectRunRecommendNavigate()
+    sendErrorElement([0, 0])
+    await screen.findByTestId("stSkillsInstallCallout")
+
+    const shownCount = (): number =>
+      (metricsManager.enqueue as ReturnType<typeof vi.fn>).mock.calls.filter(
+        ([event, payload]) =>
+          event === "menuClick" &&
+          payload?.label === "skillsNudgeShown" &&
+          payload?.surface === "errorCallout"
+      ).length
+    expect(shownCount()).toBe(1)
+
+    // Replace the error with a non-error element so the callout unmounts...
+    sendForwardMessage(
+      "delta",
+      {
+        type: "newElement",
+        newElement: { type: "text", text: { body: "ok" } },
+      },
+      { deltaPath: [0, 0], activeScriptHash: "hash1" }
+    )
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("stSkillsInstallCallout")
+      ).not.toBeInTheDocument()
+    )
+
+    // ...then bring the error back so the callout remounts. The impression must
+    // NOT be logged again (once per page load, like the toast).
+    sendErrorElement([0, 0])
+    await screen.findByTestId("stSkillsInstallCallout")
+    expect(shownCount()).toBe(1)
   })
 })

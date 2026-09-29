@@ -21,6 +21,45 @@ import "urlpattern-polyfill"
 import { StreamlitConfig } from "@streamlit/utils"
 
 /**
+ * URI returned for blocked links. We use "#" instead of "" to prevent
+ * navigation: an empty href combined with target="_blank" would open the
+ * current page in a new tab.
+ */
+export const BLOCKED_LINK_URI = "#"
+
+/** Dangerous URL schemes that can execute arbitrary code when clicked. */
+const DANGEROUS_URL_SCHEMES = ["javascript:", "vbscript:"]
+
+// C0 control characters (U+0000-U+001F) that browsers silently strip from URLs
+// per the WHATWG URL spec. These must be removed before checking schemes to
+// prevent bypass attacks like "\x01javascript:alert(1)".
+// eslint-disable-next-line no-control-regex
+const C0_CONTROL_CHARS_REGEX = /[\x00-\x1F]/g
+
+/**
+ * Returns true if the given URI uses a dangerous scheme (javascript:,
+ * vbscript:) that can execute arbitrary code when clicked.
+ *
+ * We use a blocklist approach instead of an allowlist to preserve compatibility
+ * with data: URLs and other custom schemes that Streamlit users rely on (e.g.,
+ * inline images, PDFs). Note that data:text/html URLs can execute JavaScript
+ * but run in a sandboxed null-origin context, making them less dangerous than
+ * javascript: URLs.
+ *
+ * C0 control characters and surrounding whitespace are stripped before matching
+ * so that obfuscated values like "\x01javascript:" or "java\nscript:" (which
+ * browsers normalize before interpreting the scheme) are still detected.
+ */
+export function isDangerousLinkUri(uri: string): boolean {
+  const normalizedUri = uri
+    .replace(C0_CONTROL_CHARS_REGEX, "")
+    .toLowerCase()
+    .trim()
+
+  return DANGEROUS_URL_SCHEMES.some(scheme => normalizedUri.startsWith(scheme))
+}
+
+/**
  * Check if the given origin follows the allowed origin pattern, which could
  * include wildcards.
  *

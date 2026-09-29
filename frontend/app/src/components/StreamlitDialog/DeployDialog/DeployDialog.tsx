@@ -16,8 +16,6 @@
 
 import { ReactElement, ReactNode, useCallback } from "react"
 
-import { StyledAction, StyledBody } from "baseui/card"
-
 import StreamlitLogo from "@streamlit/app/src/assets/svg/logo.svg"
 import Rocket from "@streamlit/app/src/assets/svg/rocket.svg"
 import Snowflake from "@streamlit/app/src/assets/svg/snowflake.svg"
@@ -36,14 +34,15 @@ import {
   STREAMLIT_DEPLOY_TUTORIAL_URL,
 } from "@streamlit/app/src/urls"
 import { BaseButton, BaseButtonKind } from "@streamlit/lib"
-import { GitInfo, IGitInfo } from "@streamlit/protobuf"
+import { GitInfo } from "@streamlit/protobuf"
 
-import Card from "./DeployCard"
 import ListElement from "./DeployListElement"
 import Modal from "./DeployModal"
 import {
   StyledActionsWrapper,
   StyledCardContainer,
+  StyledDeployCard,
+  StyledDeployCardBody,
   StyledHeader,
   StyledSubheader,
 } from "./styled-components"
@@ -54,7 +53,7 @@ const openUrl = (url: string): void => {
   window.open(url, "_blank")
 }
 
-const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
+const getDeployAppUrl = (gitInfo: GitInfo.$Properties | null): string => {
   if (gitInfo) {
     // If the app was run inside a GitHub repo, autofill for a one-click deploy.
     // E.g.: https://share.streamlit.io/deploy?repository=melon&branch=develop&mainModule=streamlit_app.py
@@ -70,7 +69,7 @@ const getDeployAppUrl = (gitInfo: IGitInfo | null): string => {
 }
 
 export interface DeployDialogProps {
-  gitInfo: IGitInfo | null
+  gitInfo: GitInfo.$Properties | null
   type: DialogType.DEPLOY_DIALOG
   onClose: PlainEventHandler
   showDeployError: (
@@ -149,8 +148,8 @@ export function DeployDialog(
   return (
     <Modal onClose={onClose}>
       <StyledCardContainer>
-        <Card>
-          <StyledBody style={{ flexGrow: 1 }}>
+        <StyledDeployCard>
+          <StyledDeployCardBody $flexGrow={1}>
             <img
               src={StreamlitLogo}
               alt={"Streamlit Logo"}
@@ -163,8 +162,8 @@ export function DeployDialog(
             <ListElement>
               Explore and learn from Streamlit’s community and popular apps
             </ListElement>
-          </StyledBody>
-          <StyledAction>
+          </StyledDeployCardBody>
+          <div>
             <StyledActionsWrapper>
               <BaseButton
                 kind={BaseButtonKind.PRIMARY}
@@ -184,10 +183,10 @@ export function DeployDialog(
                 Learn more
               </BaseButton>
             </StyledActionsWrapper>
-          </StyledAction>
-        </Card>
-        <Card>
-          <StyledBody style={{ flexGrow: 1 }}>
+          </div>
+        </StyledDeployCard>
+        <StyledDeployCard>
+          <StyledDeployCardBody $flexGrow={1}>
             <img
               src={Snowflake}
               alt={"Snowflake"}
@@ -205,8 +204,8 @@ export function DeployDialog(
             <ListElement>
               Integrate with Snowflake’s full data stack
             </ListElement>
-          </StyledBody>
-          <StyledAction>
+          </StyledDeployCardBody>
+          <div>
             <StyledActionsWrapper>
               <BaseButton
                 kind={BaseButtonKind.SECONDARY}
@@ -231,10 +230,10 @@ export function DeployDialog(
                 Learn more
               </BaseButton>
             </StyledActionsWrapper>
-          </StyledAction>
-        </Card>
-        <Card>
-          <StyledBody style={{ flexGrow: 2 }}>
+          </div>
+        </StyledDeployCard>
+        <StyledDeployCard>
+          <StyledDeployCardBody $flexGrow={2}>
             <img
               src={Rocket}
               alt={"Rocket"}
@@ -248,8 +247,8 @@ export function DeployDialog(
             <ListElement>
               Set up and maintain your own authentication, resources, and costs
             </ListElement>
-          </StyledBody>
-          <StyledAction>
+          </StyledDeployCardBody>
+          <div>
             <StyledActionsWrapper>
               <BaseButton
                 onClick={() => {
@@ -263,8 +262,8 @@ export function DeployDialog(
                 Learn more
               </BaseButton>
             </StyledActionsWrapper>
-          </StyledAction>
-        </Card>
+          </div>
+        </StyledDeployCard>
       </StyledCardContainer>
     </Modal>
   )

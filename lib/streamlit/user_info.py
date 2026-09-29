@@ -21,8 +21,10 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    Literal,
     NoReturn,
     cast,
+    overload,
 )
 
 from streamlit import config, logger, runtime
@@ -32,7 +34,10 @@ from streamlit.auth_util import (
     is_authlib_installed,
     validate_auth_credentials,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitAuthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingAuthlibError,
+)
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -289,7 +294,7 @@ def login(provider: str | None = None) -> None:
         if st.user.is_logged_in:
             if st.button("Log out"):
                 st.logout()
-            st.write(f"Hello, {st.user.name}!)
+            st.write(f"Hello, {st.user.name}!")
 
     """
     if provider is None:
@@ -298,10 +303,7 @@ def login(provider: str | None = None) -> None:
     context = _get_script_run_ctx()
     if context is not None:
         if not is_authlib_installed():
-            raise StreamlitAuthError(
-                """To use authentication features, you need to install """
-                """Authlib>=1.3.2, e.g. via `pip install Authlib`."""
-            )
+            raise StreamlitMissingAuthlibError()
         validate_auth_credentials(provider)
         fwd_msg = ForwardMsg()
         fwd_msg.auth_redirect.url = generate_login_redirect_url(provider)
@@ -488,6 +490,11 @@ class TokensProxy(Mapping[str, str]):
             # Use the tokens for API verification
     """
 
+    # Declare the documented token names so IDEs autocomplete ``.id`` and
+    # ``.access``; any other name still resolves through ``__getattr__``.
+    id: str
+    access: str
+
     def __init__(self, tokens: dict[str, str]) -> None:
         self._tokens = tokens
 
@@ -504,10 +511,16 @@ class TokensProxy(Mapping[str, str]):
         if name.startswith("_"):
             super().__setattr__(name, value)
         else:
-            raise StreamlitAPIException("st.user.tokens cannot be modified")
+            raise StreamlitAPIException(
+                "st.user.tokens cannot be modified",
+                error_id="user-tokens-cannot-be-modified",
+            )
 
     def __setitem__(self, name: str, value: Any) -> None:
-        raise StreamlitAPIException("st.user.tokens cannot be modified")
+        raise StreamlitAPIException(
+            "st.user.tokens cannot be modified",
+            error_id="user-tokens-cannot-be-modified",
+        )
 
     def __iter__(self) -> Iterator[str]:
         return iter(self._tokens)
@@ -648,6 +661,19 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
 
     """
 
+    # Narrow the documented is_logged_in field; provider-specific claims retain
+    # the mapping's general value type.
+    is_logged_in: bool
+
+    @overload
+    def __getitem__(self, key: Literal["is_logged_in"]) -> bool: ...
+
+    @overload
+    def __getitem__(self, key: Literal["tokens"]) -> TokensProxy: ...
+
+    @overload
+    def __getitem__(self, key: str) -> str | bool | TokensProxy | None: ...
+
     def __getitem__(self, key: str) -> str | bool | TokensProxy | None:
         if key == "tokens":
             return self.tokens
@@ -658,17 +684,23 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
 
     def __getattr__(self, key: str) -> str | bool | TokensProxy | None:
         if key == "tokens":
-            return self.tokens
+            return self.tokens  # pragma: no cover - defensive, ``tokens`` property wins via descriptor protocol
         try:
             return cast("str | bool | None", _get_user_info()[key])
         except KeyError:
             raise AttributeError(f'st.user has no attribute "{key}".')
 
     def __setattr__(self, name: str, value: str | None) -> NoReturn:
-        raise StreamlitAPIException("st.user cannot be modified")
+        raise StreamlitAPIException(
+            "st.user cannot be modified",
+            error_id="user-cannot-be-modified",
+        )
 
     def __setitem__(self, name: str, value: str | None) -> NoReturn:
-        raise StreamlitAPIException("st.user cannot be modified")
+        raise StreamlitAPIException(
+            "st.user cannot be modified",
+            error_id="user-cannot-be-modified",
+        )
 
     def __iter__(self) -> Iterator[str]:
         return iter(_get_user_info())

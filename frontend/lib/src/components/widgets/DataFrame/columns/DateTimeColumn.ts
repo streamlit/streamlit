@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-import { DatePickerType } from "@glideapps/glide-data-grid-cells"
-import moment, { Moment } from "moment-timezone"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import type { DatePickerType } from "@glideapps/glide-data-grid-cells"
+import moment, { type Moment } from "moment-timezone"
 
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
 import { formatMoment } from "~lib/util/formatMoment"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   mergeColumnParameters,
   toSafeDate,
@@ -288,6 +288,18 @@ function BaseDateTimeColumn(
       return isNullOrUndefined(cell?.data?.date)
         ? null
         : toISOString(cell.data.date)
+    },
+    valuesEqual(a: unknown, b: unknown): boolean {
+      // Equal if both parse to the same instant, so differing ISO
+      // representations of the same time are treated as equal.
+      const timeA = Date.parse(String(a))
+      const timeB = Date.parse(String(b))
+
+      if (!Number.isNaN(timeA) && !Number.isNaN(timeB)) {
+        return timeA === timeB
+      }
+
+      return Object.is(a, b)
     },
   }
 }

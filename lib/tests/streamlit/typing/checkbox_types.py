@@ -48,8 +48,15 @@ if TYPE_CHECKING:
     assert_type(checkbox("Accept terms", width="content"), bool)
     assert_type(checkbox("Accept terms", width="stretch"), bool)
     assert_type(checkbox("Accept terms", width=200), bool)
+
+    assert_type(checkbox("Accept terms", wrap=True), bool)
+    assert_type(checkbox("Accept terms", wrap=False), bool)
+    assert_type(checkbox("Accept terms", wrap=None), bool)
     assert_type(
         checkbox("Accept terms", key="bind_checkbox", bind="query-params"), bool
+    )
+    assert_type(
+        checkbox("Accept terms", key="persist_checkbox", persist_state="session"), bool
     )
 
     def my_callback() -> None:
@@ -69,6 +76,8 @@ if TYPE_CHECKING:
         bool,
     )
     assert_type(checkbox("Accept terms", on_change=None), bool)
+    assert_type(checkbox("Accept terms", on_change="rerun"), bool)
+    assert_type(checkbox("Accept terms", on_change="ignore"), bool)
 
     assert_type(
         checkbox(
@@ -110,7 +119,14 @@ if TYPE_CHECKING:
     assert_type(toggle("Enable feature", width="content"), bool)
     assert_type(toggle("Enable feature", width="stretch"), bool)
     assert_type(toggle("Enable feature", width=150), bool)
+
+    assert_type(toggle("Enable feature", wrap=True), bool)
+    assert_type(toggle("Enable feature", wrap=False), bool)
+    assert_type(toggle("Enable feature", wrap=None), bool)
     assert_type(toggle("Enable feature", key="bind_toggle", bind="query-params"), bool)
+    assert_type(
+        toggle("Enable feature", key="persist_toggle", persist_state="page"), bool
+    )
 
     assert_type(toggle("Enable feature", on_change=my_callback), bool)
     assert_type(
@@ -123,6 +139,8 @@ if TYPE_CHECKING:
         bool,
     )
     assert_type(toggle("Enable feature", on_change=None), bool)
+    assert_type(toggle("Enable feature", on_change="rerun"), bool)
+    assert_type(toggle("Enable feature", on_change="ignore"), bool)
 
     assert_type(
         toggle(

@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import os
 import os.path
 import sys
 import types
@@ -369,6 +371,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
     def test_maybe_print_static_folder_warning_called_once_on_server_start(
         self, mock_maybe_print_static_folder_warning
@@ -415,6 +418,53 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             )
             mock_set_option.assert_called_once_with("server.enableStaticServing", False)
 
+    @patch("streamlit.web.skills.are_skills_installed", Mock(return_value=False))
+    def test_skills_recommendation_shown_when_not_installed(self):
+        """Recommend installing skills when they are not yet installed."""
+        with patch_config_options(
+            {"server.headless": False, "logger.hideWelcomeMessage": False}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        out = sys.stdout.getvalue()
+        assert "Help agents write better Streamlit apps?" in out
+        assert "streamlit skills" in out
+        assert "Install the official Streamlit skills" in out
+
+    @patch("streamlit.web.skills.are_skills_installed", Mock(return_value=True))
+    def test_skills_recommendation_hidden_when_installed(self):
+        """Don't recommend installing skills when they are already installed."""
+        with patch_config_options(
+            {"server.headless": False, "logger.hideWelcomeMessage": False}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        assert sys.stdout.getvalue() == ""
+
+    @patch("streamlit.web.skills.are_skills_installed", Mock(return_value=False))
+    def test_skills_recommendation_hidden_in_headless_mode(self):
+        """Don't recommend installing skills in headless mode."""
+        with patch_config_options(
+            {"server.headless": True, "logger.hideWelcomeMessage": False}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        assert sys.stdout.getvalue() == ""
+
+    @patch("streamlit.web.skills.are_skills_installed")
+    def test_skills_recommendation_hidden_when_welcome_message_hidden(
+        self, mock_are_skills_installed
+    ):
+        """Don't recommend skills when the welcome message is hidden."""
+        with patch_config_options(
+            {"server.headless": False, "logger.hideWelcomeMessage": True}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        assert sys.stdout.getvalue() == ""
+        # Should short-circuit before checking installation status.
+        mock_are_skills_installed.assert_not_called()
+
     @patch("streamlit.config.get_config_options")
     def test_load_config_options(self, patched_get_config_options):
         """Test that bootstrap.load_config_options parses the keys properly and
@@ -444,6 +494,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
@@ -452,6 +503,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._LOGGER.exception")
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):
@@ -503,18 +555,19 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
         with testutil.patch_config_options({"server.headless": True}):
             bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
 
-    def test_bootstrap_run_in_existing_event_loop(self):
+    async def test_bootstrap_run_in_existing_event_loop(self):
         """Bootstrap run works within an existing event loop."""
-        import asyncio
-
-        event_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(event_loop)
         with testutil.patch_config_options({"server.headless": True}):
-
-            async def _run():
-                bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
-
-            event_loop.run_until_complete(_run())
+            bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
+            # When a loop is already running, run() schedules the server and
+            # returns. Await that task so serve_with_signal is not leaked.
+            bootstrap_tasks = [
+                task
+                for task in asyncio.all_tasks()
+                if task.get_name() == "bootstrap.run_server"
+            ]
+            assert bootstrap_tasks
+            await asyncio.gather(*bootstrap_tasks)
 
     def test_bootstrap_run_without_existing_event_loop(self):
         """Bootstrap run creates event loop when none exists."""
@@ -528,50 +581,142 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
 
 
 class BootstrapUvloopTest(TestCase):
-    def test_installs_uvloop_when_available(self):
-        """uvloop is installed as the default policy when present."""
+    def test_returns_uvloop_factory_when_available(self):
+        """uvloop's new_event_loop is used as the asyncio loop factory."""
         fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
+        fake_uvloop.new_event_loop = Mock(name="new_event_loop")
 
         with (
             patch.object(bootstrap.env_util, "IS_WINDOWS", False),
             patch.dict("sys.modules", {"uvloop": fake_uvloop}),
         ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+            factory = bootstrap._get_uvloop_loop_factory()
 
-        fake_uvloop.install.assert_called_once()
+        assert factory is fake_uvloop.new_event_loop
 
-    def test_skips_install_when_loop_running(self):
-        """uvloop installation is skipped if a loop is already running."""
+    def test_returns_none_on_windows(self):
+        """uvloop is not used on Windows."""
         fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
-
-        with (
-            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
-            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
-        ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=True)
-
-        fake_uvloop.install.assert_not_called()
-
-    def test_skips_install_on_windows(self):
-        """uvloop installation is skipped on Windows."""
-        fake_uvloop = types.ModuleType("uvloop")
-        fake_uvloop.install = Mock()
+        fake_uvloop.new_event_loop = Mock()
 
         with (
             patch.object(bootstrap.env_util, "IS_WINDOWS", True),
             patch.dict("sys.modules", {"uvloop": fake_uvloop}),
         ):
-            bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+            assert bootstrap._get_uvloop_loop_factory() is None
 
-        fake_uvloop.install.assert_not_called()
+    def test_returns_none_when_uvloop_missing(self):
+        """Missing uvloop yields no loop factory."""
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": None}),
+        ):
+            assert bootstrap._get_uvloop_loop_factory() is None
 
-    def test_handles_missing_uvloop(self):
-        """Missing uvloop does not raise."""
-        with patch.object(bootstrap.env_util, "IS_WINDOWS", False):
-            with patch.dict("sys.modules", {"uvloop": None}):
-                bootstrap._maybe_install_uvloop(running_in_event_loop=False)
+    def test_returns_none_when_new_event_loop_missing(self):
+        """An older uvloop without ``new_event_loop`` yields no loop factory."""
+        fake_uvloop = types.ModuleType("uvloop")
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        ):
+            assert bootstrap._get_uvloop_loop_factory() is None
+
+    def test_run_server_loop_uses_runner_loop_factory(self):
+        """When asyncio.Runner exists, the server uses loop_factory=uvloop."""
+        fake_loop = Mock(name="uvloop")
+        fake_factory = Mock(name="uvloop_factory", return_value=fake_loop)
+        mock_runner = Mock()
+        mock_runner.__enter__ = Mock(return_value=mock_runner)
+        mock_runner.__exit__ = Mock(return_value=False)
+        coro = Mock(name="main_coro")
+
+        with (
+            patch.object(
+                bootstrap, "_get_uvloop_loop_factory", return_value=fake_factory
+            ),
+            patch(
+                "streamlit.web.bootstrap.asyncio.Runner",
+                return_value=mock_runner,
+                create=True,
+            ) as mock_runner_cls,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        fake_factory.assert_called_once_with()
+        mock_runner_cls.assert_called_once()
+        assert mock_runner_cls.call_args.kwargs["loop_factory"]() is fake_loop
+        mock_runner.run.assert_called_once_with(coro)
+
+    def test_run_server_loop_falls_back_when_factory_fails(self):
+        """A failing uvloop factory falls back to the default loop."""
+        coro = Mock(name="main_coro")
+        fake_factory = Mock(name="uvloop_factory", side_effect=RuntimeError("boom"))
+
+        with (
+            patch.object(
+                bootstrap, "_get_uvloop_loop_factory", return_value=fake_factory
+            ),
+            patch(
+                "streamlit.web.bootstrap.asyncio.Runner",
+                create=True,
+            ) as mock_runner_cls,
+            patch.object(bootstrap, "_try_install_uvloop") as mock_install,
+            patch("streamlit.web.bootstrap.asyncio.run") as mock_run,
+            patch.object(bootstrap._LOGGER, "warning") as mock_warning,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        mock_runner_cls.assert_not_called()
+        mock_install.assert_not_called()
+        mock_run.assert_called_once_with(coro)
+        mock_warning.assert_called_once()
+
+    def test_run_server_loop_uses_install_when_runner_unavailable(self):
+        """Python 3.10 (no asyncio.Runner) falls back to uvloop.install()."""
+        fake_uvloop = types.ModuleType("uvloop")
+        fake_uvloop.new_event_loop = Mock(name="new_event_loop")
+        fake_uvloop.install = Mock(name="install")
+        coro = Mock(name="main_coro")
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+            patch.object(asyncio, "Runner", None, create=True),
+            patch("streamlit.web.bootstrap.asyncio.run") as mock_run,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        fake_uvloop.install.assert_called_once()
+        mock_run.assert_called_once_with(coro)
+
+    def test_run_server_loop_falls_back_to_asyncio_run(self):
+        """Without uvloop, the server uses the stdlib event loop."""
+        coro = Mock(name="main_coro")
+
+        with (
+            patch.object(bootstrap, "_get_uvloop_loop_factory", return_value=None),
+            patch.object(bootstrap, "_try_install_uvloop") as mock_install,
+            patch("streamlit.web.bootstrap.asyncio.run") as mock_run,
+        ):
+            bootstrap._run_server_loop(coro)
+
+        mock_install.assert_called_once()
+        mock_run.assert_called_once_with(coro)
+
+    def test_try_install_uvloop_skips_when_install_missing(self):
+        """uvloop without install() does not raise or warn."""
+        fake_uvloop = types.ModuleType("uvloop")
+
+        with (
+            patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+            patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+            patch.object(bootstrap._LOGGER, "warning") as mock_warning,
+        ):
+            bootstrap._try_install_uvloop()
+
+        mock_warning.assert_not_called()
 
 
 class BootstrapAsgiTest(IsolatedAsyncioTestCase):
@@ -589,13 +734,13 @@ class BootstrapAsgiTest(IsolatedAsyncioTestCase):
         mock_report_watchdog,
     ):
         """Test that run_asgi_app calls the expected bootstrap functions."""
-        import uvicorn
-
         with (
             testutil.patch_config_options(
                 {"server.address": "localhost", "server.port": 8501}
             ),
-            patch.object(uvicorn, "run") as mock_uvicorn_run,
+            patch(
+                "streamlit.web.server.starlette.starlette_server.UvicornRunner"
+            ) as mock_uvicorn_runner_cls,
         ):
             bootstrap.run_asgi_app(
                 main_script_path="/path/to/main.py",
@@ -612,10 +757,9 @@ class BootstrapAsgiTest(IsolatedAsyncioTestCase):
         mock_install_watchers.assert_called_once_with({"server_port": 8501})
         mock_report_watchdog.assert_called_once()
 
-        # Verify uvicorn.run was called with the app import string
-        mock_uvicorn_run.assert_called_once()
-        call_kwargs = mock_uvicorn_run.call_args
-        assert call_kwargs[0][0] == "myapp:app"
+        # Verify UvicornRunner was called with the app import string
+        mock_uvicorn_runner_cls.assert_called_once_with("myapp:app")
+        mock_uvicorn_runner_cls.return_value.run.assert_called_once_with()
 
     def test_run_asgi_app_raises_without_uvicorn(self):
         """Test that run_asgi_app raises RuntimeError if uvicorn is not installed."""
@@ -628,3 +772,230 @@ class BootstrapAsgiTest(IsolatedAsyncioTestCase):
                     flag_options={},
                 )
             assert "uvicorn is required" in str(cm.value)
+
+
+class BootstrapSignalHandlerTest(TestCase):
+    """Tests for _set_up_signal_handler."""
+
+    def test_signal_handler_stops_server(self):
+        """SIGTERM/SIGINT handlers call server.stop()."""
+        mock_server = Mock()
+        captured_handlers: dict[int, object] = {}
+
+        def fake_signal(signum: int, handler: object) -> None:
+            captured_handlers[signum] = handler
+
+        with patch.object(bootstrap.signal, "signal", side_effect=fake_signal):
+            bootstrap._set_up_signal_handler(mock_server)
+
+        # SIGTERM and SIGINT are registered on all platforms.
+        assert bootstrap.signal.SIGTERM in captured_handlers
+        assert bootstrap.signal.SIGINT in captured_handlers
+
+        # Invoking the SIGTERM handler should stop the server.
+        captured_handlers[bootstrap.signal.SIGTERM](bootstrap.signal.SIGTERM, None)  # type: ignore[operator]
+        mock_server.stop.assert_called_once()
+
+    def test_signal_handler_defers_stop_to_running_event_loop(self):
+        """The handler schedules server.stop() on the running loop instead of
+        calling it inline, which would risk reentrant console writes."""
+        mock_server = Mock()
+        captured_handlers: dict[int, object] = {}
+
+        def fake_signal(signum: int, handler: object) -> None:
+            captured_handlers[signum] = handler
+
+        with patch.object(bootstrap.signal, "signal", side_effect=fake_signal):
+            bootstrap._set_up_signal_handler(mock_server)
+
+        async def invoke_handler() -> None:
+            captured_handlers[bootstrap.signal.SIGINT](bootstrap.signal.SIGINT, None)  # type: ignore[operator]
+            # The stop call must not run inline inside the handler; it runs
+            # as a callback on the next loop iteration.
+            mock_server.stop.assert_not_called()
+            await asyncio.sleep(0)
+
+        asyncio.run(invoke_handler())
+        mock_server.stop.assert_called_once()
+
+    def test_uses_sigbreak_on_windows(self):
+        """SIGBREAK is registered on Windows instead of SIGQUIT."""
+        registered: list[int] = []
+
+        def fake_signal(signum: int, _handler: object) -> None:
+            registered.append(signum)
+
+        # Inject a fake SIGBREAK constant since it doesn't exist on Linux.
+        fake_sigbreak = 21  # arbitrary, distinct from SIGQUIT
+        signal_module = bootstrap.signal
+        with (
+            patch.object(bootstrap.sys, "platform", "win32"),
+            patch.object(signal_module, "signal", side_effect=fake_signal),
+            patch.object(signal_module, "SIGBREAK", fake_sigbreak, create=True),
+        ):
+            bootstrap._set_up_signal_handler(Mock())
+
+        assert fake_sigbreak in registered
+
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="signal.SIGQUIT does not exist on Windows",
+    )
+    def test_uses_sigquit_on_non_windows(self):
+        """SIGQUIT is registered on non-Windows platforms."""
+        registered: list[int] = []
+
+        def fake_signal(signum: int, _handler: object) -> None:
+            registered.append(signum)
+
+        with (
+            patch.object(bootstrap.sys, "platform", "linux"),
+            patch.object(bootstrap.signal, "signal", side_effect=fake_signal),
+        ):
+            bootstrap._set_up_signal_handler(Mock())
+
+        assert bootstrap.signal.SIGQUIT in registered
+
+
+class BootstrapPydeckMapboxTest(TestCase):
+    """Tests for _fix_pydeck_mapbox_api_warning."""
+
+    def test_sets_mapbox_env_var_when_missing(self):
+        """Sets MAPBOX_API_KEY to empty when it is unset."""
+        with patch.dict(os.environ):
+            os.environ.pop("MAPBOX_API_KEY", None)
+            bootstrap._fix_pydeck_mapbox_api_warning()
+            assert os.environ["MAPBOX_API_KEY"] == ""
+
+    def test_does_not_overwrite_existing_mapbox_env_var(self):
+        """Preserves an externally-set MAPBOX_API_KEY value."""
+        with patch.dict(os.environ, {"MAPBOX_API_KEY": "external"}):
+            bootstrap._fix_pydeck_mapbox_api_warning()
+            assert os.environ["MAPBOX_API_KEY"] == "external"
+
+
+@patch("streamlit.web.bootstrap.prepare_streamlit_environment", Mock())
+@patch("streamlit.web.bootstrap._print_url", Mock())
+@patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+@patch("streamlit.web.bootstrap.cli_util.open_browser")
+class BootstrapOnServerStartBrowserTest(IsolatedAsyncioTestCase):
+    """Tests for the maybe_open_browser path inside _on_server_start."""
+
+    async def _run_on_server_start(self) -> None:
+        # prepare_streamlit_environment is mocked at the class level to avoid
+        # leaking changes to os.environ (MAPBOX_API_KEY) and the global
+        # mimetypes registry across tests.
+        bootstrap._on_server_start(Mock(is_running_hello=False))
+        # Yield to the event loop so the call_soon callback runs.
+        await asyncio.sleep(0)
+
+    async def test_does_not_open_browser_in_headless_mode(self, mock_open_browser):
+        """The scheduled callback skips opening a browser when headless=True."""
+        with testutil.patch_config_options({"server.headless": True}):
+            await self._run_on_server_start()
+
+        mock_open_browser.assert_not_called()
+
+    async def test_opens_browser_for_manually_set_server_address(
+        self, mock_open_browser
+    ):
+        """Opens a browser using the configured non-socket server.address."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": False,
+                "server.address": "10.0.0.5",
+                "server.port": 8501,
+                "global.developmentMode": False,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            await self._run_on_server_start()
+
+        mock_open_browser.assert_called_once()
+        url = mock_open_browser.call_args.args[0]
+        assert "10.0.0.5" in url
+
+    async def test_skips_browser_for_unix_socket_server_address(
+        self, mock_open_browser
+    ):
+        """Does not open a browser when the server is bound to a unix socket."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": False,
+                "server.address": "unix:///tmp/streamlit.sock",
+                "global.developmentMode": False,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            await self._run_on_server_start()
+
+        mock_open_browser.assert_not_called()
+
+    async def test_opens_browser_at_localhost_when_nothing_configured(
+        self, mock_open_browser
+    ):
+        """Opens a browser at localhost when no explicit address is configured."""
+        with testutil.patch_config_options(
+            {
+                "server.headless": False,
+                "server.port": 8501,
+                "global.developmentMode": False,
+            }
+        ):
+            await self._run_on_server_start()
+
+        mock_open_browser.assert_called_once()
+        url = mock_open_browser.call_args.args[0]
+        assert "localhost" in url
+
+
+class BootstrapPrintUrlSpecificAddressTest(IsolatedAsyncioTestCase):
+    """Tests for the manually-set non-wildcard server.address branch in _print_url."""
+
+    def setUp(self):
+        self.orig_stdout = sys.stdout
+        sys.stdout = StringIO()
+
+    def tearDown(self):
+        sys.stdout.close()
+        sys.stdout = self.orig_stdout
+
+    def test_prints_single_url_for_specific_address(self):
+        """A specific non-wildcard server.address should produce a single 'URL: ...' entry."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.address": "10.0.0.5",
+                "server.port": 8501,
+                "global.developmentMode": False,
+                "server.headless": False,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            bootstrap._print_url(False)
+
+        out = sys.stdout.getvalue()
+        assert "URL: http://10.0.0.5:8501" in out
+        # Should not also show the localhost/network URLs.
+        assert "Local URL" not in out
+        assert "Network URL" not in out

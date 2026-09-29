@@ -22,11 +22,9 @@ from streamlit.connections import (
     BaseConnection,
     SnowflakeCallersRightsConnection,
     SnowflakeConnection,
-    SnowparkConnection,
     SQLConnection,
 )
-from streamlit.deprecation_util import deprecate_obj_name
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.secrets import secrets_singleton
@@ -42,9 +40,14 @@ if TYPE_CHECKING:
 _FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
     "snowflake": SnowflakeConnection,
     "snowflake-callers-rights": SnowflakeCallersRightsConnection,
-    "snowpark": SnowparkConnection,
     "sql": SQLConnection,
 }
+_SNOWPARK_CONNECTION_TYPE: Final = "snowpark"
+_SNOWPARK_CONNECTION_REMOVED_ERROR: Final = (
+    "The Snowpark connection was removed in favor of the Snowflake connection. "
+    'Update your app to use `st.connection("<name>", type="snowflake")` with '
+    "`SnowflakeConnection` instead."
+)
 _MODULE_EXTRACTION_REGEX = re.compile(r"No module named \'(.+)\'")
 _MODULES_TO_PYPI_PACKAGES: Final[dict[str, str]] = {
     "MySQLdb": "mysqlclient",
@@ -85,7 +88,8 @@ def _create_connection(
 
     if not issubclass(connection_class, BaseConnection):
         raise StreamlitAPIException(
-            f"{connection_class} is not a subclass of BaseConnection!"
+            f"{connection_class} is not a subclass of BaseConnection!",
+            error_id="connection-not-base-connection-subclass",
         )
 
     # We modify our helper function's `__qualname__` here to work around default
@@ -100,15 +104,16 @@ def _create_connection(
 
     scope = connection_class.scope()
     if scope not in {"global", "session"}:
-        raise StreamlitAPIException(
-            f"Connection class {connection_class} has scope '{scope}'. Valid values "
-            "are 'global' or 'session'."
+        raise StreamlitValueError(
+            "scope",
+            ["'global'", "'session'"],
+            detail=f"Connection class {connection_class.__name__} has scope {scope!r}.",
         )
 
     def on_release_wrapped(connection: ConnectionClass) -> None:
         connection.close()
 
-    __create_connection = cache_resource(
+    cached_create_connection = cache_resource(
         max_entries=max_entries,
         show_spinner="Running `st.connection(...)`.",
         ttl=ttl,
@@ -116,16 +121,23 @@ def _create_connection(
         on_release=on_release_wrapped,
     )(__create_connection)
 
-    return __create_connection(name, connection_class, **kwargs)
+    return cached_create_connection(name, connection_class, **kwargs)
 
 
 def _get_first_party_connection(connection_class: str) -> type[BaseConnection[Any]]:
+    if connection_class == _SNOWPARK_CONNECTION_TYPE:
+        raise StreamlitAPIException(
+            _SNOWPARK_CONNECTION_REMOVED_ERROR,
+            error_id="snowpark-connection-removed",
+        )
+
     if connection_class in _FIRST_PARTY_CONNECTIONS:
         return _FIRST_PARTY_CONNECTIONS[connection_class]
 
     raise StreamlitAPIException(
         f"Invalid connection '{connection_class}'. "
-        f"Supported connection classes: {_FIRST_PARTY_CONNECTIONS}"
+        f"Supported connection classes: {_FIRST_PARTY_CONNECTIONS}",
+        error_id="invalid-first-party-connection",
     )
 
 
@@ -137,7 +149,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SQLConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -149,7 +161,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SQLConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -160,7 +172,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -172,7 +184,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -183,7 +195,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeCallersRightsConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -195,28 +207,7 @@ def connection_factory(
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeCallersRightsConnection:
-    pass
-
-
-@overload
-def connection_factory(
-    name: Literal["snowpark"],
-    max_entries: int | None = None,
-    ttl: float | timedelta | None = None,
-    **kwargs: Any,
-) -> SnowparkConnection:
-    pass
-
-
-@overload
-def connection_factory(
-    name: str,
-    type: Literal["snowpark"],
-    max_entries: int | None = None,
-    ttl: float | timedelta | None = None,
-    **kwargs: Any,
-) -> SnowparkConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -227,7 +218,7 @@ def connection_factory(
     ttl: float | timedelta | None = None,
     **kwargs: Any,
 ) -> ConnectionClass:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -238,7 +229,7 @@ def connection_factory(
     ttl: float | timedelta | None = None,
     **kwargs: Any,
 ) -> BaseConnection[Any]:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 def connection_factory(  # type: ignore
@@ -267,7 +258,8 @@ def connection_factory(  # type: ignore
         The connection name used for secrets lookup in ``secrets.toml``.
         Streamlit uses secrets under ``[connections.<name>]`` for the
         connection. ``type`` will be inferred if ``name`` is one of the
-        following: ``"snowflake"``, ``"snowpark"``, or ``"sql"``.
+        following: ``"snowflake"``, ``"snowflake-callers-rights"``, or
+        ``"sql"``.
 
     type : str, connection class, or None
         The type of connection to create. This can be one of the following:
@@ -281,8 +273,6 @@ def connection_factory(  # type: ignore
           ``"snowflake"``-type connection, except the connection uses the
           current viewer's identity tokens instead of the app's connection
           configuration.
-        - ``"snowpark"``: Streamlit will initialize a connection with
-          |SnowparkConnection|_. This is deprecated.
         - ``"sql"``: Streamlit will initialize a connection with
           |SQLConnection|_.
         - A string path to an importable class: This must be a dot-separated
@@ -305,8 +295,6 @@ def connection_factory(  # type: ignore
 
         .. |SnowflakeConnection| replace:: ``SnowflakeConnection``
         .. _SnowflakeConnection: https://docs.streamlit.io/develop/api-reference/connections/st.connections.snowflakeconnection
-        .. |SnowparkConnection| replace:: ``SnowparkConnection``
-        .. _SnowparkConnection: https://docs.streamlit.io/develop/api-reference/connections/st.connections.snowparkconnection
         .. |SQLConnection| replace:: ``SQLConnection``
         .. _SQLConnection: https://docs.streamlit.io/develop/api-reference/connections/st.connections.sqlconnection
 
@@ -334,9 +322,9 @@ def connection_factory(  # type: ignore
     --------
     **Example 1: Inferred connection type**
 
-    The easiest way to create a first-party (SQL, Snowflake, or Snowpark) connection is
-    to use their default names and define corresponding sections in your ``secrets.toml``
-    file. The following example creates a ``"sql"``-type connection.
+    The easiest way to create a first-party (SQL or Snowflake) connection is to use
+    its default name and define the corresponding section in your ``secrets.toml`` file.
+    The following example creates a ``"sql"``-type connection.
 
     .. code-block:: toml
         :filename: .streamlit/secrets.toml
@@ -443,6 +431,16 @@ def connection_factory(  # type: ignore
     connection_class = type
 
     if connection_class is None:
+        # The inferred-name path needs its own guard: since "snowpark" is no longer a
+        # first-party connection, `st.connection("snowpark")` would otherwise fall
+        # through to the secrets.toml lookup and raise a confusing "no secrets" error
+        # instead of the actionable removal message.
+        if name == _SNOWPARK_CONNECTION_TYPE:
+            raise StreamlitAPIException(
+                _SNOWPARK_CONNECTION_REMOVED_ERROR,
+                error_id="snowpark-connection-removed",
+            )
+
         if name in _FIRST_PARTY_CONNECTIONS:
             # We allow users to simply write `st.connection("sql")` instead of
             # `st.connection("sql", type="sql")`.
@@ -474,17 +472,9 @@ def connection_factory(  # type: ignore
 
     # At this point, connection_class should be of type Type[ConnectionClass].
     try:
-        conn = _create_connection(
+        return _create_connection(
             name, connection_class, max_entries=max_entries, ttl=ttl, **kwargs
         )
-        if isinstance(conn, SnowparkConnection):
-            conn = deprecate_obj_name(
-                conn,
-                'connection("snowpark")',
-                'connection("snowflake")',
-                "2024-04-01",
-            )
-        return conn
     except ModuleNotFoundError as e:
         err_string = str(e)
         missing_module = re.search(_MODULE_EXTRACTION_REGEX, err_string)

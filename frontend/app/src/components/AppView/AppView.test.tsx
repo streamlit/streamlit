@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import {
@@ -28,6 +29,8 @@ import {
   mockSessionInfo,
   mockTheme,
   NavigationContextProps,
+  toastQueue,
+  TransientNode,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
@@ -134,12 +137,119 @@ function renderAppView(
   })
 }
 
+function createAllowEmptyBlock(
+  children: Array<BlockNode | ElementNode | TransientNode> = []
+): BlockNode {
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    children,
+    new BlockProto({ allowEmpty: true })
+  )
+}
+
+function createChatInputNode(
+  id: string,
+  isAutoPositionedAtBottom = false
+): ElementNode {
+  return new ElementNode(
+    new Element({
+      chatInput: {
+        id,
+        placeholder: "Enter Text Here",
+        disabled: false,
+        default: "",
+        isAutoPositionedAtBottom,
+      },
+    }),
+    ForwardMsgMetadata.create({}),
+    "no script run id",
+    FAKE_SCRIPT_HASH
+  )
+}
+
+function appRootWithBottom(
+  children: Array<BlockNode | ElementNode | TransientNode>
+): AppRoot {
+  return new AppRoot(
+    FAKE_SCRIPT_HASH,
+    new BlockNode(FAKE_SCRIPT_HASH, [
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(children),
+    ])
+  )
+}
+
 describe("AppView element", () => {
   it("renders without crashing", () => {
     render(<AppView {...getProps()} />)
     const appViewContainer = screen.getByTestId("stAppViewContainer")
     expect(appViewContainer).toBeInTheDocument()
     expect(appViewContainer).toHaveClass("stAppViewContainer")
+  })
+
+  it("renders the toast container when toasts are present", () => {
+    render(<AppView {...getProps()} />)
+
+    // ToastRegion only renders when there are visible toasts
+    expect(screen.queryByTestId("stToastContainer")).not.toBeInTheDocument()
+
+    // Add a toast and verify the container appears
+    act(() => {
+      toastQueue.add({ body: "test toast" }, { timeout: undefined })
+    })
+    const toastContainer = screen.getByTestId("stToastContainer")
+    expect(toastContainer).toBeInTheDocument()
+    expect(toastContainer).toHaveClass("stToastContainer")
+
+    // Clean up
+    act(() => {
+      toastQueue.visibleToasts.forEach((t: { key: string }) =>
+        toastQueue.close(t.key)
+      )
+    })
+  })
+
+  it("renders the skills nudge in its anchor and coexists with toasts", () => {
+    render(
+      <AppView
+        {...getProps({
+          skillsNudge: <div data-testid="stSkillsNudge">nudge</div>,
+        })}
+      />
+    )
+
+    const anchor = screen.getByTestId("stSkillsNudgeAnchor")
+    const nudge = screen.getByTestId("stSkillsNudge")
+    expect(nudge).toBeVisible()
+    // The nudge renders inside its fixed top-right anchor.
+    expect(anchor).toContainElement(nudge)
+
+    // An app toast renders alongside the nudge, not in place of it: the nudge
+    // is persistent (its own fixed card) while the toast region is separate.
+    act(() => {
+      toastQueue.add({ body: "coexisting toast" }, { timeout: undefined })
+    })
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+    expect(screen.getByText("coexisting toast")).toBeVisible()
+    // The toast region is NOT nested in the nudge anchor (it positions itself /
+    // portals to the body); they are independent. The vertical stacking (toast
+    // region pushed below the nudge) depends on layout + ResizeObserver, which
+    // jsdom does not implement, so it is asserted in the e2e instead.
+    expect(anchor).not.toContainElement(screen.getByTestId("stToastContainer"))
+
+    // Clean up
+    act(() => {
+      toastQueue.visibleToasts.forEach((t: { key: string }) =>
+        toastQueue.close(t.key)
+      )
+    })
+  })
+
+  it("does not render the nudge anchor when no nudge is provided", () => {
+    render(<AppView {...getProps()} />)
+    expect(screen.queryByTestId("stSkillsNudgeAnchor")).not.toBeInTheDocument()
   })
 
   it("does not render a sidebar when there are no elements and only one page", () => {
@@ -820,7 +930,7 @@ describe("AppView element", () => {
       const logoElement = screen.getByTestId("stHeaderLogo")
       expect(logoElement).toBeInTheDocument()
 
-      fireEvent.error(logoElement)
+      logoElement.dispatchEvent(new Event("error"))
 
       expect(sendClientErrorToHost).toHaveBeenCalledWith(
         "Header Logo",
@@ -833,7 +943,9 @@ describe("AppView element", () => {
 
   describe("when window.location.hash changes", () => {
     let originalLocation: Location
-    beforeEach(() => (originalLocation = window.location))
+    beforeEach(() => {
+      originalLocation = window.location
+    })
     afterEach(() => {
       Object.defineProperty(window, "location", {
         value: originalLocation,
@@ -863,53 +975,73 @@ describe("AppView element", () => {
     expect(stbContainer).not.toBeInTheDocument()
   })
 
-  it("renders a Scroll To Bottom container if there is an element in the bottom container.", () => {
-    const chatInputElement = new ElementNode(
+  it("does not activate app autoscroll for explicit bottom placement", () => {
+    const props = getProps({
+      elements: appRootWithBottom([createChatInputNode("123")]),
+    })
+
+    render(<AppView {...props} />)
+
+    expect(
+      screen.queryByTestId("stAppScrollToBottomContainer")
+    ).not.toBeInTheDocument()
+  })
+
+  it("activates app autoscroll for automatic bottom positioning", () => {
+    const props = getProps({
+      elements: appRootWithBottom([createChatInputNode("123", true)]),
+    })
+
+    render(<AppView {...props} />)
+
+    expect(screen.getByTestId("stAppScrollToBottomContainer")).toBeVisible()
+  })
+
+  it.each([
+    {
+      name: "a transient node in the bottom holds a chat input",
+      transient: () =>
+        new TransientNode("no script run id", undefined, [
+          createChatInputNode("transient-chat", true),
+        ]),
+    },
+    {
+      name: "a transient node's anchor is a chat input",
+      transient: () =>
+        new TransientNode(
+          "no script run id",
+          createChatInputNode("anchor-chat", true),
+          []
+        ),
+    },
+  ])("renders a Scroll To Bottom container when $name", ({ transient }) => {
+    render(
+      <AppView {...getProps({ elements: appRootWithBottom([transient()]) })} />
+    )
+
+    expect(screen.getByTestId("stAppScrollToBottomContainer")).toBeVisible()
+  })
+
+  it("does not render a Scroll To Bottom container for a transient node without chat input", () => {
+    const textElement = new ElementNode(
       new Element({
-        chatInput: {
-          id: "123",
-          placeholder: "Enter Text Here",
-          disabled: false,
-          default: "",
-        },
+        text: { body: "hello" },
       }),
       ForwardMsgMetadata.create({}),
       "no script run id",
       FAKE_SCRIPT_HASH
     )
+    const transient = new TransientNode("no script run id", undefined, [
+      textElement,
+    ])
 
-    const main = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [],
-      new BlockProto({ allowEmpty: true })
-    )
-    const sidebar = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [],
-      new BlockProto({ allowEmpty: true })
-    )
-    const event = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [],
-      new BlockProto({ allowEmpty: true })
-    )
-    const bottom = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [chatInputElement],
-      new BlockProto({ allowEmpty: true })
+    render(
+      <AppView {...getProps({ elements: appRootWithBottom([transient]) })} />
     )
 
-    const props = getProps({
-      elements: new AppRoot(
-        FAKE_SCRIPT_HASH,
-        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
-      ),
-    })
-
-    render(<AppView {...props} />)
-
-    const stbContainer = screen.queryByTestId("stAppScrollToBottomContainer")
-    expect(stbContainer).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stAppScrollToBottomContainer")
+    ).not.toBeInTheDocument()
   })
 
   describe("navigation position rendering", () => {
@@ -1059,9 +1191,8 @@ describe("AppView element", () => {
       const header = screen.getByTestId("stHeader")
       expect(header).toBeInTheDocument()
       expect(header).not.toHaveStyle({ backgroundColor: "transparent" })
-      // Navigation should be present in the header
-      const allPage2Elements = screen.getAllByText("page2")
-      expect(allPage2Elements.length).toBeGreaterThan(0)
+      // Navigation should be present in the header — top nav section trigger is rendered
+      expect(screen.getByTestId("stTopNavSection")).toBeInTheDocument()
     })
 
     it("header shows logo and sidebar button in embed mode", () => {
@@ -1138,9 +1269,8 @@ describe("AppView element", () => {
       // Header should be visible
       expect(screen.getByTestId("stHeader")).toBeInTheDocument()
 
-      // Navigation should still be shown in embed mode
-      const allPage2Elements = screen.getAllByText("page2")
-      expect(allPage2Elements.length).toBeGreaterThan(0)
+      // Navigation should still be shown in embed mode — top nav section trigger is rendered
+      expect(screen.getByTestId("stTopNavSection")).toBeInTheDocument()
     })
 
     it("header does NOT show toolbar actions in embed mode without show_toolbar", () => {
@@ -1440,7 +1570,11 @@ describe("AppView element", () => {
     ): ReturnType<typeof renderWithContexts> => {
       return renderAppView(
         { elements: elementsWithSidebar },
-        { sidebarConfigContext: { initialSidebarState } }
+        {
+          sidebarConfigContext: {
+            initialSidebarState,
+          },
+        }
       )
     }
 
@@ -1487,6 +1621,63 @@ describe("AppView element", () => {
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+    })
+
+    it("ignores a stale collapsed localStorage value when sidebar is locked", () => {
+      // Simulate a user who previously collapsed the sidebar, then the app
+      // switched to locked state — the sidebar must open regardless.
+      window.localStorage.setItem("stSidebarCollapsed-", "true")
+
+      renderAppViewWithSidebar(PageConfig.SidebarState.LOCKED)
+
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+    })
+
+    it("renders locked sidebar open at desktop viewport width", () => {
+      // Default test viewport is 1024px (desktop). LOCKED keeps sidebar open
+      // and hides the collapse button. On mobile it degrades — see utils.test.ts.
+      renderAppView(
+        { elements: elementsWithSidebar },
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.LOCKED,
+          },
+        }
+      )
+
+      const sidebarDOMElement = screen.getByTestId("stSidebar")
+      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      // Collapse button must not exist in the DOM for a locked desktop sidebar
+      expect(
+        screen.queryByTestId("stSidebarCollapseButton")
+      ).not.toBeInTheDocument()
+    })
+
+    it("persists sidebar collapsed state when the user toggles the sidebar", async () => {
+      const user = userEvent.setup()
+      renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
+
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+      await user.click(
+        within(screen.getByTestId("stSidebarCollapseButton")).getByRole(
+          "button"
+        )
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "false"
+      )
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("true")
+
+      await user.click(screen.getByTestId("stExpandSidebarButton"))
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("false")
     })
   })
 })

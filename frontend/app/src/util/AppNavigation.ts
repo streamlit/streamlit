@@ -16,7 +16,7 @@
 
 import { AppRoot, HostCommunicationManager } from "@streamlit/lib"
 import {
-  IAppPage,
+  type AppPage,
   Navigation,
   NewSession,
   PageConfig,
@@ -26,7 +26,7 @@ interface AppNavigationState {
   expandSidebarNav: boolean
   sidebarNavVisibleItems?: number
   hideSidebarNav: boolean
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
   currentPageScriptHash: string
   navSections: string[]
 }
@@ -67,9 +67,9 @@ export class AppNavigation {
 
   mainScriptHash: string | null
 
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
 
-  mainPage: IAppPage | null
+  mainPage: AppPage.$Properties | null
 
   hideSidebarNav: boolean | null
 
@@ -106,9 +106,6 @@ export class AppNavigation {
       this.hideSidebarNav = newSession.config?.hideSidebarNav ?? null
     }
 
-    // We do not know the page name, so use an empty string version
-    document.title = getTitle("")
-
     return [
       {
         // Set current page script hash to handle SPA case
@@ -128,8 +125,8 @@ export class AppNavigation {
     const currentPageScriptHash = navigationMsg.pageScriptHash
     const currentPage = appPages.find(
       p => p.pageScriptHash === currentPageScriptHash
-    ) as IAppPage
-    const mainPage = appPages.find(p => p.isDefault) as IAppPage
+    ) as AppPage.$Properties
+    const mainPage = appPages.find(p => p.isDefault) as AppPage.$Properties
     this.mainPage = mainPage
     const currentPageName = currentPage.urlPathname as string
 
@@ -197,12 +194,21 @@ export class AppNavigation {
     ]
   }
 
-  findPageByUrlPath(pathname: string): IAppPage | null {
+  findPageByUrlPath(pathname: string): AppPage.$Properties | null {
+    // Browsers URL-encode Unicode during Back/Forward navigation (popstate),
+    // so decode before matching against unencoded page URL paths.
+    let decodedPathname: string
+    try {
+      decodedPathname = decodeURIComponent(pathname)
+    } catch {
+      decodedPathname = pathname
+    }
+
     return (
       this.appPages.find(appPage =>
         // The page name is embedded at the end of the URL path, and if not, we are in the main page.
         // See https://github.com/streamlit/streamlit/blob/1.19.0/frontend/src/App.tsx#L740
-        pathname.endsWith("/" + appPage.urlPathname)
+        decodedPathname.endsWith("/" + appPage.urlPathname)
       ) ?? this.mainPage
     )
   }

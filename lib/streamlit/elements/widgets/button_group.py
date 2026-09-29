@@ -43,6 +43,7 @@ from streamlit.elements.lib.options_selector_utils import (
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
+    validate_label_visibility,
 )
 from streamlit.elements.lib.utils import (
     Key,
@@ -52,12 +53,22 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import BindOption, register_widget
-from streamlit.string_util import extract_leading_icon
+from streamlit.runtime.state import (
+    BindOption,
+    PersistStateOption,
+    get_session_state,
+    register_widget,
+    validate_on_change_mode,
+)
+from streamlit.string_util import extract_leading_icon, to_help_str
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -91,6 +102,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
     format_func: Callable[[Any], str]
+    session_state_fallback: T | None
 
     def __init__(
         self,
@@ -100,12 +112,14 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
+        session_state_fallback: T | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
         self.format_func = format_func
+        self.session_state_fallback = session_state_fallback
 
     def serialize(self, v: T | str | None) -> list[str]:
         """Serialize single-select value to a list of strings for wire format."""
@@ -127,7 +141,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
 
         return [formatted_value]
 
-    def deserialize(self, ui_value: list[str] | None) -> T | str | None:
+    def deserialize(self, ui_value: list[str] | None) -> T | None:
         """Deserialize from a list of strings to a single value."""
         if len(self.options) == 0:
             return None
@@ -149,8 +163,19 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         if option_index is not None:
             return self.options[option_index]
 
-        # Value not found in options - return as-is
-        return string_value
+        # Value not found in the current options mapping. This happens when options
+        # or format_func changes dynamically (e.g. a language switch): the frontend
+        # sends a stale wire value from the previous mapping that can't be resolved.
+        # Prefer the last known session-state value (the user's live selection) over
+        # the configured default so _widget_changed does not detect a spurious
+        # difference and fire an on_change callback. The session-state value is
+        # always more accurate than the default because it reflects what the user
+        # actually had selected (e.g. user clicked "B" while default was "A").
+        if self.session_state_fallback is not None:
+            return self.session_state_fallback
+        if self.default_option_index is not None:
+            return self.options[self.default_option_index]
+        return None
 
 
 class _MultiSelectButtonGroupSerde(Generic[T]):
@@ -165,6 +190,7 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_indices: list[int]
     format_func: Callable[[Any], str]
+    session_state_fallback: list[T] | None
 
     def __init__(
         self,
@@ -174,12 +200,14 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_indices: list[int] | None = None,
         format_func: Callable[[Any], str] = str,
+        session_state_fallback: list[T] | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_indices = default_option_indices or []
         self.format_func = format_func
+        self.session_state_fallback = session_state_fallback
 
     def serialize(self, value: list[T | str] | list[T] | None) -> list[str]:
         """Serialize multi-select values to list of strings for wire format."""
@@ -219,9 +247,35 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
             option_index = self.formatted_option_to_option_index.get(v)
             if option_index is not None:
                 values.append(self.options[option_index])
-            else:
-                # Value not found in options - append as-is
-                values.append(v)
+            # Silently drop values not found in the current options mapping.
+            # These are stale wire values from a previous format_func mapping
+            # (e.g. a language switch). validate_and_sync_multiselect_value_with_options
+            # applies the same filter for invalid canonical values.
+
+        # A label change never changes the selection, so recover stale wire entries
+        # from the last known session-state selection: that keeps _widget_changed
+        # from firing a spurious on_change and stops a relabeled selection from
+        # being truncated. Each unresolvable wire entry is a stale label for one
+        # previously selected option that is not already resolved (a "candidate"),
+        # so comparing counts tells us whether a deselect also happened this rerun:
+        #   - stale_count >= len(candidates): labels only. Recover every candidate
+        #     and keep any newly resolved additions.
+        #   - stale_count <  len(candidates): at least one option was deselected.
+        #     Stale labels are opaque, so keep only the resolved survivors rather
+        #     than risk restoring the option the user just removed (a still-selected
+        #     option relabeled in the same rerun is dropped; this is rare).
+        # With no session-state fallback, use the configured default only if every
+        # entry was stale, mirroring _SingleSelectButtonGroupSerde.deserialize.
+        dropped_stale = len(values) < len(ui_value)
+        if dropped_stale and self.session_state_fallback is not None:
+            candidates = [o for o in self.session_state_fallback if o not in values]
+            stale_count = len(ui_value) - len(values)
+            if stale_count >= len(candidates):
+                additions = [o for o in values if o not in self.session_state_fallback]
+                return list(self.session_state_fallback) + additions
+            return values
+        if not values and ui_value and self.default_option_indices:
+            return [self.options[i] for i in self.default_option_indices]
         return values
 
 
@@ -237,6 +291,7 @@ def _build_proto(
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
     required: bool = False,
+    wrap: bool | None = None,
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -255,7 +310,13 @@ def _build_proto(
             label_visibility
         )
         if help is not None:
-            proto.help = help
+            proto.help = to_help_str(help)
+
+    # wrap is layout-only and intentionally excluded from the element id
+    # (it is not passed to compute_and_register_element_id), so toggling it
+    # never resets the widget's value.
+    if wrap is not None:
+        proto.wrap = wrap
 
     for formatted_option in formatted_options:
         proto.options.append(formatted_option)
@@ -265,10 +326,7 @@ def _build_proto(
 def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode) -> None:
     """Check if the selection_mode value is valid or raise exception otherwise."""
     if selection_mode not in {"single", "multi"}:
-        raise StreamlitAPIException(
-            "The selection_mode argument must be one of ['single', 'multi']. "
-            f"The argument passed was '{selection_mode}'."
-        )
+        raise StreamlitValueError("selection_mode", ["'single'", "'multi'"])
 
 
 class ButtonGroupMixin:
@@ -292,7 +350,9 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V: ...
     # 2. required=True without default -> V | None
     @overload
@@ -313,9 +373,11 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 3. Single-select (default, required=False) -> V | None
+    # 3. Single-select with required=False or a non-literal bool -> V | None
     @overload
     def pills(
         self,
@@ -324,27 +386,6 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
-        required: Literal[False] = ...,
-        format_func: Callable[[Any], str] | None = None,
-        key: Key | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
-        width: Width = "content",
-        bind: BindOption = None,
-    ) -> V | None: ...
-    # 4. Multi-select -> list[V]
-    @overload
-    def pills(
-        self,
-        label: str,
-        options: OptionSequence[V],
-        *,
-        selection_mode: Literal["multi"],
-        default: Sequence[V] | V | None = None,
         required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
@@ -355,7 +396,64 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> V | None: ...
+    # 4. Multi-select with a sequence default -> list[V]
+    # Split from overload 5 so checkers solve V from options, not from default:
+    # a combined `default: Sequence[V] | V | None` makes `default=[1]` solve V
+    # as `int | Sequence[int]` and yields `list[V | Sequence[V]]`.
+    # Include None so a `list[V] | None` default matches this overload without
+    # relying on checker union expansion.
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: Sequence[V] | None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> list[V]: ...
+    # 5. Multi-select with a scalar default or None -> list[V]
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: V | None = None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V]: ...
     @gather_metrics("pills")
     def pills(
@@ -375,7 +473,9 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
         r"""Display a pills widget.
 
@@ -503,6 +603,21 @@ class ButtonGroupMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the options can wrap onto multiple rows. This can be one
+            of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the options stay on a single row and scroll
+              horizontally if needed; in other layouts, the options wrap onto
+              additional rows.
+            - ``True``: If the options are too wide for the available space,
+              they wrap onto additional rows.
+            - ``False``: The options stay on a single row. If they are too
+              wide for the available space, the option group scrolls
+              horizontally.
+
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
@@ -523,6 +638,21 @@ class ButtonGroupMixin:
             the URL. For ``selection_mode="multi"``, multiple selections use
             repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
             are deduplicated.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
 
         Returns
         -------
@@ -593,7 +723,9 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            wrap=wrap,
             bind=bind,
+            persist_state=persist_state,
         )
 
     # segmented_control overloads:
@@ -616,7 +748,9 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V: ...
     # 2. required=True without default -> V | None
     @overload
@@ -637,9 +771,11 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> V | None: ...
-    # 3. Single-select (default, required=False) -> V | None
+    # 3. Single-select with required=False or a non-literal bool -> V | None
     @overload
     def segmented_control(
         self,
@@ -648,27 +784,6 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
-        required: Literal[False] = ...,
-        format_func: Callable[[Any], str] | None = None,
-        key: str | int | None = None,
-        help: str | None = None,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        disabled: bool = False,
-        label_visibility: LabelVisibility = "visible",
-        width: Width = "content",
-        bind: BindOption = None,
-    ) -> V | None: ...
-    # 4. Multi-select -> list[V]
-    @overload
-    def segmented_control(
-        self,
-        label: str,
-        options: OptionSequence[V],
-        *,
-        selection_mode: Literal["multi"],
-        default: Sequence[V] | V | None = None,
         required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
@@ -679,7 +794,64 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> V | None: ...
+    # 4. Multi-select with a sequence default -> list[V]
+    # Split from overload 5 so checkers solve V from options, not from default:
+    # a combined `default: Sequence[V] | V | None` makes `default=[1]` solve V
+    # as `int | Sequence[int]` and yields `list[V | Sequence[V]]`.
+    # Include None so a `list[V] | None` default matches this overload without
+    # relying on checker union expansion.
+    # Reject required=True in multi-select mode statically: it raises
+    # StreamlitAPIException at runtime. Keep Literal[False] rather than bool --
+    # bool cannot exclude True, so a `required: bool` variable then matches no
+    # overload here, even when its value is False.
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: Sequence[V] | None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
+    ) -> list[V]: ...
+    # 5. Multi-select with a scalar default or None -> list[V]
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["multi"],
+        default: V | None = None,
+        required: Literal[False] = False,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        wrap: bool | None = None,
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V]: ...
 
     @gather_metrics("segmented_control")
@@ -700,7 +872,9 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
         r"""Display a segmented control widget.
 
@@ -828,6 +1002,21 @@ class ButtonGroupMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the options can wrap onto multiple rows. This can be one
+            of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the options stay on a single row and scroll
+              horizontally if needed; in other layouts, the options wrap onto
+              additional rows.
+            - ``True``: If the options are too wide for the available space,
+              they wrap onto additional rows.
+            - ``False``: The options stay on a single row. If they are too
+              wide for the available space, the option group scrolls
+              horizontally.
+
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
@@ -848,6 +1037,21 @@ class ButtonGroupMixin:
             the URL. For ``selection_mode="multi"``, multiple selections use
             repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
             are deduplicated.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
 
         Returns
         -------
@@ -921,7 +1125,9 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            wrap=wrap,
             bind=bind,
+            persist_state=persist_state,
         )
 
     @gather_metrics("_internal_button_group")
@@ -943,15 +1149,24 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> list[V] | V | None:
-        maybe_raise_label_warnings(label, label_visibility)
+        # Keep omitted labels as None so _build_proto can leave proto.label
+        # unset; the frontend treats that as collapsed. Coercing None to ""
+        # would write an empty visible label and change the element id.
+        if label is not None:
+            label = maybe_raise_label_warnings(label, label_visibility)
+        else:
+            validate_label_visibility(label_visibility)
 
         # Validate required with multi-select
         if required and selection_mode == "multi":
-            raise StreamlitAPIException(
-                "The `required` argument cannot be used with `selection_mode='multi'`. "
-                "The `required` parameter is only supported for single-select mode."
+            raise StreamlitIncompatibleParametersError(
+                "required=True",
+                "selection_mode='multi'",
+                explanation="`required` is only supported for single-select mode.",
             )
 
         # Use str as default format_func
@@ -996,7 +1211,36 @@ class ButtonGroupMixin:
             # behavior to mirror radio/selectbox/multiselect.
             formatted_option_to_option_index[formatted] = index
 
-        # Create appropriate serde based on selection mode
+        # Look up the currently-stored session-state value to use as a stale-wire
+        # fallback in the serde. When format_func changes dynamically and no default
+        # is configured, deserialize would otherwise return None/[] for stale wire
+        # values, causing _widget_changed to fire a spurious on_change callback.
+        # Using the last known valid value as a fallback keeps the comparison equal.
+        # Value resolution (this fallback, keeping on_change quiet) and label resync
+        # (the wire-vs-fresh-serialization check in _button_group that decides whether
+        # to resend set_value) are independent paths; both are required so on_change
+        # stays quiet while the frontend still gets the updated labels.
+        _ss_fallback_single: V | None = None
+        _ss_fallback_multi: list[V] | None = None
+        if key is not None:
+            try:
+                # KeyError is raised if the key hasn't been set yet (first run).
+                # Any other exception is caught defensively to avoid breaking rendering.
+                _ss_val = get_session_state()[str(key)]
+                if selection_mode == "single":
+                    if _ss_val is not None and _ss_val in indexable_options:
+                        _ss_fallback_single = cast("V", _ss_val)
+                elif isinstance(_ss_val, list):
+                    _valid = cast(
+                        "list[V]",
+                        [v for v in _ss_val if v in indexable_options],
+                    )
+                    if _valid:
+                        _ss_fallback_multi = _valid
+            except Exception:  # noqa: S110
+                pass  # KeyError (key not yet set) or other SS error; safe to ignore
+
+        # Create appropriate serde based on selection mode.
         serializer: WidgetSerializer[Any]
         deserializer: WidgetDeserializer[Any]
         if selection_mode == "multi":
@@ -1006,9 +1250,10 @@ class ButtonGroupMixin:
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_indices=default_values,
                 format_func=actual_format_func,
+                session_state_fallback=_ss_fallback_multi,
             )
             serializer = multi_serde.serialize
-            deserializer = multi_serde.deserialize
+            deserializer = cast("WidgetDeserializer[Any]", multi_serde.deserialize)
         else:
             single_serde = _SingleSelectButtonGroupSerde[V](
                 indexable_options,
@@ -1016,9 +1261,10 @@ class ButtonGroupMixin:
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_index=default_values[0] if default_values else None,
                 format_func=actual_format_func,
+                session_state_fallback=_ss_fallback_single,
             )
             serializer = single_serde.serialize
-            deserializer = single_serde.deserialize
+            deserializer = cast("WidgetDeserializer[Any]", single_serde.deserialize)
 
         # Single call to _button_group with the appropriate serde
         result: RegisterWidgetResult[Any] = self._button_group(
@@ -1039,8 +1285,10 @@ class ButtonGroupMixin:
             label=label,
             label_visibility=label_visibility,
             width=width,
+            wrap=wrap,
             options_format_func=actual_format_func,
             bind=bind,
+            persist_state=persist_state,
             string_formatted_options=formatted_options,
         )
 
@@ -1076,8 +1324,10 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
         options_format_func: Callable[[Any], str] | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
         string_formatted_options: list[str] | None = None,
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
@@ -1096,19 +1346,20 @@ class ButtonGroupMixin:
             and isinstance(default, Sequence)
             and len(default) > 1
         ):
-            # add more commands to the error message
             raise StreamlitAPIException(
-                "The default argument to `st.pills` must be a single value when "
-                "`selection_mode='single'`."
+                f"The default argument to `st.{style}` must be a single value when "
+                "`selection_mode='single'`.",
+                error_id="button-group-single-select-multiple-defaults",
             )
 
         if style not in {"pills", "segmented_control"}:
-            raise StreamlitAPIException(
-                "The style argument must be one of ['pills', 'segmented_control']. "
-                f"The argument passed was '{style}'."
-            )
+            raise StreamlitValueError("style", ["'pills'", "'segmented_control'"])
 
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         _default = default
         if default is not None and len(default) == 0:
@@ -1155,6 +1406,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             help=help,
             required=required,
+            wrap=wrap,
         )
 
         if bind == "query-params" and key is not None:
@@ -1169,7 +1421,9 @@ class ButtonGroupMixin:
             serializer=serializer,
             ctx=ctx,
             value_type="string_array_value",
+            disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             clearable=True,
             formatted_options=string_formatted_options,
             max_array_length=1 if selection_mode == "single" else None,
@@ -1200,12 +1454,29 @@ class ButtonGroupMixin:
                     )
                 )
 
-        if value_needs_reset or widget_state.value_changed:
-            # Always use string-based raw_values field
-            value_for_serialization = (
-                current_value if value_needs_reset else widget_state.value
-            )
-            proto.raw_values[:] = serializer(cast("T", value_for_serialization))
+        # Resend set_value when the selected option's formatted label changed
+        # between reruns. The frontend tracks selection by label, so a stale
+        # label (e.g. after a parent filter clears or a language switch remaps
+        # every label) leaves the pill looking deselected even though the value
+        # is unchanged.
+        #
+        # Compare this run's incoming wire labels (captured before this run's
+        # serializer ran) against a fresh serialization, instead of relying on a
+        # staleness signal raised inside deserialize (#15522), which the
+        # interdependent-pills case can miss.
+        #
+        # The comparison is order-sensitive, so serialize must preserve the
+        # frontend's selection order (locked by
+        # test_multi_select_no_set_value_pushed_when_labels_unchanged); a
+        # serialize-by-option-index change would spuriously churn set_value on
+        # every multi-select rerun.
+        correct_serialization = serializer(cast("T", current_value))
+        labels_changed = (
+            widget_state.incoming_serialized_values is not None
+            and widget_state.incoming_serialized_values != correct_serialization
+        )
+        if value_needs_reset or widget_state.value_changed or labels_changed:
+            proto.raw_values[:] = correct_serialization
             proto.set_value = True
 
         if ctx:
@@ -1216,7 +1487,9 @@ class ButtonGroupMixin:
             "button_group",
             proto,
             layout_config=layout_config,
-            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            has_one_shot_effect=value_needs_reset
+            or widget_state.value_changed
+            or labels_changed,
         )
 
         # Return widget_state with possibly updated value
@@ -1232,5 +1505,5 @@ class ButtonGroupMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

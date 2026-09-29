@@ -122,3 +122,22 @@ rerun_link_clicked = st.link_button(
     on_click="rerun",
 )
 st.write("Link Button with rerun value:", rerun_link_clicked)
+
+# Link button with a dangerous javascript: URL. The frontend must neutralize
+# this to "#" to prevent XSS when the button is clicked.
+st.link_button(
+    "Dangerous Link",
+    "javascript:alert('xss')",
+    key="dangerous_link_button",
+)
+
+# wrap=False keeps the button on one row and ellipsizes an overflowing label,
+# exposing the full label via a native title. A fixed width narrower than the
+# label forces the truncation.
+st.link_button(
+    "Regenerate the complete quarterly report now",
+    "https://streamlit.io",
+    width=200,
+    wrap=False,
+    key="wrap_false_link_button",
+)

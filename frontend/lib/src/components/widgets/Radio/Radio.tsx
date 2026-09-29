@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useMemo } from "react"
+import { memo, type ReactElement, useCallback, useMemo } from "react"
 
-import { Radio as RadioProto } from "@streamlit/protobuf"
+import type { Radio as RadioProto } from "@streamlit/protobuf"
 
 import UIRadio from "~lib/components/shared/Radio/Radio"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
@@ -79,7 +79,7 @@ function Radio({
     (selectedIndex: number): void => {
       // Convert index to string option value
       const selectedValue = options[selectedIndex] ?? null
-      setValueWithSource({ value: selectedValue, fromUi: true })
+      setValueWithSource({ value: selectedValue, fromUser: true })
     },
     [setValueWithSource, options]
   )
@@ -133,12 +133,15 @@ function updateWidgetMgrState(
   vws: ValueWithSource<RadioValue>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setStringValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, vws.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  })
 }
 
 export default memo(Radio)

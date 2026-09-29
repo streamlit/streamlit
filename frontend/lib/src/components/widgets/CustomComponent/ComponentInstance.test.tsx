@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { Mock, MockInstance } from "vitest"
 
 import {
   ComponentInstance as ComponentInstanceProto,
-  IComponentInstance as IComponentInstanceProto,
   SpecialArg,
 } from "@streamlit/protobuf"
 
@@ -67,6 +66,13 @@ vi.mock("~lib/WidgetStateManager")
 const MOCK_COMPONENT_URL = "http://a.mock.url"
 const MOCK_WIDGET_ID = "mock_widget_id"
 const MOCK_COMPONENT_NAME = "mock_component_name"
+
+/** Dispatch a window MessageEvent inside act() so ComponentInstance state updates flush. */
+const dispatchMessageEvent = (event: MessageEvent): void => {
+  act(() => {
+    window.dispatchEvent(event)
+  })
+}
 
 describe("ComponentInstance", () => {
   let logWarnSpy: MockInstance
@@ -227,7 +233,8 @@ describe("ComponentInstance", () => {
     )
     const skeleton = screen.getByTestId("stSkeleton")
     expect(skeleton).toBeInTheDocument()
-    expect(skeleton).toHaveStyle("height: 2.75rem")
+    // Defaults to the standard widget height (theme.sizes.minElementHeight).
+    expect(skeleton).toHaveStyle("height: 2.5rem")
 
     const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
     expect(iframe).toHaveAttribute("height", "0")
@@ -254,6 +261,72 @@ describe("ComponentInstance", () => {
     expect(iframe).toHaveAttribute("height", "0")
   })
 
+  it("uses a numeric height kwarg as the initial iframe height", () => {
+    const componentRegistry = getComponentRegistry()
+    renderWithContexts(
+      <ComponentInstance
+        element={createElementProp({ height: 100 })}
+        disabled={false}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+        }
+        componentRegistry={componentRegistry}
+      />
+    )
+    const skeleton = screen.getByTestId("stSkeleton")
+    expect(skeleton).toHaveStyle("height: 100px")
+
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute("height", "100")
+  })
+
+  it("uses a numeric string height kwarg as the initial iframe height", () => {
+    const componentRegistry = getComponentRegistry()
+    renderWithContexts(
+      <ComponentInstance
+        element={createElementProp({ height: "100" })}
+        disabled={false}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+        }
+        componentRegistry={componentRegistry}
+      />
+    )
+    const skeleton = screen.getByTestId("stSkeleton")
+    expect(skeleton).toHaveStyle("height: 100px")
+
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute("height", "100")
+  })
+
+  it("treats a non-numeric string height kwarg as unspecified", () => {
+    const componentRegistry = getComponentRegistry()
+    renderWithContexts(
+      <ComponentInstance
+        element={createElementProp({ height: "stretch" })}
+        disabled={false}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+        }
+        componentRegistry={componentRegistry}
+      />
+    )
+    const skeleton = screen.getByTestId("stSkeleton")
+    expect(skeleton).toHaveStyle("height: 2.5rem")
+
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute("height", "0")
+  })
+
   describe("COMPONENT_READY handler", () => {
     it("posts a RENDER message to the iframe", () => {
       const jsonArgs = { foo: "string", bar: 5 }
@@ -275,8 +348,7 @@ describe("ComponentInstance", () => {
       // @ts-expect-error
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -309,8 +381,7 @@ describe("ComponentInstance", () => {
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
 
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -370,8 +441,7 @@ describe("ComponentInstance", () => {
       // @ts-expect-error
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -383,8 +453,7 @@ describe("ComponentInstance", () => {
         })
       )
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -418,8 +487,7 @@ describe("ComponentInstance", () => {
       // @ts-expect-error
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -474,8 +542,7 @@ describe("ComponentInstance", () => {
       // @ts-expect-error
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -530,8 +597,7 @@ describe("ComponentInstance", () => {
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -677,8 +743,7 @@ describe("ComponentInstance", () => {
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -690,8 +755,7 @@ describe("ComponentInstance", () => {
         })
       )
       // SET COMPONENT_VALUE
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -706,12 +770,9 @@ describe("ComponentInstance", () => {
       )
       const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
       expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
-        element,
+        element.id,
         jsonValue,
-        {
-          fromUi: true,
-        },
-        undefined
+        { formId: element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -738,8 +799,7 @@ describe("ComponentInstance", () => {
 
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_READY
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -753,8 +813,7 @@ describe("ComponentInstance", () => {
 
       const bytesValue = new Uint8Array([0, 1, 2])
       // SET COMPONENT_VALUE
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -769,10 +828,9 @@ describe("ComponentInstance", () => {
       )
       const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
       expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
-        element,
+        element.id,
         bytesValue,
-        { fromUi: true },
-        "myFragmentId"
+        { formId: element.formId, fragmentId: "myFragmentId", fromUser: true }
       )
     })
 
@@ -802,8 +860,7 @@ describe("ComponentInstance", () => {
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
       // SET COMPONENT_VALUE
-      fireEvent(
-        window,
+      dispatchMessageEvent(
         new MessageEvent("message", {
           data: {
             isStreamlitMessage: true,
@@ -844,8 +901,7 @@ describe("ComponentInstance", () => {
         )
         const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
         // SET COMPONENT_READY
-        fireEvent(
-          window,
+        dispatchMessageEvent(
           new MessageEvent("message", {
             data: {
               isStreamlitMessage: true,
@@ -857,8 +913,7 @@ describe("ComponentInstance", () => {
           })
         )
         // SET IFRAME_HEIGHT
-        fireEvent(
-          window,
+        dispatchMessageEvent(
           new MessageEvent("message", {
             data: {
               isStreamlitMessage: true,
@@ -901,8 +956,7 @@ describe("ComponentInstance", () => {
         )
         const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
         // SET IFRAME_HEIGHT
-        fireEvent(
-          window,
+        dispatchMessageEvent(
           new MessageEvent("message", {
             data: {
               isStreamlitMessage: true,
@@ -954,7 +1008,7 @@ describe("ComponentInstance", () => {
   function createElementProp(
     jsonArgs: Record<string, unknown> = {},
     specialArgs: SpecialArg[] = [],
-    overrides: Partial<IComponentInstanceProto> = {}
+    overrides: Partial<ComponentInstanceProto.$Properties> = {}
   ): ComponentInstanceProto {
     return ComponentInstanceProto.create({
       jsonArgs: JSON.stringify(jsonArgs),

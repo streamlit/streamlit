@@ -20,17 +20,15 @@ from streamlit import config, errors, logger, runtime
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.errors import (
     StreamlitAPIWarning,
-    StreamlitFragmentWidgetsNotAllowedOutsideError,
     StreamlitInvalidFormCallbackError,
     StreamlitValueAssignmentNotAllowedError,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    ThreadState,
-    get_script_run_ctx,
     in_cached_function,
 )
 from streamlit.runtime.state import WidgetCallback, get_session_state
 from streamlit.runtime.state.common import require_valid_user_key
+from streamlit.string_util import to_str
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -123,49 +121,11 @@ def check_cache_replay_rules() -> None:
     if in_cached_function.get():
         from streamlit import exception
 
-        # We use an exception here to show a proper stack trace
-        # that indicates to the user where the issue is.
-        exception(CachedWidgetWarning())
-
-
-def check_fragment_path_policy(dg: DeltaGenerator) -> None:
-    """Ensures that the current widget is not written outside of the
-    fragment's delta path.
-
-    Should be called by ever element that acts as a widget.
-    We don't allow writing widgets from within a widget to the outside path
-    because it can lead to unexpected behavior. For elements, this is okay
-    because they do not trigger a re-run.
-    """
-
-    ctx = get_script_run_ctx()
-    if ctx is None:
-        return
-
-    ts = ThreadState.get()
-    if ts.fragment_id is None:
-        return
-
-    current_fragment_delta_path = ts.delta_path
-    if current_fragment_delta_path is None:
-        return
-
-    current_cursor = dg._active_dg._cursor
-    if current_cursor is None:
-        return
-
-    current_cursor_delta_path = current_cursor.delta_path
-
-    # the elements delta path cannot be smaller than the fragment's delta path if it is
-    # inside of the fragment
-    if len(current_cursor_delta_path) < len(current_fragment_delta_path):
-        raise StreamlitFragmentWidgetsNotAllowedOutsideError()
-
-    # all path indices of the fragment-path must occur in the inner-elements delta path,
-    # otherwise it is outside of the fragment container
-    for index, path_index in enumerate(current_fragment_delta_path):
-        if current_cursor_delta_path[index] != path_index:
-            raise StreamlitFragmentWidgetsNotAllowedOutsideError()
+        # st.exception renders the warning at the widget call site; the log
+        # makes it visible to CLI users and agents.
+        warning = CachedWidgetWarning()
+        _LOGGER.warning("%s", warning, stack_info=True)
+        exception(warning)
 
 
 def check_widget_policies(
@@ -178,7 +138,6 @@ def check_widget_policies(
     enable_check_callback_rules: bool = True,
 ) -> None:
     """Check all widget policies for the given DeltaGenerator."""
-    check_fragment_path_policy(dg)
     check_cache_replay_rules()
     if enable_check_callback_rules:
         check_callback_rules(dg, on_change)
@@ -189,8 +148,24 @@ def check_widget_policies(
     )
 
 
-def maybe_raise_label_warnings(label: str | None, label_visibility: str | None) -> None:
-    if not label:
+def validate_label_visibility(label_visibility: str | None) -> None:
+    """Raise if ``label_visibility`` is not a supported value."""
+    if label_visibility not in {"visible", "hidden", "collapsed"}:
+        raise errors.StreamlitValueError(
+            "label_visibility", ["'visible'", "'hidden'", "'collapsed'"]
+        )
+
+
+def maybe_raise_label_warnings(
+    label: object | None, label_visibility: str | None
+) -> str:
+    """Coerce ``label`` to ``str``, warn if empty, and validate ``label_visibility``.
+
+    Returns the coerced label so callers can assign it to protobuf string
+    fields without raising a protobuf ``TypeError``.
+    """
+    coerced = "" if label is None else to_str(label)
+    if not coerced:
         _LOGGER.warning(
             "`label` got an empty value. This is discouraged for accessibility "
             "reasons and may be disallowed in the future by raising an exception. "
@@ -198,8 +173,5 @@ def maybe_raise_label_warnings(label: str | None, label_visibility: str | None) 
             "if needed.",
             stack_info=True,
         )
-    if label_visibility not in {"visible", "hidden", "collapsed"}:
-        raise errors.StreamlitAPIException(
-            f"Unsupported label_visibility option '{label_visibility}'. "
-            f"Valid values are 'visible', 'hidden' or 'collapsed'."
-        )
+    validate_label_visibility(label_visibility)
+    return coerced

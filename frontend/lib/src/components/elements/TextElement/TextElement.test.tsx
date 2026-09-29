@@ -51,4 +51,63 @@ describe("TextElement element", () => {
     const helpText = await screen.findAllByText("help text")
     expect(helpText[0].textContent).toBe("help text")
   })
+
+  it("does not truncate by default", () => {
+    render(<TextElement {...getProps()} />)
+    expect(screen.getByText("some plain text")).not.toHaveStyle({
+      "text-overflow": "ellipsis",
+    })
+    expect(screen.queryByTitle("some plain text")).not.toBeInTheDocument()
+  })
+
+  it("preserves whitespace sequences by default", () => {
+    render(<TextElement {...getProps({ body: "Lorem    ipsum\tdolor" })} />)
+    const text = screen.getByTestId("stText").querySelector("span")
+    expect(text?.textContent).toBe("Lorem    ipsum\tdolor")
+    expect(text).toHaveStyle({ "white-space-collapse": "preserve" })
+  })
+
+  it("truncates and exposes the full text via a native title when wrap is false", async () => {
+    render(<TextElement {...getProps({ wrap: false })} />)
+    const body = await screen.findByTitle("some plain text")
+    expect(body).toHaveStyle({
+      "text-overflow": "ellipsis",
+      "white-space": "nowrap",
+      "white-space-collapse": "preserve",
+    })
+    expect(body).toBeVisible()
+  })
+
+  it("lets truncated text fill the row so inherited text-align can apply", async () => {
+    render(<TextElement {...getProps({ wrap: false })} />)
+    const body = await screen.findByTitle("some plain text")
+    expect(body).toHaveStyle({ flex: "1" })
+  })
+
+  it("sets a native title when wrap is false, including when help is set", async () => {
+    render(<TextElement {...getProps({ wrap: false, help: "help text" })} />)
+    expect(screen.getByTestId("stTooltipHoverTarget")).toBeVisible()
+    expect(await screen.findByTitle("some plain text")).toBeVisible()
+    expect(
+      screen.getByTestId("stTooltipHoverTarget").closest("[title]")
+    ).toBeNull()
+  })
+
+  it("collapses newlines when wrap is false so the body stays one line", async () => {
+    render(
+      <TextElement
+        {...getProps({
+          body: "Line one\nLine two\nLine three extra",
+          wrap: false,
+        })}
+      />
+    )
+    const body = await screen.findByTitle("Line one Line two Line three extra")
+    expect(body.textContent).not.toContain("\n")
+    expect(body).toHaveStyle({
+      "text-overflow": "ellipsis",
+      "white-space": "nowrap",
+    })
+    expect(body).toBeVisible()
+  })
 })

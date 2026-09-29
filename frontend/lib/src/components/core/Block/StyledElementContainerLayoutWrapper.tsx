@@ -19,7 +19,10 @@ import { FC, useMemo } from "react"
 import type { ElementNode } from "~lib/AppNode"
 import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
-import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
+import {
+  extractLayoutSubElement,
+  useLayoutStyles,
+} from "~lib/components/core/Layout/useLayoutStyles"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 import { ElementContainerConfig } from "./ElementContainerConfig"
@@ -46,8 +49,7 @@ export const StyledElementContainerLayoutWrapper: FC<
 
   let styles = useLayoutStyles({
     element: node.element,
-    subElement:
-      (node.element?.type && node.element[node.element.type]) || undefined,
+    subElement: extractLayoutSubElement(node.element),
     styleOverrides,
     minStretchBehavior,
   })

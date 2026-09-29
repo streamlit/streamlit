@@ -139,22 +139,19 @@ STOCKS = [
 DEFAULT_STOCKS = ["AAPL", "MSFT", "GOOGL", "NVDA", "AMZN", "TSLA", "META"]
 
 
-if "tickers_input" not in st.session_state:
-    st.session_state.tickers_input = st.query_params.get(
-        "stocks", ",".join(DEFAULT_STOCKS)
-    ).split(",")
-
-
 top_left_cell = cols[0].container(
     border=True, height="stretch", vertical_alignment="center"
 )
 
 with top_left_cell:
-    # Selectbox for stock tickers
+    # Multiselect for stock tickers. bind="query-params" keeps the selection in
+    # the URL so the dashboard is shareable — no manual st.query_params plumbing.
     tickers = st.multiselect(
         "Stock tickers",
-        options=sorted(set(STOCKS) | set(st.session_state.tickers_input)),
-        default=st.session_state.tickers_input,
+        options=STOCKS,
+        default=DEFAULT_STOCKS,
+        key="stocks",  # repeated params: ?stocks=AAPL&stocks=MSFT
+        bind="query-params",
         placeholder="Choose stocks to compare. Example: NVDA",
         accept_new_options=True,
     )
@@ -186,13 +183,6 @@ if horizon is None:
 
 tickers = [t.upper() for t in tickers]
 
-# Update query param when text input changes
-if tickers:
-    st.query_params["stocks"] = ",".join(tickers)
-else:
-    # Clear the param if input is empty
-    st.query_params.pop("stocks", None)
-
 if not tickers:
     top_left_cell.info("Pick some stocks to compare", icon=":material/info:")
     st.stop()
@@ -203,7 +193,7 @@ right_cell = cols[1].container(
 )
 
 
-@st.cache_data(show_spinner=False, ttl="6h")
+@st.cache_data(ttl="6h", show_spinner="Loading stock price data...")
 def load_data(tickers: Iterable[str], period: str) -> pd.DataFrame:
     tickers_obj = yf.Tickers(list(tickers))
     data = tickers_obj.history(period=period)

@@ -69,7 +69,7 @@ expected_page_order = [
     "page 10",
     "page 11",
     "page 12",
-    "page 13",
+    "Págé_Wíth_Spêcîãl_Chäracters",
     "page 14",
 ]
 
@@ -125,8 +125,7 @@ def test_main_script_persists_across_page_changes(app: Page):
 
 def test_main_script_widgets_persist_across_page_changes(app: Page):
     """Test that we can switch between pages and widgets from main script persists."""
-    slider = app.locator('.stSlider [role="slider"]')
-    slider.click()
+    slider = app.get_by_test_id("stSlider").get_by_role("slider")
     slider.press("ArrowRight")
     wait_for_app_run(app, wait_delay=500)
 
@@ -168,8 +167,7 @@ def test_can_switch_between_pages_and_edit_widgets(app: Page):
     get_page_link(app, "Different Title").click()
     wait_for_app_run(app, wait_delay=1000)
 
-    slider = app.locator('.stSlider [role="slider"]').nth(1)
-    slider.click()
+    slider = app.get_by_test_id("stSlider").get_by_role("slider").nth(1)
     slider.press("ArrowRight")
     wait_for_app_run(app)
     expect(app.get_by_test_id("stMarkdown").nth(1)).to_contain_text("x is 1")
@@ -468,6 +466,52 @@ def test_switch_page_with_query_params(app: Page):
     expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
     # Check page_5 specific query params display (unique prefix to avoid collision)
     expect_prefixed_markdown(app, "Page 5 Query Params:", "{'team': 'streamlit'}")
+
+
+def test_switch_page_from_callback_by_st_page(app: Page):
+    """Test that a callback can navigate with an st.Page object."""
+
+    click_button(app, "callback nav by object")
+
+    expect(page_heading(app)).to_contain_text("Page 9")
+
+
+def test_switch_page_from_callback_applies_query_params(app: Page):
+    """Test that query params passed from a callback reach the URL and the new page."""
+
+    click_button(app, "callback nav with params")
+    app.wait_for_url("**/page_5?team=streamlit", timeout=15000)
+
+    expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
+    expect_prefixed_markdown(app, "Page 5 Query Params:", "{'team': 'streamlit'}")
+
+
+def test_switch_page_from_fragment_callback(app: Page):
+    """Test that a callback on a fragment widget can still navigate.
+
+    The interaction is fragment-scoped but the navigation it requests is app-wide, so
+    this checks that fragment scoping does not suppress the page switch.
+    """
+
+    get_page_link(app, "page 10").click()
+    wait_for_app_loaded(app)
+    expect(page_heading(app)).to_contain_text("Page 10")
+
+    click_button(app, "callback nav from fragment")
+
+    expect(page_heading(app)).to_contain_text("Page 5")
+
+
+def test_switch_page_from_callback_does_not_navigate_again(app: Page):
+    """Test that a callback's navigation is not replayed when the user navigates away."""
+
+    click_button(app, "callback nav by path")
+    expect(page_heading(app)).to_contain_text("Page 5")
+
+    get_page_link(app, "page 2").click()
+    wait_for_app_loaded(app)
+
+    expect(page_heading(app)).to_contain_text("Page 2")
 
 
 def test_removes_query_params_when_clicking_link(app: Page, app_base_url: str):
@@ -791,9 +835,7 @@ def test_widgets_maintain_state_in_fragment(app: Page):
 def test_widget_state_reset_on_page_switch(app: Page):
     # Regression test for GH issue 7338 for MPAv2
 
-    slider = app.locator('.stSlider [role="slider"]')
-    # Use force=True to ensure click completes before keypress on webkit
-    slider.click(force=True)
+    slider = app.get_by_test_id("stSlider").get_by_role("slider")
     slider.press("ArrowRight")
     wait_for_app_run(app, wait_delay=500)
     expect(app.get_by_text("x is 1")).to_be_attached()
@@ -898,3 +940,31 @@ def test_logo_source_errors(app: Page, app_base_url: str):
             "Client Error: Header Logo source error" in message for message in messages
         ),
     )
+
+
+def test_browser_back_forward_with_unicode_url_path(app: Page):
+    """Test browser Back/Forward navigation works with Unicode URL paths.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/15267.
+    Browsers encode Unicode in URLs (e.g., "Págé" becomes "P%C3%A1g%C3%A9").
+    The frontend must decode the pathname before matching against page routes.
+    """
+    unicode_page_title = "Págé_Wíth_Spêcîãl_Chäracters"
+
+    # Navigate to the Unicode page via sidebar
+    app.get_by_test_id("stSidebarNav").get_by_role(
+        "link", name=unicode_page_title
+    ).click()
+    wait_for_app_loaded(app)
+    expect(app.get_by_role("heading", name=unicode_page_title)).to_be_visible()
+
+    # Browser Back should return to main page
+    app.go_back()
+    wait_for_app_loaded(app)
+    expect(main_heading(app)).to_contain_text("Main Page")
+
+    # Browser Forward should restore the Unicode page (not fall back to main)
+    app.go_forward()
+    wait_for_app_loaded(app)
+    expect(app.get_by_role("heading", name=unicode_page_title)).to_be_visible()
+    expect(main_heading(app)).not_to_contain_text(unicode_page_title)

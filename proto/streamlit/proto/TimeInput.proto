@@ -30,4 +30,14 @@ message TimeInput {
   LabelVisibility label_visibility = 9;
   int64 step = 10;
   optional string query_param_key = 11;
+  // "localized" (use browser locale), "12h", or "24h".
+  // When absent, frontend defaults to "24h" for backward compatibility.
+  optional string format = 12;
+
+  // Set by on_change="ignore": do not schedule a rerun; buffer the value until
+  // the next rerun. Bound widgets still update the URL when the value is
+  // committed. Inside a form, this flag has no effect because the form batches
+  // values until submit.
+  bool ignore_rerun = 13;
+  // Next: 14
 }

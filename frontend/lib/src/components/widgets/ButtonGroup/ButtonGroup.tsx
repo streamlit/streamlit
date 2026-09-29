@@ -14,51 +14,85 @@
  * limitations under the License.
  */
 
-import { forwardRef, memo, ReactElement, useCallback, useMemo } from "react"
+import {
+  memo,
+  type ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react"
 
-import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
+import type { Selection } from "react-aria-components"
 
 import {
   ButtonGroup as ButtonGroupProto,
   LabelVisibility,
-  streamlit,
+  type streamlit,
 } from "@streamlit/protobuf"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
-import BaseButton, {
-  BaseButtonKind,
-  BaseButtonProps,
-  BaseButtonSize,
-} from "~lib/components/shared/BaseButton/BaseButton"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
-import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
+import {
+  StyledButtonGroup,
+  StyledPillsToggleButton,
+  StyledSegmentedControlToggleButton,
+  StyledToggleButtonGroup,
+} from "~lib/components/shared/BaseButton/styled-components"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import type { EmotionTheme } from "~lib/theme/types"
+import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
   element: ButtonGroupProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig: streamlit.IWidthConfig | undefined | null
+  widthConfig: streamlit.WidthConfig.$Properties | undefined | null
 }
 
 /**
  * Get the base content string for an option.
  */
-function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
+function getOptionBaseContent(
+  option: ButtonGroupProto.Option.$Properties
+): string {
   const icon = option.contentIcon
   const content = option.content ?? ""
   return icon ? `${icon} ${content}`.trim() : content
+}
+
+/**
+ * Scroll `option` into `group` horizontally without moving ancestor
+ * scrollports (`scrollIntoView` would also pan `stMain`). Honors CSS
+ * `scroll-padding-inline` so the option lands outside the overflow fade.
+ */
+function scrollOptionIntoGroup(group: HTMLElement, option: Element): void {
+  if (!(option instanceof HTMLElement)) return
+
+  /* eslint-disable streamlit-custom/no-force-reflow-access -- Batched reads to align the option inside this group only */
+  const groupRect = group.getBoundingClientRect()
+  const optionRect = option.getBoundingClientRect()
+  const style = getComputedStyle(group)
+  const padStart = Number.parseFloat(style.scrollPaddingInlineStart) || 0
+  const padEnd = Number.parseFloat(style.scrollPaddingInlineEnd) || 0
+  const overflowStart = optionRect.left - (groupRect.left + padStart)
+  const overflowEnd = optionRect.right - (groupRect.right - padEnd)
+  if (overflowStart >= 0 && overflowEnd <= 0) return
+
+  // Assign scrollLeft instead of scrollIntoView/scrollTo: it stays local to
+  // this group (no ancestor pan) and applies synchronously so layout tests
+  // don't wait on smooth-scroll animation.
+  group.scrollLeft += overflowStart < 0 ? overflowStart : overflowEnd
+  /* eslint-enable streamlit-custom/no-force-reflow-access */
 }
 
 /**
@@ -67,11 +101,9 @@ function getOptionBaseContent(option: ButtonGroupProto.IOption): string {
  * for duplicate labels), or -1 if not found.
  */
 function findOptionIndex(
-  options: ButtonGroupProto.IOption[],
+  options: ButtonGroupProto.Option.$Properties[],
   content: string
 ): number {
-  // Iterate backwards to return the last match, matching the backend's
-  // "last wins" behavior when building formatted_option_to_option_index
   for (let i = options.length - 1; i >= 0; i--) {
     if (getOptionBaseContent(options[i]) === content) {
       return i
@@ -84,7 +116,7 @@ function findOptionIndex(
  * Convert content strings to indices based on current options.
  */
 function contentStringsToIndices(
-  options: ButtonGroupProto.IOption[],
+  options: ButtonGroupProto.Option.$Properties[],
   contentStrings: string[]
 ): number[] {
   const indices: number[] = []
@@ -97,107 +129,13 @@ function contentStringsToIndices(
   return indices
 }
 
-function handleMultiSelection(
-  clickedContent: string,
-  currentSelection: string[]
-): string[] {
-  if (!currentSelection.includes(clickedContent)) {
-    return [...currentSelection, clickedContent]
-  }
-  return currentSelection.filter(c => c !== clickedContent)
-}
-
-function handleSelection(
-  mode: ButtonGroupProto.ClickMode,
-  clickedContent: string,
-  currentSelection: string[],
-  required: boolean
-): string[] {
-  if (mode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
-    return handleMultiSelection(clickedContent, currentSelection)
-  }
-
-  // Prevent deselection when required
-  if (required && currentSelection.includes(clickedContent)) {
-    return currentSelection
-  }
-
-  return currentSelection.includes(clickedContent) ? [] : [clickedContent]
-}
-
-function getSelectionMode(
-  clickMode: ButtonGroupProto.ClickMode
-): typeof MODE.radio | typeof MODE.checkbox | undefined {
-  switch (clickMode) {
-    case ButtonGroupProto.ClickMode.SINGLE_SELECT:
-      return MODE.radio
-    case ButtonGroupProto.ClickMode.MULTI_SELECT:
-      return MODE.checkbox
-    default:
-      return undefined
-  }
-}
-
-function getSingleSelection(currentSelection: number[]): number {
-  if (currentSelection.length === 0) {
-    return -1
-  }
-  return currentSelection[0]
-}
-
-/**
- * The value stored in React state: array of content strings (like Radio).
- * E.g., ["Apple", "Banana"]
- *
- * This matches the pattern used by Radio/Selectbox/Multiselect.
- * When options change, useMemo automatically recalculates indices.
- */
+/** The value stored in React state: array of content strings. */
 type ButtonGroupValue = string[]
-
-interface ButtonGroupOptionProps extends Partial<BaseButtonProps> {
-  option: ButtonGroupProto.IOption
-  index: number
-  selected: number[]
-  style?: ButtonGroupProto.Style
-  containerWidth: boolean
-}
-
-// BaseWeb's ButtonGroup passes refs to each child button, so the option renderer
-// needs to be a stable forwardRef component rather than a render-time factory.
-const ButtonGroupOption = memo(
-  forwardRef<HTMLButtonElement, ButtonGroupOptionProps>(
-    function ButtonGroupOption(
-      { option, index, selected, style, containerWidth, ...props },
-      ref
-    ): ReactElement {
-      const isSelected = selected.includes(index)
-      const { element, kind, size } = getContentElement(
-        option.content ?? "",
-        option.contentIcon ?? undefined,
-        style
-      )
-      const buttonKind = getButtonKindAndSize(isSelected, kind)
-
-      return (
-        <BaseButton
-          {...props}
-          ref={ref}
-          size={size}
-          kind={buttonKind}
-          containerWidth={containerWidth}
-        >
-          {element}
-        </BaseButton>
-      )
-    }
-  )
-)
 
 function getInitialValue(
   widgetMgr: WidgetStateManager,
   element: ButtonGroupProto
 ): ButtonGroupValue | undefined {
-  // Get string values directly
   return widgetMgr.getStringArrayValue(element)
 }
 
@@ -205,7 +143,6 @@ function getDefaultStateFromProto(
   element: ButtonGroupProto
 ): ButtonGroupValue {
   const defaultIndices = element.default ?? []
-  // Convert default indices to content strings
   return defaultIndices
     .map(index => {
       const option = element.options[index]
@@ -215,7 +152,6 @@ function getDefaultStateFromProto(
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  // Get raw values directly
   return element.rawValues ?? []
 }
 
@@ -225,88 +161,17 @@ function syncWithWidgetManager(
   valueWithSource: ValueWithSource<ButtonGroupValue>,
   fragmentId: string | undefined
 ): void {
-  // Store content strings directly (no index suffix needed)
-  widgetMgr.setStringArrayValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
-}
-
-export function getContentElement(
-  content: string,
-  icon?: string,
-  style?: ButtonGroupProto.Style
-): { element: ReactElement; kind: BaseButtonKind; size: BaseButtonSize } {
-  const kind =
-    style === ButtonGroupProto.Style.PILLS
-      ? BaseButtonKind.PILLS
-      : BaseButtonKind.SEGMENTED_CONTROL
-
-  return {
-    element: (
-      <DynamicButtonLabel icon={icon} label={content} iconSize="base" />
-    ),
-    kind,
-    size: BaseButtonSize.MEDIUM,
-  }
-}
-
-function getButtonKindAndSize(
-  isVisuallySelected: boolean,
-  buttonKind: BaseButtonKind
-): BaseButtonKind {
-  if (isVisuallySelected) {
-    buttonKind = `${buttonKind}Active` as BaseButtonKind
-  }
-
-  return buttonKind
-}
-
-function getButtonGroupOverridesStyle(
-  style: ButtonGroupProto.Style,
-  spacing: EmotionTheme["spacing"],
-  containerWidth: boolean
-): React.CSSProperties {
-  const baseStyle: React.CSSProperties = {
-    flexWrap: "wrap",
-    // maxWidth must be conditional:
-    // - "100%" for stretch width: allows buttons to fill container
-    // - "fit-content" for content width: prevents flexbox calculation errors
-    //   that cause the last button to wrap incorrectly (gh-12067)
-    maxWidth: containerWidth ? "100%" : "fit-content",
-    // This ensures that the button group does not overflow the container
-    // due to the negative margins that BaseWeb adds.
-    margin: "0 0",
-  }
-  const width = containerWidth ? "100%" : "auto"
-
-  switch (style) {
-    case ButtonGroupProto.Style.PILLS:
-      return {
-        ...baseStyle,
-        columnGap: spacing.twoXS,
-        rowGap: spacing.twoXS,
-        width,
-      }
-    case ButtonGroupProto.Style.SEGMENTED_CONTROL:
-      return {
-        ...baseStyle,
-        columnGap: spacing.none,
-        rowGap: spacing.twoXS,
-        width,
-      }
-    default:
-      return baseStyle
-  }
+  widgetMgr.setStringArrayValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+  })
 }
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { clickMode, options, style, label, labelVisibility, help, required } =
     element
-  const theme = useEmotionTheme()
 
   const queryParamBinding = element.queryParamKey
     ? {
@@ -317,7 +182,6 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       }
     : undefined
 
-  // State stores base content strings (e.g., ["Apple", "Banana"])
   const [value, setValueWithSource] = useBasicWidgetState<
     ButtonGroupValue,
     ButtonGroupProto
@@ -333,53 +197,150 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     queryParamBinding,
   })
 
-  // Derive indices from content strings + current options (like Radio)
-  // When options change, React re-renders and useMemo recalculates indices
-  const selectedIndices = useMemo(
-    () => contentStringsToIndices(options, value),
-    [options, value]
+  const containerWidth = shouldWidthStretch(widthConfig)
+  const wrap = useResolvedWrap(element.wrap)
+
+  /** The option group scrollport: overflow tracking, scroll-into-view, and aria-required. */
+  const groupRef = useRef<HTMLDivElement>(null)
+
+  const overflowLayoutKey = useMemo(
+    () => options.map(getOptionBaseContent).join("\0"),
+    [options]
+  )
+  const { canScrollLeft, canScrollRight } = useHorizontalScrollOverflow({
+    elementRef: groupRef,
+    enabled: !wrap,
+    layoutKey: overflowLayoutKey,
+  })
+  // React Aria's ToggleButtonGroup does not forward aria-required to the DOM
+  // element. Imperatively set it on the group root so screen readers can
+  // announce that the field is mandatory.
+  useEffect(() => {
+    if (!groupRef.current) return
+    if (required) {
+      groupRef.current.setAttribute("aria-required", "true")
+    } else {
+      groupRef.current.removeAttribute("aria-required")
+    }
+  }, [required])
+
+  // Keep a selected option visible when wrap is false.
+  // Defaults are never focused, so native focus scrolling is not enough.
+  // Assign scrollLeft instead of scrollIntoView so ancestors like stMain do not pan.
+  //
+  // - Prefer the focused selected option so multi-select clicks do not jump
+  //   to the leftmost selection.
+  // - If focus is on a just-deselected option, skip scrolling so remaining
+  //   selections do not yank the viewport.
+  // - Depend on overflowLayoutKey (not the options array reference) so a
+  //   reorder still scrolls, but unrelated reruns do not.
+  useEffect(() => {
+    if (wrap || !groupRef.current || value.length === 0) return
+    const group = groupRef.current
+    const active = document.activeElement
+    const focusIsInGroup = active instanceof Element && group.contains(active)
+    if (focusIsInGroup && !active.hasAttribute("data-selected")) return
+    const selectedOption = focusIsInGroup
+      ? active
+      : group.querySelector("[data-selected]")
+    if (!selectedOption) return
+    scrollOptionIntoGroup(group, selectedOption)
+  }, [wrap, value, overflowLayoutKey])
+
+  // When options change and the currently stored value no longer matches any
+  // option (e.g. because format_func changed dynamically due to a language
+  // switch, making the stored formatted strings stale), reset the widget so
+  // it stays visually consistent. An explicit user deselection always produces
+  // value=[], which short-circuits this guard immediately.
+  //
+  // Reset target priority:
+  //   1. element.rawValues (non-empty) — the backend detected the stale wire
+  //      value via session_state_fallback and sent back the correct
+  //      serialization with set_value=True (e.g. "naranja" for option "B" in
+  //      ES mode). Using rawValues ensures non-default selections are preserved
+  //      and the widgetMgr stores the fresh label for the next rerun.
+  //   2. getDefaultStateFromProto — fallback for the brief window before the
+  //      first backend response, where only the proto default is known.
+  useEffect(() => {
+    if (value.length === 0) return
+    const validIndices = contentStringsToIndices(options, value)
+    if (validIndices.length > 0) return
+    const backendValue = getCurrStateFromProto(element)
+    setValueWithSource({
+      value:
+        backendValue.length > 0
+          ? backendValue
+          : getDefaultStateFromProto(element),
+      fromUser: false,
+    })
+  }, [options, value, setValueWithSource, element])
+
+  const selectionMode =
+    clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
+      ? "multiple"
+      : "single"
+
+  // Each ToggleButton's `id` doubles as its React Aria selection key.
+  // Namespace with element.id so identical-index keys from sibling widgets
+  // are never the same DOM `id`, which would violate the HTML uniqueness spec.
+  const buttonId = useCallback(
+    (index: number) => `${element.id}-${index}`,
+    [element.id]
   )
 
-  const containerWidth = shouldWidthStretch(widthConfig)
+  const selectedKeys = useMemo(
+    () =>
+      new Set(contentStringsToIndices(options, value).map(i => buttonId(i))),
+    [options, value, buttonId]
+  )
 
-  const onClick = useCallback(
-    (_event: React.SyntheticEvent<HTMLButtonElement>, index: number): void => {
-      const clickedContent = getOptionBaseContent(options[index])
-      const newSelected = handleSelection(
-        clickMode,
-        clickedContent,
-        value,
-        required
+  const handleSelectionChange = useCallback(
+    (keys: Selection): void => {
+      if (keys === "all") return
+      const idPrefix = `${element.id}-`
+      const newSelection = [...keys].map(k =>
+        getOptionBaseContent(options[Number(String(k).slice(idPrefix.length))])
       )
-      // Skip state update if selection didn't change (e.g., clicking already-selected
-      // option when required=true). This prevents unnecessary backend reruns.
-      if (newSelected === value) {
+      // Avoid redundant state updates (e.g., when disallowEmptySelection blocks
+      // deselection of the last item, React Aria still fires onSelectionChange
+      // with the unchanged selection set). Use set-equality so insertion-order
+      // differences in the React Aria Set do not cause spurious updates.
+      const valueSet = new Set(value)
+      if (
+        newSelection.length === value.length &&
+        newSelection.every(v => valueSet.has(v))
+      ) {
         return
       }
-      setValueWithSource({ value: newSelected, fromUi: true })
+      setValueWithSource({ value: newSelection, fromUser: true })
     },
-    [clickMode, options, value, required, setValueWithSource]
+    [options, value, setValueWithSource, element.id]
   )
 
-  const mode = getSelectionMode(clickMode)
+  const isPills = style === ButtonGroupProto.Style.PILLS
 
-  const optionElements = useMemo(
-    () =>
-      options.map((option, index) => {
-        const optionKey = `${option.content}-${index}`
-        return (
-          <ButtonGroupOption
-            key={optionKey}
-            option={option}
-            index={index}
-            selected={selectedIndices}
-            style={style}
-            containerWidth={containerWidth}
-          />
-        )
-      }),
-    [options, style, selectedIndices, containerWidth]
-  )
+  const optionElements = useMemo(() => {
+    const ButtonEl = isPills
+      ? StyledPillsToggleButton
+      : StyledSegmentedControlToggleButton
+    const dataVariant = isPills ? "pills" : "segmented_control"
+    return options.map((option, index) => (
+      <ButtonEl
+        // eslint-disable-next-line @eslint-react/no-array-index-key
+        key={`${getOptionBaseContent(option)}-${index}`}
+        id={buttonId(index)}
+        data-variant={dataVariant}
+        $containerWidth={containerWidth}
+        $wrap={wrap}
+      >
+        <DynamicButtonLabel
+          icon={option.contentIcon ?? undefined}
+          label={option.content ?? ""}
+          iconSize="base"
+        />
+      </ButtonEl>
+    ))
+  }, [options, isPills, containerWidth, wrap, buttonId])
 
   return (
     <StyledButtonGroup
@@ -403,34 +364,22 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
           />
         )}
       </WidgetLabel>
-      <BasewebButtonGroup
-        disabled={disabled}
-        mode={mode}
-        onClick={onClick}
-        selected={
-          clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
-            ? selectedIndices
-            : getSingleSelection(selectedIndices)
-        }
-        overrides={{
-          Root: {
-            props: {
-              "aria-required": required || undefined,
-            },
-            style: useCallback(
-              () =>
-                getButtonGroupOverridesStyle(
-                  style,
-                  theme.spacing,
-                  containerWidth
-                ),
-              [style, theme.spacing, containerWidth]
-            ),
-          },
-        }}
+      <StyledToggleButtonGroup
+        ref={groupRef}
+        selectionMode={selectionMode}
+        selectedKeys={selectedKeys}
+        onSelectionChange={handleSelectionChange}
+        isDisabled={disabled}
+        disallowEmptySelection={required && selectionMode === "single"}
+        aria-label={element.label}
+        $isPills={isPills}
+        $containerWidth={containerWidth}
+        $wrap={wrap}
+        data-can-scroll-start={canScrollLeft ? "" : undefined}
+        data-can-scroll-end={canScrollRight ? "" : undefined}
       >
         {optionElements}
-      </BasewebButtonGroup>
+      </StyledToggleButtonGroup>
     </StyledButtonGroup>
   )
 }

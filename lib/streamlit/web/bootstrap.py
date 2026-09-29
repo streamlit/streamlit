@@ -19,12 +19,15 @@ import mimetypes
 import os
 import signal
 import sys
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
 from streamlit.logger import get_logger
 from streamlit.watcher import report_watchdog_availability, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -39,8 +42,19 @@ def _set_up_signal_handler(server: Server) -> None:
     _LOGGER.debug("Setting up signal handler")
 
     def signal_handler(signal_number: int, stack_frame: Any) -> None:  # noqa: ARG001
-        # The server will shut down its threads and exit its loop.
-        server.stop()
+        # This handler can interrupt the event loop in the middle of a
+        # buffered console write, in which case the console output triggered
+        # by `Server.stop` raises "RuntimeError: reentrant call inside
+        # <_io.BufferedWriter>" (mainly on Windows). Defer the stop to the
+        # event loop instead of running it inline whenever possible.
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running event loop; the server will shut down its threads
+            # and exit its loop.
+            server.stop()
+        else:
+            loop.call_soon_threadsafe(server.stop)
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -59,12 +73,32 @@ def _fix_sys_path(main_script_path: str) -> None:
     sys.path.insert(0, os.path.dirname(main_script_path))
 
 
-def _maybe_install_uvloop(running_in_event_loop: bool) -> None:
-    """Install uvloop as the default event loop policy if available."""
+def _get_uvloop_loop_factory() -> Callable[[], asyncio.AbstractEventLoop] | None:
+    """Return uvloop's event-loop factory, or None if it cannot be used.
 
-    if running_in_event_loop:
-        return
+    ``new_event_loop`` exists on our minimum uvloop (0.15.2). We still look it
+    up with ``getattr`` so an unexpected older build falls back to ``install()``.
+    """
+    if env_util.IS_WINDOWS:
+        return None
 
+    try:
+        import uvloop
+    except ModuleNotFoundError:
+        return None
+
+    factory = getattr(uvloop, "new_event_loop", None)
+    return factory if callable(factory) else None
+
+
+def _try_install_uvloop() -> None:
+    """Install uvloop as the process event-loop policy if that API exists.
+
+    Used on Python 3.10 (no ``asyncio.Runner``) and as a fallback when
+    ``uvloop.new_event_loop`` is missing. ``install()`` relies on the asyncio
+    policy APIs, which are deprecated from Python 3.14 and removed in 3.16.
+    Python 3.11+ takes the Runner path instead.
+    """
     if env_util.IS_WINDOWS:
         return
 
@@ -73,13 +107,57 @@ def _maybe_install_uvloop(running_in_event_loop: bool) -> None:
     except ModuleNotFoundError:
         return
 
+    install = getattr(uvloop, "install", None)
+    if not callable(install):
+        return
+
     try:
-        uvloop.install()
+        install()
         _LOGGER.debug("uvloop installed as default event loop policy.")
     except Exception:
         _LOGGER.warning(
-            "Failed to install uvloop. Falling back to default loop.", exc_info=True
+            "Failed to install uvloop. Falling back to default loop.",
+            exc_info=True,
         )
+
+
+def _run_server_loop(main: Coroutine[Any, Any, None]) -> None:
+    """Run ``main`` on a new event loop, using uvloop when available.
+
+    Preferred path (Python 3.11+ and uvloop with ``new_event_loop``):
+    ``asyncio.Runner(loop_factory=...)``. That avoids the deprecated
+    ``uvloop.install()`` / event-loop policy APIs.
+
+    Fallback (Python 3.10, or uvloop too old for ``new_event_loop``):
+    ``uvloop.install()`` when present, then ``asyncio.run()``. If creating
+    the uvloop loop fails, skip ``install()`` and use the stdlib loop.
+    """
+    loop_factory = _get_uvloop_loop_factory()
+    # Runner was added in 3.11 and is the supported way to pick a loop
+    # implementation. getattr keeps this importable on 3.10.
+    runner_cls = getattr(asyncio, "Runner", None)
+    if loop_factory is not None and runner_cls is not None:
+        try:
+            # Create the loop before Runner.run so a factory failure can
+            # fall back without wrapping the server coroutine itself.
+            loop = loop_factory()
+        except Exception:
+            # Don't call install() here: that would retry the same uvloop
+            # implementation that just failed to create a loop.
+            _LOGGER.warning(
+                "Failed to create uvloop event loop. Falling back to default loop.",
+                exc_info=True,
+            )
+        else:
+            _LOGGER.debug("Starting new uvloop event loop for server")
+            with runner_cls(loop_factory=lambda: loop) as runner:
+                runner.run(main)
+            return
+    else:
+        _try_install_uvloop()
+
+    _LOGGER.debug("Starting new event loop for server")
+    asyncio.run(main)
 
 
 def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
@@ -94,6 +172,7 @@ def _fix_sys_argv(main_script_path: str, args: list[str]) -> None:
 def _on_server_start(server: Server) -> None:
     prepare_streamlit_environment(server.main_script_path)
     _print_url(server.is_running_hello)
+    _maybe_print_skills_recommendation()
     report_watchdog_availability()
 
     def maybe_open_browser() -> None:
@@ -118,12 +197,12 @@ def _on_server_start(server: Server) -> None:
 
 
 def _fix_pydeck_mapbox_api_warning() -> None:
-    """Sets MAPBOX_API_KEY environment variable needed for PyDeck otherwise it
-    will throw an exception.
-    """
+    """Prevent PyDeck from throwing when MAPBOX_API_KEY is unset.
 
-    if "MAPBOX_API_KEY" not in os.environ:
-        os.environ["MAPBOX_API_KEY"] = config.get_option("mapbox.token")
+    PyDeck requires the environment variable to exist; an empty default is
+    enough when the user has not provided a token.
+    """
+    os.environ.setdefault("MAPBOX_API_KEY", "")
 
 
 def _initialize_mimetypes() -> None:
@@ -265,6 +344,35 @@ def _print_url(is_running_hello: bool) -> None:
         cli_util.print_to_cli("")
 
 
+def _maybe_print_skills_recommendation() -> None:
+    """Recommend installing Streamlit agent skills when starting an app.
+
+    The message is only shown for interactive (non-headless) sessions where the
+    skills are not already installed. It points users to ``streamlit skills`` so
+    AI coding assistants can build and debug their apps more effectively.
+    """
+    if config.get_option("server.headless"):
+        # Don't advertise in headless mode (e.g. deployments, CI).
+        return
+
+    if config.get_option("logger.hideWelcomeMessage"):
+        return
+
+    from streamlit.web import skills
+
+    if skills.are_skills_installed():
+        # Skills are already installed - nothing to recommend.
+        return
+
+    skills_command = cli_util.style_for_cli("streamlit skills", fg="cyan", bold=True)
+    cli_util.print_to_cli("  Help agents write better Streamlit apps?", bold=True)
+    cli_util.print_to_cli(
+        f"  Install the official Streamlit skills by running {skills_command} "
+        "in your terminal."
+    )
+    cli_util.print_to_cli("")
+
+
 def load_config_options(flag_options: dict[str, Any]) -> None:
     """Load config options from config.toml files, then overlay the ones set by
     flag_options.
@@ -312,6 +420,23 @@ def _install_config_watchers(flag_options: dict[str, Any]) -> None:
         )
 
 
+def _prepare_asgi_app_run_context(
+    main_script_path: str,
+    args: list[str],
+    flag_options: dict[str, Any],
+    *,
+    server_mode: Literal["starlette-app", "starlette-app-direct"] = "starlette-app",
+) -> None:
+    """Apply process-level setup shared by st.App launch modes."""
+    _fix_sys_path(main_script_path)
+    _fix_sys_argv(main_script_path, args)
+    _install_config_watchers(flag_options)
+
+    config._server_mode = server_mode
+
+    report_watchdog_availability()
+
+
 def run_asgi_app(
     main_script_path: str,
     app_import_string: str,
@@ -340,16 +465,7 @@ def run_asgi_app(
     """
     from streamlit.web.server.starlette.starlette_server import UvicornRunner
 
-    # Process-level setup (CLI responsibility)
-    _fix_sys_path(main_script_path)
-    _fix_sys_argv(main_script_path, args)
-    _install_config_watchers(flag_options)
-
-    # Set server mode for metrics tracking (CLI-managed st.App)
-    config._server_mode = "starlette-app"
-
-    # Report watchdog availability for file watching
-    report_watchdog_availability()
+    _prepare_asgi_app_run_context(main_script_path, args, flag_options)
 
     # Run the ASGI app using UvicornRunner
     # UvicornRunner handles: port retry, SSL, WebSocket config, signal handling
@@ -421,8 +537,5 @@ def run(
         # This prevents the task from being garbage collected
         server._bootstrap_task = task
     else:
-        _maybe_install_uvloop(running_in_event_loop)
-        # No running event loop, so we can use asyncio.run
-        # This is the normal case when running streamlit from the command line
-        _LOGGER.debug("Starting new event loop for server")
-        asyncio.run(main())
+        # No running event loop. This is the normal CLI case.
+        _run_server_loop(main())

@@ -25,6 +25,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import expect_no_skeletons
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 
 @pytest.fixture(scope="module")
@@ -78,8 +79,9 @@ def test_builtin_colors_with_custom_theme(
     chart_elements = app.get_by_test_id("stVegaLiteChart")
     expect(chart_elements).to_have_count(4)
 
-    # Ensure all charts have rendered their Vega graphics
-    expect(chart_elements.locator("[role='graphics-document']")).to_have_count(4)
+    # Ensure all charts have rendered their Vega graphics (the graphics-document
+    # role is set on each chart container once rendered):
+    expect(get_vega_graphics_document(chart_elements)).to_have_count(4)
 
     # Take a single snapshot of all charts
     assert_snapshot(app, name="st_chart_builtin_colors-custom_theme")

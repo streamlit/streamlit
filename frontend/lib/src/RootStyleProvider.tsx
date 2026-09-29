@@ -22,7 +22,6 @@ import {
   ThemeProvider as EmotionThemeProvider,
   Global,
 } from "@emotion/react"
-import { BaseProvider } from "baseui"
 
 import { globalStyles } from "./theme/globalStyles"
 import type { ThemeConfig } from "./theme/types"
@@ -47,20 +46,11 @@ export function RootStyleProvider(
   const { children, theme } = props
 
   return (
-    <BaseProvider
-      theme={theme.basewebTheme}
-      // This zIndex is required for modals/dialog. However,
-      // it would be good to do some investigation
-      // and find a better way to configure the zIndex
-      // for the modals/dialogs.
-      zIndex={theme.emotion.zIndices.popup}
-    >
-      <CacheProvider value={cache}>
-        <EmotionThemeProvider theme={theme.emotion}>
-          <Global styles={globalStyles} />
-          {children}
-        </EmotionThemeProvider>
-      </CacheProvider>
-    </BaseProvider>
+    <CacheProvider value={cache}>
+      <EmotionThemeProvider theme={theme.emotion}>
+        <Global styles={globalStyles} />
+        {children}
+      </EmotionThemeProvider>
+    </CacheProvider>
   )
 }

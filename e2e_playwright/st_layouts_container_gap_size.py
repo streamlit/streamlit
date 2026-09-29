@@ -35,6 +35,9 @@ GAPS = cast(
     ],
 )
 
+# Integer pixel gap variants.
+PIXEL_GAPS: list[int] = [0, 20, 50]
+
 for gap in GAPS:
     gap_name = str(gap).lower()
 
@@ -82,3 +85,31 @@ for gap in GAPS:
             '<div style="background:lightblue">Three</div>',
             width="stretch",
         )
+
+for pixel_gap in PIXEL_GAPS:
+    for horizontal in (True, False):
+        orientation = "horizontal" if horizontal else "vertical"
+        with st.container(
+            border=True,
+            gap=pixel_gap,
+            horizontal=horizontal,
+            key=f"container-{orientation}-gap-pixel-{pixel_gap}",
+        ):
+            st.html(
+                '<div style="background:lightblue">One</div>',
+                width="stretch",
+            )
+            st.html(
+                '<div style="background:lightblue">Two</div>',
+                width="stretch",
+            )
+            st.html(
+                '<div style="background:lightblue">Three</div>',
+                width="stretch",
+            )
+
+# Columns with pixel gap
+with st.container(key="columns-pixel-gap"):
+    cols = st.columns(3, gap=20)
+    for i, col in enumerate(cols):
+        col.html(f'<div style="background:lightblue">Col {i}</div>')

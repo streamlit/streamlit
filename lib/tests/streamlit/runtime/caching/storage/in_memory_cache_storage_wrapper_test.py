@@ -124,6 +124,40 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             assert wrapped_storage.get("some-key") == b"some-value"
             mock_persist_get.assert_not_called()
 
+    def test_has_key_in_memory_storage_does_not_check_persist_storage(self):
+        context = self.get_storage_context()
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+        wrapped_storage.set("some-key", b"some-value")
+
+        with patch.object(
+            persist_storage, "has", wraps=persist_storage.has
+        ) as mock_persist_has:
+            assert wrapped_storage.has("some-key") is True
+            mock_persist_has.assert_not_called()
+
+    def test_has_key_in_persist_storage_does_not_read_value(self):
+        context = self.get_storage_context()
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+        persist_storage.set("some-key", b"some-value")
+
+        with (
+            patch.object(
+                persist_storage, "has", wraps=persist_storage.has
+            ) as mock_persist_has,
+            patch.object(
+                persist_storage, "get", wraps=persist_storage.get
+            ) as mock_persist_get,
+        ):
+            assert wrapped_storage.has("some-key") is True
+            mock_persist_has.assert_called_once_with("some-key")
+            mock_persist_get.assert_not_called()
+
     def test_in_memory_cache_storage_wrapper_set(self):
         """
         Test that storage.set() sets value both in in-memory cache and

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import time
 
 import streamlit as st
@@ -41,6 +42,9 @@ if number:
 
 st.header("Widget State - Redisplayed Widget Test")
 # Test for https://github.com/streamlit/streamlit/issues/3512
+# Delayed first mount after a prior-run session-state default:
+# https://github.com/streamlit/streamlit/issues/17093
+# https://github.com/streamlit/streamlit/issues/9082
 
 if st.checkbox("Display widgets"):
     if st.checkbox("Show hello"):
@@ -48,6 +52,22 @@ if st.checkbox("Display widgets"):
 
     if st.checkbox("Show goodbye", key="c3"):
         st.write("goodbye")
+
+st.session_state.setdefault("foo", 100.0)
+st.session_state.setdefault("input1", "input 1")
+st.session_state.setdefault("input2", "input 2")
+st.session_state.setdefault("input3", "input 3")
+
+if st.toggle("Show foo"):
+    foo = st.number_input("Foo", key="foo")
+    st.write("You entered:", foo)
+
+st.text_input("input 1", key="input1")
+select = st.selectbox("select delayed input", ["A", "B"])
+if select == "A":
+    st.text_input("input 2", key="input2")
+else:
+    st.text_input("input 3", key="input3")
 
 st.header("Test for input change & button click in one motion")
 # Test for https://github.com/streamlit/streamlit/issues/10007
@@ -79,7 +99,12 @@ with st.container(key="widget_container"):
         st.text_input("st.text_input", disabled=disabled)
         st.text_area("st.text_area", disabled=disabled)
     with col3:
-        st.time_input("st.time_input", disabled=disabled)
-        st.date_input("st.date_input", disabled=disabled)
+        # Use fixed value/date so the snapshot is deterministic. The defaults
+        # ("now"/"today") render the current time/date, which changes between
+        # runs and causes flaky snapshot mismatches.
+        st.time_input("st.time_input", value=datetime.time(4, 45), disabled=disabled)
+        st.date_input(
+            "st.date_input", value=datetime.date(2026, 6, 3), disabled=disabled
+        )
         st.chat_input("st.chat_input", disabled=disabled)
         st.audio_input("st.audio_input", disabled=disabled)

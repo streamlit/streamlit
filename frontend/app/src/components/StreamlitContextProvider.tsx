@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, PropsWithChildren, RefObject, useMemo } from "react"
+import {
+  memo,
+  PropsWithChildren,
+  RefObject,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react"
 
 import {
   BackendOperationClient,
@@ -32,13 +39,15 @@ import {
   ScriptRunState,
   SidebarConfigContext,
   SidebarConfigContextProps,
+  SkillsInstallContext,
+  SkillsInstallContextProps,
   ThemeConfig,
   ThemeContext,
   ThemeContextProps,
   ViewStateContext,
   ViewStateContextProps,
 } from "@streamlit/lib"
-import { Config, IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
+import { type AppPage, Config, Logo, PageConfig } from "@streamlit/protobuf"
 
 type ViewStateContextValues = {
   isFullScreen: boolean
@@ -52,6 +61,7 @@ type LibConfigContextValues = {
   enforceDownloadInNewTab?: boolean
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
   showErrorLinks?: Config.ShowErrorLinks
+  disableDataExport?: boolean
 }
 
 type NavigationContextValues = {
@@ -59,7 +69,7 @@ type NavigationContextValues = {
   currentPageScriptHash: string
   onPageChange: (pageScriptHash: string) => void
   navSections: string[]
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
 }
 
 type SidebarConfigContextValues = {
@@ -80,9 +90,12 @@ type ThemeContextValues = {
 }
 
 type ScriptRunContextValues = {
+  stopScript: () => void
   scriptRunState: ScriptRunState
   scriptRunId: string
   fragmentIdsThisRun: Array<string>
+  scriptRunFinishedSequence: number
+  scriptRunFinishedFragmentIds: Array<string>
 }
 
 type FormsContextValues = {
@@ -93,6 +106,15 @@ type BackendOperationContextValues = {
   backendOperationClient?: BackendOperationClient
 }
 
+type SkillsInstallContextValues = {
+  /** Whether the in-error "install skills" callout is allowed to show. */
+  skillsInstallEnabled?: boolean
+  /** One-click install handler (already tagged with the errorCallout surface). */
+  onInstallSkills?: () => Promise<string | undefined>
+  /** Impression callback fired once when the callout first appears. */
+  onSkillsCalloutShown?: () => void
+}
+
 type StreamlitContextProviderProps = PropsWithChildren<
   ViewStateContextValues &
     LibConfigContextValues &
@@ -101,7 +123,8 @@ type StreamlitContextProviderProps = PropsWithChildren<
     ThemeContextValues &
     ScriptRunContextValues &
     FormsContextValues &
-    BackendOperationContextValues
+    BackendOperationContextValues &
+    SkillsInstallContextValues
 >
 
 /**
@@ -118,6 +141,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   enforceDownloadInNewTab,
   resourceCrossOriginMode,
   showErrorLinks,
+  disableDataExport,
   // NavigationContext
   pageLinkBaseUrl,
   currentPageScriptHash,
@@ -138,13 +162,20 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   setTheme,
   availableThemes,
   // ScriptRunContext
+  stopScript,
   scriptRunState,
   scriptRunId,
   fragmentIdsThisRun,
+  scriptRunFinishedSequence,
+  scriptRunFinishedFragmentIds,
   // FormsContext
   formsData,
   // BackendOperationContext
   backendOperationClient,
+  // SkillsInstallContext
+  skillsInstallEnabled,
+  onInstallSkills,
+  onSkillsCalloutShown,
   // Children passed through
   children,
 }: StreamlitContextProviderProps) => {
@@ -156,6 +187,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
       showErrorLinks,
+      disableDataExport,
     }),
     [
       locale,
@@ -163,6 +195,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
       showErrorLinks,
+      disableDataExport,
     ]
   )
 
@@ -177,6 +210,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       sidebarNavVisibleItems,
       hideSidebarNav,
       appRootRef,
+      isSidebarLocked: initialSidebarState === PageConfig.SidebarState.LOCKED,
     }),
     [
       initialSidebarState,
@@ -230,11 +264,21 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   // Memoized object for ScriptRunContext values
   const scriptRunContextProps = useMemo<ScriptRunContextProps>(
     () => ({
+      stopScript,
       scriptRunState,
       scriptRunId,
       fragmentIdsThisRun,
+      scriptRunFinishedSequence,
+      scriptRunFinishedFragmentIds,
     }),
-    [scriptRunState, scriptRunId, fragmentIdsThisRun]
+    [
+      stopScript,
+      scriptRunState,
+      scriptRunId,
+      fragmentIdsThisRun,
+      scriptRunFinishedSequence,
+      scriptRunFinishedFragmentIds,
+    ]
   )
 
   const formsContextProps: FormsContextProps = useMemo(
@@ -251,6 +295,45 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       }),
       [backendOperationClient]
     )
+
+  // A single shared slot so at most one in-error "install skills" callout shows
+  // app-wide even when several error boxes are on screen. The first eligible
+  // ExceptionElement to mount claims it; the ref lives here so the lib-level
+  // callout stays stateless. A ref (not state) avoids re-rendering the whole
+  // app subtree when the claim changes.
+  const skillsCalloutOwnerRef = useRef<symbol | null>(null)
+  const claimSkillsCallout = useCallback((token: symbol): boolean => {
+    if (
+      skillsCalloutOwnerRef.current === null ||
+      skillsCalloutOwnerRef.current === token
+    ) {
+      skillsCalloutOwnerRef.current = token
+      return true
+    }
+    return false
+  }, [])
+  const releaseSkillsCallout = useCallback((token: symbol): void => {
+    if (skillsCalloutOwnerRef.current === token) {
+      skillsCalloutOwnerRef.current = null
+    }
+  }, [])
+
+  const skillsInstallContextProps = useMemo<SkillsInstallContextProps>(
+    () => ({
+      enabled: skillsInstallEnabled ?? false,
+      onInstall: onInstallSkills ?? (() => Promise.resolve(undefined)),
+      onShown: onSkillsCalloutShown ?? ((): void => {}),
+      claimCallout: claimSkillsCallout,
+      releaseCallout: releaseSkillsCallout,
+    }),
+    [
+      skillsInstallEnabled,
+      onInstallSkills,
+      onSkillsCalloutShown,
+      claimSkillsCallout,
+      releaseSkillsCallout,
+    ]
+  )
 
   /**
    * Providers conceptually grouped by stability (most to least) as follows:
@@ -272,7 +355,11 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
               <ViewStateContext.Provider value={viewStateContextProps}>
                 <ScriptRunContext.Provider value={scriptRunContextProps}>
                   <FormsContext.Provider value={formsContextProps}>
-                    {children}
+                    <SkillsInstallContext.Provider
+                      value={skillsInstallContextProps}
+                    >
+                      {children}
+                    </SkillsInstallContext.Provider>
                   </FormsContext.Provider>
                 </ScriptRunContext.Provider>
               </ViewStateContext.Provider>

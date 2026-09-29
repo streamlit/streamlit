@@ -13,12 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react"
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import { isArray, isEmpty, merge, mergeWith } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe as DataframeProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
 import {
   getColumnTypeFromArrow,
@@ -26,9 +35,9 @@ import {
   initEmptyIndexColumn,
 } from "~lib/components/widgets/DataFrame/arrowUtils"
 import {
-  BaseColumn,
-  BaseColumnProps,
-  ColumnCreator,
+  type BaseColumn,
+  type BaseColumnProps,
+  type ColumnCreator,
   ColumnTypes,
   ObjectColumn,
 } from "~lib/components/widgets/DataFrame/columns"
@@ -36,7 +45,7 @@ import {
   getConfiguredWidth,
   shouldUseContainerWidth,
 } from "~lib/components/widgets/DataFrame/dimensionUtils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
@@ -307,7 +316,7 @@ function useColumnLoader(
   data: Quiver,
   disabled: boolean,
   columnOrder: string[],
-  widthConfig?: streamlit.IWidthConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 ): ColumnLoaderReturn {
   const theme = useEmotionTheme()
 
@@ -375,7 +384,7 @@ function useColumnLoader(
 
       if (
         element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
-        updatedColumn.isEditable == true
+        updatedColumn.isEditable
       ) {
         // Set editable icon for all editable columns:
         updatedColumn = {
@@ -433,7 +442,7 @@ function useColumnLoader(
 
         if (
           element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
-          updatedColumn.isEditable == true
+          updatedColumn.isEditable
         ) {
           // Set editable icon for all editable columns:
           updatedColumn = {

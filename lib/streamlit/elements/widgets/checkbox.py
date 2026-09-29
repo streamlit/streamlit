@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
@@ -39,11 +38,15 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    OnChangeMode,
+    PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -68,14 +71,16 @@ class CheckboxMixin:
         value: bool = False,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> bool:
         r"""Display a checkbox widget.
 
@@ -131,8 +136,28 @@ class CheckboxMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this checkbox's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the checkbox should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the checkbox. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user clicks the checkbox.
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              clicks the checkbox. The checkbox still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -163,6 +188,24 @@ class CheckboxMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the checkbox label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the checkbox keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
+            - ``True``: If the label is too wide for the checkbox, it wraps onto
+              additional lines and the widget grows taller.
+            - ``False``: The checkbox keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the checkbox keeps a single-row label, hovering the label
+            reveals the full label in a tooltip, including when ``help`` is set.
+            The checkbox indicator and help icon remain visible.
+
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
@@ -177,6 +220,27 @@ class CheckboxMixin:
             query parameter can't be set or deleted through
             ``st.query_params``; it can only be programmatically changed
             through ``st.session_state``.
+
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            user clicks the checkbox. As with widgets inside a form, the URL can
+            show a value that Python hasn't received yet. Python receives
+            the new value on the next rerun, so a page load or share uses
+            the updated URL value.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
 
         Returns
         -------
@@ -211,7 +275,9 @@ class CheckboxMixin:
             type=CheckboxProto.StyleType.DEFAULT,
             ctx=ctx,
             width=width,
+            wrap=wrap,
             bind=bind,
+            persist_state=persist_state,
         )
 
     @gather_metrics("toggle")
@@ -221,14 +287,16 @@ class CheckboxMixin:
         value: bool = False,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> bool:
         r"""Display a toggle widget.
 
@@ -284,8 +352,28 @@ class CheckboxMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this toggle's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the toggle should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the toggle. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user clicks the toggle.
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              clicks the toggle. The toggle still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -316,6 +404,24 @@ class CheckboxMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        wrap : bool or None
+            Whether the toggle label can wrap onto multiple lines. This can be
+            one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the toggle keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
+            - ``True``: If the label is too wide for the toggle, it wraps onto
+              additional lines and the widget grows taller.
+            - ``False``: The toggle keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When the toggle keeps a single-row label, hovering the label reveals
+            the full label in a tooltip, including when ``help`` is set. The
+            toggle switch and help icon remain visible.
+
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
             parameter. If this is ``None`` (default), the widget's value
@@ -330,6 +436,27 @@ class CheckboxMixin:
             query parameter can't be set or deleted through
             ``st.query_params``; it can only be programmatically changed
             through ``st.session_state``.
+
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            user clicks the toggle. As with widgets inside a form, the URL can
+            show a value that Python hasn't received yet. Python receives
+            the new value on the next rerun, so a page load or share uses
+            the updated URL value.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
 
         Returns
         -------
@@ -364,7 +491,9 @@ class CheckboxMixin:
             type=CheckboxProto.StyleType.TOGGLE,
             ctx=ctx,
             width=width,
+            wrap=wrap,
             bind=bind,
+            persist_state=persist_state,
         )
 
     def _checkbox(
@@ -373,7 +502,7 @@ class CheckboxMixin:
         value: bool = False,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -382,17 +511,23 @@ class CheckboxMixin:
         type: CheckboxProto.StyleType.ValueType = CheckboxProto.StyleType.DEFAULT,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
         bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> bool:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None if value is False else value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
@@ -417,11 +552,20 @@ class CheckboxMixin:
         )
 
         if help is not None:
-            checkbox_proto.help = dedent(help)
+            checkbox_proto.help = to_help_str(help)
+
+        # wrap is layout-only, so it is intentionally excluded from the element
+        # id above. Leaving it unset lets the frontend resolve the auto default
+        # from the surrounding layout.
+        if wrap is not None:
+            checkbox_proto.wrap = wrap
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
             checkbox_proto.query_param_key = str(key)
+
+        if isinstance(on_change, str) and on_change == "ignore":
+            checkbox_proto.ignore_rerun = True
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
@@ -429,14 +573,16 @@ class CheckboxMixin:
 
         checkbox_state = register_widget(
             checkbox_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
             value_type="bool_value",
+            disabled=disabled,
             bind=bind,
+            persist_state=persist_state,
             # Checkbox/toggle is not clearable (always true or false)
             clearable=False,
         )
@@ -455,5 +601,5 @@ class CheckboxMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

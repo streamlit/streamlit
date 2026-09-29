@@ -244,6 +244,27 @@ class PollingPathWatcherTest(unittest.TestCase):
         assert callback1.call_count == 1
         assert callback2.call_count == 2
 
+    def test_close_all_logs_a_debug_message(self) -> None:
+        """close_all is a no-op kept for interface parity but emits a debug log."""
+        with mock.patch.object(polling_path_watcher._LOGGER, "debug") as mock_debug:
+            polling_path_watcher.PollingPathWatcher.close_all()
+
+        mock_debug.assert_called_once_with("Watcher closed")
+
+    def test_repr_includes_class_name(self) -> None:
+        """__repr__ identifies the watcher class."""
+        self.util_mock.path_modification_time = lambda *args: 101.0
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
+
+        watcher = polling_path_watcher.PollingPathWatcher(
+            "/this/is/my/file.py", mock.Mock()
+        )
+
+        try:
+            assert "PollingPathWatcher" in repr(watcher)
+        finally:
+            watcher.close()
+
     def test_detects_file_creation_and_modification_with_allow_nonexistent(
         self,
     ) -> None:

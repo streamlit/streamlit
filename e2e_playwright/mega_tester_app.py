@@ -15,11 +15,12 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import re
 import sys
 from datetime import date, datetime, time
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from streamlit.elements.widgets.chat import ChatInputValue
-    from streamlit.navigation.page import StreamlitPage
+    from streamlit.navigation.page import Page
 
 _DUMMY_PDF = (
     "%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n"
@@ -65,6 +66,10 @@ def _minor_version() -> int:
     if match is None:
         raise RuntimeError(f"Unable to parse Streamlit version: {st.__version__}")
     return int(match.group(1))
+
+
+def _dialog_supports_position() -> bool:
+    return "position" in inspect.signature(st.dialog).parameters
 
 
 def _module_available(module_name: str) -> bool:
@@ -242,6 +247,27 @@ def _render_data_display(
         "df.csv",
         "text/csv",
     )
+
+    if hasattr(st, "pagination"):
+        st.subheader("Paginated sample rows")
+        paginated_df = pd.DataFrame(
+            {
+                "item": [f"Item {idx}" for idx in range(1, 26)],
+                "value": np.arange(10, 260, 10),
+            }
+        )
+        page_size = 5
+        total_pages = (len(paginated_df) + page_size - 1) // page_size
+        page = st.pagination(
+            total_pages,
+            key="mega_sample_pagination",
+            disabled=disabled,
+        )
+        start_idx = (page - 1) * page_size
+        st.dataframe(
+            paginated_df.iloc[start_idx : start_idx + page_size],
+        )
+        st.caption(f"Showing page {page} of {total_pages}")
 
     if hasattr(st, "column_config"):
         st.subheader("Column config matrix")
@@ -484,6 +510,24 @@ def _render_charts(minor_version: int) -> None:
         }
     """)
 
+    if hasattr(st, "mermaid_chart"):
+        st.mermaid_chart("""
+            flowchart LR
+                User[User input] --> Script[Python script]
+                Script --> Delta[Delta protocol]
+                Delta --> Browser[Browser render]
+        """)
+
+    if hasattr(st, "echarts_chart"):
+        st.echarts_chart(
+            {
+                "animation": False,
+                "xAxis": {"type": "category", "data": ["A", "B", "C", "D", "E"]},
+                "yAxis": {"type": "value"},
+                "series": [{"type": "bar", "data": [5, 20, 36, 10, 10]}],
+            }
+        )
+
 
 def _render_custom_ui(minor_version: int) -> None:
     st.header("Custom UI elements")
@@ -521,6 +565,14 @@ def _render_custom_ui(minor_version: int) -> None:
             st.write(f"Clicked link: {clicked_link}")
 
 
+_dialog_kwargs: dict[str, Any] = {}
+if _dialog_supports_position():
+    _dialog_kwargs["position"] = cast(
+        "Literal['left', 'center', 'right']",
+        st.session_state.get("dialog_position", "center"),
+    )
+
+
 @st.dialog(
     "Test dialog",
     width=cast(
@@ -528,6 +580,7 @@ def _render_custom_ui(minor_version: int) -> None:
         st.session_state.get("dialog_width", "small"),
     ),
     dismissible=st.session_state.get("dialog_dismissible", True),
+    **_dialog_kwargs,
 )
 def _dialog(item: str) -> None:
     reason = st.text_input("Dialog reason", key="dialog_reason")
@@ -624,6 +677,18 @@ def _render_inputs(minor_version: int, help_text: str | None, disabled: bool) ->
             help=help_text,
             disabled=disabled,
         )
+
+    if hasattr(st, "menu_button"):
+        selected_action = st.menu_button(
+            "Menu button",
+            ["Export CSV", "Refresh cache", "Archive record"],
+            key="menu_button",
+            help=help_text,
+            icon=":material/more_vert:",
+            disabled=disabled,
+        )
+        if selected_action is not None:
+            st.write(f"Menu button selected: {selected_action}")
 
     st.checkbox("Checkbox", key="checkbox", help=help_text, disabled=disabled)
     toggle_value = st.toggle("Toggle", key="toggle", help=help_text, disabled=disabled)
@@ -768,6 +833,13 @@ def _render_inputs(minor_version: int, help_text: str | None, disabled: bool) ->
         default="small",
         key="dialog_width",
     )
+    if _dialog_supports_position():
+        st.segmented_control(
+            "Dialog position",
+            ["center", "left", "right"],
+            default="center",
+            key="dialog_position",
+        )
     st.toggle(
         "Dialog dismissible",
         True,
@@ -885,8 +957,10 @@ def _render_text_elements(minor_version: int, help_text: str | None) -> None:
     st.markdown("Markdown", help=help_text)
     st.markdown(
         "Markdown features: **bold** *italic* ~strikethrough~ [link](https://streamlit.io) "
-        "`code` $a=b$ 🐶 :cat: :material/home: :streamlit: <- -> <-> -- >= <= ~= :small[small] $$a = b$$"
+        "`code` $a=b$ 🐶 :cat: :material/home: :streamlit: <- -> <-> -- >= <= ~= "
+        ":small[small] :shimmer[shimmer] $$a = b$$"
     )
+    st.markdown("Shimmer status: :shimmer[Loading generated summary...]")
     st.markdown("""
 Text colors:
 
@@ -1057,7 +1131,7 @@ def _render_navigation(minor_version: int) -> None:
     many_pages = st.session_state.get("many_pages", False)
     nav_sections = st.session_state.get("nav_sections", True)
 
-    pages: dict[str, list[StreamlitPage]]
+    pages: dict[str, list[Page]]
     if many_pages:
         pages = {
             "General": [
@@ -1101,7 +1175,7 @@ def _render_navigation(minor_version: int) -> None:
             ],
         }
 
-    navigation_pages: list[StreamlitPage] | dict[str, list[StreamlitPage]]
+    navigation_pages: list[Page] | dict[str, list[Page]]
     if nav_sections:
         navigation_pages = pages
     else:

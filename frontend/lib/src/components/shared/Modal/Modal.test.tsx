@@ -15,42 +15,431 @@
  */
 
 import { screen } from "@testing-library/react"
-import { BaseProvider, LightTheme } from "baseui"
+import userEvent from "@testing-library/user-event"
+import { vi } from "vitest"
 
+import { BaseButtonKind } from "~lib/components/shared/BaseButton/BaseButton"
+import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
-import { sizes } from "~lib/theme/primitives/sizes"
 
-import Modal, { calculateModalSize } from "./Modal"
+import Modal, {
+  calculateModalSize,
+  ModalBody,
+  ModalButton,
+  ModalFooter,
+  ModalHeader,
+} from "./Modal"
 
 describe("Modal component", () => {
   it("renders without crashing", () => {
-    render(
-      <BaseProvider theme={LightTheme}>
-        <Modal isOpen />
-      </BaseProvider>
-    )
+    render(<Modal isOpen />)
 
     const modalElement = screen.getByTestId("stDialog")
-    expect(modalElement).toBeInTheDocument()
+    expect(modalElement).toBeVisible()
     expect(modalElement).toHaveClass("stDialog")
   })
+
+  it("renders below popup overlays", () => {
+    render(<Modal isOpen />)
+
+    expect(getComputedStyle(screen.getByTestId("stDialog")).zIndex).toBe(
+      String(mockTheme.emotion.zIndices.modal)
+    )
+    expect(mockTheme.emotion.zIndices.modal).toBeLessThan(
+      mockTheme.emotion.zIndices.popup
+    )
+  })
+
+  it("renders the dialog with correct ARIA role", () => {
+    render(
+      <Modal isOpen>
+        <ModalBody>Content</ModalBody>
+      </Modal>
+    )
+
+    expect(screen.getByRole("dialog")).toBeVisible()
+  })
+
+  it("renders the close button when closeable is true", () => {
+    render(<Modal isOpen closeable />)
+
+    expect(screen.getByRole("button", { name: "Close" })).toBeVisible()
+  })
+
+  it("does not render the close button when closeable is false", () => {
+    render(<Modal isOpen closeable={false} />)
+
+    expect(
+      screen.queryByRole("button", { name: "Close" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("calls onClose when the close button is clicked", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+
+    render(<Modal isOpen onClose={handleClose} />)
+
+    await user.click(screen.getByRole("button", { name: "Close" }))
+
+    expect(handleClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("calls onClose when Escape key is pressed", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+
+    render(<Modal isOpen onClose={handleClose} />)
+
+    await user.keyboard("{Escape}")
+
+    expect(handleClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("calls onClose when clicking the backdrop", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+
+    render(<Modal isOpen onClose={handleClose} />)
+
+    // Click the overlay element (outside the dialog panel) to trigger backdrop dismiss.
+    await user.click(screen.getByTestId("stDialog"))
+
+    expect(handleClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not call onClose when clicking a Streamlit overlay root", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+    const layerHost = document.createElement("div")
+    const layerButton = document.createElement("button")
+
+    // Only tag the host with data-st-overlay-root (and deliberately NOT
+    // data-react-aria-top-layer) so this test exercises Streamlit's own
+    // shouldCloseOnInteractOutside logic rather than React Aria's built-in
+    // top-layer short-circuit.
+    layerHost.setAttribute("data-st-overlay-root", "true")
+    layerButton.textContent = "Overlay option"
+    layerHost.appendChild(layerButton)
+    document.body.appendChild(layerHost)
+
+    render(<Modal isOpen onClose={handleClose} />)
+
+    await user.click(layerButton)
+
+    expect(handleClose).not.toHaveBeenCalled()
+    layerHost.remove()
+  })
+
+  it("does not call onClose on Escape when closeable is false", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+
+    render(<Modal isOpen closeable={false} onClose={handleClose} />)
+
+    await user.keyboard("{Escape}")
+
+    expect(handleClose).not.toHaveBeenCalled()
+  })
+
+  it("does not call onClose on backdrop click when closeable is false", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+
+    render(<Modal isOpen closeable={false} onClose={handleClose} />)
+
+    await user.click(screen.getByTestId("stDialog"))
+
+    expect(handleClose).not.toHaveBeenCalled()
+  })
+
+  it("does not render anything when isOpen is false", () => {
+    render(<Modal isOpen={false} />)
+
+    expect(screen.queryByTestId("stDialog")).not.toBeInTheDocument()
+  })
 })
+
 describe("calculateModalSize", () => {
-  it("returns the default size when no size is provided", () => {
+  it("returns '31.25rem' (default width) when no size is provided", () => {
     const size = calculateModalSize(undefined)
-    expect(size).toBe("default")
+    expect(size).toBe("31.25rem")
   })
-  it("returns the auto size when passed size is 'auto'", () => {
+
+  it("returns undefined (content-sized) when size is 'auto'", () => {
     const size = calculateModalSize("auto")
-    expect(size).toBe("auto")
+    expect(size).toBeUndefined()
   })
-  it("calculates the size based on the spacing and content width when size is 'medium'", () => {
+
+  it("calculates the size based on width and padding when size is 'medium'", () => {
     const size = calculateModalSize("medium", "100px", "100px")
     expect(size).toBe("calc(100px + 100px)")
   })
 
-  it("calculates the size based on the spacing and content width when size is 'large'", () => {
-    const size = calculateModalSize("large", "100px", "100px", "80rem")
-    expect(size).toBe(sizes.dialogLargeWidth)
+  it("returns the caller-supplied largeWidth when size is 'large'", () => {
+    const size = calculateModalSize("large", "100px", "100px", "77rem")
+    expect(size).toBe("77rem")
+  })
+
+  it("returns '31.25rem' when 'medium' is provided without width and padding", () => {
+    expect(calculateModalSize("medium")).toBe("31.25rem")
+  })
+
+  it("returns '31.25rem' when 'large' is provided without a largeWidth", () => {
+    expect(calculateModalSize("large", "100px", "100px")).toBe("31.25rem")
+  })
+})
+
+describe("Modal subcomponents", () => {
+  it("renders the modal header content", () => {
+    render(
+      <Modal isOpen>
+        <ModalHeader>Header Title</ModalHeader>
+      </Modal>
+    )
+    expect(screen.getByText("Header Title")).toBeVisible()
+  })
+
+  it("labels the dialog with the modal header text via aria-labelledby", () => {
+    render(
+      <Modal isOpen>
+        <ModalHeader>My Dialog Title</ModalHeader>
+      </Modal>
+    )
+    const dialog = screen.getByRole("dialog")
+    const labelledById = dialog.getAttribute("aria-labelledby")
+    expect(labelledById).toBeTruthy()
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guarded by toBeTruthy above
+    expect(document.getElementById(labelledById!)).toHaveTextContent(
+      "My Dialog Title"
+    )
+  })
+
+  it("renders the modal body content", () => {
+    render(
+      <Modal isOpen>
+        <ModalBody>Body Content</ModalBody>
+      </Modal>
+    )
+    expect(screen.getByText("Body Content")).toBeVisible()
+  })
+
+  it("renders the modal footer content", () => {
+    render(
+      <Modal isOpen>
+        <ModalFooter>
+          <span>Footer Content</span>
+        </ModalFooter>
+      </Modal>
+    )
+    expect(screen.getByText("Footer Content")).toBeVisible()
+  })
+
+  it("renders a ModalButton with the provided label", () => {
+    render(<ModalButton kind={BaseButtonKind.SECONDARY}>Confirm</ModalButton>)
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeVisible()
+  })
+
+  it("applies the width prop as an explicit CSS width, overriding the size prop", () => {
+    render(
+      <Modal isOpen size="default" width="80vw">
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+    // React Aria portals the dialog into document.body, so query from document.
+    const panel = document.querySelector("[role='dialog']")?.parentElement
+    expect(panel).toHaveStyle({ width: "80vw" })
+  })
+
+  it("keeps a viewport gutter around the dialog panel", () => {
+    render(
+      <Modal isOpen size="medium">
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+
+    const panel = document.querySelector("[role='dialog']")?.parentElement
+    expect(panel).toHaveStyle({
+      margin: "1rem",
+      // minWidth is capped by the gutter-aware width so the panel can shrink
+      // below minPopupWidth on very narrow screens instead of overflowing.
+      minWidth: "min(20rem, calc(100% - 1rem - 1rem))",
+      maxWidth: "calc(100% - 1rem - 1rem)",
+    })
+  })
+
+  it.each([
+    {
+      position: "left" as const,
+      justifyContent: "flex-start",
+      side: "start",
+    },
+    {
+      position: "right" as const,
+      justifyContent: "flex-end",
+      side: "end",
+    },
+  ])(
+    "aligns a $position drawer overlay to the $side of the viewport",
+    ({ position, justifyContent }) => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      expect(screen.getByTestId("stDialog")).toHaveStyle({
+        justifyContent,
+        alignItems: "stretch",
+        paddingTop: "0",
+        paddingBottom: "0",
+      })
+    }
+  )
+
+  it.each(["left", "right"] as const)(
+    "makes a %s drawer panel flush, full height, and square-cornered",
+    position => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      const panel = document.querySelector("[role='dialog']")?.parentElement
+      expect(panel).toHaveStyle({
+        margin: "0",
+        height: "100%",
+        minWidth: "min(12.5rem, calc(100% - 1.5rem))",
+        maxWidth: "calc(100% - 1.5rem)",
+        borderRadius: "0",
+      })
+    }
+  )
+
+  it("still dismisses a left-positioned dialog via Escape, close button, and overlay click", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+    const { rerender } = render(
+      <Modal isOpen position="left" onClose={handleClose} />
+    )
+
+    await user.keyboard("{Escape}")
+    expect(handleClose).toHaveBeenCalledTimes(1)
+
+    handleClose.mockClear()
+    rerender(<Modal isOpen position="left" onClose={handleClose} />)
+    await user.click(screen.getByRole("button", { name: "Close" }))
+    expect(handleClose).toHaveBeenCalledTimes(1)
+
+    handleClose.mockClear()
+    rerender(<Modal isOpen position="left" onClose={handleClose} />)
+    await user.click(screen.getByTestId("stDialog"))
+    expect(handleClose).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["left", "center", "right"] as const)(
+    "fades the overlay dim for a %s dialog",
+    position => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      const css = Array.from(document.querySelectorAll("style"))
+        .map(el => el.textContent ?? "")
+        .join("\n")
+      expect(css).toContain("data-entering")
+      expect(css).toContain("background-color")
+    }
+  )
+
+  it.each(["left", "right"] as const)(
+    "slides a %s drawer in on enter",
+    position => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      // jsdom does not compute CSS animation names from emotion stylesheets.
+      // Assert the enter keyframes are emitted so the drawer starts off-canvas.
+      const css = Array.from(document.querySelectorAll("style"))
+        .map(el => el.textContent ?? "")
+        .join("\n")
+      expect(css).toContain("data-entering")
+      expect(css).toContain(
+        position === "left" ? "translateX(-100%)" : "translateX(100%)"
+      )
+      // Overlay grey-out fades via background-color so the panel stays opaque.
+      expect(css).toContain("background-color")
+    }
+  )
+
+  it("does not dismiss a non-closeable left-positioned dialog", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+
+    render(
+      <Modal isOpen position="left" closeable={false} onClose={handleClose} />
+    )
+
+    await user.keyboard("{Escape}")
+    await user.click(screen.getByTestId("stDialog"))
+
+    expect(handleClose).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole("button", { name: "Close" })
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe("side drawer resize handle", () => {
+  it("does not render a resize handle on a centered dialog", () => {
+    render(<Modal isOpen />)
+
+    expect(
+      screen.queryByTestId("stDialogResizeHandle")
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { position: "left" as const, edge: "right" },
+    { position: "right" as const, edge: "left" },
+  ])(
+    "places the $position drawer handle on the $edge edge",
+    ({ position, edge }) => {
+      render(
+        <Modal isOpen position={position}>
+          <ModalBody>content</ModalBody>
+        </Modal>
+      )
+
+      const handle = screen.getByTestId("stDialogResizeHandle")
+      expect(handle).toHaveStyle({
+        [edge]: "0",
+        width: "0.5rem",
+        cursor: "col-resize",
+      })
+      expect(handle).toHaveAttribute("aria-hidden", "true")
+    }
+  )
+
+  it("does not dismiss when the resize handle is clicked", async () => {
+    const user = userEvent.setup()
+    const handleClose = vi.fn()
+
+    render(
+      <Modal isOpen position="left" onClose={handleClose}>
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+
+    await user.click(screen.getByTestId("stDialogResizeHandle"))
+
+    expect(handleClose).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog")).toBeVisible()
   })
 })

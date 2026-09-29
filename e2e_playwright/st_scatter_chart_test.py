@@ -15,9 +15,10 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
+from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
-TOTAL_SCATTER_CHARTS = 13
+TOTAL_SCATTER_CHARTS = 15
 
 
 def test_scatter_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -25,8 +26,9 @@ def test_scatter_chart_rendering(app: Page, assert_snapshot: ImageCompareFunctio
     scatter_chart_elements = app.get_by_test_id("stVegaLiteChart")
     expect(scatter_chart_elements).to_have_count(TOTAL_SCATTER_CHARTS)
 
-    # Also make sure that all Vega display objects are rendered:
-    expect(scatter_chart_elements.locator("[role='graphics-document']")).to_have_count(
+    # Also make sure that all Vega display objects are rendered (the
+    # graphics-document role is set on each chart container once rendered):
+    expect(get_vega_graphics_document(scatter_chart_elements)).to_have_count(
         TOTAL_SCATTER_CHARTS
     )
 
@@ -76,8 +78,9 @@ def test_themed_scatter_chart_rendering(
     scatter_chart_elements = themed_app.get_by_test_id("stVegaLiteChart")
     expect(scatter_chart_elements).to_have_count(TOTAL_SCATTER_CHARTS)
 
-    # Also make sure that all Vega display objects are rendered:
-    expect(scatter_chart_elements.locator("[role='graphics-document']")).to_have_count(
+    # Also make sure that all Vega display objects are rendered (the
+    # graphics-document role is set on each chart container once rendered):
+    expect(get_vega_graphics_document(scatter_chart_elements)).to_have_count(
         TOTAL_SCATTER_CHARTS
     )
 
@@ -88,3 +91,12 @@ def test_themed_scatter_chart_rendering(
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stVegaLiteChart")
+
+
+def test_scatter_chart_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the Vega graphics-document accessible name."""
+    labeled = get_vega_graphics_document(get_element_by_key(app, "scatter_alt"))
+    expect(labeled).to_have_accessible_name("Scatter chart of columns a, b, and c")
+
+    unlabeled = get_vega_graphics_document(get_element_by_key(app, "scatter_no_alt"))
+    expect(unlabeled).to_have_accessible_name("Vega visualization")

@@ -108,6 +108,13 @@ if st.button("Enable spinner before tabs scenario"):
 
 if st.session_state.get("show_spinner_before_tabs"):
     with st.spinner("Starting up..."):
+        # st.spinner only emits its transient node after an internal 0.5s delay
+        # (DELAY_SECS), enqueued from a threading.Timer. That transient node is
+        # exactly what this #14018 regression exercises (tabs replacing a
+        # spinner's TransientNode). Sleep comfortably longer than 0.5s so the
+        # timer reliably fires before the context exits (which cancels it), even
+        # when a loaded CI runner delays the callback. If the transient is never
+        # emitted, this test would silently pass without covering the regression.
         time.sleep(1)
 
     tab_one, tab_two = st.tabs(["tab_one", "tab_two"])

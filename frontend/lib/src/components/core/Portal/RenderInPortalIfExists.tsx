@@ -25,9 +25,5 @@ export const RenderInPortalIfExists: FC<PropsWithChildren> = ({
 }) => {
   const portalElement = useContext(PortalContext)?.()
 
-  return portalElement ? (
-    createPortal(children, portalElement)
-  ) : (
-    <>{children}</>
-  )
+  return portalElement ? createPortal(children, portalElement) : children
 }

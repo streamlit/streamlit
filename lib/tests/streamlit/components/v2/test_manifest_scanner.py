@@ -28,7 +28,11 @@ from streamlit.components.v2.manifest_scanner import (
     _extract_components,
     _is_likely_streamlit_component_package,
     _load_pyproject,
+    _process_single_package,
+    _validate_pyproject_for_package,
+    scan_component_manifests,
 )
+from streamlit.errors import StreamlitComponentRegistryError
 
 
 def test_component_config_from_dict_missing_name() -> None:
@@ -196,8 +200,6 @@ def test_normalize_package_name_param(_case: str, raw: str, expected: str) -> No
 
 def test_process_single_package_no_files() -> None:
     """Test _process_single_package with distribution that has no files."""
-    from streamlit.components.v2.manifest_scanner import _process_single_package
-
     # Create mock distribution with no files
     mock_dist = Mock()
     mock_dist.files = None
@@ -209,8 +211,6 @@ def test_process_single_package_no_files() -> None:
 
 def test_process_single_package_no_pyproject() -> None:
     """Test _process_single_package with distribution that has no pyproject.toml."""
-    from streamlit.components.v2.manifest_scanner import _process_single_package
-
     # Create mock distribution with files but no pyproject.toml
     mock_file = Mock()
     mock_file.name = "some_file.py"
@@ -225,8 +225,6 @@ def test_process_single_package_no_pyproject() -> None:
 
 def test_process_single_package_no_streamlit_config() -> None:
     """Test _process_single_package with pyproject.toml but no Streamlit config."""
-    from streamlit.components.v2.manifest_scanner import _process_single_package
-
     # Create mock file and distribution
     mock_file = Mock()
     mock_file.name = "pyproject.toml"
@@ -261,8 +259,6 @@ def test_process_single_package_no_streamlit_config() -> None:
 
 def test_process_single_package_valid_manifest() -> None:
     """Test _process_single_package with valid Streamlit component manifest."""
-    from streamlit.components.v2.manifest_scanner import _process_single_package
-
     # Create mock file and distribution
     mock_file = Mock()
     mock_file.name = "pyproject.toml"
@@ -318,10 +314,6 @@ def test_process_single_package_valid_manifest() -> None:
 
 def test_scan_multiple_component_manifests() -> None:
     """Test that scanning handles multiple packages correctly."""
-    from streamlit.components.v2.manifest_scanner import (
-        scan_component_manifests,
-    )
-
     # Create mock distributions with proper name and metadata attributes
     mock_dists = []
     for i in range(10):
@@ -383,10 +375,6 @@ def test_scan_multiple_component_manifests() -> None:
 
 def test_scan_component_manifests_max_workers() -> None:
     """Test that max_workers parameter is respected."""
-    from streamlit.components.v2.manifest_scanner import (
-        scan_component_manifests,
-    )
-
     # Create a small number of mock distributions with proper name and metadata attributes
     mock_dists = []
     for i in range(3):
@@ -446,10 +434,6 @@ def test_scan_component_manifests_max_workers() -> None:
 
 def test_scan_component_manifests_empty_distributions() -> None:
     """Test scanning with no installed packages."""
-    from streamlit.components.v2.manifest_scanner import (
-        scan_component_manifests,
-    )
-
     with patch(
         "streamlit.components.v2.manifest_scanner.importlib.metadata.distributions"
     ) as mock_distributions:
@@ -469,8 +453,6 @@ def test_scan_component_manifests_skips_distributions_without_name(
     _case: str, dist_name: str | None
 ) -> None:
     """Test scanning skips distributions with missing or invalid dist.name."""
-    from streamlit.components.v2.manifest_scanner import scan_component_manifests
-
     invalid_dist = Mock()
     invalid_dist.name = dist_name
     invalid_metadata = MagicMock()
@@ -511,10 +493,6 @@ def test_scan_component_manifests_skips_distributions_without_name(
 
 def test_scan_component_manifests_error_handling() -> None:
     """Test that scanning handles errors gracefully."""
-    from streamlit.components.v2.manifest_scanner import (
-        scan_component_manifests,
-    )
-
     # Create mock distributions, some will cause errors
     mock_dists = []
     for i in range(5):
@@ -620,8 +598,6 @@ def test_validate_pyproject_for_package_param(
     _case: str, pyproject_text: str, checks: tuple[tuple[str, str, bool], ...]
 ) -> None:
     """Validate pyproject parsing and name matching across many scenarios."""
-    from streamlit.components.v2.manifest_scanner import _validate_pyproject_for_package
-
     with tempfile.TemporaryDirectory() as temp_dir:
         pyproject_path = Path(temp_dir) / "pyproject.toml"
         pyproject_path.write_text(pyproject_text.strip())
@@ -988,8 +964,6 @@ def test_find_package_pyproject_toml_not_found() -> None:
 
 def test_process_single_package_editable_install_success() -> None:
     """Test _process_single_package with successful editable install detection."""
-    from streamlit.components.v2.manifest_scanner import _process_single_package
-
     mock_dist = Mock()
     mock_dist.files = None  # Editable install
     mock_dist.name = "my-awesome-component"
@@ -1048,8 +1022,6 @@ def test_process_single_package_editable_install_success() -> None:
 
 def test_process_single_package_editable_install_fallback_to_pyproject_parent() -> None:
     """Test _process_single_package falls back to pyproject.toml parent for package root."""
-    from streamlit.components.v2.manifest_scanner import _process_single_package
-
     mock_dist = Mock()
     mock_dist.files = None
     mock_dist.name = "test-component"
@@ -1096,8 +1068,6 @@ def test_process_single_package_editable_install_fallback_to_pyproject_parent() 
 
 def test_process_single_package_mixed_install_scenarios() -> None:
     """Test _process_single_package handles mixed scenarios correctly."""
-    from streamlit.components.v2.manifest_scanner import _process_single_package
-
     mock_dist = Mock()
     mock_dist.files = None
     mock_dist.name = "mixed-component"
@@ -1144,3 +1114,131 @@ def test_process_single_package_mixed_install_scenarios() -> None:
         assert manifest.name == "mixed-component"
         assert manifest.version == "1.5.0"
         assert package_root == package_dir
+
+
+def test_resolve_asset_root_returns_none_for_unset_dir() -> None:
+    """Test ComponentConfig.resolve_asset_root returns None when asset_dir is None."""
+    config = ComponentConfig(name="comp")
+    assert config.resolve_asset_root(Path("/tmp")) is None
+
+
+def test_resolve_asset_root_raises_when_dir_missing(tmp_path: Path) -> None:
+    """Test resolve_asset_root raises when asset_dir does not exist on disk."""
+    config = ComponentConfig(name="comp", asset_dir="missing_dir")
+    with pytest.raises(StreamlitComponentRegistryError, match="does not exist"):
+        config.resolve_asset_root(tmp_path)
+
+
+def test_resolve_asset_root_returns_path_when_present(tmp_path: Path) -> None:
+    """Test resolve_asset_root resolves the asset directory under package_root."""
+    asset_dir = tmp_path / "dist"
+    asset_dir.mkdir()
+    config = ComponentConfig(name="comp", asset_dir="dist")
+    resolved = config.resolve_asset_root(tmp_path)
+    assert resolved == asset_dir.resolve()
+
+
+def test_validate_pyproject_uses_setuptools_package_name(tmp_path: Path) -> None:
+    """Validate falls back to tool.setuptools.package-name when project name is absent."""
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        '[tool.setuptools]\npackage-name = "my-package"\n', encoding="utf-8"
+    )
+    assert (
+        _validate_pyproject_for_package(pyproject_path, "my-package", "my_package")
+        is True
+    )
+
+
+def test_process_single_package_no_pyproject_returns_none() -> None:
+    """_process_single_package returns None when pyproject.toml is not found."""
+    mock_dist = Mock()
+    mock_dist.name = "test-package"
+
+    with patch(
+        "streamlit.components.v2.manifest_scanner._find_package_pyproject_toml",
+        return_value=None,
+    ):
+        assert _process_single_package(mock_dist) is None
+
+
+def test_process_single_package_returns_none_when_pyproject_unparseable(
+    tmp_path: Path,
+) -> None:
+    """_process_single_package returns None when pyproject.toml cannot be parsed."""
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text("[[[ invalid toml", encoding="utf-8")
+
+    mock_dist = Mock()
+    mock_dist.name = "test-package"
+
+    with patch(
+        "streamlit.components.v2.manifest_scanner._find_package_pyproject_toml",
+        return_value=pyproject_path,
+    ):
+        assert _process_single_package(mock_dist) is None
+
+
+def test_process_single_package_returns_none_when_only_malformed_components(
+    tmp_path: Path,
+) -> None:
+    """_process_single_package returns None when no component entries parse cleanly."""
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        '[project]\nname = "test-package"\nversion = "1.0.0"\n\n'
+        "[tool.streamlit.component]\n"
+        'components = [{name = ""}, {name = 42}]\n',
+        encoding="utf-8",
+    )
+
+    mock_dist = Mock()
+    mock_dist.name = "test-package"
+    mock_dist.version = "1.0.0"
+    mock_dist.files = None
+
+    with patch(
+        "streamlit.components.v2.manifest_scanner._find_package_pyproject_toml",
+        return_value=pyproject_path,
+    ):
+        # Components have invalid "name" fields so parse_or_none returns None
+        # for each, leaving zero parsed components.
+        assert _process_single_package(mock_dist) is None
+
+
+def test_process_single_package_returns_none_on_unexpected_error() -> None:
+    """_process_single_package swallows unexpected exceptions and returns None."""
+    mock_dist = Mock()
+    mock_dist.name = "test-package"
+
+    with patch(
+        "streamlit.components.v2.manifest_scanner._find_package_pyproject_toml",
+        side_effect=RuntimeError("boom"),
+    ):
+        assert _process_single_package(mock_dist) is None
+
+
+def test_scan_component_manifests_returns_empty_when_no_candidates() -> None:
+    """scan_component_manifests returns an empty list when no candidate packages remain."""
+    non_streamlit_dist = Mock()
+    non_streamlit_dist.name = "unrelated-package"
+    metadata = MagicMock()
+    metadata_dict = {"Summary": "Nothing to see here"}
+    metadata.__getitem__.side_effect = metadata_dict.__getitem__
+    metadata.__contains__.side_effect = metadata_dict.__contains__
+    metadata.get_all.return_value = []
+    non_streamlit_dist.metadata = metadata
+
+    with (
+        patch(
+            "streamlit.components.v2.manifest_scanner.importlib.metadata.distributions",
+            return_value=[non_streamlit_dist],
+        ),
+        patch(
+            "streamlit.components.v2.manifest_scanner._process_single_package"
+        ) as mock_process,
+    ):
+        result = scan_component_manifests()
+
+    assert result == []
+    # Anti-regression: no per-package work should have been triggered.
+    mock_process.assert_not_called()

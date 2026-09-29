@@ -15,7 +15,15 @@
  */
 
 import moment, { Moment } from "moment-timezone"
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import { withTimezones } from "~lib/util/withTimezones"
 
@@ -118,6 +126,45 @@ withTimezones(() => {
         expect(result).toContain("10")
       })
     })
+  })
+})
+
+describe("formatMoment localized RangeError fallback", () => {
+  const realDateTimeFormat = Intl.DateTimeFormat
+
+  afterEach(() => {
+    Intl.DateTimeFormat = realDateTimeFormat
+  })
+
+  it("falls back to the default locale when navigator.languages is invalid", () => {
+    let attempt = 0
+    Intl.DateTimeFormat = function (
+      this: unknown,
+      _locales?: unknown,
+      options?: Intl.DateTimeFormatOptions
+    ) {
+      attempt += 1
+      if (attempt === 1) {
+        throw new RangeError("Incorrect locale information provided")
+      }
+      return new realDateTimeFormat(undefined, options)
+    } as unknown as typeof Intl.DateTimeFormat
+
+    const momentDate = moment.utc("2023-04-27T10:20:30Z")
+    const result = formatMoment(momentDate, "localized")
+    expect(typeof result).toBe("string")
+    expect(result.length).toBeGreaterThan(0)
+    expect(attempt).toBe(2)
+  })
+
+  it("re-throws non-RangeError errors from Intl.DateTimeFormat", () => {
+    Intl.DateTimeFormat = function () {
+      throw new TypeError("not a range error")
+    } as unknown as typeof Intl.DateTimeFormat
+
+    expect(() =>
+      formatMoment(moment.utc("2023-04-27T10:20:30Z"), "localized")
+    ).toThrow(TypeError)
   })
 })
 

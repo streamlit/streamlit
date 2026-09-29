@@ -36,7 +36,7 @@ from typing import (
 )
 
 from streamlit import dataframe_util, type_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import (
     is_mem_address_str,
@@ -53,6 +53,12 @@ HELP_TYPES: Final[tuple[type[Any], ...]] = (
     types.FunctionType,
     types.MethodType,
     types.ModuleType,
+)
+
+# OpenAI Responses API stream event types that carry user-visible text.
+# Other event types (lifecycle, tool-call, etc.) are protocol metadata.
+_OPENAI_RESPONSE_TEXT_EVENT_TYPES: Final = frozenset(
+    {"response.output_text.delta", "response.refusal.delta"}
 )
 
 
@@ -85,6 +91,9 @@ class WriteMixin:
             If you pass an async generator, Streamlit will internally convert
             it to a sync generator. If the generator depends on a cached object
             with async references, this can raise an error.
+
+            Streamlit natively parses OpenAI streams (both the Chat
+            Completions API and the Responses API) and LangChain streams.
 
             .. note::
                 To use additional LLM libraries, you can create a wrapper to
@@ -165,10 +174,11 @@ class WriteMixin:
         # Just apply some basic checks for common iterable types that should
         # not be passed in here.
         if isinstance(stream, str) or dataframe_util.is_dataframe_like(stream):
-            raise StreamlitAPIException(
-                "`st.write_stream` expects a generator or stream-like object as input "
-                f"not {type(stream)}. Please use `st.write` instead for "
-                "this data type."
+            raise StreamlitInvalidParameterTypeError(
+                "stream",
+                type(stream).__name__,
+                ["generator", "stream-like object"],
+                detail="Please use `st.write` instead for this data type.",
             )
 
         cursor_str = cursor or ""
@@ -200,7 +210,8 @@ class WriteMixin:
         except TypeError as exc:
             raise StreamlitAPIException(
                 f"The provided input (type: {type(stream)}) cannot be iterated. "
-                "Please make sure that it is a generator, generator function or iterable."
+                "Please make sure that it is a generator, generator function or iterable.",
+                error_id="write-stream-not-iterable",
             ) from exc
 
         # Iterate through the generator and write each chunk to the app
@@ -221,7 +232,25 @@ class WriteMixin:
                         "The most likely cause is a change of the chunk object structure "
                         "due to a recent OpenAI update. You might be able to fix this "
                         "by downgrading the OpenAI library or upgrading Streamlit. Also, "
-                        "please report this issue to: https://github.com/streamlit/streamlit/issues."
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues.",
+                        error_id="write-stream-openai-chat-parse-failed",
+                    ) from err
+
+            elif type_util.is_openai_response_event(chunk):
+                # Try to convert OpenAI Responses API stream events to a string.
+                try:
+                    if chunk.type in _OPENAI_RESPONSE_TEXT_EVENT_TYPES:
+                        chunk = chunk.delta or ""  # noqa: PLW2901
+                    else:
+                        chunk = ""  # noqa: PLW2901
+                except AttributeError as err:
+                    raise StreamlitAPIException(
+                        "Failed to parse the OpenAI Response stream event. "
+                        "The most likely cause is a change of the event object structure "
+                        "due to a recent OpenAI update. You might be able to fix this "
+                        "by downgrading the OpenAI library or upgrading Streamlit. Also, "
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues.",
+                        error_id="write-stream-openai-response-parse-failed",
                     ) from err
 
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
@@ -234,7 +263,8 @@ class WriteMixin:
                         "The most likely cause is a change of the chunk object structure "
                         "due to a recent LangChain update. You might be able to fix this "
                         "by downgrading the LangChain library or upgrading Streamlit. Also, "
-                        "please report this issue to: https://github.com/streamlit/streamlit/issues."
+                        "please report this issue to: https://github.com/streamlit/streamlit/issues.",
+                        error_id="write-stream-langchain-parse-failed",
                     ) from err
 
             if isinstance(chunk, str):
@@ -250,7 +280,7 @@ class WriteMixin:
                 # Only add the streaming symbol on the second text chunk
                 # Use _markdown with unterminated_parsing=True to complete
                 # unclosed markdown syntax (e.g., **bold) during streaming.
-                stream_container._markdown(
+                stream_container._markdown(  # ty: ignore[unresolved-attribute]
                     streamed_response + ("" if first_text else cursor_str),
                     unterminated_parsing=True,
                 )
@@ -307,8 +337,6 @@ class WriteMixin:
                   - Uses ``st.help()``.
                 * - Altair chart
                   - Uses ``st.altair_chart()``.
-                * - Bokeh figure
-                  - Uses ``st.bokeh_chart()``.
                 * - Graphviz graph
                   - Uses ``st.graphviz_chart()``.
                 * - Keras model
@@ -338,11 +366,10 @@ class WriteMixin:
             HTML expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability.
-
-            .. note::
-                If you only want to insert HTML or CSS without Markdown text,
-                we recommend using ``st.html`` instead.
+            maintainability. Don't use ``unsafe_allow_html`` to recreate UI
+            or inject CSS. Prefer native Streamlit features and theming
+            instead. If you need HTML or CSS without Markdown, use
+            ``st.html``.
 
         Examples
         --------
@@ -428,7 +455,8 @@ class WriteMixin:
                 "Cannot replace a single element with multiple elements.\n\n"
                 "The `write()` method only supports multiple elements when "
                 "inserting elements rather than replacing. That is, only "
-                "when called as `st.write()` or `st.sidebar.write()`."
+                "when called as `st.write()` or `st.sidebar.write()`.",
+                error_id="write-cannot-replace-with-multiple-elements",
             )
 
         def flush_buffer() -> None:
@@ -473,9 +501,6 @@ class WriteMixin:
             elif type_util.is_plotly_chart(arg):
                 flush_buffer()
                 self.dg.plotly_chart(arg)
-            elif type_util.is_type(arg, "bokeh.plotting.figure.Figure"):
-                flush_buffer()
-                self.dg.bokeh_chart(arg)
             elif type_util.is_graphviz_chart(arg):
                 flush_buffer()
                 self.dg.graphviz_chart(arg)
@@ -580,5 +605,5 @@ class WriteMixin:
 
     @property
     def dg(self) -> DeltaGenerator:
-        """Get our DeltaGenerator."""
+        """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)

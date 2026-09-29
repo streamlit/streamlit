@@ -113,6 +113,39 @@ describe("useTextInputAutoExpand", () => {
       expect(result.current.isExtended).toBe(false)
       expect(result.current.height).toBe("2.5rem")
     })
+
+    it("should recover when textarea was hidden during initialization", () => {
+      const hiddenRef = createMockTextareaRef({
+        offsetHeight: 0,
+        scrollHeight: 0,
+      })
+
+      const { result } = renderHook(() =>
+        useTextInputAutoExpand({ textareaRef: hiddenRef })
+      )
+
+      expect(result.current.isExtended).toBe(false)
+      expect(result.current.maxHeight).toBe("")
+
+      Object.defineProperty(hiddenRef.current!, "offsetHeight", {
+        value: 40,
+        writable: true,
+        configurable: true,
+      })
+      Object.defineProperty(hiddenRef.current!, "scrollHeight", {
+        value: 40,
+        writable: true,
+        configurable: true,
+      })
+
+      act(() => {
+        result.current.updateScrollHeight()
+      })
+
+      expect(result.current.isExtended).toBe(false)
+      expect(result.current.height).toBe("2.5rem")
+      expect(result.current.maxHeight).toBe("260px")
+    })
   })
 
   describe("scroll height calculation", () => {

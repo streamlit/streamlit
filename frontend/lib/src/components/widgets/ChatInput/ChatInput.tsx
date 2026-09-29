@@ -15,10 +15,12 @@
  */
 
 import {
-  ChangeEvent,
-  KeyboardEvent,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type KeyboardEvent,
   memo,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -32,38 +34,40 @@ import {
   Check,
   Close,
   ErrorOutline,
+  Stop,
 } from "@emotion-icons/material-rounded"
 import type { AxiosProgressEvent } from "axios"
-import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
 
 import { useWindowDimensionsContext } from "@streamlit/lib"
 import {
   ChatInput as ChatInputProto,
+  type ChatInputValue,
   FileUploaderState as FileUploaderStateProto,
-  IChatInputValue,
-  IFileURLs,
-  streamlit,
+  type FileURLs,
+  type streamlit,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
 import { useWaveformController } from "~lib/components/audio/core/useWaveformController"
 import { LOG } from "~lib/components/ChatInput/logger"
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import UploadedFileChips from "~lib/components/shared/UploadedFile/UploadedFileChips"
-import {
+import type {
   UploadedStatus,
   UploadFileInfo,
 } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { getAccept } from "~lib/components/widgets/FileUploader/utils"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
-import type { EmotionTheme } from "~lib/theme/types"
+import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
+import { ScriptRunState } from "~lib/ScriptRunState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { FileSize, sizeConverter } from "~lib/util/FileHelper"
 import { isEnterKeyPressed } from "~lib/util/inputUtils"
@@ -72,16 +76,18 @@ import {
   chatInputAcceptFileProtoValueToEnum,
   isNullOrUndefined,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
 import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
 import { createDropHandler } from "./fileUpload/createDropHandler"
 import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
+import { getPastedFiles } from "./fileUpload/fileUploadUtils"
 import {
   StyledChatAudioWave,
   StyledChatInput,
   StyledChatInputContainer,
+  StyledChatInputTextArea,
   StyledFilesArea,
   StyledInputInstructions,
   StyledInputRow,
@@ -94,64 +100,30 @@ import {
 } from "./styled-components"
 
 /**
- * Creates the UITextArea overrides configuration for the chat input.
+ * Identifies the script run that a submission triggered, so the widget can tell
+ * when *that* run finishes and re-enable itself.
  *
- * @param theme - The Emotion theme for accessing design tokens
- * @param autoExpand - Auto-expand configuration with height and maxHeight
- * @param rootLayoutStyle - Layout-specific style for Root (e.g., flex or width)
- * @param minHeightOverride - Optional minimum height override from heightConfig
- * @param useFixedHeight - When true, use 100% height instead of autoExpand (for stretch/pixel height modes)
+ * Set when the user submits in "disable"/"stop" mode and cleared once the
+ * matching run completes. While it's set, the widget is in "running mode" (input
+ * disabled, stop button shown); `undefined` means no submission is in flight.
+ *
+ * The fields pin down which completion counts as "our run" versus an unrelated
+ * run that happened to be in flight at submit time (see field docs below).
  */
-function createTextAreaOverrides(
-  theme: EmotionTheme,
-  autoExpand: { height: string; maxHeight: string; isExtended: boolean },
-  rootLayoutStyle: Record<string, string | number>,
-  minHeightOverride?: string,
-  useFixedHeight?: boolean
-): React.ComponentProps<typeof UITextArea>["overrides"] {
-  return {
-    Root: {
-      style: {
-        minHeight: minHeightOverride ?? theme.sizes.chatInputTextareaMinHeight,
-        outline: "none",
-        borderLeftWidth: "0",
-        borderRightWidth: "0",
-        borderTopWidth: "0",
-        borderBottomWidth: "0",
-        borderTopLeftRadius: "0",
-        borderTopRightRadius: "0",
-        borderBottomRightRadius: "0",
-        borderBottomLeftRadius: "0",
-        ...rootLayoutStyle,
-      },
-    },
-    Input: {
-      props: {
-        "data-testid": "stChatInputTextArea",
-      },
-      style: {
-        fontWeight: theme.fontWeights.normal,
-        lineHeight: theme.lineHeights.inputWidget,
-        "::placeholder": {
-          color: theme.colors.fadedText60,
-        },
-        // When useFixedHeight is true (stretch/pixel height mode), fill the container
-        // Otherwise, use autoExpand values for dynamic expansion
-        height: useFixedHeight
-          ? "100%"
-          : autoExpand.isExtended
-            ? autoExpand.height
-            : "auto",
-        maxHeight: useFixedHeight ? "none" : autoExpand.maxHeight,
-        overflowY: "auto",
-        paddingLeft: theme.spacing.none,
-        paddingRight: theme.spacing.none,
-        paddingBottom: theme.spacing.twoXS,
-        paddingTop: theme.spacing.twoXS,
-        width: "100%",
-      },
-    },
-  }
+type SubmittedRunScope = {
+  /** The fragment that owns the chat input, or null for a page-level widget. */
+  fragmentId: string | null
+  /**
+   * scriptRunId active when the user submitted. The run we trigger gets a fresh
+   * id once it starts, so comparing against this id lets us skip an unrelated run
+   * that was already in flight at submit time and avoid re-enabling too early.
+   */
+  scriptRunIdAtSubmit: string
+  /**
+   * scriptRunFinishedSequence at submit time. We react only to completions the
+   * frontend reports after this baseline.
+   */
+  scriptRunFinishedSequence: number
 }
 
 export interface Props {
@@ -160,7 +132,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   fragmentId?: string
-  heightConfig?: streamlit.IHeightConfig | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 const updateFile = (
@@ -208,6 +180,24 @@ function ChatInput({
 
   const acceptAudio = element.acceptAudio ?? false
 
+  const {
+    scriptRunFinishedFragmentIds,
+    scriptRunFinishedSequence,
+    scriptRunId,
+    scriptRunState,
+    stopScript,
+  } = useContext(ScriptRunContext)
+  // Tracks the run our last submission triggered; undefined when idle. Drives
+  // running mode and re-enable timing (see SubmittedRunScope).
+  const [submittedRunScope, setSubmittedRunScope] =
+    useWidgetManagerElementState<SubmittedRunScope | undefined>({
+      widgetMgr,
+      id: element.id,
+      key: "submittedRunScope",
+      defaultValue: undefined,
+    })
+  const submitMode = element.submitMode
+
   // Cleanup: abort any in-progress uploads on unmount
   useEffect(() => {
     return () => {
@@ -250,8 +240,8 @@ function ChatInput({
       const computedStyle = getComputedStyle(textarea)
       fontStringRef.current = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
 
-      const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
-      const paddingRight = parseFloat(computedStyle.paddingRight) || 0
+      const paddingLeft = Number.parseFloat(computedStyle.paddingLeft) || 0
+      const paddingRight = Number.parseFloat(computedStyle.paddingRight) || 0
       availableWidthRef.current =
         // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: runs inside ResizeObserver callback or useLayoutEffect after paint
         textarea.clientWidth - paddingLeft - paddingRight
@@ -402,6 +392,125 @@ function ChatInput({
     ((acceptedFiles: File[], rejectedFiles: never[]) => void) | null
   >(null)
 
+  const submittedRunMatchesFragmentIds = useCallback(
+    (fragmentIds: Array<string>): boolean => {
+      if (submittedRunScope === undefined) {
+        return false
+      }
+
+      return submittedRunScope.fragmentId === null
+        ? fragmentIds.length === 0
+        : fragmentIds.includes(submittedRunScope.fragmentId)
+    },
+    [submittedRunScope]
+  )
+
+  // Stop tracking the submission once the run this chat input triggered
+  // finishes. We act on a scriptFinished only when it:
+  //   1. arrives after the submission (sequence guard), and
+  //   2. comes from a run that started after the submission. The run we trigger
+  //      gets a new scriptRunId when it starts, so ignoring the id that was
+  //      active at submit time keeps us from re-enabling the widget when an
+  //      unrelated run that was already in flight finishes.
+  // We then re-enable when the completion matches our run: the same fragment, or
+  // any full-script run (which supersedes pending fragment work and also covers
+  // st.rerun(), stops, and compile errors that report no fragment ids).
+  useEffect(() => {
+    if (
+      submittedRunScope === undefined ||
+      scriptRunFinishedSequence <=
+        submittedRunScope.scriptRunFinishedSequence ||
+      scriptRunId === submittedRunScope.scriptRunIdAtSubmit
+    ) {
+      return
+    }
+
+    if (
+      submittedRunMatchesFragmentIds(scriptRunFinishedFragmentIds) ||
+      scriptRunFinishedFragmentIds.length === 0
+    ) {
+      setSubmittedRunScope(undefined)
+    }
+  }, [
+    scriptRunFinishedFragmentIds,
+    scriptRunFinishedSequence,
+    scriptRunId,
+    submittedRunMatchesFragmentIds,
+    submittedRunScope,
+    setSubmittedRunScope,
+  ])
+
+  // submit_mode state: determine if widget is in running mode and which button to show.
+  // In "disable" and "stop" modes, the widget enters running mode the moment the
+  // user submits (submittedRunScope is set) and stays there until the run it
+  // triggered completes. We intentionally do not wait for scriptRunState to flip
+  // to RUNNING/RERUN_REQUESTED: widget submissions send the rerun request
+  // directly without first moving the app into RERUN_REQUESTED, which would
+  // otherwise leave a window where the input stays enabled (and shows no stop
+  // button) until the server reports the run.
+  const stopRequested = scriptRunState === ScriptRunState.STOP_REQUESTED
+  const isInRunningMode =
+    !disabled &&
+    submittedRunScope !== undefined &&
+    submitMode !== ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT
+  // Once the user has requested a stop, the stop button has done its job: revert
+  // to the (disabled) send button so the click is acknowledged immediately,
+  // even if the script keeps running until a blocking call returns.
+  const showStopButton =
+    isInRunningMode &&
+    submitMode === ChatInputProto.SubmitMode.SUBMIT_MODE_STOP &&
+    !stopRequested
+  // Alias for the disabling call sites below; same condition as isInRunningMode.
+  const isDisabledDuringRun = isInRunningMode
+
+  // Disabling the textarea makes the browser drop focus from it. When the run
+  // finishes and the widget re-enables, restore focus so the user can keep
+  // typing the next message ("focus is preserved" in the spec). We only do this
+  // for the run-driven disable transition, not when the widget is explicitly
+  // disabled via the `disabled` prop.
+  //
+  // `disabled` is in the dependency array, so this effect also runs when only
+  // `disabled` changes (without `isDisabledDuringRun` changing). The
+  // `wasDisabledDuringRunRef` guard is essential here: it ensures we only
+  // refocus on the run-driven disable -> enable transition and never on
+  // unrelated `disabled` prop changes.
+  const wasDisabledDuringRunRef = useRef(false)
+  useEffect(() => {
+    if (wasDisabledDuringRunRef.current && !isDisabledDuringRun && !disabled) {
+      chatInputRef.current?.focus()
+    }
+    wasDisabledDuringRunRef.current = isDisabledDuringRun
+  }, [isDisabledDuringRun, disabled])
+
+  // A stop click can land during the submit-before-RUNNING window described
+  // above, where `stopScript` is still a no-op. Remember the intent and flush
+  // it once the run starts (effect below).
+  const pendingStopRef = useRef(false)
+  const handleStopClick = useCallback((): void => {
+    if (
+      scriptRunState === ScriptRunState.RUNNING ||
+      scriptRunState === ScriptRunState.RERUN_REQUESTED
+    ) {
+      // The run is already active, so stop it immediately.
+      stopScript()
+      return
+    }
+    // The triggered run has not started yet; defer the stop until it does.
+    pendingStopRef.current = true
+  }, [scriptRunState, stopScript])
+
+  // Flush a deferred stop request once the run the user wanted to stop starts.
+  useEffect(() => {
+    if (
+      pendingStopRef.current &&
+      (scriptRunState === ScriptRunState.RUNNING ||
+        scriptRunState === ScriptRunState.RERUN_REQUESTED)
+    ) {
+      pendingStopRef.current = false
+      stopScript()
+    }
+  }, [scriptRunState, stopScript])
+
   // eslint-disable-next-line react-hooks/preserve-manual-memoization -- dropHandlerRef is a ref, setFiles is a stable setter
   const handleRetry = useCallback((fileInfo: UploadFileInfo): void => {
     if (!fileInfo.file || fileInfo.status.type !== "error") {
@@ -478,7 +587,7 @@ function ChatInput({
           )
         })
       },
-      onUploadComplete: (id: number, fileUrls: IFileURLs) => {
+      onUploadComplete: (id: number, fileUrls: FileURLs.$Properties) => {
         setFiles(prevFiles => {
           const curFile = getFile(id, prevFiles)
           if (
@@ -516,6 +625,31 @@ function ChatInput({
   // Store dropHandler in ref for retry functionality
   dropHandlerRef.current = dropHandler
 
+  const handlePaste = useCallback(
+    (e: ClipboardEvent<HTMLTextAreaElement>): void => {
+      if (
+        disabled ||
+        isDisabledDuringRun ||
+        acceptFile === AcceptFileValue.None
+      ) {
+        return
+      }
+
+      if (!e.clipboardData) {
+        return
+      }
+
+      const pastedFiles = getPastedFiles(e.clipboardData)
+      if (pastedFiles.length === 0) {
+        return
+      }
+
+      e.preventDefault()
+      dropHandlerRef.current?.(pastedFiles, [])
+    },
+    [acceptFile, disabled, isDisabledDuringRun]
+  )
+
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: dropHandler,
     multiple:
@@ -523,6 +657,7 @@ function ChatInput({
       acceptFile === AcceptFileValue.Directory,
     accept: getAccept(element.fileType),
     maxSize: maxFileSize,
+    disabled: disabled || isDisabledDuringRun,
     // Disable the File System Access API to avoid browser-specific issues
     // with drag-and-drop uploads (see issue #6176 and FileDropzone usage).
     useFsAccessApi: false,
@@ -542,24 +677,39 @@ function ChatInput({
       // - audioInfo is provided (audio was just recorded and uploaded)
       // Audio bypasses the dirty check because it's uploaded and submitted
       // immediately without being added to the files state.
-      if ((!dirty && !audioInfo) || disabled) {
+      if ((!dirty && !audioInfo) || disabled || isDisabledDuringRun) {
         return
       }
 
       const filesValue = createChatInputWidgetFilesValue()
 
-      const composedValue: IChatInputValue = {
+      const composedValue: ChatInputValue.$Properties = {
         data: value,
         fileUploaderState: filesValue,
         audioFileInfo: audioInfo,
       }
 
-      widgetMgr.setChatInputValue(
-        element,
-        composedValue,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr.setChatInputValue(element.id, composedValue, {
+        // Chat input cannot be placed inside a form.
+        formId: undefined,
+        fragmentId,
+        fromUser: true,
+      })
+
+      // Track submission for submit_mode behavior
+      if (submitMode !== ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT) {
+        // A new submission starts a fresh run scope, so drop any stop intent
+        // left over from a previous (never-started) run.
+        pendingStopRef.current = false
+        // `fragmentId` is an empty string for top-level (non-fragment) widgets
+        // because it comes from a protobuf string field. Normalize falsy values
+        // to null so the run-scope matcher treats them as full-script runs.
+        setSubmittedRunScope({
+          fragmentId: fragmentId || null,
+          scriptRunIdAtSubmit: scriptRunId,
+          scriptRunFinishedSequence,
+        })
+      }
 
       // Reset dropzone when files are cleared on submit
       if (files.length > 0) {
@@ -574,6 +724,7 @@ function ChatInput({
     [
       dirty,
       disabled,
+      isDisabledDuringRun,
       value,
       files.length,
       createChatInputWidgetFilesValue,
@@ -581,6 +732,10 @@ function ChatInput({
       element,
       fragmentId,
       autoExpand,
+      submitMode,
+      scriptRunId,
+      scriptRunFinishedSequence,
+      setSubmittedRunScope,
     ]
   )
 
@@ -589,7 +744,7 @@ function ChatInput({
     // eslint-disable-next-line react-hooks/preserve-manual-memoization -- chatInputRef and uploadAbortControllerRef are refs; setAudioUploading and setRecordingError are stable setters
     async (wav: Blob): Promise<void> => {
       // Convert blob to File
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+      const timestamp = new Date().toISOString().replaceAll(/[:.]/g, "-")
       const audioFile = new File([wav], `audio-${timestamp}.wav`, {
         type: "audio/wav",
       })
@@ -712,13 +867,18 @@ function ChatInput({
       e.preventDefault()
       e.stopPropagation()
 
-      if (!acceptAudio || disabled || controller.state === "recording") {
+      if (
+        !acceptAudio ||
+        disabled ||
+        isDisabledDuringRun ||
+        controller.state === "recording"
+      ) {
         return
       }
 
       await controller.start()
     },
-    [acceptAudio, disabled, controller]
+    [acceptAudio, disabled, isDisabledDuringRun, controller]
   )
 
   const handleRecordingCancel = useCallback(() => {
@@ -810,6 +970,37 @@ function ChatInput({
     }
   }, [fileDragged, innerWidth, innerHeight])
 
+  /**
+   * Renders the submit or stop button based on submit_mode state.
+   *
+   * The stop button only reflects the explicit `disabled` prop and
+   * intentionally ignores `isDisabledDuringRun`: it must stay clickable while
+   * the script runs so the user can actually stop it. The submit button, in
+   * contrast, is disabled during the run via `isDisabledDuringRun`.
+   */
+  const renderActionButton = (): React.ReactElement =>
+    showStopButton ? (
+      <StyledSendIconButton
+        onClick={handleStopClick}
+        disabled={disabled}
+        data-testid="stChatInputStopButton"
+        aria-label="Stop script"
+        primary
+      >
+        <Icon content={Stop} size="lg" color="inherit" />
+      </StyledSendIconButton>
+    ) : (
+      <StyledSendIconButton
+        onClick={handleSubmit}
+        disabled={!dirty || disabled || isDisabledDuringRun || audioUploading}
+        data-testid="stChatInputSubmitButton"
+        aria-label="Send message"
+        primary
+      >
+        <Icon content={ArrowUpward} size="lg" color="inherit" />
+      </StyledSendIconButton>
+    )
+
   const showDropzone = acceptFile !== AcceptFileValue.None && fileDragged
   const isRecording = controller.state === "recording"
 
@@ -828,7 +1019,7 @@ function ChatInput({
       return "100%"
     }
     if (heightConfig.pixelHeight && heightConfig.pixelHeight > 0) {
-      const borderWidth = parseInt(theme.sizes.borderWidth, 10) || 1
+      const borderWidth = Number.parseInt(theme.sizes.borderWidth, 10) || 1
       const containerPadding =
         convertRemToPx(theme.spacing.md) * 2 + borderWidth * 2
       const adjustedHeight = Math.max(
@@ -890,28 +1081,33 @@ function ChatInput({
               isStacked={isStacked}
               hasExpandedHeight={hasExpandedHeight}
             >
-              <UITextArea
-                inputRef={chatInputRef}
+              <StyledChatInputTextArea
+                data-testid="stChatInputTextArea"
+                ref={chatInputRef}
                 value={value}
                 placeholder={placeholder}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
                 aria-label={placeholder}
-                disabled={disabled}
+                disabled={disabled || isDisabledDuringRun}
                 rows={1}
                 aria-describedby={
                   showInstructions ? "stChatInputInstructions" : undefined
                 }
-                overrides={createTextAreaOverrides(
-                  theme,
-                  autoExpand,
-                  {
-                    width: "100%",
-                    ...(hasExpandedHeight ? { flex: 1 } : {}),
-                  },
-                  textareaMinHeight,
+                $minHeight={
+                  textareaMinHeight ?? theme.sizes.chatInputTextareaMinHeight
+                }
+                $height={
                   hasConfiguredHeight
-                )}
+                    ? "100%"
+                    : autoExpand.isExtended
+                      ? autoExpand.height
+                      : "auto"
+                }
+                $maxHeight={
+                  hasConfiguredHeight ? "none" : autoExpand.maxHeight
+                }
               />
             </StyledTextareaWrapper>
           )}
@@ -931,7 +1127,7 @@ function ChatInput({
                     accept={getAccept(element.fileType)}
                     maxSize={maxFileSize}
                     acceptFile={acceptFile}
-                    disabled={disabled}
+                    disabled={disabled || isDisabledDuringRun}
                     fileTypes={element.fileType}
                   />
                 )}
@@ -953,49 +1149,42 @@ function ChatInput({
                     />
                   </StyledInputInstructions>
                 )}
-                {acceptAudio && (
-                  <>
-                    {recordingError ? (
-                      <Tooltip
-                        content={recordingError}
-                        placement={Placement.TOP}
-                        error
-                      >
-                        <StyledSendIconButton
-                          onClick={handleMicClickVoid}
-                          disabled={disabled || audioUploading}
-                          hasError
-                          data-testid="stChatInputMicButton"
-                          aria-label="Start recording"
-                        >
-                          <Icon
-                            content={ErrorOutline}
-                            size="xl"
-                            color="inherit"
-                          />
-                        </StyledSendIconButton>
-                      </Tooltip>
-                    ) : (
+                {acceptAudio &&
+                  (recordingError ? (
+                    <Tooltip
+                      content={recordingError}
+                      placement={Placement.TOP}
+                      error
+                    >
                       <StyledSendIconButton
                         onClick={handleMicClickVoid}
-                        disabled={disabled || audioUploading}
+                        disabled={
+                          disabled || isDisabledDuringRun || audioUploading
+                        }
+                        hasError
                         data-testid="stChatInputMicButton"
                         aria-label="Start recording"
                       >
-                        <Icon content={MicNone} size="xl" color="inherit" />
+                        <Icon
+                          content={ErrorOutline}
+                          size="xl"
+                          color="inherit"
+                        />
                       </StyledSendIconButton>
-                    )}
-                  </>
-                )}
-                <StyledSendIconButton
-                  onClick={handleSubmit}
-                  disabled={!dirty || disabled || audioUploading}
-                  data-testid="stChatInputSubmitButton"
-                  aria-label="Send message"
-                  primary
-                >
-                  <Icon content={ArrowUpward} size="lg" color="inherit" />
-                </StyledSendIconButton>
+                    </Tooltip>
+                  ) : (
+                    <StyledSendIconButton
+                      onClick={handleMicClickVoid}
+                      disabled={
+                        disabled || isDisabledDuringRun || audioUploading
+                      }
+                      data-testid="stChatInputMicButton"
+                      aria-label="Start recording"
+                    >
+                      <Icon content={MicNone} size="xl" color="inherit" />
+                    </StyledSendIconButton>
+                  ))}
+                {renderActionButton()}
               </StyledRightCluster>
             </StyledToolbarRow>
           ) : (
@@ -1012,7 +1201,7 @@ function ChatInput({
                     accept={getAccept(element.fileType)}
                     maxSize={maxFileSize}
                     acceptFile={acceptFile}
-                    disabled={disabled}
+                    disabled={disabled || isDisabledDuringRun}
                     fileTypes={element.fileType}
                   />
                 )}
@@ -1028,7 +1217,7 @@ function ChatInput({
                   <>
                     <StyledSendIconButton
                       onClick={handleRecordingCancel}
-                      disabled={disabled}
+                      disabled={disabled || isDisabledDuringRun}
                       data-testid="stChatInputCancelButton"
                       aria-label="Cancel recording"
                     >
@@ -1036,7 +1225,9 @@ function ChatInput({
                     </StyledSendIconButton>
                     <StyledSendIconButton
                       onClick={handleRecordingApproveVoid}
-                      disabled={disabled || audioUploading}
+                      disabled={
+                        disabled || isDisabledDuringRun || audioUploading
+                      }
                       data-testid="stChatInputApproveButton"
                       aria-label="Submit recording"
                     >
@@ -1064,53 +1255,42 @@ function ChatInput({
                         />
                       </StyledInputInstructions>
                     )}
-                    {acceptAudio && (
-                      <>
-                        {recordingError ? (
-                          <Tooltip
-                            content={recordingError}
-                            placement={Placement.TOP}
-                            error
-                          >
-                            <StyledSendIconButton
-                              onClick={handleMicClickVoid}
-                              disabled={disabled || audioUploading}
-                              hasError
-                              data-testid="stChatInputMicButton"
-                              aria-label="Start recording"
-                            >
-                              <Icon
-                                content={ErrorOutline}
-                                size="xl"
-                                color="inherit"
-                              />
-                            </StyledSendIconButton>
-                          </Tooltip>
-                        ) : (
+                    {acceptAudio &&
+                      (recordingError ? (
+                        <Tooltip
+                          content={recordingError}
+                          placement={Placement.TOP}
+                          error
+                        >
                           <StyledSendIconButton
                             onClick={handleMicClickVoid}
-                            disabled={disabled || audioUploading}
+                            disabled={
+                              disabled || isDisabledDuringRun || audioUploading
+                            }
+                            hasError
                             data-testid="stChatInputMicButton"
                             aria-label="Start recording"
                           >
                             <Icon
-                              content={MicNone}
+                              content={ErrorOutline}
                               size="xl"
                               color="inherit"
                             />
                           </StyledSendIconButton>
-                        )}
-                      </>
-                    )}
-                    <StyledSendIconButton
-                      onClick={handleSubmit}
-                      disabled={!dirty || disabled || audioUploading}
-                      data-testid="stChatInputSubmitButton"
-                      aria-label="Send message"
-                      primary
-                    >
-                      <Icon content={ArrowUpward} size="lg" color="inherit" />
-                    </StyledSendIconButton>
+                        </Tooltip>
+                      ) : (
+                        <StyledSendIconButton
+                          onClick={handleMicClickVoid}
+                          disabled={
+                            disabled || isDisabledDuringRun || audioUploading
+                          }
+                          data-testid="stChatInputMicButton"
+                          aria-label="Start recording"
+                        >
+                          <Icon content={MicNone} size="xl" color="inherit" />
+                        </StyledSendIconButton>
+                      ))}
+                    {renderActionButton()}
                   </>
                 )}
               </StyledRightCluster>
