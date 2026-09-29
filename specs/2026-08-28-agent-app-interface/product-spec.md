@@ -463,6 +463,10 @@ Rules:
   a stale `label=type:bug` on two unrelated pages. This is Streamlit's existing behavior
   rather than something the interface introduces; what the interface owes a client is
   saying so, and pointing at widget `value`s as the answer to "what produced this number".
+- **A label is not an identifier.** Nothing stops an app from giving two elements the same
+  `label`, and a production page did exactly that with two `st.metric`s named "AI PR
+  Review", one a count and one a duration. A client keying by label silently drops one.
+  Position in the tree, or an authored `key` where the element has one, is the identity.
 - **The `actions` list is an index, not a duplicate.** It lists the key of every element that
   can be set (`value`) or fired (`trigger`) right now, so a model can see the action space
   at a glance; type and constraints are read from the element in the tree. A `disabled`
@@ -529,7 +533,7 @@ stays usable, so an agent can correct its input and interact again.
 | Outcome                                                                              | Response                                                                                                                                 |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Invalid request — unknown key, disabled widget, unsupported element, out-of-range or wrong-shape value, missing form submit, cross-form or cross-fragment batch | Error before any execution, naming which of those it was. Nothing ran and the app is unchanged. |
-| Unrecognized `page` on a creating call                                               | Error after the run, because the page list does not exist before it. Carries the `session_id` of the session it created, which stays usable. |
+| Unrecognized `page` on a creating call                                               | Error after the run, because the page list does not exist before it. Carries the `session_id` of the session it created, which stays usable, and the available `pages` as data rather than only inside the message. |
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
 | Script failed to compile                                                             | `status: "error"` with the compile error and no usable action list.                                                                      |
 | Run exceeded `server.agentRunTimeout`                                                | `run_timed_out`. Whether app code is still finishing is not knowable from the response, so the session may stay busy briefly afterwards. |
@@ -559,6 +563,18 @@ An authored key is worth having anyway: `{"region": "Europe"}` is readable in a
 verification script and reviewable in a PR, where
 `{"$$ID-8f2c...-None": "Europe"}` is not. Documentation should say plainly that
 **setting `key=` is what makes an app a good tool.**
+
+Trialling against a 21-page production app showed how much that guidance is worth, and
+what it costs to be late with it: almost nothing there has an authored key. Open issues,
+the bug explorer, and most coverage and bundle widgets are all `$$ID-…-None`. Everything
+*worked* — they are in `actions` and they accept values copied from the latest snapshot —
+so reading and driving that app was never the problem. What is impossible is writing a
+script against it that survives a redeploy, which is exactly the verification use case.
+Two consequences worth carrying into planning rather than leaving implicit: the
+consumption and question-answering cases work on the installed base as it is, while the
+verification case needs authors to act first; and the authoring guidance is therefore not
+a documentation footnote but the thing that decides whether v1's most-cited use case
+applies to an existing app.
 
 Identity is not authorization. Every request is validated so that a stale, guessed, or
 forged key cannot set a disabled widget, an out-of-range value, or a control that no
@@ -1171,7 +1187,7 @@ apply.
 
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ v1 is loopback-only. Self-hosted, Cloud, and SiS each require identity mapping, routing, session affinity, and quota validation first.                                                                                                                                                                                                                                                                                                                                                                     |
+| Works on SiS, Cloud, etc?  | ⚠️ v1 is loopback-only. Self-hosted, Cloud, and SiS each require identity mapping, routing, session affinity, and quota validation first. Trialling against Community Cloud added one the list was missing: a platform that serves apps behind a prefix has to get that prefix to the client, or every path in the document resolves to the platform instead of the app.                                                                                                                                                                                                                                                                                                                                                                     |
 | No breaking API changes    | ✅ Additive: one config option, off in v1, and new routes under `/_stcore/agent/`. No `st.*` changes in v1. Flipping the default later is itself a reviewed change, not a silent one.                                                                                                                                                                                                                                                                                                                         |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP adapter should use the official SDK behind an optional extra.                                                                                                                                                                                                                                                                                                                                                                                               |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
@@ -1193,11 +1209,16 @@ apply.
 4. What run timeout, session, preview, and response budgets should ship? A prototype
    settled some of this: a 100-row preview keeps most filtered tables complete, and the
    externalization ceiling only has to prevent holding a second copy of something
-   enormous. Two are still open. The response document itself is unbounded, and a page
+   enormous. Three are still open. The response document itself is unbounded, and a page
    with a 3,000-option selectbox ships those options in every snapshot, which is the
-   realistic budget problem rather than table data. And "the run chain settled" is
-   currently a grace period after the last run finishes — a heuristic that works but
-   guesses; doing better needs the runtime to say whether a further run is pending.
+   realistic budget problem rather than table data. "The run chain settled" is currently a
+   grace period after the last run finishes — a heuristic that works but guesses; doing
+   better needs the runtime to say whether a further run is pending. And the run timeout
+   has no defensible default yet: opening one lazy expander on a live app took **139
+   seconds**, because the content behind it fetches from the network, so any timeout
+   comfortable for a filtered dashboard will cut off a legitimate interaction somewhere.
+   That argues the answer is the long-run handling in follow-up #4 rather than a larger
+   number.
 5. **How should a client tell how current each part of a snapshot is?** Scoped reruns make
    freshness per-region. v1 reports which fragments re-rendered, which is enough to avoid
    citing a stale number but not enough to say *when* a carried-over region was computed.
