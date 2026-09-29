@@ -56,7 +56,7 @@ export function getToolbarActionAccessibleName(
 export interface ActionButtonProps {
   label?: string
   icon?: string
-  /** Host item key, used as the accessible name when there is no visible label. */
+  /** Host item key. Used when there is no visible label; may still fall back to "Toolbar action". */
   itemKey?: string
   onClick: () => void
 }

@@ -48,7 +48,7 @@ describe("DynamicButtonLabel", () => {
     expect(screen.queryByTestId("stIconEmoji")).toBeNull()
   })
 
-  it("renders icon with no label", () => {
+  it("names an emoji-only button from its icon", () => {
     render(
       <button type="button">
         <DynamicButtonLabel {...getProps({ label: "" })} />

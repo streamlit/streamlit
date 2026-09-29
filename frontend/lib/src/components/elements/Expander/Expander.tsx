@@ -107,6 +107,21 @@ function resolveStepIcon(
     : { iconValue: DEFAULT_STEP_ICON, tone: "muted" }
 }
 
+/** Accessible name for an expander whose Markdown label renders no text. */
+function resolveBlankLabelName(
+  label: string,
+  icon: string,
+  isStep: boolean
+): string | undefined {
+  if (label.trim()) {
+    return undefined
+  }
+  if (icon) {
+    return getIconAccessibleName(icon)
+  }
+  return isStep ? "Step" : "Expander"
+}
+
 interface ExpanderIconProps {
   icon?: string
 }
@@ -271,16 +286,10 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const stepState = STEP_STATES[state]
   const stepIcon = resolveStepIcon(stepState, icon)
   const stepStateLabel = isStep ? stepState?.stateLabel : undefined
-  // Material/emoji icons and chevrons are aria-hidden. When the markdown
-  // label is blank, inject a content-based name (not aria-label) so step
-  // status text (" — running") can still append to the accessible name.
-  const blankLabelAccessibleName = !label?.trim()
-    ? icon
-      ? getIconAccessibleName(icon)
-      : isStep
-        ? "Step"
-        : "Expander"
-    : undefined
+  // Material/emoji icons and chevrons are aria-hidden. Inject a content-based
+  // name (not aria-label) when the markdown label is blank so step status
+  // text (" — running") can still append to the accessible name.
+  const blankLabelAccessibleName = resolveBlankLabelName(label, icon, isStep)
 
   const summaryHeading = (
     <StyledSummaryHeading expanderType={type}>
@@ -333,7 +342,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
       )}
 
       {/* Append the state as hidden text rather than setting an aria-label:
-          this keeps the rendered markdown (or blank-label) name, and it
+          this keeps the markdown or injected empty-label name, and it
           also reaches non-collapsible steps, which ignore aria-label. */}
       {stepStateLabel && (
         <StyledVisuallyHidden>{` — ${stepStateLabel}`}</StyledVisuallyHidden>

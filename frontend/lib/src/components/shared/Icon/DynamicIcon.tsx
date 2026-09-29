@@ -117,7 +117,7 @@ export function isMenuStyleIconLabel(
  * Uses the same `"{name} icon"` wording as the Markdown material-icon plugin.
  */
 export function getIconAccessibleName(iconValue: string): string {
-  // DynamicIconDispatcher special-cases this sentinel as a spinner glyph.
+  // Name the loading spinner as "Loading"; DynamicIcon renders "spinner" as a glyph, not an icon pack.
   if (iconValue === "spinner") {
     return "Loading"
   }

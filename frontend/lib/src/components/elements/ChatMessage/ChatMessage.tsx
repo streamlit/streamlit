@@ -138,7 +138,7 @@ const ChatMessage: React.FC<React.PropsWithChildren<ChatMessageProps>> = ({
       />
       <StyledMessageContent
         data-testid="stChatMessageContent"
-        // Nameable role so screen readers expose aria-label (they ignore it on a generic div).
+        // Screen readers ignore aria-label on a generic div; role="group" exposes "Chat message from {name}".
         role="group"
         aria-label={`Chat message from ${name}`}
       >
