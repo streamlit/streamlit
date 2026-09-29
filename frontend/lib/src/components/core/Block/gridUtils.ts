@@ -109,6 +109,20 @@ export function clampColumnSpan(
 }
 
 /**
+ * Whether a definite-height grid cell should become a vertical scrollport.
+ *
+ * Hover toolbars sit `position: absolute` above a chart. `overflow: auto` on
+ * an ancestor clips them even when in-flow content fits (no scrollbar). Only
+ * enable scrolling when in-flow content actually exceeds the cell.
+ */
+export function shouldScrollGridCell(
+  contentHeight: number,
+  cellHeight: number
+): boolean {
+  return cellHeight > 0 && contentHeight > cellHeight + 1
+}
+
+/**
  * Explicit `repeat(N, …)` template so unused last-row tracks still reserve
  * width (unlike CSS `auto-fit`).
  */

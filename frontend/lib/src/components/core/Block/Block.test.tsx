@@ -1159,6 +1159,56 @@ describe("GridContainer Component", () => {
     expect(gridContainer).toHaveAttribute("data-test-wrap", "false")
   })
 
+  it("fills the layout wrapper so stretch height can resolve", () => {
+    const block = makeGridBlock()
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGrid")).toHaveStyle("height: 100%")
+  })
+
+  it("does not clip cell content until in-flow overflow is measured", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    const block = makeGridBlock(
+      { cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED },
+      [cell]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGridCell")).toHaveStyle("overflow: visible")
+    expect(screen.getByTestId("stGridCell")).toHaveStyle("height: 100%")
+    expect(screen.getByTestId("stGridCellBody")).toHaveAttribute(
+      "data-test-scroll",
+      "false"
+    )
+  })
+
+  it("does not add a cell scrollport in content-height mode", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    const block = makeGridBlock(
+      { cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT },
+      [cell]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.queryByTestId("stGridCellBody")).not.toBeInTheDocument()
+  })
+
   it("should span all columns when columnSpanAll is set", () => {
     const cell = new BlockNode(
       FAKE_SCRIPT_HASH,

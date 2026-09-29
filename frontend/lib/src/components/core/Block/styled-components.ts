@@ -448,7 +448,14 @@ export const StyledGridContainerBlock =
         display: "grid",
         width: "100%",
         maxWidth: "100%",
+        // Fill the layout wrapper so height="stretch" / pixel height resolve
+        // for equal-row tracks and stretch children. Percentage height of an
+        // auto-sized wrapper computes to auto, so content-height grids are
+        // unchanged.
+        height: "100%",
+        flex: 1,
         minWidth: "1rem",
+        minHeight: 0,
         gap: `${rowGapPx} ${columnGapPx}`,
         gridTemplateColumns: computeGridTemplateColumns({
           columnCount,
@@ -456,18 +463,37 @@ export const StyledGridContainerBlock =
           wrap: $wrap,
         }),
         gridAutoRows,
-        // wrap=False keeps the declared track count and scrolls locally
-        ...(!$wrap && { overflowX: "auto" as const }),
+        // wrap=False keeps the declared track count and scrolls locally.
+        // overflow-y stays visible so the x-axis scrollport does not become
+        // a vertical clip for hover toolbars (browsers may still coerce it).
+        ...(!$wrap && {
+          overflowX: "auto" as const,
+          overflowY: "visible" as const,
+        }),
         // Dense packing mode fills gaps by reordering items
         ...($dense && { gridAutoFlow: "dense" }),
       }
     }
   )
 
+function gridCellJustifyContent(
+  verticalAlignment: BlockProto.GridContainer.VerticalAlignment
+): { fallback: string; safe?: string } {
+  const { VerticalAlignment } = BlockProto.GridContainer
+  switch (verticalAlignment) {
+    case VerticalAlignment.CENTER:
+      return { fallback: "center", safe: "safe center" }
+    case VerticalAlignment.BOTTOM:
+      return { fallback: "flex-end", safe: "safe flex-end" }
+    case VerticalAlignment.TOP:
+    default:
+      return { fallback: "flex-start" }
+  }
+}
+
 export interface StyledGridCellProps {
   verticalAlignment: BlockProto.GridContainer.VerticalAlignment
   showBorder: boolean
-  hasFixedHeight: boolean
   columnSpan?: number
   columnSpanAll?: boolean
   rowSpan?: number
@@ -478,45 +504,28 @@ export const StyledGridCell = styled.div<StyledGridCellProps>(
     theme,
     verticalAlignment,
     showBorder,
-    hasFixedHeight,
     columnSpan,
     columnSpanAll,
     rowSpan,
   }) => {
-    const { VerticalAlignment } = BlockProto.GridContainer
-
-    // Map vertical alignment to CSS justify-content (flex column).
-    // Two declarations: unknown `safe` must not drop the fallback alignment.
-    let justifyContentFallback = "flex-start"
-    let justifyContentSafe: string | undefined
-    switch (verticalAlignment) {
-      case VerticalAlignment.CENTER:
-        justifyContentFallback = "center"
-        justifyContentSafe = "safe center"
-        break
-      case VerticalAlignment.BOTTOM:
-        justifyContentFallback = "flex-end"
-        justifyContentSafe = "safe flex-end"
-        break
-      case VerticalAlignment.TOP:
-      default:
-        break
-    }
+    const { fallback, safe } = gridCellJustifyContent(verticalAlignment)
 
     return css(
       {
         display: "flex",
         flexDirection: "column",
         alignItems: "stretch",
-        justifyContent: justifyContentFallback,
+        justifyContent: fallback,
         minWidth: 0,
         minHeight: 0,
         maxWidth: "100%",
-        // For fixed-height cells, overflow-y: auto scrolls tall content.
-        // overflow-x: clip avoids a spurious horizontal scrollbar.
-        // Content painted inside this cell (including popovers/tooltips)
-        // is clipped by the scroll container.
-        ...(hasFixedHeight && { overflowY: "auto", overflowX: "clip" }),
+        // Explicit height so stretch children (height: 100%) resolve against
+        // the grid area. Stretched grid items otherwise keep height: auto.
+        height: "100%",
+        // Overflow stays visible here so hover toolbars (position: absolute
+        // above a chart) can paint. In-flow scrolling is applied on
+        // StyledGridCellBody only when content actually exceeds the cell.
+        overflow: "visible",
         ...(showBorder && {
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
           borderRadius: theme.radii.default,
@@ -529,9 +538,63 @@ export const StyledGridCell = styled.div<StyledGridCellProps>(
         ...(rowSpan && rowSpan > 1 && { gridRow: `span ${rowSpan}` }),
       },
       // Second declaration so unknown `safe` does not drop the fallback.
-      justifyContentSafe &&
+      safe &&
         css`
-          justify-content: ${justifyContentSafe};
+          justify-content: ${safe};
+        `
+    )
+  }
+)
+
+/**
+ * In-flow body of a grid cell. Fills a definite-height cell so stretch
+ * children resolve. `overflow: auto` is applied only when in-flow content
+ * exceeds the cell — a permanent scrollport would clip hover toolbars even
+ * when nothing scrolls.
+ */
+export const StyledGridCellBody = styled.div<{ $scroll: boolean }>(
+  ({ $scroll }) => ({
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
+    width: "100%",
+    minHeight: 0,
+    flex: 1,
+    height: "100%",
+    maxHeight: "100%",
+    ...($scroll && { overflowY: "auto", overflowX: "clip" }),
+  })
+)
+
+interface StyledGridCellContentProps {
+  verticalAlignment: BlockProto.GridContainer.VerticalAlignment
+}
+
+/**
+ * In-flow content of a grid cell. `min-height: min-content` lets this box
+ * grow with tall children so ResizeObserver can detect overflow without
+ * reading scrollHeight. `height: 100%` keeps stretch children resolving
+ * against the cell when content is shorter than the row. Alignment lives
+ * here because this box fills the cell; justify-content on the outer cell
+ * would otherwise be a no-op.
+ */
+export const StyledGridCellContent = styled.div<StyledGridCellContentProps>(
+  ({ verticalAlignment }) => {
+    const { fallback, safe } = gridCellJustifyContent(verticalAlignment)
+
+    return css(
+      {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "stretch",
+        justifyContent: fallback,
+        width: "100%",
+        height: "100%",
+        minHeight: "min-content",
+      },
+      safe &&
+        css`
+          justify-content: ${safe};
         `
     )
   }

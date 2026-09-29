@@ -21,6 +21,7 @@ import {
   GRID_AUTO_COLUMN_CAP,
   resolveGridColumnCount,
   resolveMinColumnWidthPx,
+  shouldScrollGridCell,
 } from "./gridUtils"
 
 describe("cssLengthToPx", () => {
@@ -167,5 +168,20 @@ describe("computeGridTemplateColumns", () => {
         wrap: false,
       })
     ).toBe("repeat(4, minmax(200px, 1fr))")
+  })
+})
+
+describe("shouldScrollGridCell", () => {
+  it("does not scroll when the cell has no definite height", () => {
+    expect(shouldScrollGridCell(400, 0)).toBe(false)
+  })
+
+  it("does not scroll when in-flow content fits", () => {
+    expect(shouldScrollGridCell(180, 200)).toBe(false)
+    expect(shouldScrollGridCell(200, 200)).toBe(false)
+  })
+
+  it("scrolls when in-flow content exceeds the cell", () => {
+    expect(shouldScrollGridCell(240, 200)).toBe(true)
   })
 })

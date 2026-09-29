@@ -18,6 +18,7 @@ import {
   type JSX,
   ReactElement,
   type ReactNode,
+  type Ref,
   useContext,
   useMemo,
 } from "react"
@@ -61,6 +62,7 @@ import {
   cssLengthToPx,
   resolveGridColumnCount,
   resolveMinColumnWidthPx,
+  shouldScrollGridCell,
 } from "./gridUtils"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
@@ -69,6 +71,8 @@ import {
   StyledFlexContainerBlock,
   StyledFlexContainerBlockProps,
   StyledGridCell,
+  StyledGridCellBody,
+  StyledGridCellContent,
   StyledGridContainerBlock,
   StyledLayoutWrapper,
   translateGapWidth,
@@ -284,6 +288,103 @@ interface GridContainerProps extends BaseBlockProps {
 }
 
 const GRID_OBSERVED_PROPERTIES: DOMRectKeys[] = ["width"]
+const GRID_CELL_OBSERVED_PROPERTIES: DOMRectKeys[] = ["height"]
+
+interface GridCellProps {
+  constrainOverflow: boolean
+  verticalAlignment: BlockProto.GridContainer.VerticalAlignment
+  showBorder: boolean
+  columnSpan?: number
+  columnSpanAll: boolean
+  rowSpan?: number
+  children: ReactNode
+}
+
+type GridCellShellProps = Omit<GridCellProps, "constrainOverflow">
+
+const GridCellShell = ({
+  verticalAlignment,
+  showBorder,
+  columnSpan,
+  columnSpanAll,
+  rowSpan,
+  children,
+  cellRef,
+}: GridCellShellProps & {
+  cellRef?: Ref<HTMLDivElement>
+}): ReactElement => (
+  <StyledGridCell
+    ref={cellRef}
+    verticalAlignment={verticalAlignment}
+    showBorder={showBorder}
+    className="stGridCell"
+    data-testid="stGridCell"
+    columnSpan={columnSpan}
+    columnSpanAll={columnSpanAll}
+    rowSpan={rowSpan}
+  >
+    {children}
+  </StyledGridCell>
+)
+
+const OverflowAwareGridCell = ({
+  verticalAlignment,
+  showBorder,
+  columnSpan,
+  columnSpanAll,
+  rowSpan,
+  children,
+}: GridCellShellProps): ReactElement => {
+  const { values: cellHeights, elementRef: cellRef } =
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
+  const { values: contentHeights, elementRef: contentRef } =
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
+  const scroll = shouldScrollGridCell(
+    contentHeights[0] ?? 0,
+    cellHeights[0] ?? 0
+  )
+
+  return (
+    <GridCellShell
+      verticalAlignment={verticalAlignment}
+      showBorder={showBorder}
+      columnSpan={columnSpan}
+      columnSpanAll={columnSpanAll}
+      rowSpan={rowSpan}
+      cellRef={cellRef}
+    >
+      <StyledGridCellBody
+        $scroll={scroll}
+        data-testid="stGridCellBody"
+        data-test-scroll={String(scroll)}
+      >
+        <StyledGridCellContent
+          ref={contentRef}
+          verticalAlignment={verticalAlignment}
+        >
+          {children}
+        </StyledGridCellContent>
+      </StyledGridCellBody>
+    </GridCellShell>
+  )
+}
+
+/**
+ * One CSS Grid item. The cell itself never becomes a scrollport: hover
+ * toolbars sit `position: absolute` above charts and would be clipped even
+ * when in-flow content fits. Definite-height rows add an inner body that
+ * fills the cell (so stretch children resolve) and only switches to
+ * `overflow: auto` if in-flow content actually exceeds the cell.
+ */
+const GridCell = ({
+  constrainOverflow,
+  ...shellProps
+}: GridCellProps): ReactElement => {
+  if (!constrainOverflow) {
+    return <GridCellShell {...shellProps} />
+  }
+  return <OverflowAwareGridCell {...shellProps} />
+}
 
 /**
  * Renders a CSS Grid container with its children wrapped in grid cells.
@@ -421,22 +522,27 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     componentRegistry,
   ])
 
-  // Determine if grid has fixed cell height for overflow handling
-  const hasFixedHeight =
-    cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED
+  const heightConfig = node.deltaBlock.heightConfig
+  const gridHasBoundedHeight = Boolean(
+    heightConfig?.useStretch ||
+    heightConfig?.pixelHeight ||
+    heightConfig?.remHeight
+  )
+  const constrainOverflow =
+    cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED ||
+    (cellHeightMode === BlockProto.GridContainer.CellHeightMode.EQUAL &&
+      gridHasBoundedHeight)
 
-  // Wrap each child in a StyledGridCell with span information.
+  // Wrap each child in a grid cell with span information.
   // Use nodeId for stable React keys so width-driven template updates do not
   // remount cells. Fall back to index if nodeId unavailable.
   const wrappedChildren = childrenWithCells.map((child, index) => (
-    <StyledGridCell
+    <GridCell
       // eslint-disable-next-line @eslint-react/no-array-index-key -- nodeId is preferred; index is only used when the child has no identity
       key={child.nodeId ?? index}
+      constrainOverflow={constrainOverflow}
       verticalAlignment={verticalAlignment}
       showBorder={showCellBorder}
-      hasFixedHeight={hasFixedHeight}
-      className="stGridCell"
-      data-testid="stGridCell"
       columnSpan={
         child.columnSpanAll || !child.columnSpan
           ? undefined
@@ -452,7 +558,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       >
         {child.element}
       </FlexContextProvider>
-    </StyledGridCell>
+    </GridCell>
   ))
 
   return (
