@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { isValidElement, memo, ReactElement } from "react"
+import { isValidElement, memo, type ReactElement } from "react"
 
 import { HelpCircle as HelpCircleIcon } from "react-feather"
 

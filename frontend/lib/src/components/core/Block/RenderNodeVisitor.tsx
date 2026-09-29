@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
-import { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
-import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
+import type { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import { getElementId } from "~lib/util/utils"
 
-import { BlockNodeRenderer, BlockPropsWithoutWidth } from "./Block"
+import { BlockNodeRenderer, type BlockPropsWithoutWidth } from "./Block"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 
 type OptionalReactElements = ReactElement | ReactElement[] | null | undefined

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { Fragment, ReactElement, useContext } from "react"
+import { Fragment, type ReactElement, useContext } from "react"
 
-import { Components } from "react-markdown"
+import type { Components } from "react-markdown"
 
-import { Heading as HeadingProto } from "@streamlit/protobuf"
+import type { Heading as HeadingProto } from "@streamlit/protobuf"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"

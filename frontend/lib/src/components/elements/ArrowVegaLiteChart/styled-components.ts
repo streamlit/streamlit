@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CSSObject } from "@emotion/react"
+import type { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { IGuestToHostMessage } from "~lib/hostComm/types"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { IGuestToHostMessage } from "~lib/hostComm/types"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
 function iconToUrl(icon: string): string {
   const iconRegexp = /^:(.+)\/(.+):$/

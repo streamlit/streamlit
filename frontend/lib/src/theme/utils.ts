@@ -28,7 +28,7 @@ import { getLogger } from "loglevel"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
-import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
+import type { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import { LocalStore } from "~lib/util/storageUtils"
 import {
   isDarkThemeInQueryParams,

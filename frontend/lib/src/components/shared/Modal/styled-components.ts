@@ -15,7 +15,7 @@
  */
 
 import isPropValid from "@emotion/is-prop-valid"
-import { CSSObject, keyframes } from "@emotion/react"
+import { type CSSObject, keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 import {
   Dialog,

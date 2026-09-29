@@ -117,8 +117,8 @@
   "overrides": [
     {
       "files": [
-        "lib/src/components/widgets/**/*.ts",
-        "lib/src/components/widgets/**/*.tsx"
+        "lib/src/**/*.ts",
+        "lib/src/**/*.tsx"
       ],
       "rules": {
         "typescript/consistent-type-imports": [
@@ -131,8 +131,8 @@
     },
     {
       "files": [
-        "lib/src/components/widgets/**/*.test.ts",
-        "lib/src/components/widgets/**/*.test.tsx"
+        "lib/src/**/*.test.ts",
+        "lib/src/**/*.test.tsx"
       ],
       "rules": {
         "typescript/consistent-type-imports": "off"

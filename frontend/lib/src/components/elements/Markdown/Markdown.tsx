@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
 import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 

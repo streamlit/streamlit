@@ -17,7 +17,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 
 import { FloatingFocusManager, FloatingPortal } from "@floating-ui/react"
-import { ChromePicker, ColorResult } from "react-color"
+import { ChromePicker, type ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
 
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
@@ -28,7 +28,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { convertRemToPx } from "~lib/theme/utils"
-import { LabelVisibilityOptions } from "~lib/util/utils"
+import type { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
   StyledChromePicker,

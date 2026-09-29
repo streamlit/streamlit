@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import type { IconSizeProp } from "~lib/theme/types"
 
 import {
   StyledMaterialIcon,
-  StyledMaterialIconProps,
+  type StyledMaterialIconProps,
 } from "./styled-components"
 
 interface MaterialIconProps {

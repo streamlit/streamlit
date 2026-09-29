@@ -28,7 +28,7 @@ import {
   isNullOrUndefined,
 } from "~lib/util/utils"
 
-import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
+import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 

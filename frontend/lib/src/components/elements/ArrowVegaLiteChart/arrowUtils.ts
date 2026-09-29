@@ -16,13 +16,13 @@
 
 import {
   DataFrameCellType,
-  DataType,
+  type DataType,
   getTimezone,
   isDatetimeType,
   isDateType,
   isNumericType,
 } from "~lib/dataframes/arrowTypeUtils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 const MagicFields = {
