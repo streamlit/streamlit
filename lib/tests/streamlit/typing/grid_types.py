@@ -32,9 +32,10 @@ if TYPE_CHECKING:
     # st.grid returns GridContainer
     assert_type(grid(), GridContainer)
 
-    # GridContainer is a DeltaGenerator (Liskov substitution)
-    g: DeltaGenerator = grid()
-    assert_type(g, DeltaGenerator)
+    # Check that the container is usable anywhere a DeltaGenerator is expected.
+    # The annotated assignment is the subtype check: assert_type here would only
+    # see the DeltaGenerator annotation, so it could never fail.
+    _grid_as_delta_generator: DeltaGenerator = grid()
 
     # Context manager returns Self
     with grid() as ctx:
