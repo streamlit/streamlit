@@ -77,7 +77,7 @@
     "color2k": "^2.0.2",
     "d3-graphviz": "^5.6.0",
     "d3-selection": "^3.0.0",
-    "dompurify": "^3.4.15",
+    "dompurify": "^3.4.16",
     "echarts": "^6.1.0",
     "hoist-non-react-statics": "^3.3.2",
     "hotkeys-js": "^4.0.8",
