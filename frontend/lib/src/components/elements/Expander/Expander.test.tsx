@@ -83,8 +83,8 @@ describe("Expander container", () => {
       </Expander>
     )
 
-    // jsdom does not expose <summary> as role=button; aria-label is still the name.
-    expect(screen.getByLabelText("info icon")).toBeVisible()
+    const summary = screen.getByTestId("stExpander").querySelector("summary")
+    expect(summary).toHaveAccessibleName("info icon")
   })
 
   it("falls back to a generic name when label and icon are empty", () => {
@@ -95,7 +95,8 @@ describe("Expander container", () => {
       </Expander>
     )
 
-    expect(screen.getByLabelText("Expander")).toBeVisible()
+    const summary = screen.getByTestId("stExpander").querySelector("summary")
+    expect(summary).toHaveAccessibleName("Expander")
   })
 
   it("renders expander label as expected", () => {
@@ -763,6 +764,16 @@ describe("step mode (type=STEP)", () => {
     )
 
     expect(getSummary()).toHaveAccessibleName("Loading data — running")
+  })
+
+  it("keeps status text in the name for a blank-label collapsible step", () => {
+    render(
+      <Expander {...getStepProps({ label: "", state: State.RUNNING })}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(getSummary()).toHaveAccessibleName("Step — running")
   })
 
   it("announces the status state for a step without content", () => {

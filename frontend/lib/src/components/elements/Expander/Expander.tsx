@@ -271,12 +271,15 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const stepState = STEP_STATES[state]
   const stepIcon = resolveStepIcon(stepState, icon)
   const stepStateLabel = isStep ? stepState?.stateLabel : undefined
-  // Material/emoji icons and chevrons are aria-hidden; name blank-label
-  // summaries so the <summary> stays findable after glyphs are excluded.
-  const iconOnlySummaryName = !label?.trim()
+  // Material/emoji icons and chevrons are aria-hidden. When the markdown
+  // label is blank, inject a content-based name (not aria-label) so step
+  // status text (" — running") can still append to the accessible name.
+  const blankLabelAccessibleName = !label?.trim()
     ? icon
       ? getIconAccessibleName(icon)
-      : "Expander"
+      : isStep
+        ? "Step"
+        : "Expander"
     : undefined
 
   const summaryHeading = (
@@ -325,8 +328,12 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
         <StreamlitMarkdown source={label} allowHTML={false} isLabel />
       </StyledSummaryLabelWrapper>
 
+      {blankLabelAccessibleName && (
+        <StyledVisuallyHidden>{blankLabelAccessibleName}</StyledVisuallyHidden>
+      )}
+
       {/* Append the state as hidden text rather than setting an aria-label:
-          this keeps the rendered markdown label as the accessible name, and it
+          this keeps the rendered markdown (or blank-label) name, and it
           also reaches non-collapsible steps, which ignore aria-label. */}
       {stepStateLabel && (
         <StyledVisuallyHidden>{` — ${stepStateLabel}`}</StyledVisuallyHidden>
@@ -387,7 +394,6 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
           // collapse animation. Default and compact keep the native <details>
           // mapping.
           aria-expanded={isStep ? isOpen : undefined}
-          aria-label={iconOnlySummaryName}
         >
           {summaryHeading}
         </StyledSummary>
