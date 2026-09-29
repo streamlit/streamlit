@@ -142,7 +142,7 @@ class StreamlitDuplicateElementId(
 
 
 class StreamlitDuplicateElementKey(DuplicateWidgetID):
-    """An exception raised when the key of an element is not unique."""
+    """Raised when a user-provided key is duplicated within its namespace (elements, forms, or fragments)."""
 
     def __init__(
         self,
@@ -170,9 +170,10 @@ class StreamlitDuplicateElementKey(DuplicateWidgetID):
         else:
             opener = f"There are multiple elements with the same `key='{user_key}'`."
             detail = (
-                "Keys must be unique app-wide during a run. They are not scoped "
-                "by element type or container, so a different widget type or an "
-                "element in another tab, column, or sidebar cannot reuse this key."
+                "Keys must be unique across everything that renders in a single "
+                "run. They are not scoped by element type or container, so "
+                "elements of different types, and elements in different tabs, "
+                "columns, or the sidebar, cannot share a key."
             )
             fixer = "To fix this, give each element its own unique key."
         super().__init__(f"{opener} {detail}\n\n{fixer}")

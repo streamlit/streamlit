@@ -1056,8 +1056,8 @@ class DataEditorMixin:
             An optional string or integer to use as the unique key for
             the widget. If this is ``None`` (default), a key will be
             generated for the widget based on the values of the other
-            parameters. Keys must be unique app-wide during a run; they
-            are not scoped by element type or container.
+            parameters. No two elements may have the same key, even if
+            they are different element types or in different containers.
 
             A key lets you access the widget's value via
             ``st.session_state[key]`` (read-only). For more details, see

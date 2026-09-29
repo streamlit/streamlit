@@ -336,13 +336,13 @@ def test_value_error_with_detail() -> None:
 
 
 @pytest.mark.parametrize("user_key", ["shared", "my-key", "the key"])
-def test_duplicate_element_key_message_is_app_wide(user_key: str) -> None:
-    """Duplicate widget keys are app-wide and not scoped by type or container."""
+def test_duplicate_element_key_message_is_unique_during_a_run(user_key: str) -> None:
+    """Duplicate widget keys are unique during a run and not scoped by type or container."""
     exc = errors.StreamlitDuplicateElementKey(user_key)
     message = str(exc)
 
     assert f"key='{user_key}'" in message
-    assert "app-wide" in message
+    assert "single run" in message
     assert "element type" in message
     assert "container" in message
     assert "unique key" in message
@@ -351,7 +351,7 @@ def test_duplicate_element_key_message_is_app_wide(user_key: str) -> None:
     assert isinstance(exc, errors.DuplicateWidgetID)
     assert not isinstance(exc, errors.LocalizableStreamlitException)
     # Keys stay in the displayed message only, never in telemetry suffixes.
-    assert getattr(exc, "error_id", None) is None
+    assert exc.error_id is None
 
 
 def test_duplicate_form_key_message_describes_form_namespace() -> None:
@@ -363,7 +363,7 @@ def test_duplicate_form_key_message_describes_form_namespace() -> None:
     assert "Form keys" in message
     assert "separate namespace" in message
     assert "give each form" in message
-    assert "app-wide" not in message
+    assert "single run" not in message
     assert "element type" not in message
 
 
@@ -376,7 +376,7 @@ def test_duplicate_fragment_key_message_describes_fragment_namespace() -> None:
     assert "Fragment keys" in message
     assert "separate namespace" in message
     assert "give each fragment definition" in message
-    assert "app-wide" not in message
+    assert "single run" not in message
     assert "element type" not in message
 
 

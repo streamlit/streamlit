@@ -575,9 +575,10 @@ class PlotlyMixin:
             An optional string to use for giving this element a stable
             identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
-            Keys must be unique app-wide during a run; they are not scoped by
-            element type or container. Identical unkeyed charts still collide
-            across tabs and columns unless you pass a unique ``key``.
+            No two elements may have the same key, even if they are
+            different element types or in different containers.
+            Identical unkeyed charts still collide across tabs and
+            columns unless you pass a unique ``key``.
 
             If selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
