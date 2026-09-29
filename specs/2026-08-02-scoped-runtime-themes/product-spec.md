@@ -58,9 +58,11 @@ CSS, positioning, or element internals.
 
 ### Theme mapping
 
-Introduce public `ThemeConfig` and `ThemeVariantConfig` `TypedDict`s, re-exported from the
-top-level `streamlit` namespace (for example, `from streamlit import ThemeConfig`) so IDEs can
-discover them when annotating theme mappings. Python keys use `snake_case`, consistent with
+Introduce public `ThemeConfig` and `ThemeVariantConfig` `TypedDict`s, exported from
+`streamlit.typing` (for example, `from streamlit.typing import ThemeConfig` or
+`st.typing.ThemeConfig`) so IDEs can discover them when annotating theme mappings. Do not
+re-export them from the top-level `streamlit` / `st` command namespace; that surface is for
+commands and a small number of primary objects. Python keys use `snake_case`, consistent with
 Streamlit's Python API. Each visual key corresponds to an existing theme token.
 
 ```python
@@ -125,11 +127,13 @@ When `base` is inherited, switching Streamlit's theme menu or the operating-syst
 the active variant immediately in the browser. It does not require a Python rerun. If only one
 variant is provided, the other mode uses the shared values over its inherited base.
 
-Invalid keys and values raise a `StreamlitAPIException` with the invalid key/value and accepted
-alternatives. Colors accept hex, `rgb()`/`rgba()`, and W3C/CSS named colors (such as `"green"`), so
-the examples below are valid. These are standard CSS color names, not Streamlit's semantic palette
-names (the `red`/`orange`/`green` tokens used by markdown, badges, and dataframes). Radii and chart
-palettes follow the same rules as their `config.toml` equivalents.
+Invalid keys and values raise specific public exception types: `StreamlitInvalidColorError` for
+colors, `StreamlitValueError` for unknown keys and invalid radius literals, and
+`StreamlitInvalidParameterTypeError` when `theme` is not a mapping. Colors match the
+`config.toml` theme contract: hex, `rgb()`, and `rgba()` only. Named CSS colors such as `"green"`
+are rejected because they collide with Streamlit's semantic palette names (`red`/`orange`/`green`
+used by markdown, badges, and dataframes). Radii and chart palettes follow the same rules as
+their `config.toml` equivalents.
 
 ### Scoped themes with `st.container`
 
@@ -153,7 +157,7 @@ The simplest use case remains a regular container around the target element:
 ```python
 import streamlit as st
 
-with st.container(theme={"primary_color": "green"}):
+with st.container(theme={"primary_color": "#16A34A"}):
     st.button("Approve", type="primary")
 
 st.button("Unchanged", type="primary")
@@ -188,16 +192,27 @@ Scoped themes compose. An inner mapping inherits unspecified tokens from the nea
 container:
 
 ```python
-with st.container(theme={"primary_color": "green", "button_radius": "full"}):
+with st.container(theme={"primary_color": "#16A34A", "button_radius": "full"}):
     st.button("Green pill", type="primary")
 
-    with st.container(theme={"primary_color": "orange"}):
+    with st.container(theme={"primary_color": "#EA580C"}):
         st.button("Orange pill", type="primary")  # Inherits button_radius.
 ```
 
 Inheritance from the nearest themed container applies only when the inner scope omits `base` (or
-uses `"inherit"`). Setting `base="light"` or `base="dark"` resets the starting point to the app's
-configured variant, so an outer scope's tokens (such as `primary_color`) no longer carry through.
+uses `"inherit"`). Setting `base="light"` or `base="dark"` is both a mode selection and an
+inheritance reset: unspecified tokens start from the app's configured variant, not the nearest
+scoped container, so an outer scope's tokens (such as `primary_color`) no longer carry through.
+
+```python
+with st.container(theme={"primary_color": "#16A34A", "button_radius": "full"}):
+    st.button("Green pill", type="primary")
+
+    # Starts from the app's dark variant. Does not inherit primary_color or
+    # button_radius from the outer container.
+    with st.container(theme={"base": "dark", "background_color": "#171221"}):
+        st.button("App-dark button", type="primary")
+```
 
 A scope can follow the app's light/dark mode:
 
@@ -211,13 +226,19 @@ Behavior:
 
 - The override applies to the container surface and all descendants, including columns, tabs,
   expanders, charts, and custom components created inside it.
-- The container paints a surface only when the scope sets `background_color`, and applies a new
-  `text_color` only when the scope sets it. A primary-only override adds no opaque background, so
+- The container paints a surface only when the current layer sets `background_color` after
+  variant selection (including a value supplied only in `light`/`dark`), and applies a new
+  `text_color` only when that layer sets it. A primary-only override adds no opaque background, so
   it preserves today's stacking behavior. Existing padding behavior is unchanged; use `border=True`
   for an inset card.
 - Siblings and ancestors remain unchanged.
 - Portaled descendants such as select menus, tooltips, and popover bodies keep the scoped theme.
+  Dialogs opened with `@st.dialog` do not: their elements are written to a root-level dialog
+  block in the delta tree, so they use the page/runtime theme rather than the calling container's
+  scope.
 - Light/dark sections follow the effective parent mode unless `base` forces a mode.
+- An explicit `base` of `"light"` or `"dark"` also resets inheritance to that app variant.
+  Outer-scope tokens do not carry through.
 - Changing the mapping on a rerun updates the theme without resetting widget identity or state.
 - `theme=None` preserves current behavior and adds no theme provider.
 
@@ -249,13 +270,13 @@ mode = st.segmented_control(
 st.set_page_config(theme={**brand_theme, "base": mode})
 ```
 
-Unlike most page settings, `theme` may be set after other commands have run, so the override can
-depend on widget values from the same run. On the first run of a new session the control returns
-its `default`, so the initial theme matches that default; persist the choice (for example in
-`st.session_state` or a user profile) to restore a returning user's selection. Because the override
-applies only when the browser processes that run's `PageConfig` message, a theme set later in a run
-can briefly show the configured theme on first paint (most noticeable on reconnect or slow
-networks).
+Like other page settings, `theme` can be set at any point in the run, so the override can depend
+on widget values from the same run. Unlike the others, it repaints the running app rather than
+only affecting page chrome. On the first run of a new session the control returns its `default`,
+so the initial theme matches that default; persist the choice (for example in `st.session_state`
+or a user profile) to restore a returning user's selection. Because the override applies only when
+the browser processes that run's `PageConfig` message, a theme set later in a run can briefly show
+the configured theme on first paint (most noticeable on reconnect or slow networks).
 
 If the app should continue following the user's Streamlit/system theme selection, omit `base`:
 
@@ -269,9 +290,15 @@ The runtime override is:
 - Applied immediately when the frontend receives the command; it does not trigger an additional
   script rerun.
 - Layered over the user's currently selected/configured theme unless `base` selects a mode.
-- Re-resolved from `light` or `dark` whenever the underlying browser theme mode changes.
+- Re-resolved from `light` or `dark` whenever the underlying browser theme mode changes, unless
+  `base` forces a mode (in which case the forced mode's variant sections apply).
 - Not persisted across a new browser session by Streamlit. Apps can persist a choice in
   `st.session_state`, a user profile, a cookie-backed component, or their own storage.
+
+When `base` is `"light"` or `"dark"`, the app owns the painted mode until the override is
+cleared. The Streamlit theme menu and OS auto-switch still update the user's stored selection,
+but they do not change the effective appearance. Use an in-app control (as in the example above)
+when the app should change mode, or omit `base` when the menu/OS should remain in control.
 
 `st.set_page_config` remains additive at the parameter level:
 
@@ -284,7 +311,10 @@ The runtime override is:
 
 This is a deliberate difference from `st.container`, where `theme=None` and `theme={}` both mean
 "no scoped override." On `st.set_page_config`, `None` preserves the current runtime override while
-`{}` clears it, because the page-level command is additive across reruns and navigation:
+`{}` clears it, because the page-level command is additive across reruns and navigation. Building a
+mapping incrementally (`theme = {}; if x: theme["primary_color"] = ...`) therefore clears the
+override when every branch leaves it empty. Use `theme=None` (or omit `theme`) when the call should
+be a no-op.
 
 | `theme` value | `st.set_page_config` | `st.container` |
 |---|---|---|
@@ -329,7 +359,7 @@ processed that run's forward message.
 - Adds one parameter rather than adding styling parameters to every element.
 - Keeps the implementation based on semantic tokens instead of DOM/CSS details.
 
-**Option 2: `with st.theme(primary_color="green"):` and `st.set_theme(...)`**
+**Option 2: `with st.theme(primary_color="#16A34A"):` and `st.set_theme(...)`**
 
 - Direct keyword arguments provide excellent autocomplete.
 - A dedicated invisible theme block could avoid layout semantics.
@@ -360,7 +390,9 @@ processed that run's forward message.
   one-level light/dark variants apply consistently to the main app and derived sidebar theme.
 - Theme parameters on `st.columns`, `st.tabs`, `st.expander`, or every element. They can be
   composed inside a themed container first.
-- Scoped styling for inherently global effects such as `st.toast`, `st.balloons`, and `st.snow`.
+- Scoped styling for inherently global effects such as `st.toast`, `st.balloons`, `st.snow`,
+  and `@st.dialog` content. Dialogs render as root-level blocks, so they do not inherit a
+  calling container's theme.
 - Named theme registries or automatic account persistence.
 - New semantic widget variants such as `type="danger"`; scoped primary colors address some of
   the visual need but do not replace a dedicated semantic API.
@@ -376,4 +408,4 @@ processed that run's forward message.
 | No new dependencies | ✅ |
 | Metrics collected | Record command/scope usage only; never collect theme values. |
 | Any security/legal impact? | No raw CSS or new remote resources; reuse existing value validation. |
-| Any docs changes needed? | Add `st.container` and `st.set_page_config` docs plus a theming guide section, including a note that apps are responsible for color contrast (for example `primary_color`/`background_color`/`text_color` pairs), since the feature does not enforce WCAG. |
+| Any docs changes needed? | Add `st.container` and `st.set_page_config` docs plus a theming guide section, including a note that apps are responsible for color contrast (for example `primary_color`/`background_color`/`text_color` pairs), since the feature does not enforce WCAG. Document that an explicit runtime `base` owns the painted mode until cleared, so the Streamlit theme menu / OS auto-switch will not change appearance while that override is active. |
