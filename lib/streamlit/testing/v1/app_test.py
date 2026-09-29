@@ -120,13 +120,15 @@ TMP_DIR = tempfile.TemporaryDirectory()
 
 
 def _query_params_from_query_string(query_string: str) -> dict[str, str | list[str]]:
-    """Parse a query string into the shape testers use on ``AppTest.query_params``.
+    """Parse a query string into the value shapes a test author assigns to ``AppTest.query_params``.
 
-    ``parse_qs`` always wraps values in lists. Single values are unwrapped to
-    ``str`` so ``at.query_params["x"] = "1"`` round-trips; repeated keys stay
-    ``list[str]`` so ``doseq`` encoding on the next run still works.
+    Single values become ``str`` so ``at.query_params["x"] = "1"`` round-trips.
+    Repeated keys stay ``list[str]`` so the next run still encodes each value
+    as its own ``key=value`` pair. Blank values (``?foo=``) are kept as ``""``
+    rather than dropped.
     """
     parsed = parse.parse_qs(query_string, keep_blank_values=True)
+    # Same single-value unwrap as QueryParams.populate_from_query_string.
     return {
         key: values[0] if len(values) == 1 else values for key, values in parsed.items()
     }
@@ -263,10 +265,12 @@ class AppTest:
         ``keys``, ``items``, ``values``, ``to_dict``, ``len``, and iteration.
 
     query_params: dict[str, Any]
-        Dictionary of query parameters to be used by the simulated app. Use
-        dict-like syntax to set ``query_params`` values for the simulated app.
-        After ``.run()``, single values are ``str`` and repeated keys are
-        ``list[str]``.
+        Dictionary of query parameters for the simulated app. Use dict-like
+        syntax to set values before ``.run()``. After ``.run()``, a single
+        occurrence is ``str`` (a one-element list collapses to ``str``),
+        blank values are preserved as ``""``, and repeated keys stay
+        ``list[str]``. That last case differs from ``st.query_params``,
+        which returns only the last value.
     """
 
     def __init__(

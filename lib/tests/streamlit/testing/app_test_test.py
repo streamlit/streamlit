@@ -178,11 +178,7 @@ def test_set_query_params() -> None:
 
 
 def test_query_params_round_trip() -> None:
-    """Tester-set query params round-trip through .run() without parse_qs wrapping.
-
-    Single values stay str, repeated keys stay lists (doseq encoding), and
-    blank values are preserved.
-    """
+    """AppTest preserves single, repeated, and blank query parameters across runs."""
 
     def script():
         import streamlit as st
@@ -191,17 +187,21 @@ def test_query_params_round_trip() -> None:
 
     at = AppTest.from_function(script)
     at.query_params["x"] = "1"
+    at.query_params["one"] = ["solo"]
     at.query_params["tags"] = ["a", "b"]
     at.query_params["empty"] = ""
     at.run()
 
     assert at.query_params["x"] == "1"
+    assert at.query_params["one"] == "solo"
     assert at.query_params["tags"] == ["a", "b"]
     assert at.query_params["empty"] == ""
     assert at.query_params["from_app"] == "bar"
 
+    # Second run re-encodes the collapsed dict; values must stay stable.
     at.run()
     assert at.query_params["x"] == "1"
+    assert at.query_params["one"] == "solo"
     assert at.query_params["tags"] == ["a", "b"]
     assert at.query_params["empty"] == ""
     assert at.query_params["from_app"] == "bar"
