@@ -296,7 +296,27 @@ function getClosePendingRange(
   if (isRangeFullyCleared(container)) {
     return []
   }
-  return getPendingRange(container, displayStart, displayEnd)
+  const pending = getPendingRange(container, displayStart, displayEnd)
+  if (pending.length === 2) {
+    return pending
+  }
+  // DateField onChange may have both bounds while this frame's DOM parse
+  // is still incomplete. Skip this when a field is mid-edit so a partial
+  // clear still reverts, and when a field is fully cleared so a stale end
+  // is not restored.
+  if (displayStart && displayEnd && !hasPartiallyTypedField(container)) {
+    const startField =
+      container?.querySelector('[data-range-field="start"]') ?? null
+    const endField =
+      container?.querySelector('[data-range-field="end"]') ?? null
+    if (
+      !(startField && isFieldFullyCleared(startField)) &&
+      !(endField && isFieldFullyCleared(endField))
+    ) {
+      return [displayStart, displayEnd]
+    }
+  }
+  return pending
 }
 
 /** True when the user is mid-edit and we cannot yet parse a complete range. */
@@ -629,7 +649,13 @@ function RangeDateInput({
           onCloseRef.current(true)
         } else {
           const committed = compact([startValue, endValue])
+          const isRealClear =
+            pending.length === 0 && isRangeFullyCleared(triggerRef.current)
+          // If this frame could not parse a complete range and the field is
+          // not actually cleared, do not stage [] or latch skipCloseCommit.
+          // The close effect retries after paint once React Aria flushes.
           if (
+            (pending.length === 2 || isRealClear) &&
             shouldNotifyRangePending(pending, committed, hasEditedRef.current)
           ) {
             hasEditedRef.current = false
@@ -874,7 +900,7 @@ function RangeDateInput({
         // type_date and keyboard users commit with Escape even when the
         // calendar is not open (no overlay onClose / close effect).
         const pending = getClosePendingRange(
-          e.currentTarget,
+          triggerRef.current ?? e.currentTarget,
           displayStartRef.current,
           displayEndRef.current
         )
@@ -892,7 +918,13 @@ function RangeDateInput({
             } else {
               onChangeRef.current(pending)
             }
+            if (isOpen) {
+              skipCloseCommitRef.current = true
+            }
           }
+        }
+        if (isOpen) {
+          setIsOpenState(false)
         }
       }
 
