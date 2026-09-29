@@ -114,9 +114,9 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       bgHeaderHasFocus: flatHeaderInteractionBg,
       bgHeaderHovered: flatHeaderInteractionBg,
       bgButtonHovered: buttonHoverBg,
-      textHeader: theme.colors.fadedText60,
+      textHeader: theme.colors.dataframeHeaderTextColor,
       textHeaderSelected: theme.colors.white,
-      textGroupHeader: theme.colors.fadedText60,
+      textGroupHeader: theme.colors.dataframeHeaderTextColor,
       headerIconSize: Math.round(convertRemToPx("1.125rem")),
       headerFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       // Cell styling:

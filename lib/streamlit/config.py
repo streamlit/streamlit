@@ -2468,6 +2468,25 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "dataframeHeaderTextColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The text color of the dataframe's header.
+
+        This color applies to column headers and grouped column headers. It
+        does not restyle body cells or row-selection checkboxes. If this
+        isn't set, Streamlit uses a faded version of `theme.textColor`.
+    """,
+)
+
+_create_theme_options(
     "showWidgetBorder",
     categories=[
         "theme",

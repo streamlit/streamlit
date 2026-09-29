@@ -165,4 +165,46 @@ describe("useCustomTheme hook", () => {
       customResult.current.glideTheme.bgHeaderHovered
     )
   })
+
+  it("maps dataframeHeaderTextColor to textHeader and textGroupHeader", () => {
+    const themeWithHeaderText = {
+      ...mockTheme.emotion,
+      colors: {
+        ...mockTheme.emotion.colors,
+        dataframeHeaderTextColor: "#00ff00",
+      },
+    }
+
+    const wrapper = ({
+      children,
+    }: {
+      children: React.ReactNode
+    }): JSX.Element => (
+      <ThemeProvider theme={themeWithHeaderText}>{children}</ThemeProvider>
+    )
+
+    const { result } = renderHook(() => useCustomTheme(), { wrapper })
+    const { textHeader, textGroupHeader, textHeaderSelected } =
+      result.current.glideTheme
+
+    expect(textHeader).toBe("#00ff00")
+    expect(textGroupHeader).toBe("#00ff00")
+    expect(textHeaderSelected).toBe(mockTheme.emotion.colors.white)
+  })
+
+  it("uses fadedText60 for header text when dataframeHeaderTextColor is unset", () => {
+    const wrapper = ({
+      children,
+    }: {
+      children: React.ReactNode
+    }): JSX.Element => (
+      <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
+    )
+
+    const { result } = renderHook(() => useCustomTheme(), { wrapper })
+    const { textHeader, textGroupHeader } = result.current.glideTheme
+
+    expect(textHeader).toBe(mockTheme.emotion.colors.fadedText60)
+    expect(textGroupHeader).toBe(mockTheme.emotion.colors.fadedText60)
+  })
 })
