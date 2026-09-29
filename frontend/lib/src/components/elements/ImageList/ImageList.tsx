@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { CSSProperties, memo, ReactElement } from "react"
+import {
+  CSSProperties,
+  memo,
+  ReactElement,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { getLogger } from "loglevel"
 
@@ -33,6 +41,7 @@ import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { isDangerousLinkUri } from "~lib/util/UriUtil"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   StyledCaption,
@@ -96,17 +105,52 @@ const Image = ({
   link?: string
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
+  const captionDomId = useId()
+  const captionRef = useRef<HTMLDivElement>(null)
+  // Name the link from the caption only when the caption actually renders
+  // text. Label Markdown strips some constructs (a lone `---` becomes
+  // nothing), which would otherwise point aria-labelledby at an empty node.
+  const [captionHasText, setCaptionHasText] = useState(false)
   // Do not wrap a dangerous URI in an anchor. A neutralized href="#" is
   // still a nameless focusable control (WCAG SC 4.1.2).
   const safeLink = link && !isDangerousLinkUri(link) ? link : undefined
+  // Unset means omit alt (detectable missing name). Empty string is decorative.
+  const imgAlt: string | undefined = isNullOrUndefined(image.alt)
+    ? undefined
+    : image.alt
+
+  // Watch the caption for text that arrives late: async Markdown plugins
+  // (KaTeX, emoji) swap a loading skeleton for real content after the first
+  // render. Only linked images consume captionHasText.
+  useLayoutEffect(() => {
+    const node = captionRef.current
+    if (!safeLink || !image.caption || !node) {
+      setCaptionHasText(false)
+      return
+    }
+
+    const syncCaptionHasText = (): void => {
+      const text = node.textContent?.trim() ?? ""
+      setCaptionHasText(text.length > 0)
+    }
+
+    syncCaptionHasText()
+
+    const observer = new MutationObserver(syncCaptionHasText)
+    observer.observe(node, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+    return () => observer.disconnect()
+  }, [image.caption, safeLink])
 
   const imageElement = (
-    // Images currently have no authored alt; inventing a placeholder
-    // (e.g. the list index) is a WCAG F30 failure, so omit the attribute.
     // oxlint-disable-next-line jsx-a11y/alt-text
     <img
       style={imgStyle}
       src={buildMediaURL(image.url)}
+      alt={imgAlt}
       onError={handleImageError}
       crossOrigin={crossOrigin}
     />
@@ -122,7 +166,11 @@ const Image = ({
           href={safeLink}
           target="_blank"
           rel="noreferrer"
-          aria-label={image.caption || safeLink}
+          // Name the link from the visible caption, then alt, then the URL.
+          // Label by the caption node so markdown is announced as plain text.
+          {...(captionHasText
+            ? { "aria-labelledby": captionDomId }
+            : { "aria-label": imgAlt || safeLink })}
           data-testid="stImageLink"
         >
           {imageElement}
@@ -131,7 +179,12 @@ const Image = ({
         imageElement
       )}
       {image.caption && (
-        <StyledCaption data-testid="stImageCaption" style={imgStyle}>
+        <StyledCaption
+          ref={captionRef}
+          id={captionDomId}
+          data-testid="stImageCaption"
+          style={imgStyle}
+        >
           <StreamlitMarkdown
             source={image.caption}
             allowHTML={false}
