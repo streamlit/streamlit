@@ -115,28 +115,23 @@ function ToolbarActions({
       className="stToolbarActions"
       data-testid="stToolbarActions"
     >
-      {hostToolbarItems.map((item, index) => {
-        const { label, icon, key } = item
-        const reactKey = trimHostString(key) || `toolbar-action-${index}`
-
-        return (
-          <ActionButton
-            key={reactKey}
-            label={label}
-            icon={icon}
-            ariaLabel={getToolbarActionAccessibleName(label, key)}
-            onClick={() => {
-              metricsMgr.enqueue("menuClick", {
-                label: key,
-              })
-              sendMessageToHost({
-                type: "TOOLBAR_ITEM_CALLBACK",
-                key,
-              })
-            }}
-          />
-        )
-      })}
+      {hostToolbarItems.map(({ key, label, icon }) => (
+        <ActionButton
+          key={key}
+          label={label}
+          icon={icon}
+          ariaLabel={getToolbarActionAccessibleName(label, key)}
+          onClick={() => {
+            metricsMgr.enqueue("menuClick", {
+              label: key,
+            })
+            sendMessageToHost({
+              type: "TOOLBAR_ITEM_CALLBACK",
+              key,
+            })
+          }}
+        />
+      ))}
     </StyledToolbarActions>
   )
 }
