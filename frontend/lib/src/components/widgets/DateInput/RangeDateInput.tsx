@@ -326,6 +326,10 @@ function rangeEqual(a: CalendarDate[], b: CalendarDate[]): boolean {
   return a.every((d, i) => datesEqual(d, b[i]))
 }
 
+function rangeIsoKey(dates: CalendarDate[]): string {
+  return dates.map(calendarDateToIso).join(",")
+}
+
 /** True when close/blur should notify the parent, including a full clear
  * that matches an already-empty committed value after a real edit.
  * Callers must clear `hasEdited` after the pending edit is committed or
@@ -391,6 +395,7 @@ function RangeDateInput({
   // Set when close/blur already notified the parent so a late DateField
   // onChange after Escape does not write twice.
   const committedOnThisCloseRef = useRef(false)
+  const lastNotifiedRangeKeyRef = useRef("")
   // A full clear that matches an empty default still needs to notify the
   // parent so a required field can paint.
   const hasEditedRef = useRef(false)
@@ -536,6 +541,7 @@ function RangeDateInput({
           ) {
             hasEditedRef.current = false
             committedOnThisCloseRef.current = true
+            lastNotifiedRangeKeyRef.current = rangeIsoKey(pending)
             onChangeRef.current(pending)
           }
         }
@@ -641,6 +647,7 @@ function RangeDateInput({
             }
             skipCloseCommitRef.current = true
             committedOnThisCloseRef.current = true
+            lastNotifiedRangeKeyRef.current = rangeIsoKey(pending)
           }
         }
       },
@@ -741,12 +748,17 @@ function RangeDateInput({
       // both bounds are now complete and close/blur did not already notify.
       if (
         !isOpenRef.current &&
-        !committedOnThisCloseRef.current &&
         date &&
-        displayEndRef.current
+        displayEndRef.current &&
+        rangeIsoKey([date, displayEndRef.current]) !==
+          lastNotifiedRangeKeyRef.current
       ) {
         hasEditedRef.current = false
         committedOnThisCloseRef.current = true
+        lastNotifiedRangeKeyRef.current = rangeIsoKey([
+          date,
+          displayEndRef.current,
+        ])
         onChangeRef.current([date, displayEndRef.current])
       }
     },
@@ -766,12 +778,17 @@ function RangeDateInput({
       if (date) onFocusChange(date)
       if (
         !isOpenRef.current &&
-        !committedOnThisCloseRef.current &&
         displayStartRef.current &&
-        date
+        date &&
+        rangeIsoKey([displayStartRef.current, date]) !==
+          lastNotifiedRangeKeyRef.current
       ) {
         hasEditedRef.current = false
         committedOnThisCloseRef.current = true
+        lastNotifiedRangeKeyRef.current = rangeIsoKey([
+          displayStartRef.current,
+          date,
+        ])
         onChangeRef.current([displayStartRef.current, date])
       }
     },
@@ -836,6 +853,7 @@ function RangeDateInput({
           onChange([start, end])
           skipCloseCommitRef.current = true
           committedOnThisCloseRef.current = true
+          lastNotifiedRangeKeyRef.current = rangeIsoKey([start, end])
           setIsOpenState(false)
           restoreFocusToField()
           setIsCalendarActive(false)
@@ -852,6 +870,7 @@ function RangeDateInput({
       onChange([range.start, range.end])
       skipCloseCommitRef.current = true
       committedOnThisCloseRef.current = true
+      lastNotifiedRangeKeyRef.current = rangeIsoKey([range.start, range.end])
       setIsOpenState(false)
       restoreFocusToField()
       setIsCalendarActive(false)
@@ -871,14 +890,16 @@ function RangeDateInput({
           displayStartRef.current,
           displayEndRef.current
         )
-        if (pending.length === 2 && !committedOnThisCloseRef.current) {
+        if (pending.length === 2) {
           const committed = compact([startValue, endValue])
+          const pendingKey = rangeIsoKey(pending)
           if (
+            pendingKey !== lastNotifiedRangeKeyRef.current &&
             shouldNotifyRangePending(pending, committed, hasEditedRef.current)
           ) {
             hasEditedRef.current = false
             committedOnThisCloseRef.current = true
-            skipCloseCommitRef.current = true
+            lastNotifiedRangeKeyRef.current = pendingKey
             if (formCommit) {
               formCommit(pending)
             } else {
@@ -1121,6 +1142,12 @@ function RangeDateInput({
         displayStartRef.current,
         displayEndRef.current
       )
+      if (
+        pending.length === 2 &&
+        rangeIsoKey(pending) === lastNotifiedRangeKeyRef.current
+      ) {
+        return
+      }
       if (shouldRevertPartialRange(triggerRef.current, pending)) {
         hasEditedRef.current = false
         onCloseRef.current(true)
@@ -1134,6 +1161,7 @@ function RangeDateInput({
       }
       hasEditedRef.current = false
       committedOnThisCloseRef.current = true
+      lastNotifiedRangeKeyRef.current = rangeIsoKey(pending)
       if (isOpen) {
         // Tab-away closes the popover in the same interaction. Skip the
         // close-effect commit so an optional empty-default range does not
