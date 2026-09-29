@@ -15,13 +15,13 @@
  */
 
 import {
-  BaseGridCell,
-  Theme as GlideTheme,
-  GridCell,
+  type BaseGridCell,
+  type Theme as GlideTheme,
+  type GridCell,
   GridCellKind,
-  GridColumn,
-  LoadingCell,
-  TextCell,
+  type GridColumn,
+  type LoadingCell,
+  type TextCell,
 } from "@glideapps/glide-data-grid"
 import { Vector } from "apache-arrow"
 import { isString, merge, toString } from "lodash-es"
@@ -30,7 +30,7 @@ import "moment-duration-format"
 import "moment-timezone"
 import numbro from "numbro"
 
-import { ArrowType } from "~lib/dataframes/arrowTypeUtils"
+import type { ArrowType } from "~lib/dataframes/arrowTypeUtils"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 

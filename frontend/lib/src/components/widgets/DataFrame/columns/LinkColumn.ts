@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind, UriCell } from "@glideapps/glide-data-grid"
+import {
+  type GridCell,
+  GridCellKind,
+  type UriCell,
+} from "@glideapps/glide-data-grid"
 
 import {
   isMaterialIcon,
@@ -24,8 +28,8 @@ import { genericFonts } from "~lib/theme/primitives/typography"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   getLinkDisplayValueFromRegex,
   toSafeString,

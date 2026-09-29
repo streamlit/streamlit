@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -35,19 +35,22 @@ import {
 } from "@emotion-icons/material-outlined"
 import {
   CompactSelection,
-  DataEditorRef,
+  type DataEditorRef,
   DataEditor as GlideDataEditor,
-  GridCell,
-  GridColumn,
-  GridMouseEventArgs,
-  GridSelection,
+  type GridCell,
+  type GridColumn,
+  type GridMouseEventArgs,
+  type GridSelection,
   type Item,
-  Rectangle,
+  type Rectangle,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
-import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe as DataframeProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
 import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
@@ -65,10 +68,10 @@ import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import useTimeout from "~lib/hooks/useTimeout"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   getTextCell,
   ImageCellEditor,
   toGlideColumn,

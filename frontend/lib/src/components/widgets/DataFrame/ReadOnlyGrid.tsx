@@ -20,7 +20,7 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 
 import DataFrame from "./DataFrame"
 

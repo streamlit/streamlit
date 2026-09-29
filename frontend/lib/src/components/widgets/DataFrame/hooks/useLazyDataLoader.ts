@@ -17,22 +17,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import {
-  GridCell,
+  type GridCell,
   GridCellKind,
   type Item,
-  LoadingCell,
+  type LoadingCell,
   type Rectangle,
 } from "@glideapps/glide-data-grid"
 
 import { SortState } from "@streamlit/protobuf"
 
-import { BackendOperationClient } from "~lib/BackendOperationClient"
+import type { BackendOperationClient } from "~lib/BackendOperationClient"
 import { getCellFromArrow } from "~lib/components/widgets/DataFrame/arrowUtils"
 import {
-  BaseColumn,
+  type BaseColumn,
   getErrorCell,
 } from "~lib/components/widgets/DataFrame/columns"
-import { ServerSortState } from "~lib/components/widgets/DataFrame/hooks/useColumnSort"
+import type { ServerSortState } from "~lib/components/widgets/DataFrame/hooks/useColumnSort"
 import { LazyDataframeCache } from "~lib/components/widgets/DataFrame/LazyDataframeCache"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"

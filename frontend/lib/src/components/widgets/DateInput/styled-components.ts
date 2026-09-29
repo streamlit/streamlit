@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { ComponentType } from "react"
+import type { ComponentType } from "react"
 
 import styled from "@emotion/styled"
-import { CalendarDate } from "@internationalized/date"
+import type { CalendarDate } from "@internationalized/date"
 import { getLuminance, transparentize } from "color2k"
 import {
   Button,
@@ -25,14 +25,14 @@ import {
   CalendarCell,
   CalendarGrid,
   CalendarHeaderCell,
-  CalendarProps,
+  type CalendarProps,
   DateSegment,
   Group,
   ListBox,
   ListBoxItem,
   Popover,
   RangeCalendar,
-  RangeCalendarProps,
+  type RangeCalendarProps,
   Select,
 } from "react-aria-components"
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Table, tableFromIPC } from "apache-arrow"
+import { type Table, tableFromIPC } from "apache-arrow"
 
 import { ARROW_REF_KEY } from "~lib/components/widgets/BidiComponent/constants"
 

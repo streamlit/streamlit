@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { GridCell } from "@glideapps/glide-data-grid"
+import type { GridCell } from "@glideapps/glide-data-grid"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   isMissingValueCell,
 } from "~lib/components/widgets/DataFrame/columns"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"

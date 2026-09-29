@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect } from "react"
+import { memo, type ReactElement, useCallback, useEffect } from "react"
 
 import {
   DynamicIcon,
