@@ -901,9 +901,9 @@ class LayoutsMixin:
         """
         validate_wrap(wrap)
 
-        if columns == "auto":
+        if isinstance(columns, str) and columns == "auto":
             validated_columns: Literal["auto"] | int = "auto"
-        elif isinstance(columns, str):
+        elif isinstance(columns, str):  # type: ignore[unreachable]
             raise StreamlitValueError(
                 "columns",
                 ['"auto"', "an integer from 1 to 24"],
@@ -932,9 +932,9 @@ class LayoutsMixin:
                 ),
             )
 
-        if min_column_width == "auto":
+        if isinstance(min_column_width, str) and min_column_width == "auto":
             validated_min_column_width: Literal["auto"] | int = "auto"
-        elif isinstance(min_column_width, str):
+        elif isinstance(min_column_width, str):  # type: ignore[unreachable]
             raise StreamlitValueError(
                 "min_column_width",
                 ['"auto"', "a positive integer"],
@@ -974,7 +974,7 @@ class LayoutsMixin:
                 detail=f"Got {vertical_alignment!r}.",
             )
 
-        if row_height in {"content", "equal"}:
+        if isinstance(row_height, str) and row_height in {"content", "equal"}:
             validated_row_height: Literal["content", "equal"] | int = row_height
         elif isinstance(row_height, str):
             raise StreamlitValueError(

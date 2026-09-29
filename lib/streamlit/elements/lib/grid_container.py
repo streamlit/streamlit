@@ -104,9 +104,9 @@ class GridContainer(DeltaGenerator):
             height: 220px
 
         """
-        if column_span == "all":
+        if isinstance(column_span, str) and column_span == "all":
             validated_column_span: Literal["all"] | int = "all"
-        elif isinstance(column_span, str):
+        elif isinstance(column_span, str):  # type: ignore[unreachable]
             raise StreamlitValueError(
                 "column_span",
                 ['"all"', "a positive integer"],

@@ -2772,6 +2772,7 @@ class GridTest(DeltaGeneratorTestCase):
             (None,),
             (1.5,),
             (True,),
+            ([],),
         ]
     )
     def test_invalid_columns_type(self, invalid_columns):
@@ -2797,6 +2798,7 @@ class GridTest(DeltaGeneratorTestCase):
             ("invalid",),
             (None,),
             (True,),
+            ([],),
         ]
     )
     def test_invalid_min_column_width(self, invalid_min_width):
@@ -2924,6 +2926,7 @@ class GridTest(DeltaGeneratorTestCase):
             (0,),
             ("invalid",),
             (None,),
+            ([],),
         ]
     )
     def test_invalid_row_height(self, invalid_height):
@@ -3105,6 +3108,7 @@ class CellTest(DeltaGeneratorTestCase):
             (None,),
             (1.5,),
             (True,),
+            ([],),
         ]
     )
     def test_invalid_column_span_type(self, invalid_columns):
