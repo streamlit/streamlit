@@ -15,9 +15,6 @@ supported-markers = [
 exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
 exclude-newer-span = "PT24H"
 
-[options.exclude-newer-package]
-streamlit-pdf = false
-
 [manifest]
 overrides = [
     { name = "pandas", marker = "python_full_version < '3.11'", specifier = ">=1.4.0,<3" },

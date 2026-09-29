@@ -44,9 +44,6 @@ required-version = ">=0.11.8"
 environments = ["python_version < '3.15' and sys_platform != 'emscripten'"]
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
-# Temporary: allow locking streamlit-pdf 2.1.0 (st.pdf alt sink; published today).
-# Remove this override once the global 24h cooldown would admit 2.1.0 on its own.
-exclude-newer-package = { streamlit-pdf = false }
 # Explicit version constraints by Python version:
 # - Python 3.10: pandas 2.x / websockets 16.x (pandas 3.x and websockets 17.x
 #   require Python >= 3.11)
