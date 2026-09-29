@@ -329,11 +329,11 @@ In loops, include a stable data ID in the key. A loop index is not enough if ite
 ```python
 # BAD: Reordering rows recycles keys and mixes widget state
 for i, item in enumerate(items):
-    st.button("Delete", key=f"delete_{i}")
+    st.checkbox(item.name, key=f"select_{i}")
 
 # GOOD: The key follows the item, not its position
 for item in items:
-    st.button("Delete", key=f"delete_{item.id}")
+    st.checkbox(item.name, key=f"select_{item.id}")
 ```
 
 Identical unkeyed `st.plotly_chart` calls collide even across tabs or columns because auto-generated IDs ignore layout context. Pass a distinct `key` for each chart.

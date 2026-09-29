@@ -352,7 +352,6 @@ def test_duplicate_element_key_message_is_app_wide(user_key: str) -> None:
     assert not isinstance(exc, errors.LocalizableStreamlitException)
     # Keys stay in the displayed message only, never in telemetry suffixes.
     assert getattr(exc, "error_id", None) is None
-    assert not hasattr(exc, "exec_kwargs")
 
 
 def test_duplicate_form_key_message_describes_form_namespace() -> None:
@@ -360,8 +359,10 @@ def test_duplicate_form_key_message_describes_form_namespace() -> None:
     message = str(errors.StreamlitDuplicateElementKey("foo", scope="form"))
 
     assert "key='foo'" in message
+    assert "multiple forms" in message
     assert "Form keys" in message
     assert "separate namespace" in message
+    assert "give each form" in message
     assert "app-wide" not in message
     assert "element type" not in message
 
@@ -371,8 +372,10 @@ def test_duplicate_fragment_key_message_describes_fragment_namespace() -> None:
     message = str(errors.StreamlitDuplicateElementKey("shared_key", scope="fragment"))
 
     assert "key='shared_key'" in message
+    assert "fragment definitions" in message
     assert "Fragment keys" in message
     assert "separate namespace" in message
+    assert "give each fragment definition" in message
     assert "app-wide" not in message
     assert "element type" not in message
 

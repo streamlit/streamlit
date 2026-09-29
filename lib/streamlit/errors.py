@@ -141,9 +141,7 @@ class StreamlitDuplicateElementId(
         )
 
 
-class StreamlitDuplicateElementKey(
-    DuplicateWidgetID
-):  # pragma: no cover - simple f-string
+class StreamlitDuplicateElementKey(DuplicateWidgetID):
     """An exception raised when the key of an element is not unique."""
 
     def __init__(
@@ -153,25 +151,31 @@ class StreamlitDuplicateElementKey(
         scope: Literal["element", "form", "fragment"] = "element",
     ) -> None:
         if scope == "form":
+            opener = f"There are multiple forms with the same `key='{user_key}'`."
             detail = (
                 "Form keys must be unique among forms in a run; they are a "
                 "separate namespace from widget keys."
             )
+            fixer = "To fix this, give each form its own unique key."
         elif scope == "fragment":
+            opener = (
+                f"There are multiple fragment definitions with the same "
+                f"`key='{user_key}'`."
+            )
             detail = (
                 "Fragment keys must be unique among fragment definitions that "
                 "render in a run; they are a separate namespace from widget keys."
             )
+            fixer = "To fix this, give each fragment definition its own unique key."
         else:
+            opener = f"There are multiple elements with the same `key='{user_key}'`."
             detail = (
                 "Keys must be unique app-wide during a run. They are not scoped "
                 "by element type or container, so a different widget type or an "
                 "element in another tab, column, or sidebar cannot reuse this key."
             )
-        super().__init__(
-            f"There are multiple elements with the same `key='{user_key}'`. "
-            f"{detail}\n\nTo fix this, give each element its own unique key."
-        )
+            fixer = "To fix this, give each element its own unique key."
+        super().__init__(f"{opener} {detail}\n\n{fixer}")
 
 
 class UnserializableSessionStateError(

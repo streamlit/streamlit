@@ -2610,8 +2610,10 @@ def test_fragment_duplicate_key_different_definitions_raises() -> None:
 
     message = str(ctx.value)
     assert "key='shared_key'" in message
+    assert "fragment definitions" in message
     assert "Fragment keys" in message
     assert "separate namespace" in message
+    assert "give each fragment definition" in message
 
 
 def test_fragment_same_definition_multiple_call_sites_no_collision() -> None:
