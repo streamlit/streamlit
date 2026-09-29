@@ -71,6 +71,7 @@ import {
   isValidSegmentValue,
   noop,
   parseDateFieldPaste,
+  readCalendarDateFromField,
   SEGMENT_SELECTOR,
   validateDate,
 } from "./dateInputUtils"
@@ -185,6 +186,48 @@ function AnchorDateWatcher({
 
 function compact(dates: (CalendarDate | null)[]): CalendarDate[] {
   return dates.filter((d): d is CalendarDate => d !== null)
+}
+
+/** Commit payload for close/blur. Prefer controlled display state; fill a
+ * missing bound from the DOM when React Aria has painted typed digits but
+ * has not flushed `onChange` yet (Escape after typing the end date). */
+function getPendingRange(
+  container: HTMLElement | null,
+  displayStart: CalendarDate | null,
+  displayEnd: CalendarDate | null
+): CalendarDate[] {
+  return compact([
+    displayStart ??
+      readCalendarDateFromField(
+        container?.querySelector('[data-range-field="start"]') ?? null
+      ),
+    displayEnd ??
+      readCalendarDateFromField(
+        container?.querySelector('[data-range-field="end"]') ?? null
+      ),
+  ])
+}
+
+function isRangeFullyCleared(container: HTMLElement | null): boolean {
+  const segments = container?.querySelectorAll('[role="spinbutton"]')
+  return (
+    !!segments &&
+    segments.length > 0 &&
+    Array.from(segments).every(segment =>
+      segment.matches('[data-placeholder="true"]')
+    )
+  )
+}
+
+function getClosePendingRange(
+  container: HTMLElement | null,
+  displayStart: CalendarDate | null,
+  displayEnd: CalendarDate | null
+): CalendarDate[] {
+  if (isRangeFullyCleared(container)) {
+    return []
+  }
+  return getPendingRange(container, displayStart, displayEnd)
 }
 
 function rangeEqual(a: CalendarDate[], b: CalendarDate[]): boolean {
@@ -390,26 +433,13 @@ function RangeDateInput({
           hasEditedRef.current = false
           onCloseRef.current(true)
         } else {
-          // Use the DOM as ground truth: if EVERY spinbutton segment shows
-          // a placeholder, the user cleared the entire widget.
-          const segments = triggerRef.current?.querySelectorAll(
-            '[role="spinbutton"]'
-          )
-          const allCleared =
-            segments &&
-            segments.length > 0 &&
-            Array.from(segments).every(s =>
-              s.matches('[data-placeholder="true"]')
-            )
-
           // Range mode intentionally commits [] on full clear (including
           // non-clearable widgets); SingleDateInput reverts to last committed.
-          let pending: CalendarDate[]
-          if (allCleared) {
-            pending = []
-          } else {
-            pending = compact([displayStartRef.current, displayEndRef.current])
-          }
+          const pending = getClosePendingRange(
+            triggerRef.current,
+            displayStartRef.current,
+            displayEndRef.current
+          )
 
           const committed = compact([startValue, endValue])
           if (
@@ -500,10 +530,11 @@ function RangeDateInput({
           hasEditedRef.current = false
           onCloseRef.current(true)
         } else if (formCommit) {
-          const pending = compact([
+          const pending = getClosePendingRange(
+            triggerRef.current,
             displayStartRef.current,
-            displayEndRef.current,
-          ])
+            displayEndRef.current
+          )
           const committed = compact([startValue, endValue])
           if (
             shouldNotifyRangePending(pending, committed, hasEditedRef.current)
@@ -596,8 +627,10 @@ function RangeDateInput({
   // start (prevents end-promotion into the start slot on close).
   const handleStartFieldChange = useCallback(
     (date: CalendarDate | null): void => {
+      displayStartRef.current = date
       setDisplayStart(date)
       if (!date) {
+        displayEndRef.current = null
         setDisplayEnd(null)
       }
       const pending = compact([date, date ? displayEndRef.current : null])
@@ -612,6 +645,7 @@ function RangeDateInput({
   const handleEndFieldChange = useCallback(
     (date: CalendarDate | null): void => {
       if (date && !displayStartRef.current) return
+      displayEndRef.current = date
       setDisplayEnd(date)
       hasEditedRef.current = true
       onEdit(compact([displayStartRef.current, date]).map(calendarDateToIso))
@@ -936,7 +970,11 @@ function RangeDateInput({
         onCloseRef.current(true)
         return
       }
-      const pending = compact([displayStartRef.current, displayEndRef.current])
+      const pending = getClosePendingRange(
+        triggerRef.current,
+        displayStartRef.current,
+        displayEndRef.current
+      )
       const committed = compact([startValue, endValue])
       if (
         !shouldNotifyRangePending(pending, committed, hasEditedRef.current)
@@ -990,7 +1028,9 @@ function RangeDateInput({
                   aria-describedby={error ? errorId : undefined}
                   isInvalid={!!error}
                   // Keep invalid state tied to Streamlit's error, not native
-                  // constraint validation. The wrapper owns `aria-required`.
+                  // constraint validation. Required is exposed on the field
+                  // group that contains the focused segments, not via RAC
+                  // `isRequired` (which would mark empty as invalid).
                   validationBehavior="aria"
                   value={displayStart}
                   onChange={handleStartFieldChange}
@@ -999,7 +1039,11 @@ function RangeDateInput({
                   shouldForceLeadingZeros
                   isDisabled={disabled}
                 >
-                  <ReorderedSegments format={format} isRange />
+                  <ReorderedSegments
+                    format={format}
+                    isRange
+                    required={required}
+                  />
                 </DateField>
               </div>
             </StyledDateField>
@@ -1019,7 +1063,11 @@ function RangeDateInput({
                   shouldForceLeadingZeros
                   isDisabled={disabled}
                 >
-                  <ReorderedSegments format={format} isRange />
+                  <ReorderedSegments
+                    format={format}
+                    isRange
+                    required={required}
+                  />
                 </DateField>
               </div>
             </StyledDateField>

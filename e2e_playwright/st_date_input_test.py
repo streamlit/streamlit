@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 34
+NUM_DATE_INPUTS = 35
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -1268,6 +1268,19 @@ def test_date_input_required_blocks_empty_commits_and_form_submits(app: Page):
     expect_markdown(app, "required standalone: 2020-03-01")
     expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
     expect(standalone_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
+
+    range_standalone_widget = get_element_by_key(app, "required_standalone_range")
+    range_standalone_field = range_standalone_widget.get_by_test_id("stDateInputField")
+    type_date(range_standalone_field, "2020", "01", "01", "2020", "01", "10")
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "required standalone range: (datetime.date(2020, 1, 1), datetime.date(2020, 1, 10))",
+    )
+    expect(app.get_by_text("Runs: 5", exact=True)).to_be_visible()
+    expect(
+        range_standalone_widget.get_by_test_id("stDateInputError")
+    ).not_to_be_visible()
 
     hidden_widget = get_element_by_key(app, "required_hidden")
     expect(hidden_widget.get_by_test_id("stDateInputField")).to_have_attribute(

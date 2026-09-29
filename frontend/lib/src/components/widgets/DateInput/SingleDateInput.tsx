@@ -451,6 +451,7 @@ function SingleDateInput({
   // errors in real-time — but do NOT commit to widget state.
   const handleFieldChange = useCallback(
     (date: CalendarDate | null): void => {
+      displayValueRef.current = date
       setDisplayValue(date)
       hasEditedRef.current = true
       onEdit(date ? [calendarDateToIso(date)] : [])
@@ -697,7 +698,9 @@ function SingleDateInput({
                 aria-describedby={error ? errorId : undefined}
                 isInvalid={!!error}
                 // Keep invalid state tied to Streamlit's error, not native
-                // constraint validation. The wrapper owns `aria-required`.
+                // constraint validation. Required is exposed on the field
+                // group that contains the focused segments, not via RAC
+                // `isRequired` (which would mark empty as invalid).
                 validationBehavior="aria"
                 value={displayValue}
                 onChange={handleFieldChange}
@@ -706,7 +709,7 @@ function SingleDateInput({
                 shouldForceLeadingZeros
                 isDisabled={disabled}
               >
-                <ReorderedSegments format={format} />
+                <ReorderedSegments format={format} required={required} />
               </DateField>
             </StyledDateField>
           </I18nProvider>

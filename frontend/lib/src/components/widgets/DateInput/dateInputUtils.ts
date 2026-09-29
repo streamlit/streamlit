@@ -452,3 +452,54 @@ export function isRequiredEmptyDateValue(
 ): boolean {
   return isRange ? isoValues.length !== 2 : isoValues.length === 0
 }
+
+/**
+ * Reads a complete `CalendarDate` from a DateField's spinbutton segments.
+ * Returns null when any segment is still a placeholder or the year/month/day
+ * triple is missing. Used when React Aria has painted typed digits but has
+ * not yet flushed `onChange` into controlled state (Escape-to-commit).
+ */
+export function readCalendarDateFromField(
+  field: Element | null
+): CalendarDate | null {
+  if (!field) {
+    return null
+  }
+  const segments = field.querySelectorAll(SEGMENT_SELECTOR)
+  if (segments.length === 0) {
+    return null
+  }
+  if (
+    Array.from(segments).some(segment =>
+      segment.matches('[data-placeholder="true"]')
+    )
+  ) {
+    return null
+  }
+
+  let year: number | undefined
+  let month: number | undefined
+  let day: number | undefined
+  for (const segment of segments) {
+    const type = segment.getAttribute("data-type")
+    const value = Number(segment.textContent)
+    if (!Number.isFinite(value)) {
+      return null
+    }
+    if (type === "year") {
+      year = value
+    } else if (type === "month") {
+      month = value
+    } else if (type === "day") {
+      day = value
+    }
+  }
+  if (year === undefined || month === undefined || day === undefined) {
+    return null
+  }
+  try {
+    return new CalendarDate(year, month, day)
+  } catch {
+    return null
+  }
+}

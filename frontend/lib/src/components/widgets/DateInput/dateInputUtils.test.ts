@@ -39,6 +39,7 @@ import {
   parsePartialSegmentPaste,
   parsePastedDate,
   parsePastedDateRange,
+  readCalendarDateFromField,
   reorderSegments,
   validateDate,
 } from "./dateInputUtils"
@@ -638,5 +639,51 @@ describe("isRequiredEmptyDateValue", () => {
     ["two-element range", ["2024-03-06", "2024-03-08"], true, false],
   ] as const)("%s", (_label, isoValues, isRange, expected) => {
     expect(isRequiredEmptyDateValue([...isoValues], isRange)).toBe(expected)
+  })
+})
+
+describe("readCalendarDateFromField", () => {
+  const makeField = (
+    parts: { type: string; text: string; placeholder?: boolean }[]
+  ): HTMLElement => {
+    const field = document.createElement("div")
+    for (const part of parts) {
+      const segment = document.createElement("span")
+      segment.setAttribute("data-type", part.type)
+      if (part.placeholder) {
+        segment.setAttribute("data-placeholder", "true")
+      }
+      segment.textContent = part.text
+      field.appendChild(segment)
+    }
+    return field
+  }
+
+  it("reads a complete date", () => {
+    expect(
+      readCalendarDateFromField(
+        makeField([
+          { type: "year", text: "2020" },
+          { type: "month", text: "01" },
+          { type: "day", text: "10" },
+        ])
+      )?.toString()
+    ).toBe("2020-01-10")
+  })
+
+  it("returns null when a segment is still a placeholder", () => {
+    expect(
+      readCalendarDateFromField(
+        makeField([
+          { type: "year", text: "2020" },
+          { type: "month", text: "01" },
+          { type: "day", text: "dd", placeholder: true },
+        ])
+      )
+    ).toBeNull()
+  })
+
+  it("returns null for a missing field", () => {
+    expect(readCalendarDateFromField(null)).toBeNull()
   })
 })

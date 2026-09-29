@@ -110,6 +110,22 @@ const typeIntoSegment = async (
   }
 }
 
+const typeRangeDate = async (
+  user: ReturnType<typeof userEvent.setup>,
+  region: HTMLElement,
+  start: [string, string, string],
+  end: [string, string, string]
+): Promise<void> => {
+  const startSegments = getRangeDateSegments(region, "start")
+  const endSegments = getRangeDateSegments(region, "end")
+  await typeIntoSegment(user, startSegments.year, start[0])
+  await typeIntoSegment(user, startSegments.month, start[1])
+  await typeIntoSegment(user, startSegments.day, start[2])
+  await typeIntoSegment(user, endSegments.year, end[0])
+  await typeIntoSegment(user, endSegments.month, end[1])
+  await typeIntoSegment(user, endSegments.day, end[2])
+}
+
 /** Backspaces a segment back to its empty placeholder (e.g. "yyyy"), which
  * takes one keypress per currently-displayed digit — React Aria's Backspace
  * removes one character at a time, it doesn't clear the whole segment. */
@@ -4192,16 +4208,39 @@ describe("required", () => {
 
   it("sets aria-required only when required is true", () => {
     const { unmount } = render(<DateInput {...getRequiredEmptyProps()} />)
-    expect(screen.getByTestId("stDateInputField")).toHaveAttribute(
-      "aria-required",
-      "true"
-    )
+    const requiredField = screen.getByTestId("stDateInputField")
+    expect(requiredField).toHaveAttribute("aria-required", "true")
+    const requiredGroups = [
+      ...requiredField.querySelectorAll('[role="group"]'),
+    ].filter(group => group.querySelector('[role="spinbutton"]'))
+    expect(requiredGroups.length).toBeGreaterThan(0)
+    requiredGroups.forEach(group => {
+      expect(group).toHaveAttribute("aria-required", "true")
+    })
     unmount()
 
     render(<DateInput {...getProps({ required: false })} />)
-    expect(screen.getByTestId("stDateInputField")).not.toHaveAttribute(
-      "aria-required"
+    const optionalField = screen.getByTestId("stDateInputField")
+    expect(optionalField).not.toHaveAttribute("aria-required")
+    const optionalGroups = [
+      ...optionalField.querySelectorAll('[role="group"]'),
+    ].filter(group => group.querySelector('[role="spinbutton"]'))
+    optionalGroups.forEach(group => {
+      expect(group).not.toHaveAttribute("aria-required")
+    })
+  })
+
+  it("sets aria-required on both range date field groups", () => {
+    render(<DateInput {...getRequiredEmptyProps({ isRange: true })} />)
+    const field = screen.getByTestId("stDateInputField")
+    expect(field).toHaveAttribute("aria-required", "true")
+    const groups = [...field.querySelectorAll('[role="group"]')].filter(
+      group => group.querySelector('[role="spinbutton"]')
     )
+    expect(groups.length).toBe(2)
+    groups.forEach(group => {
+      expect(group).toHaveAttribute("aria-required", "true")
+    })
   })
 
   it("shows the required marker when the label is visible", () => {
@@ -4967,6 +5006,35 @@ describe("required", () => {
     vi.useRealTimers()
   })
 
+  it("commits a typed complete required range on Escape", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({ isRange: true })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    await typeRangeDate(
+      user,
+      region,
+      ["2020", "01", "01"],
+      ["2020", "01", "10"]
+    )
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2020-01-01", "2020-01-10"],
+        expect.anything()
+      )
+    })
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
   it("does not write a one-element range while re-editing a complete required range", async () => {
     const user = userEvent.setup()
     vi.setSystemTime(new Date(2019, 6, 15))
@@ -5236,5 +5304,38 @@ describe("optional empty default", () => {
       )
     })
     expect(setStringArrayValueSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("commits a typed complete optional range on Escape", async () => {
+    const user = userEvent.setup()
+    const props = getOptionalEmptyProps({ isRange: true })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    await typeRangeDate(
+      user,
+      region,
+      ["2020", "02", "01"],
+      ["2020", "02", "07"]
+    )
+    await user.keyboard("{Escape}")
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2020-02-01", "2020-02-07"],
+        expect.anything()
+      )
+    })
+    expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
+      props.element.id,
+      ["2020-02-01"],
+      expect.anything()
+    )
   })
 })

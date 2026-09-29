@@ -294,6 +294,14 @@ required_standalone = st.date_input(
 )
 st.write("required standalone:", required_standalone)
 
+required_standalone_range = st.date_input(
+    "Required standalone range",
+    value=[],
+    key="required_standalone_range",
+    required=True,
+)
+st.write("required standalone range:", required_standalone_range)
+
 st.date_input(
     "Required hidden",
     value=None,
