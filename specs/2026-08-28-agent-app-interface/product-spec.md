@@ -267,8 +267,9 @@ than requiring a second call.
 **`page` on a creating call cannot be resolved by lookup, which the obvious implementation
 gets wrong.** Mapping a `url_path` to the internal page hash is a post-run fact: an
 `st.navigation` app has no page list until it has run once, so a creating call naming a
-page has nothing to look up, and a first prototype rejected a page that plainly existed —
-the headline parameterization example above. The browser has the same problem on a cold
+page has nothing to look up. Resolving first and erroring on a miss would therefore
+reject a page that plainly exists — the headline parameterization example above. The
+browser has the same problem on a cold
 load and solves it by sending the page *name* and letting the runtime resolve it, which is
 what this should do too. The consequence is that an unrecognized page can only be detected
 after the run, so that one error arrives late and carries the `session_id` of the session
@@ -452,21 +453,24 @@ Rules:
   current page; a top-level `app_title` carries what
   `st.set_page_config(page_title=...)` set for the whole app. Collapsing them makes
   `page.title` answer "which app am I in?" while every caller reads it as "which page am
-  I on?", and a client-side trial cited the wrong one in a report before the two were
-  split. Note the limit of the split: an app that calls `st.set_page_config` on each page
-  makes `app_title` follow the page, because that is what the app asked the browser tab to
-  say. `page.url_path` is the reliable identity of where a client is, and a 21-page
-  production app confirmed both halves of that.
-- **`query_params` is URL state, not a description of the page's filters.** Parameters are
-  session-global and survive navigation, so a value a bound widget wrote on one page is
-  still reported on the next one, where nothing reads it. A trial against a live app cited
-  a stale `label=type:bug` on two unrelated pages. This is Streamlit's existing behavior
-  rather than something the interface introduces; what the interface owes a client is
-  saying so, and pointing at widget `value`s as the answer to "what produced this number".
-- **A label is not an identifier.** Nothing stops an app from giving two elements the same
-  `label`, and a production page did exactly that with two `st.metric`s named "AI PR
-  Review", one a count and one a duration. A client keying by label silently drops one.
-  Position in the tree, or an authored `key` where the element has one, is the identity.
+  I on?", so a report citing one of them cites the wrong thing. Note the limit of the
+  split: an app that calls `st.set_page_config` on each page makes `app_title` follow the
+  page, because that is what the app asked the browser tab to say. `page.url_path` is the
+  reliable identity of where a client is.
+- **`query_params` is URL state, and it has to be reported as the app has it.** Streamlit
+  scopes widget-bound parameters by page: navigating to a page that binds none of them
+  drops them, and the server announces the new query string the same way it tells a
+  browser to update its address bar. So the interface holds that string as durable
+  client state — sent with each rerun, replaced when the server says it changed — rather
+  than replaying whatever the last request carried. Replaying is what makes a snapshot
+  report a filter the app has already discarded, on a page where nothing reads it, and
+  what lets a stale parameter overwrite a widget value on the way back. Even reported
+  correctly, these are URL parameters rather than a description of what produced a number;
+  widget `value`s are that.
+- **A label is not an identifier.** Nothing stops an app from giving two elements the
+  same `label` — two `st.metric`s can share one, with one holding a count and the other a
+  duration — so a client keying by label silently drops one. Position in the tree, or an
+  authored `key` where the element has one, is the identity.
 - **The `actions` list is an index, not a duplicate.** It lists the key of every element that
   can be set (`value`) or fired (`trigger`) right now, so a model can see the action space
   at a glance; type and constraints are read from the element in the tree. A `disabled`
@@ -521,7 +525,7 @@ Three details matter for an agent reading that snapshot:
 - **An exception the app displayed on purpose is not a failed run.** `st.exception` is a
   display command, so "is there an exception element?" is the wrong question — an app that
   catches a `ValueError` and renders it deliberately would flip the whole interaction to
-  `error`, which a client-side trial hit. The two cases are distinguishable because only
+  `error`. The two cases are distinguishable because only
   the runtime's own error display applies `client.showErrorDetails` redaction, so the
   element records whether it was uncaught and only that sets `status`. A
   caught-and-displayed exception stays in the tree, marked as handled, which is more
@@ -542,66 +546,44 @@ stays usable, so an agent can correct its input and interact again.
 
 An element's `key` is the author's `key` when one was set, and otherwise Streamlit's
 internal element ID. That is deliberately the same addressing rule `st.session_state`
-uses, so `widget_state` reads like the session state an agent already knows how to write.
-It also introduces no new identity scheme: the element ID is already unique, already registered
+uses, so `widget_state` reads like session state an agent already knows how to write, and
+it introduces no new identity scheme: the element ID is already unique, already registered
 during the run, and already the identity on `WidgetState.id`. The two forms cannot
 collide, because keys beginning with the element-ID prefix are reserved.
 
-The compatibility contract is deliberately narrow:
+**A client acts only on keys from the snapshot it just received.** That is the whole
+addressing contract, and it is what makes the rest safe: a generated element ID is an
+opaque, session-scoped handle whose string format is not public and may change, so nothing
+outside Streamlit should construct, parse, or persist one. Since every response is a fresh
+snapshot, a client never needs to.
 
-- An **authored `key`** is the stable, readable identity. Authors should set it and
-  clients should prefer it; it survives runs and releases.
-- A **generated element ID** is an opaque, session-scoped handle. Clients read it from
-  the latest snapshot and must not construct, parse, interpret, hardcode, or persist it.
-- Its string format is **not** a public contract and may change. Nothing outside
-  Streamlit should depend on the `$$ID-<hash>-None` shape.
-
-That is workable because every response is a fresh snapshot, so an agent always acts on
-keys it just read.
-
-An authored key is worth having anyway: `{"region": "Europe"}` is readable in a
-verification script and reviewable in a PR, where
-`{"$$ID-8f2c...-None": "Europe"}` is not. Documentation should say plainly that
-**setting `key=` is what makes an app a good tool.**
-
-Trialling against a 21-page production app showed how much that guidance is worth, and
-what it costs to be late with it: almost nothing there has an authored key. Open issues,
-the bug explorer, and most coverage and bundle widgets are all `$$ID-…-None`. Everything
-*worked* — they are in `actions` and they accept values copied from the latest snapshot —
-so reading and driving that app was never the problem. What is impossible is writing a
-script against it that survives a redeploy, which is exactly the verification use case.
-Two consequences worth carrying into planning rather than leaving implicit: the
-consumption and question-answering cases work on the installed base as it is, while the
-verification case needs authors to act first; and the authoring guidance is therefore not
-a documentation footnote but the thing that decides whether v1's most-cited use case
-applies to an existing app.
+An authored `key` adds one thing on top: durability for text a *human* writes. `{"region":
+"Europe"}` stays valid across runs and releases and is reviewable in a PR, where
+`{"$$ID-8f2c...-None": "Europe"}` is neither. So authored keys are what make a
+verification script or a saved request survive a redeploy, while an agent driving an app
+interactively needs nothing beyond the latest snapshot. Authoring guidance should say so
+in those terms, because it is the difference between the two use cases rather than a
+general prerequisite.
 
 Identity is not authorization. Every request is validated so that a stale, guessed, or
 forged key cannot set a disabled widget, an out-of-range value, or a control that no
-longer exists. Validation rejects the whole request before anything is applied.
+longer exists, and validation rejects the whole request before anything is applied.
 
-**Validate against the last snapshot, not against live widget state.** This is the one
-place where the obvious implementation is wrong, and prototyping proved it. `WidgetMetadata`
-survives a page switch and a collapsed conditional branch — only the *value* is cleaned
-up — so a validator built on the widget registry accepts a key for a control that is no
-longer on the page, runs the script, changes nothing, and returns `200`. That is the worst
-available failure mode: a silent no-op that reads as success. The registry is also missing
-things a client needs checked, because it never had a reason to record them: numeric and
-temporal bounds, the arity of a range, the options of a payload-bearing trigger, and which
-`st.form` an element belongs to.
-
-All of those are in the document the client was actually given, which is the deeper point:
-**the snapshot is the contract, so the snapshot is what a write is judged against.** A spec
-that describes validation in terms of runtime state is describing something the caller
-cannot see. In practice the server keeps, per session, what each addressable element
-advertised — actionable, disabled, `support`, form, options, bounds, and current value —
-and checks the next request against that.
-
-The corollary is that rejections can say what is actually wrong instead of collapsing into
-one code. A disabled slider reports `disabled_widget`, a file uploader reports
-`unsupported_element`, and only a key that genuinely is not on the page reports
-`not_on_page`. Getting this wrong sends a client looking in the wrong place, which a
-client-side trial did before the distinction existed.
+**Validation is against the last snapshot, not against live widget state**, and this is
+the one place where the obvious implementation is wrong. `WidgetMetadata` survives a page
+switch and a collapsed conditional branch — only the *value* is cleaned up — so a
+validator built on the widget registry accepts a key for a control that is no longer on
+the page, runs the script, changes nothing, and returns `200`: a silent no-op that reads
+as success. The registry also never had a reason to record several things a client needs
+checked, namely numeric and temporal bounds, the arity of a range, the options of a
+payload-bearing trigger, and which `st.form` an element belongs to. All of them are in the
+document the client was given, which is the deeper point: **the snapshot is the contract,
+so the snapshot is what a write is judged against.** The server therefore keeps, per
+session, what each addressable element advertised — actionable, disabled, `support`, form,
+options, bounds, and current value — and checks the next request against that. A
+consequence worth keeping is that rejections name the actual problem: `disabled_widget`
+for a disabled control, `unsupported_element` for one this interface cannot drive, and
+`not_on_page` only when the key really is absent.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -613,74 +595,60 @@ client-side trial did before the distinction existed.
 | Widget inside a fragment         | Interactive, and the rerun is **scoped to that fragment**, as in the browser. Every key in one request must belong to the same fragment, or to none. See below.                                                                                                                                                                                                                                                                                                                                |
 | Widget with `on_change="ignore"` | Interactive, like any other widget. The mode only tells the browser not to rerun on change; it carries no backend meaning, so the endpoint applies the value and reruns. An agent that wants browser-equivalent deferral batches the value with whatever trigger should cause the rerun.                                                                                                                                      |
 
-**Reruns are scoped the way the browser scopes them.** An earlier draft made v1
-full-rerun-only and deferred scoping to a follow-up. Prototyping moved it into v1, for two
-reasons. The first is cost: everything needed is already on the wire, since
-`Delta.fragment_id` tags every emitted delta with its owning fragment and
-`ClientState.fragment_id` already carries the scope into a rerun, so the work is recording
-the id in the snapshot and using it, not new plumbing. The second is that full-rerun-only
-is not merely slower for `st.dialog` — it is broken, and the two cannot be separated:
-
-- **A dialog body is a fragment.** `st.dialog` wraps the decorated function in one, which
-  is exactly why a dialog survives interaction inside it and closes on a full rerun. So
-  dialog interactivity was never a dialog feature to build; it was a fragment feature that
-  was missing.
-- **The rule a client has to learn is the browser's rule.** Acting on something inside a
-  dialog keeps it open; acting anywhere else is a full rerun, which does not re-emit the
-  dialog and therefore closes it. A client must finish inside a dialog before touching
-  anything else.
+**Reruns are scoped the way the browser scopes them.** Acting on a widget inside an
+`st.fragment` reruns that fragment alone, which costs less per turn and is also the only
+way `st.dialog` works at all: a dialog body *is* a fragment, which is why a dialog
+survives interaction inside it and closes on a full rerun. The rule a client learns is
+therefore the browser's rule — finish inside a dialog before touching anything else,
+because anything else closes it. None of this needs new plumbing:
+`Delta.fragment_id` already tags every emitted delta with its owning fragment and
+`ClientState.fragment_id` already carries the scope into a rerun.
 
 Because the wire carries one fragment id, a request naming two fragments — or mixing a
 fragment's contents with controls outside it — is rejected rather than widened to a full
-rerun. Widening is the friendlier-looking choice and would silently close an open dialog.
-A refused request leaves the previous snapshot current, so a rejected batch does not close
-one either.
+rerun, since widening would silently close an open dialog. A refused request leaves the
+previous snapshot current, so a rejected batch does not close one either.
 
-Two details about the overlay, both found by driving one:
+Two details about the overlay:
 
-- **The dialog node is the wrapper, not the fragment.** Its body is the child container, so
-  `fragment` appears on the contents rather than on the overlay. A client reads the scope
-  from the node it intends to act on.
+- **The dialog node is the wrapper, not the fragment.** Its body is the child container,
+  so `fragment` appears on the contents. A client reads the scope from the node it intends
+  to act on.
 - **The overlay is addressable only when `on_dismiss` registered a widget for it**, and
   then firing it is how a client closes the dialog deliberately. With the default
-  `on_dismiss="ignore"` nothing is registered, so the overlay carries no key at all rather
-  than one that resolves to nothing — the same "a key is an identity, not an invitation"
-  rule, applied to the container. Without a registered dismissal, closing is any full
-  rerun, including an empty interaction, which is heavier than clicking an X in a browser.
+  `on_dismiss="ignore"` nothing is registered, so the overlay carries no key rather than
+  one that resolves to nothing. Without a registered dismissal, closing is any full rerun,
+  including an empty interaction, which is heavier than clicking an X in a browser.
 
-**A scoped rerun makes freshness per-region, which the response has to say.** After a
-fragment-scoped interaction most of the tree is carried over from an earlier run, still
-current as far as the app is concerned but not freshly computed, so a single
-`observed_at` would overstate how current the document is — and the report and export use
-cases cite exactly that field as provenance. Two shapes were considered. Returning only
-the fragment's subtree makes the timestamp honest by construction and was rejected: it
-pushes the delta merge and fragment-scoped staleness rules onto every client, which is the
-Streamlit knowledge this interface exists to absorb, and it breaks `actions`, since a
-client needs the whole page's action set to choose its next move. So the document stays
-complete and declares freshness instead: nodes inside a fragment carry an opaque
-`fragment` handle, and a top-level `fragments` list reports which regions this interaction
-re-rendered. `observed_at` means when the snapshot was assembled.
+**A scoped rerun makes freshness per-region, which the response has to say.** Most of the
+tree is then carried over from an earlier run — still current as far as the app is
+concerned, but not freshly computed — so a single `observed_at` would overstate the
+document, and the report and export use cases cite exactly that field as provenance. The
+document stays complete and declares freshness instead: nodes inside a fragment carry an
+opaque `fragment` handle, a top-level `fragments` list reports which regions this
+interaction re-rendered, and `observed_at` means when the snapshot was assembled.
+Returning only the fragment's subtree would make the timestamp honest by construction and
+is the wrong trade: it pushes the delta merge and fragment-scoped staleness rules onto
+every client, which is the Streamlit knowledge this interface exists to absorb, and it
+breaks `actions`, since a client needs the whole page's action set to choose its next
+move.
 
 That list is also where a `run_every` interval is reported. The refresh clock is the
 browser's, so an auto-refreshing fragment never refreshes for a non-browser client;
 disclosing the interval and letting the caller decide to poll is honest, while inventing
 background reruns server-side is not.
 
-**A headless client inherits the frontend's responsibilities, and `clear_on_submit` is
-where that first bites.** `lib/streamlit` only writes the flag onto the proto; all of the
-clearing is React, where submitting a form emits a `formCleared` signal and each widget
-resets itself, writing defaults back into form-scoped state the server does not see until
-the next submit. So no non-browser consumer can observe it — this interface and `AppTest`
-diverge from the browser identically. Worth noticing that the browser is already
-inconsistent with itself here: right after a submit the server still holds the submitted
-values while the UI shows empty fields, so a rerun triggered by anything else renders
-values the user believes they cleared. Moving the reset server-side after a submit run,
-where form membership is already known from each widget's `form_id`, would fix both at
-once — but that is a change to core form semantics and belongs in its own change rather
-than inside this interface. Until then v1 declares the gap and tells clients not to treat
-empty fields as evidence that a submit landed. **The general rule is worth writing down:
-any behavior Streamlit implements in React rather than in Python is absent for every
-non-browser client, and this is unlikely to be the only instance.**
+**A headless client inherits the frontend's responsibilities**, and two behaviors sit on
+that line today. `clear_on_submit` is implemented in React — submitting a form emits a
+`formCleared` signal and each widget resets itself — so no non-browser consumer can
+observe it, and this interface and `AppTest` diverge from the browser identically. A
+widget bound with `bind="query-params"` is the same shape: the browser writes the new
+value into its own address bar, so setting such a widget here changes its value without
+changing `query_params`. Both are declared rather than emulated, because moving either
+reset server-side changes behavior for browser sessions too and belongs in its own change.
+**The general rule is worth writing down: any behavior Streamlit implements in React
+rather than in Python is absent for every non-browser client, and these two are unlikely
+to be the last.**
 
 Actions do not carry a JSON Schema in v1. The element's `type` plus its constraint
 properties (`options`, `min_value`, `max_value`) already tell a model what to send, and
@@ -740,11 +708,11 @@ budget, the request fails rather than truncating silently.
 **`data.complete` is the field a client branches on, and it resolves three ways, never
 none.** Either the data here is everything (`complete: true`), or a `url` serves the rest,
 or an explicit `unavailable` says the data was too large to hold a second copy of. A first
-prototype used one byte threshold for both the preview and the externalization, and a
-client trial hit the hole immediately: a 206-row table is about 8 KB, so it was truncated
-*and* had no URL, while its own caption told the agent to fetch one. Whether a client
-needs a URL is a question about row count, not payload size, so there is no size floor for
-externalizing — only a ceiling above which the copy is refused and declared.
+single byte threshold for both the preview and the externalization leaves a hole: a
+206-row table is about 8 KB, so it would be truncated *and* have no URL, while its own
+caption tells the agent to fetch one. Whether a client needs a URL is a question about row
+count, not payload size, so there is no size floor for externalizing — only a ceiling
+above which the copy is refused and declared.
 
 Two consequences of that framing are worth stating, because both were mistakes first:
 
@@ -753,15 +721,16 @@ Two consequences of that framing are worth stating, because both were mistakes f
   there is no table to serve and a client should stop looking for one. This is different
   from having no data contract at all. It does not mean the specification is worth its
   weight: about nine tenths of a small Plotly figure is `layout.template`, the theme, and
-  a page of them measured 549 KB on a live app while answering nothing. Report the figure
+  a dashboard page of them reaches hundreds of kilobytes while answering nothing. Report
+  the figure
   with the theme dropped and name what was dropped, so a trimmed figure is
   distinguishable from one the app never configured.
 
-  **Nothing that holds data is dropped, at any size.** A first attempt capped the inlined
-  specification and reported an oversized figure as unavailable, which is the wrong trade:
-  the traces are the only part worth reading, and a figure is large precisely because it
-  plots a lot of points — the same bytes the app already sends its own client. So a
-  20,000-point scatter reports its full 541 KB of traces. Whether *that* needs a response
+  **Nothing that holds data is dropped, at any size.** Capping the inlined specification
+  would be the wrong trade: the traces are the only part worth reading, and a figure is
+  large precisely because it plots a lot of points — the same bytes the app already sends
+  its own client. So a 20,000-point scatter reports its full 541 KB of traces. Whether
+  *that* needs a response
   budget is a real question, and it belongs with the other budget questions rather than
   being settled by silently discarding data; if it does, the answer is serving the
   specification behind `data.url` the way a table's Arrow is served, not truncating it.
@@ -770,7 +739,7 @@ Two consequences of that framing are worth stating, because both were mistakes f
   plotted table is externalized like any other dataframe's.
 
 The preview cap is a row count rather than a byte budget, set high enough (100 rows in the
-prototype) that most filtered tables come back complete and need no second request.
+) that most filtered tables come back complete and need no second request.
 
 ### What v1 does not support
 
@@ -882,10 +851,9 @@ be unable to `POST` to it. Closing that gap needs a caller with a general HTTP t
 the MCP adapter in follow-up #6.
 
 **The document has to say where the app is, because a hosted app is not at the root a
-client would guess.** Trialling against a Community Cloud app found this the hard way:
-that platform serves embedded apps under `/~/+/`, so an agent that joins the public origin
-with `/_stcore/agent/v1/interact` gets a redirect to a login page and concludes the app has
-no API. Root-relative `data.url`s fail the same way. So the served document carries an
+client would guess.** Community Cloud serves embedded apps under `/~/+/`, so an agent that
+joins the public origin with `/_stcore/agent/v1/interact` gets a redirect to a login page
+and concludes the app has no API. Root-relative `data.url`s fail the same way. So the served document carries an
 OpenAPI `servers` entry describing where it was reached from, and the paths and any
 `data.url` resolve against it. Two deliberate choices: it is a *relative* URL, because
 behind a proxy the scheme and host this process sees are not necessarily the ones the
@@ -895,9 +863,9 @@ since a forged value can only misdirect the caller that forged it. A proxy that 
 silently and announces nothing cannot be detected, which is a real limit rather than
 something to paper over.
 
-The same trial found `Link: rel="service-desc"` missing from that host's responses, which
-the proxy is stripping. Headers are the more fragile channel, which is the argument for
-keeping the document self-describing rather than relying on the header alone.
+A proxy may also strip `Link: rel="service-desc"` from responses. Headers are the more
+fragile channel, which is the argument for keeping the document self-describing rather
+than relying on the header alone.
 
 **The intended end state is on by default, with a deployment or platform opt-out.** The
 governing invariant is that a caller gets **no more authority and no more information than
@@ -955,9 +923,9 @@ live state, which is required either way.
 as the browser does — `Delta.fragment_id` already tags every emitted delta with its owning
 fragment, and `ClientState.fragment_id` already carries the scope into the rerun — so no
 new public or proto field is needed. Letting a client name a scope would only enable
-inconsistent requests. Prototyping confirmed this: the work was recording the id per node
-and pruning the merged tree per fragment, not identity plumbing, and a client never has to
-know what a fragment is to benefit from one.
+inconsistent requests. The work this implies is recording the id per node and pruning the
+merged tree per fragment, not identity plumbing, and a client never has to know what a
+fragment is to benefit from one.
 
 **Prune the accumulated tree when a run finishes, not when one starts.** A non-obvious
 consequence of scoped reruns, and the one thing that looked equivalent and was not. The
@@ -1124,7 +1092,7 @@ covers an `AppTest.snapshot()`, a generated element capability registry to repla
 same per-element answers this interface needs. Maintaining that knowledge in parallel
 systems guarantees they disagree within a release.
 
-What prototyping changed is *where* the single definition lives. A central registry keyed
+Where that single definition lives matters. A central registry keyed
 on proto variants cannot hold it, for the reasons in
 [Key design decisions](#key-design-decisions): the semantics are gone by the time a
 serializer sees a proto. So the one definition is the description each command builds as
@@ -1187,7 +1155,7 @@ apply.
 
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ v1 is loopback-only. Self-hosted, Cloud, and SiS each require identity mapping, routing, session affinity, and quota validation first. Trialling against Community Cloud added one the list was missing: a platform that serves apps behind a prefix has to get that prefix to the client, or every path in the document resolves to the platform instead of the app.                                                                                                                                                                                                                                                                                                                                                                     |
+| Works on SiS, Cloud, etc?  | ⚠️ v1 is loopback-only. Self-hosted, Cloud, and SiS each require identity mapping, routing, session affinity, and quota validation first. A platform that serves apps behind a prefix, as Community Cloud does, also has to get that prefix to the client, or every path in the document resolves to the platform instead of the app.                                                                                                                                                                                                                                                                                                                                                                     |
 | No breaking API changes    | ✅ Additive: one config option, off in v1, and new routes under `/_stcore/agent/`. No `st.*` changes in v1. Flipping the default later is itself a reviewed change, not a silent one.                                                                                                                                                                                                                                                                                                                         |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP adapter should use the official SDK behind an optional extra.                                                                                                                                                                                                                                                                                                                                                                                               |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
@@ -1206,17 +1174,17 @@ apply.
 3. Which resource authorization mechanism — principal-scoped references or expiring
    signed capabilities — can reuse media storage across OSS, Cloud, and SiS without
    turning resource URLs into durable bearer tokens?
-4. What run timeout, session, preview, and response budgets should ship? A prototype
-   settled some of this: a 100-row preview keeps most filtered tables complete, and the
+4. What run timeout, session, preview, and response budgets should ship? Some of it is
+   settled: a 100-row preview keeps most filtered tables complete, and the
    externalization ceiling only has to prevent holding a second copy of something
    enormous. Three are still open. The response document itself is unbounded, and a page
    with a 3,000-option selectbox ships those options in every snapshot, which is the
    realistic budget problem rather than table data. "The run chain settled" is currently a
    grace period after the last run finishes — a heuristic that works but guesses; doing
    better needs the runtime to say whether a further run is pending. And the run timeout
-   has no defensible default yet: opening one lazy expander on a live app took **139
-   seconds**, because the content behind it fetches from the network, so any timeout
-   comfortable for a filtered dashboard will cut off a legitimate interaction somewhere.
+   has no defensible default yet: opening a single lazy expander whose contents fetch from
+   the network can take **over two minutes**, so any timeout comfortable for a filtered
+   dashboard will cut off a legitimate interaction somewhere.
    That argues the answer is the long-run handling in follow-up #4 rather than a larger
    number.
 5. **How should a client tell how current each part of a snapshot is?** Scoped reruns make
@@ -1234,16 +1202,16 @@ apply.
    settled before v1 ships, with or without per-action schemas.
 8. **What is actually unbounded, and which of those need bounding?** Three things now
    dominate a large response, and truncation is the wrong answer to all of them because
-   each omission would remove something a client legitimately needs. A production page's
-   selectbox carried 497 options and another 591, and the omitted options would be exactly
-   the values a request may legally send. A figure's specification carries its traces, so a
+   each omission would remove something a client legitimately needs. A selectbox can carry
+   several hundred options, and the omitted ones would be exactly the values a request may
+   legally send. A figure's specification carries its traces, so a
    20,000-point scatter is half a megabyte. And table previews are already capped, which
    is the one case where a `url` makes truncation safe. The candidate answer is to extend
    that pattern — serve oversized option lists and figure specifications behind
    `data.url` — rather than to cap and discard. Worth deciding with measurements from real
    apps rather than in the abstract.
 9. **Should a browser-only affordance be declared where the app tells a human to use it?**
-   A live app's captions said "click on a bar" and "select a row" for charts and dataframes
+   An app's captions may say "click on a bar" or "select a row" for charts and dataframes
    whose selection this interface does not support. `actions` correctly omits them, so the
    contract is honest, but the app's own prose invites a client to try. A `support` reason
    on the element carrying the affordance would close the gap between what the document

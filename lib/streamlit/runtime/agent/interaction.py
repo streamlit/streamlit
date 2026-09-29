@@ -96,6 +96,9 @@ class AgentSessionClient(SessionClient):
         self._lifecycle: dict[str, ForwardMsg] = {}
         self._run_finished = asyncio.Event()
         self._run_id = ""
+        # Set when this interaction's run changed the query string, which is
+        # how the server tells a browser to update its address bar.
+        self.query_string_update: str | None = None
         # The fragments the most recent run re-rendered, so the snapshot can
         # say which parts of the tree came from this observation.
         self.fragments_last_run: list[str] = []
@@ -119,6 +122,9 @@ class AgentSessionClient(SessionClient):
         if msg_type == "delta":
             self._deltas.append((self._run_id, msg))
             return
+
+        if msg_type == "page_info_changed":
+            self.query_string_update = msg.page_info_changed.query_string
 
         if msg_type == "auto_rerun" and msg.auto_rerun.fragment_id:
             self.auto_rerun_intervals[msg.auto_rerun.fragment_id] = (
@@ -157,6 +163,7 @@ class AgentSessionClient(SessionClient):
 
     def begin_interaction(self) -> None:
         self._run_finished.clear()
+        self.query_string_update = None
 
     async def wait_until_settled(self, timeout: float) -> None:
         """Wait for the run chain to stop producing new runs.
@@ -189,6 +196,11 @@ class AgentSession:
     handle: str
     session_id: str
     client: AgentSessionClient
+    # The query string this client holds, kept the way a browser keeps its
+    # address bar: sent with each rerun, and updated when the server says it
+    # changed. Deriving it per request instead would replay parameters a page
+    # transition has already dropped.
+    query_string: str = ""
     last_used: float = field(default_factory=time.monotonic)
     element_states: dict[str, ElementState] = field(default_factory=dict)
     # Guards against a second interaction arriving while one is still running.
@@ -317,7 +329,7 @@ async def _run_interaction(
     client_state = app_session._client_state
     rerun = BackMsg().rerun_script
     rerun.page_script_hash = client_state.page_script_hash
-    rerun.query_string = client_state.query_string
+    rerun.query_string = session.query_string
 
     if page is not None:
         page_hash, page_name = _resolve_page(app_session, page)
@@ -362,11 +374,20 @@ async def _run_interaction(
             "busy briefly.",
         ) from exc
 
+    # Keep the query string the way a browser keeps its address bar: what was
+    # sent, unless the run reported a change. Streamlit scopes widget-bound
+    # parameters by page, so a page transition drops some, and replaying the
+    # request's own string would keep reporting a filter the app has discarded.
+    if session.client.query_string_update is not None:
+        session.query_string = session.client.query_string_update
+    else:
+        session.query_string = rerun.query_string
+
     result = snapshot_module.build_snapshot(
         session_id=session.handle,
         messages=session.client.messages,
         session_state=app_session.session_state,
-        query_params=_decode_query_params(app_session._client_state.query_string),
+        query_params=_decode_query_params(session.query_string),
         rendered_fragments=session.client.fragments_last_run,
         auto_rerun_intervals=session.client.auto_rerun_intervals,
     )
