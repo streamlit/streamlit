@@ -411,7 +411,11 @@ export interface StyledGridContainerBlockProps {
   cellHeightMode: BlockProto.GridContainer.CellHeightMode
   cellHeightPx?: number
   $dense?: boolean
-  $fillHeight?: boolean
+  /**
+   * When false, skip wrap=False overflow on this element. Bounded-height
+   * grids apply overflow on StyledGridScrollBody instead.
+   */
+  $applyOverflow?: boolean
 }
 
 export const StyledGridContainerBlock =
@@ -426,7 +430,7 @@ export const StyledGridContainerBlock =
       cellHeightMode,
       cellHeightPx,
       $dense,
-      $fillHeight,
+      $applyOverflow = true,
     }) => {
       const rowGapPx = translateGapWidth(rowGap, theme)
       const columnGapPx = translateGapWidth(columnGap, theme)
@@ -447,16 +451,14 @@ export const StyledGridContainerBlock =
         case CellHeightMode.CONTENT:
         default:
           gridAutoRows = "auto"
+          break
       }
 
       return {
         display: "grid",
         width: "100%",
         maxWidth: "100%",
-        // Fill a definite-height layout wrapper so stretch / pixel height
-        // resolve for equal-row tracks. Content-height grids stay auto so a
-        // stretched sibling in a horizontal container cannot inflate them.
-        ...($fillHeight ? { height: "100%", flex: 1 } : { height: "auto" }),
+        height: "auto",
         minWidth: "1rem",
         minHeight: 0,
         gap: `${rowGapPx} ${columnGapPx}`,
@@ -469,29 +471,63 @@ export const StyledGridContainerBlock =
         // wrap=False keeps the declared track count and scrolls locally.
         // overflow-y stays visible so the x-axis scrollport does not become
         // a vertical clip for hover toolbars (browsers may still coerce it).
-        ...(!$wrap && {
-          overflowX: "auto" as const,
-          overflowY: "visible" as const,
-          // One-axis overflow can coerce the other axis, which would clip
-          // child focus rings. Cancel the extra padding with a negative
-          // margin so the outer layout is unchanged.
-          paddingBlock: theme.sizes.focusRingWidth,
-          marginBlock: `-${theme.sizes.focusRingWidth}`,
-        }),
-        // Pixel / stretch height: the layout wrapper is definite-sized but
-        // only interpolates width/height/flex, so the inner grid must be the
-        // vertical scrollport. Cell-level overflow is separate (fixed/equal
-        // rows). This override must follow wrap=False so overflowY becomes
-        // auto instead of remaining visible.
-        ...($fillHeight && {
-          overflowY: "auto" as const,
-          overflowX: $wrap ? ("clip" as const) : ("auto" as const),
-        }),
+        // Bounded-height grids move overflow onto StyledGridScrollBody so
+        // this one-axis rule is not applied twice.
+        ...(!$wrap &&
+          $applyOverflow && {
+            overflowX: "auto" as const,
+            overflowY: "visible" as const,
+            // One-axis overflow can coerce the other axis, which would clip
+            // child focus rings. Cancel the extra padding with a negative
+            // margin so the outer layout is unchanged.
+            paddingBlock: theme.sizes.focusRingWidth,
+            marginBlock: `-${theme.sizes.focusRingWidth}`,
+          }),
         // Dense packing mode fills gaps by reordering items
         ...($dense && { gridAutoFlow: "dense" }),
       }
     }
   )
+
+/**
+ * Bounded-height port around a content-sized grid. Fills the layout wrapper
+ * and becomes a vertical scrollport only when in-flow tracks exceed it, so
+ * chart hover toolbars stay visible when nothing actually overflows.
+ */
+export const StyledGridScrollBody = styled.div<{
+  $scroll: boolean
+  $wrap: boolean
+}>(({ theme, $scroll, $wrap }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "stretch",
+  width: "100%",
+  minHeight: 0,
+  flex: 1,
+  height: "100%",
+  maxHeight: "100%",
+  ...($scroll && {
+    overflowY: "auto" as const,
+    overflowX: $wrap ? ("clip" as const) : ("auto" as const),
+  }),
+  ...(!$wrap &&
+    !$scroll && {
+      overflowX: "auto" as const,
+      overflowY: "visible" as const,
+      paddingBlock: theme.sizes.focusRingWidth,
+      marginBlock: `-${theme.sizes.focusRingWidth}`,
+    }),
+}))
+
+/**
+ * Grows with grid tracks so ResizeObserver can detect overflow without
+ * reading scrollHeight.
+ */
+export const StyledGridContentMeasure = styled.div({
+  width: "100%",
+  minHeight: "min-content",
+  flexShrink: 0,
+})
 
 function gridCellJustifyContent(
   verticalAlignment: BlockProto.GridContainer.VerticalAlignment

@@ -1181,10 +1181,13 @@ describe("GridContainer Component", () => {
     )
     renderWithContexts(makeGridNodeRendererComponent(block))
 
-    expect(screen.getByTestId("stGrid")).toHaveStyle("height: 100%")
+    const scrollBody = screen.getByTestId("stGridScrollBody")
+    expect(scrollBody).toHaveStyle("height: 100%")
+    expect(scrollBody).toHaveAttribute("data-test-scroll", "false")
+    expect(screen.getByTestId("stGrid")).toHaveStyle("height: auto")
   })
 
-  it("scrolls overflowing content when the grid has a pixel height", () => {
+  it("does not clip a pixel-height grid until in-flow tracks overflow", () => {
     const block = new BlockNode(
       FAKE_SCRIPT_HASH,
       [],
@@ -1204,9 +1207,10 @@ describe("GridContainer Component", () => {
     )
     renderWithContexts(makeGridNodeRendererComponent(block))
 
-    const gridContainer = screen.getByTestId("stGrid")
-    expect(gridContainer).toHaveStyle("height: 100%")
-    expect(gridContainer).toHaveStyle("overflow-y: auto")
+    const scrollBody = screen.getByTestId("stGridScrollBody")
+    expect(scrollBody).toHaveStyle("height: 100%")
+    expect(scrollBody).toHaveAttribute("data-test-scroll", "false")
+    expect(screen.getByTestId("stGrid")).not.toHaveStyle("overflow-y: auto")
   })
 
   it("keeps content-height grids auto-sized", () => {
@@ -1214,6 +1218,7 @@ describe("GridContainer Component", () => {
     renderWithContexts(makeGridNodeRendererComponent(block))
 
     expect(screen.getByTestId("stGrid")).toHaveStyle("height: auto")
+    expect(screen.queryByTestId("stGridScrollBody")).not.toBeInTheDocument()
   })
 
   it("does not clip cell content until in-flow overflow is measured", () => {

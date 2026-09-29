@@ -78,6 +78,8 @@ import {
   StyledGridCellBody,
   StyledGridCellContent,
   StyledGridContainerBlock,
+  StyledGridContentMeasure,
+  StyledGridScrollBody,
   StyledLayoutWrapper,
   translateGapWidth,
 } from "./styled-components"
@@ -390,6 +392,37 @@ const GridCell = ({
   return <OverflowAwareGridCell {...shellProps} />
 }
 
+const OverflowAwareGridPort = ({
+  wrap,
+  children,
+}: {
+  wrap: boolean
+  children: ReactNode
+}): ReactElement => {
+  const { values: portHeights, elementRef: portRef } =
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
+  const { values: contentHeights, elementRef: contentRef } =
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
+  const scroll = shouldScrollGridCell(
+    contentHeights[0] ?? 0,
+    portHeights[0] ?? 0
+  )
+
+  return (
+    <StyledGridScrollBody
+      ref={portRef}
+      $scroll={scroll}
+      $wrap={wrap}
+      data-testid="stGridScrollBody"
+      data-test-scroll={String(scroll)}
+    >
+      <StyledGridContentMeasure ref={contentRef}>
+        {children}
+      </StyledGridContentMeasure>
+    </StyledGridScrollBody>
+  )
+}
+
 /**
  * Renders a CSS Grid container with its children wrapped in grid cells.
  */
@@ -591,18 +624,18 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     ]
   )
 
-  return (
+  const grid = (
     <StyledGridContainerBlock
       ref={elementRef}
       columnCount={columnCount}
       minColumnWidthPx={minColumnWidthPx}
       $wrap={wrap}
+      $applyOverflow={!gridHasBoundedHeight}
       rowGap={rowGap}
       columnGap={columnGap}
       cellHeightMode={cellHeightMode}
       cellHeightPx={cellHeightPx}
       $dense={dense}
-      $fillHeight={gridHasBoundedHeight}
       className={["stGrid", convertKeyToClassName(userKey)]
         .filter(Boolean)
         .join(" ")}
@@ -613,6 +646,12 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       {wrappedChildren}
     </StyledGridContainerBlock>
   )
+
+  if (!gridHasBoundedHeight) {
+    return grid
+  }
+
+  return <OverflowAwareGridPort wrap={wrap}>{grid}</OverflowAwareGridPort>
 }
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
