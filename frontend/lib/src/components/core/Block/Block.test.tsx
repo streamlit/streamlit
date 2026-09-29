@@ -740,6 +740,69 @@ describe("BlockNodeRenderer direct column wrapping context", () => {
   })
 })
 
+describe("BlockNodeRenderer direct grid cell wrapping context", () => {
+  const label = "Regenerate the complete quarterly report now"
+
+  function makeGridCellBlock(children: AppNode[]): BlockNode {
+    return new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+  }
+
+  function makeGridBlockWithChildren(children: AppNode[]): BlockNode {
+    return new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: true,
+        gridContainer: {
+          maxColumns: 3,
+          wrap: true,
+        },
+      })
+    )
+  }
+
+  async function renderGridChildren(children: AppNode[]): Promise<void> {
+    renderWithContexts(
+      makeVerticalBlockComponent(
+        makeVerticalBlock([makeGridBlockWithChildren(children)])
+      )
+    )
+    expect(await screen.findByRole("button", { name: label })).toBeVisible()
+  }
+
+  it("resolves auto wrap to false for a button in grid.cell()", async () => {
+    await renderGridChildren([makeGridCellBlock([makeButton(label)])])
+
+    expect(await screen.findByTitle(label)).toBeVisible()
+  })
+
+  it("resolves auto wrap to false for a button as a direct grid child", async () => {
+    await renderGridChildren([makeButton(label)])
+
+    expect(await screen.findByTitle(label)).toBeVisible()
+  })
+
+  it("resets wrap in a nested layout container inside a grid cell", async () => {
+    const nestedContainer = makeVerticalBlock([makeButton(label)], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+        wrap: true,
+      },
+    })
+    await renderGridChildren([makeGridCellBlock([nestedContainer])])
+
+    expect(screen.queryByTitle(label)).not.toBeInTheDocument()
+  })
+})
+
 describe("BlockNodeRenderer container types", () => {
   const widgetMgr = new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -993,7 +1056,7 @@ describe("BlockNodeRenderer container types", () => {
 
 describe("GridContainer Component", () => {
   function makeGridBlock(
-    gridContainerProps: Partial<BlockProto.IGridContainer> = {},
+    gridContainerProps: Partial<BlockProto.GridContainer.$Properties> = {},
     children: BlockNode[] = []
   ): BlockNode {
     return new BlockNode(
@@ -1041,6 +1104,7 @@ describe("GridContainer Component", () => {
     const gridContainer = screen.getByTestId("stGrid")
     expect(gridContainer).toBeVisible()
     expect(gridContainer).toHaveClass("stGrid")
+    expect(gridContainer).toHaveAttribute("data-test-wrap", "true")
   })
 
   it("should apply display: grid style", () => {
@@ -1051,7 +1115,7 @@ describe("GridContainer Component", () => {
     expect(gridContainer).toHaveStyle("display: grid")
   })
 
-  it("should apply auto-fit grid template columns in auto mode", () => {
+  it("should apply an explicit column count from the default content width", () => {
     const block = makeGridBlock({
       maxColumns: 0,
       minColumnWidthPx: 200,
@@ -1059,13 +1123,14 @@ describe("GridContainer Component", () => {
     renderWithContexts(makeGridNodeRendererComponent(block))
 
     const gridContainer = screen.getByTestId("stGrid")
-    // Check that it uses auto-fit with minmax
+    // Unmeasured first paint uses contentMaxWidth (736px): (736+16)/(200+16) = 3
     expect(gridContainer).toHaveStyle(
-      "grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr))"
+      "grid-template-columns: repeat(3, minmax(0, 1fr))"
     )
+    expect(gridContainer).toHaveAttribute("data-test-column-count", "3")
   })
 
-  it("should apply fixed column template in fixed mode without min width", () => {
+  it("should cap integer columns at the declared count", () => {
     const block = makeGridBlock({
       maxColumns: 3,
       minColumnWidthPx: 0,
@@ -1076,6 +1141,38 @@ describe("GridContainer Component", () => {
     expect(gridContainer).toHaveStyle(
       "grid-template-columns: repeat(3, minmax(0, 1fr))"
     )
+  })
+
+  it("should keep the declared count and scroll when wrap is false", () => {
+    const block = makeGridBlock({
+      maxColumns: 4,
+      minColumnWidthPx: 200,
+      wrap: false,
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toHaveStyle(
+      "grid-template-columns: repeat(4, minmax(200px, 1fr))"
+    )
+    expect(gridContainer).toHaveStyle("overflow-x: auto;")
+    expect(gridContainer).toHaveAttribute("data-test-wrap", "false")
+  })
+
+  it("should span all columns when columnSpanAll is set", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: { columnSpanAll: true },
+      })
+    )
+    const block = makeGridBlock({ maxColumns: 4 }, [cell])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGridCell")).toHaveStyle("grid-column: 1/-1")
   })
 
   it.each([

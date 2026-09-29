@@ -48,9 +48,20 @@ import Popover from "~lib/components/elements/Popover/Popover"
 import Tabs, { type TabProps } from "~lib/components/elements/Tabs/Tabs"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import {
+  type DOMRectKeys,
+  useResizeObserver,
+} from "~lib/hooks/useResizeObserver"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
+import { convertRemToPx } from "~lib/theme/utils"
 import { notNullOrUndefined } from "~lib/util/utils"
 
+import {
+  clampColumnSpan,
+  cssLengthToPx,
+  resolveGridColumnCount,
+  resolveMinColumnWidthPx,
+} from "./gridUtils"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
   StyledColumn,
@@ -60,6 +71,7 @@ import {
   StyledGridCell,
   StyledGridContainerBlock,
   StyledLayoutWrapper,
+  translateGapWidth,
 } from "./styled-components"
 import {
   assignDividerColor,
@@ -149,7 +161,8 @@ export const ContainerContentsWrapper = (
       // stays compact for the column's direct children. Deliberately not inherited
       // from parentContext. Nested providers that use this wrapper (form, expander,
       // tabs, …) are not columns, so the flag resets to false. Nested st.container
-      // resets the same way because FlexBoxContainer omits this prop.
+      // resets the same way because FlexBoxContainer only sets this prop when the
+      // node is a column or grid cell.
       isDirectlyInColumn={notNullOrUndefined(props.node.deltaBlock.column)}
       parentContext={parentContext}
     >
@@ -236,6 +249,13 @@ export const FlexBoxContainer = (
       parentWidth={parentWidth}
       hasContentWidth={hasContentWidth}
       hasFixedWidth={hasFixedWidth}
+      // True for `st.columns` columns and `st.grid` cells so auto wrap stays
+      // compact for their direct children. Nested containers omit both fields
+      // and reset the flag. Not inherited from parentContext.
+      isDirectlyInColumn={
+        notNullOrUndefined(props.node.deltaBlock.column) ||
+        notNullOrUndefined(props.node.deltaBlock.gridCell)
+      }
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -263,6 +283,8 @@ interface GridContainerProps extends BaseBlockProps {
   node: BlockNode
 }
 
+const GRID_OBSERVED_PROPERTIES: DOMRectKeys[] = ["width"]
+
 /**
  * Renders a CSS Grid container with its children wrapped in grid cells.
  */
@@ -277,20 +299,22 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     componentRegistry,
   } = props
 
+  const theme = useEmotionTheme()
   // Handle cycling of colors for dividers (same as ChildRenderer):
-  assignDividerColor(node, useEmotionTheme())
+  assignDividerColor(node, theme)
 
   const parentContext = useContext(FlexContext)
   const gridConfig = node.deltaBlock.gridContainer
 
   const userKey = getKeyFromId(node.deltaBlock.id)
 
+  const { values: observedWidths, elementRef } =
+    useResizeObserver<HTMLDivElement>(GRID_OBSERVED_PROPERTIES)
+  const measuredWidth = observedWidths[0]
+
   // Extract grid configuration with defaults
   const maxColumns = gridConfig?.maxColumns ?? 0
-  // In auto mode (maxColumns=0), we need a positive min width; in fixed mode, 0 is valid
   const rawMinColumnWidthPx = gridConfig?.minColumnWidthPx ?? 0
-  const minColumnWidthPx =
-    maxColumns === 0 && rawMinColumnWidthPx === 0 ? 200 : rawMinColumnWidthPx
   const rowGap = gridConfig?.rowGapConfig ?? {
     gapSize: streamlit.GapSize.SMALL,
   }
@@ -305,11 +329,40 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     gridConfig?.cellHeightMode ??
     BlockProto.GridContainer.CellHeightMode.CONTENT
   const cellHeightPx = gridConfig?.cellHeightConfig?.pixelHeight ?? undefined
-  const dense = gridConfig?.dense ?? true
+  const dense = gridConfig?.dense ?? false
+  const wrap = gridConfig?.wrap ?? true
+
+  const minColumnWidthPx = resolveMinColumnWidthPx({
+    minColumnWidthPx: rawMinColumnWidthPx,
+    showBorder: showCellBorder,
+    autoMinColumnWidthPx: convertRemToPx(
+      theme.sizes.gridMinColumnWidth,
+      theme.fontSizes.baseFontSize
+    ),
+    borderPaddingPx:
+      2 * convertRemToPx(theme.spacing.lg, theme.fontSizes.baseFontSize),
+  })
+  const columnGapPx = cssLengthToPx(
+    translateGapWidth(columnGap, theme),
+    theme.fontSizes.baseFontSize
+  )
+  const fallbackWidthPx =
+    parentContext?.parentWidth ??
+    (Number.parseFloat(theme.sizes.contentMaxWidth) || 736)
+  const columnCount = resolveGridColumnCount({
+    availableWidthPx: measuredWidth,
+    minColumnWidthPx,
+    columnGapPx,
+    maxColumns,
+    wrap,
+    fallbackWidthPx,
+  })
 
   // Collect child elements and their grid cell configurations.
   // Use individual props as dependencies instead of the props object
   // to ensure stable memoization (widgetMgr etc. are stable singletons).
+  // Do not depend on columnCount here: clamp spans when wrapping so a
+  // wrap-driven N change does not re-run RenderNodeVisitor.
   const childrenWithCells = useMemo(() => {
     const visitor = new RenderNodeVisitor({
       node,
@@ -324,6 +377,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     return (node.children ?? []).map(childNode => {
       // Get grid cell config from BlockNode children
       let columnSpan: number | undefined
+      let columnSpanAll = false
       let rowSpan: number | undefined
       let nodeId: string | undefined
 
@@ -331,7 +385,9 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
         nodeId = childNode.deltaBlock.id || undefined
         if (childNode.deltaBlock.gridCell) {
           const gridCell = childNode.deltaBlock.gridCell
-          if (gridCell.columnSpan && gridCell.columnSpan > 1) {
+          if (gridCell.columnSpanAll) {
+            columnSpanAll = true
+          } else if (gridCell.columnSpan && gridCell.columnSpan > 1) {
             columnSpan = gridCell.columnSpan
           }
           if (gridCell.rowSpan && gridCell.rowSpan > 1) {
@@ -349,6 +405,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
         element: childElement,
         nodeId,
         columnSpan,
+        columnSpanAll,
         rowSpan,
       }
     })
@@ -367,19 +424,27 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED
 
   // Wrap each child in a StyledGridCell with span information.
-  // Use nodeId for stable React keys to avoid incorrect reuse when elements
-  // are inserted/removed. Fall back to index if nodeId unavailable.
+  // Use nodeId for stable React keys so width-driven template updates do not
+  // remount cells. Fall back to index if nodeId unavailable.
   const wrappedChildren = childrenWithCells.map((child, index) => (
     <StyledGridCell
+      // eslint-disable-next-line @eslint-react/no-array-index-key -- nodeId is preferred; index is only used when the child has no identity
       key={child.nodeId ?? index}
       verticalAlignment={verticalAlignment}
       showBorder={showCellBorder}
       hasFixedHeight={hasFixedHeight}
-      columnSpan={child.columnSpan}
+      data-testid="stGridCell"
+      columnSpan={
+        child.columnSpanAll || !child.columnSpan
+          ? undefined
+          : clampColumnSpan(child.columnSpan, columnCount)
+      }
+      columnSpanAll={child.columnSpanAll}
       rowSpan={child.rowSpan}
     >
       <FlexContextProvider
         direction={Direction.VERTICAL}
+        isDirectlyInColumn
         parentContext={parentContext}
       >
         {child.element}
@@ -389,17 +454,21 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
 
   return (
     <StyledGridContainerBlock
-      maxColumns={maxColumns}
+      ref={elementRef}
+      columnCount={columnCount}
       minColumnWidthPx={minColumnWidthPx}
+      $wrap={wrap}
       rowGap={rowGap}
       columnGap={columnGap}
       cellHeightMode={cellHeightMode}
       cellHeightPx={cellHeightPx}
-      dense={dense}
+      $dense={dense}
       className={["stGrid", convertKeyToClassName(userKey)]
         .filter(Boolean)
         .join(" ")}
       data-testid="stGrid"
+      data-test-column-count={columnCount}
+      data-test-wrap={String(wrap)}
     >
       {wrappedChildren}
     </StyledGridContainerBlock>

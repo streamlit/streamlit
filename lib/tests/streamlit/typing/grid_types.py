@@ -44,13 +44,18 @@ if TYPE_CHECKING:
     assert_type(grid("auto"), GridContainer)
     assert_type(grid(4), GridContainer)
 
-    # min_column_width accepts int or None
+    # min_column_width accepts "auto" or int
+    assert_type(grid(4, min_column_width="auto"), GridContainer)
     assert_type(grid(4, min_column_width=200), GridContainer)
-    assert_type(grid(4, min_column_width=None), GridContainer)
 
-    # gap accepts single value or tuple
+    # wrap accepts bool
+    assert_type(grid(4, wrap=True), GridContainer)
+    assert_type(grid(4, wrap=False), GridContainer)
+
+    # gap accepts single value, tuple, or list
     assert_type(grid(gap="small"), GridContainer)
     assert_type(grid(gap=("medium", "small")), GridContainer)
+    assert_type(grid(gap=["medium", "small"]), GridContainer)
     assert_type(grid(gap=(None, "small")), GridContainer)
 
     # vertical_alignment accepts literals
@@ -62,22 +67,32 @@ if TYPE_CHECKING:
     assert_type(grid(border=True), GridContainer)
     assert_type(grid(border=False), GridContainer)
 
-    # cell_height accepts literals or int
-    assert_type(grid(cell_height="content"), GridContainer)
-    assert_type(grid(cell_height="equal"), GridContainer)
-    assert_type(grid(cell_height=200), GridContainer)
+    # row_height accepts literals or int
+    assert_type(grid(row_height="content"), GridContainer)
+    assert_type(grid(row_height="equal"), GridContainer)
+    assert_type(grid(row_height=200), GridContainer)
 
     # width accepts "stretch" or int
     assert_type(grid(width="stretch"), GridContainer)
     assert_type(grid(width=400), GridContainer)
 
+    # height accepts "content", "stretch", or int
+    assert_type(grid(height="content"), GridContainer)
+    assert_type(grid(height="stretch"), GridContainer)
+    assert_type(grid(height=720), GridContainer)
+
+    # key accepts str or int
+    assert_type(grid(key="my_grid"), GridContainer)
+    assert_type(grid(key=1), GridContainer)
+
     # dense accepts bool
     assert_type(grid(dense=True), GridContainer)
     assert_type(grid(dense=False), GridContainer)
 
-    # span method returns DeltaGenerator
-    span = grid().span
-    assert_type(span(), DeltaGenerator)
-    assert_type(span(columns=2), DeltaGenerator)
-    assert_type(span(rows=2), DeltaGenerator)
-    assert_type(span(columns=2, rows=3), DeltaGenerator)
+    # cell method returns DeltaGenerator
+    cell = grid().cell
+    assert_type(cell(), DeltaGenerator)
+    assert_type(cell(column_span=2), DeltaGenerator)
+    assert_type(cell(column_span="all"), DeltaGenerator)
+    assert_type(cell(row_span=2), DeltaGenerator)
+    assert_type(cell(column_span=2, row_span=3), DeltaGenerator)

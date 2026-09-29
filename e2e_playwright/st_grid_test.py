@@ -15,43 +15,55 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import get_element_by_key
 
 
 def test_grid_renders(app: Page):
     """Test that all grids render correctly."""
     grids = app.get_by_test_id("stGrid")
-    expect(grids).to_have_count(5)
+    expect(grids).to_have_count(6)
 
 
 def test_auto_sizing_grid(app: Page):
     """Test that the auto-sizing grid contains metrics."""
-    first_grid = app.get_by_test_id("stGrid").first
-    # Check that metrics are inside the grid
+    first_grid = get_element_by_key(app, "auto_sizing")
     metrics = first_grid.get_by_test_id("stMetric")
     expect(metrics).to_have_count(4)
+    expect(first_grid).to_have_attribute("data-test-wrap", "true")
 
 
 def test_grid_with_border(app: Page):
     """Test that the bordered grid has visible borders."""
-    # Second grid has borders
-    bordered_grid = app.get_by_test_id("stGrid").nth(1)
-    # Verify grid contains content
+    bordered_grid = get_element_by_key(app, "bordered")
     expect(bordered_grid).to_be_visible()
+    expect(bordered_grid.get_by_test_id("stGridCell")).to_have_count(6)
 
 
 def test_grid_with_span(app: Page):
     """Test that grid with spanning cells renders correctly."""
-    # Third grid has spanning
-    span_grid = app.get_by_test_id("stGrid").nth(2)
+    span_grid = get_element_by_key(app, "spanning")
     expect(span_grid).to_be_visible()
-    # Check that span text is visible
     expect(span_grid.get_by_text("Spans 2 columns")).to_be_visible()
+    expect(span_grid.get_by_text("Spans all columns")).to_be_visible()
+
+    span_all_cell = span_grid.get_by_test_id("stGridCell").first
+    expect(span_all_cell).to_have_css("grid-column-start", "1")
+    expect(span_all_cell).to_have_css("grid-column-end", "-1")
+
+
+def test_grid_wrap_false_keeps_declared_columns(app: Page):
+    """wrap=False keeps the declared count and scrolls locally."""
+    no_wrap_grid = get_element_by_key(app, "no_wrap")
+    expect(no_wrap_grid).to_have_attribute("data-test-wrap", "false")
+    expect(no_wrap_grid).to_have_attribute("data-test-column-count", "3")
+    expect(no_wrap_grid).to_have_css("overflow-x", "auto")
+    # Must not collapse to wrapping auto-fit behavior.
+    expect(no_wrap_grid).not_to_have_attribute("data-test-wrap", "true")
 
 
 def test_grid_visual_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test grid visual appearance with snapshot."""
-    # Take snapshot of the first grid (auto-sizing)
-    first_grid = themed_app.get_by_test_id("stGrid").first
+    first_grid = get_element_by_key(themed_app, "auto_sizing")
     assert_snapshot(first_grid, name="st_grid-auto_sizing")
 
 
@@ -59,7 +71,7 @@ def test_grid_with_border_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test bordered grid visual appearance."""
-    bordered_grid = themed_app.get_by_test_id("stGrid").nth(1)
+    bordered_grid = get_element_by_key(themed_app, "bordered")
     assert_snapshot(bordered_grid, name="st_grid-bordered")
 
 
@@ -67,5 +79,5 @@ def test_grid_with_span_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test grid with span visual appearance."""
-    span_grid = themed_app.get_by_test_id("stGrid").nth(2)
+    span_grid = get_element_by_key(themed_app, "spanning")
     assert_snapshot(span_grid, name="st_grid-span")

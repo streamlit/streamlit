@@ -300,7 +300,7 @@ _VALID_GAP_VALUES: Final = [
 ]
 
 
-def get_gap_config(gap: Gap | None) -> GapConfig:
+def get_gap_config(gap: Gap | None, *, parameter: str = "gap") -> GapConfig:
     """Convert a gap value to a ``GapConfig`` proto.
 
     ``gap`` may be one of the string enum values (``"xxsmall"``, ``"xsmall"``,
@@ -311,6 +311,8 @@ def get_gap_config(gap: Gap | None) -> GapConfig:
     ----------
     gap : Gap or None
         The gap value to convert.
+    parameter : str
+        Parameter name used in validation errors. Defaults to ``"gap"``.
 
     Raises
     ------
@@ -333,7 +335,7 @@ def get_gap_config(gap: Gap | None) -> GapConfig:
         gap_config.gap_size = _GAP_STRING_MAPPING[gap.lower()]
         return gap_config
 
-    raise StreamlitValueError("gap", _VALID_GAP_VALUES, detail=f"Got {gap!r}.")
+    raise StreamlitValueError(parameter, _VALID_GAP_VALUES, detail=f"Got {gap!r}.")
 
 
 _VALID_HORIZONTAL_ALIGNMENTS: Final = ["left", "center", "right", "distribute"]

@@ -16,6 +16,7 @@
 
 import { CSSProperties } from "react"
 
+import { css } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
@@ -29,6 +30,8 @@ import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
 
+import { computeGridTemplateColumns } from "./gridUtils"
+
 /**
  * Column vertical-alignment rules target the wrapper class rather than the two
  * field styled-components, so both widgets stay covered if their inner React
@@ -36,7 +39,7 @@ import { assertNever } from "~lib/util/assertNever"
  */
 const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 
-function translateGapWidth(
+export function translateGapWidth(
   gap: streamlit.GapConfig.$Properties | undefined,
   theme: EmotionTheme
 ): string {
@@ -400,55 +403,28 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
 )
 
 export interface StyledGridContainerBlockProps {
-  maxColumns: number
+  columnCount: number
   minColumnWidthPx: number
+  $wrap: boolean
   rowGap: streamlit.GapConfig.$Properties | undefined
   columnGap: streamlit.GapConfig.$Properties | undefined
   cellHeightMode: BlockProto.GridContainer.CellHeightMode
   cellHeightPx?: number
-  dense?: boolean
-}
-
-/**
- * Computes the CSS grid-template-columns value based on configuration.
- *
- * When maxColumns is 0 (auto mode), we use auto-fit with minmax to let the
- * browser determine the number of columns based on available width.
- *
- * When maxColumns is set, we optionally incorporate minColumnWidth to allow
- * responsive wrapping, or use fixed equal columns if no minimum is specified.
- */
-function computeGridTemplateColumns(
-  maxColumns: number,
-  minColumnWidthPx: number,
-  columnGapPx: string
-): string {
-  if (maxColumns === 0) {
-    // Auto mode: columns determined by min width
-    return `repeat(auto-fit, minmax(min(100%, ${minColumnWidthPx}px), 1fr))`
-  }
-
-  if (minColumnWidthPx > 0) {
-    // Fixed column count with min width: allow responsive wrapping
-    // Use min(100%, minWidth) to ensure columns can collapse to single column
-    return `repeat(auto-fit, minmax(min(100%, max(${minColumnWidthPx}px, calc((100% - ${maxColumns - 1} * ${columnGapPx}) / ${maxColumns}))), 1fr))`
-  }
-
-  // Fixed column count without min width: strict equal columns
-  return `repeat(${maxColumns}, minmax(0, 1fr))`
+  $dense?: boolean
 }
 
 export const StyledGridContainerBlock =
   styled.div<StyledGridContainerBlockProps>(
     ({
       theme,
-      maxColumns,
+      columnCount,
       minColumnWidthPx,
+      $wrap,
       rowGap,
       columnGap,
       cellHeightMode,
       cellHeightPx,
-      dense,
+      $dense,
     }) => {
       const rowGapPx = translateGapWidth(rowGap, theme)
       const columnGapPx = translateGapWidth(columnGap, theme)
@@ -474,14 +450,16 @@ export const StyledGridContainerBlock =
         maxWidth: "100%",
         minWidth: "1rem",
         gap: `${rowGapPx} ${columnGapPx}`,
-        gridTemplateColumns: computeGridTemplateColumns(
-          maxColumns,
+        gridTemplateColumns: computeGridTemplateColumns({
+          columnCount,
           minColumnWidthPx,
-          columnGapPx
-        ),
+          wrap: $wrap,
+        }),
         gridAutoRows,
+        // wrap=False keeps the declared track count and scrolls locally
+        ...(!$wrap && { overflowX: "auto" as const }),
         // Dense packing mode fills gaps by reordering items
-        ...(dense && { gridAutoFlow: "dense" }),
+        ...($dense && { gridAutoFlow: "dense" }),
       }
     }
   )
@@ -491,6 +469,7 @@ export interface StyledGridCellProps {
   showBorder: boolean
   hasFixedHeight: boolean
   columnSpan?: number
+  columnSpanAll?: boolean
   rowSpan?: number
 }
 
@@ -501,45 +480,57 @@ export const StyledGridCell = styled.div<StyledGridCellProps>(
     showBorder,
     hasFixedHeight,
     columnSpan,
+    columnSpanAll,
     rowSpan,
   }) => {
     const { VerticalAlignment } = BlockProto.GridContainer
 
-    // Map vertical alignment to CSS justify-content (since we use column direction)
-    // Use "safe" keyword for center/end to prevent content from overflowing
-    // when it's larger than the container
-    let justifyContent: string
+    // Map vertical alignment to CSS justify-content (flex column).
+    // Two declarations: unknown `safe` must not drop the fallback alignment.
+    let justifyContentFallback = "flex-start"
+    let justifyContentSafe: string | undefined
     switch (verticalAlignment) {
       case VerticalAlignment.CENTER:
-        justifyContent = "safe center"
+        justifyContentFallback = "center"
+        justifyContentSafe = "safe center"
         break
       case VerticalAlignment.BOTTOM:
-        justifyContent = "safe flex-end"
+        justifyContentFallback = "flex-end"
+        justifyContentSafe = "safe flex-end"
         break
       case VerticalAlignment.TOP:
       default:
-        justifyContent = "flex-start"
+        break
     }
 
-    return {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "stretch",
-      justifyContent,
-      minWidth: 0,
-      minHeight: 0,
-      maxWidth: "100%",
-      // For fixed height cells, use overflow-y auto to allow scrolling
-      // but keep overflow-x visible so toolbars/menus aren't clipped
-      ...(hasFixedHeight && { overflowY: "auto", overflowX: "clip" }),
-      ...(showBorder && {
-        border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-        borderRadius: theme.radii.default,
-        padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
-      }),
-      ...(columnSpan &&
-        columnSpan > 1 && { gridColumn: `span ${columnSpan}` }),
-      ...(rowSpan && rowSpan > 1 && { gridRow: `span ${rowSpan}` }),
-    }
+    return css(
+      {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "stretch",
+        justifyContent: justifyContentFallback,
+        minWidth: 0,
+        minHeight: 0,
+        maxWidth: "100%",
+        // For fixed height cells, use overflow-y auto to allow scrolling
+        // but keep overflow-x clipped so toolbars/menus aren't clipped by x
+        ...(hasFixedHeight && { overflowY: "auto", overflowX: "clip" }),
+        ...(showBorder && {
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          borderRadius: theme.radii.default,
+          padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+        }),
+        ...(columnSpanAll && { gridColumn: "1 / -1" }),
+        ...(!columnSpanAll &&
+          columnSpan &&
+          columnSpan > 1 && { gridColumn: `span ${columnSpan}` }),
+        ...(rowSpan && rowSpan > 1 && { gridRow: `span ${rowSpan}` }),
+      },
+      // Second declaration so unknown `safe` does not drop the fallback.
+      justifyContentSafe &&
+        css`
+          justify-content: ${justifyContentSafe};
+        `
+    )
   }
 )

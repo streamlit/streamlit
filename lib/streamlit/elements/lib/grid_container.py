@@ -14,44 +14,70 @@
 
 from __future__ import annotations
 
+from numbers import Integral
+from typing import TYPE_CHECKING, Literal
+
 from typing_extensions import Self
 
 from streamlit.delta_generator import DeltaGenerator
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
 
+if TYPE_CHECKING:
+    from streamlit.cursor import Cursor
+
+
+def _is_int(value: object) -> bool:
+    """Return True for real ints, excluding ``bool`` (a subclass of ``int``)."""
+    return isinstance(value, Integral) and not isinstance(value, bool)
+
 
 class GridContainer(DeltaGenerator):
-    """A DeltaGenerator for grid containers that supports cell spanning.
+    """A DeltaGenerator for grid containers that supports ``cell()``.
 
-    This class extends DeltaGenerator to provide the span() method,
-    which allows creating grid cells that span multiple columns and/or rows.
+    This class extends DeltaGenerator to provide the ``cell()`` method,
+    which groups elements into one cell and can span columns or rows.
     """
+
+    def __init__(
+        self,
+        root_container: int | None = None,
+        cursor: Cursor | None = None,
+        parent: DeltaGenerator | None = None,
+        block_type: str | None = None,
+    ) -> None:
+        super().__init__(root_container, cursor, parent, block_type)
+        self._declared_columns: Literal["auto"] | int = "auto"
 
     def __enter__(self) -> Self:  # type: ignore[override]
         super().__enter__()
         return self
 
-    @gather_metrics("span")
-    def span(
+    @gather_metrics("grid.cell")
+    def cell(
         self,
-        columns: int = 1,
-        rows: int = 1,
+        *,
+        column_span: int | Literal["all"] = 1,
+        row_span: int = 1,
     ) -> DeltaGenerator:
-        r"""Create a grid cell that spans multiple columns and/or rows.
+        r"""Create the next auto-placed grid cell.
 
-        This method creates a container within the grid that can span multiple
-        columns or rows. Each call creates a new grid cell with the specified
-        span configuration.
+        With no arguments this groups multiple elements into one cell.
+        ``column_span`` and ``row_span`` occupy more tracks. The returned
+        object works with ``with`` notation or method chaining.
 
         Parameters
         ----------
-        columns : int
+        column_span : int or "all"
             Number of columns this cell should span. Defaults to 1.
-            Must be a positive integer.
+            ``"all"`` occupies every column track on its own row.
 
-        rows : int
+        row_span : int
             Number of rows this cell should span. Defaults to 1.
             Must be a positive integer.
 
@@ -62,43 +88,79 @@ class GridContainer(DeltaGenerator):
 
         Examples
         --------
-        Create a grid where one cell spans 2 columns.
+        Group a metric and caption in one cell, and span a featured card.
 
         >>> import streamlit as st
         >>>
-        >>> grid = st.grid(4, min_column_width=200, border=True)
-        >>>
-        >>> with grid.span(columns=2):
-        ...     st.markdown("This spans 2 columns")
-        >>> with grid.container():
-        ...     st.markdown("Cell 2")
-        >>> with grid.container():
-        ...     st.markdown("Cell 3")
+        >>> grid = st.grid(4, border=True, row_height="equal")
+        >>> with grid.cell():
+        ...     st.metric("Revenue", "$1.2M", "+8%")
+        ...     st.caption("Trailing 30 days")
+        >>> with grid.cell(column_span="all"):
+        ...     st.markdown("**Featured**")
+
+        .. output::
+            https://doc-grid-cell.streamlit.app/
+            height: 220px
 
         """
-        # Validate columns
-        if not isinstance(columns, int) or columns < 1:
-            raise StreamlitAPIException(
-                f"`columns` must be a positive integer. Got: {columns!r}"
+        if column_span == "all":
+            validated_column_span: Literal["all"] | int = "all"
+        elif isinstance(column_span, str):
+            raise StreamlitValueError(
+                "column_span",
+                ['"all"', "a positive integer"],
+                detail=f"Got {column_span!r}.",
+            )
+        elif not _is_int(column_span):
+            raise StreamlitInvalidParameterTypeError(
+                "column_span",
+                type(column_span).__name__,
+                ["int", '"all"'],
+            )
+        elif column_span < 1:
+            raise StreamlitValueError(
+                "column_span",
+                ['"all"', "a positive integer"],
+                detail=f"Got {column_span!r}.",
+            )
+        else:
+            declared_columns = self._declared_columns
+            if declared_columns != "auto" and column_span > declared_columns:
+                raise StreamlitValueOutOfRangeError(
+                    "column_span",
+                    column_span,
+                    1,
+                    declared_columns,
+                )
+            validated_column_span = column_span
+
+        if not _is_int(row_span):
+            raise StreamlitInvalidParameterTypeError(
+                "row_span",
+                type(row_span).__name__,
+                ["int"],
+            )
+        if row_span < 1:
+            raise StreamlitValueError(
+                "row_span",
+                ["a positive integer"],
+                detail=f"Got {row_span!r}.",
             )
 
-        # Validate rows
-        if not isinstance(rows, int) or rows < 1:
-            raise StreamlitAPIException(
-                f"`rows` must be a positive integer. Got: {rows!r}"
-            )
-
-        # Build the proto
         block_proto = BlockProto()
         block_proto.allow_empty = True
-
-        # Set vertical container (acts as a regular container within the grid cell)
         block_proto.vertical.SetInParent()
+        # Always set grid_cell so the frontend treats this block as a
+        # column-like wrap region even for the default 1x1 span.
+        block_proto.grid_cell.SetInParent()
 
-        # Set grid cell span information
-        if columns > 1:
-            block_proto.grid_cell.column_span = columns
-        if rows > 1:
-            block_proto.grid_cell.row_span = rows
+        if validated_column_span == "all":
+            block_proto.grid_cell.column_span_all = True
+        elif validated_column_span > 1:
+            block_proto.grid_cell.column_span = validated_column_span
+
+        if row_span > 1:
+            block_proto.grid_cell.row_span = row_span
 
         return self.dg._block(block_proto)
