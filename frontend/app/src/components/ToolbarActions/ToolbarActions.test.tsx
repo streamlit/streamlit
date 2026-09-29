@@ -96,7 +96,9 @@ describe("ToolbarActions", () => {
     const props = getProps()
     render(<ToolbarActions {...props} />)
 
-    const favoriteButton = screen.getByRole("button", { name: "favorite" })
+    const favoriteButton = screen.getByRole("button", {
+      name: "Toolbar action",
+    })
     await user.click(favoriteButton)
     expect(props.sendMessageToHost).toHaveBeenLastCalledWith({
       type: "TOOLBAR_ITEM_CALLBACK",
@@ -111,18 +113,20 @@ describe("ToolbarActions", () => {
     })
   })
 
-  it("falls back to the host key when the label is whitespace-only", () => {
+  it("falls back to a generic name when the label is omitted or whitespace-only", () => {
     render(
       <ToolbarActions
         {...getProps({
           hostToolbarItems: [
-            { key: "favorite", icon: "star.svg", label: "   " },
+            { key: "toolbar-item-7f3a", icon: "star.svg", label: "   " },
           ],
         })}
       />
     )
 
-    expect(screen.getByRole("button", { name: "favorite" })).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Toolbar action" })
+    ).toBeVisible()
     expect(
       screen.queryByTestId("stToolbarActionButtonLabel")
     ).not.toBeInTheDocument()
