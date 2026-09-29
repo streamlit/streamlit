@@ -2482,9 +2482,11 @@ _create_theme_options(
 
         This color applies to column headers, grouped column headers, and
         header icons such as sort and edit. It doesn't apply to the text in
-        body cells. If this isn't set, Streamlit uses a faded version of
-        `theme.textColor`. When a column is selected, its header text and
-        icons stay white, matching existing selection behavior.
+        body cells. If this is set, Streamlit uses it as-is. If it isn't
+        set, Streamlit uses a faded version of `theme.textColor` (the
+        configured `textColor`, or the theme default if `textColor` is also
+        unset). When a column is selected, its header text and icons stay
+        white, matching existing selection behavior.
     """,
 )
 
