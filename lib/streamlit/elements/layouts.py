@@ -829,8 +829,9 @@ class LayoutsMixin:
             An optional string or integer to use as the unique key for
             the widget. If this is ``None`` (default), a key will be
             generated for the widget based on the values of the other
-            parameters. No two elements may have the same key, even if
-            they are different element types or in different containers.
+            parameters. No two elements may have the same key in a single
+            run, even if they are different element types or in different
+            containers.
 
             When ``on_change`` is set to ``"rerun"`` or a callable, or when
             ``bind="query-params"`` is set, setting a key lets you read or
@@ -1260,8 +1261,9 @@ class LayoutsMixin:
             An optional string or integer to use as the unique key for
             the widget. If this is ``None`` (default), a key will be
             generated for the widget based on the values of the other
-            parameters. No two elements may have the same key, even if
-            they are different element types or in different containers.
+            parameters. No two elements may have the same key in a single
+            run, even if they are different element types or in different
+            containers.
 
             When ``on_change`` is set to ``"rerun"`` or a callable, or when
             ``bind="query-params"`` is set, setting a key lets you read or update
@@ -1755,8 +1757,9 @@ class LayoutsMixin:
             An optional string or integer to use as the unique key for
             the widget. If this is ``None`` (default), a key will be
             generated for the widget based on the values of the other
-            parameters. No two elements may have the same key, even if
-            they are different element types or in different containers.
+            parameters. No two elements may have the same key in a single
+            run, even if they are different element types or in different
+            containers.
 
             When ``on_change`` is set to ``"rerun"`` or a callable, setting a
             key lets you read or update the open/closed state via

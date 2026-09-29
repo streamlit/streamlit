@@ -575,8 +575,8 @@ class PlotlyMixin:
             An optional string to use for giving this element a stable
             identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
-            No two elements may have the same key, even if they are
-            different element types or in different containers.
+            No two elements may have the same key in a single run, even if
+            they are different element types or in different containers.
             Identical unkeyed charts still collide across tabs and
             columns unless you pass a unique ``key``.
 
