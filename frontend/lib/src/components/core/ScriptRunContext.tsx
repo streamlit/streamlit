@@ -64,7 +64,7 @@ export interface ScriptRunContextProps {
    * Lets widgets detect that a run finished. Bumped on every scriptFinished
    * message (a monotonic counter, so consecutive finishes stay distinct).
    *
-   * Consumed by: ChatInput
+   * Consumed by: ChatInput, TextInput
    */
   scriptRunFinishedSequence: number
 

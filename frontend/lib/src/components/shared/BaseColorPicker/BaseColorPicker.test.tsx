@@ -17,6 +17,7 @@
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { render } from "~lib/test_util"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
@@ -98,6 +99,20 @@ describe("ColorPicker widget", () => {
     expect(
       screen.getByRole("button", { name: /label color picker/i })
     ).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("mounts the popover in the shared floating overlay portal", async () => {
+    const user = userEvent.setup()
+    render(<BaseColorPicker {...getProps()} />)
+
+    await user.click(
+      screen.getByRole("button", { name: /label color picker/i })
+    )
+
+    const portalHost = document.getElementById(FLOATING_OVERLAY_PORTAL_ID)
+    expect(portalHost).toContainElement(
+      screen.getByTestId("stColorPickerPopover")
+    )
   })
 
   it("closes popover and calls onChange when trigger is clicked again", async () => {

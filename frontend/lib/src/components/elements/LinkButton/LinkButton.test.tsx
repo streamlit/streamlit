@@ -30,7 +30,7 @@ vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
   formatShortcutForDisplay: vi.fn(
     (shortcut: string | null | undefined) =>
-      shortcut?.replace(/\+/g, " + ") || undefined
+      shortcut?.replaceAll("+", " + ") || undefined
   ),
 }))
 
@@ -207,9 +207,8 @@ describe("LinkButton widget", () => {
     await user.click(screen.getByRole("link"))
 
     expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-      props.element,
-      { fromUi: true },
-      fragmentId
+      props.element.id,
+      { formId: undefined, fragmentId: fragmentId, fromUser: true }
     )
   })
 

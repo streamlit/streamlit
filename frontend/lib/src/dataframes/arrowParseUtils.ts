@@ -138,7 +138,7 @@ function parseHeaderName(name: string, numLevels: number): string[] {
 
   try {
     return JSON.parse(
-      name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replace(/'/g, '"')
+      name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replaceAll("'", '"')
     )
   } catch {
     // Add empty strings for the missing levels

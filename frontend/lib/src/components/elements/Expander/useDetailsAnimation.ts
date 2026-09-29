@@ -16,6 +16,7 @@
 
 import {
   MouseEvent,
+  RefCallback,
   RefObject,
   useCallback,
   useEffect,
@@ -69,15 +70,19 @@ export interface UseDetailsAnimationOptions {
   label: string
   /** Callback when user toggles (for widget mode) */
   onToggle?: (newOpen: boolean) => void
-  /** Whether the expander is in compact mode (no border) */
-  isCompact?: boolean
+  /** Whether the expander draws a border, which counts towards its height */
+  hasBorder?: boolean
 }
 
 interface UseDetailsAnimationResult {
   /** Current open state */
   isOpen: boolean
-  /** Ref to attach to <details> element */
-  detailsRef: RefObject<HTMLDetailsElement>
+  /**
+   * Ref callback for the <details> element. It re-applies the current open
+   * state on every mount, because a step that starts empty renders a plain
+   * header and only swaps in a <details> once its first child arrives.
+   */
+  detailsRef: RefCallback<HTMLDetailsElement>
   /** Ref to attach to <summary> element */
   summaryRef: RefObject<HTMLElement>
   /** Ref to attach to content panel */
@@ -100,13 +105,14 @@ export function useDetailsAnimation({
   backendExpanded,
   label,
   onToggle,
-  isCompact = false,
+  hasBorder = true,
 }: UseDetailsAnimationOptions): UseDetailsAnimationResult {
   const [isOpen, setIsOpen] = useState(backendExpanded ?? false)
-  // Border size to add to height calculations (0 for compact mode which has no border)
-  const borderOffset = isCompact ? 0 : 2 * BORDER_SIZE
+  // Border size to add to height calculations (0 for the borderless
+  // compact and step styles)
+  const borderOffset = hasBorder ? 2 * BORDER_SIZE : 0
 
-  const detailsRef = useRef<HTMLDetailsElement>(null)
+  const detailsRef = useRef<HTMLDetailsElement | null>(null)
   const summaryRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -123,6 +129,22 @@ export function useDetailsAnimation({
 
   // Track if component has mounted (to skip animation on initial render)
   const hasMountedRef = useRef(false)
+
+  // Store the <details> node in state so the ResizeObserver effect re-runs
+  // when a step remounts it. A ref alone would not retrigger that effect.
+  const [detailsElement, setDetailsElement] =
+    useState<HTMLDetailsElement | null>(null)
+
+  const attachDetails = useCallback(
+    (node: HTMLDetailsElement | null): void => {
+      detailsRef.current = node
+      if (node) {
+        node.open = isOpenRef.current
+      }
+      setDetailsElement(node)
+    },
+    []
+  )
 
   /**
    * Cancel any running animation and clear the inline height/overflow lock it
@@ -339,10 +361,12 @@ export function useDetailsAnimation({
     }
   }, [backendExpanded, label, cancelAnimation, animateTo])
 
-  // ResizeObserver for content size changes
+  // ResizeObserver for content size changes. Keyed on the <details> element so
+  // that a step which starts without content — and therefore mounts its
+  // <details> only once the first child arrives — still gets observed.
   useEffect(() => {
     const content = contentRef.current
-    const details = detailsRef.current
+    const details = detailsElement
     if (!content || !details) {
       return
     }
@@ -362,7 +386,7 @@ export function useDetailsAnimation({
       observer.disconnect()
       clearResizeTimeout()
     }
-  }, [clearResizeTimeout, restartResizeTimeout])
+  }, [detailsElement, clearResizeTimeout, restartResizeTimeout])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -392,7 +416,7 @@ export function useDetailsAnimation({
 
   return {
     isOpen,
-    detailsRef,
+    detailsRef: attachDetails,
     summaryRef,
     contentRef,
     handleToggle,

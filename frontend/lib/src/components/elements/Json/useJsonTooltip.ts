@@ -62,7 +62,7 @@ export function formatJsonPath(namespace: Array<string | null>): string {
       key === "" || /[^a-zA-Z0-9_$]/.test(key) || /^\d/.test(key)
     if (needsBrackets) {
       // Escape backslashes first, then double quotes
-      const escaped = key.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+      const escaped = key.replaceAll("\\", "\\\\").replaceAll('"', '\\"')
       return `${path}["${escaped}"]`
     }
     // Use dot notation

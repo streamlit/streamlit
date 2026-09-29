@@ -20,14 +20,14 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 
 import DataFrame from "./DataFrame"
 
 interface ReadOnlyGridProps {
   data: Quiver
   height?: number
-  width?: streamlit.IWidthConfig
+  width?: streamlit.WidthConfig.$Properties
   customToolbarActions?: React.ReactNode[]
 }
 

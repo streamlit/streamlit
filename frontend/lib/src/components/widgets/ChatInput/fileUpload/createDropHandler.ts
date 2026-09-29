@@ -17,14 +17,13 @@
 import { zip } from "lodash-es"
 import { ErrorCode as FileErrorCode } from "react-dropzone"
 
-import {
+import type {
   ChatInput as ChatInputProto,
   FileURLs as FileURLsProto,
-  IFileURLs,
 } from "@streamlit/protobuf"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { type FileRejection, getRejectedFileInfo } from "~lib/util/FileHelper"
 
 import { validateFileType } from "./fileUploadUtils"
@@ -33,7 +32,7 @@ interface CreateDropHandlerParams {
   acceptMultipleFiles: boolean
   maxFileSize: number
   uploadClient: FileUploadClient
-  uploadFile: (fileURLs: FileURLsProto, file: File) => void
+  uploadFile: (fileURLs: FileURLsProto.$Properties, file: File) => void
   addFiles: (files: UploadFileInfo[]) => void
   getNextLocalFileId: () => number
   deleteExistingFiles: () => void
@@ -163,12 +162,16 @@ export const createDropHandler =
 
     uploadClient
       .fetchFileURLs(acceptedFiles)
-      .then((fileURLsArray: IFileURLs[]) => {
+      .then((fileURLsArray: FileURLsProto.$Properties[]) => {
         zip(fileURLsArray, acceptedFiles).forEach(
           ([fileURLs, acceptedFile]) => {
-            uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
+            uploadFile(
+              fileURLs as FileURLsProto.$Properties,
+              acceptedFile as File
+            )
           }
         )
+        return
       })
       .catch((errorMessage: string) => {
         addFiles(

@@ -19,7 +19,7 @@ import shutil
 import subprocess
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -163,6 +163,15 @@ def test_parse_git_version(
     assert _parse_git_version(output) == expected
 
 
+def test_parse_git_version_returns_none_for_non_bytes_input() -> None:
+    """Return ``None`` when given a non-bytes value instead of raising.
+
+    ``_GIT_VERSION_PATTERN`` is a bytes regex, so searching a ``str`` raises a
+    ``TypeError`` internally that is contained and reported as ``None``.
+    """
+    assert _parse_git_version("git version 2.3.4") is None  # type: ignore[arg-type]
+
+
 @pytest.mark.parametrize(
     ("version", "is_valid"),
     [
@@ -178,6 +187,18 @@ def test_git_version_validity(version: bytes | None, is_valid: bool) -> None:
     """Enforce the minimum supported Git version."""
     with _mock_git_repo(git_version=version) as repo:
         assert repo.is_valid() is is_valid
+
+
+def test_empty_git_root_is_not_a_repo() -> None:
+    """Treat an empty repository root as not-a-repo.
+
+    ``git rev-parse --show-toplevel`` returning only a record terminator decodes
+    to an empty string, so ``__init__`` returns early before marking the path a
+    repository or recording a git root.
+    """
+    with _mock_git_repo(show_toplevel=b"\n") as repo:
+        assert repo.is_repo is False
+        assert repo._git_root is None
 
 
 def test_invalid_repository_is_failure_safe() -> None:
@@ -212,6 +233,46 @@ def test_public_git_queries_contain_unexpected_failures() -> None:
             assert repo.uncommitted_files is None
             assert repo.ahead_commits is None
             assert repo.get_tracking_branch_remote() is None
+            assert repo.get_repo_info() is None
+
+
+def test_ahead_commits_contains_unexpected_rev_list_failures() -> None:
+    """Unexpected errors after the upstream is resolved return an empty list."""
+    with _mock_git_repo() as repo:
+        with (
+            patch.object(
+                repo, "get_tracking_branch_remote", return_value=("origin", "main")
+            ),
+            patch("streamlit.git_util._run_git", side_effect=RuntimeError("boom")),
+        ):
+            assert repo.ahead_commits == []
+
+
+def test_get_tracking_branch_remote_contains_unexpected_failures() -> None:
+    """Unexpected errors while reading the upstream are contained."""
+    with _mock_git_repo() as repo:
+        with patch.object(
+            GitRepo,
+            "tracking_branch",
+            new_callable=PropertyMock,
+            side_effect=RuntimeError("boom"),
+        ):
+            assert repo.get_tracking_branch_remote() is None
+
+
+def test_get_remote_urls_contains_unexpected_failures() -> None:
+    """Unexpected Git errors while listing remote URLs return an empty list."""
+    with _mock_git_repo() as repo:
+        with patch("streamlit.git_util._run_git", side_effect=RuntimeError("boom")):
+            assert repo._get_remote_urls("origin") == []
+
+
+def test_get_repo_info_contains_unexpected_failures() -> None:
+    """Unexpected errors while assembling repo info are contained."""
+    with _mock_git_repo() as repo:
+        with patch.object(
+            repo, "get_tracking_branch_remote", side_effect=RuntimeError("boom")
+        ):
             assert repo.get_repo_info() is None
 
 

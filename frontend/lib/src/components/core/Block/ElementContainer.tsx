@@ -16,8 +16,6 @@
 
 import { memo, ReactElement, ReactNode, Suspense, useContext } from "react"
 
-import classNames from "classnames"
-
 import { ElementNode } from "~lib/AppNode"
 import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
@@ -77,11 +75,13 @@ export const ElementContainer = memo(function ElementContainer({
 
   return (
     <StyledElementContainerLayoutWrapper
-      className={classNames(
+      className={[
         "stElementContainer",
         "element-container",
-        convertKeyToClassName(userKey)
-      )}
+        convertKeyToClassName(userKey),
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-testid="stElementContainer"
       data-stale={isStale}
       isStale={isStale && !isFullScreen}

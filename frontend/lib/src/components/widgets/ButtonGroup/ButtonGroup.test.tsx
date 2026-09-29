@@ -22,6 +22,11 @@ import {
   LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -163,12 +168,9 @@ describe("ButtonGroup widget", () => {
     render(<ButtonGroup {...props} />)
     // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       [`:material/${materialIconNames[defaultSelectedIndex]}:`],
-      {
-        fromUi: false,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -194,40 +196,40 @@ describe("ButtonGroup widget", () => {
       expect(buttons).toHaveLength(EXPECTED_BUTTONS_LENGTH)
       // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[defaultSelectedIndex]}:`],
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
 
       // click element at index 1 to select it
       await user.click(buttons[1])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[1]}:`],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(2)
 
       // click element at index 0 to select it
       await user.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[0]}:`],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(3)
 
       // click on same button does deselect it
       await user.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(4)
     })
@@ -243,46 +245,45 @@ describe("ButtonGroup widget", () => {
       const buttons = getButtonGroupButtons()
       // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[defaultSelectedIndex]}:`],
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       await user.click(buttons[1])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
-        // the defaultSelectedIndex is default value, index 1 is newly clicked
+        props.element.id,
         [
           `:material/${materialIconNames[defaultSelectedIndex]}:`,
           `:material/${materialIconNames[1]}:`,
         ],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       await user.click(getButtonGroupButtons()[0])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [
           `:material/${materialIconNames[defaultSelectedIndex]}:`,
           `:material/${materialIconNames[1]}:`,
           `:material/${materialIconNames[0]}:`,
         ],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
 
       // unselect the second button
       await user.click(getButtonGroupButtons()[1])
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [
           `:material/${materialIconNames[defaultSelectedIndex]}:`,
           `:material/${materialIconNames[0]}:`,
         ],
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -298,19 +299,25 @@ describe("ButtonGroup widget", () => {
       render(<ButtonGroup {...props} />)
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[defaultSelectedIndex]}:`],
-        { fromUi: false },
-        "myFragmentId"
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: false,
+        }
       )
 
       const button = getButtonGroupButtons()[0]
       await user.click(button)
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[0]}:`],
-        { fromUi: true },
-        "myFragmentId"
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: true,
+        }
       )
     })
 
@@ -339,12 +346,13 @@ describe("ButtonGroup widget", () => {
       expectHighlightStyle(buttons[defaultSelectedIndex], false)
 
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         [`:material/${materialIconNames[3]}:`],
         {
-          fromUi: false,
-        },
-        undefined
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -476,7 +484,9 @@ describe("ButtonGroup widget", () => {
     expectHighlightStyle(buttons[3], false)
 
     // "Submit" the form
-    act(() => props.widgetMgr.submitForm("form", undefined))
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
 
     buttons = getButtonGroupButtons()
     // default option selected
@@ -484,10 +494,9 @@ describe("ButtonGroup widget", () => {
     expectHighlightStyle(buttons[1], false)
     expectHighlightStyle(buttons[2])
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       [`:material/${materialIconNames[defaultSelectedIndex]}:`],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -519,12 +528,11 @@ describe("ButtonGroup widget", () => {
 
     // Pre-populate widgetMgr with the EN-formatted selection so the component
     // starts with a stale value when it next renders with ES options.
-    widgetMgr.setStringArrayValue(
-      enElement,
-      ["apple"],
-      { fromUi: false },
-      undefined
-    )
+    widgetMgr.setStringArrayValue(enElement.id, ["apple"], {
+      formId: enElement.formId,
+      fragmentId: undefined,
+      fromUser: false,
+    })
 
     const baseProps: Props = {
       element: enElement,
@@ -548,10 +556,9 @@ describe("ButtonGroup widget", () => {
     // The stale-value effect should have fired and reset widgetMgr to the
     // ES default (index 0 = "manzana") so the widget is visually consistent.
     expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      esElement,
+      esElement.id,
       ["manzana"],
-      { fromUi: false },
-      undefined
+      { formId: esElement.formId, fragmentId: undefined, fromUser: false }
     )
   })
 })
@@ -663,10 +670,9 @@ describe("ButtonGroup required parameter", () => {
 
     // Should have been called with empty array (deselected)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       [],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -685,10 +691,9 @@ describe("ButtonGroup required parameter", () => {
     // Initial mount call
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       ["apple"],
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
 
     const buttons = getButtonGroupButtons()
@@ -719,10 +724,9 @@ describe("ButtonGroup required parameter", () => {
 
     // Should have changed to "banana"
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       ["banana"],
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -739,5 +743,458 @@ describe("ButtonGroup required parameter", () => {
     const buttonGroup = screen.getByRole("radiogroup")
     expect(buttonGroup).toBeInTheDocument()
     expect(buttonGroup).toHaveAttribute("aria-required", "true")
+  })
+})
+
+describe("ButtonGroup wrap", () => {
+  const simpleOptions = [
+    ButtonGroupProto.Option.create({ content: "apple" }),
+    ButtonGroupProto.Option.create({ content: "banana" }),
+    ButtonGroupProto.Option.create({ content: "cherry" }),
+  ]
+
+  const horizontalContext: IFlexContext = {
+    direction: Direction.HORIZONTAL,
+    isInHorizontalLayout: true,
+    isDirectlyInColumn: false,
+    isInRoot: false,
+    isInContentWidthContainer: false,
+  }
+
+  const originalScrollIntoView = Element.prototype.scrollIntoView
+  afterEach(() => {
+    vi.restoreAllMocks()
+    Element.prototype.scrollIntoView = originalScrollIntoView
+  })
+
+  function makeRect(
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): DOMRect {
+    return {
+      x,
+      y,
+      width,
+      height,
+      top: y,
+      left: x,
+      right: x + width,
+      bottom: y + height,
+      toJSON() {
+        return this
+      },
+    }
+  }
+
+  /**
+   * Selected options sit past the group's right edge so the scroll effect
+   * actually moves. When focus is inside the group, only the focused option
+   * is treated as overflowing — other selected options stay in view so we
+   * can tell which geometry the effect used.
+   */
+  function mockSelectedOptionOutOfView(): void {
+    vi.spyOn(
+      HTMLElement.prototype,
+      "getBoundingClientRect"
+    ).mockImplementation(function (this: HTMLElement) {
+      const isGroup =
+        this.getAttribute("role") === "radiogroup" ||
+        this.getAttribute("role") === "group"
+      if (isGroup) {
+        return makeRect(0, 0, 200, 32)
+      }
+      const active = document.activeElement
+      const focusIsInGroup =
+        active instanceof HTMLElement &&
+        (active.closest('[role="radiogroup"]') !== null ||
+          active.closest('[role="group"]') !== null)
+      if (this === active && focusIsInGroup) {
+        return makeRect(400, 0, 80, 32)
+      }
+      if (this.hasAttribute("data-selected")) {
+        return focusIsInGroup
+          ? makeRect(0, 0, 80, 32)
+          : makeRect(400, 0, 80, 32)
+      }
+      return makeRect(0, 0, 80, 32)
+    })
+  }
+
+  function mockButtonGroupScrollMetrics(
+    group: HTMLElement,
+    metrics: {
+      scrollLeft?: number
+      scrollWidth?: number
+      clientWidth?: number
+    }
+  ): void {
+    const scrollLeft = metrics.scrollLeft ?? 0
+    const scrollWidth = metrics.scrollWidth ?? 1000
+    const clientWidth = metrics.clientWidth ?? 200
+    Object.defineProperties(group, {
+      scrollLeft: {
+        configurable: true,
+        get: () => scrollLeft,
+      },
+      scrollWidth: {
+        configurable: true,
+        get: () => scrollWidth,
+      },
+      clientWidth: {
+        configurable: true,
+        get: () => clientWidth,
+      },
+    })
+  }
+
+  it("uses nowrap and overflow-x when wrap is false", () => {
+    render(
+      <ButtonGroup {...getProps({ wrap: false, options: simpleOptions })} />
+    )
+    const group = screen.getByRole("radiogroup")
+    expect(group).toHaveStyle("flex-wrap: nowrap")
+    expect(group).toHaveStyle("overflow-x: auto")
+    expect(group).toHaveStyle("scrollbar-width: none")
+    expect(group).toHaveStyle("padding-block: 0.2rem")
+    expect(group).toHaveStyle("margin-block: -0.2rem")
+    expect(group).toHaveStyle("scroll-padding-inline: 1rem")
+    // Content-width + wrap=False stays intrinsic (not stretched to 100%).
+    expect(group).toHaveStyle("width: auto")
+    expect(group).toHaveStyle("max-width: 100%")
+  })
+
+  it("keeps fit-content max-width when wrapping at content width", () => {
+    render(
+      <ButtonGroup {...getProps({ wrap: true, options: simpleOptions })} />
+    )
+    const group = screen.getByRole("radiogroup")
+    expect(group).toHaveStyle("flex-wrap: wrap")
+    expect(group).toHaveStyle("max-width: fit-content")
+  })
+
+  it("stretches to parent width when wrap is false and width is stretch", () => {
+    render(
+      <ButtonGroup
+        {...getProps(
+          { wrap: false, options: simpleOptions },
+          { widthConfig: { useStretch: true } }
+        )}
+      />
+    )
+    const group = screen.getByRole("radiogroup")
+    expect(group).toHaveStyle("width: 100%")
+    expect(group).toHaveStyle("overflow-x: auto")
+  })
+
+  it("does not shrink option buttons when wrap is false", () => {
+    render(
+      <ButtonGroup {...getProps({ wrap: false, options: simpleOptions })} />
+    )
+    // Keep content width so the group scrolls instead of crushing labels.
+    const button = getButtonGroupButtons()[0]
+    expect(button).toHaveStyle("flex-shrink: 0")
+    expect(button).toHaveStyle("min-width: fit-content")
+  })
+
+  it("allows wrapping by default outside a horizontal layout", () => {
+    render(<ButtonGroup {...getProps({ options: simpleOptions })} />)
+    expect(screen.getByRole("radiogroup")).toHaveStyle("flex-wrap: wrap")
+  })
+
+  it("auto default does not wrap inside a horizontal layout", () => {
+    render(
+      <FlexContext.Provider value={horizontalContext}>
+        <ButtonGroup {...getProps({ options: simpleOptions })} />
+      </FlexContext.Provider>
+    )
+    const group = screen.getByRole("radiogroup")
+    expect(group).toHaveStyle("flex-wrap: nowrap")
+    expect(group).toHaveStyle("overflow-x: auto")
+  })
+
+  it("explicit wrap=true wraps inside a horizontal layout", () => {
+    render(
+      <FlexContext.Provider value={horizontalContext}>
+        <ButtonGroup {...getProps({ wrap: true, options: simpleOptions })} />
+      </FlexContext.Provider>
+    )
+    expect(screen.getByRole("radiogroup")).toHaveStyle("flex-wrap: wrap")
+  })
+
+  it("still updates selection when wrap is false", async () => {
+    const user = userEvent.setup()
+    render(
+      <ButtonGroup
+        {...getProps({
+          wrap: false,
+          options: simpleOptions,
+          default: [0],
+        })}
+      />
+    )
+
+    const buttons = getButtonGroupButtons()
+    await user.click(buttons[1])
+
+    expect(buttons[1]).toHaveAttribute("data-selected")
+    expect(buttons[0]).not.toHaveAttribute("data-selected")
+  })
+
+  it("lets long labels keep their natural width when wrap is false", () => {
+    const longLabel =
+      "A very long option label that would otherwise ellipsize at contentMaxWidth"
+    render(
+      <ButtonGroup
+        {...getProps({
+          wrap: false,
+          options: [ButtonGroupProto.Option.create({ content: longLabel })],
+          default: [],
+        })}
+      />
+    )
+    const button = getButtonGroupButtons()[0]
+    expect(button).toHaveStyle("min-width: fit-content")
+    expect(button).toHaveStyle("flex-shrink: 0")
+  })
+
+  it("keeps a focus ring on a wrap=false option", async () => {
+    const user = userEvent.setup()
+    render(
+      <ButtonGroup
+        {...getProps({
+          wrap: false,
+          options: simpleOptions,
+          default: [],
+        })}
+      />
+    )
+    const group = screen.getByRole("radiogroup")
+    expect(group).toHaveStyle("padding-block: 0.2rem")
+    expect(group).toHaveStyle("margin-block: -0.2rem")
+
+    await user.tab()
+    const focused = group.querySelector("[data-focus-visible]")
+    expect(focused).toBeTruthy()
+  })
+
+  it.each([
+    { wrap: false, expectedCalls: 1 },
+    { wrap: true, expectedCalls: 0 },
+  ] as const)(
+    "scrolls selected option into view only when wrap is false (wrap=$wrap)",
+    ({ wrap, expectedCalls }) => {
+      mockSelectedOptionOutOfView()
+      const setScrollLeft = vi.spyOn(
+        HTMLElement.prototype,
+        "scrollLeft",
+        "set"
+      )
+
+      render(
+        <ButtonGroup
+          {...getProps({
+            wrap,
+            options: simpleOptions,
+            default: [2],
+          })}
+        />
+      )
+
+      expect(setScrollLeft).toHaveBeenCalledTimes(expectedCalls)
+    }
+  )
+
+  it("does not re-scroll on rerender with a new options array reference", () => {
+    mockSelectedOptionOutOfView()
+    const setScrollLeft = vi.spyOn(HTMLElement.prototype, "scrollLeft", "set")
+
+    const props = getProps({
+      wrap: false,
+      options: simpleOptions,
+      default: [2],
+    })
+    const { rerender } = render(<ButtonGroup {...props} />)
+    expect(setScrollLeft).toHaveBeenCalledTimes(1)
+
+    // Proto options are a new array on every ForwardMsg even when unchanged.
+    const sameOptionsNewRef = simpleOptions.map(option =>
+      ButtonGroupProto.Option.create(option)
+    )
+    rerender(
+      <ButtonGroup
+        {...props}
+        element={ButtonGroupProto.create({
+          ...props.element,
+          options: sameOptionsNewRef,
+        })}
+      />
+    )
+    expect(setScrollLeft).toHaveBeenCalledTimes(1)
+  })
+
+  it("scrolls the selected option into view when options are reordered", () => {
+    mockSelectedOptionOutOfView()
+    const setScrollLeft = vi.spyOn(HTMLElement.prototype, "scrollLeft", "set")
+
+    const props = getProps({
+      wrap: false,
+      options: simpleOptions,
+      default: [2],
+    })
+    const { rerender } = render(<ButtonGroup {...props} />)
+    expect(setScrollLeft).toHaveBeenCalledTimes(1)
+
+    // Same selection, different order — overflowLayoutKey must retrigger scroll.
+    const reordered = [simpleOptions[2], simpleOptions[0], simpleOptions[1]]
+    rerender(
+      <ButtonGroup
+        {...props}
+        element={ButtonGroupProto.create({
+          ...props.element,
+          options: reordered,
+        })}
+      />
+    )
+    expect(setScrollLeft).toHaveBeenCalledTimes(2)
+  })
+
+  it("scrolls the focused selected option in multi-select, not the leftmost", async () => {
+    const user = userEvent.setup()
+    mockSelectedOptionOutOfView()
+    const setScrollLeft = vi.spyOn(HTMLElement.prototype, "scrollLeft", "set")
+
+    render(
+      <ButtonGroup
+        {...getProps({
+          wrap: false,
+          options: simpleOptions,
+          default: [0],
+          clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+        })}
+      />
+    )
+    setScrollLeft.mockClear()
+
+    const buttons = getButtonGroupButtons()
+    await user.click(buttons[2])
+
+    // Leftmost selected stays in view; only the focused option overflows.
+    expect(setScrollLeft).toHaveBeenCalled()
+  })
+
+  it("does not scroll when deselecting a non-leftmost selected option", async () => {
+    const user = userEvent.setup()
+    mockSelectedOptionOutOfView()
+    const setScrollLeft = vi.spyOn(HTMLElement.prototype, "scrollLeft", "set")
+
+    render(
+      <ButtonGroup
+        {...getProps({
+          wrap: false,
+          options: simpleOptions,
+          default: [0, 2],
+          clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+        })}
+      />
+    )
+    setScrollLeft.mockClear()
+
+    const buttons = getButtonGroupButtons()
+    await user.click(buttons[2])
+
+    expectHighlightStyle(buttons[2], false)
+    expectHighlightStyle(buttons[0])
+    expect(setScrollLeft).not.toHaveBeenCalled()
+  })
+
+  it("does not scroll window or ancestor containers when bringing a selection into view", () => {
+    mockSelectedOptionOutOfView()
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    const ancestor = document.createElement("div")
+    ancestor.scrollTop = 80
+    ancestor.scrollLeft = 40
+    document.body.appendChild(ancestor)
+
+    try {
+      render(
+        <ButtonGroup
+          {...getProps({
+            wrap: false,
+            options: simpleOptions,
+            default: [2],
+          })}
+        />,
+        { container: ancestor }
+      )
+
+      expect(scrollIntoView).not.toHaveBeenCalled()
+      expect(ancestor.scrollTop).toBe(80)
+      expect(ancestor.scrollLeft).toBe(40)
+      expect(window.scrollX).toBe(0)
+      expect(window.scrollY).toBe(0)
+    } finally {
+      ancestor.remove()
+    }
+  })
+
+  it("shows an overflow fade only on sides that can still scroll", () => {
+    render(
+      <ButtonGroup {...getProps({ wrap: false, options: simpleOptions })} />
+    )
+    const group = screen.getByRole("radiogroup")
+
+    mockButtonGroupScrollMetrics(group, {
+      scrollLeft: 0,
+      scrollWidth: 800,
+      clientWidth: 200,
+    })
+    act(() => {
+      group.dispatchEvent(new Event("scroll"))
+    })
+    expect(group).toHaveAttribute("data-can-scroll-end")
+    expect(group).not.toHaveAttribute("data-can-scroll-start")
+
+    mockButtonGroupScrollMetrics(group, {
+      scrollLeft: 50,
+      scrollWidth: 800,
+      clientWidth: 200,
+    })
+    act(() => {
+      group.dispatchEvent(new Event("scroll"))
+    })
+    expect(group).toHaveAttribute("data-can-scroll-start")
+    expect(group).toHaveAttribute("data-can-scroll-end")
+
+    mockButtonGroupScrollMetrics(group, {
+      scrollLeft: 600,
+      scrollWidth: 800,
+      clientWidth: 200,
+    })
+    act(() => {
+      group.dispatchEvent(new Event("scroll"))
+    })
+    expect(group).toHaveAttribute("data-can-scroll-start")
+    expect(group).not.toHaveAttribute("data-can-scroll-end")
+  })
+
+  it("does not show an overflow fade when wrapping", () => {
+    render(
+      <ButtonGroup {...getProps({ wrap: true, options: simpleOptions })} />
+    )
+    const group = screen.getByRole("radiogroup")
+    mockButtonGroupScrollMetrics(group, {
+      scrollLeft: 0,
+      scrollWidth: 800,
+      clientWidth: 200,
+    })
+    act(() => {
+      group.dispatchEvent(new Event("scroll"))
+    })
+    expect(group).not.toHaveAttribute("data-can-scroll-start")
+    expect(group).not.toHaveAttribute("data-can-scroll-end")
+    expect(group).not.toHaveStyle("overflow-x: auto")
   })
 })

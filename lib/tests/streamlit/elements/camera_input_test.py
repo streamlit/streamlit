@@ -21,7 +21,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.camera_input import CameraInputSerde
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidWidthError,
+    StreamlitValueError,
+)
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.uploaded_file_manager import (
@@ -62,11 +66,11 @@ class CameraInputResolutionTest(DeltaGeneratorTestCase):
         ]
     )
     def test_resolution_invalid_raises_exception(self, invalid_resolution):
-        """Test that an invalid resolution raises StreamlitAPIException and no element is enqueued."""
+        """Test that an invalid resolution raises StreamlitValueError and no element is enqueued."""
         queue_length_before = len(self.forward_msg_queue._queue)
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
             st.camera_input("the label", resolution=invalid_resolution)
-        assert "Invalid resolution" in str(exc_info.value)
+        assert "Invalid `resolution` value" in str(exc_info.value)
         assert len(self.forward_msg_queue._queue) == queue_length_before
 
     def test_stable_id_with_key_and_resolution(self):
@@ -131,11 +135,11 @@ class CameraInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.camera_input("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_cached_widget_replay_warning(self):

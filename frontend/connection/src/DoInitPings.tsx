@@ -215,6 +215,7 @@ If you are trying to access a Streamlit app running on another server, this coul
         }
         onHostConfigResp(hostConfigResp.data as IHostConfigProperties)
         resolve(uriNumber)
+        return
       })
       .catch((error: FetchError) => {
         if (cancelled) {

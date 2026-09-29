@@ -146,3 +146,58 @@ st.button(
 # These should display the literal characters, not be parsed as markdown
 st.button("+", key="markdown_plus_label")
 st.button("1. Something", key="markdown_numbered_label")
+
+# wrap=False keeps the button on one row and ellipsizes an overflowing label,
+# exposing the full label via a native title (skipped when help is set). A
+# narrow fixed width forces the long label to overflow so the auto default
+# (wrap=None) wraps and grows taller in a vertical layout, while wrap=False
+# stays single-row.
+_WRAP_LABEL = "Regenerate the complete quarterly report now"
+with st.container(key="wrap_buttons"):
+    st.button(_WRAP_LABEL, width=150, wrap=False, key="wrap_false_button")
+    st.button(_WRAP_LABEL, width=150, key="wrap_auto_vertical_button")
+    st.button(
+        _WRAP_LABEL,
+        width=150,
+        wrap=False,
+        help="wrap help text",
+        key="wrap_help_button",
+    )
+    st.button(
+        _WRAP_LABEL,
+        width=150,
+        wrap=False,
+        icon=":material/mood:",
+        shortcut="Alt+W",
+        key="wrap_icon_button",
+    )
+
+# Default (auto) wrap: inside a horizontal container the label does not wrap; it
+# ellipsizes and exposes the full label via a native title. A fixed container
+# width narrower than the label forces the overflow.
+with st.container(horizontal=True, width=200, key="wrap_auto_horizontal"):
+    st.button(_WRAP_LABEL, key="wrap_auto_button")
+
+# Direct column children use the same compact auto default. Nesting the control
+# in another layout container (here a vertical st.container) resets that direct
+# placement, while an explicit wrap value always wins.
+with st.container(key="wrap_column_placements"):
+    auto_column, explicit_column, nested_column = st.columns(3)
+    auto_column.button(_WRAP_LABEL, width=150, key="wrap_auto_direct_column_button")
+    explicit_column.button(
+        _WRAP_LABEL,
+        width=150,
+        wrap=True,
+        key="wrap_true_direct_column_button",
+    )
+    with nested_column.container():
+        st.button(_WRAP_LABEL, width=150, key="wrap_auto_nested_column_button")
+
+# A form is a layout boundary: placing the form in a column does not make
+# the submit button a direct column child, so auto wrap still wraps.
+with st.container(key="wrap_form_in_column"):
+    form_col, _ = st.columns(2)
+    with form_col.form("wrap_column_form"):
+        st.form_submit_button(
+            _WRAP_LABEL, width=150, key="wrap_auto_form_submit_in_column"
+        )

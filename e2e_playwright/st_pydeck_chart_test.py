@@ -18,6 +18,7 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    get_element_by_key,
     select_selectbox_option,
 )
 from e2e_playwright.shared.pydeck_utils import wait_for_chart_canvas
@@ -75,6 +76,10 @@ def test_empty_chart(themed_app: Page, assert_snapshot: ImageCompareFunction) ->
 @pytest.mark.only_browser("chromium")
 def test_basic_chart(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
     pydeck_charts = select_subtest(themed_app, "basic_chart_subtest")
+
+    wait_for_chart_canvas(pydeck_charts.nth(0))
+    # Wrapper has no layout size; assert the button, not the testid.
+    expect(pydeck_charts.get_by_role("button", name="Zoom In")).to_be_visible()
 
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
@@ -151,6 +156,20 @@ def test_mapbox(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None
 
 # Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
 @pytest.mark.only_browser("chromium")
+def test_layer_extensions(app: Page, assert_snapshot: ImageCompareFunction) -> None:
+    """st.pydeck_chart renders layers that declare deck.gl @@type extensions."""
+    pydeck_charts = select_subtest(app, "layer_extensions_subtest")
+
+    wait_for_chart_canvas(pydeck_charts.nth(0))
+    assert_snapshot(
+        pydeck_charts.nth(0),
+        name="st_pydeck_chart-layer_extensions",
+        pixel_threshold=PIXEL_THRESHOLD,
+    )
+
+
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_width_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> None:
     """Tests that width parameter works correctly."""
     pydeck_charts = select_subtest(app, "width_parameter_subtest")
@@ -193,7 +212,6 @@ def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> N
     )
 
     # For height="stretch", snapshot the entire container to verify stretching
-    from e2e_playwright.shared.app_utils import get_element_by_key
 
     stretch_container = get_element_by_key(app, "test_height_stretch")
     wait_for_chart_canvas(pydeck_charts.nth(2))
@@ -207,6 +225,36 @@ def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> N
     assert_snapshot(
         pydeck_charts.nth(3),
         name="st_pydeck_chart-height_50px",
+        pixel_threshold=PIXEL_THRESHOLD,
+    )
+
+
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
+def test_orbit_point_cloud(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
+    pydeck_charts = select_subtest(themed_app, "orbit_point_cloud_subtest")
+
+    wait_for_chart_canvas(pydeck_charts.nth(0))
+    expect(pydeck_charts.get_by_test_id("stDeckGlJsonChartZoomButton")).to_have_count(0)
+    assert_snapshot(
+        pydeck_charts.nth(0),
+        name="st_pydeck_chart-orbit_point_cloud",
+        pixel_threshold=PIXEL_THRESHOLD,
+    )
+
+
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
+def test_globe_view(themed_app: Page, assert_snapshot: ImageCompareFunction) -> None:
+    pydeck_charts = select_subtest(themed_app, "globe_view_subtest")
+
+    wait_for_chart_canvas(pydeck_charts.nth(0))
+    expect(pydeck_charts.get_by_test_id("stDeckGlJsonChartZoomButton")).to_have_count(0)
+    assert_snapshot(
+        pydeck_charts.nth(0),
+        name="st_pydeck_chart-globe_view",
         pixel_threshold=PIXEL_THRESHOLD,
     )
 
@@ -225,3 +273,29 @@ def select_subtest(app: Page, name: str) -> Locator:
     app.wait_for_timeout(10000)
 
     return pydeck_charts
+
+
+def test_pydeck_chart_alt_sets_accessible_name(app: Page) -> None:
+    """`alt` becomes the pydeck chart container's accessible name."""
+    select_subtest(app, "alt_chart_subtest")
+
+    labeled = get_element_by_key(app, "pydeck_with_alt").get_by_test_id(
+        "stDeckGlJsonChart"
+    )
+    expect(labeled).to_have_attribute("role", "figure")
+    expect(labeled).to_have_accessible_name(
+        "Scatter map of sample points near San Francisco"
+    )
+    # role=figure (not img) keeps the Streamlit toolbar operable. Playwright
+    # treats opacity:0 as visible, so assert the toolbar is actually revealed.
+    # Mapbox zoom controls are chromium-only in CI, so assert Fullscreen only.
+    labeled.hover()
+    expect(labeled.get_by_test_id("stElementToolbar")).to_have_css("opacity", "1")
+    expect(labeled.get_by_role("button", name="Fullscreen")).to_be_visible()
+
+    unlabeled = get_element_by_key(app, "pydeck_without_alt").get_by_test_id(
+        "stDeckGlJsonChart"
+    )
+    expect(unlabeled).not_to_have_attribute("role")
+    expect(unlabeled).not_to_have_attribute("aria-label")
+    expect(unlabeled).to_have_accessible_name("")

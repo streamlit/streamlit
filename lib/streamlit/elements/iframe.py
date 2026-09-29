@@ -25,7 +25,12 @@ from streamlit.elements.lib.layout_utils import (
     validate_height,
     validate_width,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.utils import normalize_alt
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
@@ -65,14 +70,14 @@ def _validate_tab_index(tab_index: int | None) -> None:
     """Validate tab_index according to web specifications."""
     if tab_index is None:
         return
-    if not (
-        isinstance(tab_index, int)
-        and not isinstance(tab_index, bool)
-        and tab_index >= -1
-    ):
-        raise StreamlitAPIException(
-            "tab_index must be None, -1, or a non-negative integer."
+    if isinstance(tab_index, bool) or not isinstance(tab_index, int):
+        raise StreamlitInvalidParameterTypeError(
+            "tab_index",
+            type(tab_index).__name__,
+            ["int"],
         )
+    if tab_index < -1:
+        raise StreamlitValueError("tab_index", ["None", "-1", "a non-negative integer"])
 
 
 class IframeMixin:
@@ -265,6 +270,7 @@ class IframeMixin:
         width: int | Literal["stretch", "content"] = "stretch",
         height: int | Literal["stretch", "content"] = "content",
         tab_index: int | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Embed content in an iframe.
 
@@ -334,12 +340,31 @@ class IframeMixin:
             <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex>`_
             documentation on MDN.
 
+        alt : str or None
+            A description of the embed for screen readers and other assistive
+            technologies. Streamlit maps this to the iframe's ``title``
+            attribute, which is the frame's accessible name. If this is
+            ``None`` (default), the title stays ``"st.iframe"``.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+            An iframe must have a title, so empty ``alt`` keeps the
+            ``"st.iframe"`` fallback rather than becoming decorative.
+
+            Describe the embedded content rather than repeating text that is
+            already visible on the page.
+
         Examples
         --------
         Embed an external website:
 
         >>> import streamlit as st
-        >>> st.iframe("https://docs.streamlit.io", height=600)
+        >>> st.iframe(
+        ...     "https://docs.streamlit.io",
+        ...     height=600,
+        ...     alt="Streamlit documentation",
+        ... )
 
         Embed HTML content directly:
 
@@ -397,6 +422,10 @@ class IframeMixin:
         if tab_index is not None:
             iframe_proto.tab_index = tab_index
 
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            iframe_proto.alt = normalized_alt
+
         # For URLs (not srcdoc), "content" sizing falls back because cross-origin
         # content cannot be measured. Height falls back to 400px, width to stretch.
         effective_width = width
@@ -451,7 +480,8 @@ class IframeMixin:
                 UnicodeDecodeError,
             ) as e:
                 raise StreamlitAPIException(
-                    f"Unable to read file '{file_path}': {e}"
+                    f"Unable to read file '{file_path}': {e}",
+                    error_id="iframe-unable-to-read-html-file",
                 ) from e
             return True
         # Non-HTML files: upload to media storage
@@ -460,7 +490,8 @@ class IframeMixin:
                 file_data = f.read()
         except (FileNotFoundError, PermissionError, OSError) as e:
             raise StreamlitAPIException(
-                f"Unable to read file '{file_path}': {e}"
+                f"Unable to read file '{file_path}': {e}",
+                error_id="iframe-unable-to-read-file",
             ) from e
 
         mimetype, _ = mimetypes.guess_type(file_path)

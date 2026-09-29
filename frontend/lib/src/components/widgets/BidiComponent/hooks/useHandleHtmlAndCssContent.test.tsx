@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import type { MutableRefObject, RefObject } from "react"
-import { ReactNode } from "react"
+import type { MutableRefObject, ReactNode, RefObject } from "react"
 
 import { renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -152,7 +151,7 @@ describe("useHandleHtmlAndCssContent", () => {
     )
   })
 
-  it("appends a link element with onerror handler when cssSourcePath is set", () => {
+  it("appends a link element with an error listener when cssSourcePath is set", () => {
     const context = buildContextValue({ cssSourcePath: "styles.css" })
     const cssUrl = "https://example.com/styles.css"
     vi.spyOn(context.componentRegistry, "getBidiComponentURL").mockReturnValue(
@@ -171,6 +170,27 @@ describe("useHandleHtmlAndCssContent", () => {
     const errorArg = setError.mock.calls[0][0]
     expect(errorArg).toBeInstanceOf(Error)
     expect(errorArg.message).toMatch(/Failed to load CSS/)
+  })
+
+  it("does not call setError for a CSS error after the effect is cleaned up", () => {
+    const context = buildContextValue({ cssSourcePath: "styles.css" })
+    const cssUrl = "https://example.com/styles.css"
+    vi.spyOn(context.componentRegistry, "getBidiComponentURL").mockReturnValue(
+      cssUrl
+    )
+
+    const { unmount } = renderUseHandleHtmlAndCssContent({
+      context,
+      containerRef,
+      setError,
+    })
+
+    const link = parent.querySelector("link")
+    expect(link).not.toBeNull()
+
+    unmount()
+    link?.dispatchEvent(new Event("error"))
+    expect(setError).not.toHaveBeenCalled()
   })
 
   it("prefers cssContent over cssSourcePath when both are provided", () => {

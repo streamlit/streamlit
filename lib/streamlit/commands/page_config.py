@@ -23,10 +23,8 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import (
-    StreamlitInvalidMenuItemKeyError,
-    StreamlitInvalidPageLayoutError,
-    StreamlitInvalidSidebarStateError,
     StreamlitInvalidURLError,
+    StreamlitValueError,
 )
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg as ForwardProto
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
@@ -41,6 +39,14 @@ if TYPE_CHECKING:
 GET_HELP_KEY: Final = "get help"
 REPORT_A_BUG_KEY: Final = "report a bug"
 ABOUT_KEY: Final = "about"
+_VALID_SIDEBAR_STATE_VALUES: Final = [
+    "'auto'",
+    "'expanded'",
+    "'collapsed'",
+    "'locked'",
+    "a positive integer (width in pixels)",
+]
+_MENU_ITEM_URL_PROTOCOLS: Final = ("http", "https", "mailto")
 
 PageIcon: TypeAlias = AtomicImage | str
 Layout: TypeAlias = Literal["centered", "wide"]
@@ -253,7 +259,7 @@ def set_page_config(
         pb_layout = PageConfigProto.LAYOUT_UNSET
     else:
         # Note: Pylance incorrectly notes this error as unreachable
-        raise StreamlitInvalidPageLayoutError(layout=layout)
+        raise StreamlitValueError("layout", ["'centered'", "'wide'"])
 
     msg.page_config_changed.layout = pb_layout
 
@@ -272,8 +278,10 @@ def set_page_config(
     elif isinstance(initial_sidebar_state, int):
         # Integer values set the sidebar width and use AUTO state
         if initial_sidebar_state <= 0:
-            raise StreamlitInvalidSidebarStateError(
-                initial_sidebar_state=f"width must be positive (got {initial_sidebar_state})"
+            raise StreamlitValueError(
+                "initial_sidebar_state",
+                _VALID_SIDEBAR_STATE_VALUES,
+                detail=f"Got {initial_sidebar_state}.",
             )
         pb_sidebar_state = PageConfigProto.AUTO
         msg.page_config_changed.initial_sidebar_width.pixel_width = (
@@ -281,8 +289,10 @@ def set_page_config(
         )
     else:
         # Note: Pylance incorrectly notes this error as unreachable
-        raise StreamlitInvalidSidebarStateError(
-            initial_sidebar_state=initial_sidebar_state
+        raise StreamlitValueError(
+            "initial_sidebar_state",
+            _VALID_SIDEBAR_STATE_VALUES,
+            detail=f"Got {initial_sidebar_state!r}.",
         )
 
     msg.page_config_changed.initial_sidebar_state = pb_sidebar_state
@@ -308,14 +318,16 @@ def set_menu_items_proto(
     lowercase_menu_items: MenuItems, menu_items_proto: PageConfigProto.MenuItems
 ) -> None:
     if GET_HELP_KEY in lowercase_menu_items:
-        if lowercase_menu_items[GET_HELP_KEY] is not None:
-            menu_items_proto.get_help_url = lowercase_menu_items[GET_HELP_KEY]
+        get_help_url = lowercase_menu_items[GET_HELP_KEY]
+        if get_help_url is not None:
+            menu_items_proto.get_help_url = get_help_url
         else:
             menu_items_proto.hide_get_help = True
 
     if REPORT_A_BUG_KEY in lowercase_menu_items:
-        if lowercase_menu_items[REPORT_A_BUG_KEY] is not None:
-            menu_items_proto.report_a_bug_url = lowercase_menu_items[REPORT_A_BUG_KEY]
+        report_a_bug_url = lowercase_menu_items[REPORT_A_BUG_KEY]
+        if report_a_bug_url is not None:
+            menu_items_proto.report_a_bug_url = report_a_bug_url
         else:
             menu_items_proto.hide_report_a_bug = True
 
@@ -332,11 +344,13 @@ def set_menu_items_proto(
 def validate_menu_items(menu_items: MenuItems) -> None:
     for k, v in menu_items.items():
         if not valid_menu_item_key(k):
-            raise StreamlitInvalidMenuItemKeyError(key=k)
-        if v is not None and (
-            not is_url(v, ("http", "https", "mailto")) and k != ABOUT_KEY
-        ):
-            raise StreamlitInvalidURLError(url=v)
+            raise StreamlitValueError(
+                "menu_items",
+                ["'Get help'", "'Report a bug'", "'About'"],
+                detail=f"`{k}` is not a supported menu item key.",
+            )
+        if v is not None and k != ABOUT_KEY and not is_url(v, _MENU_ITEM_URL_PROTOCOLS):
+            raise StreamlitInvalidURLError(v, _MENU_ITEM_URL_PROTOCOLS)
 
 
 def valid_menu_item_key(key: str) -> TypeGuard[MenuKey]:

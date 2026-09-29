@@ -273,6 +273,7 @@ def test_exception_proto_stable():
         ("stack_trace", FD.LABEL_REPEATED, FD.TYPE_STRING),
         ("is_warning", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
         ("width_config", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
+        ("is_streamlit_exception", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
     }
 
 

@@ -70,6 +70,7 @@ import {
   makeAppSkeletonElement,
   makeElementWithErrorText,
   makeElementWithInfoText,
+  normalizeQueryString,
   notUndefined,
   preserveEmbedQueryParams,
   setCookie,
@@ -85,7 +86,7 @@ describe("setCookie", () => {
     */
     document.cookie.split(";").forEach(cookie => {
       const eqPos = cookie.indexOf("=")
-      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
+      const name = eqPos > -1 ? cookie.slice(0, eqPos) : cookie
       document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`
     })
   })
@@ -493,6 +494,17 @@ describe("keysToSnakeCase", () => {
       alice_name: "alice",
       bob_name: "bob",
     })
+  })
+
+  it("should preserve consecutive uppercase letters", () => {
+    expect(keysToSnakeCase({ testGUILabel: 1, XMLHttpRequest: 2 })).toEqual({
+      test_GUI_label: 1,
+      XML_http_request: 2,
+    })
+  })
+
+  it("should decamelize Unicode letters", () => {
+    expect(keysToSnakeCase({ déjàVu: true })).toEqual({ déjà_vu: true })
   })
 
   it("should return an empty dictionary when passed an empty dictionary", () => {
@@ -934,6 +946,13 @@ describe("getQueryString", () => {
       expected: "embed=true&embed_options=dark&page=1&sort=asc",
       description: "handles complex query strings",
     },
+    {
+      queryStringOverride: "?foo=bar",
+      preservedQueryParams: "embed=true",
+      expected: "embed=true&foo=bar",
+      description:
+        "normalizes queryStringOverride values with a leading question mark",
+    },
   ])(
     "$description",
     ({ queryStringOverride, preservedQueryParams, expected }) => {
@@ -942,6 +961,16 @@ describe("getQueryString", () => {
       )
     }
   )
+})
+
+describe("normalizeQueryString", () => {
+  it("strips a leading question mark", () => {
+    expect(normalizeQueryString("?foo=bar")).toBe("foo=bar")
+  })
+
+  it("returns an unchanged query string when there is no leading question mark", () => {
+    expect(normalizeQueryString("foo=bar")).toBe("foo=bar")
+  })
 })
 
 describe("debounce", () => {

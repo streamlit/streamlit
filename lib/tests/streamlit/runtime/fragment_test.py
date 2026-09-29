@@ -33,6 +33,8 @@ from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
     StreamlitAPIException,
+    StreamlitDuplicateElementKey,
+    StreamlitInvalidLayoutContextError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -42,6 +44,7 @@ from streamlit.runtime.fragment import (
     _check_not_parallel_worker,
     _dispatch_parallel_fragment,
     _fragment,
+    _FragmentLifetime,
     _reset_outside_wrappers,
     _run_parallel_fragment,
     fragment,
@@ -83,12 +86,14 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         *,
         parent_fragment_id: str | None = None,
         value: str | None = None,
+        lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
     ) -> None:
         fragment_value = fragment_id if value is None else value
         self._storage.register(
             fragment_id,
             fragment_value,
             parent_fragment_id=parent_fragment_id,
+            lifetime=lifetime,
         )
 
     def _set_fragment_chain(self, *fragment_ids: str) -> None:
@@ -159,6 +164,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         self._storage.clear()
         assert len(self._storage._fragments) == 0
         assert len(self._storage._parent_by_id) == 0
+        assert len(self._storage._lifetime_by_id) == 0
 
     def test_clear_with_new_fragment_ids(self):
         self._set_fragment("some_other_key", value="some_other_fragment")
@@ -281,7 +287,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         removed = self._storage.clear_stale_descendants("outer", frozenset({"outer"}))
 
-        assert set(removed) == {"inner", "leaf"}
+        assert removed == ["inner", "leaf"]
 
     def test_clear_stale_descendants_returns_empty_when_nothing_removed(self):
         """When no descendant is evicted, an empty list is returned."""
@@ -301,6 +307,112 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         assert self._storage.contains("outer")
         assert self._storage.contains("inner")
+
+    def test_clear_stale_descendants_prunes_child_of_reregistered_fragment(self):
+        """A fragment that executed owns cleanup of its missing children."""
+        self._set_fragment_chain("outer", "inner", "leaf")
+
+        removed = self._storage.clear_stale_descendants(
+            "outer", frozenset({"outer", "inner"})
+        )
+
+        assert removed == ["leaf"]
+        assert self._storage.contains("outer")
+        assert self._storage.contains("inner")
+        assert not self._storage.contains("leaf")
+
+    def test_clear_stale_descendants_keeps_full_app_scoped_child(self):
+        """Full-app-scoped descendants survive parent fragment reruns."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset({"outer"}))
+
+        assert removed == []
+        assert self._storage.contains("dialog")
+
+    def test_full_app_clear_removes_dialog_retained_from_removed_parent(self):
+        """Full app cleanup removes a retained dialog whose parent was removed."""
+        self._set_fragment_chain("outer", "inner")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="inner",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset())
+
+        assert removed == ["inner"]
+        assert not self._storage.contains("inner")
+        assert self._storage.contains("dialog")
+        assert self._storage._parent_by_id["dialog"] == "inner"
+
+        self._storage.clear(new_fragment_ids=frozenset({"outer"}))
+
+        assert not self._storage.contains("dialog")
+
+    def test_clear_stale_descendants_preserves_retained_dialog_subtree(self):
+        """An unexecuted retained dialog keeps its previously registered subtree."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+        self._set_fragment("nested", parent_fragment_id="dialog")
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset())
+
+        assert removed == []
+        assert self._storage.contains("dialog")
+        assert self._storage.contains("nested")
+
+    def test_clear_stale_descendants_reconciles_reregistered_dialog_subtree(self):
+        """A retained dialog that executed still owns cleanup of its missing children."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+        self._set_fragment("nested", parent_fragment_id="dialog")
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset({"dialog"}))
+
+        assert removed == ["nested"]
+        assert self._storage.contains("dialog")
+        assert not self._storage.contains("nested")
+
+    def test_dialog_root_cleanup_removes_missing_nested_fragment(self):
+        """A dialog rerun is authoritative for its parent-scoped children."""
+        self._set_fragment(
+            "dialog",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+        self._set_fragment("nested", parent_fragment_id="dialog")
+
+        removed = self._storage.clear_stale_descendants("dialog", frozenset())
+
+        assert removed == ["nested"]
+        assert self._storage.contains("dialog")
+        assert not self._storage.contains("nested")
+
+    def test_full_app_clear_removes_full_app_scoped_child(self):
+        """Full app cleanup removes unregistered full-app-scoped fragments."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+
+        self._storage.clear(new_fragment_ids=frozenset({"outer"}))
+
+        assert not self._storage.contains("dialog")
 
     def test_clear_stale_descendants_preserves_sibling_branch(self):
         """Only siblings missing from this run are removed."""
@@ -392,6 +504,22 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         assert self._storage.ids_registered_after(snapshot) == frozenset({"some_key"})
 
+    def test_has_ancestor_in_finds_transitive_ancestor(self):
+        """Any ancestor along the chain counts, not just the immediate parent."""
+        self._set_fragment_chain("outer", "middle", "inner")
+
+        assert self._storage.has_ancestor_in("inner", {"outer"})
+        assert self._storage.has_ancestor_in("inner", {"middle"})
+        assert self._storage.has_ancestor_in("middle", {"outer"})
+
+    def test_has_ancestor_in_excludes_self_and_descendants(self):
+        """A fragment is not its own ancestor, and descendants don't count."""
+        self._set_fragment_chain("outer", "inner")
+
+        assert not self._storage.has_ancestor_in("inner", {"inner"})
+        assert not self._storage.has_ancestor_in("outer", {"inner"})
+        assert not self._storage.has_ancestor_in("inner", set())
+
     def test_order_fragment_ids_empty_input_returns_empty_list(self):
         """An empty input list yields an empty ordering."""
         assert self._storage.order_fragment_ids([]) == []
@@ -465,9 +593,82 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert self._storage.contains("a")
         assert self._storage.contains("b")
 
+        removed = self._storage.clear_stale_descendants("a", frozenset({"a"}))
+        assert removed == ["b"]
+        assert self._storage.contains("a")
+        assert not self._storage.contains("b")
+
     def test_contains(self):
         assert self._storage.contains("some_key")
         assert not self._storage.contains("some_other_key")
+
+    def test_resolve_target_returns_ids_for_named_fragment(self):
+        """resolve_target with a single name returns the registered fragment id."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        result = self._storage.resolve_target("charts")
+
+        assert result == ["frag_a"]
+
+    def test_resolve_target_multiple_call_sites(self):
+        """One key registered at multiple call sites resolves to all ids."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+        self._storage.register("frag_b", "fragment_b", target_key="charts")
+
+        result = self._storage.resolve_target("charts")
+
+        assert result == ["frag_a", "frag_b"]
+
+    def test_resolve_target_list_of_names(self):
+        """A list of keys resolves to the union in stable order with deduplication."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+        self._storage.register("frag_b", "fragment_b", target_key="table")
+
+        result = self._storage.resolve_target(["charts", "table"])
+
+        assert result == ["frag_a", "frag_b"]
+
+    def test_resolve_target_deduplicates_overlapping_keys(self):
+        """resolve_target(['a', 'a']) returns each fragment id only once."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        result = self._storage.resolve_target(["charts", "charts"])
+
+        assert result == ["frag_a"]
+
+    def test_resolve_target_unknown_name_raises(self):
+        """Resolving a name with no registered fragment raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="No fragment found for target"):
+            self._storage.resolve_target("unknown")
+
+    def test_remove_prunes_target_key_index(self):
+        """Removing a fragment drops it from the name index."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        self._storage.delete("frag_a")
+
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("charts")
+
+    def test_clear_prunes_target_key_index(self):
+        """clear() drops all fragments from the name index."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        self._storage.clear()
+
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("charts")
+
+    def test_reregister_with_new_key_repoints_index(self):
+        """Re-registering the same fragment id under a new key detaches the old name."""
+        self._storage.register("frag_a", "fragment_a", target_key="old_name")
+
+        # Re-register with a different key.
+        self._storage.register("frag_a", "fragment_a", target_key="new_name")
+
+        assert self._storage.resolve_target("new_name") == ["frag_a"]
+        with pytest.raises(StreamlitAPIException):
+            self._storage.resolve_target("old_name")
 
 
 def test_has_lock() -> None:
@@ -1518,6 +1719,7 @@ def test_fragment_decorator_handles_pep649_annotations() -> None:
         ("registration_sequence", (), {}),
         ("ids_registered_after", (0,), {}),
         ("order_fragment_ids", ([],), {}),
+        ("has_ancestor_in", ("frag", set()), {}),
         ("delete", ("key",), {}),
         ("contains", ("key",), {}),
         ("register_outside_wrapper", ("frag", "container", object()), {}),
@@ -2160,10 +2362,10 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
     """Tests for API restrictions in parallel fragment workers."""
 
     def test_check_not_parallel_worker_raises_when_flag_is_true(self) -> None:
-        """_check_not_parallel_worker raises StreamlitAPIException when is_parallel_worker=True."""
+        """_check_not_parallel_worker raises StreamlitInvalidLayoutContextError when is_parallel_worker=True."""
         ThreadState.initialize(is_parallel_worker=True)
         try:
-            with pytest.raises(StreamlitAPIException) as exc_info:
+            with pytest.raises(StreamlitInvalidLayoutContextError) as exc_info:
                 _check_not_parallel_worker("st.test_api")
 
             assert "st.test_api" in str(exc_info.value)
@@ -2219,7 +2421,7 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
 
         with ThreadState.scoped(fragment_id="inner"):
             assert ThreadState.get().is_parallel_worker is True
-            with pytest.raises(StreamlitAPIException):
+            with pytest.raises(StreamlitInvalidLayoutContextError):
                 _check_not_parallel_worker("@st.dialog")
 
         assert ThreadState.get().is_parallel_worker is True
@@ -2373,3 +2575,83 @@ class NestedFragmentContainerRerunTest(DeltaGeneratorTestCase):
             f"{recorded_fragment_ids[0]!r}."
         )
         assert recorded_fragment_ids == initial_run_ids
+
+
+@pytest.mark.parametrize("reserved_key", ["app", "fragment"])
+def test_fragment_reserved_key_raises(reserved_key: str) -> None:
+    """@st.fragment(key=<reserved>) raises StreamlitAPIException immediately."""
+    with pytest.raises(StreamlitAPIException, match="reserved name"):
+        fragment(key=reserved_key)
+
+
+def test_fragment_duplicate_key_different_definitions_raises() -> None:
+    """Two different fragment definitions sharing a key raise StreamlitDuplicateElementKey."""
+
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = MemoryFragmentStorage()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
+
+    ThreadState.initialize()
+
+    @fragment(key="shared_key")
+    def fragment_alpha() -> None:
+        pass
+
+    @fragment(key="shared_key")
+    def fragment_beta() -> None:
+        pass
+
+    with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx):
+        fragment_alpha()
+        with pytest.raises(StreamlitDuplicateElementKey):
+            fragment_beta()
+
+
+def test_fragment_same_definition_multiple_call_sites_no_collision() -> None:
+    """Calling the same keyed fragment from two call sites does not raise."""
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_storage = MemoryFragmentStorage()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.cursors = {}
+
+    ThreadState.initialize()
+
+    @fragment(key="multi_site")
+    def my_fragment() -> None:
+        pass
+
+    with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx):
+        my_fragment()
+        # Second call site of the same definition — must not raise.
+        my_fragment()
+
+
+def test_shared_run_state_reset_clears_fragment_user_keys() -> None:
+    """reset() frees previously-claimed fragment user keys for the next run."""
+    shared = SharedRunState()
+
+    assert shared.register_fragment_user_key("my_key", "definition_a") is True
+    assert shared.register_fragment_user_key("my_key", "definition_b") is False
+
+    shared.reset()
+
+    assert shared.register_fragment_user_key("my_key", "definition_b") is True
+
+
+def test_fragment_different_definitions_same_key_collide() -> None:
+    """Two different fragment definitions using the same key in one run collide:
+    register_fragment_user_key returns False for the second definition_id.
+    """
+    shared = SharedRunState()
+
+    assert (
+        shared.register_fragment_user_key("shared_key", "mymodule.fragment_alpha")
+        is True
+    )
+    assert (
+        shared.register_fragment_user_key("shared_key", "mymodule.fragment_beta")
+        is False
+    )

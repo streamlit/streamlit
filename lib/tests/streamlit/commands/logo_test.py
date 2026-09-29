@@ -19,7 +19,11 @@ from PIL import Image
 
 import streamlit as st
 from streamlit.commands.logo import _invalid_logo_text
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidURLError,
+    StreamlitValueError,
+)
 from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
 from streamlit.web.server.server import MEDIA_ENDPOINT
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -61,7 +65,7 @@ class LogoTest(DeltaGeneratorTestCase):
         streamlit = Image.open(
             str(pathlib.Path(__file__).parent / "full-streamlit.png")
         )
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidURLError, match=r'"http://" or "https://"'):
             st.logo(streamlit, link="www.example.com")
 
     def test_with_icon_image(self):
@@ -118,7 +122,7 @@ class LogoTest(DeltaGeneratorTestCase):
         streamlit = Image.open(
             str(pathlib.Path(__file__).parent / "full-streamlit.png")
         )
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.logo(streamlit, size="corgi")
 
     def test_material_icon(self):

@@ -41,6 +41,10 @@ describe("DataFrame FormattingMenu", () => {
       <FormattingMenu {...defaultProps}>{defaultChildren}</FormattingMenu>
     )
 
+    expect(screen.getByTestId("stDataFrameColumnFormattingMenu")).toHaveClass(
+      "stDataFrameColumnFormattingMenu"
+    )
+
     // Check for presence of number-specific formats
     expect(screen.getByText("Automatic")).toBeInTheDocument()
     expect(screen.getByText("Dollar")).toBeInTheDocument()

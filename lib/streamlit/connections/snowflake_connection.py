@@ -121,22 +121,19 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
         >>> st.dataframe(df)
 
         """
-        from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
+        from streamlit.connections import retry_util
 
-        @retry(
-            after=lambda _: self.reset(),
-            stop=stop_after_attempt(3),
-            reraise=True,
+        @retry_util.retry(
+            max_attempts=3,
+            wait_seconds=1,
             # We don't have to implement retries ourself for most error types as the
             # `snowflake-connector-python` library already implements retries for
             # retryable HTTP errors.
-            retry=retry_if_exception(
-                lambda e: (
-                    hasattr(e, "sqlstate")
-                    and e.sqlstate == SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED
-                )
+            retry_on_exception=lambda exc: (
+                hasattr(exc, "sqlstate")
+                and exc.sqlstate == SQLSTATE_CONNECTION_WAS_NOT_ESTABLISHED
             ),
-            wait=wait_fixed(1),
+            after=self.reset,
         )
         # `params` must be an explicit parameter (not captured from closure) so that
         # `@st.cache_data` includes it in the cache key.
@@ -158,12 +155,12 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ttl
         ).replace(".", "_")
         _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
-        _query = cache_data(
+        cached_query = cache_data(
             show_spinner=show_spinner,
             ttl=ttl,
         )(_query)
 
-        return _query(self._connection_instance_id, sql, params)
+        return cached_query(self._connection_instance_id, sql, params)
 
     def write_pandas(
         self,
@@ -685,7 +682,8 @@ class SnowflakeConnection(BaseSnowflakeConnection):
                     "or as kwargs to `st.connection`? "
                     "See the [SnowflakeConnection configuration documentation]"
                     "(https://docs.streamlit.io/st.connections.snowflakeconnection-configuration) "
-                    "for more details and examples."
+                    "for more details and examples.",
+                    error_id="snowflake-missing-connection-config",
                 )
             raise
 
@@ -748,7 +746,8 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
             if value is None:
                 raise StreamlitAPIException(
                     f"Environment variable `{env_var_name}` not found. Is this app "
-                    "running in a Snowflake container environment?"
+                    "running in a Snowflake container environment?",
+                    error_id="snowflake-env-var-not-found",
                 )
             params[param_name] = value
 
@@ -756,7 +755,8 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
         if not os.path.exists(SNOWPARK_CONNECTION_TOKEN_FILE):
             raise StreamlitAPIException(
                 f"Token file `{SNOWPARK_CONNECTION_TOKEN_FILE}` not found. Is this app "
-                "running in a Snowflake container environment?"
+                "running in a Snowflake container environment?",
+                error_id="snowflake-token-file-not-found",
             )
         login_token = cls._read_token_file()
 
@@ -765,7 +765,8 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
             raise StreamlitAPIException(
                 "Token header not found. Is this app running with caller's "
                 "rights enabled, and is this connection being created in an app "
-                "execution thread?"
+                "execution thread?",
+                error_id="snowflake-token-header-not-found",
             )
         user_token = st_context.headers[SNOWPARK_USER_TOKEN_HEADER_NAME]
 

@@ -16,7 +16,7 @@
 
 import { kebabCase } from "lodash-es"
 
-import {
+import type {
   StreamlitTheme,
   StreamlitThemeCssProperties,
 } from "@streamlit/component-v2-lib"

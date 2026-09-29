@@ -25,7 +25,7 @@ import {
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import CodeBlockCopyToolbar from "./CodeBlockCopyToolbar"
-import { StyledCodeBlock, StyledPre } from "./styled-components"
+import { StyledCode, StyledCodeBlock, StyledPre } from "./styled-components"
 
 export interface StreamlitSyntaxHighlighterProps {
   children: string | string[] | undefined | null
@@ -40,6 +40,48 @@ export interface StreamlitSyntaxHighlighterProps {
 type RendererProps = Parameters<
   NonNullable<SyntaxHighlighterProps["renderer"]>
 >[0]
+
+/**
+ * Line count above which syntax highlighting is skipped.
+ *
+ * `react-syntax-highlighter`'s `processLines` flattens unwrapped rows with
+ * `[].concat.apply([], newTree)`, spreading one argument per line. Past roughly 120k
+ * arguments the engine rejects the call, so the whole code block fails to render.
+ * See https://github.com/streamlit/streamlit/issues/11996.
+ *
+ * Line count is the threshold because it is the argument count; byte size is not. The
+ * cap applies on both wrap paths: only the unwrapped path can throw, but highlighting
+ * this many lines pins the main thread either way.
+ *
+ * The safe ceiling is engine-specific, so this cites the tightest known limit rather
+ * than the one measured here: JavaScriptCore hard-caps `apply` at 65,536 arguments,
+ * where V8 tolerates roughly 110k-120k (the boundary observed in jsdom). 50k
+ * therefore clears Safari with only ~1.3x of headroom -- do not raise it toward the
+ * V8 number without re-checking JavaScriptCore, or the crash comes back there.
+ */
+export const MAX_HIGHLIGHTED_LINES = 50000
+
+/**
+ * Returns whether `text` has more than `limit` lines.
+ *
+ * Stops at the first extra newline, so a huge input is no more expensive to check
+ * than a small one, and does not allocate an array of lines the way
+ * `split("\n").length` would.
+ */
+export function exceedsLineLimit(text: string, limit: number): boolean {
+  let lines = 1
+  let index = text.indexOf("\n")
+
+  while (index !== -1) {
+    lines++
+    if (lines > limit) {
+      return true
+    }
+    index = text.indexOf("\n", index + 1)
+  }
+
+  return false
+}
 
 function StreamlitSyntaxHighlighter({
   language,
@@ -90,6 +132,11 @@ function StreamlitSyntaxHighlighter({
   const isEmpty = !text || text.trim().length === 0
   const shouldShowCopyButton = !isEmpty
 
+  const isTooLongToHighlight = useMemo(
+    () => exceedsLineLimit(text, MAX_HIGHLIGHTED_LINES),
+    [text]
+  )
+
   return (
     <StyledCodeBlock
       className="stCode"
@@ -97,24 +144,37 @@ function StreamlitSyntaxHighlighter({
       tabIndex={shouldShowCopyButton ? 0 : undefined}
     >
       <StyledPre wrapLines={wrapLines ?? false}>
-        <SyntaxHighlighter
-          language={language}
-          PreTag="div"
-          customStyle={{ backgroundColor: "transparent" }}
-          // We set an empty style object here because we have our own CSS styling that
-          // reacts on our theme.
-          style={{}}
-          lineNumberStyle={{}}
-          showLineNumbers={showLineNumbers}
-          wrapLongLines={wrapLines}
-          // Fix bug with wrapLongLines+showLineNumbers (see link below) by
-          // using a renderer that wraps individual lines of code in their
-          // own spans.
-          // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
-          renderer={showLineNumbers && wrapLines ? renderer : undefined}
-        >
-          {text}
-        </SyntaxHighlighter>
+        {isTooLongToHighlight ? (
+          // Too many lines to hand to the highlighter -- see MAX_HIGHLIGHTED_LINES.
+          // Render the code unhighlighted instead of risking not rendering it at
+          // all. Line numbers go too, since they come from the highlighter's own row
+          // structure.
+          <StyledCode
+            wrapLines={wrapLines ?? false}
+            data-testid="stCodeUnhighlighted"
+          >
+            {text}
+          </StyledCode>
+        ) : (
+          <SyntaxHighlighter
+            language={language}
+            PreTag="div"
+            customStyle={{ backgroundColor: "transparent" }}
+            // We set an empty style object here because we have our own CSS styling that
+            // reacts on our theme.
+            style={{}}
+            lineNumberStyle={{}}
+            showLineNumbers={showLineNumbers}
+            wrapLongLines={wrapLines}
+            // Fix bug with wrapLongLines+showLineNumbers (see link below) by
+            // using a renderer that wraps individual lines of code in their
+            // own spans.
+            // https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/376
+            renderer={showLineNumbers && wrapLines ? renderer : undefined}
+          >
+            {text}
+          </SyntaxHighlighter>
+        )}
       </StyledPre>
       {shouldShowCopyButton && <CodeBlockCopyToolbar text={text} />}
     </StyledCodeBlock>

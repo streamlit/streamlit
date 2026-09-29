@@ -16,7 +16,7 @@
 
 import { getLogger } from "loglevel"
 
-import { BackMsg, ForwardMsg, IBackMsg } from "@streamlit/protobuf"
+import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 import {
   getCookie,
   isNullOrUndefined,
@@ -118,10 +118,6 @@ export interface Args {
   enableBypass?: boolean
 }
 
-interface MessageQueue {
-  [index: number]: ForwardMsg
-}
-
 const LOG = getLogger("WebsocketConnection")
 
 /**
@@ -213,10 +209,10 @@ export class WebsocketConnection {
   private nextMessageIndex = 0
 
   /**
-   * This dictionary stores received messages that we haven't sent out yet
-   * (because we're still decoding previous messages)
+   * Incoming messages that we haven't dispatched yet because earlier
+   * messages are still being decoded. Keyed by transmission order.
    */
-  private readonly messageQueue: MessageQueue = {}
+  private readonly messageQueue = new Map<number, ForwardMsg>()
 
   /**
    * The current state of this object's state machine.
@@ -811,7 +807,7 @@ export class WebsocketConnection {
    * Encodes the message with the outgoingMessageType and sends it over the
    * wire.
    */
-  public sendMessage(obj: IBackMsg): void {
+  public sendMessage(obj: BackMsg.$Properties): void {
     if (!this.websocket) {
       return
     }
@@ -853,21 +849,24 @@ export class WebsocketConnection {
     const encodedMsg = new Uint8Array(data)
     const msg = ForwardMsg.decode(encodedMsg)
 
-    this.messageQueue[messageIndex] = await this.cache.processMessagePayload(
-      msg,
-      encodedMsg
+    this.messageQueue.set(
+      messageIndex,
+      await this.cache.processMessagePayload(msg, encodedMsg)
     )
 
     // Dispatch any pending messages in the queue. This may *not* result
     // in our just-decoded message being dispatched: if there are other
     // messages that were received earlier than this one but are being
     // downloaded, our message won't be sent until they're done.
-    while (this.lastDispatchedMessageIndex + 1 in this.messageQueue) {
+    let queuedMessage = this.messageQueue.get(
+      this.lastDispatchedMessageIndex + 1
+    )
+    while (queuedMessage !== undefined) {
       const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
-      this.args.onMessage(this.messageQueue[dispatchMessageIndex])
-
-      delete this.messageQueue[dispatchMessageIndex]
+      this.args.onMessage(queuedMessage)
+      this.messageQueue.delete(dispatchMessageIndex)
       this.lastDispatchedMessageIndex = dispatchMessageIndex
+      queuedMessage = this.messageQueue.get(dispatchMessageIndex + 1)
     }
   }
 }

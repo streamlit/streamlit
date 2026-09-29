@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { ButtonCell, ButtonCellData } from "./cells/ButtonCell"
+import type { ButtonCell, ButtonCellData } from "./cells/ButtonCell"
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   toSafeArray,
   toSafeString,
 } from "./utils"

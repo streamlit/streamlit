@@ -16,11 +16,12 @@
 
 import styled from "@emotion/styled"
 
-import type { IconSize } from "~lib/theme/types"
+import { getIconCssSize } from "~lib/components/shared/Icon/getIconCssSize"
+import type { IconSizeProp } from "~lib/theme/types"
 import { computeSpacingStyle } from "~lib/theme/utils"
 
 export interface StyledMaterialIconProps {
-  size: IconSize
+  size: IconSizeProp
   margin: string
   padding: string
   color: string
@@ -28,14 +29,15 @@ export interface StyledMaterialIconProps {
 
 export const StyledMaterialIcon = styled.span<StyledMaterialIconProps>(
   ({ size, margin, padding, theme, color }) => {
+    const iconCssSize = getIconCssSize(size, theme.iconSizes)
     return {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
       color: color,
-      fontSize: theme.iconSizes[size],
-      width: theme.iconSizes[size],
-      height: theme.iconSizes[size],
+      fontSize: iconCssSize,
+      width: iconCssSize,
+      height: iconCssSize,
       margin: computeSpacingStyle(margin, theme),
       padding: computeSpacingStyle(padding, theme),
       userSelect: "none",

@@ -16,11 +16,11 @@
 
 import { useCallback } from "react"
 
-import { DataEditorProps } from "@glideapps/glide-data-grid"
+import type { DataEditorProps } from "@glideapps/glide-data-grid"
 import { getLogger } from "loglevel"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   toSafeString,
 } from "~lib/components/widgets/DataFrame/columns"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
@@ -63,7 +63,7 @@ function escapeValue(value: unknown): string {
   // Special chars need to be escaped:
   if (CSV_SPECIAL_CHARS_REGEX.test(strValue)) {
     // Add quotes around the value:
-    return `${CSV_QUOTE_CHAR}${strValue.replace(
+    return `${CSV_QUOTE_CHAR}${strValue.replaceAll(
       // Escape all quote chars if inside a quoted string:
       new RegExp(CSV_QUOTE_CHAR, "g"),
       CSV_ESCAPE_CHAR + CSV_QUOTE_CHAR

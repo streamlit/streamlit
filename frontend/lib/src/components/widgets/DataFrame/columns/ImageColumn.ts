@@ -14,11 +14,15 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind, ImageCell } from "@glideapps/glide-data-grid"
+import {
+  type GridCell,
+  GridCellKind,
+  type ImageCell,
+} from "@glideapps/glide-data-grid"
 
 import { notNullOrUndefined } from "~lib/util/utils"
 
-import { BaseColumn, BaseColumnProps, toSafeString } from "./utils"
+import { type BaseColumn, type BaseColumnProps, toSafeString } from "./utils"
 
 /**
  * A column type that renders an image as a cell value. On cell selection, open

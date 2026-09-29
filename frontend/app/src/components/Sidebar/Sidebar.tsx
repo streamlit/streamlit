@@ -19,6 +19,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -61,7 +62,7 @@ import {
 import {
   calculateMaxBreakpoint,
   clampSidebarWidth,
-  DEFAULT_WIDTH,
+  getSidebarWidthLimits,
 } from "./utils"
 
 export interface SidebarProps {
@@ -83,6 +84,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 }): ReactElement => {
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
+  const sidebarWidthLimits = useMemo(
+    () => getSidebarWidthLimits(theme.sizes, theme.fontSizes.baseFontSize),
+    [theme.sizes, theme.fontSizes.baseFontSize]
+  )
   const { innerWidth } = useWindowDimensionsContext()
 
   const { appPages } = useContext(NavigationContext)
@@ -101,32 +106,26 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const sidebarRef = useRef<HTMLDivElement>(null)
 
-  const cachedSidebarWidth = localStorageAvailable()
-    ? window.localStorage.getItem("sidebarWidth")
-    : undefined
-
   const [sidebarWidth, setSidebarWidth] = useState<string>(() => {
-    const getCachedWidth = (): string | null => {
-      if (cachedSidebarWidth) {
-        const cached = Number.parseInt(cachedSidebarWidth, 10)
-        return Number.isNaN(cached)
-          ? null
-          : clampSidebarWidth(cached).toString()
+    const cachedSidebarWidth = localStorageAvailable()
+      ? window.localStorage.getItem("sidebarWidth")
+      : undefined
+
+    if (cachedSidebarWidth) {
+      const cached = Number.parseInt(cachedSidebarWidth, 10)
+      if (!Number.isNaN(cached)) {
+        return clampSidebarWidth(cached, sidebarWidthLimits).toString()
       }
-      return null
-    }
-
-    const clampedCached = getCachedWidth()
-
-    if (clampedCached) {
-      return clampedCached
     }
 
     if (notNullOrUndefined(initialSidebarWidth)) {
-      return clampSidebarWidth(initialSidebarWidth).toString()
+      return clampSidebarWidth(
+        initialSidebarWidth,
+        sidebarWidthLimits
+      ).toString()
     }
 
-    return DEFAULT_WIDTH
+    return sidebarWidthLimits.defaultWidthPx.toString()
   })
 
   const [lastInnerWidth, setLastInnerWidth] = useState<number>(
@@ -145,16 +144,19 @@ const Sidebar: React.FC<SidebarProps> = ({
     setShowSidebarCollapse(false)
   }, [])
 
-  const initializeSidebarWidth = useCallback((width: number): void => {
-    const clampedWidth = clampSidebarWidth(width)
-    const newWidth = clampedWidth.toString()
+  const initializeSidebarWidth = useCallback(
+    (width: number): void => {
+      const clampedWidth = clampSidebarWidth(width, sidebarWidthLimits)
+      const newWidth = clampedWidth.toString()
 
-    setSidebarWidth(newWidth)
+      setSidebarWidth(newWidth)
 
-    if (localStorageAvailable()) {
-      window.localStorage.setItem("sidebarWidth", newWidth)
-    }
-  }, [])
+      if (localStorageAvailable()) {
+        window.localStorage.setItem("sidebarWidth", newWidth)
+      }
+    },
+    [sidebarWidthLimits]
+  )
 
   const onResizeStop = useCallback<ResizeCallback>(
     (
@@ -226,8 +228,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   function resetSidebarWidth(): void {
     // Double clicking on the resize handle resets sidebar to initial width or default
     const resetWidth = notNullOrUndefined(initialSidebarWidth)
-      ? clampSidebarWidth(initialSidebarWidth).toString()
-      : DEFAULT_WIDTH
+      ? clampSidebarWidth(initialSidebarWidth, sidebarWidthLimits).toString()
+      : sidebarWidthLimits.defaultWidthPx.toString()
     setSidebarWidth(resetWidth)
     if (localStorageAvailable()) {
       window.localStorage.setItem("sidebarWidth", resetWidth)
@@ -276,7 +278,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         },
       }}
       handleComponent={{
-        right: <StyledResizeHandle onDoubleClick={resetSidebarWidth} />,
+        right: (
+          <StyledResizeHandle
+            data-testid="stSidebarResizeHandle"
+            onDoubleClick={resetSidebarWidth}
+          />
+        ),
       }}
       size={{
         width: sidebarWidth,

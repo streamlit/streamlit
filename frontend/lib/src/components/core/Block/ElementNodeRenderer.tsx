@@ -34,6 +34,7 @@ import {
   DateTimeInput as DateTimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
   DownloadButton as DownloadButtonProto,
+  EChartsChart as EChartsChartProto,
   Exception as ExceptionProto,
   Feedback as FeedbackProto,
   FileUploader as FileUploaderProto,
@@ -83,6 +84,7 @@ import { AppSkeleton } from "~lib/components/elements/Skeleton/AppSkeleton"
 import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
 import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
+import { FormSubmitContent } from "~lib/components/widgets/Form/FormSubmitContent"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 import { ElementContainer } from "./ElementContainer"
@@ -109,6 +111,9 @@ const Balloons = lazy(
 )
 const DeckGlJsonChart = lazy(
   () => import("~lib/components/elements/DeckGlJsonChart/DeckGlJsonChart")
+)
+const EChartsChart = lazy(
+  () => import("~lib/components/elements/EChartsChart/EChartsChart")
 )
 const GraphVizChart = lazy(
   () => import("~lib/components/elements/GraphVizChart/GraphVizChart")
@@ -181,11 +186,6 @@ const Feedback = lazy(
 const FileUploader = lazy(
   () => import("~lib/components/widgets/FileUploader/FileUploader")
 )
-const FormSubmitContent = lazy(() =>
-  import("~lib/components/widgets/Form/FormSubmitContent").then(module => ({
-    default: module.FormSubmitContent,
-  }))
-)
 const Multiselect = lazy(
   () => import("~lib/components/widgets/Multiselect/Multiselect")
 )
@@ -225,14 +225,17 @@ interface RawElementNodeRendererProps extends ElementNodeRendererProps {
   isStale: boolean
 }
 
-function hideIfStale(isStale: boolean, component: ReactElement): ReactElement {
-  return isStale ? <></> : component
+function hideIfStale(
+  isStale: boolean,
+  component: ReactElement
+): ReactElement | null {
+  return isStale ? null : component
 }
 
 // Render ElementNodes (i.e. leaf nodes).
 const RawElementNodeRenderer = (
   props: RawElementNodeRendererProps
-): ReactElement => {
+): ReactElement | null => {
   const { node, isStale } = props
   const { isInRoot, isInHorizontalLayout } = useRequiredContext(FlexContext)
 
@@ -684,9 +687,13 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           <Toast
-            // React key needed so toasts triggered on re-run
+            // Keyed by scriptRunId so the toast remounts on each run; a
+            // still-visible toast at the same position is de-duped in Toast.
             key={node.scriptRunId}
             element={toastProto}
+            // The delta path is a stable per-position identity used to de-dupe
+            // the toast across the remounts that happen on every rerun.
+            toastId={node.metadata.deltaPath.join("-")}
             {...elementProps}
           />
         </ElementContainer>
@@ -792,6 +799,8 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           {buttonProto.isFormSubmitter ? (
+            // Eager so enter-to-submit follows the first-registered submit button.
+            // Lazy + Suspense can mount an enabled secondary button first.
             <FormSubmitContent element={buttonProto} {...widgetProps} />
           ) : (
             <Button element={buttonProto} {...widgetProps} />
@@ -1086,6 +1095,29 @@ const RawElementNodeRenderer = (
             key={numberInputProto.id}
             element={numberInputProto}
             {...widgetProps}
+          />
+        </ElementContainer>
+      )
+    }
+
+    case "echartsChart": {
+      const echartsProto = node.element.echartsChart as EChartsChartProto
+      return (
+        <ElementContainer
+          node={node}
+          // Use overflow-visible (like other charts) so the hover toolbar, which
+          // floats above the chart, and tooltips aren't clipped by the
+          // overflow:auto that a pixel `height` otherwise applies.
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
+          isStale={isStale}
+        >
+          <EChartsChart
+            // An ECharts chart only has an id when the user gave it a key.
+            // An unkeyed chart has none, so it falls back to positional
+            // identity like other elements.
+            key={echartsProto.id || undefined}
+            element={echartsProto}
+            {...elementProps}
           />
         </ElementContainer>
       )

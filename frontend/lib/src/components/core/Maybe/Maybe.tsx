@@ -22,7 +22,7 @@ interface MaybeProps extends PropsWithChildren<{
 
 const Maybe: React.FC<MaybeProps> = memo(
   function Maybe({ children }) {
-    return <>{children}</>
+    return children
   },
   (prevProps, nextProps) => {
     // If either prevProps.enable OR nextProps.enable is true, we want to update

@@ -1,0 +1,187 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {
+  createContext,
+  RefObject,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
+
+/**
+ * SkillsInstallContext lets the lib-level error display (ExceptionElement) offer
+ * a one-click "install Streamlit skills" call-to-action, without the lib
+ * depending on app-level concerns. The app (which owns the backend operation
+ * client and the server's recommendation flag) supplies the values; the lib
+ * only consumes them. This mirrors how `LibConfigContext` feeds `showErrorLinks`
+ * into `ExceptionElement`.
+ *
+ * The callout is a single Install CTA — there is no dismiss/snooze on this
+ * surface. Once shown it persists until it self-dismisses (after a successful
+ * install's brief confirmation) or its error box unmounts. `enabled` going
+ * false prevents a NEW callout from claiming the slot, and hides an idle
+ * callout that hasn't been acted on (e.g. once the proactive toast appears, the
+ * server stops recommending, or skills get installed) — but it never tears down
+ * a callout that is mid-confirmation.
+ *
+ * Consumed by:
+ * @see ExceptionElement
+ */
+export interface SkillsInstallContextProps {
+  /**
+   * Whether the install callout is allowed to show. The app computes this from
+   * the server's recommendation flag plus localhost/embed gating; the lib adds
+   * its own per-error gate (errors only, links enabled).
+   */
+  enabled: boolean
+
+  /**
+   * Perform the one-click install. Resolves with an optional detail message
+   * (e.g. where the skills were installed) on success, and rejects with an
+   * Error (carrying a user-facing message) on failure. The app routes the
+   * install-funnel telemetry (with the "errorCallout" surface) through here.
+   */
+  onInstall: () => Promise<string | undefined>
+
+  /**
+   * Record that the callout was shown (the impression event, tagged with the
+   * "errorCallout" surface). Called once when the callout first appears.
+   */
+  onShown: () => void
+
+  /**
+   * Claim the single callout slot for `token`. Returns true if `token` now owns
+   * the slot (or already did). Used to guarantee that at most one callout shows
+   * even when several error boxes are on screen.
+   */
+  claimCallout: (token: symbol) => boolean
+
+  /** Release the callout slot if `token` currently owns it. */
+  releaseCallout: (token: symbol) => void
+}
+
+const noop = (): void => {}
+const noopInstall = (): Promise<string | undefined> =>
+  Promise.resolve(undefined)
+
+/**
+ * Inert defaults so the lib renders in isolation (tests, Storybook) and so the
+ * callout never shows unless an app explicitly provides a value. The default
+ * `claimCallout` returns false, so without a provider no callout is rendered.
+ */
+export const SkillsInstallContext = createContext<SkillsInstallContextProps>({
+  enabled: false,
+  onInstall: noopInstall,
+  onShown: noop,
+  claimCallout: () => false,
+  releaseCallout: noop,
+})
+
+SkillsInstallContext.displayName = "SkillsInstallContext"
+
+/**
+ * Whether `element` is actually being rendered to the user.
+ *
+ * Streamlit keeps hidden containers mounted — a collapsed `st.expander` renders
+ * its children into an `inert` subtree, an inactive `st.tabs` panel stays in the
+ * DOM under `display: none`. An error box in either is a fully mounted, eligible
+ * ExceptionElement that would otherwise claim the one app-wide callout slot and
+ * burn the once-per-session impression, leaving a *visible* error below it with
+ * no offer and the funnel holding an impression that could never convert.
+ *
+ * `checkVisibility` handles `display: none` (and detached nodes); `inert` is
+ * orthogonal to CSS visibility so it needs its own check. Where the API is
+ * missing — jsdom, which does no layout at all — treat the element as visible
+ * rather than silently disabling the feature in every unit test.
+ */
+function isRenderedToUser(element: HTMLElement | null): boolean {
+  if (element === null) {
+    return true
+  }
+  if (element.closest("[inert]") !== null) {
+    return false
+  }
+  return typeof element.checkVisibility === "function"
+    ? element.checkVisibility()
+    : true
+}
+
+/**
+ * Claim the single shared callout slot the first time this error box becomes
+ * `eligible` and is actually on screen. Returns whether this caller owns the slot
+ * and should render the callout.
+ *
+ * The claim is "sticky": once acquired it is kept even if `eligible` later flips
+ * false (e.g. a successful install turns the server recommendation off, or the
+ * proactive toast appears) — so the callout can finish showing its success
+ * confirmation instead of being yanked mid-frame. The slot is freed only when
+ * the owning error box unmounts.
+ *
+ * Idempotent under React StrictMode's mount/unmount/mount double-invoke because
+ * the per-instance token re-acquires its own slot. Two hand-off gaps, both
+ * resolving on the next rerun that remounts the tree, which is how exception
+ * elements arrive in the first place: a sibling doesn't take over the instant the
+ * owner unmounts, and an error that was hidden when it mounted doesn't claim the
+ * slot if it later becomes visible without remounting.
+ */
+export function useSkillsCalloutSlot(
+  eligible: boolean,
+  elementRef?: RefObject<HTMLElement | null>
+): boolean {
+  const { claimCallout, releaseCallout } = useContext(SkillsInstallContext)
+  const tokenRef = useRef<symbol | null>(null)
+  if (tokenRef.current === null) {
+    tokenRef.current = Symbol("skillsCalloutSlot")
+  }
+  const [ownsSlot, setOwnsSlot] = useState(false)
+
+  // Claim once, when first eligible. Skip while not eligible or already owning,
+  // so an `eligible` flip to false never releases the slot here.
+  useLayoutEffect(() => {
+    if (!eligible || ownsSlot) {
+      return
+    }
+    if (!isRenderedToUser(elementRef?.current ?? null)) {
+      return
+    }
+    if (claimCallout(tokenRef.current as symbol)) {
+      setOwnsSlot(true)
+    }
+  }, [eligible, ownsSlot, claimCallout, elementRef])
+
+  // Free the slot when the owning error box unmounts, and reset `ownsSlot` so a
+  // remount re-runs the claim effect and re-acquires the slot. Uses
+  // useLayoutEffect (matching the claim's phase) so that on a same-commit
+  // unmount+remount hand-off the departing instance's release runs BEFORE the
+  // arriving instance's claim — otherwise a passive-phase release would run
+  // after the new instance's layout-phase claim, the claim would see the slot
+  // still owned, and the callout would drop until a later rerun. Resetting
+  // `ownsSlot` also covers React StrictMode's dev-only mount/unmount/mount
+  // double-invoke: without it the remount's claim would early-return on a stale
+  // `ownsSlot === true` while the slot sits free, letting a sibling also claim
+  // it and render a second callout. On a real unmount the state update no-ops.
+  useLayoutEffect(() => {
+    const token = tokenRef.current as symbol
+    return () => {
+      releaseCallout(token)
+      setOwnsSlot(false)
+    }
+  }, [releaseCallout])
+
+  return ownsSlot
+}

@@ -31,7 +31,9 @@ if TYPE_CHECKING:
     import altair as alt
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.vega_charts import VegaChartsMixin, VegaLiteState
+    from streamlit.elements.vega_charts import VegaChartsMixin
+    from streamlit.typing import VegaLiteState
+    from streamlit.util import ReadOnlyAttributeDictionary
 
     line_chart = VegaChartsMixin().line_chart
     area_chart = VegaChartsMixin().area_chart
@@ -74,6 +76,8 @@ if TYPE_CHECKING:
     assert_type(line_chart(data, height=400), DeltaGenerator)
     assert_type(line_chart(data, use_container_width=True), DeltaGenerator)
     assert_type(line_chart(data, use_container_width=None), DeltaGenerator)
+    assert_type(line_chart(data, alt="Monthly revenue by region"), DeltaGenerator)
+    assert_type(line_chart(data, alt=None), DeltaGenerator)
     assert_type(
         line_chart(
             data,
@@ -85,6 +89,7 @@ if TYPE_CHECKING:
             width=500,
             height=400,
             use_container_width=None,
+            alt="Line chart of a vs b and c",
         ),
         DeltaGenerator,
     )
@@ -101,6 +106,8 @@ if TYPE_CHECKING:
     assert_type(area_chart(data, stack="center"), DeltaGenerator)
     assert_type(area_chart(data, stack="layered"), DeltaGenerator)
     assert_type(area_chart(data, stack=None), DeltaGenerator)
+    assert_type(area_chart(data, alt="Area chart of counts over time"), DeltaGenerator)
+    assert_type(area_chart(data, alt=None), DeltaGenerator)
     assert_type(
         area_chart(
             data,
@@ -113,6 +120,7 @@ if TYPE_CHECKING:
             width="stretch",
             height="content",
             use_container_width=True,
+            alt="Normalized area chart",
         ),
         DeltaGenerator,
     )
@@ -129,6 +137,8 @@ if TYPE_CHECKING:
     assert_type(bar_chart(data, sort="a"), DeltaGenerator)
     assert_type(bar_chart(data, stack="layered"), DeltaGenerator)
     assert_type(bar_chart(data, stack=None), DeltaGenerator)
+    assert_type(bar_chart(data, alt="Revenue by product line"), DeltaGenerator)
+    assert_type(bar_chart(data, alt=None), DeltaGenerator)
     assert_type(
         bar_chart(
             data,
@@ -143,6 +153,7 @@ if TYPE_CHECKING:
             width=500,
             height=400,
             use_container_width=None,
+            alt="Horizontal bar chart",
         ),
         DeltaGenerator,
     )
@@ -158,6 +169,8 @@ if TYPE_CHECKING:
     assert_type(scatter_chart(data, size=100), DeltaGenerator)
     assert_type(scatter_chart(data, size=12.5), DeltaGenerator)
     assert_type(scatter_chart(data, size=None), DeltaGenerator)
+    assert_type(scatter_chart(data, alt="Scatter of a vs b"), DeltaGenerator)
+    assert_type(scatter_chart(data, alt=None), DeltaGenerator)
     assert_type(
         scatter_chart(
             data,
@@ -170,6 +183,7 @@ if TYPE_CHECKING:
             width="content",
             height="stretch",
             use_container_width=True,
+            alt="Scatter chart with size",
         ),
         DeltaGenerator,
     )
@@ -197,6 +211,8 @@ if TYPE_CHECKING:
         altair_chart(chart, on_select="ignore", selection_mode="points"),
         DeltaGenerator,
     )
+    assert_type(altair_chart(chart, on_select="ignore", alt="Chart"), DeltaGenerator)
+    assert_type(altair_chart(chart, on_select="ignore", alt=None), DeltaGenerator)
 
     # on_select="rerun" / callable -> VegaLiteState
     assert_type(altair_chart(chart, on_select="rerun"), VegaLiteState)
@@ -207,6 +223,10 @@ if TYPE_CHECKING:
         altair_chart(chart, on_select="rerun", selection_mode=["p1", "p2"]),
         VegaLiteState,
     )
+    assert_type(altair_chart(chart, on_select="rerun", alt="Chart"), VegaLiteState)
+    vega_lite_state = altair_chart(chart, on_select="rerun")
+    assert_type(vega_lite_state.selection, ReadOnlyAttributeDictionary)
+    assert_type(vega_lite_state["selection"], ReadOnlyAttributeDictionary)
     assert_type(
         altair_chart(
             chart,
@@ -217,6 +237,7 @@ if TYPE_CHECKING:
             use_container_width=None,
             on_select="rerun",
             selection_mode=("p1", "p2"),
+            alt="Selectable chart",
         ),
         VegaLiteState,
     )
@@ -237,12 +258,18 @@ if TYPE_CHECKING:
     assert_type(vega_lite_chart(data, spec, theme="streamlit"), DeltaGenerator)
     assert_type(vega_lite_chart(data, spec, key=None), DeltaGenerator)
     assert_type(vega_lite_chart(data, spec, use_container_width=False), DeltaGenerator)
+    assert_type(vega_lite_chart(data, spec, alt="Chart"), DeltaGenerator)
+    assert_type(vega_lite_chart(data, spec, alt=None), DeltaGenerator)
 
     # on_select="rerun" / callable -> VegaLiteState
     assert_type(vega_lite_chart(data, spec, on_select="rerun"), VegaLiteState)
     assert_type(vega_lite_chart(data, spec, on_select=my_callback), VegaLiteState)
     assert_type(
         vega_lite_chart(data, spec, on_select="rerun", selection_mode="points"),
+        VegaLiteState,
+    )
+    assert_type(
+        vega_lite_chart(data, spec, on_select="rerun", alt="Chart"),
         VegaLiteState,
     )
     assert_type(
@@ -256,6 +283,7 @@ if TYPE_CHECKING:
             use_container_width=None,
             on_select="rerun",
             selection_mode=["p1", "p2"],
+            alt="Selectable chart",
         ),
         VegaLiteState,
     )
@@ -265,18 +293,24 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Built-in charts do not accept None for width (only Width, not Width | None).
-    line_chart(data, width=None)  # type: ignore[arg-type]
+    line_chart(data, width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid width / height values (only int or "stretch" / "content").
-    bar_chart(data, width="invalid")  # type: ignore[arg-type]
-    scatter_chart(data, height=None)  # type: ignore[arg-type]
+    bar_chart(data, width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    scatter_chart(data, height=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid stack value for area_chart.
-    area_chart(data, stack="invalid")  # type: ignore[arg-type]
+    area_chart(data, stack="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid alt value (must be a string or None).
+    line_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    area_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    bar_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    scatter_chart(data, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid theme value for altair_chart (only "streamlit" or None).
-    altair_chart(chart, theme="dark")  # type: ignore[call-overload]
+    altair_chart(chart, theme="dark")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid on_select literal (only "ignore" / "rerun" or a callable).
-    altair_chart(chart, on_select="invalid")  # type: ignore[call-overload]
-    vega_lite_chart(data, spec, on_select="invalid")  # type: ignore[call-overload]
+    altair_chart(chart, on_select="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+    vega_lite_chart(data, spec, on_select="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]

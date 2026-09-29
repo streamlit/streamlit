@@ -18,7 +18,259 @@ import { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
+
+/**
+ * WebKit has no filled-range pseudo-element, so the track gradient is driven
+ * by this 0-100% stop, updated from the input's value.
+ */
+export const VEGA_RANGE_PROGRESS_VAR = "--vega-range-progress"
+
+/**
+ * Writes the input's value as a 0-100% stop into `--vega-range-progress` so
+ * the WebKit track gradient matches the slider position.
+ */
+export const syncVegaRangeProgress = (input: HTMLInputElement): void => {
+  // Missing min/max use the HTML defaults (0/100); an empty value falls
+  // back to min, not the platform midpoint.
+  const min = input.min === "" ? 0 : Number(input.min)
+  const max = input.max === "" ? 100 : Number(input.max)
+  const value = input.value === "" ? min : Number(input.value)
+  const span = max - min
+  const isValid =
+    Number.isFinite(min) &&
+    Number.isFinite(max) &&
+    Number.isFinite(value) &&
+    span !== 0
+  const pct = isValid ? ((value - min) / span) * 100 : 0
+  input.style.setProperty(
+    VEGA_RANGE_PROGRESS_VAR,
+    `${Math.min(100, Math.max(0, pct))}%`
+  )
+}
+
+/**
+ * Keeps WebKit range fills in sync with input value via `--vega-range-progress`.
+ * Syncs ranges present at bind time and subsequent user `input` events.
+ * Programmatic Vega writes (`view.signal(...).run()`, expression-driven
+ * params) set the DOM value without dispatching `input`, so the WebKit fill
+ * can go stale; Firefox uses `::-moz-range-progress` and does not need this.
+ * Call after vega-embed creates the bindings form; invoke the return value
+ * before Vega's finalize so the delegated input listener is removed.
+ */
+export const bindVegaRangeProgress = (root: HTMLElement): (() => void) => {
+  const ranges = root.querySelectorAll<HTMLInputElement>("input[type='range']")
+  if (ranges.length === 0) {
+    return () => {}
+  }
+
+  const onInput = (event: Event): void => {
+    if (
+      event.target instanceof HTMLInputElement &&
+      event.target.type === "range"
+    ) {
+      syncVegaRangeProgress(event.target)
+    }
+  }
+  ranges.forEach(syncVegaRangeProgress)
+  root.addEventListener("input", onInput)
+  return () => root.removeEventListener("input", onInput)
+}
+
+const vegaBindingStylesCache = new WeakMap<EmotionTheme, CSSObject>()
+
+/**
+ * Styles Vega's native parameter-binding widgets (`form.vega-bindings`).
+ * Streamlit disables vega-embed's default CSS, so without this they render
+ * as unstyled browser controls. Uses Streamlit fonts, colors, radius, and
+ * focus treatment rather than replacing the native controls.
+ */
+export const getVegaBindingStyles = (theme: EmotionTheme): CSSObject => {
+  const cached = vegaBindingStylesCache.get(theme)
+  if (cached) {
+    return cached
+  }
+
+  const controlBorderColor =
+    theme.colors.widgetBorderColor ?? theme.colors.secondaryBg
+  const rangeFill = `var(${VEGA_RANGE_PROGRESS_VAR}, 0%)`
+  const rangeTrackBackground = `linear-gradient(to right, ${theme.colors.primary} ${rangeFill}, ${theme.colors.darkenedBgMix25} ${rangeFill})`
+  const rangeTrackGeometry: CSSObject = {
+    height: theme.spacing.twoXS,
+    border: "none",
+    borderRadius: theme.radii.full,
+  }
+  const rangeThumbStyles: CSSObject = {
+    appearance: "none",
+    WebkitAppearance: "none",
+    width: theme.sizes.sliderThumb,
+    height: theme.sizes.sliderThumb,
+    border: "none",
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.primary,
+    boxShadow: theme.shadows.none,
+    cursor: "pointer",
+  }
+  const textControlStyles: CSSObject = {
+    fontFamily: "inherit",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+    backgroundColor: theme.colors.secondaryBg,
+    border: `${theme.sizes.borderWidth} solid ${controlBorderColor}`,
+    borderRadius: theme.radii.default,
+    padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+    lineHeight: theme.lineHeights.inputWidget,
+    margin: theme.spacing.none,
+    maxWidth: "100%",
+    transitionDuration: "200ms",
+    transitionProperty: "border, box-shadow",
+    transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.4, 1)",
+    "&:focus": {
+      outline: "none",
+    },
+    "&:focus-visible": {
+      outline: "none",
+      borderColor: theme.colors.primary,
+      boxShadow: theme.shadows.focusRing,
+    },
+  }
+
+  const styles: CSSObject = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: theme.spacing.sm,
+    margin: theme.spacing.none,
+    padding: theme.spacing.none,
+    paddingTop: theme.spacing.sm,
+    border: "none",
+    fontFamily: theme.genericFonts.bodyFont,
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.bodyText,
+    // Native range/checkbox/radio/select widgets follow the document
+    // color-scheme; without this they stay light-themed on a dark app.
+    colorScheme: hasLightBackgroundColor(theme) ? "light" : "dark",
+    accentColor: theme.colors.primary,
+    // Vega always mounts an empty bindings form. Hide it so padding doesn't
+    // inflate charts that have no parameter widgets.
+    "&:not(:has(.vega-bind))": {
+      display: "none",
+    },
+
+    "& .vega-bind": {
+      display: "flex",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: theme.spacing.sm,
+      width: "100%",
+    },
+
+    "& .vega-bind label": {
+      display: "flex",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: theme.spacing.sm,
+      margin: theme.spacing.none,
+      cursor: "pointer",
+    },
+
+    "& .vega-bind-name": {
+      fontSize: theme.fontSizes.sm,
+      fontWeight: theme.fontWeights.normal,
+      lineHeight: theme.lineHeights.small,
+      color: theme.colors.bodyText,
+      flexShrink: 0,
+      // Keep labels a consistent width so sliders, selects, and radios line up.
+      minWidth: "8em",
+    },
+
+    "& select": {
+      ...textControlStyles,
+      cursor: "pointer",
+    },
+
+    // Vega copies the bind `input` type onto a generic <input>. Style the
+    // text-like types Vega can emit; range/checkbox/radio/color have more
+    // specific rules below.
+    "& input[type='text'], & input[type='number'], & input[type='search'], & input[type='date'], & input[type='time'], & input[type='datetime-local'], & input[type='month'], & input[type='week']":
+      textControlStyles,
+
+    "& input[type='color']": {
+      height: theme.sizes.smallElementHeight,
+      width: theme.sizes.smallElementHeight,
+      padding: theme.spacing.threeXS,
+      backgroundColor: theme.colors.secondaryBg,
+      border: `${theme.sizes.borderWidth} solid ${controlBorderColor}`,
+      borderRadius: theme.radii.default,
+      cursor: "pointer",
+    },
+
+    "& input[type='range']": {
+      // Override the native track; accent-color fills are nearly black in Chrome light mode.
+      appearance: "none",
+      WebkitAppearance: "none",
+      width: "12em",
+      maxWidth: "100%",
+      height: theme.sizes.sliderThumb,
+      margin: theme.spacing.none,
+      padding: theme.spacing.none,
+      backgroundColor: "transparent",
+      cursor: "pointer",
+      "&:focus": {
+        outline: "none",
+      },
+      "&:focus-visible": {
+        outline: `${theme.sizes.focusOutlineWidth} solid ${theme.colors.primary}`,
+        outlineOffset: theme.spacing.threeXS,
+      },
+      "&::-webkit-slider-runnable-track": {
+        ...rangeTrackGeometry,
+        background: rangeTrackBackground,
+      },
+      "&::-webkit-slider-thumb": {
+        ...rangeThumbStyles,
+        // WebKit lays the thumb on the track's top edge; pull it back by
+        // half the height difference so it sits on the centerline.
+        marginTop: `calc((${theme.spacing.twoXS} - ${theme.sizes.sliderThumb}) / 2)`,
+      },
+      "&::-moz-range-track": {
+        ...rangeTrackGeometry,
+        backgroundColor: theme.colors.darkenedBgMix25,
+      },
+      "&::-moz-range-progress": {
+        ...rangeTrackGeometry,
+        backgroundColor: theme.colors.primary,
+      },
+      "&::-moz-range-thumb": rangeThumbStyles,
+    },
+
+    // Vega appends an unclassed <span> with the current slider value.
+    "& input[type='range'] + span": {
+      fontSize: theme.fontSizes.sm,
+      color: theme.colors.fadedText60,
+      lineHeight: theme.lineHeights.small,
+      minWidth: "3em",
+    },
+
+    "& input[type='checkbox'], & input[type='radio']": {
+      margin: theme.spacing.none,
+      cursor: "pointer",
+      width: theme.sizes.checkbox,
+      height: theme.sizes.checkbox,
+    },
+
+    "& .vega-bind-radio": {
+      display: "flex",
+      flexWrap: "wrap",
+      alignItems: "center",
+      gap: theme.spacing.md,
+    },
+  }
+
+  vegaBindingStylesCache.set(theme, styles)
+  return styles
+}
 
 export const StyledVegaLiteChartTooltips = (
   theme: EmotionTheme
@@ -99,7 +351,7 @@ interface StyledVegaLiteChartContainerProps {
 
 export const StyledVegaLiteChartContainer =
   styled.div<StyledVegaLiteChartContainerProps>(
-    ({ useContainerWidth, useContainerHeight }) => ({
+    ({ theme, useContainerWidth, useContainerHeight }) => ({
       width: useContainerWidth ? "100%" : "auto",
       height: useContainerHeight ? "100%" : "auto",
       // These styles come from VegaLite Library
@@ -121,5 +373,6 @@ export const StyledVegaLiteChartContainer =
           },
         },
       },
+      "& form.vega-bindings": getVegaBindingStyles(theme),
     })
   )

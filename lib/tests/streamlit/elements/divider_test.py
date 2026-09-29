@@ -31,6 +31,7 @@ class DividerTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element
         assert c.markdown.body == "---"
+        assert not c.markdown.HasField("wrap")
 
     @parameterized.expand(
         [

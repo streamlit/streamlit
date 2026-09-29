@@ -16,7 +16,7 @@
 
 import { FC, PureComponent, ReactElement } from "react"
 
-import { act, fireEvent, screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
@@ -156,7 +156,11 @@ describe("withScreencast HOC", () => {
     /** Drive the 3-second countdown to zero via its animation-end events. */
     const advanceCountdown = (): void => {
       for (let i = 0; i < 3; i++) {
-        fireEvent.animationEnd(screen.getByTestId("stCountdown"))
+        act(() => {
+          screen
+            .getByTestId("stCountdown")
+            .dispatchEvent(new Event("animationend", { bubbles: true }))
+        })
       }
     }
 
@@ -269,7 +273,9 @@ describe("withScreencast HOC", () => {
       // Initialization rejects asynchronously; flush pending microtasks so the
       // resulting state update is wrapped in act().
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
       })
 
       expect(

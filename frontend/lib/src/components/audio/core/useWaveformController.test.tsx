@@ -39,7 +39,7 @@ vi.mock("wavesurfer.js", () => ({
   },
 }))
 
-vi.mock("wavesurfer.js/dist/plugins/record", () => ({
+vi.mock("wavesurfer.js/dist/plugins/record.js", () => ({
   default: {
     create: vi.fn(),
   },
@@ -266,7 +266,7 @@ describe("useWaveformController", () => {
 
     const WaveSurferModule = await import("wavesurfer.js")
     const RecordPluginModule =
-      await import("wavesurfer.js/dist/plugins/record")
+      await import("wavesurfer.js/dist/plugins/record.js")
 
     // Mock the WaveSurfer.create to return our mock instance
     const createMock = WaveSurferModule.default.create as ReturnType<
@@ -291,7 +291,9 @@ describe("useWaveformController", () => {
 
     // Wait for initialization
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
     })
 
     // Unmount the component
@@ -364,7 +366,7 @@ describe("useWaveformController", () => {
 
     const WaveSurferModule = await import("wavesurfer.js")
     const RecordPluginModule =
-      await import("wavesurfer.js/dist/plugins/record")
+      await import("wavesurfer.js/dist/plugins/record.js")
 
     const createMock = WaveSurferModule.default.create as ReturnType<
       typeof vi.fn
@@ -388,7 +390,9 @@ describe("useWaveformController", () => {
     )
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0))
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
     })
 
     act(() => {
@@ -454,7 +458,7 @@ describe("useWaveformController", () => {
 
       const WaveSurferModule = await import("wavesurfer.js")
       const RecordPluginModule =
-        await import("wavesurfer.js/dist/plugins/record")
+        await import("wavesurfer.js/dist/plugins/record.js")
       ;(
         WaveSurferModule.default.create as ReturnType<typeof vi.fn>
       ).mockReturnValue(mockWaveSurfer)
@@ -609,7 +613,9 @@ describe("useWaveformController", () => {
         recordHandlers.get("record-end")?.(
           new Blob(["audio"], { type: "audio/webm" })
         )
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
       })
 
       // Signal that the loaded audio is ready for playback.

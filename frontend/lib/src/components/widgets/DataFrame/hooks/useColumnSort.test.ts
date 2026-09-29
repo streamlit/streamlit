@@ -134,7 +134,7 @@ describe("useColumnSort hook", () => {
 
     expect(Array.from(sortedDataAsc)).toEqual(
       // Sort as number array
-      Array.from(sortedDataAsc).sort(sortOperator)
+      Array.from(sortedDataAsc).toSorted(sortOperator)
     )
 
     // Sort again for descending order
@@ -157,7 +157,7 @@ describe("useColumnSort hook", () => {
 
     expect(Array.from(sortedDataDesc)).toEqual(
       // Sort as number array
-      Array.from(sortedDataDesc).sort(sortOperator).reverse()
+      Array.from(sortedDataDesc).toSorted(sortOperator).toReversed()
     )
   })
 
@@ -188,7 +188,7 @@ describe("useColumnSort hook", () => {
 
     expect(Array.from(sortedDataAsc)).toEqual(
       // Sort as text array
-      Array.from(sortedDataAsc).sort()
+      Array.from(sortedDataAsc).toSorted()
     )
 
     // Sort again for descending order
@@ -211,7 +211,7 @@ describe("useColumnSort hook", () => {
 
     expect(Array.from(sortedDataDesc)).toEqual(
       /// Sort as text array
-      Array.from(sortedDataDesc).sort().reverse()
+      Array.from(sortedDataDesc).toSorted().toReversed()
     )
   })
 
@@ -241,12 +241,12 @@ describe("useColumnSort hook", () => {
     // Verify data is sorted in descending order
     expect(Array.from(sortedDataDesc)).toEqual(
       Array.from(sortedDataDesc)
-        .sort((a, b) => {
+        .toSorted((a, b) => {
           if (a === undefined) return -1
           if (b === undefined) return 1
           return a - b
         })
-        .reverse()
+        .toReversed()
     )
   })
 
@@ -275,7 +275,7 @@ describe("useColumnSort hook", () => {
 
     // Verify data is sorted in ascending order
     expect(Array.from(sortedDataAsc)).toEqual(
-      Array.from(sortedDataAsc).sort((a, b) => {
+      Array.from(sortedDataAsc).toSorted((a, b) => {
         if (a === undefined) return -1
         if (b === undefined) return 1
         return a - b

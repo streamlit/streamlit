@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, TypeAlias, cast
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
@@ -33,7 +32,7 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.file_uploader import _get_upload_files
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
@@ -44,8 +43,10 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -199,7 +200,8 @@ class AudioInputMixin:
             The ``UploadedFile`` class is a subclass of ``BytesIO``, and
             therefore is "file-like". This means you can pass an instance of it
             anywhere a file is expected. The MIME type for the audio data is
-            ``audio/wav``.
+            ``audio/wav``. To use this type in an annotation, import it from
+            ``streamlit.typing``.
 
             .. Note::
                 The resulting ``UploadedFile`` is subject to the size
@@ -243,9 +245,9 @@ class AudioInputMixin:
         """
         # Validate sample_rate parameter
         if sample_rate is not None and sample_rate not in ALLOWED_SAMPLE_RATES:
-            raise StreamlitAPIException(
-                f"Invalid sample_rate: {sample_rate}. "
-                f"Must be one of {sorted(ALLOWED_SAMPLE_RATES)} Hz, or None for browser default."
+            raise StreamlitValueError(
+                "sample_rate",
+                [str(rate) for rate in sorted(ALLOWED_SAMPLE_RATES)] + ["None"],
             )
 
         ctx = get_script_run_ctx()
@@ -279,6 +281,10 @@ class AudioInputMixin:
         ctx: ScriptRunContext | None = None,
     ) -> UploadedFile | None:
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         check_widget_policies(
             self.dg,
@@ -287,7 +293,7 @@ class AudioInputMixin:
             default_value=None,
             writes_allowed=False,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "audio_input",
@@ -315,7 +321,7 @@ class AudioInputMixin:
             audio_input_proto.sample_rate = sample_rate
 
         if label and help is not None:
-            audio_input_proto.help = dedent(help)
+            audio_input_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(width=width)
 

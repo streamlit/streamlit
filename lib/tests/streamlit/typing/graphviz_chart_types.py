@@ -58,11 +58,19 @@ if TYPE_CHECKING:
     assert_type(
         graphviz_chart(
             digraph,
+            use_container_width=True,
             width="stretch",
             height=400,
+            alt="Directed process graph",
         ),
         DeltaGenerator,
     )
+
+    assert_type(
+        graphviz_chart("digraph { a -> b }", alt="Directed graph of a to b"),
+        DeltaGenerator,
+    )
+    assert_type(graphviz_chart("digraph { a -> b }", alt=None), DeltaGenerator)
 
     # =====================================================================
     # Invalid usages - should NOT type check
@@ -70,7 +78,8 @@ if TYPE_CHECKING:
 
     # Invalid width / height values (only int or "stretch" / "content", and
     # None is not allowed)
-    graphviz_chart("digraph { a -> b }", width="invalid")  # type: ignore[arg-type]
-    graphviz_chart("digraph { a -> b }", width=None)  # type: ignore[arg-type]
-    graphviz_chart("digraph { a -> b }", height="invalid")  # type: ignore[arg-type]
-    graphviz_chart("digraph { a -> b }", height=None)  # type: ignore[arg-type]
+    graphviz_chart("digraph { a -> b }", width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    graphviz_chart("digraph { a -> b }", width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    graphviz_chart("digraph { a -> b }", height="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    graphviz_chart("digraph { a -> b }", height=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    graphviz_chart("digraph { a -> b }", alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

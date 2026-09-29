@@ -30,7 +30,7 @@ type SubElement = {
   width?: number
   // We must include this for backwards compatiblity since
   // Alert.proto has been released (1.45) with the field in this position.
-  widthConfig?: streamlit.IWidthConfig | null | undefined
+  widthConfig?: streamlit.WidthConfig.$Properties | null | undefined
 }
 
 /**
@@ -55,7 +55,7 @@ export const extractLayoutSubElement = (
     height: candidate.height as number | undefined,
     width: candidate.width as number | undefined,
     widthConfig: candidate.widthConfig as
-      | streamlit.IWidthConfig
+      | streamlit.WidthConfig.$Properties
       | null
       | undefined,
   }
@@ -92,10 +92,10 @@ export type UseLayoutStylesArgs = {
 }
 
 const isPositiveNumber = (value: unknown): value is number =>
-  typeof value === "number" && value >= 0 && !isNaN(value)
+  typeof value === "number" && value >= 0 && !Number.isNaN(value)
 
 const isNonZeroPositiveNumber = (value: unknown): value is number =>
-  typeof value === "number" && value > 0 && !isNaN(value)
+  typeof value === "number" && value > 0 && !Number.isNaN(value)
 
 enum DimensionType {
   PIXEL = "pixel",

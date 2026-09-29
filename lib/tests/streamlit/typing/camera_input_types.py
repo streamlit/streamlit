@@ -22,7 +22,7 @@ from typing_extensions import assert_type
 # The return type is always UploadedFile | None
 if TYPE_CHECKING:
     from streamlit.elements.widgets.camera_input import CameraInputMixin
-    from streamlit.runtime.uploaded_file_manager import UploadedFile
+    from streamlit.typing import UploadedFile
 
     camera_input = CameraInputMixin().camera_input
 

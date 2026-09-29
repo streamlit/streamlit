@@ -74,7 +74,8 @@ def make_bidi_component_presenter(
                 ):
                     raise StreamlitAPIException(
                         f"`st.session_state.{user_key}.{k}` cannot be modified after the component"
-                        f" with key `{user_key}` is instantiated."
+                        f" with key `{user_key}` is instantiated.",
+                        error_id="bidi-component-state-cannot-be-modified",
                     )
 
         # Base state must be a flat mapping; otherwise, present as-is.

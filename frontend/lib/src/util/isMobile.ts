@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import UAParser from "ua-parser-js"
-
-const parser = new UAParser()
+import { parseUserAgent } from "@streamlit/utils"
 
 /**
  * Utilizes user agent to determine if the user is on a mobile device.
@@ -25,6 +23,5 @@ const parser = new UAParser()
  * @returns true if the user is on a mobile device, false otherwise
  */
 export function isMobile(): boolean {
-  const result = parser.getResult()
-  return result.device.type === "mobile"
+  return parseUserAgent(navigator.userAgent).deviceType === "mobile"
 }

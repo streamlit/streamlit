@@ -19,13 +19,15 @@ import contextlib
 import re
 import textwrap
 import traceback
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
+from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
+_LOGGER: Final = get_logger(__name__)
 _SPACES_RE = re.compile(r"\s*")
 _EMPTY_LINE_RE = re.compile(r"\s*\n")
 
@@ -61,6 +63,8 @@ def echo(
         show_code = placeholder.code
         show_warning = placeholder.warning
 
+    code_string: str | None = None
+    error_message: str | None = None
     try:
         # Get stack frame *before* running the echoed code. The frame's
         # line number will point to the `st.echo` statement we're running.
@@ -102,15 +106,18 @@ def echo(
         lines_to_display = source_lines[echo_block_start_line:echo_block_end_line]
 
         code_string = textwrap.dedent("".join(lines_to_display))
+    except OSError as err:
+        error_message = f"Unable to display code. {err}"
+        _LOGGER.warning("%s", error_message, stack_info=True)
 
-        # Run the echoed code...
-        yield
+    # Run the echoed block even when the source could not be read, so a
+    # missing or unreadable file does not skip the user's code.
+    yield
 
-        # And draw the code string to the app!
+    if code_string is not None:
         show_code(code_string, "python")
-
-    except FileNotFoundError as err:
-        show_warning(f"Unable to display code. {err}")
+    elif error_message is not None:
+        show_warning(error_message)
 
 
 def _get_initial_indent(lines: Iterable[str]) -> int:

@@ -47,7 +47,7 @@ const BALLOON_IMAGES: string[] = [
 
 const NUM_BALLOON_TYPES = BALLOON_IMAGES.length
 
-export interface Props {
+interface Props {
   scriptRunId: string
 }
 

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { JSX } from "react"
+
 import { renderHook } from "@testing-library/react"
 import { parseToRgba } from "color2k"
 

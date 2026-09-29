@@ -24,8 +24,14 @@ from typing import TYPE_CHECKING, Final, TypeAlias, Union, cast
 from streamlit import runtime, type_util, url_util
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
-from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.utils import compute_and_register_element_id, normalize_alt
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
+)
+from streamlit.logger import get_logger
 from streamlit.proto.Audio_pb2 import Audio as AudioProto
 from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -39,6 +45,8 @@ if TYPE_CHECKING:
     from numpy import typing as npt
 
     from streamlit.delta_generator import DeltaGenerator
+
+_LOGGER: Final = get_logger(__name__)
 
 
 MediaData: TypeAlias = Union[
@@ -79,6 +87,7 @@ class MediaMixin:
         end_time: MediaTime | None = None,
         loop: bool = False,
         autoplay: bool = False,
+        alt: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display an audio player.
@@ -143,6 +152,19 @@ class MediaMixin:
             Whether the audio file should start playing automatically. This is
             ``False`` by default. Browsers will not autoplay audio files if the
             user has not interacted with the page by clicking somewhere.
+        alt : str or None
+            A description of the audio for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the player.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Describe the content of the audio rather than repeating text that is
+            already visible on the page, which assistive technologies can read
+            already. This is a short description, not a substitute for a
+            transcript of the audio.
         width : "stretch" or int
             The width of the audio player element. This can be one of the
             following:
@@ -161,7 +183,12 @@ class MediaMixin:
 
         >>> import streamlit as st
         >>>
-        >>> st.audio("cat-purr.mp3", format="audio/mpeg", loop=True)
+        >>> st.audio(
+        ...     "cat-purr.mp3",
+        ...     format="audio/mpeg",
+        ...     loop=True,
+        ...     alt="A cat purring contentedly",
+        ... )
 
         .. output::
            https://doc-audio-purr.streamlit.app/
@@ -200,13 +227,16 @@ class MediaMixin:
         is_data_numpy_array = type_util.is_type(data, "numpy.ndarray")
 
         if is_data_numpy_array and sample_rate is None:
-            raise StreamlitAPIException(
-                "`sample_rate` must be specified when `data` is a numpy array."
+            raise StreamlitMissingRequiredParameterError(
+                "sample_rate",
+                detail="Must be specified when `data` is a numpy array.",
             )
         if not is_data_numpy_array and sample_rate is not None:
-            self.dg.warning(
-                "Warning: `sample_rate` will be ignored since data is not a numpy "
-                "array."
+            # `sample_rate` only applies to NumPy data, so it is dropped here
+            # and surfaced to the developer via the console.
+            _LOGGER.warning(
+                "`sample_rate` will be ignored since data is not a numpy array.",
+                stack_info=True,
             )
         coordinates = self.dg._get_delta_path_str()
         marshall_audio(
@@ -220,6 +250,7 @@ class MediaMixin:
             end_time,
             loop,
             autoplay,
+            alt=alt,
             width=width,
         )
         return self.dg._enqueue("audio", audio_proto)
@@ -236,6 +267,7 @@ class MediaMixin:
         loop: bool = False,
         autoplay: bool = False,
         muted: bool = False,
+        alt: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display a video player.
@@ -323,6 +355,20 @@ class MediaMixin:
             Whether the video should play with the audio silenced. This is
             ``False`` by default. Use this in conjunction with ``autoplay=True``
             to enable autoplay without user interaction.
+        alt : str or None
+            A description of the video for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for a native player. A YouTube iframe
+            continues to use its embed URL as its title.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Describe the content of the video rather than repeating text that is
+            already visible on the page, which assistive technologies can read
+            already. This is not a replacement for ``subtitles``, which serve
+            viewers who can see the video but not hear it.
         width : "stretch" or int
             The width of the video player element. This can be one of the
             following:
@@ -341,7 +387,7 @@ class MediaMixin:
         >>> video_file = open("myvideo.mp4", "rb")
         >>> video_bytes = video_file.read()
         >>>
-        >>> st.video(video_bytes)
+        >>> st.video(video_bytes, alt="A timelapse of a city skyline at sunset")
 
         .. output::
            https://doc-video.streamlit.app/
@@ -402,6 +448,7 @@ class MediaMixin:
             loop,
             autoplay,
             muted,
+            alt=alt,
             width=width,
         )
         return self.dg._enqueue("video", video_proto)
@@ -487,7 +534,11 @@ def _marshall_av_media(
     elif type_util.is_type(data, "numpy.ndarray"):
         data_or_filename = data.tobytes()
     else:
-        raise RuntimeError(f"Invalid binary data format: {type(data)}")
+        raise StreamlitInvalidParameterTypeError(
+            "data",
+            type(data).__name__,
+            ["str", "bytes", "Path", "BytesIO", "file-like", "ndarray"],
+        )
 
     if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(
@@ -513,6 +564,7 @@ def marshall_video(
     loop: bool = False,
     autoplay: bool = False,
     muted: bool = False,
+    alt: str | None = None,
     width: WidthWithoutContent = "stretch",
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
@@ -557,6 +609,10 @@ def marshall_video(
     muted: bool
         Whether the video should play with the audio silenced. This can be used to
         enable autoplay without user interaction. Defaults to False.
+    alt: str or None
+        A description of the video exposed to assistive technologies as the
+        accessible name. Defaults to None. Empty or whitespace-only values are
+        treated as unset (and logged); leading/trailing whitespace is stripped.
     width: int or "stretch"
         The width of the video player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
@@ -565,7 +621,10 @@ def marshall_video(
     """
 
     if start_time < 0 or (end_time is not None and end_time <= start_time):
-        raise StreamlitAPIException("Invalid start_time and end_time combination.")
+        raise StreamlitAPIException(
+            "Invalid start_time and end_time combination.",
+            error_id="media-invalid-start-end-time",
+        )
 
     proto.start_time = start_time
     proto.muted = muted
@@ -580,6 +639,10 @@ def marshall_video(
     else:
         width_config.use_stretch = True
     proto.width_config.CopyFrom(width_config)
+
+    normalized_alt = normalize_alt(alt)
+    if normalized_alt is not None:
+        proto.alt = normalized_alt
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = VideoProto.Type.NATIVE
@@ -600,8 +663,10 @@ def marshall_video(
             proto.url = youtube_url
             proto.type = VideoProto.Type.YOUTUBE_IFRAME
             if subtitles:
-                raise StreamlitAPIException(
-                    "Subtitles are not supported for YouTube videos."
+                raise StreamlitIncompatibleParametersError(
+                    "subtitles",
+                    "data=<YouTube URL>",
+                    explanation="Subtitles are not supported for YouTube videos.",
                 )
         else:
             proto.url = data
@@ -618,9 +683,10 @@ def marshall_video(
         elif isinstance(subtitles, dict):
             subtitle_items.extend(subtitles.items())
         else:
-            raise StreamlitAPIException(
-                f"Unsupported data type for subtitles: {type(subtitles)}. "
-                f"Only str (file paths) and dict are supported."
+            raise StreamlitInvalidParameterTypeError(
+                "subtitles",
+                type(subtitles).__name__,
+                ["str", "bytes", "BytesIO", "Path", "dict"],
             )
 
         for label, subtitle_data in subtitle_items:
@@ -637,13 +703,21 @@ def marshall_video(
                 sub.url = process_subtitle_data(
                     subtitle_coordinates, subtitle_data, label
                 )
-            except (TypeError, ValueError) as original_err:
+            except (TypeError, ValueError, StreamlitAPIException) as original_err:
+                # Include the track label so a multi-track dict names which
+                # subtitle failed. Subtitle helpers raise Streamlit types;
+                # lower-level parsing can still raise native TypeError/ValueError.
                 raise StreamlitAPIException(
-                    f"Failed to process the provided subtitle: {label}"
+                    f"Failed to process the provided subtitle {label!r}: "
+                    f"{original_err}",
+                    error_id="video-failed-processing-subtitle",
                 ) from original_err
 
     if autoplay:
         proto.autoplay = autoplay
+        # Include `alt` like other stable kwargs. Changing `alt` remounts an
+        # unkeyed autoplaying player (and may re-trigger autoplay), matching
+        # the approved element-identity contract for `alt`.
         proto.id = compute_and_register_element_id(
             "video",
             # video does not yet allow setting a user-defined key
@@ -657,6 +731,7 @@ def marshall_video(
             loop=loop,
             autoplay=autoplay,
             muted=muted,
+            alt=normalized_alt,
             width=width,
         )
 
@@ -675,7 +750,9 @@ def _parse_start_time_end_time(
         error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
             param_name="start_time", param_value=start_time
         )
-        raise StreamlitAPIException(error_msg) from None
+        raise StreamlitAPIException(
+            error_msg, error_id="media-invalid-start-time"
+        ) from None
 
     try:
         end_time = time_to_seconds(end_time, coerce_none_to_inf=False)
@@ -685,7 +762,9 @@ def _parse_start_time_end_time(
         error_msg = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
             param_name="end_time", param_value=end_time
         )
-        raise StreamlitAPIException(error_msg) from None
+        raise StreamlitAPIException(
+            error_msg, error_id="media-invalid-end-time"
+        ) from None
 
     return start_time, end_time
 
@@ -724,7 +803,10 @@ def _validate_and_normalize(data: npt.NDArray[Any]) -> tuple[bytes, int]:
         nchan = transformed_data.shape[0]
         transformed_data = transformed_data.T.ravel()
     else:
-        raise StreamlitAPIException("Numpy array audio input must be a 1D or 2D array.")
+        raise StreamlitAPIException(
+            "Numpy array audio input must be a 1D or 2D array.",
+            error_id="audio-numpy-invalid-rank",
+        )
 
     if transformed_data.size == 0:
         return transformed_data.astype(np.int16).tobytes(), nchan
@@ -779,6 +861,7 @@ def marshall_audio(
     end_time: int | None = None,
     loop: bool = False,
     autoplay: bool = False,
+    alt: str | None = None,
     width: WidthWithoutContent = "stretch",
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
@@ -806,6 +889,10 @@ def marshall_audio(
     autoplay : bool
         Whether the audio should start playing automatically.
         Browsers will not autoplay audio files if the user has not interacted with the page yet.
+    alt: str or None
+        A description of the audio exposed to assistive technologies as the
+        accessible name. Defaults to None. Empty or whitespace-only values are
+        treated as unset (and logged); leading/trailing whitespace is stripped.
     width: int or "stretch"
         The width of the audio player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
@@ -824,6 +911,10 @@ def marshall_audio(
     else:
         width_config.use_stretch = True
     proto.width_config.CopyFrom(width_config)
+
+    normalized_alt = normalize_alt(alt)
+    if normalized_alt is not None:
+        proto.alt = normalized_alt
 
     if isinstance(data, Path):
         data = str(data)  # Convert Path to string
@@ -844,6 +935,9 @@ def marshall_audio(
 
     if autoplay:
         proto.autoplay = autoplay
+        # Include `alt` like other stable kwargs. Changing `alt` remounts an
+        # unkeyed autoplaying player (and may re-trigger autoplay), matching
+        # the approved element-identity contract for `alt`.
         proto.id = compute_and_register_element_id(
             "audio",
             user_key=None,
@@ -856,5 +950,6 @@ def marshall_audio(
             end_time=end_time,
             loop=loop,
             autoplay=autoplay,
+            alt=normalized_alt,
             width=width,
         )

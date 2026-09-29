@@ -31,30 +31,29 @@ import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
 
 import {
-  CameraInput as CameraInputProto,
+  type CameraInput as CameraInputProto,
   FileUploaderState as FileUploaderStateProto,
-  FileURLs as FileURLsProto,
-  IFileURLs,
+  type FileURLs as FileURLsProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
 import Icon from "~lib/components/shared/Icon/Icon"
 import {
-  UploadedStatus,
+  type UploadedStatus,
   UploadFileInfo,
-  UploadingStatus,
+  type UploadingStatus,
 } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import useTimeout from "~lib/hooks/useTimeout"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import CameraInputButton from "./CameraInputButton"
 import {
@@ -64,7 +63,7 @@ import {
   StyledSpan,
 } from "./styled-components"
 import { FacingMode } from "./SwitchFacingModeButton"
-import WebcamComponent, { WebcamPermission } from "./WebcamComponent"
+import WebcamComponent, { type WebcamPermission } from "./WebcamComponent"
 
 const RESTORED_FROM_WIDGET_STRING = "RESTORED_FROM_WIDGET"
 const MIN_SHUTTER_EFFECT_TIME_MS = 150
@@ -268,11 +267,9 @@ const CameraInput = ({
    * Upload progress for the current file, derived during render.
    */
   const progress: number | undefined = useMemo(() => {
-    if (
-      files.length > 0 &&
-      files[files.length - 1].status.type === "uploading"
-    ) {
-      const lastFileStatus = files[files.length - 1].status as UploadingStatus
+    const lastFile = files.at(-1)
+    if (lastFile?.status.type === "uploading") {
+      const lastFileStatus: UploadingStatus = lastFile.status
       return lastFileStatus.progress
     }
     return undefined
@@ -339,7 +336,7 @@ const CameraInput = ({
    * Called when an upload has completed. Updates the file's status.
    */
   const onUploadComplete = useCallback(
-    (localFileId: number, fileUrls: IFileURLs): void => {
+    (localFileId: number, fileUrls: FileURLsProto.$Properties): void => {
       setShutter(false)
 
       const curFile = getFile(localFileId)
@@ -395,7 +392,7 @@ const CameraInput = ({
    * Upload a file to the backend.
    */
   const uploadFile = useCallback(
-    (fileURLs: IFileURLs, file: File): void => {
+    (fileURLs: FileURLsProto.$Properties, file: File): void => {
       // Create an UploadFileInfo for this file and add it to our state.
       const abortController = new AbortController()
       const uploadingFileInfo = new UploadFileInfo(
@@ -492,7 +489,7 @@ const CameraInput = ({
 
       const capturePromise = urltoFile(
         capturedImgSrc,
-        `camera-input-${new Date().toISOString().replace(/:/g, "_")}.jpg`
+        `camera-input-${new Date().toISOString().replaceAll(":", "_")}.jpg`
       )
         .then(file =>
           uploadClient.fetchFileURLs([file]).then(fileURLsArray => ({
@@ -504,6 +501,7 @@ const CameraInput = ({
         .then(waitForMinShutterEffect)
         .then(() => {
           setMinShutterEffectPassed(true)
+          return
         })
         .catch(err => {
           LOG.error(err)
@@ -549,14 +547,11 @@ const CameraInput = ({
   useEffect(() => {
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (prevWidgetValue === undefined) {
-      widgetMgr.setFileUploaderStateValue(
-        element,
-        toWidgetState(files),
-        {
-          fromUi: false,
-        },
-        fragmentId
-      )
+      widgetMgr.setFileUploaderStateValue(element.id, toWidgetState(files), {
+        formId: element.formId,
+        fragmentId,
+        fromUser: false,
+      })
     }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -576,14 +571,11 @@ const CameraInput = ({
     const newWidgetValue = toWidgetState(files)
     const prevWidgetValue = widgetMgr.getFileUploaderStateValue(element)
     if (!isEqual(newWidgetValue, prevWidgetValue)) {
-      widgetMgr.setFileUploaderStateValue(
-        element,
-        newWidgetValue,
-        {
-          fromUi: true,
-        },
-        fragmentId
-      )
+      widgetMgr.setFileUploaderStateValue(element.id, newWidgetValue, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: true,
+      })
     }
   }, [status, files, widgetMgr, element, fragmentId])
 
@@ -595,12 +587,11 @@ const CameraInput = ({
     setImgSrc(null)
 
     const newWidgetValue = toWidgetState([])
-    widgetMgr.setFileUploaderStateValue(
-      element,
-      newWidgetValue,
-      { fromUi: true },
-      fragmentId
-    )
+    widgetMgr.setFileUploaderStateValue(element.id, newWidgetValue, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: true,
+    })
   }, [element, fragmentId, widgetMgr])
 
   useFormClearHelper({

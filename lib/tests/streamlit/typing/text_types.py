@@ -60,15 +60,22 @@ if TYPE_CHECKING:
         DeltaGenerator,
     )
 
+    # Text with wrap parameter (keyword-only)
+    assert_type(text("Text", wrap=True), DeltaGenerator)
+    assert_type(text("Text", wrap=False), DeltaGenerator)
+
     # =====================================================================
     # Invalid usages - should NOT type check
     # =====================================================================
 
     # Invalid width value (not "stretch", "content", or int)
-    text("Text", width="invalid")  # type: ignore[arg-type]
+    text("Text", width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid text_alignment value (not "left", "center", "right", or "justify")
-    text("Text", text_alignment="start")  # type: ignore[arg-type]
+    text("Text", text_alignment="start")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing help as positional argument (should be keyword-only)
-    text("Text", "help text")  # type: ignore[call-arg]
+    text("Text", "help text")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+
+    # Invalid wrap value (must be bool)
+    text("Text", wrap="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

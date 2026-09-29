@@ -15,6 +15,7 @@
 """time_input unit test."""
 
 from datetime import date, datetime, time, timedelta
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -29,8 +30,10 @@ from streamlit.elements.widgets.time_widgets import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -119,11 +122,11 @@ class TimeInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.time_input("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_st_time_input(self):
@@ -147,16 +150,18 @@ class TimeInputTest(DeltaGeneratorTestCase):
     def test_st_time_input_exceptions(self):
         """Test st.time_input exceptions."""
         value = time(9, 00)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.time_input("Set an alarm for", value, step=True)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.time_input("Set an alarm for", value, step=(90, 0))
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitValueOutOfRangeError, match=r"\[1 second, 23 hours\]"
+        ):
             st.time_input("Set an alarm for", value, step=0)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitValueOutOfRangeError, match=r"\[1 second, 23 hours\]"
+        ):
             st.time_input("Set an alarm for", value, step=timedelta(hours=24))
-        with pytest.raises(StreamlitAPIException):
-            st.time_input("Set an alarm for", value, step=timedelta(days=1))
         # step=1 and step=59 are now valid (sub-minute steps unlocked)
         st.time_input("Set an alarm for", value, step=1)
         st.time_input("Set an alarm for", value, step=59)
@@ -370,8 +375,8 @@ class TimeInputBindQueryParamsTest(DeltaGeneratorTestCase):
             st.time_input("the label", bind="query-params")
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.time_input("the label", key="my_key", bind="invalid-value")
 
     def test_bind_query_params_with_explicit_value(self):
@@ -455,15 +460,18 @@ def test_convert_timelike_to_time_returns_same_instance_for_time() -> None:
 
 
 @pytest.mark.parametrize(
-    ("invalid_input", "match"),
-    [("not-a-time", "datetime, time"), (42, None)],
+    ("invalid_input", "exc", "match"),
+    [
+        ("not-a-time", StreamlitAPIException, "datetime, time"),
+        (42, StreamlitInvalidParameterTypeError, None),
+    ],
     ids=["invalid_string", "invalid_type"],
 )
 def test_convert_timelike_to_time_invalid_raises(
-    invalid_input: object, match: str | None
+    invalid_input: object, exc: type[Exception], match: str | None
 ) -> None:
-    """Unparseable strings or wrong types raise StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match=match):
+    """Unparseable strings or wrong types raise a Streamlit API exception."""
+    with pytest.raises(exc, match=match):
         _convert_timelike_to_time(invalid_input)  # type: ignore[arg-type]
 
 
@@ -514,15 +522,18 @@ def test_convert_datelike_to_date_parses_iso_strings(
 
 
 @pytest.mark.parametrize(
-    ("invalid_input", "match"),
-    [("not-a-date", "ISO string"), (42, None)],
+    ("invalid_input", "exc", "match"),
+    [
+        ("not-a-date", StreamlitAPIException, "ISO string"),
+        (42, StreamlitInvalidParameterTypeError, None),
+    ],
     ids=["invalid_string", "invalid_type"],
 )
 def test_convert_datelike_to_date_invalid_raises(
-    invalid_input: object, match: str | None
+    invalid_input: object, exc: type[Exception], match: str | None
 ) -> None:
-    """Unparseable strings or wrong types raise StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match=match):
+    """Unparseable strings or wrong types raise a Streamlit API exception."""
+    with pytest.raises(exc, match=match):
         _convert_datelike_to_date(invalid_input)  # type: ignore[arg-type]
 
 
@@ -533,7 +544,7 @@ def test_parse_date_value_none_is_not_range() -> None:
 
 def test_parse_date_value_too_many_dates_raises() -> None:
     """A range of more than 2 dates raises StreamlitAPIException."""
-    with pytest.raises(StreamlitAPIException, match="0 - 2 date"):
+    with pytest.raises(StreamlitAPIException, match="0 to 2 date"):
         _parse_date_value([date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)])
 
 
@@ -641,8 +652,55 @@ class TestFormatProtoField(DeltaGeneratorTestCase):
         assert el.time_input.format == "localized"
 
     def test_invalid_format_raises(self):
-        """Invalid format values raise StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException, match=r"`format` must be"):
+        """Invalid format values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `format` value"):
             st.time_input("label", time(8, 45), format="6h", key="fmt_6h")  # type: ignore[arg-type]
-        with pytest.raises(StreamlitAPIException, match=r"`format` must be"):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `format` value"):
             st.time_input("label", time(8, 45), format="auto", key="fmt_auto")  # type: ignore[arg-type]
+
+
+class TimeInputOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.time_input("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.time_input
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.time_input("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.time_input("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.time_input("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.time_input
+        assert c.ignore_rerun is True
