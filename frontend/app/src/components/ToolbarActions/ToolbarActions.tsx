@@ -30,6 +30,29 @@ import {
   StyledToolbarActions,
 } from "./styled-components"
 
+const DEFAULT_TOOLBAR_ACTION_NAME = "Toolbar action"
+
+function trimHostString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+/**
+ * Accessible name for a host toolbar action.
+ *
+ * Host messages are untrusted: `label` / `key` may be missing or non-strings.
+ * Prefer a visible label, then a string key (so multiple icon-only actions stay
+ * distinct), then a stable generic name. Icons are CSS background URLs and
+ * cannot contribute a Material/emoji name.
+ */
+export function getToolbarActionAccessibleName(
+  label: unknown,
+  key: unknown
+): string {
+  return (
+    trimHostString(label) || trimHostString(key) || DEFAULT_TOOLBAR_ACTION_NAME
+  )
+}
+
 export interface ActionButtonProps {
   label?: string
   icon?: string
@@ -47,7 +70,7 @@ export function ActionButton({
   ariaLabel,
   onClick,
 }: ActionButtonProps): ReactElement {
-  const visibleLabel = label?.trim() || undefined
+  const visibleLabel = trimHostString(label) || undefined
 
   return (
     <div className="stToolbarActionButton" data-testid="stToolbarActionButton">
@@ -92,26 +115,28 @@ function ToolbarActions({
       className="stToolbarActions"
       data-testid="stToolbarActions"
     >
-      {hostToolbarItems.map(({ key, label, icon }) => (
-        <ActionButton
-          key={key}
-          label={label}
-          icon={icon}
-          // Icon is a CSS background URL (no Material/emoji token to name from).
-          // Prefer label, then key so multiple icon-only actions stay distinct,
-          // then a generic name if the host sends an empty key.
-          ariaLabel={label?.trim() || key.trim() || "Toolbar action"}
-          onClick={() => {
-            metricsMgr.enqueue("menuClick", {
-              label: key,
-            })
-            sendMessageToHost({
-              type: "TOOLBAR_ITEM_CALLBACK",
-              key,
-            })
-          }}
-        />
-      ))}
+      {hostToolbarItems.map((item, index) => {
+        const { label, icon, key } = item
+        const reactKey = trimHostString(key) || `toolbar-action-${index}`
+
+        return (
+          <ActionButton
+            key={reactKey}
+            label={label}
+            icon={icon}
+            ariaLabel={getToolbarActionAccessibleName(label, key)}
+            onClick={() => {
+              metricsMgr.enqueue("menuClick", {
+                label: key,
+              })
+              sendMessageToHost({
+                type: "TOOLBAR_ITEM_CALLBACK",
+                key,
+              })
+            }}
+          />
+        )
+      })}
     </StyledToolbarActions>
   )
 }

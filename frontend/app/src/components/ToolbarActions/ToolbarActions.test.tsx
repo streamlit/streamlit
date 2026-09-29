@@ -18,14 +18,60 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import { mockSessionInfo } from "@streamlit/lib"
+import { IToolbarItem, mockSessionInfo } from "@streamlit/lib"
 import { render } from "@streamlit/lib/testing"
 
 import ToolbarActions, {
   ActionButton,
   ActionButtonProps,
+  getToolbarActionAccessibleName,
   ToolbarActionsProps,
 } from "./ToolbarActions"
+
+describe("getToolbarActionAccessibleName", () => {
+  it.each([
+    {
+      label: "Share",
+      key: "share",
+      expected: "Share",
+    },
+    {
+      label: "  Share  ",
+      key: "share",
+      expected: "Share",
+    },
+    {
+      label: "   ",
+      key: "favorite",
+      expected: "favorite",
+    },
+    {
+      label: undefined,
+      key: "favorite",
+      expected: "favorite",
+    },
+    {
+      label: undefined,
+      key: "  ",
+      expected: "Toolbar action",
+    },
+    {
+      label: undefined,
+      key: undefined,
+      expected: "Toolbar action",
+    },
+    {
+      label: 1,
+      key: { id: "x" },
+      expected: "Toolbar action",
+    },
+  ])(
+    "returns $expected for label=$label key=$key",
+    ({ label, key, expected }) => {
+      expect(getToolbarActionAccessibleName(label, key)).toBe(expected)
+    }
+  )
+})
 
 describe("ActionButton", () => {
   const getProps = (
@@ -130,18 +176,20 @@ describe("ToolbarActions", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("falls back to a generic name when label and key are empty", () => {
+  it("keeps rendering when a host item key is missing or non-string", () => {
     render(
       <ToolbarActions
         {...getProps({
-          hostToolbarItems: [{ key: "  ", icon: "star.svg" }],
+          hostToolbarItems: [
+            { icon: "star.svg" } as IToolbarItem,
+            { key: 123 as unknown as string, icon: "star.svg" },
+          ],
         })}
       />
     )
 
-    expect(
-      screen.getByRole("button", { name: "Toolbar action" })
-    ).toBeVisible()
+    const buttons = screen.getAllByRole("button", { name: "Toolbar action" })
+    expect(buttons).toHaveLength(2)
   })
 
   it("does not set aria-label when a visible label is present", () => {
