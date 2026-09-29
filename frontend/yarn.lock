@@ -3638,7 +3638,7 @@ __metadata:
     unist-util-visit: "npm:^5.1.0"
     urlpattern-polyfill: "npm:^10.1.0"
     vega: "npm:^6.4.0"
-    vega-embed: "npm:^7.2.0"
+    vega-embed: "npm:^7.3.0"
     vega-interpreter: "npm:^2.3.2"
     vega-lite: "npm:6.4.3"
     vfile: "npm:^6.0.0"
@@ -15205,9 +15205,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vega-embed@npm:^7.2.0":
-  version: 7.2.0
-  resolution: "vega-embed@npm:7.2.0"
+"vega-embed@npm:^7.3.0":
+  version: 7.3.0
+  resolution: "vega-embed@npm:7.3.0"
   dependencies:
     fast-json-patch: "npm:^3.1.1"
     json-stringify-pretty-compact: "npm:^4.0.0"
@@ -15220,7 +15220,7 @@ __metadata:
   peerDependencies:
     vega: "*"
     vega-lite: "*"
-  checksum: 10c0/406d0249c788d971b3b8f1b94154d086962a523ce0080750fb94ed5b66bb4faf0b6de6a57a2818a6eb3caf1227672defcb49ddc6946701c7912fbb524b92ca92
+  checksum: 10c0/9313c91f6be7a1dcc23fa80fde8894e7646ae7a6b8f869849ec9b7dd5e56fe68530635fa2f31afc86a14603738e5b82ab351a0ec50fb32dfc933143d4ddffb85
   languageName: node
   linkType: hard
 
