@@ -1156,6 +1156,8 @@ describe("GridContainer Component", () => {
       "grid-template-columns: repeat(4, minmax(200px, 1fr))"
     )
     expect(gridContainer).toHaveStyle("overflow-x: auto;")
+    expect(gridContainer).toHaveStyle("padding-block: 0.2rem")
+    expect(gridContainer).toHaveStyle("margin-block: -0.2rem")
     expect(gridContainer).toHaveAttribute("data-test-wrap", "false")
   })
 
@@ -1312,5 +1314,44 @@ describe("GridContainer Component", () => {
     expect(cells[0]).toHaveClass("stGridCell")
     expect(cells[1]).toHaveClass("stGridCell")
     expect(cells[0]).not.toBe(cells[1])
+  })
+
+  it("does not create a cell for a duplicate widget id", () => {
+    const block = makeGridBlock({}, [
+      textInput("First", "same-id"),
+      textInput("Second", "same-id"),
+    ])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
+    expect(screen.getAllByTestId("stElementContainer")).toHaveLength(1)
+  })
+
+  it("uses the grid pixel width for first-paint column count", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        widthConfig: { pixelWidth: 416 },
+        gridContainer: {
+          maxColumns: 0,
+          minColumnWidthPx: 200,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          showCellBorder: false,
+          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+        },
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    // Unmeasured first paint uses pixelWidth 416: (416+16)/(200+16) = 2
+    expect(gridContainer).toHaveStyle(
+      "grid-template-columns: repeat(2, minmax(0, 1fr))"
+    )
+    expect(gridContainer).toHaveAttribute("data-test-column-count", "2")
   })
 })

@@ -652,7 +652,7 @@ class DeltaGenerator(
                     dg_type(
                         root_container=None,
                         cursor=None,
-                        parent=dg._parent,
+                        parent=dg,
                         block_type=block_type,
                     ),
                 )

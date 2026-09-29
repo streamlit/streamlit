@@ -55,7 +55,11 @@ import {
 } from "~lib/hooks/useResizeObserver"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
 import { convertRemToPx } from "~lib/theme/utils"
-import { getElementId, notNullOrUndefined } from "~lib/util/utils"
+import {
+  getElementId,
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "~lib/util/utils"
 
 import {
   clampColumnSpan,
@@ -447,9 +451,13 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     translateGapWidth(columnGap, theme),
     theme.fontSizes.baseFontSize
   )
+  const pixelWidth = node.deltaBlock.widthConfig?.pixelWidth
   const fallbackWidthPx =
+    (notNullOrUndefined(pixelWidth) && pixelWidth > 0
+      ? pixelWidth
+      : undefined) ??
     parentContext?.parentWidth ??
-    (Number.parseFloat(theme.sizes.contentMaxWidth) || 736)
+    cssLengthToPx(theme.sizes.contentMaxWidth, theme.fontSizes.baseFontSize)
   const columnCount = resolveGridColumnCount({
     availableWidthPx: measuredWidth,
     minColumnWidthPx,
@@ -475,7 +483,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       componentRegistry,
     })
 
-    return (node.children ?? []).map(childNode => {
+    return (node.children ?? []).flatMap(childNode => {
       // Get grid cell config from BlockNode children
       let columnSpan: number | undefined
       let columnSpanAll = false
@@ -503,14 +511,19 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       // instead of indexing into reactElements, since the visitor may
       // push 0, 1, or multiple elements per node (e.g., transient nodes).
       const childElement = childNode.accept(visitor)
-
-      return {
-        element: childElement,
-        nodeId,
-        columnSpan,
-        columnSpanAll,
-        rowSpan,
+      if (isNullOrUndefined(childElement)) {
+        return []
       }
+
+      return [
+        {
+          element: childElement,
+          nodeId,
+          columnSpan,
+          columnSpanAll,
+          rowSpan,
+        },
+      ]
     })
   }, [
     node,
@@ -536,30 +549,41 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
   // Wrap each child in a grid cell with span information.
   // Use nodeId for stable React keys so width-driven template updates do not
   // remount cells. Fall back to index if nodeId unavailable.
-  const wrappedChildren = childrenWithCells.map((child, index) => (
-    <GridCell
-      // eslint-disable-next-line @eslint-react/no-array-index-key -- nodeId is preferred; index is only used when the child has no identity
-      key={child.nodeId ?? index}
-      constrainOverflow={constrainOverflow}
-      verticalAlignment={verticalAlignment}
-      showBorder={showCellBorder}
-      columnSpan={
-        child.columnSpanAll || !child.columnSpan
-          ? undefined
-          : clampColumnSpan(child.columnSpan, columnCount)
-      }
-      columnSpanAll={child.columnSpanAll}
-      rowSpan={child.rowSpan}
-    >
-      <FlexContextProvider
-        direction={Direction.VERTICAL}
-        isDirectlyInColumn
-        parentContext={parentContext}
-      >
-        {child.element}
-      </FlexContextProvider>
-    </GridCell>
-  ))
+  const wrappedChildren = useMemo(
+    () =>
+      childrenWithCells.map((child, index) => (
+        <GridCell
+          // eslint-disable-next-line @eslint-react/no-array-index-key -- nodeId is preferred; index is only used when the child has no identity
+          key={child.nodeId ?? index}
+          constrainOverflow={constrainOverflow}
+          verticalAlignment={verticalAlignment}
+          showBorder={showCellBorder}
+          columnSpan={
+            child.columnSpanAll || !child.columnSpan
+              ? undefined
+              : clampColumnSpan(child.columnSpan, columnCount)
+          }
+          columnSpanAll={child.columnSpanAll}
+          rowSpan={child.rowSpan}
+        >
+          <FlexContextProvider
+            direction={Direction.VERTICAL}
+            isDirectlyInColumn
+            parentContext={parentContext}
+          >
+            {child.element}
+          </FlexContextProvider>
+        </GridCell>
+      )),
+    [
+      childrenWithCells,
+      columnCount,
+      verticalAlignment,
+      showCellBorder,
+      constrainOverflow,
+      parentContext,
+    ]
+  )
 
   return (
     <StyledGridContainerBlock

@@ -34,8 +34,10 @@ from streamlit.elements.lib.layout_utils import (
     get_height_config,
     get_justify,
     get_width_config,
+    is_int,
     validate_height,
     validate_horizontal_alignment,
+    validate_uint32_max,
     validate_vertical_alignment,
     validate_width,
     validate_wrap,
@@ -79,11 +81,6 @@ SpecType: TypeAlias = int | Sequence[int | float]
 
 _GRID_COLUMNS_MIN = 1
 _GRID_COLUMNS_MAX = 24
-
-
-def _is_int(value: object) -> bool:
-    """Return True for real ints, excluding ``bool`` (a subclass of ``int``)."""
-    return isinstance(value, Integral) and not isinstance(value, bool)
 
 
 @dataclass
@@ -785,19 +782,31 @@ class LayoutsMixin:
               ``wrap=False``, this count is kept at every width.
 
         min_column_width : "auto" or int
-            Preferred cell floor.
+            The minimum width of each column. This can be one of the
+            following:
 
-            - ``"auto"`` (default): A theme rem token (about 200px at a
-              16px root). Bordered cells add padding so content width
-              stays equivalent.
-            - A positive integer: Outer cell width in pixels. Wrap
-              threshold when ``wrap=True``; shrink-then-scroll floor
-              when ``wrap=False``.
+            - ``"auto"`` (default): Streamlit uses a theme-based width of
+              about 200 pixels. When ``border`` is ``True``, the cell
+              padding is added on top so the available content width
+              stays the same.
+            - An integer specifying the minimum width in pixels: When
+              ``wrap`` is ``True``, the grid drops a column before cells
+              become narrower than this width. When ``wrap`` is
+              ``False``, cells shrink to this width and the grid then
+              scrolls horizontally.
 
         wrap : bool
-            Whether the column count may decrease. ``False`` keeps the
-            declared count and scrolls the grid horizontally. Invalid
-            with ``columns="auto"``.
+            Whether the number of columns can decrease as the container
+            gets narrower. This can be one of the following:
+
+            - ``True`` (default): The grid uses fewer columns when cells
+              would become narrower than ``min_column_width``.
+            - ``False``: The grid keeps the declared number of columns
+              and scrolls horizontally instead.
+
+            Setting ``wrap=False`` with ``columns="auto"`` raises an
+            exception, because there is no declared column count to
+            keep.
 
         gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, tuple, list, or None
             The size of the gap between cells. A scalar matches
@@ -925,7 +934,7 @@ class LayoutsMixin:
                 ['"auto"', "an integer from 1 to 24"],
                 detail=f"Got {columns!r}.",
             )
-        elif not _is_int(columns):
+        elif not is_int(columns):
             raise StreamlitInvalidParameterTypeError(
                 "columns",
                 type(columns).__name__,
@@ -956,7 +965,7 @@ class LayoutsMixin:
                 ['"auto"', "a positive integer"],
                 detail=f"Got {min_column_width!r}.",
             )
-        elif not _is_int(min_column_width):
+        elif not is_int(min_column_width):
             raise StreamlitInvalidParameterTypeError(
                 "min_column_width",
                 type(min_column_width).__name__,
@@ -969,6 +978,7 @@ class LayoutsMixin:
                 detail=f"Got {min_column_width!r}.",
             )
         else:
+            validate_uint32_max("min_column_width", min_column_width)
             validated_min_column_width = min_column_width
 
         if isinstance(gap, (tuple, list)):
@@ -979,11 +989,12 @@ class LayoutsMixin:
                     detail=f"Got a sequence with {len(gap)} elements.",
                 )
             row_gap, col_gap = gap
-            row_gap_parameter = "row_gap"
-            col_gap_parameter = "column_gap"
+            row_gap_detail: str | None = f"Got {row_gap!r} for the row gap in `gap`."
+            col_gap_detail: str | None = f"Got {col_gap!r} for the column gap in `gap`."
         else:
             row_gap = col_gap = gap
-            row_gap_parameter = col_gap_parameter = "gap"
+            row_gap_detail = None
+            col_gap_detail = None
 
         valid_alignments = ["top", "center", "bottom"]
         if vertical_alignment not in valid_alignments:
@@ -1001,7 +1012,7 @@ class LayoutsMixin:
                 ['"content"', '"equal"', "a positive integer"],
                 detail=f"Got {row_height!r}.",
             )
-        elif not _is_int(row_height):
+        elif not is_int(row_height):
             raise StreamlitInvalidParameterTypeError(
                 "row_height",
                 type(row_height).__name__,
@@ -1014,6 +1025,7 @@ class LayoutsMixin:
                 detail=f"Got {row_height!r}.",
             )
         else:
+            validate_uint32_max("row_height", row_height)
             validated_row_height = row_height
 
         validate_width(width=width)
@@ -1030,10 +1042,10 @@ class LayoutsMixin:
             grid_container.min_column_width_px = validated_min_column_width
 
         grid_container.row_gap_config.CopyFrom(
-            get_gap_config(row_gap, parameter=row_gap_parameter)
+            get_gap_config(row_gap, parameter="gap", detail=row_gap_detail)
         )
         grid_container.column_gap_config.CopyFrom(
-            get_gap_config(col_gap, parameter=col_gap_parameter)
+            get_gap_config(col_gap, parameter="gap", detail=col_gap_detail)
         )
 
         alignment_mapping = {

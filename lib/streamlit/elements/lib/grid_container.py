@@ -14,27 +14,21 @@
 
 from __future__ import annotations
 
-from numbers import Integral
 from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import Self
 
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.lib.layout_utils import is_int, validate_uint32_max
 from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
     StreamlitValueError,
     StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
-from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.cursor import Cursor
-
-
-def _is_int(value: object) -> bool:
-    """Return True for real ints, excluding ``bool`` (a subclass of ``int``)."""
-    return isinstance(value, Integral) and not isinstance(value, bool)
 
 
 class GridContainer(DeltaGenerator):
@@ -58,7 +52,6 @@ class GridContainer(DeltaGenerator):
         super().__enter__()
         return self
 
-    @gather_metrics("grid.cell")
     def cell(
         self,
         *,
@@ -112,7 +105,7 @@ class GridContainer(DeltaGenerator):
                 ['"all"', "a positive integer"],
                 detail=f"Got {column_span!r}.",
             )
-        elif not _is_int(column_span):
+        elif not is_int(column_span):
             raise StreamlitInvalidParameterTypeError(
                 "column_span",
                 type(column_span).__name__,
@@ -125,6 +118,7 @@ class GridContainer(DeltaGenerator):
                 detail=f"Got {column_span!r}.",
             )
         else:
+            validate_uint32_max("column_span", column_span)
             declared_columns = self._declared_columns
             if declared_columns != "auto" and column_span > declared_columns:
                 raise StreamlitValueOutOfRangeError(
@@ -135,7 +129,7 @@ class GridContainer(DeltaGenerator):
                 )
             validated_column_span = column_span
 
-        if not _is_int(row_span):
+        if not is_int(row_span):
             raise StreamlitInvalidParameterTypeError(
                 "row_span",
                 type(row_span).__name__,
@@ -147,6 +141,7 @@ class GridContainer(DeltaGenerator):
                 ["a positive integer"],
                 detail=f"Got {row_span!r}.",
             )
+        validate_uint32_max("row_span", row_span)
 
         block_proto = BlockProto()
         block_proto.allow_empty = True

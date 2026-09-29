@@ -2806,6 +2806,11 @@ class GridTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.grid(columns=3, min_column_width=invalid_min_width)
 
+    def test_min_column_width_exceeds_uint32(self):
+        """Values above protobuf uint32 raise a Streamlit range error."""
+        with pytest.raises(StreamlitValueOutOfRangeError):
+            st.grid(columns=3, min_column_width=2**32)
+
     def test_grid_with_single_gap(self):
         """Test grid with a single gap value."""
         st.grid(gap="medium")
@@ -2868,6 +2873,13 @@ class GridTest(DeltaGeneratorTestCase):
         """A scalar invalid gap is reported as `gap`, not `row_gap`."""
         with pytest.raises(StreamlitValueError, match=r"`gap`"):
             st.grid(gap="tiny")
+
+    def test_grid_invalid_tuple_gap_names_gap_parameter(self):
+        """An invalid tuple gap is reported as `gap`, not `column_gap`."""
+        with pytest.raises(StreamlitValueError, match=r"`gap`") as exc_info:
+            st.grid(gap=("small", "tiny"))
+        assert "column_gap" not in str(exc_info.value)
+        assert "column gap" in str(exc_info.value)
 
     @parameterized.expand(
         [
@@ -2938,6 +2950,11 @@ class GridTest(DeltaGeneratorTestCase):
         """Test that invalid row_height values raise an error."""
         with pytest.raises(StreamlitAPIException):
             st.grid(row_height=invalid_height)
+
+    def test_row_height_exceeds_uint32(self):
+        """Pixel row_height above protobuf uint32 raises a Streamlit range error."""
+        with pytest.raises(StreamlitValueOutOfRangeError):
+            st.grid(row_height=2**32)
 
     def test_grid_width_stretch(self):
         """Test grid with stretch width."""
@@ -3147,3 +3164,15 @@ class CellTest(DeltaGeneratorTestCase):
         grid = st.grid()
         with pytest.raises(StreamlitAPIException):
             grid.cell(row_span=invalid_rows)
+
+    def test_column_span_exceeds_uint32(self):
+        """column_span above protobuf uint32 raises a Streamlit range error."""
+        grid = st.grid()
+        with pytest.raises(StreamlitValueOutOfRangeError):
+            grid.cell(column_span=2**32)
+
+    def test_row_span_exceeds_uint32(self):
+        """row_span above protobuf uint32 raises a Streamlit range error."""
+        grid = st.grid()
+        with pytest.raises(StreamlitValueOutOfRangeError):
+            grid.cell(row_span=2**32)

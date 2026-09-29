@@ -469,6 +469,11 @@ export const StyledGridContainerBlock =
         ...(!$wrap && {
           overflowX: "auto" as const,
           overflowY: "visible" as const,
+          // One-axis overflow can coerce the other axis, which would clip
+          // child focus rings. Cancel the extra padding with a negative
+          // margin so the outer layout is unchanged.
+          paddingBlock: theme.sizes.focusRingWidth,
+          marginBlock: `-${theme.sizes.focusRingWidth}`,
         }),
         // Dense packing mode fills gaps by reordering items
         ...($dense && { gridAutoFlow: "dense" }),
