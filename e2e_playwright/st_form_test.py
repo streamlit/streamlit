@@ -15,7 +15,7 @@
 import re
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -194,9 +194,24 @@ def test_form_submits_on_enter(app: Page):
     expect(form_6.get_by_test_id("stMarkdown").last).to_have_text("Form submitted")
 
 
+def _form_with_disabled_first_submit(app: Page) -> tuple[Locator, Locator]:
+    """Return the form whose first submit is disabled, after both buttons
+    are mounted in disabled-then-enabled order.
+
+    The tests below depend on that order. Asserting before both buttons
+    mount lets those tests pass for the wrong reason.
+    """
+    form = app.get_by_test_id("stForm").nth(6)
+    submit_buttons = form.get_by_test_id("stFormSubmitButton")
+    expect(submit_buttons).to_have_count(2)
+    expect(submit_buttons.first.locator("button")).to_be_disabled()
+    expect(submit_buttons.last.locator("button")).to_be_enabled()
+    return form, submit_buttons
+
+
 def test_form_disabled_submit_on_enter(app: Page):
     """Tests that submit on enter does not work when 1st submit button disabled."""
-    form_7 = app.get_by_test_id("stForm").nth(6)
+    form_7, _ = _form_with_disabled_first_submit(app)
     text_input = form_7.get_by_test_id("stTextInput").locator("input")
     text_input.fill("Test")
     expect(form_7.get_by_test_id("InputInstructions")).to_have_text("")
@@ -237,26 +252,26 @@ def test_form_submits_on_click(app: Page):
 
 def test_form_disabled_submit_on_click(app: Page):
     """Tests that submit via disabled form submit button does not work."""
-    form_7 = app.get_by_test_id("stForm").nth(6)
+    form_7, submit_buttons = _form_with_disabled_first_submit(app)
     text_input = form_7.get_by_test_id("stTextInput").locator("input")
     text_input.fill("Test")
     expect(form_7.get_by_test_id("InputInstructions")).to_have_text("")
 
-    # Try submit with disabled submit button, check not submitted
-    form_7.get_by_test_id("stFormSubmitButton").first.click()
+    # Disabled buttons are not actionable; force the click to assert no submit.
+    submit_buttons.first.locator("button").click(force=True)
     wait_for_app_run(app)
     expect(form_7.get_by_test_id("stMarkdown").last).not_to_have_text("Form submitted")
 
 
 def test_secondary_submit_buttons_enabled(app: Page):
     """Tests that secondary submit buttons work when enabled."""
-    form_7 = app.get_by_test_id("stForm").nth(6)
+    form_7, submit_buttons = _form_with_disabled_first_submit(app)
     text_input = form_7.get_by_test_id("stTextInput").locator("input")
     text_input.fill("Test")
     expect(form_7.get_by_test_id("InputInstructions")).to_have_text("")
 
     # Submit form with secondary submit button, check submitted
-    form_7.get_by_test_id("stFormSubmitButton").last.click()
+    submit_buttons.last.locator("button").click()
     wait_for_app_run(app)
     expect(form_7.get_by_test_id("stMarkdown").last).to_have_text("Form submitted")
 

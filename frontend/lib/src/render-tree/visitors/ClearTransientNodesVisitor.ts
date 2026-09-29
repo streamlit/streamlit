@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
-import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import {
+  type AppNode,
+  BlockNode,
+  type ElementNode,
+  type TransientNode,
+} from "~lib/AppNode"
 
-import { AppNodeVisitor } from "./AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * Visitor that clears transient nodes from the render tree. It does this by:

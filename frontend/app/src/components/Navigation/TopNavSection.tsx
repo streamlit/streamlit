@@ -31,7 +31,7 @@ import {
   useFloatingOverlay,
   useOverlayDismissal,
 } from "@streamlit/lib"
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import SidebarNavLink from "./SidebarNavLink"

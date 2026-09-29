@@ -2598,13 +2598,6 @@ class Status(Block):
 
     @property
     def state(self) -> str:
-        # Blocks are classified as a status by the presence of an icon, so an
-        # st.expander with a custom icon lands here without a state.
-        if self.proto.state == self.proto.State.STATE_UNDEFINED:
-            raise ValueError(
-                "This block has no status state. Only st.status sets a state; "
-                "an st.expander with an icon is also exposed via at.status."
-            )
         return self.proto.State.Name(self.proto.state).lower()
 
 
@@ -3001,7 +2994,9 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             elif bty == "column":
                 new_node = Column(block.column, root=root)
             elif bty == "expandable":
-                if block.expandable.icon:
+                # st.status always sets state; st.expander leaves it undefined
+                # even when an icon is present.
+                if block.expandable.state != block.expandable.State.STATE_UNDEFINED:
                     new_node = Status(block.expandable, root=root)
                 else:
                     new_node = Expander(block.expandable, root=root)

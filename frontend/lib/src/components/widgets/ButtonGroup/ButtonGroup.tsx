@@ -16,19 +16,19 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useMemo,
   useRef,
 } from "react"
 
-import { Selection } from "react-aria-components"
+import type { Selection } from "react-aria-components"
 
 import {
   ButtonGroup as ButtonGroupProto,
   LabelVisibility,
-  streamlit,
+  type streamlit,
 } from "@streamlit/protobuf"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
@@ -45,11 +45,11 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean

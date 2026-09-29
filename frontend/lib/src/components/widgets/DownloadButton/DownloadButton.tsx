@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -24,7 +24,7 @@ import {
   useState,
 } from "react"
 
-import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
+import type { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
 import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -38,10 +38,10 @@ import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosi
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import useTimeout from "~lib/hooks/useTimeout"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { StyledErrorMessage } from "~lib/styled-components"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   endpoints: StreamlitEndpoints

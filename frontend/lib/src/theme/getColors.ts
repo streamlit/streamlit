@@ -17,7 +17,7 @@
 import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
 import { BACKGROUND_ONLY_COLORS, NAMED_COLOR_CONFIG } from "./namedColors"
-import {
+import type {
   DerivedColors,
   EmotionTheme,
   EmotionThemeColors,

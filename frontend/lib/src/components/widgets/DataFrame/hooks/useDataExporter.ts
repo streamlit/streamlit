@@ -16,11 +16,11 @@
 
 import { useCallback } from "react"
 
-import { DataEditorProps } from "@glideapps/glide-data-grid"
+import type { DataEditorProps } from "@glideapps/glide-data-grid"
 import { getLogger } from "loglevel"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   toSafeString,
 } from "~lib/components/widgets/DataFrame/columns"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"

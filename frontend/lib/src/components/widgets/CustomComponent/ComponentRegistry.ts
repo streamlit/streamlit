@@ -15,11 +15,11 @@
  */
 import { getLogger } from "loglevel"
 
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import type { IframeMessage } from "./componentUtils"
-import { ComponentMessageType } from "./enums"
+import type { ComponentMessageType } from "./enums"
 
 type ComponentMessageListener = (
   type: ComponentMessageType,

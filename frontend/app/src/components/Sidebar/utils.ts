@@ -15,10 +15,27 @@
  */
 import { parseToRgba, rgba } from "color2k"
 
+import { convertRemToPx, type EmotionTheme } from "@streamlit/lib"
 import { PageConfig } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
 
-export const DEFAULT_WIDTH = "300"
+export interface SidebarWidthLimits {
+  minWidthPx: number
+  maxWidthPx: number
+  defaultWidthPx: number
+}
+
+/** Convert the theme sidebar width tokens to pixels for clamp/resize math. */
+export function getSidebarWidthLimits(
+  sizes: EmotionTheme["sizes"],
+  rootFontSizePx: number
+): SidebarWidthLimits {
+  return {
+    minWidthPx: convertRemToPx(sizes.minSidebarWidth, rootFontSizePx),
+    maxWidthPx: convertRemToPx(sizes.maxSidebarWidth, rootFontSizePx),
+    defaultWidthPx: convertRemToPx(sizes.defaultSidebarWidth, rootFontSizePx),
+  }
+}
 
 /**
  * Convert a CSS breakpoint string (e.g. "768px") to the max-width threshold
@@ -79,11 +96,14 @@ export const saveSidebarState = (
   }
 }
 
-export function clampSidebarWidth(width: number): number {
+export function clampSidebarWidth(
+  width: number,
+  { minWidthPx, maxWidthPx, defaultWidthPx }: SidebarWidthLimits
+): number {
   if (Number.isNaN(width)) {
-    return Number.parseInt(DEFAULT_WIDTH, 10)
+    return defaultWidthPx
   }
-  return Math.min(600, Math.max(200, width))
+  return Math.min(maxWidthPx, Math.max(minWidthPx, width))
 }
 
 /**

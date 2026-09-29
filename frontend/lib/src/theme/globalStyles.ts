@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { css, SerializedStyles } from "@emotion/react"
+import { css, type SerializedStyles } from "@emotion/react"
 import { transparentize } from "color2k"
 
 import type { EmotionTheme } from "./types"

@@ -27,7 +27,7 @@ import {
   StreamlitErrorCodeBlock,
   StreamlitMarkdown,
 } from "@streamlit/lib"
-import { type Exception } from "@streamlit/protobuf"
+import type { Exception } from "@streamlit/protobuf"
 
 import { DeployDialog, DeployDialogProps } from "./DeployDialog/DeployDialog"
 import { StyledDeployErrorContent } from "./styled-components"

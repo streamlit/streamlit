@@ -15,7 +15,7 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
   useCallback,
   useEffect,
@@ -34,9 +34,9 @@ import {
   TableChart,
 } from "@emotion-icons/material-outlined"
 
-import {
-  type ArrowData,
-  type ArrowNamedDataSet,
+import type {
+  ArrowData,
+  ArrowNamedDataSet,
   streamlit,
   VegaLiteChart as VegaLiteChartProto,
 } from "@streamlit/protobuf"
@@ -56,9 +56,9 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { downloadDataUrl } from "~lib/util/downloadDataUrl"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { VegaLiteChartElement, WrappedNamedDataset } from "./arrowUtils"
+import type { VegaLiteChartElement, WrappedNamedDataset } from "./arrowUtils"
 import {
   StyledVegaLiteChartContainer,
   StyledVegaLiteChartTooltips,
