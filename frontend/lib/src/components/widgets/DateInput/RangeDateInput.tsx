@@ -337,6 +337,9 @@ function RangeDateInput({
 
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
   const skipCloseCommitRef = useRef(false)
+  // Set when close/blur already notified the parent so a late DateField
+  // onChange after Escape does not write twice.
+  const committedOnThisCloseRef = useRef(false)
   // A full clear that matches an empty default still needs to notify the
   // parent so a required field can paint.
   const hasEditedRef = useRef(false)
@@ -449,9 +452,14 @@ function RangeDateInput({
   onCloseRef.current = onClose
 
   const [isOpen, setIsOpenState] = useState(false)
+  const isOpenRef = useRef(isOpen)
+  isOpenRef.current = isOpen
 
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
+    if (isOpen) {
+      committedOnThisCloseRef.current = false
+    }
     if (wasOpenRef.current && !isOpen) {
       inAnchorModeRef.current = false
       selfCommittedAnchorRef.current = null
@@ -476,6 +484,7 @@ function RangeDateInput({
             shouldNotifyRangePending(pending, committed, hasEditedRef.current)
           ) {
             hasEditedRef.current = false
+            committedOnThisCloseRef.current = true
             onChangeRef.current(pending)
           }
         }
@@ -580,6 +589,7 @@ function RangeDateInput({
               onChangeRef.current(pending)
             }
             skipCloseCommitRef.current = true
+            committedOnThisCloseRef.current = true
           }
         }
       },
@@ -676,19 +686,43 @@ function RangeDateInput({
       onEdit(pending.map(calendarDateToIso))
       validateBothFields(date, date ? displayEndRef.current : null)
       if (date) onFocusChange(date)
+      // Escape can close before React Aria flushes onChange. Commit here if
+      // both bounds are now complete and close/blur did not already notify.
+      if (
+        !isOpenRef.current &&
+        !committedOnThisCloseRef.current &&
+        date &&
+        displayEndRef.current
+      ) {
+        hasEditedRef.current = false
+        committedOnThisCloseRef.current = true
+        onChangeRef.current([date, displayEndRef.current])
+      }
     },
     [onEdit, onFocusChange, validateBothFields]
   )
 
   const handleEndFieldChange = useCallback(
     (date: CalendarDate | null): void => {
-      if (date && !displayStartRef.current) return
       displayEndRef.current = date
       setDisplayEnd(date)
+      if (date && !displayStartRef.current) {
+        return
+      }
       hasEditedRef.current = true
       onEdit(compact([displayStartRef.current, date]).map(calendarDateToIso))
       validateBothFields(displayStartRef.current, date)
       if (date) onFocusChange(date)
+      if (
+        !isOpenRef.current &&
+        !committedOnThisCloseRef.current &&
+        displayStartRef.current &&
+        date
+      ) {
+        hasEditedRef.current = false
+        committedOnThisCloseRef.current = true
+        onChangeRef.current([displayStartRef.current, date])
+      }
     },
     [onEdit, onFocusChange, validateBothFields]
   )
@@ -750,6 +784,7 @@ function RangeDateInput({
           hasEditedRef.current = false
           onChange([start, end])
           skipCloseCommitRef.current = true
+          committedOnThisCloseRef.current = true
           setIsOpenState(false)
           restoreFocusToField()
           setIsCalendarActive(false)
@@ -765,6 +800,7 @@ function RangeDateInput({
       hasEditedRef.current = false
       onChange([range.start, range.end])
       skipCloseCommitRef.current = true
+      committedOnThisCloseRef.current = true
       setIsOpenState(false)
       restoreFocusToField()
       setIsCalendarActive(false)
@@ -1021,6 +1057,7 @@ function RangeDateInput({
         return
       }
       hasEditedRef.current = false
+      committedOnThisCloseRef.current = true
       if (isOpen) {
         // Tab-away closes the popover in the same interaction. Skip the
         // close-effect commit so an optional empty-default range does not
