@@ -16,9 +16,9 @@
 
 import { colors } from "~lib/theme/primitives/colors"
 
-// NOTE: Updates to the color below MUST be reflected in the mockTheme.ts file
-// to ensure the mock theme used for tests is consistent with expected theme colors.
-const requiredThemeColors = {
+// Used by emotionBaseTheme and mockTheme — hex allowed under lib/src/theme/**
+// (streamlit-custom/no-hardcoded-theme-values is off for theme files).
+export const requiredThemeColors = {
   bgColor: colors.white,
   secondaryBg: colors.gray20,
   bodyText: colors.gray85,

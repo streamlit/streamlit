@@ -16,6 +16,10 @@
 
 /** A mock theme definition for use in unit tests. */
 
+import {
+  type OptionalThemeColors,
+  requiredThemeColors,
+} from "~lib/theme/emotionBaseTheme/themeColors"
 import { createEmotionColors } from "~lib/theme/getColors"
 import { createShadows } from "~lib/theme/getShadows"
 import { breakpoints } from "~lib/theme/primitives/breakpoints"
@@ -34,47 +38,6 @@ import {
 } from "~lib/theme/primitives/typography"
 import { zIndices } from "~lib/theme/primitives/zIndices"
 import type { ThemeConfig } from "~lib/theme/types"
-
-const requiredThemeColors = {
-  bgColor: colors.white,
-  secondaryBg: colors.gray20,
-  bodyText: colors.gray85,
-
-  primary: colors.red70,
-  secondary: colors.blue70,
-
-  // Default main theme colors (light theme)
-  // Keep in sync with emotionBaseTheme/themeColors.ts
-  redColor: "#D94A57",
-  orangeColor: "#E0682B",
-  yellowColor: "#E0A61F",
-  blueColor: "#3B82F6",
-  greenColor: "#079464",
-  violetColor: "#9B5DE5",
-  grayColor: "#716A63",
-
-  // Default background theme colors (light theme)
-  redBackgroundColor: "#FFF1F2",
-  orangeBackgroundColor: "#FFF6ED",
-  yellowBackgroundColor: "#FFFAE5",
-  blueBackgroundColor: "#EDF5FF",
-  greenBackgroundColor: "#F1FBF6",
-  violetBackgroundColor: "#F8F2FF",
-  grayBackgroundColor: "#F5F4F2",
-
-  // Default text theme colors (light theme)
-  redTextColor: "#9E303B",
-  orangeTextColor: "#9B4519",
-  yellowTextColor: "#9D7110",
-  blueTextColor: "#244FB4",
-  greenTextColor: "#0C5A44",
-  violetTextColor: "#6F33B8",
-  grayTextColor: "#3F3A34",
-}
-
-interface OptionalThemeColors {
-  widgetBorderColor?: string
-}
 
 const optionalThemeColors: OptionalThemeColors = {}
 
