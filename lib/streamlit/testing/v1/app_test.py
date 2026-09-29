@@ -119,6 +119,19 @@ if TYPE_CHECKING:
 TMP_DIR = tempfile.TemporaryDirectory()
 
 
+def _query_params_from_query_string(query_string: str) -> dict[str, str | list[str]]:
+    """Parse a query string into the shape testers use on ``AppTest.query_params``.
+
+    ``parse_qs`` always wraps values in lists. Single values are unwrapped to
+    ``str`` so ``at.query_params["x"] = "1"`` round-trips; repeated keys stay
+    ``list[str]`` so ``doseq`` encoding on the next run still works.
+    """
+    parsed = parse.parse_qs(query_string, keep_blank_values=True)
+    return {
+        key: values[0] if len(values) == 1 else values for key, values in parsed.items()
+    }
+
+
 class _AppTestSessionState:
     """Dict-like session state for AppTest testers.
 
@@ -252,6 +265,8 @@ class AppTest:
     query_params: dict[str, Any]
         Dictionary of query parameters to be used by the simulated app. Use
         dict-like syntax to set ``query_params`` values for the simulated app.
+        After ``.run()``, single values are ``str`` and repeated keys are
+        ``list[str]``.
     """
 
     def __init__(
@@ -524,7 +539,7 @@ class AppTest:
                 self._registered_pages = new_pages
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
-        self.query_params = parse.parse_qs(query_string)
+        self.query_params = _query_params_from_query_string(query_string)
 
         if self.secrets:
             if st.secrets._secrets is not None:
