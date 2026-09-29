@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { CSSProperties, memo, ReactElement } from "react"
+import {
+  CSSProperties,
+  memo,
+  ReactElement,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { getLogger } from "loglevel"
 
@@ -32,7 +40,8 @@ import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
+import { isDangerousLinkUri } from "~lib/util/UriUtil"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   StyledCaption,
@@ -81,7 +90,6 @@ function getImageWidth(
 }
 
 const Image = ({
-  itemKey,
   image,
   imgStyle,
   buildMediaURL,
@@ -89,7 +97,6 @@ const Image = ({
   shouldStretch,
   link,
 }: {
-  itemKey: string
   image: ImageProto
   imgStyle: CSSProperties
   buildMediaURL: (url: string) => string
@@ -98,14 +105,52 @@ const Image = ({
   link?: string
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
-  const isLinkBlocked = link ? isDangerousLinkUri(link) : false
-  const href = isLinkBlocked ? BLOCKED_LINK_URI : link
+  const captionDomId = useId()
+  const captionRef = useRef<HTMLDivElement>(null)
+  // Name the link from the caption only when the caption actually renders
+  // text. Label Markdown strips some constructs (a lone `---` becomes
+  // nothing), which would otherwise point aria-labelledby at an empty node.
+  const [captionHasText, setCaptionHasText] = useState(false)
+  // Do not wrap a dangerous URI in an anchor. A neutralized href="#" is
+  // still a nameless focusable control (WCAG SC 4.1.2).
+  const safeLink = link && !isDangerousLinkUri(link) ? link : undefined
+  // Unset means omit alt (detectable missing name). Empty string is decorative.
+  const imgAlt: string | undefined = isNullOrUndefined(image.alt)
+    ? undefined
+    : image.alt
+
+  // Watch the caption for text that arrives late: async Markdown plugins
+  // (KaTeX, emoji) swap a loading skeleton for real content after the first
+  // render. Only linked images consume captionHasText.
+  useLayoutEffect(() => {
+    const node = captionRef.current
+    if (!safeLink || !image.caption || !node) {
+      setCaptionHasText(false)
+      return
+    }
+
+    const syncCaptionHasText = (): void => {
+      const text = node.textContent?.trim() ?? ""
+      setCaptionHasText(text.length > 0)
+    }
+
+    syncCaptionHasText()
+
+    const observer = new MutationObserver(syncCaptionHasText)
+    observer.observe(node, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+    return () => observer.disconnect()
+  }, [image.caption, safeLink])
 
   const imageElement = (
+    // oxlint-disable-next-line jsx-a11y/alt-text
     <img
       style={imgStyle}
       src={buildMediaURL(image.url)}
-      alt={itemKey}
+      alt={imgAlt}
       onError={handleImageError}
       crossOrigin={crossOrigin}
     />
@@ -116,15 +161,16 @@ const Image = ({
       data-testid="stImageContainer"
       shouldStretch={shouldStretch}
     >
-      {href ? (
+      {safeLink ? (
         <StyledImageLink
-          href={href}
-          target={isLinkBlocked ? "_self" : "_blank"}
+          href={safeLink}
+          target="_blank"
           rel="noreferrer"
-          onClick={isLinkBlocked ? event => event.preventDefault() : undefined}
-          // For blocked links, fall back to the image's alt text instead of the
-          // neutralized "#" href, which is meaningless to screen readers.
-          aria-label={image.caption || (isLinkBlocked ? undefined : link)}
+          // Name the link from the visible caption, then alt, then the URL.
+          // Label by the caption node so markdown is announced as plain text.
+          {...(captionHasText
+            ? { "aria-labelledby": captionDomId }
+            : { "aria-label": imgAlt || safeLink })}
           data-testid="stImageLink"
         >
           {imageElement}
@@ -133,7 +179,12 @@ const Image = ({
         imageElement
       )}
       {image.caption && (
-        <StyledCaption data-testid="stImageCaption" style={imgStyle}>
+        <StyledCaption
+          ref={captionRef}
+          id={captionDomId}
+          data-testid="stImageCaption"
+          style={imgStyle}
+        >
           <StreamlitMarkdown
             source={image.caption}
             allowHTML={false}
@@ -226,7 +277,6 @@ function ImageList({
             // TODO: Update to match React best practices
             // eslint-disable-next-line @eslint-react/no-array-index-key
             key={idx}
-            itemKey={idx.toString()}
             image={iimage as ImageProto}
             imgStyle={imgStyle}
             buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}
