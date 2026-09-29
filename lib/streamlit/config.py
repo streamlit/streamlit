@@ -1565,7 +1565,7 @@ _create_theme_options(
     description="""
         Red color used in the basic color palette.
 
-        By default, this is #ff4b4b for the light theme and #ff2b2b for the
+        By default, this is #D94A57 for the light theme and #F2919A for the
         dark theme.
 
         If `redColor` is provided, and `redBackgroundColor` isn't, then
@@ -1587,7 +1587,7 @@ _create_theme_options(
     description="""
         Orange color used in the basic color palette.
 
-        By default, this is #ffa421 for the light theme and #ff8700 for the
+        By default, this is #E0682B for the light theme and #F2A56D for the
         dark theme.
 
         If `orangeColor` is provided, and `orangeBackgroundColor` isn't, then
@@ -1609,7 +1609,7 @@ _create_theme_options(
     description="""
         Yellow color used in the basic color palette.
 
-        By default, this is #faca2b for the light theme and #ffe312 for the
+        By default, this is #E0A61F for the light theme and #FBD54F for the
         dark theme.
 
         If `yellowColor` is provided, and `yellowBackgroundColor` isn't, then
@@ -1631,7 +1631,7 @@ _create_theme_options(
     description="""
         Blue color used in the basic color palette.
 
-        By default, this is #1c83e1 for the light theme and #0068c9 for the
+        By default, this is #3B82F6 for the light theme and #85B8F8 for the
         dark theme.
 
         If a `blueColor` is provided, and `blueBackgroundColor` isn't, then
@@ -1653,7 +1653,7 @@ _create_theme_options(
     description="""
         Green color used in the basic color palette.
 
-        By default, this is #21c354 for the light theme and #09ab3b for the
+        By default, this is #079464 for the light theme and #7ED5B0 for the
         dark theme.
 
         If `greenColor` is provided, and `greenBackgroundColor` isn't, then
@@ -1675,7 +1675,8 @@ _create_theme_options(
     description="""
         Violet color used in the basic color palette.
 
-        By default, this is #803df5 for both the light and dark themes.
+        By default, this is #9B5DE5 for the light theme and #BF8EF7 for the
+        dark theme.
 
         If a `violetColor` is provided, and `violetBackgroundColor` isn't, then
         `violetBackgroundColor` will be derived from `violetColor` using 10%
@@ -1696,7 +1697,7 @@ _create_theme_options(
     description="""
         Gray color used in the basic color palette.
 
-        By default, this is #a3a8b8 for the light theme and #555867 for the
+        By default, this is #716A63 for the light theme and #A9A5A0 for the
         dark theme.
 
         If `grayColor` is provided, and `grayBackgroundColor` isn't, then
@@ -1721,8 +1722,8 @@ _create_theme_options(
         If `redColor` is provided, this defaults to `redColor` using 10%
         opacity for the light theme and 20% opacity for the dark theme.
 
-        Otherwise, this is #ff2b2b with 10% opacity for light theme and
-        #ff6c6c with 20% opacity for dark theme.
+        Otherwise, this is #FFF1F2 for the light theme and #412023 for the dark
+        theme.
     """,
 )
 
@@ -1742,8 +1743,8 @@ _create_theme_options(
         If `orangeColor` is provided, this defaults to `orangeColor` using 10%
         opacity for the light theme and 20% opacity for the dark theme.
 
-        Otherwise, this is #ffa421 with 10% opacity for the light theme and
-        #ff8700 with 20% opacity for the dark theme.
+        Otherwise, this is #FFF6ED for the light theme and #342414 for the dark
+        theme.
     """,
 )
 
@@ -1763,8 +1764,8 @@ _create_theme_options(
         If `yellowColor` is provided, this defaults to `yellowColor` using 10%
         opacity for the light theme and 20% opacity for the dark theme.
 
-        Otherwise, this is #ffff12 with 10% opacity for the light theme and
-        #ffff12 with 20% opacity for the dark theme.
+        Otherwise, this is #FFFAE5 for the light theme and #302917 for the dark
+        theme.
     """,
 )
 
@@ -1784,8 +1785,8 @@ _create_theme_options(
         If `blueColor` is provided, this defaults to `blueColor` using 10%
         opacity for the light theme and 20% opacity for the dark theme.
 
-        Otherwise, this is #1c83ff with 10% opacity for the light theme and
-        #3d9df3 with 20% opacity for the dark theme.
+        Otherwise, this is #EDF5FF for the light theme and #1E2A3D for the dark
+        theme.
     """,
 )
 
@@ -1805,8 +1806,8 @@ _create_theme_options(
         If `greenColor` is provided, this defaults to `greenColor` using 10%
         opacity for the light theme and 20% opacity for the dark theme.
 
-        Otherwise, this is #21c354 with 10% opacity for the light theme and
-        #3dd56d with 20% opacity for the dark theme.
+        Otherwise, this is #F1FBF6 for the light theme and #0E2F24 for the dark
+        theme.
     """,
 )
 
@@ -1826,8 +1827,8 @@ _create_theme_options(
         If `violetColor` is provided, this defaults to `violetColor` using 10%
         opacity for the light theme and 20% opacity for the dark theme.
 
-        Otherwise, this is #9a5dff with 10% opacity for light theme and
-        #9a5dff with 20% opacity for dark theme.
+        Otherwise, this is #F8F2FF for the light theme and #332244 for the dark
+        theme.
     """,
 )
 
@@ -1847,8 +1848,8 @@ _create_theme_options(
         If `grayColor` is provided, this defaults to `grayColor` using 10%
         opacity for the light theme and 20% opacity for the dark theme.
 
-        Otherwise, this is #31333f with 10% opacity for the light theme and
-        #808495 with 20% opacity for the dark theme.
+        Otherwise, this is #F5F4F2 for the light theme and #2C2925 for the dark
+        theme.
     """,
 )
 
@@ -1868,7 +1869,7 @@ _create_theme_options(
         If `redColor` is provided, this defaults to `redColor`, darkened by 15%
         for the light theme and lightened by 15% for the dark theme.
 
-        Otherwise, this is #bd4043 for the light theme and #ff6c6c for the dark
+        Otherwise, this is #9E303B for the light theme and #F2919A for the dark
         theme.
     """,
 )
@@ -1889,7 +1890,7 @@ _create_theme_options(
         If `orangeColor` is provided, this defaults to `orangeColor`, darkened
         by 15% for the light theme and lightened by 15% for the dark theme.
 
-        Otherwise, this is #e2660c for the light theme and #ffbd45 for the dark
+        Otherwise, this is #9B4519 for the light theme and #F2A56D for the dark
         theme.
     """,
 )
@@ -1910,7 +1911,7 @@ _create_theme_options(
         If `yellowColor` is provided, this defaults to `yellowColor`, darkened
         by 15% for the light theme and lightened by 15% for the dark theme.
 
-        Otherwise, this is #926c05 for the light theme and #ffffc2 for the dark
+        Otherwise, this is #9D7110 for the light theme and #FBD54F for the dark
         theme.
     """,
 )
@@ -1931,7 +1932,7 @@ _create_theme_options(
         If `blueColor` is provided, this defaults to `blueColor`, darkened by
         15% for the light theme and lightened by 15% for the dark theme.
 
-        Otherwise, this is #0054a3 for the light theme and #3d9df3 for the dark
+        Otherwise, this is #244FB4 for the light theme and #85B8F8 for the dark
         theme.
     """,
 )
@@ -1952,7 +1953,7 @@ _create_theme_options(
         If `greenColor` is provided, this defaults to `greenColor`, darkened by
         15% for the light theme and lightened by 15% for the dark theme.
 
-        Otherwise, this is #158237 for the light theme and #5ce488 for the dark
+        Otherwise, this is #0C5A44 for the light theme and #7ED5B0 for the dark
         theme.
     """,
 )
@@ -1973,7 +1974,7 @@ _create_theme_options(
         If `violetColor` is provided, this defaults to `violetColor`, darkened
         by 15% for the light theme and lightened by 15% for the dark theme.
 
-        Otherwise, this is #583f84 for the light theme and #b27eff for the dark
+        Otherwise, this is #6F33B8 for the light theme and #BF8EF7 for the dark
         theme.
     """,
 )
@@ -1994,8 +1995,8 @@ _create_theme_options(
         If `grayColor` is provided, this defaults to `grayColor`, darkened by
         15% for the light theme and lightened by 15% for the dark theme.
 
-        Otherwise, this is #31333f with 60% opacity for the light theme and
-        #fafafa with 60% opacity for the dark theme.
+        Otherwise, this is #3F3A34 for the light theme and #B8B3A8 for the dark
+        theme.
     """,
 )
 
