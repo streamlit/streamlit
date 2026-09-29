@@ -411,17 +411,12 @@ right now. Naming follows the public API, for the reason above:
 }
 ```
 
-The two keys show both forms: `region` comes from `key="region"` on the selectbox, while
-the keyless button falls back to its element ID. The expander shows a container — its
-`children` are present even though it is collapsed, and its `label` and `icon` carry
-author-written context that would otherwise be invisible to a non-browser client.
-
-The dataframe shows the split between authored configuration and derived facts: `props`
-carries only `column_config`, which the author wrote, while everything Streamlit worked
-out about the dataset sits under `data`. That is also the two-tier pattern for data —
-enough inline to reason about the table without a second request, plus `data.url` for the
-full Arrow bytes when exact values matter. That URL is a fetch-now handle and must not be
-persisted; see [Data, charts, and media in v1](#data-charts-and-media-in-v1).
+Three things in that example are worth pointing at: both key forms appear, since `region`
+is authored and the button falls back to its element ID; the collapsed expander still
+carries its `children`, `label`, and `icon`, which would otherwise be invisible to a
+non-browser client; and the dataframe shows the `props`/`data` split, with only
+`column_config` above the line. Data representation, including what `data.url` is and is
+not, is [its own section](#data-charts-and-media-in-v1).
 
 Rules:
 
@@ -638,17 +633,14 @@ browser's, so an auto-refreshing fragment never refreshes for a non-browser clie
 disclosing the interval and letting the caller decide to poll is honest, while inventing
 background reruns server-side is not.
 
-**A headless client inherits the frontend's responsibilities**, and two behaviors sit on
-that line today. `clear_on_submit` is implemented in React — submitting a form emits a
-`formCleared` signal and each widget resets itself — so no non-browser consumer can
-observe it, and this interface and `AppTest` diverge from the browser identically. A
-widget bound with `bind="query-params"` is the same shape: the browser writes the new
-value into its own address bar, so setting such a widget here changes its value without
-changing `query_params`. Both are declared rather than emulated, because moving either
-reset server-side changes behavior for browser sessions too and belongs in its own change.
-**The general rule is worth writing down: any behavior Streamlit implements in React
-rather than in Python is absent for every non-browser client, and these two are unlikely
-to be the last.**
+**A headless client inherits the frontend's responsibilities.** Any behavior Streamlit
+implements in React rather than in Python is absent for every non-browser client, and two
+sit on that line today: `clear_on_submit`, whose reset each widget performs in the
+browser, and `bind="query-params"`, whose new value the browser writes into its own
+address bar — so setting such a widget here changes its value without changing
+`query_params`. Both are declared rather than emulated, because moving either server-side
+changes behavior for browser sessions too and belongs in its own change. This is unlikely
+to be the last pair.
 
 Actions do not carry a JSON Schema in v1. The element's `type` plus its constraint
 properties (`options`, `min_value`, `max_value`) already tell a model what to send, and
@@ -783,26 +775,15 @@ This is a new programmatic execution surface and needs an explicit review.
 - **Audit without content.** Log session hashes, action kinds, outcomes, latency, and
   sizes — never labels, values, table contents, or queries.
 
-Two things must be built before the interface can be reached remotely, and they are the
-reason v1 is loopback-only:
+- **Resource authorization is the one prerequisite with an implementation detail worth
+  stating here.** The media route is a bare content-hash lookup with no session check, and
+  identical bytes deduplicate to the same URL across sessions. That is acceptable for
+  media an app already chose to display, and not for newly externalized table and chart
+  data, which is why principal-scoped links are a prerequisite for remote enablement.
 
-1. **Authentication and identity parity.** For a public app this changes nothing: an
-   agent session is anonymous and runs with the server's credentials, exactly like an
-   anonymous browser viewer, and there is no reason to treat the two differently. What
-   matters is parity, not extra protection. The route must sit behind the same
-   authentication gate as the app, and where a request *is* authenticated, that identity
-   must reach `st.user` the way the WebSocket handshake already does — routing behind
-   middleware does not do the second half by itself, and identity is never accepted from
-   the request body. Skipping it is the real hazard: an app that branches on `st.user`
-   for per-user data access would serve an agent as though nobody were signed in.
-2. **Resource authorization.** The media route is currently a bare content-hash lookup
-   with no session check, and identical bytes deduplicate to the same URL across
-   sessions. That is acceptable for media an app already chose to display; it is not
-   acceptable for newly externalized table and chart data, which is why that
-   externalization is a follow-up rather than part of v1.
-
-Cookie-authenticated mutating routes also need Origin and XSRF handling; CORS is not
-authentication.
+What must be true before the interface can be reached remotely at all is one list, in
+[Enablement](#enablement), rather than a second one here. Note only that CORS is not
+authentication: a cookie-authenticated mutating route needs Origin and XSRF handling.
 
 ### Enablement
 
@@ -818,15 +799,14 @@ can reach an app is a deployment property, not app behavior.
 
 **Discovery is part of the feature, not documentation around it.** The workflow people
 ask for is "point an agent at an app and ask it a question", which only works if fetching
-the app's URL says the interface exists. It does not today: the served `index.html` is
-about 7 KB of module preloads whose only human-readable text is *"You need to enable
-JavaScript to run this app."* That one sentence is the entire payload an HTML-to-text
-extraction keeps, so it is the only place a naive fetch will look. It should therefore say
-that the app can also be read and driven as JSON over HTTP, that this is the recommended
-way to use a Streamlit app without a browser, that scraping the page is pointless because
-it carries no app content, and where to start. A machine-readable
-`<link rel="service-desc">` ([RFC 8631](https://www.rfc-editor.org/rfc/rfc8631)) belongs
-alongside it, matching the `Link` header the API returns on its own responses.
+the app's URL says the interface exists. The served `index.html` is about 7 KB of module
+preloads whose only human-readable text is *"You need to enable JavaScript to run this
+app."* — the entire payload an HTML-to-text extraction keeps, and therefore the only place
+a naive fetch will look. It should also say that the app can be read and driven as JSON
+over HTTP, that this is the recommended way to use a Streamlit app without a browser, that
+scraping the page is pointless because it carries no app content, and where to start, with
+a machine-readable `<link rel="service-desc">`
+([RFC 8631](https://www.rfc-editor.org/rfc/rfc8631)) alongside.
 
 **The hint is unconditional and the endpoint answers.** Injecting it only when the API is
 enabled would mean rewriting a static file at serve time and would make the HTML's
@@ -884,7 +864,7 @@ settled before the default flips:
 | Bulk data access  | A dataframe becomes typed data rather than a scrolled viewport, and v1 serves the full Arrow bytes over a link. The same data an app already sent its client, far easier to take in one request. | Response, preview, and artifact-size budgets in v1; principal-scoped or expiring resource links before remote enablement.                                                                                                     |
 | Request volume    | An agent loops faster than a human clicks.                                                                                                                                                       | Session caps, one in-flight interaction per session, and request rate limits.                                                                                                                                                 |
 | Cross-origin POST | The WebSocket has origin checks; a new cookie-authenticated mutating route needs its own.                                                                                                        | Origin and XSRF handling on the route.                                                                                                                                                                                        |
-| Identity          | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose route or identity mapping is skipped, leaving `st.user` unset so per-user access branches silently take the anonymous path. | **Parity** with the app's existing gate: the same authentication on the route, and an authenticated caller resolving to the same `st.user` and access-control branches as an equivalent browser session. A hard requirement for default-on, not a later refinement. |
+| Identity          | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose route or identity mapping is skipped, leaving `st.user` unset so per-user access branches silently take the anonymous path. | **Parity** with the app's existing gate: the same authentication on the route, and an authenticated caller resolving to the same `st.user` and access-control branches as an equivalent browser session — which routing behind middleware does not achieve by itself, and which is never taken from the request body. A hard requirement for default-on, not a later refinement. |
 
 So v1 is **off by default and served only to loopback peers**, matching the existing
 conservative gate used for the skills-install backend operation. That makes the first
