@@ -15,12 +15,12 @@
  */
 
 import {
-  ClipboardEvent,
-  FocusEvent,
-  KeyboardEvent,
+  type ClipboardEvent,
+  type FocusEvent,
+  type KeyboardEvent,
   memo,
-  MouseEvent,
-  ReactElement,
+  type MouseEvent,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -36,13 +36,13 @@ import {
 } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
-import { CalendarDate } from "@internationalized/date"
+import type { CalendarDate } from "@internationalized/date"
 import {
   CalendarGridBody,
   CalendarGridHeader,
   DateField,
   I18nProvider,
-  Key,
+  type Key,
   RangeCalendarStateContext,
 } from "react-aria-components"
 

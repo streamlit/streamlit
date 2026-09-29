@@ -113,5 +113,30 @@
     "promise/no-callback-in-promise": "error",
     "promise/no-new-statics": "error",
     "promise/valid-params": "error"
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "lib/src/components/widgets/**/*.ts",
+        "lib/src/components/widgets/**/*.tsx"
+      ],
+      "rules": {
+        "typescript/consistent-type-imports": [
+          "error",
+          {
+            "fixStyle": "inline-type-imports"
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "lib/src/components/widgets/**/*.test.ts",
+        "lib/src/components/widgets/**/*.test.tsx"
+      ],
+      "rules": {
+        "typescript/consistent-type-imports": "off"
+      }
+    }
+  ]
 }

@@ -21,7 +21,7 @@ import {
   toSafeDate,
   toSafeNumber,
 } from "~lib/components/widgets/DataFrame/columns/utils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 const LOG = getLogger("DataFrameStatistics")

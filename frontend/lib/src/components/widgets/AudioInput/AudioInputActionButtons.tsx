@@ -16,7 +16,7 @@
 
 import { memo } from "react"
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Mic } from "@emotion-icons/material-outlined"
 import {
   Pause,

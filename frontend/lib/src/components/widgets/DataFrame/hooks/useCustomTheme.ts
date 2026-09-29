@@ -15,7 +15,10 @@
  */
 import { useMemo } from "react"
 
-import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
+import type {
+  Theme as GlideTheme,
+  SpriteMap,
+} from "@glideapps/glide-data-grid"
 import { lighten, mix, transparentize } from "color2k"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"

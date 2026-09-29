@@ -19,8 +19,8 @@ import type { AxiosProgressEvent } from "axios"
 import type { FileURLs } from "@streamlit/protobuf"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
-import { FileUploadClient } from "~lib/FileUploadClient"
-import { WidgetInfo } from "~lib/WidgetStateManager"
+import type { FileUploadClient } from "~lib/FileUploadClient"
+import type { WidgetInfo } from "~lib/WidgetStateManager"
 
 interface CreateUploadFileParams {
   getNextLocalFileId: () => number
