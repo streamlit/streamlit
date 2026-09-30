@@ -1266,7 +1266,7 @@ class ArrowMixin:
             # st.dataframe selections and st.data_editor edits are read-only
             # through this interface.
             support="read_only_in_v1",
-            column_config=column_config,
+            column_config=agent_spec.described_column_config(column_config_mapping),
             column_order=list(column_order) if column_order else None,
             hide_index=hide_index,
             selection_mode=sorted(selection_mode_set) or None,

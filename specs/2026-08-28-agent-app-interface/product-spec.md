@@ -299,7 +299,14 @@ right now. Naming follows the public API, for the reason above:
 - **Omit geometry and absent content.** Width, height, gaps, alignment, stretch ratios,
   padding, and border or surface styling carry no meaning for a non-visual client.
   Optional content that was never supplied — `help`, `icon`, `caption` left as `None` —
-  is omitted rather than serialized as null. Read this strictly, because the effective-value
+  is omitted rather than serialized as null, and that applies inside a nested parameter
+  object too. It matters most where a helper builds a full object per item: the column
+  type helpers do, so an unpruned `column_config` reports `"width": null, "help": null,
+  "disabled": null, …` per column and accounted for 17% of one real snapshot, two thirds
+  of it nulls. Report such a parameter from the mapping Streamlit resolved rather than the
+  author's argument, so defaults are applied and the one null that *means* something —
+  a `column_config` entry of `None`, which hides that column — has already become
+  `{"hidden": true}`. Read this strictly, because the effective-value
   rule above pulls the other way and will happily put styling on every element: a
   heading's `divider`, a column's share of its row, and a container's `border` are all
   presentation, and reporting them adds a key to most nodes on a page that no client can

@@ -177,8 +177,6 @@ def element(
     if not is_recording():
         return None
 
-    from streamlit.runtime.agent import json_encoding
-
     description: dict[str, Any] = {_TYPE_KEY: command}
     if key is not None:
         description[_KEY_KEY] = key
@@ -188,12 +186,66 @@ def element(
         description[_SUPPORT_KEY] = support
     if data_url is not None:
         description[_DATA_URL_KEY] = data_url
-    description[_PROPS_KEY] = {
-        name: json_encoding.to_json_value(value)
+    description[_PROPS_KEY] = _describe_props(props)
+    return json.dumps(description)
+
+
+def _describe_props(props: dict[str, Any]) -> dict[str, Any]:
+    """Convert a command's arguments to JSON, dropping the ones left unset.
+
+    An absent parameter is omitted rather than reported as null, at any depth.
+    That matters most for a nested parameter object: the column type helpers
+    build a full dict per column, so a `column_config` arrives carrying
+    `"width": null, "help": null, "disabled": null, ...` for everything the
+    author did not set. On a real page that made `column_config` 17% of the
+    whole snapshot, two thirds of it nulls.
+
+    A caller that wants to say something with `None` has to say it another way,
+    which Streamlit already does: `column_config={"Notes": None}` means hidden,
+    and is reported as `{"hidden": true}`.
+    """
+    from streamlit.runtime.agent import json_encoding
+
+    return {
+        name: _drop_unset(json_encoding.to_json_value(value))
         for name, value in props.items()
         if value is not None
     }
-    return json.dumps(description)
+
+
+def described_column_config(column_config_mapping: Any) -> Any:
+    """Describe a column configuration from the mapping Streamlit resolved.
+
+    The resolved mapping is the better source than the author's argument: it has
+    defaults applied, and it already states "hide this column" as
+    `{"hidden": True}` rather than as the bare `None` the author may have
+    written -- so no null in it carries meaning, and every remaining one can be
+    dropped as unset.
+
+    Only the index entry is removed, because its key is an internal identifier
+    and `hide_index` is reported as a parameter in its own right.
+    """
+    if not isinstance(column_config_mapping, dict):
+        return column_config_mapping
+
+    from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
+
+    return {
+        name: config
+        for name, config in column_config_mapping.items()
+        if name != INDEX_IDENTIFIER
+    } or None
+
+
+def _drop_unset(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _drop_unset(item) for key, item in value.items() if item is not None
+        }
+    if isinstance(value, list):
+        # Positions in a list are meaningful, so a null stays a null.
+        return [_drop_unset(item) for item in value]
+    return value
 
 
 def block(
@@ -217,8 +269,6 @@ def block(
     if not is_recording():
         return None
 
-    from streamlit.runtime.agent import json_encoding
-
     description: dict[str, Any] = {_TYPE_KEY: command}
     if key is not None:
         description[_KEY_KEY] = key
@@ -228,11 +278,7 @@ def block(
         description[_SUPPORT_KEY] = support
     if transparent:
         description[_TRANSPARENT_KEY] = True
-    description[_PROPS_KEY] = {
-        name: json_encoding.to_json_value(value)
-        for name, value in props.items()
-        if value is not None
-    }
+    description[_PROPS_KEY] = _describe_props(props)
     return json.dumps(description)
 
 

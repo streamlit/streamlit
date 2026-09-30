@@ -1504,7 +1504,7 @@ class DataEditorMixin:
                     coordinates=self.dg._get_delta_path_str(),
                 ),
                 support="read_only_in_v1",
-                column_config=column_config,
+                column_config=agent_spec.described_column_config(column_config_mapping),
                 column_order=list(column_order) if column_order else None,
                 hide_index=hide_index,
                 num_rows=num_rows,
