@@ -434,6 +434,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
   }, [data, datasets])
 
+  const labelContext = inputElement.alt?.trim() || undefined
+
   if (showData) {
     const derivedHeight =
       fullScreenHeight ??
@@ -444,6 +446,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         data={data ?? datasets[0]?.data}
         height={derivedHeight}
         width={widthConfig ?? undefined}
+        alt={labelContext}
         customToolbarActions={[
           <ToolbarAction
             key="show-chart"
@@ -452,7 +455,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             onClick={() => {
               setShowData(false)
             }}
-            labelContext={inputElement.alt?.trim() || undefined}
+            labelContext={labelContext}
           />,
         ]}
       />
@@ -462,8 +465,6 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // Create the container inside which Vega draws its content.
   // To style the Vega tooltip, we need to apply global styles since
   // the tooltip element is drawn outside of this component.
-  const labelContext = inputElement.alt?.trim() || undefined
-
   return (
     <StyledToolbarElementContainer
       height={

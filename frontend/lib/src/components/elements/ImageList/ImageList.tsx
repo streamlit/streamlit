@@ -96,6 +96,7 @@ const Image = ({
   handleImageError,
   shouldStretch,
   link,
+  onCaptionPlainTextChange,
 }: {
   image: ImageProto
   imgStyle: CSSProperties
@@ -103,6 +104,8 @@ const Image = ({
   handleImageError: (e: React.SyntheticEvent<HTMLImageElement>) => void
   shouldStretch?: boolean
   link?: string
+  /** Reports rendered caption plain text (not markdown source) for toolbar naming. */
+  onCaptionPlainTextChange?: (text: string | undefined) => void
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
   const captionDomId = useId()
@@ -121,29 +124,32 @@ const Image = ({
 
   // Watch the caption for text that arrives late: async Markdown plugins
   // (KaTeX, emoji) swap a loading skeleton for real content after the first
-  // render. Only linked images consume captionHasText.
+  // render. Linked images use captionHasText; the parent may also need the
+  // rendered plain text for toolbar aria-labels.
   useLayoutEffect(() => {
     const node = captionRef.current
-    if (!safeLink || !image.caption || !node) {
+    if (!image.caption || !node) {
       setCaptionHasText(false)
+      onCaptionPlainTextChange?.(undefined)
       return
     }
 
-    const syncCaptionHasText = (): void => {
+    const syncCaptionPlainText = (): void => {
       const text = node.textContent?.trim() ?? ""
       setCaptionHasText(text.length > 0)
+      onCaptionPlainTextChange?.(text || undefined)
     }
 
-    syncCaptionHasText()
+    syncCaptionPlainText()
 
-    const observer = new MutationObserver(syncCaptionHasText)
+    const observer = new MutationObserver(syncCaptionPlainText)
     observer.observe(node, {
       childList: true,
       subtree: true,
       characterData: true,
     })
     return () => observer.disconnect()
-  }, [image.caption, safeLink])
+  }, [image.caption, onCaptionPlainTextChange])
 
   const imageElement = (
     // oxlint-disable-next-line jsx-a11y/alt-text
@@ -200,6 +206,19 @@ const Image = ({
 }
 
 /**
+ * Prefer a single image's non-blank alt for toolbar context. Caption plain
+ * text is supplied separately from the rendered caption node.
+ */
+function getSingleImageAltContext(
+  imgs: readonly ImageProto[]
+): string | undefined {
+  if (imgs.length !== 1) {
+    return undefined
+  }
+  return imgs[0].alt?.trim() || undefined
+}
+
+/**
  * Functional element for a horizontal list of images.
  */
 function ImageList({
@@ -253,20 +272,19 @@ function ImageList({
     )
   }
 
-  // One list-level Fullscreen for the gallery: only compose when a single
-  // image is shown so we do not mis-attribute a multi-image caption/alt.
-  const labelContext = (() => {
-    if (element.imgs.length !== 1) {
-      return undefined
-    }
-    const image = element.imgs[0] as ImageProto
-    const alt = image.alt?.trim()
-    if (alt) {
-      return alt
-    }
-    const caption = image.caption?.trim()
-    return caption || undefined
-  })()
+  // Rendered caption plain text for the single-image toolbar fallback.
+  const [captionPlainText, setCaptionPlainText] = useState<
+    string | undefined
+  >()
+
+  // The gallery has a single list-level Fullscreen button, so only borrow a
+  // name when there is exactly one image — otherwise the button would be named
+  // after an arbitrary member of the list. Prefer alt (plain text); else the
+  // rendered caption plain text (not markdown source).
+  const altContext = getSingleImageAltContext(element.imgs as ImageProto[])
+  const labelContext = altContext ?? captionPlainText
+  const reportCaptionPlainText =
+    element.imgs.length === 1 && !altContext ? setCaptionPlainText : undefined
 
   return (
     <StyledToolbarElementContainer
@@ -299,6 +317,9 @@ function ImageList({
             handleImageError={handleImageError}
             shouldStretch={shouldStretch}
             link={element.imgs.length === 1 ? element.link : undefined}
+            onCaptionPlainTextChange={
+              idx === 0 ? reportCaptionPlainText : undefined
+            }
           />
         ))}
       </StyledImageList>

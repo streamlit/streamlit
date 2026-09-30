@@ -489,6 +489,46 @@ describe("ImageList Element", () => {
         })
       ).toBeInTheDocument()
     })
+
+    it("composes rendered caption plain text, not markdown source", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "**Revenue** by quarter",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Revenue by quarter$/,
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Fullscreen: \*\*Revenue\*\*/,
+        })
+      ).not.toBeInTheDocument()
+    })
+
+    it("omits caption context when the caption renders no text", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [{ caption: "---", url: "/media/mockImage1.jpeg" }],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+    })
   })
 
   describe("crossOrigin attribute", () => {

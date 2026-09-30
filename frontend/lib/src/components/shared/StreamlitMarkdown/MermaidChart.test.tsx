@@ -392,20 +392,33 @@ describe("MermaidChart", () => {
       await waitForChartImage()
 
       // Toolbar is opacity:0 until hover — presence in the DOM is enough.
-      // Aria-labels compose the diagram alt (e.g. "Download as PNG: Mermaid flowchart").
+      // Unlabeled diagrams keep generic chrome names (author alt only).
+      expect(
+        screen.getByRole("button", { name: /^Download as PNG$/ })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: /^Copy to clipboard$/ })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+    })
+
+    it("composes an author-provided diagram name into toolbar aria-labels", async () => {
+      const source = ["flowchart TD", "%% stAlt: Checkout flow", "A-->B"].join(
+        "\n"
+      )
+      render(<MermaidChart source={source} />)
+      await waitForChartImage()
+
       expect(
         screen.getByRole("button", {
-          name: /^Download as PNG: Mermaid flowchart$/,
+          name: /^Download as PNG: Checkout flow$/,
         })
       ).toBeInTheDocument()
       expect(
         screen.getByRole("button", {
-          name: /^Copy to clipboard: Mermaid flowchart$/,
-        })
-      ).toBeInTheDocument()
-      expect(
-        screen.getByRole("button", {
-          name: /^Fullscreen: Mermaid flowchart$/,
+          name: /^Fullscreen: Checkout flow$/,
         })
       ).toBeInTheDocument()
     })

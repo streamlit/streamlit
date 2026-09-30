@@ -23,7 +23,6 @@ import { render } from "~lib/test_util"
 import { TOP_DISTANCE } from "./styled-components"
 import Toolbar, {
   ToolbarAction,
-  toolbarActionAriaLabel,
   type ToolbarActionProps,
   type ToolbarProps,
 } from "./Toolbar"
@@ -172,7 +171,7 @@ describe("Toolbar element", () => {
     ).toBeInTheDocument()
   })
 
-  it("composes labelContext into the Fullscreen aria-label only", async () => {
+  it("composes labelContext into the Fullscreen aria-label but not the tooltip", async () => {
     vi.useFakeTimers()
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
@@ -212,20 +211,6 @@ describe("Toolbar element", () => {
         name: /^Close fullscreen: Revenue table$/,
       })
     ).toBeInTheDocument()
-  })
-})
-
-describe("toolbarActionAriaLabel", () => {
-  it("returns the label when context is missing or blank", () => {
-    expect(toolbarActionAriaLabel("Fullscreen")).toBe("Fullscreen")
-    expect(toolbarActionAriaLabel("Fullscreen", "")).toBe("Fullscreen")
-    expect(toolbarActionAriaLabel("Fullscreen", "   ")).toBe("Fullscreen")
-  })
-
-  it("composes action and trimmed context", () => {
-    expect(toolbarActionAriaLabel("Fullscreen", "  Revenue table  ")).toBe(
-      "Fullscreen: Revenue table"
-    )
   })
 })
 

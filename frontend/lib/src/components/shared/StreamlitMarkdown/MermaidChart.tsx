@@ -143,11 +143,12 @@ function extractStreamlitAlt(source: string): string | undefined {
 }
 
 /**
- * Generates accessible alt text for a mermaid diagram.
- * Prefers Streamlit's %% stAlt: marker, then author accTitle/accDescr,
- * then a type-derived fallback.
+ * Author-provided accessible name for toolbar chrome.
+ * Prefers Streamlit's %% stAlt: marker, then Mermaid accTitle/accDescr.
+ * Omits the type-derived fallback so unlabeled diagrams keep generic
+ * Fullscreen / Download labels.
  */
-function getAltText(source: string): string {
+function getAuthorProvidedAltText(source: string): string | undefined {
   const streamlitAlt = extractStreamlitAlt(source)
   if (streamlitAlt) {
     return streamlitAlt
@@ -164,8 +165,19 @@ function getAltText(source: string): string {
   if (description) {
     return description
   }
+  return undefined
+}
 
-  return `Mermaid ${getDiagramTypeFromSource(source)}`
+/**
+ * Generates accessible alt text for a mermaid diagram.
+ * Prefers Streamlit's %% stAlt: marker, then author accTitle/accDescr,
+ * then a type-derived fallback.
+ */
+function getAltText(source: string): string {
+  return (
+    getAuthorProvidedAltText(source) ??
+    `Mermaid ${getDiagramTypeFromSource(source)}`
+  )
 }
 
 /**
@@ -683,9 +695,9 @@ const MermaidChart = memo(function MermaidChart({
     )
   }
 
-  // Render the SVG via an <img> tag with blob URL.
-  const labelContext = getAltText(source)
+  const labelContext = getAuthorProvidedAltText(source)
 
+  // Render the SVG via an <img> tag with blob URL.
   return (
     <ErrorBoundary>
       <StyledToolbarElementContainer
@@ -718,7 +730,7 @@ const MermaidChart = memo(function MermaidChart({
           isFullScreen={isFullScreen}
           data-testid="stMermaidChart"
         >
-          {svgBlobUrl && <img src={svgBlobUrl} alt={labelContext} />}
+          {svgBlobUrl && <img src={svgBlobUrl} alt={getAltText(source)} />}
         </StyledMermaidContainer>
       </StyledToolbarElementContainer>
     </ErrorBoundary>

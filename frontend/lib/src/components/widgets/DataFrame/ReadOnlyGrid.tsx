@@ -29,6 +29,8 @@ interface ReadOnlyGridProps {
   height?: number
   width?: streamlit.WidthConfig.$Properties
   customToolbarActions?: React.ReactNode[]
+  /** Accessible name composed into the grid toolbar button labels. */
+  alt?: string
 }
 
 /**
@@ -41,6 +43,7 @@ interface ReadOnlyGridProps {
  * @param data - The arrow data to display in the grid.
  * @param height - The height of the grid.
  * @param customToolbarActions - Custom toolbar actions to display in the grid toolbar.
+ * @param alt - Accessible name composed into toolbar button aria-labels.
  *
  * @returns A React element that displays the data in a read-only grid.
  */
@@ -49,6 +52,7 @@ export const ReadOnlyGrid = ({
   height,
   width,
   customToolbarActions,
+  alt,
 }: ReadOnlyGridProps): React.ReactElement => {
   return (
     <DataFrame
@@ -64,6 +68,7 @@ export const ReadOnlyGrid = ({
           formId: "",
           columnOrder: [],
           selectionMode: [],
+          alt: alt ?? "",
         })
       }
       data={data}

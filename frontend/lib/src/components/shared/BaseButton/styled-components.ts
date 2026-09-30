@@ -534,7 +534,8 @@ export const StyledElementToolbarButton = styled(
     display: "flex",
     gap: theme.spacing.xs,
     alignItems: "center",
-    // WCAG 2.2 SC 2.5.8 Target Size (Minimum): ≥24×24 CSS px.
+    // WCAG 2.2 SC 2.5.8 Target Size (Minimum): ≥24×24 CSS px at the default
+    // 16px root. Rem scales with theme.baseFontSize by design.
     minWidth: theme.sizes.smallElementHeight,
     minHeight: theme.sizes.smallElementHeight,
     // line height should be the same as the icon size

@@ -35,13 +35,11 @@ import {
 
 /**
  * Compose an icon-only toolbar button's accessible name.
- * Tooltip / visible label stay as `label`; aria-label adds element context
- * when the author supplied a name (e.g. "Fullscreen: Revenue table").
+ * The tooltip and visible label stay as `label`. When `labelContext` is
+ * non-blank, aria-label becomes `{label}: {context}`
+ * (e.g. "Fullscreen: Revenue table").
  */
-export function toolbarActionAriaLabel(
-  label: string,
-  labelContext?: string
-): string {
+function toolbarActionAriaLabel(label: string, labelContext?: string): string {
   const context = labelContext?.trim()
   return context ? `${label}: ${context}` : label
 }
