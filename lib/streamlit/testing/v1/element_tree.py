@@ -125,6 +125,7 @@ def _unknown_element_content(proto: Any) -> Any:
     return getattr(proto, "value", None)
 
 
+# Rem values must be unique and exactly representable in proto float32 (rem_width).
 _REM_TO_SPACE_SIZE: Final = {
     rem: cast("SpaceSize", name) for name, rem in SIZE_TO_REM_MAPPING.items()
 }
@@ -201,6 +202,7 @@ class Element(ABC):
     root: ElementTree = field(repr=False)
     key: str | None
 
+    @abstractmethod
     def __init__(self, proto: Any, root: ElementTree) -> None:
         self.proto = proto
         self.root = root
@@ -954,7 +956,7 @@ class Space(Element):
 
     @property
     def value(self) -> SpaceSize | None:
-        """The ``size`` passed to ``st.space``, or ``None`` if it cannot be reconstructed."""
+        """The ``size`` used by ``st.space``, including the default."""
         return self._size
 
 
