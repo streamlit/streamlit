@@ -623,7 +623,7 @@ for a disabled control, `unsupported_element` for one this interface cannot driv
 | Form                             | Send that form's fields plus exactly one of its submit triggers. Omitted fields keep current values. Reject fields without a submit, fields from two forms, and unrelated controls in the same call. `clear_on_submit` is **not** applied: the reset lives in the browser, so fields keep their submitted values. See below.                                                                                                        |
 | Trigger                          | At most one per request. Triggers reset and never persist as `true`.                                                                                                                                                                                                                                                                                                                                                          |
 | Navigation                       | `page` and `query_params` are a navigation transition and cannot be combined with widget changes.                                                                                                                                                                                                                                                                                                                             |
-| Widget inside a fragment         | Interactive, and the rerun is **scoped to that fragment**, as in the browser. Every key in one request must belong to the same fragment, or to none. See below.                                                                                                                                                                                                                                                                                                                                |
+| Widget inside a fragment         | Interactive, and the rerun is **scoped to that fragment**, as in the browser. A batch spanning regions reruns the whole app, except that an open dialog's widgets are sent on their own. See below.                                                                                                                                                                                                                                                                                                                             |
 | Widget with `on_change="ignore"` | Interactive, like any other widget. The mode only tells the browser not to rerun on change; it carries no backend meaning, so the endpoint applies the value and reruns. An agent that wants browser-equivalent deferral batches the value with whatever trigger should cause the rerun.                                                                                                                                      |
 
 **Reruns are scoped the way the browser scopes them.** Acting on a widget inside an
@@ -670,7 +670,8 @@ when the snapshot was assembled, and nodes carry their `fragment` so a client kn
 write will re-run.
 
 Returning only the fragment's subtree is the other tempting shortcut and also wrong: it
-pushes the delta merge and fragment-scoped staleness rules onto every client, which is the
+pushes the delta merge, and the rules for which nodes a scoped run replaces, onto every
+client, which is the
 Streamlit knowledge this interface exists to absorb, and it breaks `actions`, since a
 client needs the whole page's action set to choose its next move.
 
@@ -791,7 +792,7 @@ explain the gap or fall back to a browser:
 | `run_every` fragment refresh                            | Nothing refreshes until the client interacts again; the interval is not reported, since it would not change when a caller chooses to.                              |
 | `clear_on_submit`                                       | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.       |
 | `st.file_uploader`, `st.camera_input`, `st.audio_input` | Inspectable, not interactive.                                                                                                                                      |
-| `st.data_editor` edits, dataframe and chart selections  | Read-only.                                                                                                                                                         |
+| `st.data_editor` edits, dataframe and chart selections  | Read-only, with `support: read_only_in_v1` on the element when the app enabled them.                                                                                                                                                      |
 | Deferred downloads and download callbacks               | Not triggerable. Eager downloads expose their existing URL.                                                                                                        |
 | Long-running interactions                               | No polling or partial results; the request either settles or returns `run_timed_out`.                                                                              |
 
@@ -1226,20 +1227,15 @@ new command or significant parameter should ship with all of the following, or a
    dashboard will cut off a legitimate interaction somewhere.
    That argues the answer is the long-run handling in follow-up #4 rather than a larger
    number.
-5. **How should a client tell how current each part of a snapshot is?** Scoped reruns make
-   freshness per-region. v1 reports which fragments re-rendered, which is enough to avoid
-   citing a stale number but not enough to say *when* a carried-over region was computed.
-   A per-node timestamp is the obvious extension and may be more precision than any
-   consumer wants.
-6. **Should `clear_on_submit` move server-side?** It is implemented in React today, so no
+5. **Should `clear_on_submit` move server-side?** It is implemented in React today, so no
    headless client can honor it, and the browser is already inconsistent with itself
    immediately after a submit. Fixing it properly is a change to core form semantics and
    affects browser sessions too, so it needs its own decision rather than riding along
    here.
-7. Which exact JSON encodings should be standardized for dates, datetimes, decimals,
+6. Which exact JSON encodings should be standardized for dates, datetimes, decimals,
    large integers, non-finite numbers, ranges, and object-valued options? These must be
    settled before v1 ships, with or without per-action schemas.
-8. **What is actually unbounded, and which of those need bounding?** Three things now
+7. **What is actually unbounded, and which of those need bounding?** Three things now
    dominate a large response, and truncation is the wrong answer to all of them because
    each omission would remove something a client legitimately needs. A selectbox can carry
    several hundred options, and the omitted ones would be exactly the values a request may
@@ -1248,4 +1244,4 @@ new command or significant parameter should ship with all of the following, or a
    is the one case where a `url` makes truncation safe. The candidate answer is to extend
    that pattern — serve oversized option lists and figure specifications behind
    `data.url` — rather than to cap and discard. Worth deciding with measurements from real
-   apps    rather than in the abstract.
+   apps rather than in the abstract.
