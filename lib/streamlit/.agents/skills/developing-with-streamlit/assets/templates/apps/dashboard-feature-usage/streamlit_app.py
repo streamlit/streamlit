@@ -342,9 +342,9 @@ with chart_col:
         st.altair_chart(
             chart,
             alt=(
-                "Share of requests by endpoint over time"
+                f"{rolling_label} share of requests by endpoint over time"
                 if normalize
-                else "Request count by endpoint over time"
+                else f"{rolling_label} request count by endpoint over time"
             ),
         )
 

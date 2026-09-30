@@ -399,7 +399,9 @@ def dimension_metric(
                     create_bar_chart(
                         filtered, "ds", y_col, dim_col, CHART_HEIGHT, show_percent
                     ),
-                    alt=f"{title} by day",
+                    alt=(
+                        f"{title} share by day" if show_percent else f"{title} by day"
+                    ),
                 )
             else:
                 st.altair_chart(
