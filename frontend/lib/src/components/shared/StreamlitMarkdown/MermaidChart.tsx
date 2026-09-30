@@ -684,6 +684,8 @@ const MermaidChart = memo(function MermaidChart({
   }
 
   // Render the SVG via an <img> tag with blob URL.
+  const labelContext = getAltText(source)
+
   return (
     <ErrorBoundary>
       <StyledToolbarElementContainer
@@ -696,16 +698,19 @@ const MermaidChart = memo(function MermaidChart({
           isFullScreen={isFullScreen}
           onExpand={expand}
           onCollapse={collapse}
+          labelContext={labelContext}
         >
           <ToolbarAction
             label="Download as PNG"
             icon={FileDownload}
             onClick={handleDownloadPng}
+            labelContext={labelContext}
           />
           <ToolbarAction
             label={copyLabel}
             icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySource}
+            labelContext={labelContext}
           />
         </Toolbar>
         <StyledMermaidContainer
@@ -713,7 +718,7 @@ const MermaidChart = memo(function MermaidChart({
           isFullScreen={isFullScreen}
           data-testid="stMermaidChart"
         >
-          {svgBlobUrl && <img src={svgBlobUrl} alt={getAltText(source)} />}
+          {svgBlobUrl && <img src={svgBlobUrl} alt={labelContext} />}
         </StyledMermaidContainer>
       </StyledToolbarElementContainer>
     </ErrorBoundary>

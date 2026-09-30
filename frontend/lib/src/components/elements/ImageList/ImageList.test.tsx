@@ -438,6 +438,59 @@ describe("ImageList Element", () => {
     expect(document.body.style.overflow).toBe("unset")
   })
 
+  describe("toolbar accessible name", () => {
+    it("uses a plain Fullscreen label for multi-image lists", () => {
+      render(<ImageList {...getProps()} />)
+
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+    })
+
+    it("composes a single-image caption into the Fullscreen aria-label", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Black Square as PNG.",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Black Square as PNG\.$/,
+        })
+      ).toBeInTheDocument()
+    })
+
+    it("prefers a single-image alt over caption for the Fullscreen aria-label", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Visible caption",
+                url: "/media/mockImage1.jpeg",
+                alt: "Sunrise over a mountain ridge",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Sunrise over a mountain ridge$/,
+        })
+      ).toBeInTheDocument()
+    })
+  })
+
   describe("crossOrigin attribute", () => {
     it.each([
       { resourceCrossOriginMode: "anonymous" },

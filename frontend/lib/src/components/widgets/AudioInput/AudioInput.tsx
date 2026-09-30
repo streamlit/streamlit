@@ -527,6 +527,8 @@ const AudioInput: React.FC<Props> = ({
   const showNoMicPermissionsOrPlaceholderOrError =
     hasNoMicPermissions || showPlaceholder || isError
 
+  const labelContext = element.label?.trim() || undefined
+
   return (
     <StyledAudioInputContainerDiv
       className="stAudioInput"
@@ -552,12 +554,14 @@ const AudioInput: React.FC<Props> = ({
           isFullScreen={false}
           disableFullscreenMode={true}
           target={StyledWaveformContainerDiv}
+          labelContext={labelContext}
         >
           {recordingUrl && (
             <ToolbarAction
               label="Download as WAV"
               icon={FileDownload}
               onClick={handleDownloadClick}
+              labelContext={labelContext}
             />
           )}
           {deleteFileUrl && (
@@ -565,6 +569,7 @@ const AudioInput: React.FC<Props> = ({
               label="Clear recording"
               icon={Delete}
               onClick={handleDeleteClick}
+              labelContext={labelContext}
             />
           )}
         </Toolbar>

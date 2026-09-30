@@ -534,7 +534,9 @@ export const StyledElementToolbarButton = styled(
     display: "flex",
     gap: theme.spacing.xs,
     alignItems: "center",
-    minHeight: "unset",
+    // WCAG 2.2 SC 2.5.8 Target Size (Minimum): ≥24×24 CSS px.
+    minWidth: theme.sizes.smallElementHeight,
+    minHeight: theme.sizes.smallElementHeight,
     // line height should be the same as the icon size
     lineHeight: theme.iconSizes.md,
     width: "auto",

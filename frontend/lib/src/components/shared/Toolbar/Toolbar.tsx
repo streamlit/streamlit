@@ -33,11 +33,26 @@ import {
   type StyledToolbarWrapperProps,
 } from "./styled-components"
 
+/**
+ * Compose an icon-only toolbar button's accessible name.
+ * Tooltip / visible label stay as `label`; aria-label adds element context
+ * when the author supplied a name (e.g. "Fullscreen: Revenue table").
+ */
+export function toolbarActionAriaLabel(
+  label: string,
+  labelContext?: string
+): string {
+  const context = labelContext?.trim()
+  return context ? `${label}: ${context}` : label
+}
+
 export interface ToolbarActionProps {
   label: string
   icon?: EmotionIcon
   show_label?: boolean
   onClick: () => void
+  /** Element name composed into aria-label only (not the tooltip). */
+  labelContext?: string
 }
 
 export function ToolbarAction({
@@ -45,6 +60,7 @@ export function ToolbarAction({
   show_label,
   icon,
   onClick,
+  labelContext,
 }: ToolbarActionProps): ReactElement {
   const theme = useEmotionTheme()
 
@@ -76,7 +92,7 @@ export function ToolbarAction({
             event.stopPropagation()
           }}
           kind={BaseButtonKind.ELEMENT_TOOLBAR}
-          aria-label={label}
+          aria-label={toolbarActionAriaLabel(label, labelContext)}
         >
           {icon && (
             <Icon
@@ -99,6 +115,8 @@ export interface ToolbarProps {
   locked?: boolean
   target?: StyledToolbarWrapperProps["target"]
   disableFullscreenMode?: boolean
+  /** Element name composed into Fullscreen / Close fullscreen aria-labels. */
+  labelContext?: string
 }
 
 const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
@@ -109,6 +127,7 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
   children,
   target,
   disableFullscreenMode,
+  labelContext,
 }): ReactElement => {
   const showFullscreenButton =
     onExpand && !disableFullscreenMode && !isFullScreen
@@ -129,6 +148,7 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
             label="Fullscreen"
             icon={Fullscreen}
             onClick={() => onExpand()}
+            labelContext={labelContext}
           />
         )}
         {showCloseFullscreenButton && (
@@ -136,6 +156,7 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
             label="Close fullscreen"
             icon={FullscreenExit}
             onClick={() => onCollapse()}
+            labelContext={labelContext}
           />
         )}
       </StyledToolbar>

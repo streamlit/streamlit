@@ -253,6 +253,21 @@ function ImageList({
     )
   }
 
+  // One list-level Fullscreen for the gallery: only compose when a single
+  // image is shown so we do not mis-attribute a multi-image caption/alt.
+  const labelContext = (() => {
+    if (element.imgs.length !== 1) {
+      return undefined
+    }
+    const image = element.imgs[0] as ImageProto
+    const alt = image.alt?.trim()
+    if (alt) {
+      return alt
+    }
+    const caption = image.caption?.trim()
+    return caption || undefined
+  })()
+
   return (
     <StyledToolbarElementContainer
       width={containerWidth}
@@ -266,6 +281,7 @@ function ImageList({
         onExpand={expand}
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
+        labelContext={labelContext}
       ></Toolbar>
       <StyledImageList
         className="stImage"

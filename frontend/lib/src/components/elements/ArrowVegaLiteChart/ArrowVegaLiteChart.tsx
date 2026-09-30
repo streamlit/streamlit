@@ -452,6 +452,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             onClick={() => {
               setShowData(false)
             }}
+            labelContext={inputElement.alt?.trim() || undefined}
           />,
         ]}
       />
@@ -461,6 +462,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // Create the container inside which Vega draws its content.
   // To style the Vega tooltip, we need to apply global styles since
   // the tooltip element is drawn outside of this component.
+  const labelContext = inputElement.alt?.trim() || undefined
+
   return (
     <StyledToolbarElementContainer
       height={
@@ -478,6 +481,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         onExpand={expand}
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
+        labelContext={labelContext}
       >
         {enableShowData && (
           <ToolbarAction
@@ -486,6 +490,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             onClick={() => {
               setShowData(true)
             }}
+            labelContext={labelContext}
           />
         )}
         {isViewReady && (
@@ -493,6 +498,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             label="Download as PNG"
             icon={FileDownload}
             onClick={handleDownloadPng}
+            labelContext={labelContext}
           />
         )}
         {showCopySpecAction && (
@@ -503,6 +509,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             label={isCopied ? "Copied!" : "Copy Vega-Lite spec"}
             icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySpec}
+            labelContext={labelContext}
           />
         )}
       </Toolbar>

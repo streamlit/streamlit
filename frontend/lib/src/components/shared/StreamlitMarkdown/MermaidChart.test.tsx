@@ -379,7 +379,7 @@ describe("MermaidChart", () => {
       // Toolbar is opacity:0 until hover; fireEvent avoids userEvent visibility checks.
       // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
       fireEvent.click(
-        screen.getByRole("button", { name: "Copy to clipboard" })
+        screen.getByRole("button", { name: /Copy to clipboard/ })
       )
 
       await waitFor(() => {
@@ -392,11 +392,21 @@ describe("MermaidChart", () => {
       await waitForChartImage()
 
       // Toolbar is opacity:0 until hover — presence in the DOM is enough.
+      // Aria-labels compose the diagram alt (e.g. "Download as PNG: Mermaid flowchart").
       expect(
-        screen.getByRole("button", { name: "Download as PNG" })
+        screen.getByRole("button", {
+          name: /^Download as PNG: Mermaid flowchart$/,
+        })
       ).toBeInTheDocument()
       expect(
-        screen.getByRole("button", { name: "Copy to clipboard" })
+        screen.getByRole("button", {
+          name: /^Copy to clipboard: Mermaid flowchart$/,
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Mermaid flowchart$/,
+        })
       ).toBeInTheDocument()
     })
 
@@ -421,7 +431,7 @@ describe("MermaidChart", () => {
       await waitForChartImage()
 
       // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
-      fireEvent.click(screen.getByRole("button", { name: "Download as PNG" }))
+      fireEvent.click(screen.getByRole("button", { name: /Download as PNG/ }))
 
       await waitFor(() => {
         expect(anchorClick).toHaveBeenCalled()
@@ -440,7 +450,7 @@ describe("MermaidChart", () => {
       await waitForChartImage()
 
       // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
-      fireEvent.click(screen.getByRole("button", { name: "Download as PNG" }))
+      fireEvent.click(screen.getByRole("button", { name: /Download as PNG/ }))
 
       // load/error listeners are synchronous via the MockImage setter; no download link click.
       expect(anchorClick).not.toHaveBeenCalled()
