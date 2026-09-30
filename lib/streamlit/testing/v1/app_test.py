@@ -79,6 +79,7 @@ from streamlit.testing.v1.element_tree import (
     Selectbox,
     SelectSlider,
     Slider,
+    Space,
     Status,
     Subheader,
     Success,
@@ -1253,6 +1254,20 @@ class AppTest:
             ``at.slider(key="my_key")`` for a widget with a given key.
         """
         return self._tree.slider
+
+    @property
+    def space(self) -> ElementList[Space]:
+        """Sequence of all ``st.space`` elements.
+
+        Returns
+        -------
+        ElementList of Space
+            Sequence of all ``st.space`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.space[0]`` for the first element. Space is an
+            extension of the Element class.
+        """
+        return self._tree.space
 
     @property
     def subheader(self) -> ElementList[Subheader]:

@@ -32,6 +32,7 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
     AppTestError,
+    Space,
     UnknownElement,
     _form_clear_flags,
     _format_value_for_widget,
@@ -246,6 +247,40 @@ def test_columns():
     assert at.columns[1].radio[0].value == "a"
 
     repr(at.columns[0])
+
+
+def test_space() -> None:
+    """st.space is a typed Space node; .value is the layout size."""
+
+    def script():
+        import streamlit as st
+
+        st.space()
+        st.space("xxsmall")
+        st.space("medium")
+        st.space("stretch")
+        st.space(100)
+        with st.container(key="box"):
+            st.space("large")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    assert at.space.len == 6
+    assert isinstance(at.space[0], Space)
+    assert [s.value for s in at.space] == [
+        "small",
+        "xxsmall",
+        "medium",
+        "stretch",
+        100,
+        "large",
+    ]
+    assert list(at.get("space")) == list(at.space)
+    assert at.container("box").space[0].value == "large"
+    repr(at.space[0])
+
+    with pytest.raises(AppTestError, match="set_value"):
+        at.space[0].set_value("large")
 
 
 def test_image():
