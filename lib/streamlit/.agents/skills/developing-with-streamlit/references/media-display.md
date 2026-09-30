@@ -4,14 +4,14 @@ Use the typed media command for images, video, audio, and PDFs — each renders 
 
 ## Accessible names (`alt`)
 
-Pass keyword-only `alt=` so assistive technologies can name the media. Write a short plain-text replacement for the visual (about a sentence). Do not open with "Image of…"; do not paste the same string into `caption` and `alt`.
+Pass keyword-only `alt=` so assistive technologies can name the media. Write a short, plain-text name appropriate to the media (about one sentence). Do not open with "Image of…"; do not paste the same string into `caption` and `alt`.
 
 - **`st.image` / `st.pyplot`:** `alt` is independent of `caption`. Use `alt=""` only for decorative images. Omitting `alt` leaves the image without an accessible name.
 - **`st.video` / `st.audio`:** `alt` names the player. For video captions (WCAG 1.2.2), use `subtitles=`, not `alt`.
 - **`st.pdf`:** `alt` names the viewer, not the PDF's page content.
-- **`st.iframe`:** `alt` sets the iframe `title`. Omit it only when a shared fallback title is acceptable.
+- **`st.iframe`:** `alt` sets the iframe `title`. Omit it only when the default title (`"st.iframe"` on every embed) is acceptable.
 
-Blank or whitespace-only `alt` is treated as omitted (and logged) on non-image commands. Decorative `alt=""` is image/pyplot-only.
+Whitespace-only `alt` is omitted and logged on every command. Empty `alt=""` is decorative only on `st.image` / `st.pyplot`.
 
 ## Images: st.image
 
@@ -42,7 +42,7 @@ Accepts a path, URL, or bytes. Supports `start_time` / `end_time`, `autoplay`, `
 
 ```python
 st.audio("track.mp3", alt="Q2 earnings call recording")
-st.audio(samples, sample_rate=44100)  # a NumPy sample array
+st.audio(samples, sample_rate=44100, alt="Synthesized tone sample")
 ```
 
 Accepts a path, URL, bytes, or a NumPy sample array (with `sample_rate`). Supports `start_time`, `autoplay`, and `loop`.
@@ -63,7 +63,7 @@ Renders a PDF inline from a path, URL, bytes, or file-like object (`height` defa
 
 ## Logo: st.logo
 
-`st.logo` pins a brand image to the top of the sidebar/header — distinct from `st.image`, which places an image in the page's content flow. See [design.md](design.md). It has no author `alt` parameter (app chrome).
+`st.logo` pins a brand image to the top of the sidebar/header — distinct from `st.image`, which places an image in the page's content flow. See [design.md](design.md). It has no `alt` parameter because Streamlit treats the logo as app chrome, not page content.
 
 ## References
 

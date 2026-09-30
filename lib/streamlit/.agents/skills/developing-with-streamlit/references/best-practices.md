@@ -52,7 +52,7 @@ query = st.text_input(
 )
 ```
 
-Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, and dataframes so assistive technologies can name them. Keep it short and specific; see [media-display.md](media-display.md) and [data-display.md](data-display.md).
+Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short and specific; see [media-display.md](media-display.md) and [data-display.md](data-display.md).
 
 ```python
 # BAD: Meaningful image with no alt
@@ -72,7 +72,7 @@ Prefer native Streamlit elements over recreating UI with custom HTML. This inclu
 
 Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` commands.
 
-- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command. Pass `alt=` to set a unique iframe `title` when the page has more than one embed.
+- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command. Pass `alt=` to set the iframe `title`. The default is a shared `"st.iframe"` name on every embed.
 - Use `st.html` for static HTML or CSS that should render directly in the app instead of inside an iframe. JavaScript is ignored by default; only enable it with `unsafe_allow_javascript=True` when necessary, and never enable it for untrusted content.
 
 ## Layout
@@ -270,7 +270,9 @@ Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` when you
 # GOOD: Native charts for common cases
 st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
 st.bar_chart(df, x="category", y="orders", alt="Orders by category")
-st.scatter_chart(df, x="revenue", y="margin", color="segment")
+st.scatter_chart(
+    df, x="revenue", y="margin", color="segment", alt="Margin versus revenue by segment"
+)
 
 # GOOD: Altair for complex charts
 chart = (

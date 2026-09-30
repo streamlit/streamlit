@@ -101,10 +101,12 @@ st.mermaid_chart(
         B -->|Yes| C[OK]
         B -->|No| D[Cancel]
 """,
-    width="stretch",
     alt="Decision flowchart from start to OK or Cancel",
-)  # "stretch" (default), "content", or a pixel value
+    width="stretch",  # "stretch" (default), "content", or a pixel value
+)
 ```
+
+`alt` names `st.mermaid_chart` only; a mermaid fence in `st.markdown` has no `alt` parameter.
 
 ## Colored text, backgrounds, and badges
 
