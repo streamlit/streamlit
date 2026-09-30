@@ -27,13 +27,16 @@ import asyncio
 import secrets
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import urlencode
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from streamlit import config
 from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.ClientState_pb2 import ContextInfo
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import snapshot as snapshot_module
 from streamlit.runtime.agent.widget_patch import (
@@ -188,6 +191,10 @@ class AgentSession:
     # changed. Deriving it per request instead would replay parameters a page
     # transition has already dropped.
     query_string: str = ""
+    # Browser facts the client chose to state, resent with every rerun the way
+    # a browser resends its own. None until a request supplies them, so the app
+    # reads `st.context.timezone` as unknown rather than as a guess.
+    context_info: ContextInfo | None = None
     last_used: float = field(default_factory=time.monotonic)
     element_states: dict[str, ElementState] = field(default_factory=dict)
     # Guards against a second interaction arriving while one is still running.
@@ -318,6 +325,11 @@ async def _run_interaction(
     rerun.page_script_hash = client_state.page_script_hash
     rerun.query_string = session.query_string
 
+    context = request.get("context")
+    context_info = session.context_info if context is None else _parse_context(context)
+    if context_info is not None:
+        rerun.context_info.CopyFrom(context_info)
+
     if page is not None:
         page_hash, page_name = _resolve_page(app_session, page)
         rerun.page_script_hash = page_hash
@@ -347,6 +359,7 @@ async def _run_interaction(
     back_msg = BackMsg()
     back_msg.rerun_script.CopyFrom(rerun)
 
+    session.context_info = context_info
     session.client.begin_interaction()
     runtime.handle_backmsg(session.session_id, back_msg)
 
@@ -422,7 +435,7 @@ def _app_session(runtime: Runtime, session: AgentSession) -> Any:
 
 
 def _validate_request_shape(request: dict[str, Any]) -> None:
-    known = {"session_id", "widget_state", "trigger", "page", "query_params"}
+    known = {"session_id", "widget_state", "trigger", "page", "query_params", "context"}
     unknown = set(request) - known
     if unknown:
         raise AgentRequestError(
@@ -492,6 +505,55 @@ def _encode_query_params(query_params: Any) -> str:
                 )
             pairs.append((str(name), str(value)))
     return urlencode(pairs)
+
+
+def _parse_context(context: Any) -> ContextInfo:
+    """Build the browser context a request states about its client.
+
+    Only facts a browser sends about itself without authentication, so
+    accepting them grants nothing. Identity never comes from here.
+    """
+    if not isinstance(context, dict):
+        raise AgentRequestError("invalid_request", "`context` must be an object.")
+    unknown = set(context) - {"timezone", "locale"}
+    if unknown:
+        raise AgentRequestError(
+            "invalid_request",
+            f"Unknown `context` fields: {', '.join(sorted(unknown))}. Supported: "
+            "`timezone`, `locale`.",
+        )
+
+    info = ContextInfo()
+    timezone = context.get("timezone")
+    if timezone is not None:
+        try:
+            zone = ZoneInfo(timezone) if isinstance(timezone, str) else None
+        except (ZoneInfoNotFoundError, ValueError):
+            zone = None
+        if zone is None:
+            raise AgentRequestError(
+                "invalid_request",
+                f"`context.timezone` must be an IANA name such as "
+                f"'Europe/Berlin', not {timezone!r}.",
+            )
+        info.timezone = timezone
+        # A browser reports the offset alongside the name, as minutes behind
+        # UTC the way JavaScript's getTimezoneOffset counts them. Deriving it
+        # keeps the two from disagreeing.
+        utc_offset = datetime.now(zone).utcoffset()
+        info.timezone_offset = (
+            -int(utc_offset.total_seconds()) // 60 if utc_offset is not None else 0
+        )
+
+    locale = context.get("locale")
+    if locale is not None:
+        if not isinstance(locale, str) or not locale:
+            raise AgentRequestError(
+                "invalid_request",
+                "`context.locale` must be a language tag such as 'de-DE'.",
+            )
+        info.locale = locale
+    return info
 
 
 def _decode_query_params(query_string: str) -> dict[str, list[str]]:

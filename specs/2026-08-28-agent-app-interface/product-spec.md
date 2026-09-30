@@ -237,6 +237,7 @@ Later calls reference keys from the snapshot they just read:
 | `trigger`      | Optional, at most one `{"key": ...}`. Payload-bearing triggers such as `st.chat_input` also carry `"value"`.                                                                                                            |
 | `page`         | Optional `url_path` of a page listed in the snapshot's `pages`, resolved by normal navigation. Defaults to the app's default page on creation, the current page otherwise. Never a Python path or internal script hash. |
 | `query_params` | Optional replacement mapping of name → list of strings. `{}` clears; omission preserves.                                                                                                                                |
+| `context`      | Optional `timezone` and `locale`, read by the app as `st.context`. What a browser reports about itself without authentication, so accepting it grants nothing. Held for the session; omission preserves, and a new one replaces it. |
 
 The request blocks until the run chain settles, then returns the snapshot. An accepted
 interaction may cause more than one script run through callbacks, `st.rerun()`, or a page
@@ -266,9 +267,10 @@ not:
   its session state kept, so a coding agent can edit and re-check in one session, or omit
   `session_id` for a clean start.
 - **Absent, because a browser supplies it:** `st.context.headers` and `cookies` are
-  empty, and its timezone, locale, URL, theme, and embedding fields are `None` rather
-  than guessed; `st.user` is anonymous. An app that formats times from
-  `st.context.timezone` needs a fallback for `None`.
+  empty, and its URL, theme, and embedding fields are `None` rather than guessed;
+  `st.user` is anonymous. Timezone and locale are `None` too unless the request states
+  them in `context`, which is what lets an app that formats times from
+  `st.context.timezone` render them as it would for a user.
 
 **Navigation is the one-round-trip parameterization channel.** Widgets
 declared with `bind="query-params"` can be set on the creating call, so "run this
@@ -819,7 +821,7 @@ back to a browser rather than mistake it for missing content:
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again; the interval is not reported, since it would not change when a caller chooses to.                                         |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.                  |
 | `bind="query-params"` write-back                                           | Setting a bound widget changes its value but not `query_params`; the browser is what writes the address bar. See [Actions in v1](#actions-in-v1).                             |
-| Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty and its other fields are `None`. The session is anonymous, so an app behind `st.login` shows its signed-out state. Identity mapping is part of remote enablement; see [Enablement](#enablement). |
+| Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`. The session is anonymous, so an app behind `st.login` shows its signed-out state. Identity mapping is part of remote enablement; see [Enablement](#enablement). |
 | Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun.                                                                                               |
 | Long-running interactions                                                  | No polling or partial results; the request either settles or returns `run_timed_out`.                                                                                         |
 
@@ -1024,7 +1026,8 @@ code that would change it.
 ## Follow-ups
 
 Each of these is additive to the v1 contract and independently shippable. They are
-ordered roughly by expected value.
+ordered roughly by expected value. Smaller implementation follow-ups and alternatives
+considered while building the prototype are in [potential-follow-ups.md](potential-follow-ups.md).
 
 1. **Remote enablement, then on by default.** Identity mapping into `st.user`, Origin
    and XSRF handling, and the response and rate budgets that make bulk access and request
@@ -1245,12 +1248,10 @@ new command or significant parameter should ship with all of the following, or a
 4. What run timeout, session, preview, and response budgets should ship? Some of it is
    settled: a 100-row preview keeps most filtered tables complete, and the
    externalization ceiling only has to prevent holding a second copy of something
-   enormous. Three are still open. The response document itself is unbounded, and a page
+   enormous. Two are still open. The response document itself is unbounded, and a page
    with a 3,000-option selectbox ships those options in every snapshot, which is the
-   realistic budget problem rather than table data. "The run chain settled" is currently a
-   grace period after the last run finishes — a heuristic that works but guesses; doing
-   better needs the runtime to say whether a further run is pending. And the run timeout
-   has no defensible default yet: opening a single lazy expander whose contents fetch from
+   realistic budget problem rather than table data. And the run timeout has no
+   defensible default yet: opening a single lazy expander whose contents fetch from
    the network can take **over two minutes**, so any timeout comfortable for a filtered
    dashboard will cut off a legitimate interaction somewhere.
    That argues the answer is the long-run handling in follow-up #4 rather than a larger
@@ -1273,3 +1274,14 @@ new command or significant parameter should ship with all of the following, or a
    that pattern — serve oversized option lists and figure specifications behind
    `data.url` — rather than to cap and discard. Worth deciding with measurements from real
    apps rather than in the abstract.
+8. **What stability does the snapshot promise, and where does a public contract live?**
+   The document is a compatibility surface from its first release: clients will key on
+   element types, `props` names, and error codes, and every command's description becomes
+   part of it. That needs a written policy before v1 ships — what `schema_version`
+   guarantees, which changes are additive, and whether the first release is labeled
+   experimental so the shape can still move. The path is part of the same decision.
+   `/_stcore/` is Streamlit's internal namespace, next to the WebSocket and health
+   routes, which keeps the interface clear of routes an `st.App` author defines, but it
+   also signals "not a contract". Keeping it there with `v1` carrying the stability, or
+   moving to a prefix that reads as public, should be decided before clients depend on
+   either.

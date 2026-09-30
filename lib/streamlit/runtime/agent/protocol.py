@@ -514,6 +514,27 @@ def _schemas() -> dict[str, Any]:
                         "report' a single request."
                     ),
                 },
+                "context": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "timezone": {
+                            "type": "string",
+                            "description": "An IANA name, such as `Europe/Berlin`.",
+                        },
+                        "locale": {
+                            "type": "string",
+                            "description": "A language tag, such as `de-DE`.",
+                        },
+                    },
+                    "description": (
+                        "What a browser would report about itself, read by the "
+                        "app as `st.context.timezone` and `st.context.locale`. "
+                        "Held for the session and resent with every rerun; "
+                        "omitting it preserves the last value, and a new one "
+                        "replaces it. Unset, the app reads both as `None`."
+                    ),
+                },
             },
             "description": (
                 "Navigation (`page`, `query_params`) is a separate transition "
@@ -627,12 +648,12 @@ def _schemas() -> dict[str, Any]:
                         "items": {"type": "string"},
                     },
                     "description": (
-                        "The session's current URL parameters.\n\n"
-                        "Not a description of the filters that produced this "
-                        "page. They are session-global and survive navigation, "
-                        "so a parameter a bound widget wrote on one page is "
-                        "still here on the next one, where nothing reads it. "
-                        "Cite widget `value`s for what produced a number."
+                        "The session's current URL parameters, as the app has "
+                        "them: navigating to a page that binds none of them "
+                        "drops them, as it does in a browser's address bar.\n\n"
+                        "URL state, not a description of the filters that "
+                        "produced this page. Cite widget `value`s for what "
+                        "produced a number."
                     ),
                 },
                 "tree": {
