@@ -275,6 +275,7 @@ def test_space() -> None:
         100,
         "large",
     ]
+    assert list(at.get("space")) == list(at.space)
     assert at.container("box").space[0].value == "large"
     repr(at.space[0])
 
