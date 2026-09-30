@@ -688,7 +688,6 @@ def build_snapshot(
     session_state: SessionState | None,
     query_params: dict[str, list[str]],
     rendered_fragments: list[str] | None = None,
-    auto_rerun_intervals: dict[str, float] | None = None,
 ) -> Snapshot:
     """Build the complete snapshot document for the run that just settled."""
     tree = merge_deltas(messages)
@@ -724,10 +723,8 @@ def build_snapshot(
         "actions": builder.actions,
     }
 
-    if fragments := _fragments(
-        builder.fragment_ids, rendered_fragments or [], auto_rerun_intervals or {}
-    ):
-        document["fragments"] = fragments
+    if stale := _stale_fragments(builder.fragment_ids, rendered_fragments or []):
+        document["stale_fragments"] = stale
 
     if builder.undescribed_types:
         # Commands that have not been given an agent-API description yet.
@@ -738,38 +735,21 @@ def build_snapshot(
     return Snapshot(document=document, element_states=builder.element_states)
 
 
-def _fragments(
-    seen: set[str],
-    rendered: list[str],
-    auto_rerun_intervals: dict[str, float],
-) -> list[dict[str, Any]]:
-    """Report only the fragments a client has to know something about.
+def _stale_fragments(seen: set[str], rendered: list[str]) -> list[str]:
+    """The fragments this interaction did not re-render.
 
-    Two things need saying, and neither applies to most fragments most of the
-    time. A partial rerun leaves regions of different ages, so a fragment the
-    last run did *not* re-render is older than `observed_at` claims. And a
-    fragment with `run_every` refreshes itself in a browser but never here, so
-    its interval is worth disclosing for a client that wants to poll.
+    The one thing a client cannot work out for itself: after a fragment-scoped
+    rerun the rest of the tree is carried over, so those regions are older than
+    `observed_at` claims. Everything else about a fragment is already available
+    -- which fragments exist, and which nodes belong to them, is the `fragment`
+    field on the nodes themselves.
 
-    Anything else is silence: a fragment absent from this list was rendered by
-    this interaction and does not refresh on its own. Listing every fragment
-    with `rendered: true` instead would put a page's worth of opaque hashes in
-    every snapshot to say what the absence of the list already says -- six of
-    them on one real page, carrying nothing.
-
-    Which fragments exist at all is answerable from the tree, where each node
-    inside one carries its `fragment`.
+    Empty after a full run, which is why the field is omitted then rather than
+    listing a page's worth of opaque hashes to say nothing.
     """
-    entries = []
-    for fragment_id in sorted(seen):
-        entry: dict[str, Any] = {"id": fragment_id}
-        if rendered and fragment_id not in rendered:
-            entry["rendered"] = False
-        if interval := auto_rerun_intervals.get(fragment_id):
-            entry["run_every"] = round(interval, 3)
-        if len(entry) > 1:
-            entries.append(entry)
-    return entries
+    if not rendered:
+        return []
+    return sorted(seen - set(rendered))
 
 
 def _last_message(messages: list[ForwardMsg], msg_type: str) -> ForwardMsg | None:

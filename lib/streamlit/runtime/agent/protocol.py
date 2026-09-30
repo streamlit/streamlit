@@ -206,7 +206,8 @@ omitted rather than sent as null.
 `fragment` appears on a node that lives inside an `st.fragment` (including an \
 `st.dialog` body, which is one). Acting on it reruns that fragment alone, \
 which is both faster and the only way to interact with a dialog without \
-closing it. See the top-level `fragments` field.
+closing it. A scoped rerun leaves the other regions untouched, which \
+`stale_fragments` reports.
 
 A dialog node itself has no `fragment`: it is the overlay around one, and its \
 body is the child container. Read the scope from the node you intend to act \
@@ -613,17 +614,20 @@ def _schemas() -> dict[str, Any]:
                     "items": {"$ref": "#/components/schemas/Page"},
                     "description": "Every page this app declares.",
                 },
-                "fragments": {
+                "stale_fragments": {
                     "type": "array",
-                    "items": {"$ref": "#/components/schemas/Fragment"},
+                    "items": {"type": "string"},
                     "description": (
-                        "Exceptions among the app's `st.fragment` regions: the "
-                        "ones this interaction did not re-render, and the ones "
-                        "that refresh themselves. Absent when there is nothing "
-                        "to report, which is the common case.\n\n"
-                        "A fragment not listed here was rendered by this "
-                        "interaction. To find which fragments exist at all, read "
-                        "the `fragment` field on the nodes in `tree`."
+                        "Fragments this interaction did not re-render, by the "
+                        "same opaque id the nodes inside them carry as "
+                        "`fragment`. Their contents are carried over from an "
+                        "earlier run: still current as far as the app is "
+                        "concerned, but older than `observed_at`, so check this "
+                        "before citing a number as being as of that "
+                        "instant.\n\n"
+                        "Absent after a full rerun, when nothing is carried "
+                        "over. To find which fragments exist at all, read the "
+                        "`fragment` field on the nodes in `tree`."
                     ),
                 },
                 "query_params": {
@@ -913,51 +917,6 @@ def _schemas() -> dict[str, Any]:
                 },
                 "title": {"type": "string"},
                 "icon": {"type": "string"},
-            },
-        },
-        "Fragment": {
-            "type": "object",
-            "required": ["id"],
-            "description": (
-                "An `st.fragment` region of the app. Streamlit reruns a "
-                "fragment on its own when something inside it changes, and this "
-                "interface does the same: a request whose keys all belong to one "
-                "fragment reruns only that fragment, and a request that mixes "
-                "regions is refused with `cross_fragment_batch`.\n\n"
-                "An `st.dialog` body is a fragment, which is why acting inside "
-                "a dialog keeps it open while acting anywhere else closes it: "
-                "a full rerun does not re-emit the dialog."
-            ),
-            "properties": {
-                "id": {
-                    "type": "string",
-                    "description": (
-                        "An opaque handle, matching the `fragment` field on the "
-                        "nodes belonging to it. Compare it for equality; do not "
-                        "parse or persist it."
-                    ),
-                },
-                "rendered": {
-                    "type": "boolean",
-                    "enum": [False],
-                    "description": (
-                        "Present, and false, when this interaction did not "
-                        "re-render the region: its contents are carried over "
-                        "from an earlier run, still current as far as the app is "
-                        "concerned but older than `observed_at`. Absent means it "
-                        "was rendered."
-                    ),
-                },
-                "run_every": {
-                    "type": "number",
-                    "description": (
-                        "The fragment's `run_every` interval in seconds, when it "
-                        "has one. A browser refreshes such a fragment on a "
-                        "timer; this interface has no clock, so nothing happens "
-                        "until you interact again. Poll by sending an empty "
-                        "request if you want the newer values."
-                    ),
-                },
             },
         },
         "Error": {

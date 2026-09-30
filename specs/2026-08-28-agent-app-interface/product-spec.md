@@ -637,22 +637,24 @@ tree is then carried over from an earlier run — still current as far as the ap
 concerned, but not freshly computed — so a single `observed_at` would overstate the
 document, and the report and export use cases cite exactly that field as provenance. The
 document stays complete and declares freshness instead: nodes inside a fragment carry an
-opaque `fragment` handle, a top-level `fragments` list reports the exceptions — the
-regions this interaction did *not* re-render, and the ones that refresh themselves — and
-`observed_at` means when the snapshot was assembled. Reporting the exceptions rather than
-every fragment is deliberate: a page with six of them would otherwise carry six opaque
-hashes in every snapshot to say what an absent list already says, and the common case has
-nothing to report at all.
+opaque `fragment` handle, a top-level `stale_fragments` lists the regions this interaction
+did *not* re-render, and `observed_at` means when the snapshot was assembled. Reporting
+only the stale ones is deliberate, and the field is absent after a full rerun: listing
+every fragment instead would put a page's worth of opaque hashes in every snapshot — six
+on one real page — to say what an absent list already says. Which fragments exist is
+answerable from the nodes.
 Returning only the fragment's subtree would make the timestamp honest by construction and
 is the wrong trade: it pushes the delta merge and fragment-scoped staleness rules onto
 every client, which is the Streamlit knowledge this interface exists to absorb, and it
 breaks `actions`, since a client needs the whole page's action set to choose its next
 move.
 
-That list is also where a `run_every` interval is reported. The refresh clock is the
-browser's, so an auto-refreshing fragment never refreshes for a non-browser client;
-disclosing the interval and letting the caller decide to poll is honest, while inventing
-background reruns server-side is not.
+A `run_every` fragment refreshes itself in a browser and never here, because the clock is
+the browser's and inventing background reruns server-side would be worse. That gap is
+declared once, in [What v1 does not support](#what-v1-does-not-support), rather than as an
+interval on every snapshot: a caller reruns when it wants newer values, and the app's
+preferred cadence does not change that decision. Advertising a cadence to an autonomous
+caller mostly invites the polling loop the request-volume budget is there to bound.
 
 **A headless client inherits the frontend's responsibilities.** Any behavior Streamlit
 implements in React rather than in Python is absent for every non-browser client, and two
@@ -761,7 +763,7 @@ explain the gap or fall back to a browser:
 
 | Not in v1                                               | Behavior                                                                                                                                                           |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `run_every` fragment refresh                            | The interval is reported on the fragment; nothing refreshes until the client interacts again.                                                                       |
+| `run_every` fragment refresh                            | Nothing refreshes until the client interacts again; the interval is not reported, since it would not change when a caller chooses to.                              |
 | `clear_on_submit`                                       | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.       |
 | `st.file_uploader`, `st.camera_input`, `st.audio_input` | Inspectable, not interactive.                                                                                                                                      |
 | `st.data_editor` edits, dataframe and chart selections  | Read-only.                                                                                                                                                         |

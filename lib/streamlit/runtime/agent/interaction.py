@@ -102,10 +102,6 @@ class AgentSessionClient(SessionClient):
         # The fragments the most recent run re-rendered, so the snapshot can
         # say which parts of the tree came from this observation.
         self.fragments_last_run: list[str] = []
-        # Auto-rerun intervals by fragment id, from the `auto_rerun` messages a
-        # full run emits. The browser turns these into timers; this client has
-        # none, so they are reported instead.
-        self.auto_rerun_intervals: dict[str, float] = {}
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         msg_type = msg.WhichOneof("type")
@@ -113,10 +109,6 @@ class AgentSessionClient(SessionClient):
         if msg_type == "new_session":
             self._run_id = msg.new_session.script_run_id
             self.fragments_last_run = list(msg.new_session.fragment_ids_this_run)
-            if not self.fragments_last_run:
-                # Which fragments exist, and how often they refresh themselves,
-                # is re-established by each full run.
-                self.auto_rerun_intervals = {}
             self._run_finished.clear()
 
         if msg_type == "delta":
@@ -125,11 +117,6 @@ class AgentSessionClient(SessionClient):
 
         if msg_type == "page_info_changed":
             self.query_string_update = msg.page_info_changed.query_string
-
-        if msg_type == "auto_rerun" and msg.auto_rerun.fragment_id:
-            self.auto_rerun_intervals[msg.auto_rerun.fragment_id] = (
-                msg.auto_rerun.interval
-            )
 
         if msg_type is not None:
             self._lifecycle[msg_type] = msg
@@ -389,7 +376,6 @@ async def _run_interaction(
         session_state=app_session.session_state,
         query_params=_decode_query_params(session.query_string),
         rendered_fragments=session.client.fragments_last_run,
-        auto_rerun_intervals=session.client.auto_rerun_intervals,
     )
     session.element_states = result.element_states
     session.last_used = time.monotonic()
