@@ -39,6 +39,9 @@ export interface LabelProps {
   // Python label so toggling required does not change widget identity.
   // Omitted for hidden/collapsed labels.
   required?: boolean
+
+  /** Ref to the visual (aria-hidden) label text node for plain-text consumers. */
+  labelTextRef?: React.Ref<HTMLSpanElement>
 }
 
 export function WidgetLabel({
@@ -48,6 +51,7 @@ export function WidgetLabel({
   labelVisibility,
   htmlFor,
   required,
+  labelTextRef,
 }: LabelProps): React.ReactElement | null {
   if (isNullOrUndefined(label)) {
     return null
@@ -70,7 +74,7 @@ export function WidgetLabel({
           and/or aria-labelledby). We hide the visual label text from assistive tech
           to avoid duplicate announcements, while keeping any children (e.g. help
           icons) accessible. */}
-      <span aria-hidden="true">
+      <span aria-hidden="true" ref={labelTextRef}>
         <StreamlitMarkdown source={label} allowHTML={false} isLabel />
       </span>
       {showRequiredMarker && (

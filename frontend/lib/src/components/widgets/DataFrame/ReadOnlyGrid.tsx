@@ -29,13 +29,13 @@ interface ReadOnlyGridProps {
   height?: number
   width?: streamlit.WidthConfig.$Properties
   customToolbarActions?: React.ReactNode[]
-  /** Accessible name composed into the grid toolbar button labels. */
+  /** Accessible name for the grid region, also composed into toolbar button aria-labels. */
   alt?: string
 }
 
 /**
  * A lightweight wrapper around the dataframe component that allows to reuse the
- * component as a ready-only data grid for arrow data for other cases
+ * component as a read-only data grid for arrow data for other cases
  * (e.g. to show underlying data of a chart).
  *
  * The width is always set to stretch, but the height can be configured.
@@ -43,7 +43,7 @@ interface ReadOnlyGridProps {
  * @param data - The arrow data to display in the grid.
  * @param height - The height of the grid.
  * @param customToolbarActions - Custom toolbar actions to display in the grid toolbar.
- * @param alt - Accessible name composed into toolbar button aria-labels.
+ * @param alt - Accessible name for the grid region, also composed into toolbar button aria-labels.
  *
  * @returns A React element that displays the data in a read-only grid.
  */

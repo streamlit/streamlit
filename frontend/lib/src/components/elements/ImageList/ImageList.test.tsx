@@ -529,6 +529,50 @@ describe("ImageList Element", () => {
         screen.getByRole("button", { name: /^Fullscreen$/ })
       ).toBeInTheDocument()
     })
+
+    it("drops caption context when rerendering from one image to a gallery", () => {
+      const { rerender } = render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Black Square as PNG.",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Black Square as PNG\.$/,
+        })
+      ).toBeInTheDocument()
+
+      rerender(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Black Square as PNG.",
+                url: "/media/mockImage1.jpeg",
+              },
+              { caption: "b", url: "/media/mockImage2.jpeg" },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Fullscreen: Black Square/,
+        })
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe("crossOrigin attribute", () => {

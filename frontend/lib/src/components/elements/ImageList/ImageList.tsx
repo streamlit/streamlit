@@ -125,10 +125,11 @@ const Image = ({
   // Watch the caption for text that arrives late: async Markdown plugins
   // (KaTeX, emoji) swap a loading skeleton for real content after the first
   // render. Linked images use captionHasText; the parent may also need the
-  // rendered plain text for toolbar aria-labels.
+  // rendered plain text for toolbar aria-labels. Skip the observer when
+  // neither consumer is active (e.g. unlinked gallery members).
   useLayoutEffect(() => {
     const node = captionRef.current
-    if (!image.caption || !node) {
+    if ((!safeLink && !onCaptionPlainTextChange) || !image.caption || !node) {
       setCaptionHasText(false)
       onCaptionPlainTextChange?.(undefined)
       return
@@ -149,7 +150,7 @@ const Image = ({
       characterData: true,
     })
     return () => observer.disconnect()
-  }, [image.caption, onCaptionPlainTextChange])
+  }, [image.caption, onCaptionPlainTextChange, safeLink])
 
   const imageElement = (
     // oxlint-disable-next-line jsx-a11y/alt-text
@@ -205,10 +206,7 @@ const Image = ({
   )
 }
 
-/**
- * Prefer a single image's non-blank alt for toolbar context. Caption plain
- * text is supplied separately from the rendered caption node.
- */
+/** Returns a single image's non-blank alt, or undefined for empty or multi-image lists. */
 function getSingleImageAltContext(
   imgs: readonly ImageProto[]
 ): string | undefined {
@@ -280,11 +278,14 @@ function ImageList({
   // The gallery has a single list-level Fullscreen button, so only borrow a
   // name when there is exactly one image — otherwise the button would be named
   // after an arbitrary member of the list. Prefer alt (plain text); else the
-  // rendered caption plain text (not markdown source).
+  // rendered caption plain text (not markdown source). Gate caption fallback on
+  // isSingleImage so a 1→N rerun cannot leak a stale caption into the name.
+  const isSingleImage = element.imgs.length === 1
   const altContext = getSingleImageAltContext(element.imgs as ImageProto[])
-  const labelContext = altContext ?? captionPlainText
+  const labelContext =
+    altContext ?? (isSingleImage ? captionPlainText : undefined)
   const reportCaptionPlainText =
-    element.imgs.length === 1 && !altContext ? setCaptionPlainText : undefined
+    isSingleImage && !altContext ? setCaptionPlainText : undefined
 
   return (
     <StyledToolbarElementContainer
