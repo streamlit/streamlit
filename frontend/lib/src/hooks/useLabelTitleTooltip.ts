@@ -21,7 +21,7 @@ import { type RefObject, useEffect, useRef } from "react"
  * elements or hard breaks would otherwise concatenate (`onetwo`). CSS
  * generated content is not included in `textContent`.
  */
-function plainTextWithBlockGaps(root: HTMLElement): string {
+export function plainTextWithBlockGaps(root: HTMLElement): string {
   const clone = root.cloneNode(true) as HTMLElement
   clone.querySelectorAll("br").forEach(br => {
     br.replaceWith(document.createTextNode(" "))

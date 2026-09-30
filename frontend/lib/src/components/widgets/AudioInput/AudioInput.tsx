@@ -37,6 +37,7 @@ import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import type { FileUploadClient } from "~lib/FileUploadClient"
 import useDownloadUrl from "~lib/hooks/useDownloadUrl"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { plainTextWithBlockGaps } from "~lib/hooks/useLabelTitleTooltip"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { uploadFiles } from "~lib/util/uploadFiles"
@@ -541,7 +542,7 @@ const AudioInput: React.FC<Props> = ({
     }
 
     const syncLabelPlainText = (): void => {
-      const text = node.textContent?.replaceAll(/\s+/g, " ").trim() ?? ""
+      const text = plainTextWithBlockGaps(node)
       setLabelContext(text || undefined)
     }
 

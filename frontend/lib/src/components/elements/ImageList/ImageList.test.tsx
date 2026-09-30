@@ -516,6 +516,32 @@ describe("ImageList Element", () => {
       ).not.toBeInTheDocument()
     })
 
+    it("inserts spaces between caption block nodes in the Fullscreen name", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Line one\n\nLine two",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Line one Line two$/,
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Fullscreen: Line oneLine two/,
+        })
+      ).not.toBeInTheDocument()
+    })
+
     it("omits caption context when the caption renders no text", () => {
       render(
         <ImageList

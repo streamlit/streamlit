@@ -38,6 +38,7 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
+import { plainTextWithBlockGaps } from "~lib/hooks/useLabelTitleTooltip"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { isDangerousLinkUri } from "~lib/util/UriUtil"
@@ -136,7 +137,7 @@ const Image = ({
     }
 
     const syncCaptionPlainText = (): void => {
-      const text = node.textContent?.trim() ?? ""
+      const text = plainTextWithBlockGaps(node)
       setCaptionHasText(text.length > 0)
       onCaptionPlainTextChange?.(text || undefined)
     }
@@ -275,15 +276,14 @@ function ImageList({
     string | undefined
   >()
 
-  // The gallery has a single list-level Fullscreen button, so only borrow a
-  // name when there is exactly one image — otherwise the button would be named
-  // after an arbitrary member of the list. Prefer alt (plain text); else the
-  // rendered caption plain text (not markdown source). Gate caption fallback on
-  // isSingleImage so a 1→N rerun cannot leak a stale caption into the name.
+  // The gallery has one list-level Fullscreen button, so borrow a name only
+  // when there is exactly one image; otherwise the button would be named after
+  // an arbitrary member. Prefer alt, else the caption's rendered plain text.
   const isSingleImage = element.imgs.length === 1
   const altContext = getSingleImageAltContext(element.imgs as ImageProto[])
   const labelContext =
     altContext ?? (isSingleImage ? captionPlainText : undefined)
+  // Gated on isSingleImage so a 1→N rerun cannot leak a stale caption.
   const reportCaptionPlainText =
     isSingleImage && !altContext ? setCaptionPlainText : undefined
 

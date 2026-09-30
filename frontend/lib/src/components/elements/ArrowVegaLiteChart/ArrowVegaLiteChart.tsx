@@ -510,7 +510,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
             label={isCopied ? "Copied!" : "Copy Vega-Lite spec"}
             icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySpec}
-            labelContext={labelContext}
+            // Skip context while on the transient "Copied!" label so the name
+            // stays "Copied!" rather than "Copied!: {context}".
+            labelContext={isCopied ? undefined : labelContext}
           />
         )}
       </Toolbar>

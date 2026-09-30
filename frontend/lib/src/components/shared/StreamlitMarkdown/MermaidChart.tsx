@@ -169,9 +169,8 @@ function getAuthorProvidedAltText(source: string): string | undefined {
 }
 
 /**
- * Generates accessible alt text for a mermaid diagram.
- * Prefers Streamlit's %% stAlt: marker, then author accTitle/accDescr,
- * then a type-derived fallback.
+ * Accessible alt text for the diagram image: the author-provided name, else a
+ * type-derived fallback.
  */
 function getAltText(source: string): string {
   return (
@@ -722,7 +721,9 @@ const MermaidChart = memo(function MermaidChart({
             label={copyLabel}
             icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySource}
-            labelContext={labelContext}
+            // Skip context while on the transient copied label so the name
+            // stays "Copied" rather than "Copied: {context}".
+            labelContext={isCopied ? undefined : labelContext}
           />
         </Toolbar>
         <StyledMermaidContainer
