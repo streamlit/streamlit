@@ -375,7 +375,6 @@ async def _run_interaction(
         messages=session.client.messages,
         session_state=app_session.session_state,
         query_params=_decode_query_params(session.query_string),
-        rendered_fragments=session.client.fragments_last_run,
     )
     session.element_states = result.element_states
     session.last_used = time.monotonic()

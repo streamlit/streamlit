@@ -632,22 +632,22 @@ Two details about the overlay:
   one that resolves to nothing. Without a registered dismissal, closing is any full rerun,
   including an empty interaction, which is heavier than clicking an X in a browser.
 
-**A scoped rerun makes freshness per-region, which the response has to say.** Most of the
-tree is then carried over from an earlier run — still current as far as the app is
-concerned, but not freshly computed — so a single `observed_at` would overstate the
-document, and the report and export use cases cite exactly that field as provenance. The
-document stays complete and declares freshness instead: nodes inside a fragment carry an
-opaque `fragment` handle, a top-level `stale_fragments` lists the regions this interaction
-did *not* re-render, and `observed_at` means when the snapshot was assembled. Reporting
-only the stale ones is deliberate, and the field is absent after a full rerun: listing
-every fragment instead would put a page's worth of opaque hashes in every snapshot — six
-on one real page — to say what an absent list already says. Which fragments exist is
-answerable from the nodes.
-Returning only the fragment's subtree would make the timestamp honest by construction and
-is the wrong trade: it pushes the delta merge and fragment-scoped staleness rules onto
-every client, which is the Streamlit knowledge this interface exists to absorb, and it
-breaks `actions`, since a client needs the whole page's action set to choose its next
-move.
+**A scoped rerun leaves the rest of the tree as the last run left it, and the response
+says nothing special about that.** It is tempting to declare which regions were not
+re-rendered, on the grounds that a single `observed_at` overstates them. Resist it: a
+browser is in exactly the same position after the same interaction, so keeping a page
+coherent across its own fragments is the app's responsibility either way, and
+`st.rerun("<key>")` is the supported way for one fragment to refresh another — which this
+interface reports correctly with no extra field, because the refreshed fragment really did
+run. Adding a staleness signal would hand an agent a report on an app's internal
+coherence that no other client receives, for a hazard the app owns. `observed_at` means
+when the snapshot was assembled, and nodes carry their `fragment` so a client knows what a
+write will re-run.
+
+Returning only the fragment's subtree is the other tempting shortcut and also wrong: it
+pushes the delta merge and fragment-scoped staleness rules onto every client, which is the
+Streamlit knowledge this interface exists to absorb, and it breaks `actions`, since a
+client needs the whole page's action set to choose its next move.
 
 A `run_every` fragment refreshes itself in a browser and never here, because the clock is
 the browser's and inventing background reruns server-side would be worse. That gap is

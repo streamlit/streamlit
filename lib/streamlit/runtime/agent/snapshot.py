@@ -204,7 +204,6 @@ class _SnapshotBuilder:
         self.element_states: dict[str, ElementState] = {}
         self.undescribed_types: set[str] = set()
         self.saw_uncaught_exception = False
-        self.fragment_ids: set[str] = set()
 
     def serialize_children(
         self, node: _Node, inherited_support: str | None = None
@@ -227,11 +226,6 @@ class _SnapshotBuilder:
             return self._serialize_container(node, inherited_support)
 
         if self._is_contentless(node):
-            # Still worth recording which fragment it belonged to, so a
-            # fragment whose whole body is placeholders is not missing from
-            # `fragments`.
-            if node.fragment_id is not None:
-                self.fragment_ids.add(node.fragment_id)
             return []
 
         return [self._serialize_element(node, inherited_support)]
@@ -307,7 +301,6 @@ class _SnapshotBuilder:
         if node.fragment_id is None:
             return
         result["fragment"] = node.fragment_id
-        self.fragment_ids.add(node.fragment_id)
 
     def _serialize_element(
         self, node: _Node, inherited_support: str | None = None
@@ -687,7 +680,6 @@ def build_snapshot(
     messages: list[ForwardMsg],
     session_state: SessionState | None,
     query_params: dict[str, list[str]],
-    rendered_fragments: list[str] | None = None,
 ) -> Snapshot:
     """Build the complete snapshot document for the run that just settled."""
     tree = merge_deltas(messages)
@@ -723,9 +715,6 @@ def build_snapshot(
         "actions": builder.actions,
     }
 
-    if stale := _stale_fragments(builder.fragment_ids, rendered_fragments or []):
-        document["stale_fragments"] = stale
-
     if builder.undescribed_types:
         # Commands that have not been given an agent-API description yet.
         # Reported so a gap is visible to the caller instead of looking like a
@@ -733,23 +722,6 @@ def build_snapshot(
         document["undescribed_types"] = sorted(builder.undescribed_types)
 
     return Snapshot(document=document, element_states=builder.element_states)
-
-
-def _stale_fragments(seen: set[str], rendered: list[str]) -> list[str]:
-    """The fragments this interaction did not re-render.
-
-    The one thing a client cannot work out for itself: after a fragment-scoped
-    rerun the rest of the tree is carried over, so those regions are older than
-    `observed_at` claims. Everything else about a fragment is already available
-    -- which fragments exist, and which nodes belong to them, is the `fragment`
-    field on the nodes themselves.
-
-    Empty after a full run, which is why the field is omitted then rather than
-    listing a page's worth of opaque hashes to say nothing.
-    """
-    if not rendered:
-        return []
-    return sorted(seen - set(rendered))
 
 
 def _last_message(messages: list[ForwardMsg], msg_type: str) -> ForwardMsg | None:

@@ -206,8 +206,10 @@ omitted rather than sent as null.
 `fragment` appears on a node that lives inside an `st.fragment` (including an \
 `st.dialog` body, which is one). Acting on it reruns that fragment alone, \
 which is both faster and the only way to interact with a dialog without \
-closing it. A scoped rerun leaves the other regions untouched, which \
-`stale_fragments` reports.
+closing it. A scoped rerun leaves the other regions as the last run left \
+them, exactly as it does in a browser: keeping a page coherent across its own \
+fragments is the app's job, and `st.rerun("<key>")` is how an app refreshes \
+another one.
 
 A dialog node itself has no `fragment`: it is the overlay around one, and its \
 body is the child container. Read the scope from the node you intend to act \
@@ -614,22 +616,6 @@ def _schemas() -> dict[str, Any]:
                     "items": {"$ref": "#/components/schemas/Page"},
                     "description": "Every page this app declares.",
                 },
-                "stale_fragments": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": (
-                        "Fragments this interaction did not re-render, by the "
-                        "same opaque id the nodes inside them carry as "
-                        "`fragment`. Their contents are carried over from an "
-                        "earlier run: still current as far as the app is "
-                        "concerned, but older than `observed_at`, so check this "
-                        "before citing a number as being as of that "
-                        "instant.\n\n"
-                        "Absent after a full rerun, when nothing is carried "
-                        "over. To find which fragments exist at all, read the "
-                        "`fragment` field on the nodes in `tree`."
-                    ),
-                },
                 "query_params": {
                     "type": "object",
                     "additionalProperties": {
@@ -787,8 +773,7 @@ def _schemas() -> dict[str, Any]:
                         "opaque id. Acting on such a node reruns that fragment "
                         "alone, and every key in one request must belong to the "
                         "same fragment or to none. Compare the id for equality "
-                        "against other nodes and against `stale_fragments`; do "
-                        "not parse or persist it."
+                        "against other nodes; do not parse or persist it."
                     ),
                 },
             },
