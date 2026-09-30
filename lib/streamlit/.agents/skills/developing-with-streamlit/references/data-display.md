@@ -7,7 +7,9 @@ Present data clearly.
 Pass keyword-only `alt=` on charts, maps, tables, and grids so assistive technologies can find them. Keep it to about a sentence: the chart's takeaway, the map's subject, or the table's purpose — not a data dump and not a paste of the dataframe.
 
 ```python
-st.bar_chart(df, x="category", y="revenue", alt="Revenue by product line, highest for Enterprise")
+st.bar_chart(
+    df, x="category", y="revenue", alt="Revenue by product line, highest for Enterprise"
+)
 st.dataframe(df, alt="Top 20 customers by revenue")
 st.table(summary, alt="Quarterly KPI summary")
 ```
