@@ -14,10 +14,11 @@
 
 """Type tests for st.stop.
 
-``st.stop()`` returns ``NoReturn``, so a successful (or ignored) call makes
-later statements in the same block unreachable. Each case lives in its own
-function so invalid-argument checks stay reachable. Import the function from
-``execution_control`` so the signature isn't erased by ``@gather_metrics``.
+``st.stop()`` is annotated as ``NoReturn``, so type checkers treat later
+statements in the same block as unreachable (including after an invalid call
+whose error is suppressed). Each case lives in its own function so every
+check stays reachable. Import ``stop`` from ``execution_control``, matching
+other command typing tests.
 """
 
 from __future__ import annotations
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
     def _stop_rejects_positional_arg() -> None:
         stop("reason")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
 
-    def _stop_rejects_keyword_arg() -> None:
+    def _stop_rejects_key_arg() -> None:
         stop(key="stop")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
 
     def _stop_rejects_help_arg() -> None:
