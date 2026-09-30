@@ -102,6 +102,7 @@ st.mermaid_chart(
         B -->|No| D[Cancel]
 """,
     width="stretch",
+    alt="Decision flowchart from start to OK or Cancel",
 )  # "stretch" (default), "content", or a pixel value
 ```
 
