@@ -2822,7 +2822,9 @@ class VegaChartsMixin:
         return agent_spec.element(
             command,
             key=proto.id or None,
-            support="read_only_in_v1",
+            # Selections cannot be sent through this interface. A chart without
+            # them has nothing to send, so it is fully supported.
+            support="read_only_in_v1" if selection_mode else None,
             data_url=data_offload.serve_arrow_over_http(
                 arrow_bytes, coordinates=self.dg._get_delta_path_str()
             ),

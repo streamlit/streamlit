@@ -828,7 +828,11 @@ class PlotlyMixin:
                     key=plotly_chart_proto.id,
                     support="read_only_in_v1",
                     theme=theme,
-                    selection_mode=sorted(plotly_chart_proto.selection_mode) or None,
+                    selection_mode=sorted(
+                        {selection_mode}
+                        if isinstance(selection_mode, str)
+                        else set(selection_mode)
+                    ),
                 ),
             )
             return widget_state.value
@@ -838,9 +842,7 @@ class PlotlyMixin:
             "plotly_chart",
             plotly_chart_proto,
             layout_config=layout_config,
-            agent_props=agent_spec.element(
-                "plotly_chart", support="read_only_in_v1", theme=theme
-            ),
+            agent_props=agent_spec.element("plotly_chart", theme=theme),
         )
 
     @property

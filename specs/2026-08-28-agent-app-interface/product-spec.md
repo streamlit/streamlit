@@ -349,23 +349,29 @@ right now. Naming follows the public API, for the reason above:
           {
             "type": "caption",
             "props": {
-              "body": "Net revenue excludes refunds. Periods are UTC. Source: finance ledger."
+              "body": "Net revenue excludes refunds. Periods are UTC. Source: finance ledger.",
+              "unsafe_allow_html": false
             }
           },
           {
-            "key": "region",
             "type": "selectbox",
+            "key": "region",
             "props": {
               "label": "Region",
               "options": ["All", "Europe", "AMER", "APAC"],
+              "index": 0,
               "help": "Customer billing region; All includes every region.",
-              "disabled": false
+              "disabled": false,
+              "label_visibility": "visible",
+              "accept_new_options": false,
+              "filter_mode": "fuzzy",
+              "on_change": "rerun"
             },
             "value": "All"
           },
           {
-            "key": "$$ID-8f2c9a1d4b6e7f30-None",
             "type": "button",
+            "key": "$$ID-8f2c9a1d4b6e7f30-None",
             "props": {
               "label": "Refresh data",
               "type": "secondary",
@@ -377,39 +383,47 @@ right now. Naming follows the public API, for the reason above:
             "props": {
               "label": "Net revenue",
               "value": "€1.2M",
-              "delta": "+8%"
+              "delta": "+8%",
+              "delta_color": "normal",
+              "label_visibility": "visible"
             }
           },
           {
             "type": "dataframe",
-            "props": { "column_config": { "month": { "label": "Month" } } },
+            "props": { "column_config": { "quarter": { "label": "Quarter" } } },
             "data": {
               "columns": [
-                { "name": "month", "type": "string" },
-                { "name": "revenue", "type": "number" }
+                { "name": "quarter", "type": "large_string" },
+                { "name": "revenue", "type": "int64" }
               ],
-              "row_count": 24,
+              "row_count": 4,
               "column_count": 2,
-              "complete": false,
+              "complete": true,
               "preview": {
-                "truncated": true,
-                "rows": [["2026-01", 120000]]
+                "truncated": false,
+                "rows": [
+                  ["2026-Q1", 284000],
+                  ["2026-Q2", 301500],
+                  ["2026-Q3", 297250],
+                  ["2026-Q4", 318000]
+                ]
               },
-              "url": "/media/4f1c8ab27d9e5306.arrow"
+              "url": "/media/4f1c8ab27d9e5306"
             }
           },
           {
             "type": "expander",
             "props": {
               "label": "How net revenue is calculated",
-              "icon": ":material/info:",
-              "expanded": false
+              "expanded": false,
+              "icon": ":material/info:"
             },
             "children": [
               {
                 "type": "markdown",
                 "props": {
-                  "body": "Gross invoiced amounts minus refunds and credit notes, converted to EUR at the invoice-date rate."
+                  "body": "Gross invoiced amounts minus refunds and credit notes, converted to EUR at the invoice-date rate.",
+                  "unsafe_allow_html": false
                 }
               }
             ]
@@ -491,7 +505,10 @@ Rules:
 - **Unsupported things stay visible, on the element itself.** An element that is not
   fully supported carries a `support` field with a machine-readable reason —
   `browser_required` for a custom component, for example — and absent means fully
-  supported. Keeping it on the node means an agent never has to cross-reference a summary
+  supported. A table or chart is fully supported until the app enables selections on
+  it; then it is `read_only_in_v1`, which marks exactly the element an app's "select a
+  row" caption is talking about. Tagging every table would mark gaps a display-only
+  element does not have, and teach clients to ignore the field. Keeping it on the node means an agent never has to cross-reference a summary
   list to find out which element a gap belongs to. A container's `support` binds its
   contents: an element inside an undrivable container is not drivable either, and
   repeating the reason onto descendants keeps `actions` from advertising children the
@@ -680,7 +697,7 @@ without introducing a new authorization surface.
 
 | Output                         | v1 representation                                                                                                                                                                                                                                          |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with logical types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order, not objects: repeating the column names per row is most of a long preview's size, and halved a 100-row catalog. A CSV blob would save no more — inside a JSON string it escapes its own quotes twice — while costing the types `columns` just declared. |
+| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order, not objects: repeating the column names per row is most of a long preview's size, and halved a 100-row catalog. A CSV blob would save no more — inside a JSON string it escapes its own quotes twice — while costing the types `columns` just declared. |
 | Lazy dataframe                 | The same shape, with the chunk already emitted as the preview and `complete: false`. `data.url` serves that chunk; fetching further ranges is a follow-up.                                                                                                 |
 | Chart                          | Public properties in `props`, the native specification inline when it fits the size budget and behind `data.url` otherwise, and chart data under `data` exactly as a dataframe's.                                                                          |
 | Image, audio, video, PDF       | Caption, MIME type, and the existing `/media/...` URL the app already exposed to its own client.                                                                                                                                                           |
@@ -1223,10 +1240,4 @@ new command or significant parameter should ship with all of the following, or a
    is the one case where a `url` makes truncation safe. The candidate answer is to extend
    that pattern — serve oversized option lists and figure specifications behind
    `data.url` — rather than to cap and discard. Worth deciding with measurements from real
-   apps rather than in the abstract.
-9. **Should a browser-only affordance be declared where the app tells a human to use it?**
-   An app's captions may say "click on a bar" or "select a row" for charts and dataframes
-   whose selection this interface does not support. `actions` correctly omits them, so the
-   contract is honest, but the app's own prose invites a client to try. A `support` reason
-   on the element carrying the affordance would close the gap between what the document
-   says and what the app's text says.
+   apps    rather than in the abstract.

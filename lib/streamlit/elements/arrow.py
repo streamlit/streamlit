@@ -1263,9 +1263,9 @@ class ArrowMixin:
             data_url=data_offload.serve_arrow_over_http(
                 proto.arrow_data.data, coordinates=self.dg._get_delta_path_str()
             ),
-            # st.dataframe selections and st.data_editor edits are read-only
-            # through this interface.
-            support="read_only_in_v1",
+            # Selections cannot be sent through this interface. A display-only
+            # table has nothing to send, so it is fully supported.
+            support="read_only_in_v1" if is_selection_activated else None,
             column_config=agent_spec.described_column_config(column_config_mapping),
             column_order=list(column_order) if column_order else None,
             hide_index=hide_index,

@@ -915,7 +915,6 @@ class EChartsMixin:
             agent_props=agent_spec.element(
                 "echarts_chart",
                 key=echarts_chart_proto.id or None,
-                support="read_only_in_v1",
                 theme=theme,
             ),
         )

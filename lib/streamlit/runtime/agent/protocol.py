@@ -795,7 +795,11 @@ def _schemas() -> dict[str, Any]:
             "properties": {
                 "columns": {
                     "type": "array",
-                    "description": "Column names with their logical types.",
+                    "description": (
+                        "Column names with their Arrow types (`int64`, "
+                        "`large_string`, `timestamp[ns]`), the schema of the "
+                        "bytes `url` serves."
+                    ),
                     "items": {
                         "type": "object",
                         "properties": {

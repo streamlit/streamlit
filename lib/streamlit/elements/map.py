@@ -313,7 +313,6 @@ class MapMixin:
             # not a data contract.
             agent_props=agent_spec.element(
                 "map",
-                support="read_only_in_v1",
                 data_url=_serve_points(data, self.dg._get_delta_path_str()),
                 latitude=latitude,
                 longitude=longitude,
