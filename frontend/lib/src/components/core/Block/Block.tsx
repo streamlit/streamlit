@@ -18,13 +18,14 @@ import {
   type JSX,
   type ReactElement,
   type ReactNode,
+  type Ref,
   useContext,
   useMemo,
 } from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import type { BlockNode } from "~lib/AppNode"
+import { BlockNode, ElementNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
@@ -48,16 +49,39 @@ import Popover from "~lib/components/elements/Popover/Popover"
 import Tabs, { type TabProps } from "~lib/components/elements/Tabs/Tabs"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import {
+  type DOMRectKeys,
+  useResizeObserver,
+} from "~lib/hooks/useResizeObserver"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
-import { notNullOrUndefined } from "~lib/util/utils"
+import { convertRemToPx } from "~lib/theme/utils"
+import {
+  getElementId,
+  isNullOrUndefined,
+  notNullOrUndefined,
+} from "~lib/util/utils"
 
+import {
+  clampColumnSpan,
+  cssLengthToPx,
+  resolveGridColumnCount,
+  resolveMinColumnWidthPx,
+  shouldScrollGridCell,
+} from "./gridUtils"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
   StyledColumn,
   StyledDialogContentEndPad,
   StyledFlexContainerBlock,
   type StyledFlexContainerBlockProps,
+  StyledGridCell,
+  StyledGridCellBody,
+  StyledGridCellContent,
+  StyledGridContainerBlock,
+  StyledGridContentMeasure,
+  StyledGridScrollBody,
   StyledLayoutWrapper,
+  translateGapWidth,
 } from "./styled-components"
 import {
   assignDividerColor,
@@ -147,7 +171,8 @@ export const ContainerContentsWrapper = (
       // stays compact for the column's direct children. Deliberately not inherited
       // from parentContext. Nested providers that use this wrapper (form, expander,
       // tabs, …) are not columns, so the flag resets to false. Nested st.container
-      // resets the same way because FlexBoxContainer omits this prop.
+      // resets the same way because FlexBoxContainer only sets this prop when the
+      // node is a column or grid cell.
       isDirectlyInColumn={notNullOrUndefined(props.node.deltaBlock.column)}
       parentContext={parentContext}
     >
@@ -234,6 +259,13 @@ export const FlexBoxContainer = (
       parentWidth={parentWidth}
       hasContentWidth={hasContentWidth}
       hasFixedWidth={hasFixedWidth}
+      // True for `st.columns` columns and `st.grid` cells so auto wrap stays
+      // compact for their direct children. Nested containers omit both fields
+      // and reset the flag. Not inherited from parentContext.
+      isDirectlyInColumn={
+        notNullOrUndefined(props.node.deltaBlock.column) ||
+        notNullOrUndefined(props.node.deltaBlock.gridCell)
+      }
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -255,6 +287,376 @@ export const FlexBoxContainer = (
       </StyledFlexContainerBlock>
     </FlexContextProvider>
   )
+}
+
+interface GridContainerProps extends BaseBlockProps {
+  node: BlockNode
+}
+
+const GRID_OBSERVED_PROPERTIES: DOMRectKeys[] = ["width"]
+const GRID_CELL_OBSERVED_PROPERTIES: DOMRectKeys[] = ["height"]
+
+interface GridCellProps {
+  constrainOverflow: boolean
+  verticalAlignment: BlockProto.GridContainer.VerticalAlignment
+  showBorder: boolean
+  columnSpan?: number
+  columnSpanAll: boolean
+  rowSpan?: number
+  children: ReactNode
+}
+
+type GridCellShellProps = Omit<GridCellProps, "constrainOverflow">
+
+const GridCellShell = ({
+  verticalAlignment,
+  showBorder,
+  columnSpan,
+  columnSpanAll,
+  rowSpan,
+  children,
+  cellRef,
+}: GridCellShellProps & {
+  cellRef?: Ref<HTMLDivElement>
+}): ReactElement => (
+  <StyledGridCell
+    ref={cellRef}
+    verticalAlignment={verticalAlignment}
+    showBorder={showBorder}
+    className="stGridCell"
+    data-testid="stGridCell"
+    columnSpan={columnSpan}
+    columnSpanAll={columnSpanAll}
+    rowSpan={rowSpan}
+  >
+    {children}
+  </StyledGridCell>
+)
+
+const OverflowAwareGridCell = ({
+  verticalAlignment,
+  showBorder,
+  columnSpan,
+  columnSpanAll,
+  rowSpan,
+  children,
+}: GridCellShellProps): ReactElement => {
+  const { values: bodyHeights, elementRef: bodyRef } =
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
+  const { values: contentHeights, elementRef: contentRef } =
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
+  const scroll = shouldScrollGridCell(
+    contentHeights[0] ?? 0,
+    bodyHeights[0] ?? 0
+  )
+
+  return (
+    <GridCellShell
+      verticalAlignment={verticalAlignment}
+      showBorder={showBorder}
+      columnSpan={columnSpan}
+      columnSpanAll={columnSpanAll}
+      rowSpan={rowSpan}
+    >
+      <StyledGridCellBody
+        ref={bodyRef}
+        $scroll={scroll}
+        data-testid="stGridCellBody"
+        data-test-scroll={String(scroll)}
+      >
+        <StyledGridCellContent
+          ref={contentRef}
+          verticalAlignment={verticalAlignment}
+        >
+          {children}
+        </StyledGridCellContent>
+      </StyledGridCellBody>
+    </GridCellShell>
+  )
+}
+
+/**
+ * One CSS Grid item. The cell itself never becomes a scrollport: hover
+ * toolbars sit `position: absolute` above charts and would be clipped even
+ * when in-flow content fits. Definite-height rows add an inner body that
+ * fills the cell (so stretch children resolve) and only switches to
+ * `overflow: auto` if in-flow content actually exceeds the cell.
+ */
+const GridCell = ({
+  constrainOverflow,
+  ...shellProps
+}: GridCellProps): ReactElement => {
+  if (!constrainOverflow) {
+    return <GridCellShell {...shellProps} />
+  }
+  return <OverflowAwareGridCell {...shellProps} />
+}
+
+const OverflowAwareGridPort = ({
+  wrap,
+  children,
+}: {
+  wrap: boolean
+  children: ReactNode
+}): ReactElement => {
+  const { values: portHeights, elementRef: portRef } =
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
+  const { values: contentHeights, elementRef: contentRef } =
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
+  const scroll = shouldScrollGridCell(
+    contentHeights[0] ?? 0,
+    portHeights[0] ?? 0
+  )
+
+  return (
+    <StyledGridScrollBody
+      ref={portRef}
+      $scroll={scroll}
+      $wrap={wrap}
+      data-testid="stGridScrollBody"
+      data-test-scroll={String(scroll)}
+    >
+      <StyledGridContentMeasure ref={contentRef}>
+        {children}
+      </StyledGridContentMeasure>
+    </StyledGridScrollBody>
+  )
+}
+
+/**
+ * Renders a CSS Grid container with its children wrapped in grid cells.
+ */
+const GridContainer = (props: GridContainerProps): ReactElement => {
+  const {
+    node,
+    widgetsDisabled,
+    disableFullscreenMode,
+    endpoints,
+    widgetMgr,
+    uploadClient,
+    componentRegistry,
+  } = props
+
+  const theme = useEmotionTheme()
+  // Handle cycling of colors for dividers (same as ChildRenderer):
+  assignDividerColor(node, theme)
+
+  const parentContext = useContext(FlexContext)
+  const gridConfig = node.deltaBlock.gridContainer
+
+  const userKey = getKeyFromId(node.deltaBlock.id)
+
+  const { values: observedWidths, elementRef } =
+    useResizeObserver<HTMLDivElement>(GRID_OBSERVED_PROPERTIES)
+  const measuredWidth = observedWidths[0]
+
+  // Extract grid configuration with defaults
+  const maxColumns = gridConfig?.maxColumns ?? 0
+  const rawMinColumnWidthPx = gridConfig?.minColumnWidthPx ?? 0
+  const rowGap = gridConfig?.rowGapConfig ?? {
+    gapSize: streamlit.GapSize.SMALL,
+  }
+  const columnGap = gridConfig?.columnGapConfig ?? {
+    gapSize: streamlit.GapSize.SMALL,
+  }
+  const verticalAlignment =
+    gridConfig?.verticalAlignment ??
+    BlockProto.GridContainer.VerticalAlignment.TOP
+  const showCellBorder = gridConfig?.showCellBorder ?? false
+  const cellHeightMode =
+    gridConfig?.cellHeightMode ??
+    BlockProto.GridContainer.CellHeightMode.CONTENT
+  const cellHeightPx = gridConfig?.cellHeightConfig?.pixelHeight ?? undefined
+  const dense = gridConfig?.dense ?? false
+  const wrap = gridConfig?.wrap ?? true
+
+  const minColumnWidthPx = resolveMinColumnWidthPx({
+    minColumnWidthPx: rawMinColumnWidthPx,
+    showBorder: showCellBorder,
+    autoMinColumnWidthPx: convertRemToPx(
+      theme.sizes.gridMinColumnWidth,
+      theme.fontSizes.baseFontSize
+    ),
+    borderPaddingPx:
+      2 * convertRemToPx(theme.spacing.lg, theme.fontSizes.baseFontSize),
+  })
+  const columnGapPx = cssLengthToPx(
+    translateGapWidth(columnGap, theme),
+    theme.fontSizes.baseFontSize
+  )
+  const pixelWidth = node.deltaBlock.widthConfig?.pixelWidth
+  const fallbackWidthPx =
+    (notNullOrUndefined(pixelWidth) && pixelWidth > 0
+      ? pixelWidth
+      : undefined) ??
+    parentContext?.parentWidth ??
+    cssLengthToPx(theme.sizes.contentMaxWidth, theme.fontSizes.baseFontSize)
+  const columnCount = resolveGridColumnCount({
+    availableWidthPx: measuredWidth,
+    minColumnWidthPx,
+    columnGapPx,
+    maxColumns,
+    wrap,
+    fallbackWidthPx,
+  })
+
+  // Collect child elements and their grid cell configurations.
+  // Use individual props as dependencies instead of the props object
+  // to ensure stable memoization (widgetMgr etc. are stable singletons).
+  // Do not depend on columnCount here: clamp spans when wrapping so a
+  // wrap-driven N change does not re-run RenderNodeVisitor.
+  const childrenWithCells = useMemo(() => {
+    const visitor = new RenderNodeVisitor({
+      node,
+      widgetsDisabled,
+      disableFullscreenMode,
+      endpoints,
+      widgetMgr,
+      uploadClient,
+      componentRegistry,
+    })
+
+    return (node.children ?? []).flatMap((childNode, sourceIndex) => {
+      // Get grid cell config from BlockNode children
+      let columnSpan: number | undefined
+      let columnSpanAll = false
+      let rowSpan: number | undefined
+      let nodeId: string | undefined
+
+      if (childNode instanceof BlockNode) {
+        nodeId = childNode.deltaBlock.id || undefined
+        if (childNode.deltaBlock.gridCell) {
+          const gridCell = childNode.deltaBlock.gridCell
+          if (gridCell.columnSpanAll) {
+            columnSpanAll = true
+          } else if (gridCell.columnSpan && gridCell.columnSpan > 1) {
+            columnSpan = gridCell.columnSpan
+          }
+          if (gridCell.rowSpan && gridCell.rowSpan > 1) {
+            rowSpan = gridCell.rowSpan
+          }
+        }
+      } else if (childNode instanceof ElementNode) {
+        nodeId = getElementId(childNode.element)
+      }
+
+      // Render the child element using the return value from accept()
+      // instead of indexing into reactElements, since the visitor may
+      // push 0, 1, or multiple elements per node (e.g., transient nodes).
+      const childElement = childNode.accept(visitor)
+      // Transient nodes (e.g. a cleared spinner) can return [] — that is not
+      // null, but it must not become an empty bordered grid cell.
+      if (
+        isNullOrUndefined(childElement) ||
+        (Array.isArray(childElement) && childElement.length === 0)
+      ) {
+        return []
+      }
+
+      return [
+        {
+          element: childElement,
+          nodeId,
+          sourceIndex,
+          columnSpan,
+          columnSpanAll,
+          rowSpan,
+        },
+      ]
+    })
+  }, [
+    node,
+    widgetsDisabled,
+    disableFullscreenMode,
+    endpoints,
+    widgetMgr,
+    uploadClient,
+    componentRegistry,
+  ])
+
+  const heightConfig = node.deltaBlock.heightConfig
+  const gridHasBoundedHeight = Boolean(
+    heightConfig?.useStretch ||
+    heightConfig?.pixelHeight ||
+    heightConfig?.remHeight
+  )
+  const constrainOverflow =
+    cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED ||
+    (cellHeightMode === BlockProto.GridContainer.CellHeightMode.EQUAL &&
+      gridHasBoundedHeight)
+
+  // Wrap each child in a grid cell with span information.
+  // Use nodeId for stable React keys so width-driven template updates do not
+  // remount cells. Fall back to the source child index so filtering a
+  // duplicate widget does not shift later cell() keys.
+  const wrappedChildren = useMemo(
+    () =>
+      childrenWithCells.map(child => (
+        <GridCell
+          key={child.nodeId ?? `grid-child-${child.sourceIndex}`}
+          constrainOverflow={constrainOverflow}
+          verticalAlignment={verticalAlignment}
+          showBorder={showCellBorder}
+          columnSpan={
+            child.columnSpanAll || !child.columnSpan
+              ? undefined
+              : clampColumnSpan(child.columnSpan, columnCount)
+          }
+          columnSpanAll={child.columnSpanAll}
+          rowSpan={child.rowSpan}
+        >
+          <FlexContextProvider
+            direction={Direction.VERTICAL}
+            isDirectlyInColumn
+            parentContext={parentContext}
+          >
+            {child.element}
+          </FlexContextProvider>
+        </GridCell>
+      )),
+    [
+      childrenWithCells,
+      columnCount,
+      verticalAlignment,
+      showCellBorder,
+      constrainOverflow,
+      parentContext,
+    ]
+  )
+
+  const useOverflowPort =
+    gridHasBoundedHeight &&
+    cellHeightMode !== BlockProto.GridContainer.CellHeightMode.EQUAL
+
+  const grid = (
+    <StyledGridContainerBlock
+      ref={elementRef}
+      columnCount={columnCount}
+      minColumnWidthPx={minColumnWidthPx}
+      $wrap={wrap}
+      $applyOverflow={!useOverflowPort}
+      $fillHeight={gridHasBoundedHeight && !useOverflowPort}
+      rowGap={rowGap}
+      columnGap={columnGap}
+      cellHeightMode={cellHeightMode}
+      cellHeightPx={cellHeightPx}
+      $dense={dense}
+      className={["stGrid", convertKeyToClassName(userKey)]
+        .filter(Boolean)
+        .join(" ")}
+      data-testid="stGrid"
+      data-test-column-count={columnCount}
+      data-test-wrap={String(wrap)}
+    >
+      {wrappedChildren}
+    </StyledGridContainerBlock>
+  )
+
+  if (!useOverflowPort) {
+    return grid
+  }
+
+  return <OverflowAwareGridPort wrap={wrap}>{grid}</OverflowAwareGridPort>
 }
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {
@@ -283,6 +685,7 @@ export const BlockNodeRenderer = (
     }
   } else if (
     node.deltaBlock.type === "flexContainer" ||
+    node.deltaBlock.type === "gridContainer" ||
     node.deltaBlock.column ||
     node.deltaBlock.expandable
   ) {
@@ -357,6 +760,10 @@ export const BlockNodeRenderer = (
 
   if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
     containerElement = <FlexBoxContainer {...childProps} />
+  }
+
+  if (node.deltaBlock.gridContainer) {
+    containerElement = <GridContainer {...childProps} />
   }
 
   if (node.deltaBlock.dialog) {

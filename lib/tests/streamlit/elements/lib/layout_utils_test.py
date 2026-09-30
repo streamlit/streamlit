@@ -253,6 +253,16 @@ class LayoutUtilsTest(unittest.TestCase):
         with pytest.raises(StreamlitValueError, match=r"`gap`"):
             get_gap_config("tiny")  # type: ignore[arg-type]
 
+    def test_get_gap_config_custom_detail(self):
+        """get_gap_config uses a caller-supplied detail in the error."""
+
+        with pytest.raises(StreamlitValueError, match=r"column gap in `gap`"):
+            get_gap_config(
+                "tiny",  # type: ignore[arg-type]
+                parameter="gap",
+                detail="Got 'tiny' for the column gap in `gap`.",
+            )
+
     @parameterized.expand(
         [
             ("left",),

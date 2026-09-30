@@ -24,8 +24,8 @@ import { FlexContext } from "~lib/components/core/Layout/FlexContext"
  *
  * - `true` / `false`: use the explicit value.
  * - `null` / `undefined` (auto, the default): keep the control on one row
- *   inside a horizontal container or as a direct column child, so neighbors
- *   stay aligned; wrap in any other layout.
+ *   inside a horizontal container or as a direct column or grid-cell child,
+ *   so neighbors stay aligned; wrap in any other layout.
  *
  * @param wrap The `wrap` value from the element proto (nullable).
  * @returns Whether wrapping is allowed.

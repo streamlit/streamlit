@@ -260,6 +260,22 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         new_dg = dg._enqueue("empty", EmptyProto())
         assert dg == new_dg
 
+    def test_block_bare_mode_returns_dg_type_parented_on_caller(self):
+        """Bare-mode _block returns the subclass and parents it on the caller.
+
+        The enqueued path uses parent=dg; bare mode must match so walks of
+        ``_parent`` (for example ``current_form_id``) stay consistent.
+        """
+        from streamlit.elements.lib.mutable_status_container import StatusContainer
+
+        dg = DeltaGenerator(root_container=None)
+        block_proto = Block_pb2.Block()
+        block_proto.expandable.SetInParent()
+        result = dg._block(block_proto, dg_type=StatusContainer)
+        assert isinstance(result, StatusContainer)
+        assert result._parent is dg
+        assert not isinstance(result._parent, StatusContainer)
+
     @parameterized.expand([(RootContainer.MAIN,), (RootContainer.SIDEBAR,)])
     def test_enqueue(self, container):
         dg = DeltaGenerator(root_container=container)

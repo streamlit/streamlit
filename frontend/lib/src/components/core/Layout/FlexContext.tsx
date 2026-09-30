@@ -23,9 +23,9 @@ export interface IFlexContext {
   isInHorizontalLayout: boolean
   /**
    * True when widgets here are direct layout children of an `st.columns`
-   * column. Nested layout providers create a new context and leave this
-   * false. Transparent blocks do not create a provider, so they keep the
-   * parent value.
+   * column or an `st.grid` cell (including `grid.cell()`). Nested layout
+   * providers create a new context and leave this false. Transparent
+   * blocks do not create a provider, so they keep the parent value.
    */
   isDirectlyInColumn: boolean
   isInRoot: boolean
@@ -69,7 +69,7 @@ FlexContext.displayName = "FlexContext"
  * @returns isInHorizontalLayout: Whether the nearest `st.container` ancestor is
  *   a horizontal layout.
  * @returns isDirectlyInColumn: Whether widgets in this context are direct
- *   layout children of an `st.columns` column.
+ *   layout children of an `st.columns` column or an `st.grid` cell.
  * @returns parentWidth: The width of the parent container in pixels, if it has
  *   a fixed pixel width.
  * @returns isInContentWidthContainer: Whether this element is inside a content-width
