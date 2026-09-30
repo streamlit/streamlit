@@ -784,17 +784,25 @@ that most filtered tables come back complete and need no second request.
 
 ### What v1 does not support
 
-Each of these is _declared_ in the snapshot, never silently missing, so an agent can
-explain the gap or fall back to a browser:
+This is the complete list; the sections linked from it have the details. Where a gap
+belongs to an element, the element declares it, so an agent can explain the gap or fall
+back to a browser rather than mistake it for missing content:
 
-| Not in v1                                               | Behavior                                                                                                                                                           |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `run_every` fragment refresh                            | Nothing refreshes until the client interacts again; the interval is not reported, since it would not change when a caller chooses to.                              |
-| `clear_on_submit`                                       | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.       |
-| `st.file_uploader`, `st.camera_input`, `st.audio_input` | Inspectable, not interactive.                                                                                                                                      |
-| `st.data_editor` edits, dataframe and chart selections  | Read-only, with `support: read_only_in_v1` on the element when the app enabled them.                                                                                                                                                      |
-| Deferred downloads and download callbacks               | Not triggerable. Eager downloads expose their existing URL.                                                                                                        |
-| Long-running interactions                               | No polling or partial results; the request either settles or returns `run_timed_out`.                                                                              |
+| Not in v1                                                                  | Behavior                                                                                                                                                                      |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Custom components, `st.html`, `st.iframe`, `st.pyplot`                     | `support: browser_required` with safe metadata; a pyplot figure keeps its image URL. Component JavaScript never runs. See [Data, charts, and media](#data-charts-and-media-in-v1). |
+| `st.file_uploader`, `st.camera_input`, `st.audio_input`                    | Inspectable, not interactive: `support: not_interactive_in_v1`.                                                                                                                |
+| `st.chat_input` attachments                                                | Text only. `accept_file` is reported, but a request cannot attach files.                                                                                                      |
+| `st.data_editor` edits, dataframe and chart selections                     | Read-only, with `support: read_only_in_v1` on the element when the app enabled them.                                                                                          |
+| Deferred downloads and download callbacks                                  | Not triggerable. Eager downloads expose their existing URL.                                                                                                                   |
+| Lazy dataframe continuation                                                | `complete: false`, and `data.url` serves only the chunk already loaded.                                                                                                       |
+| Data too large to hold a second copy of                                    | `data.unavailable` instead of a `url`.                                                                                                                                        |
+| `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again; the interval is not reported, since it would not change when a caller chooses to.                                         |
+| `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.                  |
+| `bind="query-params"` write-back                                           | Setting a bound widget changes its value but not `query_params`; the browser is what writes the address bar. See [Actions in v1](#actions-in-v1).                             |
+| Signed-in users (`st.login`, `st.user`)                                    | The session is anonymous, so an app behind `st.login` shows its signed-out state. Identity mapping is part of remote enablement; see [Enablement](#enablement).                |
+| Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun.                                                                                               |
+| Long-running interactions                                                  | No polling or partial results; the request either settles or returns `run_timed_out`.                                                                                         |
 
 ### Security
 
