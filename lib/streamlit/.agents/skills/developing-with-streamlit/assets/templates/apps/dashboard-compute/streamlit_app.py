@@ -386,6 +386,7 @@ def dimension_metric(
             filtered = filter_by_time_range(filtered, "ds", time_range or "All")
 
             y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
+            series = "7-day average" if "7-day MA" in line_options else "daily"
 
             if "table" in (view_mode or ""):
                 st.dataframe(
@@ -400,13 +401,15 @@ def dimension_metric(
                         filtered, "ds", y_col, dim_col, CHART_HEIGHT, show_percent
                     ),
                     alt=(
-                        f"{title} share by day" if show_percent else f"{title} by day"
+                        f"{title} {series} share by day"
+                        if show_percent
+                        else f"{title} {series} by day"
                     ),
                 )
             else:
                 st.altair_chart(
                     create_line_chart(filtered, "ds", y_col, dim_col, CHART_HEIGHT),
-                    alt=f"{title} over time",
+                    alt=f"{title} {series} over time",
                 )
 
 

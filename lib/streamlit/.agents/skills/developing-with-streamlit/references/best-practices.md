@@ -147,7 +147,7 @@ import streamlit as st
 from utils.data import load_sales
 
 st.title("Sales")
-st.line_chart(load_sales())
+st.line_chart(load_sales(), alt="Sales over time")
 ```
 
 ## Performance

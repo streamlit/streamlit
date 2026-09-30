@@ -4,7 +4,7 @@ Present data clearly.
 
 ## Accessible names (`alt`)
 
-Pass keyword-only `alt=` on charts, maps, tables, and grids so assistive technologies can name them. Keep it to about a sentence: the chart's takeaway, the map's subject, or the table's purpose — not a data dump and not a paste of the dataframe.
+Pass keyword-only `alt=` on charts, maps, tables, and grids so assistive technologies can name them. Write a short, plain-text accessible name (about one sentence); Markdown syntax is announced literally. Prefer the chart's takeaway, the map's subject, or the table's purpose — not a data dump and not a paste of the dataframe.
 
 ```python
 st.bar_chart(
@@ -14,10 +14,10 @@ st.dataframe(df, alt="Top 20 customers by revenue")
 st.table(summary, alt="Quarterly KPI summary")
 ```
 
-- Charts and maps (`st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart`, `st.altair_chart`, `st.vega_lite_chart`, `st.plotly_chart`, `st.graphviz_chart`, `st.map`, `st.pydeck_chart`, `st.mermaid_chart`): describe what the graphic shows.
-- **`st.echarts_chart`:** your `alt` replaces ECharts' generated description — a vague string is a regression.
+- Charts and maps (`st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart`, `st.altair_chart`, `st.vega_lite_chart`, `st.plotly_chart`, `st.graphviz_chart`, `st.map`, `st.pydeck_chart`, `st.mermaid_chart`): describe the chart's takeaway or the map's subject, not the chart type or a data dump.
+- **`st.echarts_chart`:** `alt` replaces the description ECharts generates from the data, so a vague name is worse than passing none.
 - **`st.dataframe` / `st.data_editor` / `st.table`:** name the grid or table; do not paste cell values into `alt`.
-- Whitespace-only `alt` is omitted and logged on every command. Empty `alt=""` is decorative only on `st.image` / `st.pyplot` (see [media-display.md](media-display.md)).
+- A whitespace-only `alt` is ignored (same as not passing `alt`) and logged on every command. Empty `alt=""` is decorative only on `st.image` / `st.pyplot` (see [media-display.md](media-display.md)).
 
 ## Native charts first
 
@@ -41,10 +41,12 @@ Use clear labels—not column names or abbreviations. Skip `x_label`/`y_label` i
 st.line_chart(df, x="dt", y="rev")
 
 # GOOD: readable columns, no labels needed
-st.line_chart(df, x="date", y="revenue")
+st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
 
 # GOOD: cryptic columns, add labels
-st.line_chart(df, x="dt", y="rev", x_label="Date", y_label="Revenue")
+st.line_chart(
+    df, x="dt", y="rev", x_label="Date", y_label="Revenue", alt="Monthly revenue trend"
+)
 ```
 
 ## Altair for complex charts
