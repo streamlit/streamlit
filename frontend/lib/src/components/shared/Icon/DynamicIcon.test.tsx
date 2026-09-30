@@ -20,7 +20,7 @@ import { render } from "~lib/test_util"
 
 import {
   DynamicIcon,
-  DynamicIconProps,
+  type DynamicIconProps,
   extractLeadingMaterialIcon,
   getFilledStarIconSrc,
   isMaterialIcon,

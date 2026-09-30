@@ -16,7 +16,7 @@
 
 import { waitFor } from "@testing-library/react"
 
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 
 import { createUploadFileHandler } from "./createFileUploadHandler"
 

@@ -16,7 +16,7 @@
 
 import { describe, expect, expectTypeOf, it } from "vitest"
 
-import {
+import type {
   StreamlitTheme,
   StreamlitThemeCssProperties,
 } from "@streamlit/component-v2-lib"

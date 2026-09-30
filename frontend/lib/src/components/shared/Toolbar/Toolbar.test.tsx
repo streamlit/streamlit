@@ -23,8 +23,8 @@ import { render } from "~lib/test_util"
 import { TOP_DISTANCE } from "./styled-components"
 import Toolbar, {
   ToolbarAction,
-  ToolbarActionProps,
-  ToolbarProps,
+  type ToolbarActionProps,
+  type ToolbarProps,
 } from "./Toolbar"
 
 const onExpand = vi.fn()

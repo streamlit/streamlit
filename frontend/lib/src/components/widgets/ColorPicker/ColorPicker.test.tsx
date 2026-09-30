@@ -22,7 +22,7 @@ import { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import ColorPicker, { Props } from "./ColorPicker"
+import ColorPicker, { type Props } from "./ColorPicker"
 
 const getProps = (
   elementProps: Partial<ColorPickerProto> = {},

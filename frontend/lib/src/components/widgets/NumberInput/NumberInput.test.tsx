@@ -27,7 +27,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import NumberInput, { Props } from "./NumberInput"
+import NumberInput, { type Props } from "./NumberInput"
 
 const getProps = (
   elementProps: Partial<NumberInputProto> = {},

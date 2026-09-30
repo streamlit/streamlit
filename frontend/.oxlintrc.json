@@ -128,15 +128,6 @@
           }
         ]
       }
-    },
-    {
-      "files": [
-        "lib/src/**/*.test.ts",
-        "lib/src/**/*.test.tsx"
-      ],
-      "rules": {
-        "typescript/consistent-type-imports": "off"
-      }
     }
   ]
 }

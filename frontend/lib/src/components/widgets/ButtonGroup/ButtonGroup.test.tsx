@@ -24,13 +24,13 @@ import {
 
 import {
   FlexContext,
-  IFlexContext,
+  type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import ButtonGroup, { Props } from "./ButtonGroup"
+import ButtonGroup, { type Props } from "./ButtonGroup"
 
 const materialIconNames = ["icon", "icon_2", "icon_3", "icon_4"]
 const defaultSelectedIndex = 2

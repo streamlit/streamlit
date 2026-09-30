@@ -22,9 +22,9 @@ import { Video as VideoProto } from "@streamlit/protobuf"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
-import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
-import Video, { VideoProps } from "./Video"
+import Video, { type VideoProps } from "./Video"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {

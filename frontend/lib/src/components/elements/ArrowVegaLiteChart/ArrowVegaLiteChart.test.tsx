@@ -51,7 +51,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import ArrowVegaLiteChart, {
   hasNestedComposition,
   isFacetChart,
-  Props,
+  type Props,
 } from "./ArrowVegaLiteChart"
 
 const getProps = (

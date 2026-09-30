@@ -17,13 +17,16 @@
 import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
+import {
+  ImageList as ImageListProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 
-import ImageList, { ImageListProps } from "./ImageList"
+import ImageList, { type ImageListProps } from "./ImageList"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {

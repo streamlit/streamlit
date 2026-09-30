@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { Field, makeVector, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
@@ -22,7 +22,7 @@ import JsonColumn from "./JsonColumn"
 import {
   arrayToCopyValue,
   arrayValuesEqual,
-  BaseColumnProps,
+  type BaseColumnProps,
   countDecimals,
   getEmptyCell,
   getErrorCell,

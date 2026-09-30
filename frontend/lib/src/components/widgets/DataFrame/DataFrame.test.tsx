@@ -31,7 +31,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render, renderWithContexts } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 // Track DataEditor calls for assertions - separate from the component so we can use forwardRef
 const dataEditorMockFn = vi.fn()
@@ -60,7 +60,7 @@ vi.mock("@glideapps/glide-data-grid", async () => ({
 // distribution. But the file picker most likely wouldn't work anyways in jest-dom.
 vi.mock("native-file-system-adapter", () => ({}))
 
-import DataFrame, { DataFrameProps } from "./DataFrame"
+import DataFrame, { type DataFrameProps } from "./DataFrame"
 
 const getProps = (
   data: Uint8Array,

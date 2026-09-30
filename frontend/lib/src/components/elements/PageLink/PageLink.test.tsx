@@ -22,7 +22,7 @@ import { PageLink as PageLinkProto, streamlit } from "@streamlit/protobuf"
 import { render, renderWithContexts } from "~lib/test_util"
 import { lightTheme } from "~lib/theme/themeConfigs"
 
-import PageLink, { buildHref, Props } from "./PageLink"
+import PageLink, { buildHref, type Props } from "./PageLink"
 
 const getProps = (
   elementProps: Partial<PageLinkProto> = {},

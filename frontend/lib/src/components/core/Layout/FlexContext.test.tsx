@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-import { FC, ReactNode, useContext } from "react"
+import { type FC, type ReactNode, useContext } from "react"
 
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { FlexContext, FlexContextProvider, IFlexContext } from "./FlexContext"
+import {
+  FlexContext,
+  FlexContextProvider,
+  type IFlexContext,
+} from "./FlexContext"
 import { Direction } from "./utils"
 
 /** Helper component to consume and display context values. */
