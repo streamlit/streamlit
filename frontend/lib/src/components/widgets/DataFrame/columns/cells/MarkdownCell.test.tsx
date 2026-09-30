@@ -22,7 +22,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
 
-import renderer, { MarkdownCell } from "./MarkdownCell"
+import renderer, { type MarkdownCell } from "./MarkdownCell"
 
 describe("MarkdownCell renderer", () => {
   const mockTheme = {

@@ -20,7 +20,7 @@ import {
   describe,
   expect,
   it,
-  MockInstance,
+  type MockInstance,
   vi,
 } from "vitest"
 
@@ -75,6 +75,7 @@ import {
   preserveEmbedQueryParams,
   setCookie,
 } from "./utils"
+import type * as Utils from "./utils"
 
 describe("setCookie", () => {
   afterEach(() => {
@@ -538,7 +539,7 @@ describe("keysToSnakeCase", () => {
 
 // Mock isInChildFrame since getUrl depends on it
 vi.mock("./utils", async importOriginal => {
-  const actual = await importOriginal<typeof import("./utils")>()
+  const actual = await importOriginal<typeof Utils>()
   return {
     ...actual,
     isInChildFrame: vi.fn(),

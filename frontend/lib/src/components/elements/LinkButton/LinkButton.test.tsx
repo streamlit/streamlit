@@ -24,7 +24,7 @@ import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import LinkButton, { Props } from "./LinkButton"
+import LinkButton, { type Props } from "./LinkButton"
 
 vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),

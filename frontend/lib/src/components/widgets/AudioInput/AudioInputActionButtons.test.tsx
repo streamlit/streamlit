@@ -20,7 +20,7 @@ import { userEvent } from "@testing-library/user-event"
 import { render } from "~lib/test_util"
 
 import AudioInputActionButtons, {
-  AudioInputActionButtonProps,
+  type AudioInputActionButtonProps,
 } from "./AudioInputActionButtons"
 
 const getProps = (): AudioInputActionButtonProps => ({

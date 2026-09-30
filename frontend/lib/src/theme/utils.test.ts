@@ -16,12 +16,12 @@
 
 import { darken, lighten, mix, transparentize } from "color2k"
 import { getLogger } from "loglevel"
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { baseTheme, darkTheme, lightTheme } from "~lib/theme/themeConfigs"
-import { ThemeConfig } from "~lib/theme/types"
+import type { ThemeConfig } from "~lib/theme/types"
 import {
   AUTO_THEME_NAME,
   bgColorToBaseString,

@@ -19,9 +19,9 @@ import { Field, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
-import { MediaCell } from "./cells/MediaCell"
+import type { MediaCell } from "./cells/MediaCell"
 import { AudioColumn, VideoColumn } from "./MediaColumn"
-import { BaseColumnProps } from "./utils"
+import type { BaseColumnProps } from "./utils"
 
 const createMockColumnProps = (name: string): BaseColumnProps => ({
   id: "1",
