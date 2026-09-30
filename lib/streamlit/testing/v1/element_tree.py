@@ -201,8 +201,9 @@ class Element(ABC):
     root: ElementTree = field(repr=False)
     key: str | None
 
-    @abstractmethod
-    def __init__(self, proto: ElementProto, root: ElementTree) -> None: ...
+    def __init__(self, proto: Any, root: ElementTree) -> None:
+        self.proto = proto
+        self.root = root
 
     def __iter__(self) -> Iterator[Self]:
         yield self
@@ -932,7 +933,7 @@ class Latex(Markdown):
 
 
 @dataclass(repr=False)
-class Space(Element):  # codeql[py/missing-call-to-init]
+class Space(Element):
     """A representation of ``st.space``."""
 
     proto: SpaceProto = field(repr=False)
@@ -946,9 +947,8 @@ class Space(Element):  # codeql[py/missing-call-to-init]
         *,
         size: SpaceSize | None,
     ) -> None:
-        self.proto = proto
+        super().__init__(proto, root)
         self.key = None
-        self.root = root
         self.type = "space"
         self._size = size
 
