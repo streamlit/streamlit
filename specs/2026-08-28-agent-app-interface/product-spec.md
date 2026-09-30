@@ -359,7 +359,6 @@ right now. Naming follows the public API, for the reason above:
             "props": {
               "label": "Region",
               "options": ["All", "Europe", "AMER", "APAC"],
-              "index": 0,
               "help": "Customer billing region; All includes every region.",
               "disabled": false,
               "label_visibility": "visible",
@@ -460,7 +459,10 @@ Rules:
 - **Construction versus current state.** `props` is how the element was built; `value` is
   what it holds now. A widget's live value comes from
   reconciled client state, since proto defaults stop being accurate after the first
-  interaction. A display element has no `value`; its content stays in `props`, so an
+  interaction. A parameter that only picks the starting value — `index`, a
+  multiselect's `default`, the tab `st.tabs` opens first — is left out: `value` says the
+  same thing on the first run and stays true after it, and every tab's contents are in
+  the tree regardless of which one a browser shows. A display element has no `value`; its content stays in `props`, so an
   `st.metric` number is `props.value`.
 - **Reported options and values are the form a request may send back.** For a widget with
   a `format_func`, `st.session_state` holds the author's Python option while the accepted
@@ -565,7 +567,7 @@ stays usable, so an agent can correct its input and interact again.
 
 | Outcome                                                                              | Response                                                                                                                                 |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Invalid request — unknown key, disabled widget, unsupported element, out-of-range or wrong-shape value, missing form submit, cross-form or cross-fragment batch | Error before any execution, naming which of those it was. Nothing ran and the app is unchanged. |
+| Invalid request — unknown key, disabled widget, unsupported element, out-of-range or wrong-shape value, missing form submit, cross-form or cross-dialog batch | Error before any execution, naming which of those it was. Nothing ran and the app is unchanged. |
 | Unrecognized `page` on a creating call                                               | Error after the run, because the page list does not exist before it. Carries the `session_id` of the session it created, which stays usable, and the available `pages` as data rather than only inside the message. |
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
 | Script failed to compile                                                             | `status: "error"` with the compile error and no usable action list.                                                                      |
@@ -633,10 +635,16 @@ because anything else closes it. None of this needs new plumbing:
 `Delta.fragment_id` already tags every emitted delta with its owning fragment and
 `ClientState.fragment_id` already carries the scope into a rerun.
 
-Because the wire carries one fragment id, a request naming two fragments — or mixing a
-fragment's contents with controls outside it — is rejected rather than widened to a full
-rerun, since widening would silently close an open dialog. A refused request leaves the
-previous snapshot current, so a rejected batch does not close one either.
+A batch is the one thing a browser cannot produce — a person changes one widget at a
+time — so its scope needs a rule of its own. The wire carries one fragment id, so a batch
+confined to one fragment reruns that fragment, and a batch spanning several regions
+reruns the whole app, which runs every fragment and loses nothing. The exception is an
+open dialog. A full rerun does not call the dialog function, so its widgets never
+render: a `Confirm` click sent with an outside filter would never be read, and the
+response would show a closed dialog that looks the same whether the confirm ran or not.
+Mixing a dialog's widgets with anything outside it is therefore `cross_dialog_batch`,
+rejected before anything runs, so the dialog stays open and the client sends the
+dialog's part first.
 
 Two details about the overlay:
 
@@ -795,7 +803,7 @@ This is a new programmatic execution surface and needs an explicit review.
   first release cannot be reached from another host. See [Enablement](#enablement).
 - **Validate semantically, then serialize.** Never accept a raw `BackMsg`, element ID,
   delta path, fragment ID, or `WidgetState` protobuf. Reject stale, disabled, removed,
-  out-of-range, wrong-shape, cross-form, cross-fragment, and oversized requests
+  out-of-range, wrong-shape, cross-form, cross-dialog, and oversized requests
   atomically, before any callback runs — against the last snapshot rather than live widget
   state, for the reasons in [Actions in v1](#actions-in-v1).
   Note that this makes the agent path _stricter_ than the WebSocket path, where several

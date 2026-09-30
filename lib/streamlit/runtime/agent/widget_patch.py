@@ -286,32 +286,34 @@ def resolve_fragment(
     `st.dialog`, so driving a dialog at all depends on staying inside its
     fragment.
 
-    The wire carries one fragment id, so a request has to name one region. A
-    batch spanning two fragments, or mixing a fragment's contents with controls
-    outside it, is rejected rather than widened to a full rerun -- widening
-    would silently close an open dialog and throw away the rest of the batch's
-    effect.
+    The wire carries one fragment id, so a batch spanning several regions
+    becomes a full rerun, which runs every fragment. The exception is an open
+    dialog: a full rerun closes it without running its contents, so what the
+    batch sent to the dialog would be silently discarded. That is rejected.
     """
     targets = list(widget_state or {})
     if trigger is not None and isinstance(trigger.get("key"), str):
         targets.append(trigger["key"])
 
     fragments = set()
+    touches_dialog = False
     for key in targets:
         state = element_states.get(resolve_element_id(session_state, key))
         fragments.add(state.fragment_id if state is not None else None)
+        touches_dialog |= state is not None and state.in_dialog
 
-    if len(fragments) > 1:
-        named = sorted(f for f in fragments if f is not None)
+    if len(fragments) <= 1:
+        return next(iter(fragments), None) or ""
+
+    if touches_dialog:
         raise AgentRequestError(
-            "cross_fragment_batch",
-            "One interaction cannot span two fragments, or mix a fragment's "
-            "contents with controls outside it, because a rerun is scoped to a "
-            f"single fragment (here: {named}). Send them as separate "
-            "interactions.",
+            "cross_dialog_batch",
+            "The request combined widgets in an open dialog with widgets "
+            "outside it. Covering both takes a full rerun, which closes the "
+            "dialog and discards what was sent to it. Send the dialog's "
+            "widgets on their own first.",
         )
-
-    return next(iter(fragments), None) or ""
+    return ""
 
 
 def _is_number(value: Any) -> bool:

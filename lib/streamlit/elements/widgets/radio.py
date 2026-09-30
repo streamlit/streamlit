@@ -643,7 +643,6 @@ class RadioMixin:
                 # The formatted options a client must send back, not the
                 # author's Python objects.
                 options=formatted_options,
-                index=index,
                 captions=list(captions) if captions else None,
                 help=help,
                 horizontal=horizontal,

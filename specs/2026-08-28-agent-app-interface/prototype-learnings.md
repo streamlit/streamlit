@@ -784,10 +784,12 @@ fragment. Nothing needed a new proto field. Four things had to change:
 3. **Carry the fragment id from the tree into the next request.** Recorded per node in
    the merge, then used to scope the rerun, which is exactly the browser's path from
    `node.fragmentId` to the outgoing message.
-4. **Refuse what the wire cannot express.** One `BackMsg` carries one fragment id, so a
-   batch spanning two fragments, or mixing a fragment's contents with controls outside
-   it, is `cross_fragment_batch`. Widening it to a full rerun would have been the
-   friendlier-looking choice and would silently close an open dialog.
+4. **Widen what the wire cannot scope, unless widening loses input.** One `BackMsg`
+   carries one fragment id, so a batch spanning several regions is a full rerun, which
+   runs every fragment. The one case that loses input is an open dialog: a full rerun
+   closes it without running its contents. Mixing a dialog's widgets with anything
+   outside it is `cross_dialog_batch`. Rejecting every cross-region batch was stricter
+   than needed; only the dialog case silently discards what the client sent.
 
 Dialog support then fell out of (1)-(4) with one deletion: dropping the `support` flag.
 Acting on a dialog's contents scopes to its fragment, which re-renders the body without

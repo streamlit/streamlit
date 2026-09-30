@@ -80,12 +80,13 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
             "until submitted, so the fields alone would change nothing."
         ),
     ),
-    "cross_fragment_batch": (
+    "cross_dialog_batch": (
         400,
         (
-            "The request spanned two fragments, or mixed a fragment's contents "
-            "with controls outside it. A rerun is scoped to a single fragment, "
-            "so these have to be separate interactions."
+            "The request combined widgets in an open `st.dialog` with widgets "
+            "outside it. That takes a full rerun, which closes the dialog "
+            "without running its contents, so send the dialog's widgets on "
+            "their own first."
         ),
     ),
     "cross_form_batch": (
@@ -472,9 +473,11 @@ def _schemas() -> dict[str, Any]:
                         "Fields belonging to an `st.form` must be sent together "
                         "with one of that form's submit triggers, because a "
                         "form defers its values until submitted.\n\n"
-                        "All keys in one request must belong to the same "
-                        "`fragment` (or to none), because a rerun is scoped to "
-                        "a single fragment.\n\n"
+                        "Keys that all belong to one `fragment` rerun only "
+                        "that fragment; keys spanning several regions rerun "
+                        "the whole app. Keys inside an open `st.dialog` must "
+                        "be sent on their own, because a full rerun closes "
+                        "the dialog.\n\n"
                         "Cannot be sent on a creating call, because element "
                         "keys only exist once the app has run."
                     ),

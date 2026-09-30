@@ -1214,7 +1214,6 @@ class LayoutsMixin:
                 key=element_id or key,
                 action="value" if is_stateful else None,
                 options=list(tabs),
-                default=default,
             ),
         )
 

@@ -187,6 +187,10 @@ class ElementState(NamedTuple):
     # The fragment this element lives in, if any. A request that targets it is
     # scoped to that fragment, the way the browser scopes a widget change.
     fragment_id: str | None
+    # Whether the element is inside an open `st.dialog`. Only a rerun scoped
+    # to the dialog's fragment keeps it open, so a request that cannot be
+    # scoped that way would discard what it sent to the dialog.
+    in_dialog: bool
 
 
 @dataclass
@@ -204,6 +208,9 @@ class _SnapshotBuilder:
         self.element_states: dict[str, ElementState] = {}
         self.undescribed_types: set[str] = set()
         self.saw_uncaught_exception = False
+        # Dialogs cannot nest, so a flag is enough to track the one being
+        # serialized.
+        self._in_dialog = False
 
     def serialize_children(
         self, node: _Node, inherited_support: str | None = None
@@ -253,7 +260,12 @@ class _SnapshotBuilder:
         # A container that cannot be driven cannot have drivable contents.
         # Without this, `actions` would advertise children that the container's
         # own `support` denies, and the document would contradict itself.
+        is_dialog = node.description.get("type") == "dialog"
+        if is_dialog:
+            self._in_dialog = True
         children = self.serialize_children(node, support)
+        if is_dialog:
+            self._in_dialog = False
 
         if node.root_name is not None:
             return [{"type": node.root_name, "children": children}]
@@ -393,6 +405,7 @@ class _SnapshotBuilder:
             max_value=props.get("max_value"),
             value=result.get("value"),
             fragment_id=fragment_id,
+            in_dialog=self._in_dialog,
         )
         if actionable:
             self.actions.append(

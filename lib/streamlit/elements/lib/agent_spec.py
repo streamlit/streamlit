@@ -31,7 +31,6 @@ its proto, in the same function, from the same arguments::
             action="value",
             label=label,
             options=formatted_options,
-            index=index,
             help=help,
             placeholder=placeholder,
             disabled=disabled,
