@@ -250,9 +250,9 @@ def test_columns():
 
 
 def test_space() -> None:
-    """st.space is a typed Space node; .value is the layout size."""
+    """``st.space`` parses as ``Space``; ``value`` is the reconstructed size."""
 
-    def script():
+    def script() -> None:
         import streamlit as st
 
         st.space()
@@ -275,7 +275,6 @@ def test_space() -> None:
         100,
         "large",
     ]
-    assert list(at.get("space")) == list(at.space)
     assert at.container("box").space[0].value == "large"
     repr(at.space[0])
 

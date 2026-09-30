@@ -27,6 +27,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    Final,
     Generic,
     NoReturn,
     TypeAlias,
@@ -123,10 +124,16 @@ def _unknown_element_content(proto: Any) -> Any:
     return getattr(proto, "value", None)
 
 
+_REM_TO_SPACE_SIZE: Final = {
+    rem: cast("SpaceSize", name) for name, rem in SIZE_TO_REM_MAPPING.items()
+}
+
+
 def _space_size_from_width_config(width_config: Any) -> SpaceSize | None:
     """Reconstruct the ``st.space`` size from ``Element.width_config``.
 
-    Production writes the same size onto width and height; AppTest reads width.
+    The Space proto does not store size. Production encodes the same value on
+    width and height; AppTest reads width.
     """
     spec = width_config.WhichOneof("width_spec")
     if spec == "use_stretch":
@@ -134,11 +141,7 @@ def _space_size_from_width_config(width_config: Any) -> SpaceSize | None:
     if spec == "pixel_width":
         return int(width_config.pixel_width)
     if spec == "rem_width":
-        rem = width_config.rem_width
-        for name, mapped in SIZE_TO_REM_MAPPING.items():
-            if rem == mapped:
-                return cast("SpaceSize", name)
-        return None
+        return _REM_TO_SPACE_SIZE.get(width_config.rem_width)
     return None
 
 
@@ -939,7 +942,7 @@ class Space(Element):
         proto: SpaceProto,
         root: ElementTree,
         *,
-        size: SpaceSize | None = None,
+        size: SpaceSize | None,
     ) -> None:
         self.proto = proto
         self.key = None
@@ -949,7 +952,7 @@ class Space(Element):
 
     @property
     def value(self) -> SpaceSize | None:
-        """The ``size`` passed to ``st.space``."""
+        """The ``size`` passed to ``st.space``, or ``None`` if it cannot be reconstructed."""
         return self._size
 
 
