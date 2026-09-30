@@ -258,7 +258,8 @@ describe("on_change='ignore' mode", () => {
 
   async function commitHexViaClose(
     user: ReturnType<typeof userEvent.setup>,
-    newColor: string
+    newColor: string,
+    closeWith: "swatch" | "escape" = "swatch"
   ): Promise<void> {
     const colorBlock = screen.getByTestId("stColorPickerBlock")
     await user.click(colorBlock)
@@ -266,7 +267,11 @@ describe("on_change='ignore' mode", () => {
     await user.tripleClick(colorInput)
     await user.keyboard("{backspace}")
     await user.type(colorInput, newColor)
-    await user.click(colorBlock)
+    if (closeWith === "escape") {
+      await user.keyboard("{Escape}")
+    } else {
+      await user.click(colorBlock)
+    }
   }
 
   it("passes triggerRerun: false when ignoreRerun is true", async () => {
@@ -283,7 +288,7 @@ describe("on_change='ignore' mode", () => {
     setStringValueSpy.mockClear()
     sendRerunBackMsg.mockClear()
 
-    await commitHexViaClose(user, "#e91e63")
+    await commitHexViaClose(user, "#e91e63", "escape")
 
     expect(setStringValueSpy).toHaveBeenLastCalledWith(
       props.element.id,

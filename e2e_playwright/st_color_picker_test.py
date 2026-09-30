@@ -412,15 +412,17 @@ def test_color_picker_on_change_ignore(app: Page):
     text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
     text_input.fill("#00ff00")
 
-    # Typing without committing must not update the URL or Python.
+    # Give a stray rerun a chance to land before asserting it did not happen.
     wait_for_app_run(app)
+
+    # Typing without committing must not update the URL or Python.
     expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
     expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
     expect(app).not_to_have_url(re.compile(r"[?&]ignore_color="))
     expect_prefixed_markdown(app, "Ignore color value:", "#ff0000")
 
-    # Closing the popover commits without a rerun, and updates the URL.
-    app.get_by_text("Ignore change color picker").click()
+    # Escape closes the popover and commits without a rerun, and updates the URL.
+    text_input.press("Escape")
     wait_for_app_run(app)
 
     expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
