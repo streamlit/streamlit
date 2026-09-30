@@ -1092,9 +1092,8 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
    a debugging and verification convenience. An agent with shell access can already curl
    the endpoint, which is why this is not v1.
 6. **MCP endpoint.** One more route on the Streamlit server,
-   `/_stcore/agent/v1/mcp`, so an app can be added to an AI application by its URL. A
-   fixed tool set — `interact` and a paging `read_data` — with dynamic actions in the tool
-   _result_. Per-widget tools are not an option: `tools/list` "MUST NOT vary
+   `/_stcore/agent/v1/mcp`, so an app can be added to an AI application by its URL. One
+   fixed `interact` tool, with dynamic actions in its _result_. Per-widget tools are not an option: `tools/list` "MUST NOT vary
    per-connection or as a side effect of other requests on the connection"
    ([MCP tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)),
    and the specification's own guidance for this shape is the opaque-handle pattern
