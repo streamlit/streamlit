@@ -204,8 +204,9 @@ agents is the half nobody owns.
 
 ### v1 is one operation
 
-The whole interface is one route, served when `server.enableAgentApi` is on. See
-[Enablement](#enablement) for that setting and where it should end up.
+The whole interface is one executing route, served when `server.enableAgentApi` is on,
+plus `GET /_stcore/agent/v1/openapi.json` describing it. See [Enablement](#enablement)
+for that setting and where it should end up.
 
 ```http
 POST /_stcore/agent/v1/interact
@@ -241,13 +242,33 @@ The request blocks until the run chain settles, then returns the snapshot. An ac
 interaction may cause more than one script run through callbacks, `st.rerun()`, or a page
 redirect; "one interaction" means one client submission, not one execution. If the run
 exceeds `server.agentRunTimeout`, the response is an explicit `run_timed_out` error —
-v1 has no partial or streaming result.
+v1 has no partial or streaming result. What comes back is the end state, so output a
+browser shows only while a run is in progress — a spinner, `st.write_stream` arriving
+chunk by chunk — never appears, while a toast the run raised does, even though a browser
+hides it after a few seconds.
 
 Sessions are reclaimed after `server.agentSessionTTL` of inactivity, so there is nothing
 to close. There is no separate read or delete route in v1, and no passive way to re-read
 the last result: **an `interact` with no changes is an explicit rerun, not a read.** It
 executes the script again and can repeat side effects exactly as any other Streamlit
 rerun does. A non-executing read arrives with the polling work in follow-up #4.
+
+**An agent session is an ordinary Streamlit session with a different client.** The
+runtime treats it as one more browser tab, which settles what it shares and what it does
+not:
+
+- **Shared with every session in the process:** `st.cache_data`, `st.cache_resource`,
+  connections, and module-level state. An agent reads and warms the same caches browser
+  users do.
+- **Its own:** `st.session_state`, widget values, and the query string, kept across its
+  interactions until the session is reclaimed.
+- **The script on disk:** an edit takes effect on the session's next interaction, with
+  its session state kept, so a coding agent can edit and re-check in one session, or omit
+  `session_id` for a clean start.
+- **Absent, because a browser supplies it:** `st.context.headers` and `cookies` are
+  empty, and its timezone, locale, URL, theme, and embedding fields are `None` rather
+  than guessed; `st.user` is anonymous. An app that formats times from
+  `st.context.timezone` needs a fallback for `None`.
 
 **Navigation is the one-round-trip parameterization channel.** Widgets
 declared with `bind="query-params"` can be set on the creating call, so "run this
@@ -264,16 +285,13 @@ Neither `widget_state` nor `trigger` is accepted on a creating call, because ele
 only resolve once the app has run. Accepting values that might silently not apply is worse
 than requiring a second call.
 
-**`page` on a creating call cannot be resolved by lookup, which the obvious implementation
-gets wrong.** Mapping a `url_path` to the internal page hash is a post-run fact: an
-`st.navigation` app has no page list until it has run once, so a creating call naming a
-page has nothing to look up. Resolving first and erroring on a miss would therefore
-reject a page that plainly exists — the headline parameterization example above. The
-browser has the same problem on a cold
-load and solves it by sending the page *name* and letting the runtime resolve it, which is
-what this should do too. The consequence is that an unrecognized page can only be detected
-after the run, so that one error arrives late and carries the `session_id` of the session
-it already created, rather than leaking it.
+**A `page` on a creating call is resolved by the runtime, not looked up first.** Mapping a
+`url_path` to the internal page hash is a post-run fact: an `st.navigation` app has no
+page list until it has run once, so looking the page up first would reject a page that
+plainly exists — including the parameterization example above. The browser has the same
+problem on a cold load and sends the page *name* for the runtime to resolve, and so does
+this. The cost is that an unrecognized page is only detected after the run, so that error
+carries the `session_id` of the session it created rather than leaking it.
 
 ### The snapshot
 
@@ -292,26 +310,24 @@ right now. Naming follows the public API, for the reason above:
 - **Effective values, not just authored ones.** Include every public property that
   affects an element's meaning or how it can be interacted with, after backend-known
   defaults are resolved — `disabled: false`, `required: false`, `expanded: false`, the
-  effective button `type`, `label_visibility`, selection mode, options, bounds, and step. A client should
-  not have to know each command's defaults for each Streamlit version to read the
-  document, and "absent" should never be ambiguous between false, unsupported, and
-  overlooked.
-- **Omit geometry and absent content.** Width, height, gaps, alignment, stretch ratios,
-  padding, and border or surface styling carry no meaning for a non-visual client.
-  Optional content that was never supplied — `help`, `icon`, `caption` left as `None` —
-  is omitted rather than serialized as null, and that applies inside a nested parameter
-  object too. It matters most where a helper builds a full object per item: the column
-  type helpers do, so an unpruned `column_config` reports `"width": null, "help": null,
-  "disabled": null, …` per column and accounted for 17% of one real snapshot, two thirds
-  of it nulls. Report such a parameter from the mapping Streamlit resolved rather than the
-  author's argument, so defaults are applied and the one null that *means* something —
-  a `column_config` entry of `None`, which hides that column — has already become
-  `{"hidden": true}`. Read this strictly, because the effective-value
-  rule above pulls the other way and will happily put styling on every element: a
-  heading's `divider`, a column's share of its row, and a container's `border` are all
-  presentation, and reporting them adds a key to most nodes on a page that no client can
-  read. The test is whether a property changes what the element *means* or how it can be
-  *used*, not whether the author passed it.
+  effective button `type`, `label_visibility`, selection mode, options, bounds, and step.
+  A client should not have to know each command's defaults for each Streamlit version to
+  read the document, and "absent" should never be ambiguous between false, unsupported,
+  and overlooked.
+- **Omit presentation.** Width, height, gaps, alignment, stretch ratios, padding, border
+  or surface styling, a heading's `divider`, and a column's share of its row carry no
+  meaning for a non-visual client. Read this strictly, because the effective-value rule
+  above pulls the other way and would otherwise put styling on most nodes of a page. The
+  test is whether a property changes what the element *means* or how it can be *used*,
+  not whether the author passed it.
+- **Omit absent content, at any depth.** Optional content that was never supplied —
+  `help`, `icon`, `caption` left as `None` — is left out rather than serialized as null,
+  including inside a nested parameter object. That matters most where a helper builds a
+  full object per item: an unpruned `column_config` reports `"width": null, "help": null,
+  …` per column, and was 17% of one real snapshot. Such a parameter is reported from the
+  mapping Streamlit resolved rather than the author's argument, so defaults are applied
+  and the one null that *means* something — a `column_config` entry of `None`, which
+  hides that column — has already become `{"hidden": true}`.
 - **An element that would serialize to nothing is left out.** An unfilled `st.empty()`
   placeholder and an `st.space()` say only "there is nothing here", which is what their
   absence says too; on a real page they were a fifth of all nodes. A container whose
@@ -450,20 +466,21 @@ not, is [its own section](#data-charts-and-media-in-v1).
 
 Rules:
 
-- **Structure is preserved.** All four root containers and every emitted container keep
-  their ordered `children` — columns, tabs, expanders, forms, chat messages, dialogs —
-  because grouping conveys meaning even without pixel dimensions. Blocks that render no
+- **Structure is preserved.** The four root containers — `main`, `sidebar`, `event`
+  (where dialogs open), and `bottom` (a pinned `st.chat_input`) — and every emitted
+  container keep their ordered `children`: columns, tabs, expanders, forms, chat
+  messages, dialogs. Grouping conveys meaning even without pixel dimensions. Blocks that render no
   DOM node are elided, and a layout container with one child and no configured
   properties collapses into it. Eagerly rendered collapsed content is included; hiding it
   would be a browser fiction. Content for a tab that never executed is never invented.
 - **Construction versus current state.** `props` is how the element was built; `value` is
-  what it holds now. A widget's live value comes from
-  reconciled client state, since proto defaults stop being accurate after the first
-  interaction. A parameter that only picks the starting value — `index`, a
-  multiselect's `default`, the tab `st.tabs` opens first — is left out: `value` says the
-  same thing on the first run and stays true after it, and every tab's contents are in
-  the tree regardless of which one a browser shows. A display element has no `value`; its content stays in `props`, so an
-  `st.metric` number is `props.value`.
+  what it holds now. A widget's live value comes from reconciled client state, since
+  proto defaults stop being accurate after the first interaction. A parameter that only
+  picks the starting value — `index`, a multiselect's `default`, the tab `st.tabs` opens
+  first — is left out: `value` says the same thing on the first run and stays true after
+  it, and every tab's contents are in the tree regardless of which one a browser shows. A
+  display element has no `value`; its content stays in `props`, so an `st.metric` number
+  is `props.value`.
 - **Reported options and values are the form a request may send back.** For a widget with
   a `format_func`, `st.session_state` holds the author's Python option while the accepted
   wire value is the formatted string, and reporting the authored object would make both
@@ -507,14 +524,14 @@ Rules:
 - **Unsupported things stay visible, on the element itself.** An element that is not
   fully supported carries a `support` field with a machine-readable reason —
   `browser_required` for a custom component, for example — and absent means fully
-  supported. A table or chart is fully supported until the app enables selections on
-  it; then it is `read_only_in_v1`, which marks exactly the element an app's "select a
-  row" caption is talking about. Tagging every table would mark gaps a display-only
-  element does not have, and teach clients to ignore the field. Keeping it on the node means an agent never has to cross-reference a summary
-  list to find out which element a gap belongs to. A container's `support` binds its
-  contents: an element inside an undrivable container is not drivable either, and
-  repeating the reason onto descendants keeps `actions` from advertising children the
-  container itself denies.
+  supported. Keeping it on the node means an agent never has to cross-reference a summary
+  list to find out which element a gap belongs to. A table or chart is fully supported
+  until the app enables selections on it; then it is `read_only_in_v1`, which marks
+  exactly the element an app's "select a row" caption is talking about. Tagging every
+  table would mark gaps a display-only element does not have, and teach clients to ignore
+  the field. A container's `support` binds its contents: an element inside an undrivable
+  container is not drivable either, and repeating the reason onto descendants keeps
+  `actions` from advertising children the container itself denies.
 - **A described node reports what it is; a gap says so.** An element whose command has no
   description falls back to a node named after its proto field and is listed in a
   response-level `undescribed_types`, so a coverage gap is visible to the caller as a gap
@@ -522,11 +539,14 @@ Rules:
   [Success criteria](#success-criteria) for why this is a runtime property rather than a
   static check.
 - **It is an observation, not a Python dump.** Callbacks, arbitrary objects, secrets,
-  source, caches, and `st.session_state` are absent by construction. Password values are
-  write-only. Markdown, code, and LaTeX stay source strings.
-- **App text is untrusted content.** Labels, help, captions, and data can carry prompt
-  injection. The response marks app-authored content as such; server-generated fields are
-  a separate trust domain.
+  source, caches, and `st.session_state` are absent by construction. A password input's
+  value is write-only: it can be set and never comes back, since responses get logged and
+  kept in a model's context. Markdown, code, and LaTeX stay source strings.
+- **App text is untrusted content.** Labels, help, captions, page titles, and data can
+  carry prompt injection. Nearly every string in the document is app-authored, so rather
+  than marking them field by field, the protocol description tells clients to treat all
+  of it as data, not instructions. Only the envelope — `schema_version`, `session_id`,
+  `status`, `observed_at`, and error codes — is server-generated.
 - **The `status` field reports the run, not the transport.** `ready` means the run chain
   settled and the app did not raise. See [When a run fails](#when-a-run-fails).
 - **Versioned.** Additive optional fields are compatible within `schema_version: 1`;
@@ -539,7 +559,7 @@ the point it raised, and Streamlit reports the run as _finished successfully_ �
 marker describes the runner, not the app. So the response is `200` with `status: "error"`
 and a snapshot that is real but incomplete.
 
-Three details matter for an agent reading that snapshot:
+Four details matter for an agent reading that snapshot:
 
 - **The tree is truncated at the raise.** Everything below it never executed, and stale
   cleanup removes whatever the previous run had emitted there, so both the tree and
@@ -571,7 +591,8 @@ stays usable, so an agent can correct its input and interact again.
 | Unrecognized `page` on a creating call                                               | Error after the run, because the page list does not exist before it. Carries the `session_id` of the session it created, which stays usable, and the available `pages` as data rather than only inside the message. |
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
 | Script failed to compile                                                             | `status: "error"` with the compile error and no usable action list.                                                                      |
-| Run exceeded `server.agentRunTimeout`                                                | `run_timed_out`. Whether app code is still finishing is not knowable from the response, so the session may stay busy briefly afterwards. |
+| Another interaction on the same session is still in flight                           | `session_busy`. One interaction per session at a time, so a client never interrupts its own run by accident.                             |
+| Run exceeded `server.agentRunTimeout`                                                | `run_timed_out`. The app may still be running; the session's next interaction stops it at its next Streamlit call and starts a fresh run, as a browser interaction would, so whether the rest of the timed-out run happened is not knowable. |
 
 ### Actions in v1
 
@@ -600,8 +621,8 @@ Identity is not authorization. Every request is validated so that a stale, guess
 forged key cannot set a disabled widget, an out-of-range value, or a control that no
 longer exists, and validation rejects the whole request before anything is applied.
 
-**Validation is against the last snapshot, not against live widget state**, and this is
-the one place where the obvious implementation is wrong. `WidgetMetadata` survives a page
+**Validation is against the last snapshot, not against live widget state**, which is not
+the obvious implementation. `WidgetMetadata` survives a page
 switch and a collapsed conditional branch — only the *value* is cleaned up — so a
 validator built on the widget registry accepts a key for a control that is no longer on
 the page, runs the script, changes nothing, and returns `200`: a silent no-op that reads
@@ -748,14 +769,14 @@ budget, the request fails rather than truncating silently.
 
 **`data.complete` is the field a client branches on, and it resolves three ways, never
 none.** Either the data here is everything (`complete: true`), or a `url` serves the rest,
-or an explicit `unavailable` says the data was too large to hold a second copy of. A first
-single byte threshold for both the preview and the externalization leaves a hole: a
+or an explicit `unavailable` says the data was too large to hold a second copy of. One
+byte threshold for both the preview and the externalization would leave a hole: a
 206-row table is about 8 KB, so it would be truncated *and* have no URL, while its own
 caption tells the agent to fetch one. Whether a client needs a URL is a question about row
 count, not payload size, so there is no size floor for externalizing — only a ceiling
 above which the copy is refused and declared.
 
-Two consequences of that framing are worth stating, because both were mistakes first:
+Two consequences of that framing are easy to get wrong:
 
 - **A chart that was given a specification rather than a dataframe is `complete`.**
   `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification, so
@@ -763,16 +784,14 @@ Two consequences of that framing are worth stating, because both were mistakes f
   from having no data contract at all. It does not mean the specification is worth its
   weight: about nine tenths of a small Plotly figure is `layout.template`, the theme, and
   a dashboard page of them reaches hundreds of kilobytes while answering nothing. Report
-  the figure
-  with the theme dropped and name what was dropped, so a trimmed figure is
+  the figure with the theme dropped and name what was dropped, so a trimmed figure is
   distinguishable from one the app never configured.
 
   **Nothing that holds data is dropped, at any size.** Capping the inlined specification
   would be the wrong trade: the traces are the only part worth reading, and a figure is
   large precisely because it plots a lot of points — the same bytes the app already sends
   its own client. So a 20,000-point scatter reports its full 541 KB of traces. Whether
-  *that* needs a response
-  budget is a real question, and it belongs with the other budget questions rather than
+  *that* needs a response budget belongs with the other budget questions rather than
   being settled by silently discarding data; if it does, the answer is serving the
   specification behind `data.url` the way a table's Arrow is served, not truncating it.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
@@ -800,7 +819,7 @@ back to a browser rather than mistake it for missing content:
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again; the interval is not reported, since it would not change when a caller chooses to.                                         |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.                  |
 | `bind="query-params"` write-back                                           | Setting a bound widget changes its value but not `query_params`; the browser is what writes the address bar. See [Actions in v1](#actions-in-v1).                             |
-| Signed-in users (`st.login`, `st.user`)                                    | The session is anonymous, so an app behind `st.login` shows its signed-out state. Identity mapping is part of remote enablement; see [Enablement](#enablement).                |
+| Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty and its other fields are `None`. The session is anonymous, so an app behind `st.login` shows its signed-out state. Identity mapping is part of remote enablement; see [Enablement](#enablement). |
 | Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun.                                                                                               |
 | Long-running interactions                                                  | No polling or partial results; the request either settles or returns `run_timed_out`.                                                                                         |
 
@@ -890,9 +909,9 @@ the MCP adapter in follow-up #6.
 **The document has to say where the app is, because a hosted app is not at the root a
 client would guess.** Community Cloud serves embedded apps under `/~/+/`, so an agent that
 joins the public origin with `/_stcore/agent/v1/interact` gets a redirect to a login page
-and concludes the app has no API. Root-relative `data.url`s fail the same way. So the served document carries an
-OpenAPI `servers` entry describing where it was reached from, and the paths and any
-`data.url` resolve against it.
+and concludes the app has no API. Root-relative `data.url`s fail the same way. So the
+served document carries an OpenAPI `servers` entry describing where it was reached from,
+and the paths and any `data.url` resolve against it.
 
 Two deliberate choices there. It is a *relative* URL, because behind a proxy the scheme
 and host this process sees are not necessarily the ones the client used, while a relative
@@ -952,11 +971,12 @@ pretending identities exist before execution.
 
 **Reuse existing identities rather than minting new ones.** Author `key`s and element IDs
 already address widgets — and are what `st.session_state` is keyed by — while `url_path`
-already identifies pages, so the interface exposes those instead of a parallel scheme. A freshly invented scheme — positional
-indices, say — would need its own definition and edge cases (is the counter scoped per
-page or per container? what happens when a fragment re-emits?) to buy nothing. Opaque
+already identifies pages, so the interface exposes those instead of a parallel scheme. A
+freshly invented scheme — positional indices, say — would need its own definition and
+edge cases (is the counter scoped per page or per container? what happens when a fragment
+re-emits?) to buy nothing. Opaque
 revision-scoped handles sound safer, but safety comes from server-side validation against
-live state, which is required either way.
+the last snapshot, which is required either way.
 
 **No `fragment_id` in the request.** The server derives the scope from the chosen action,
 as the browser does — `Delta.fragment_id` already tags every emitted delta with its owning
@@ -966,9 +986,8 @@ inconsistent requests. The work this implies is recording the id per node and pr
 merged tree per fragment, not identity plumbing, and a client never has to know what a
 fragment is to benefit from one.
 
-**Prune the accumulated tree when a run finishes, not when one starts.** A non-obvious
-consequence of scoped reruns, and the one thing that looked equivalent and was not. The
-server's outgoing queue is cleared at the start of a run, so mirroring that seems right —
+**Prune the accumulated tree when a run finishes, not when one starts.** The server's
+outgoing queue is cleared at the start of a run, so mirroring that seems right —
 but the thing being maintained here is the browser's *element tree*, which accumulates
 deltas as they arrive and prunes when a run *finishes*, scoped to what that run owned. The
 difference shows up on an interrupted run: a callback that calls `st.rerun(scope="fragment")`
@@ -980,16 +999,16 @@ behavior by audience, which fragments the app and undermines the property that m
 work: one app, one set of explanations, two clients.
 
 **Each command describes itself where it fills its proto, not in a central serializer.**
-This replaces the obvious design — one registry that maps each proto variant to a
-description — and the reason is that a proto is a *rendering* contract, so by the time a
-serializer sees one, the semantics are already gone. Three examples of what cannot be
+The obvious design is one registry that maps each proto variant to a description, and it
+cannot work: a proto is a *rendering* contract, so by the time a serializer sees one, the
+semantics are already gone. Three examples of what cannot be
 recovered downstream: a built-in chart's `x` and `y` survive only as compiled Vega
 encodings; a selection widget's `options` are the `format_func`-formatted strings, with
 the authored objects no longer present; `st.metric` has formatted its number into a
 display string. Several commands also share one proto, so the command name itself has to
 be recovered by inspecting fields, which is a heuristic that silently rots when a new
-command reuses an existing proto — `st.mermaid_chart`, which enqueues markdown, reported
-itself as `st.markdown` until it described itself explicitly.
+command reuses an existing proto: `st.mermaid_chart` enqueues markdown, so a serializer
+reading the proto reports it as `st.markdown`.
 
 Building the description in the element function costs one JSON object per element, built
 only for sessions the agent API created, so a browser session builds and sends nothing.
@@ -1049,9 +1068,9 @@ ordered roughly by expected value.
    available apps. It depends on the authored `st.App` title/description in follow-up #2
    ([#16878](https://github.com/streamlit/streamlit/issues/16878)). It must never publish
    widget schemas or user-dependent page lists from a shared warm-up run.
-8. **Remaining interaction coverage.** Uploads, `st.data_editor` edits, dataframe and
-   chart selections, lazy-data continuation, deferred downloads, `run_every` scheduling,
-   and per-action JSON Schema.
+8. **Remaining interaction coverage.** Uploads, including `st.chat_input` attachments;
+   `st.data_editor` edits; dataframe and chart selections; deferred downloads; `run_every`
+   scheduling; and per-action JSON Schema.
 
 ## Beyond the app surface
 
@@ -1114,12 +1133,13 @@ agent access alone.
 - A filtered dashboard, a form with two submit buttons, a chat flow, and a multi-turn
   dialog all complete without a browser.
 - Large dataframes produce bounded snapshots and a fetchable `data.url`.
-- No route responds with `enableAgentApi` unset.
+- With `enableAgentApi` unset, `interact` executes nothing and the schema route only
+  reports that the API is disabled.
 
-**Coverage is a runtime property, not a static check.** The original plan was CI asserting
-that every `Element` and `Block` variant has a declaration, which is not checkable once
-descriptions are built at fill time: a proto variant no longer maps to one command, and a
-command's description exists only along the code path that emits it. Nothing static can
+**Coverage is a runtime property, not a static check.** A CI assertion that every
+`Element` and `Block` variant has a declaration cannot work when descriptions are built
+at fill time: a proto variant does not map to one command, and a command's description
+exists only along the code path that emits it. Nothing static can
 see that `st.badge` and `st.caption` both produce markdown, or that a command wrote the
 wrong name. What replaces it is the pair above — `undescribed_types` in every response,
 plus a test that sweeps a kitchen-sink app and asserts the list is empty — and the

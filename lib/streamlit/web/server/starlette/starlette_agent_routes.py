@@ -18,7 +18,9 @@
 /_stcore/agent/v1/openapi.json`` describes how, so a caller that found the
 endpoint can learn the protocol without being handed documentation.
 
-Served only when ``server.enableAgentApi`` is on, and only to loopback peers.
+Both routes are always registered, because the app's HTML always links the
+schema; with ``server.enableAgentApi`` off they only say so. When it is on,
+they serve loopback peers only.
 
 That is the same conservative gate the skills-install operation uses, and it
 keeps the first release useful for local verification and CI while remote

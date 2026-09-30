@@ -99,8 +99,8 @@ class AgentSessionClient(SessionClient):
         # Set when this interaction's run changed the query string, which is
         # how the server tells a browser to update its address bar.
         self.query_string_update: str | None = None
-        # The fragments the most recent run re-rendered, so the snapshot can
-        # say which parts of the tree came from this observation.
+        # The fragments the most recent run re-rendered, which is what that run
+        # owns when it finishes and stale deltas are dropped.
         self.fragments_last_run: list[str] = []
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
@@ -356,9 +356,9 @@ async def _run_interaction(
     except TimeoutError as exc:
         raise AgentRequestError(
             "run_timed_out",
-            f"The app did not finish within {timeout:g} seconds. Whether it is "
-            "still running is not knowable from here, so the session may stay "
-            "busy briefly.",
+            f"The app did not finish within {timeout:g} seconds. It may still be "
+            "running; the next interaction on this session stops it and starts "
+            "a fresh run.",
         ) from exc
 
     # Keep the query string the way a browser keeps its address bar: what was

@@ -339,7 +339,7 @@ class _SnapshotBuilder:
         element_id = description.get("key")
 
         action = description.get("action")
-        if element_id and action:
+        if element_id and action and not _is_write_only(description):
             value = self._widget_value(element_id)
             if action == "value" or value:
                 # A trigger's value only means anything while it is set, and it
@@ -503,6 +503,16 @@ def _fallback_description(proto_field: str, payload: Message | None) -> dict[str
     if element_id:
         description["key"] = element_id
     return description
+
+
+def _is_write_only(description: dict[str, Any]) -> bool:
+    """Whether an element's value may be set but must never be reported.
+
+    Responses are logged and kept in a model's context, so a password the app
+    defaulted or the client typed must not come back out.
+    """
+    props = description.get("props") or {}
+    return description.get("type") == "text_input" and props.get("type") == "password"
 
 
 def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:

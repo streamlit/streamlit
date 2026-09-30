@@ -151,9 +151,10 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
     "run_timed_out": (
         504,
         (
-            "The app did not finish within `server.agentRunTimeout`. Whether it is "
-            "still running is not knowable from the response, so the session may "
-            "stay busy briefly."
+            "The app did not finish within `server.agentRunTimeout`. It may still "
+            "be running; the session's next interaction stops it at its next "
+            "Streamlit call and starts a fresh run, as a browser interaction "
+            "would, so whether the rest of that run happened is not knowable."
         ),
     ),
     "internal_error": (
@@ -724,8 +725,10 @@ def _schemas() -> dict[str, Any]:
                         "and its shape is the shape the element accepts -- a "
                         "two-item list stays a two-item list.\n\n"
                         "Present for elements whose `actions` entry has kind "
-                        "`value`. A display element keeps its content in "
-                        "`props` instead, so an `st.metric` number is "
+                        "`value`, except a `text_input` with `type: "
+                        '"password"`, whose value can be set but is never '
+                        "reported back. A display element keeps its content "
+                        "in `props` instead, so an `st.metric` number is "
                         "`props.value`."
                     )
                 },
