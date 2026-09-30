@@ -95,6 +95,7 @@ if TYPE_CHECKING:
     from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
     from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
     from streamlit.proto.Toast_pb2 import Toast as ToastProto
+    from streamlit.proto.WidthConfig_pb2 import WidthConfig
     from streamlit.runtime.state.safe_session_state import SafeSessionState
     from streamlit.testing.v1.app_test import AppTest
     from streamlit.typing import ChatInputValue
@@ -129,11 +130,12 @@ _REM_TO_SPACE_SIZE: Final = {
 }
 
 
-def _space_size_from_width_config(width_config: Any) -> SpaceSize | None:
+def _space_size_from_width_config(width_config: WidthConfig) -> SpaceSize | None:
     """Reconstruct the ``st.space`` size from ``Element.width_config``.
 
-    The Space proto does not store size. Production encodes the same value on
-    width and height; AppTest reads width.
+    The Space proto does not store the size. ``st.space`` writes the same
+    value into both the width and height configs and lets the frontend pick
+    the relevant axis, so reading width alone recovers the original argument.
     """
     spec = width_config.WhichOneof("width_spec")
     if spec == "use_stretch":
@@ -142,7 +144,7 @@ def _space_size_from_width_config(width_config: Any) -> SpaceSize | None:
         return int(width_config.pixel_width)
     if spec == "rem_width":
         return _REM_TO_SPACE_SIZE.get(width_config.rem_width)
-    return None
+    return None  # pragma: no cover - defensive
 
 
 def _format_value_for_widget(format_func: Callable[[Any], str], value: Any) -> str:
@@ -930,7 +932,7 @@ class Latex(Markdown):
 
 
 @dataclass(repr=False)
-class Space(Element):
+class Space(Element):  # codeql[py/missing-call-to-init]
     """A representation of ``st.space``."""
 
     proto: SpaceProto = field(repr=False)
