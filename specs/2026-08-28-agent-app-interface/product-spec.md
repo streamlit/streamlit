@@ -12,7 +12,7 @@ a typed output tree. That makes an app an _executable semantic layer_ over its d
 rather than merely a UI over Python — and it is essentially the same observe → act →
 observe loop an agent runs. Today that loop is only reachable through a browser.
 
-This spec adds an HTTP operation (with CLI and MCP adapters as follow-ups) that lets an
+This spec adds an HTTP operation (with a CLI and an MCP endpoint as follow-ups) that lets an
 agent run a real Streamlit app without a browser: send JSON widget values, get back the
 finished app as a typed tree of containers and elements named after the public `st.*`
 API, plus the list of things it can do next. It is a second client of the execution
@@ -940,7 +940,7 @@ app that never opted in serves, so it omits the exact Streamlit version.
 What this does *not* solve is worth stating: discovery is not capability. Most agent
 harnesses' web tools only issue GET requests, so an agent can find the protocol and still
 be unable to `POST` to it. Closing that gap needs a caller with a general HTTP tool, or
-the MCP adapter in follow-up #6.
+the MCP endpoint in follow-up #6.
 
 **The document has to say where the app is, because a hosted app is not at the root a
 client would guess.** Community Cloud serves embedded apps under `/~/+/`, so an agent that
@@ -1091,13 +1091,16 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
 5. **CLI.** `streamlit agent interact <url> --json @request.json` over the same routes, as
    a debugging and verification convenience. An agent with shell access can already curl
    the endpoint, which is why this is not v1.
-6. **MCP adapter.** A small fixed tool set (`interact`, `get_state`, `close_session`)
-   over the same controller, behind an optional extra, with dynamic actions in the tool
+6. **MCP endpoint.** One more route on the Streamlit server,
+   `/_stcore/agent/v1/mcp`, so an app can be added to an AI application by its URL. A
+   fixed tool set — `interact` and a paging `read_data` — with dynamic actions in the tool
    _result_. Per-widget tools are not an option: `tools/list` "MUST NOT vary
    per-connection or as a side effect of other requests on the connection"
    ([MCP tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)),
    and the specification's own guidance for this shape is the opaque-handle pattern
-   `session_id` already implements. `interact` must never be annotated read-only.
+   `session_id` already implements. `interact` must never be annotated read-only. The
+   design, including why it is written by hand rather than on the SDK, is in
+   [mcp-support.md](mcp-support.md).
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2
@@ -1260,7 +1263,7 @@ new command or significant parameter should ship with all of the following, or a
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until a credential flow maps them. Multi-worker deployments need session affinity, since an agent session lives in one process. A platform that serves apps behind a prefix, as Community Cloud does, also has to get that prefix to the client, or every path in the document resolves to the platform instead of the app. |
 | No breaking API changes    | ✅ Additive: one config option, off in v1, and new routes under `/_stcore/agent/`. No `st.*` changes in v1. Flipping the default later is itself a reviewed change, not a silent one.                                                                                                                                                                                                                                                                                                                         |
-| No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP adapter should use the official SDK behind an optional extra.                                                                                                                                                                                                                                                                                                                                                                                               |
+| No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either; see [mcp-support.md](mcp-support.md).                                                                                                                                                                                                                                                                                                                                                                                          |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
 | Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: off by default in v1 with on-by-default as the goal, no stricter than the app once on, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, and identity mapping — the gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
 | Any docs changes needed?   | Protocol reference and coverage matrix, an authoring guide ("write `key=`, explain the app in the app"), verification guidance next to `AppTest` and Playwright, and a security/deployment page.                                                                                                                                                                                                                                                                                                              |
