@@ -15,6 +15,7 @@
  */
 
 import { screen, waitFor } from "@testing-library/react"
+import { LinearGradient } from "vega"
 import embed from "vega-embed"
 import { TopLevelSpec } from "vega-lite"
 
@@ -28,6 +29,7 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
 import Metric, { getMetricChartSpec, MetricProps } from "./Metric"
+import { getMetricAreaGradient } from "./metricColors"
 
 // Mock vega-embed
 vi.mock("vega-embed", () => ({
@@ -696,6 +698,68 @@ describe("Metric element", () => {
           }),
         ]),
       })
+    })
+
+    const getAreaChartGradient = (chartData: number[]): LinearGradient => {
+      const spec = getMetricChartSpec(
+        chartData,
+        MetricProto.ChartType.AREA,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.GRAY
+      ) as TopLevelSpec & {
+        layer: Array<{ mark: { color: LinearGradient } }>
+      }
+
+      return spec.layer[0].mark.color
+    }
+
+    it("fills the area chart with a gradient instead of a flat color", () => {
+      expect(getAreaChartGradient([1, 2, 3, 4, 5])).toEqual(
+        getMetricAreaGradient(
+          mockTheme.emotion,
+          MetricProto.MetricColor.GRAY,
+          1
+        )
+      )
+    })
+
+    it.each([
+      // The baseline is the data minimum, so the fill fades in one direction
+      // only and the gradient needs no stop between its edges.
+      { chartData: [1, 2, 3, 4, 5], expectedOffsets: [0, 1] },
+      { chartData: [-30, -20, -25], expectedOffsets: [0, 1] },
+      { chartData: [-2, -1, 0], expectedOffsets: [0, 1] },
+      { chartData: [5, 5, 5], expectedOffsets: [0, 1] },
+      // The fill diverges around zero, so it fades out at the zero line and
+      // back in below it. Zero sits `dataMax / (dataMax - dataMin)` from the top.
+      { chartData: [-10, 30], expectedOffsets: [0, 0.75, 1] },
+      { chartData: [-30, 10], expectedOffsets: [0, 0.25, 1] },
+      { chartData: [-10, 10], expectedOffsets: [0, 0.5, 1] },
+    ])(
+      "places gradient stops at $expectedOffsets for $chartData",
+      ({ chartData, expectedOffsets }) => {
+        expect(
+          getAreaChartGradient(chartData).stops.map(stop => stop.offset)
+        ).toEqual(expectedOffsets)
+      }
+    )
+
+    it.each([
+      { chartType: MetricProto.ChartType.LINE, name: "line" },
+      { chartType: MetricProto.ChartType.BAR, name: "bar" },
+    ])("does not apply a gradient fill to $name charts", ({ chartType }) => {
+      const spec = getMetricChartSpec(
+        [1, 2, 3, 4, 5],
+        chartType,
+        200,
+        mockTheme.emotion,
+        MetricProto.MetricColor.GRAY
+      ) as TopLevelSpec & {
+        layer: Array<{ mark: { color?: unknown } }>
+      }
+
+      expect(spec.layer[0].mark.color).toBeUndefined()
     })
 
     it.each([

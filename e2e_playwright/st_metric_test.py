@@ -94,8 +94,16 @@ def test_green_up_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFu
 
 
 def test_red_down_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    metric = get_metric(themed_app, "S&P 500")
+    # This is also the app's area chart metric. Its shaded region is filled with
+    # a gradient, which a snapshot cannot tell apart from a flat fill, so assert
+    # that Vega actually emitted the gradient definition.
+    expect(
+        metric.get_by_test_id("stMetricChart").locator("defs linearGradient")
+    ).to_have_count(1)
+
     assert_snapshot(
-        get_metric(themed_app, "S&P 500"),
+        metric,
         name="st_metric-red",
     )
 
