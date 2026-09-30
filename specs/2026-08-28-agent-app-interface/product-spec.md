@@ -730,8 +730,8 @@ Two consequences of that framing are worth stating, because both were mistakes f
   a Deck.gl layer, and an agent should not be mining coordinates out of layer JSON, so the
   plotted table is externalized like any other dataframe's.
 
-The preview cap is a row count rather than a byte budget, set high enough (100 rows in the
-) that most filtered tables come back complete and need no second request.
+The preview cap is a row count rather than a byte budget, set high enough — 100 rows —
+that most filtered tables come back complete and need no second request.
 
 ### What v1 does not support
 
@@ -835,13 +835,15 @@ client would guess.** Community Cloud serves embedded apps under `/~/+/`, so an 
 joins the public origin with `/_stcore/agent/v1/interact` gets a redirect to a login page
 and concludes the app has no API. Root-relative `data.url`s fail the same way. So the served document carries an
 OpenAPI `servers` entry describing where it was reached from, and the paths and any
-`data.url` resolve against it. Two deliberate choices: it is a *relative* URL, because
-behind a proxy the scheme and host this process sees are not necessarily the ones the
-client used, and a relative server URL resolves against wherever the document was fetched;
-and where a proxy strips its prefix before forwarding, `X-Forwarded-Prefix` is honored,
-since a forged value can only misdirect the caller that forged it. A proxy that strips
-silently and announces nothing cannot be detected, which is a real limit rather than
-something to paper over.
+`data.url` resolve against it.
+
+Two deliberate choices there. It is a *relative* URL, because behind a proxy the scheme
+and host this process sees are not necessarily the ones the client used, while a relative
+server URL resolves against wherever the document was fetched. And where a proxy strips
+its prefix before forwarding, `X-Forwarded-Prefix` is honored, which is safe because a
+forged value can only misdirect the caller that forged it. A proxy that strips silently
+and announces nothing cannot be detected, which is a real limit rather than something to
+paper over.
 
 A proxy may also strip `Link: rel="service-desc"` from responses. Headers are the more
 fragile channel, which is the argument for keeping the document self-describing rather
@@ -1040,17 +1042,22 @@ agent access alone.
 
 ## Success criteria
 
-**v1 ships when:** every command that emits an element or container describes itself, with
-an empty `undescribed_types` across a kitchen-sink app that exercises the whole display
-and widget surface; every serialized element `type` and `props` key either matches a public
-command or parameter name or appears on a documented list of derived additions; JSON
-encodings are pinned for dates, datetimes, decimals, large integers, non-finite numbers,
-ranges, and object-valued options; every advertised interaction matches an equivalent
-browser session on callback order, resulting widget value, and emitted output; whatever
-the snapshot reports as a value can be sent straight back; a filtered dashboard, a form
-with two submit buttons, a chat flow, and a multi-turn dialog complete without a browser;
-large dataframes produce bounded snapshots and a fetchable `data.url`; and no route
-responds with `enableAgentApi` unset.
+**v1 ships when:**
+
+- Every command that emits an element or container describes itself, with an empty
+  `undescribed_types` across a kitchen-sink app that exercises the whole display and
+  widget surface.
+- Every serialized element `type` and `props` key either matches a public command or
+  parameter name, or appears on a documented list of derived additions.
+- JSON encodings are pinned for dates, datetimes, decimals, large integers, non-finite
+  numbers, ranges, and object-valued options.
+- Every advertised interaction matches an equivalent browser session on callback order,
+  resulting widget value, and emitted output.
+- Whatever the snapshot reports as a value can be sent straight back.
+- A filtered dashboard, a form with two submit buttons, a chat flow, and a multi-turn
+  dialog all complete without a browser.
+- Large dataframes produce bounded snapshots and a fetchable `data.url`.
+- No route responds with `enableAgentApi` unset.
 
 **Coverage is a runtime property, not a static check.** The original plan was CI asserting
 that every `Element` and `Block` variant has a declaration, which is not checkable once
@@ -1104,13 +1111,17 @@ repeated trials with skills both enabled and disabled, and report sample size an
 uncertainty.
 
 Because model knowledge lags releases, a feature is not done when its code merges. Every
-new command or significant parameter should ship with complete type annotations and
-docstrings, canonical examples that explain the app's _meaning_, updated bundled skills
-and templates, `AppTest` capability registration, an agent-API description at its emit
-site and an entry in the coverage sweep, browser E2E coverage where browser behavior matters, defined
-accessibility behavior, content-free telemetry, and migration guidance for the CSS or
-component workaround it replaces — with an explicit "not applicable" where one does not
-apply.
+new command or significant parameter should ship with all of the following, or an explicit
+"not applicable" where one does not apply:
+
+- Complete type annotations and docstrings, plus canonical examples that explain the app's
+  _meaning_ rather than only its syntax.
+- Updated bundled skills and templates.
+- `AppTest` capability registration.
+- An agent-API description at its emit site, and an entry in the coverage sweep.
+- Browser E2E coverage where browser behavior matters, and defined accessibility behavior.
+- Content-free telemetry.
+- Migration guidance for the CSS or component workaround it replaces.
 
 ## Out of scope
 
