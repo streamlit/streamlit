@@ -388,16 +388,23 @@ def dimension_metric(
             y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
 
             if "table" in (view_mode or ""):
-                st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
+                st.dataframe(
+                    filtered,
+                    height=CHART_HEIGHT,
+                    hide_index=True,
+                    alt=f"{title} data",
+                )
             elif "Bar" in (chart_type or ""):
                 st.altair_chart(
                     create_bar_chart(
                         filtered, "ds", y_col, dim_col, CHART_HEIGHT, show_percent
                     ),
+                    alt=f"{title} by day",
                 )
             else:
                 st.altair_chart(
                     create_line_chart(filtered, "ds", y_col, dim_col, CHART_HEIGHT),
+                    alt=f"{title} over time",
                 )
 
 
