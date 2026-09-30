@@ -637,8 +637,12 @@ tree is then carried over from an earlier run — still current as far as the ap
 concerned, but not freshly computed — so a single `observed_at` would overstate the
 document, and the report and export use cases cite exactly that field as provenance. The
 document stays complete and declares freshness instead: nodes inside a fragment carry an
-opaque `fragment` handle, a top-level `fragments` list reports which regions this
-interaction re-rendered, and `observed_at` means when the snapshot was assembled.
+opaque `fragment` handle, a top-level `fragments` list reports the exceptions — the
+regions this interaction did *not* re-render, and the ones that refresh themselves — and
+`observed_at` means when the snapshot was assembled. Reporting the exceptions rather than
+every fragment is deliberate: a page with six of them would otherwise carry six opaque
+hashes in every snapshot to say what an absent list already says, and the common case has
+nothing to report at all.
 Returning only the fragment's subtree would make the timestamp honest by construction and
 is the wrong trade: it pushes the delta merge and fragment-scoped staleness rules onto
 every client, which is the Streamlit knowledge this interface exists to absorb, and it

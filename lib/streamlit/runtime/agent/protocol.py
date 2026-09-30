@@ -617,8 +617,13 @@ def _schemas() -> dict[str, Any]:
                     "type": "array",
                     "items": {"$ref": "#/components/schemas/Fragment"},
                     "description": (
-                        "The `st.fragment` regions in the current tree, absent "
-                        "when the app has none."
+                        "Exceptions among the app's `st.fragment` regions: the "
+                        "ones this interaction did not re-render, and the ones "
+                        "that refresh themselves. Absent when there is nothing "
+                        "to report, which is the common case.\n\n"
+                        "A fragment not listed here was rendered by this "
+                        "interaction. To find which fragments exist at all, read "
+                        "the `fragment` field on the nodes in `tree`."
                     ),
                 },
                 "query_params": {
@@ -912,7 +917,7 @@ def _schemas() -> dict[str, Any]:
         },
         "Fragment": {
             "type": "object",
-            "required": ["id", "rendered"],
+            "required": ["id"],
             "description": (
                 "An `st.fragment` region of the app. Streamlit reruns a "
                 "fragment on its own when something inside it changes, and this "
@@ -934,11 +939,13 @@ def _schemas() -> dict[str, Any]:
                 },
                 "rendered": {
                     "type": "boolean",
+                    "enum": [False],
                     "description": (
-                        "Whether this region was re-rendered by the interaction "
-                        "that produced this snapshot. False means its contents "
-                        "are carried over from an earlier one, still current as "
-                        "far as the app is concerned but not freshly computed."
+                        "Present, and false, when this interaction did not "
+                        "re-render the region: its contents are carried over "
+                        "from an earlier run, still current as far as the app is "
+                        "concerned but older than `observed_at`. Absent means it "
+                        "was rendered."
                     ),
                 },
                 "run_every": {

@@ -743,29 +743,33 @@ def _fragments(
     rendered: list[str],
     auto_rerun_intervals: dict[str, float],
 ) -> list[dict[str, Any]]:
-    """Describe the fragments in the tree, and which the last run re-rendered.
+    """Report only the fragments a client has to know something about.
 
-    A partial rerun means the tree holds regions of different ages, so
-    ``observed_at`` alone would overstate how current some of it is. `rendered`
-    is what makes that legible: on a full run every fragment is rendered, and
-    after a fragment-scoped interaction only the one that ran is.
+    Two things need saying, and neither applies to most fragments most of the
+    time. A partial rerun leaves regions of different ages, so a fragment the
+    last run did *not* re-render is older than `observed_at` claims. And a
+    fragment with `run_every` refreshes itself in a browser but never here, so
+    its interval is worth disclosing for a client that wants to poll.
 
-    ``run_every`` is reported rather than acted on. The browser turns it into a
-    timer; this interface has no clock of its own, so refreshing is the client's
-    decision.
+    Anything else is silence: a fragment absent from this list was rendered by
+    this interaction and does not refresh on its own. Listing every fragment
+    with `rendered: true` instead would put a page's worth of opaque hashes in
+    every snapshot to say what the absence of the list already says -- six of
+    them on one real page, carrying nothing.
+
+    Which fragments exist at all is answerable from the tree, where each node
+    inside one carries its `fragment`.
     """
-    return [
-        {
-            "id": fragment_id,
-            "rendered": not rendered or fragment_id in rendered,
-            **(
-                {"run_every": round(interval, 3)}
-                if (interval := auto_rerun_intervals.get(fragment_id))
-                else {}
-            ),
-        }
-        for fragment_id in sorted(seen)
-    ]
+    entries = []
+    for fragment_id in sorted(seen):
+        entry: dict[str, Any] = {"id": fragment_id}
+        if rendered and fragment_id not in rendered:
+            entry["rendered"] = False
+        if interval := auto_rerun_intervals.get(fragment_id):
+            entry["run_every"] = round(interval, 3)
+        if len(entry) > 1:
+            entries.append(entry)
+    return entries
 
 
 def _last_message(messages: list[ForwardMsg], msg_type: str) -> ForwardMsg | None:
