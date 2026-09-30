@@ -1099,7 +1099,7 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
    and the specification's own guidance for this shape is the opaque-handle pattern
    `session_id` already implements. `interact` must never be annotated read-only. The
    design, including why it is written by hand rather than on the SDK, is in
-   [mcp-support.md](mcp-support.md).
+   [mcp-support.md](mcp-support.md), and the prototype implements it.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2

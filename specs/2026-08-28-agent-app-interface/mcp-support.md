@@ -5,6 +5,9 @@ application as an MCP server by pasting one URL. Nothing to install and no secon
 process. The MCP endpoint is one more route on the Streamlit server, offering the same
 interactions as `POST /_stcore/agent/v1/interact` through the same code.
 
+**Status:** prototyped. The protocol handling is in `lib/streamlit/runtime/agent/mcp.py`
+and the route in `starlette_agent_routes.py`, next to the HTTP API's.
+
 ## What it looks like
 
 ```text
@@ -40,7 +43,9 @@ what the app currently allows lives in each result, exactly as `actions` does in
 snapshot.
 
 - **Input:** the agent API request — `session_id`, `widget_state`, `trigger`, `page`,
-  `query_params`, `context` — with the same schema.
+  `query_params`, `context` — with the same schema, made self-contained: MCP has no
+  `components` section to point into and not every client resolves `$ref`, so
+  referenced schemas are inlined.
 - **Result:** the snapshot, as structured content and as JSON text for clients that do
   not read structured output.
 - **Annotations:** not read-only and not idempotent, because any action may write.
@@ -61,8 +66,11 @@ Three details:
   because MCP expects a model to see a tool failure and correct itself.
 - **URLs are absolute.** An MCP client has no OpenAPI `servers` entry to resolve a
   root-relative `/media/...` against, so results carry URLs built from the address the
-  request arrived on, honoring the same `X-Forwarded-Prefix` rule. Without that, a client
-  that can fetch a `data.url` would not know where to fetch it from.
+  request arrived on, honoring `X-Forwarded-Prefix`, `X-Forwarded-Proto`, and
+  `X-Forwarded-Host` where a proxy sets them. Without that, a client that can fetch a
+  `data.url` would not know where to fetch it from. Building this surfaced a bug in the
+  HTTP API too: media URLs lacked `server.baseUrlPath`, so under a base path every
+  `data.url` was a 404. Both transports now include it.
 
 There is no `get_state` or `close_session`, which the product spec's follow-up #6 listed.
 A read that does not execute arrives with the polling work in follow-up #4, and sessions
@@ -107,7 +115,12 @@ messages and rejects the rest:
 
 A notification such as `notifications/initialized` gets `202 Accepted` with no body. A
 `GET`, which a client uses to open a stream for server-initiated messages, gets `405`, as
-the transport allows. That is about 150–200 lines in the style of the existing agent
+the transport allows; the route is registered for it explicitly, because otherwise the
+request falls through to the app's page handler and returns its HTML with a `200`.
+Batches are answered message by message, for clients on protocol versions that still
+send them. A client asking for a protocol version the server does not list gets the
+newest it does. With the agent API off, every request gets a `403` whose message names
+the setting to turn on. That is about 150–200 lines in the style of the existing agent
 routes, and it adds no dependency, so the product spec's "no new dependencies" still
 holds.
 

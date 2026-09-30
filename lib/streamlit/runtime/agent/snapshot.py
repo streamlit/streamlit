@@ -752,6 +752,46 @@ def _is_index_column(name: str) -> bool:
     return name.startswith("__index_level_") or name == "__index__"
 
 
+def rebase_media_urls(
+    document: dict[str, Any], *, media_path: str, prefix: str
+) -> None:
+    """Prefix a snapshot's media URLs with where the app is served, in place.
+
+    Media storage hands out URLs relative to the app's root (``/media/<id>``),
+    which a browser resolves against its own base path. A client of this API has
+    no base path to resolve against, so the URL has to carry it: without
+    ``server.baseUrlPath`` in front, a table's ``data.url`` is a 404.
+
+    Only ``data.url`` and the ``url`` and ``src`` props are touched, and only
+    values under ``media_path``, so an external link an app displays is never
+    rewritten.
+    """
+    media_prefix = media_path.rstrip("/") + "/"
+
+    def rebase(value: Any) -> Any:
+        if isinstance(value, str) and value.startswith(media_prefix):
+            return prefix + value
+        if isinstance(value, list):
+            return [rebase(item) for item in value]
+        return value
+
+    def walk(node: dict[str, Any]) -> None:
+        data = node.get("data")
+        if isinstance(data, dict) and "url" in data:
+            data["url"] = rebase(data["url"])
+        props = node.get("props")
+        if isinstance(props, dict):
+            for name in ("url", "src"):
+                if name in props:
+                    props[name] = rebase(props[name])
+        for child in node.get("children") or []:
+            walk(child)
+
+    tree = document.get("tree")
+    if isinstance(tree, dict):
+        walk(tree)
+
+
 def build_snapshot(
     *,
     session_id: str,
