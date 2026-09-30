@@ -299,7 +299,17 @@ right now. Naming follows the public API, for the reason above:
 - **Omit geometry and absent content.** Width, height, gaps, alignment, stretch ratios,
   padding, and border or surface styling carry no meaning for a non-visual client.
   Optional content that was never supplied — `help`, `icon`, `caption` left as `None` —
-  is omitted rather than serialized as null.
+  is omitted rather than serialized as null. Read this strictly, because the effective-value
+  rule above pulls the other way and will happily put styling on every element: a
+  heading's `divider`, a column's share of its row, and a container's `border` are all
+  presentation, and reporting them adds a key to most nodes on a page that no client can
+  read. The test is whether a property changes what the element *means* or how it can be
+  *used*, not whether the author passed it.
+- **An element that would serialize to nothing is left out.** An unfilled `st.empty()`
+  placeholder and an `st.space()` say only "there is nothing here", which is what their
+  absence says too; on a real page they were a fifth of all nodes. A container whose
+  properties were all presentation likewise collapses into its child, since the grouping
+  it expressed was visual.
 
 ```json
 {

@@ -49,20 +49,23 @@ def _heading_agent_props(
     *,
     anchor: Anchor = None,
     help: str | None = None,
-    divider: Divider = None,
     icon: str | None = None,
 ) -> str | None:
     """Describe a heading for the agent API.
 
     st.title, st.header, and st.subheader differ only in the HTML tag they
     emit, so each passes its own command name.
+
+    `divider` is deliberately not a parameter here: it draws a rule under the
+    heading, which is styling on an element whose meaning is its text, and
+    reporting it would put a key on every heading in every snapshot that no
+    reader can act on.
     """
     return agent_spec.element(
         command,
         body=str(body),
         anchor=anchor,
         help=help,
-        divider=divider,
         icon=icon,
     )
 
@@ -216,7 +219,7 @@ class HeadingMixin:
             ),
             layout_config=layout_config,
             agent_props=_heading_agent_props(
-                "header", body, anchor=anchor, help=help, divider=divider, icon=icon
+                "header", body, anchor=anchor, help=help, icon=icon
             ),
         )
 
@@ -368,7 +371,7 @@ class HeadingMixin:
             ),
             layout_config=layout_config,
             agent_props=_heading_agent_props(
-                "subheader", body, anchor=anchor, help=help, divider=divider, icon=icon
+                "subheader", body, anchor=anchor, help=help, icon=icon
             ),
         )
 

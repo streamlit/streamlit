@@ -503,7 +503,6 @@ class MetricMixin:
                 help=help,
                 icon=icon,
                 format=format,
-                border=border,
                 chart_type=chart_type if chart_data is not None else None,
                 label_visibility=label_visibility,
             ),

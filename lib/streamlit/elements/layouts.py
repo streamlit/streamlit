@@ -456,7 +456,10 @@ class LayoutsMixin:
         return self.dg._block(
             block_proto,
             agent_props=agent_spec.block(
-                "container", key=key, border=border, horizontal=horizontal
+                # `border` and `horizontal` are surface styling and layout
+                # direction, neither of which a non-visual client can use.
+                "container",
+                key=key,
             ),
         )
 
@@ -740,14 +743,17 @@ class LayoutsMixin:
         # st.columns and st.container both emit a FlexContainer, so the
         # difference between "a row of columns" and "a horizontal container" is
         # only knowable here.
-        row = self.dg._block(
-            block_proto, agent_props=agent_spec.block("columns", spec=spec)
-        )
+        # `spec` is widths, which is the same stretch-ratio information the
+        # columns themselves leave out.
+        row = self.dg._block(block_proto, agent_props=agent_spec.block("columns"))
         total_weight = sum(weights)
         return [
+            # A column's share of the row is a stretch ratio, so it stays out of
+            # the description; what a non-visual client needs from a row of
+            # columns is the grouping, which the nesting already gives it.
             row._block(
                 column_proto(w / total_weight),
-                agent_props=agent_spec.block("column", weight=w / total_weight),
+                agent_props=agent_spec.block("column"),
             )
             for w in weights
         ]

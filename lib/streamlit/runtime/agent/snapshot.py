@@ -57,6 +57,10 @@ SCHEMA_VERSION: Final = 1
 # outright.
 _PREVIEW_ROW_LIMIT: Final = 100
 
+# Commands whose whole contribution is layout: a placeholder nobody filled and
+# blank space. See `_SnapshotBuilder._is_contentless`.
+_CONTENTLESS_TYPES: Final = {"empty", "space"}
+
 _ROOT_CONTAINER_NAMES: Final = {
     RootContainer.MAIN: "main",
     RootContainer.SIDEBAR: "sidebar",
@@ -216,11 +220,37 @@ class _SnapshotBuilder:
         """Serialize one node.
 
         Returns a list because a transparent container contributes its children
-        to the parent instead of nesting under a wrapper node.
+        to the parent instead of nesting under a wrapper node, and because an
+        element that carries nothing is dropped entirely.
         """
-        if node.element is not None:
-            return [self._serialize_element(node, inherited_support)]
-        return self._serialize_container(node, inherited_support)
+        if node.element is None:
+            return self._serialize_container(node, inherited_support)
+
+        if self._is_contentless(node):
+            # Still worth recording which fragment it belonged to, so a
+            # fragment whose whole body is placeholders is not missing from
+            # `fragments`.
+            if node.fragment_id is not None:
+                self.fragment_ids.add(node.fragment_id)
+            return []
+
+        return [self._serialize_element(node, inherited_support)]
+
+    @staticmethod
+    def _is_contentless(node: _Node) -> bool:
+        """True for an element that would serialize to nothing but its name.
+
+        `st.empty()` reserves a slot and `st.space()` adds blank space, so an
+        unfilled one of either says only "there is nothing here", which is what
+        its absence says too. Reporting them costs a fifth of the nodes on a
+        real page -- 15 of 85 on one -- for no reading a client can do.
+
+        Checked against the props rather than the name alone, so either command
+        gaining something meaningful to say starts being reported again.
+        """
+        return node.description.get("type") in _CONTENTLESS_TYPES and not (
+            node.description.get("props") or node.description.get("key")
+        )
 
     def _serialize_container(
         self, node: _Node, inherited_support: str | None = None

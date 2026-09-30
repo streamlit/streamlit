@@ -220,7 +220,6 @@ class FormMixin:
                 "form",
                 key=form_id,
                 clear_on_submit=clear_on_submit,
-                border=border,
                 enter_to_submit=enter_to_submit,
             ),
         )

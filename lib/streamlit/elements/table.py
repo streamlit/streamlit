@@ -399,9 +399,10 @@ class TableMixin:
                 data_url=data_offload.serve_arrow_over_http(
                     proto.arrow_data.data, coordinates=delta_path
                 ),
+                # `border` is surface styling; `hide_index` and `hide_header`
+                # stay because they change which data is presented.
                 hide_index=hide_index,
                 hide_header=hide_header,
-                border=border,
             ),
         )
 
