@@ -4885,7 +4885,7 @@ requires-dist = [
     { name = "sqlalchemy", marker = "extra == 'sql'", specifier = ">=2.0.0" },
     { name = "starlette", specifier = ">=0.46.0,<2" },
     { name = "streamlit", extras = ["auth", "charts", "snowflake", "sql", "pdf", "performance"], marker = "extra == 'all'" },
-    { name = "streamlit-pdf", marker = "extra == 'pdf'", specifier = ">=1.0.0" },
+    { name = "streamlit-pdf", marker = "extra == 'pdf'", specifier = ">=2.1.0" },
     { name = "toml", specifier = ">=0.10.1,<2" },
     { name = "typing-extensions", specifier = ">=4.10.0,<5" },
     { name = "uvicorn", specifier = ">=0.30.0,<1" },
@@ -5141,11 +5141,11 @@ test = [
 
 [[package]]
 name = "streamlit-pdf"
-version = "2.0.1"
+version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e3/5d/04487c85e3b5071b417451f1a910302d063ccd9f392457846bea271b340d/streamlit_pdf-2.0.1.tar.gz", hash = "sha256:c6306381d0eeb291d7a4f6eb16cfbf937560a29be78049c64251fa2c3276e1a2", size = 1949207, upload-time = "2025-11-18T00:38:44.079Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/eb/2d4c6311874469102ee94e20152b775bae762644f4c628d54916daf5b51e/streamlit_pdf-2.1.0.tar.gz", hash = "sha256:2e2a79140335087517e83b024277750fb910d61fd24052d886c0def4f856fc2d", size = 1950894, upload-time = "2026-09-28T17:48:20.361Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/65/57/ba77126eed2cb516feaf19b9f9d39af5be110b0a692415e772c7bbab7ed3/streamlit_pdf-2.0.1-py3-none-any.whl", hash = "sha256:8330d7f954e46edc7574b7e498378462555a8e25e829946abb78dbf5684b0a1e", size = 2083529, upload-time = "2025-11-18T00:38:42.373Z" },
+    { url = "https://files.pythonhosted.org/packages/30/5b/310ff1c5cb48a70a8532b92c523b420a6906d693a2e00e11ef6f3a59dcc8/streamlit_pdf-2.1.0-py3-none-any.whl", hash = "sha256:a5ba2e19571abab0254d5296499fa0fc508f1e66e6a2b3bb13e167037410067e", size = 2083846, upload-time = "2026-09-28T17:48:18.358Z" },
 ]
 
 [[package]]
