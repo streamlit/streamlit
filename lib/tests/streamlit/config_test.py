@@ -796,6 +796,7 @@ class ConfigTest(unittest.TestCase):
                 "magic.displayLastExprIfNoSemicolon",
                 "secrets.files",
                 "server.address",
+                "server.agentMaxSessions",
                 "server.agentRunTimeout",
                 "server.agentSessionTTL",
                 "server.allowedHosts",

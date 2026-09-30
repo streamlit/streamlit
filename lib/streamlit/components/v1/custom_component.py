@@ -232,11 +232,20 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
             element.component_instance,
             # Component JavaScript is never executed server-side, so only the
             # component's identity and the arguments it was given are visible.
+            # The arguments are nested because their names are the
+            # component's own, not Streamlit's.
             agent_props=agent_spec.element(
                 "components.v1.declare_component",
                 key=element.component_instance.id or None,
                 support="browser_required",
                 component_name=self.name,
+                args={
+                    name: value
+                    for name, value in json_args.items()
+                    if name not in {"key", "default"}
+                }
+                or None,
+                default=json_args.get("default"),
             ),
         )
         return return_value

@@ -57,9 +57,9 @@ SCHEMA_VERSION: Final = 1
 # outright.
 _PREVIEW_ROW_LIMIT: Final = 100
 
-# Commands whose whole contribution is layout: a placeholder nobody filled and
-# blank space. See `_SnapshotBuilder._is_contentless`.
-_CONTENTLESS_TYPES: Final = {"empty", "space"}
+# Commands whose whole contribution is layout or styling: a placeholder nobody
+# filled, blank space, and style-only HTML. See `_SnapshotBuilder._is_contentless`.
+_CONTENTLESS_TYPES: Final = {"empty", "space", "html"}
 
 _ROOT_CONTAINER_NAMES: Final = {
     RootContainer.MAIN: "main",

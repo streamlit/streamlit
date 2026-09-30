@@ -168,11 +168,9 @@ class IframeMixin:
             "iframe",
             iframe_proto,
             layout_config=layout_config,
-            # Component JavaScript is never executed server-side, so an iframe
-            # can only be reported by its source.
+            # A URL the client can fetch itself, so nothing is withheld.
             agent_props=agent_spec.element(
                 "components.v1.iframe",
-                support="browser_required",
                 src=iframe_proto.src or None,
             ),
         )
@@ -276,8 +274,10 @@ class IframeMixin:
             "iframe",
             iframe_proto,
             layout_config=layout_config,
+            # `components.html` exists to run scripts, which this interface does
+            # not, so the source is reported and the rendered result is not.
             agent_props=agent_spec.element(
-                "components.v1.html", support="browser_required"
+                "components.v1.html", support="browser_required", html=html
             ),
         )
 
@@ -461,10 +461,13 @@ class IframeMixin:
             "iframe",
             iframe_proto,
             layout_config=layout_config,
+            # `src` is a URL the client can fetch itself, or inline HTML whose
+            # scripts run in the browser and not here, which is the only case
+            # where what renders can differ from what is reported.
             agent_props=agent_spec.element(
                 "iframe",
-                support="browser_required",
-                src=iframe_proto.src or None,
+                support="browser_required" if iframe_proto.srcdoc else None,
+                src=iframe_proto.src or iframe_proto.srcdoc or None,
             ),
         )
 

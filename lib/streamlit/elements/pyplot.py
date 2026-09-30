@@ -221,11 +221,10 @@ class PyplotMixin:
             "imgs",
             image_list_proto,
             layout_config=layout_config,
-            # The rendered figure is a bitmap by the time it is emitted, so a
-            # non-browser client can only be told that it is one.
+            # The figure is a bitmap by the time it is emitted, so it is reported
+            # the way `st.image` is: by the URL a client can fetch it from.
             agent_props=agent_spec.element(
                 "pyplot",
-                support="browser_required",
                 url=[img.url for img in image_list_proto.imgs] or None,
             ),
         )

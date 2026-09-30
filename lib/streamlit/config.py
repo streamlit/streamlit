@@ -1247,11 +1247,32 @@ _create_option(
         Enable the agent API, which lets a non-browser client drive the app
         over HTTP at `/_stcore/agent/v1/interact`.
 
-        The API is off by default and is only served to loopback callers, so
-        it is reachable from the machine running the server and nowhere else.
+        The API is off by default. Once on, it is served wherever the app is,
+        with the same Host and Origin checks as the app's WebSocket, and a
+        caller gets no more access than the app gives a browser. Identity
+        comes from `server.trustedUserHeaders`; without it, agent sessions are
+        anonymous.
     """,
     default_val=False,
     type_=bool,
+)
+
+_create_option(
+    "server.agentMaxSessions",
+    description="""
+        Maximum number of agent API sessions the server holds at once.
+
+        An agent session outlives the request that created it, so this bounds
+        what a loop of creating calls can hold in memory. When the limit is
+        reached, sessions idle past `server.agentSessionTTL` are reclaimed
+        first, and new sessions are then refused.
+
+        Note: This is an experimental API subject to change.
+    """,
+    default_val=100,
+    type_=int,
+    # Hide until the budgets are settled.
+    visibility="hidden",
 )
 
 _create_option(

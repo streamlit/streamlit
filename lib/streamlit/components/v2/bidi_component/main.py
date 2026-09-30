@@ -529,11 +529,16 @@ class BidiComponentMixin:
             INTERNAL_COMPONENT_NAME,
             bidi_component_proto,
             layout_config=layout_config,
+            # Component JavaScript is never executed server-side, so what the
+            # component was given is reported and what it renders is not.
             agent_props=agent_spec.element(
                 "components.v2.component",
                 key=bidi_component_proto.id or None,
                 support="browser_required",
                 component_name=bidi_component_proto.component_name or None,
+                data=json.loads(bidi_component_proto.json)
+                if bidi_component_proto.json
+                else None,
             ),
         )
 

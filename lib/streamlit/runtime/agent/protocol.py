@@ -167,8 +167,24 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
     "not_available": (
         403,
         (
-            "The agent API is not served to this caller. It is off unless "
-            "`server.enableAgentApi` is set, and is only served to loopback peers."
+            "The agent API is not served by this app. It is off unless "
+            "`server.enableAgentApi` is set."
+        ),
+    ),
+    "origin_not_allowed": (
+        403,
+        (
+            "The request came from a web page on another origin, which the app "
+            "refuses the same way it refuses that page's WebSocket. Non-browser "
+            "clients send no `Origin` header and are not affected."
+        ),
+    ),
+    "too_many_sessions": (
+        429,
+        (
+            "The server already holds its maximum number of agent sessions "
+            "(`server.agentMaxSessions`). Reuse an existing `session_id`, or "
+            "retry once idle sessions expire."
         ),
     ),
 }
@@ -248,16 +264,11 @@ def build_openapi_document(
     Parameters
     ----------
     availability
-        ``"available"``, or why not: ``"disabled"`` when the server does not
-        offer the API at all, ``"loopback-only"`` when it does but not to this
-        caller. The two need separate answers, because telling a remote caller
-        to enable a setting that is already on sends it after the wrong fix.
-
-        Anything other than ``"available"`` also omits the exact Streamlit
-        version. This document is the one agent API response an unauthenticated
-        caller can reach, and a precise version is worth more to someone
-        matching it against advisories than to a client that cannot call
-        anything.
+        ``"available"``, or ``"disabled"`` when the server does not offer the
+        API. A disabled document also omits the exact Streamlit version: it is
+        the one agent API response an app that never opted in serves, and a
+        precise version is worth more to someone matching it against
+        advisories than to a client that cannot call anything.
     interact_path
         The served path of the interact operation, including any base URL path.
     schema_path
@@ -370,24 +381,9 @@ afterwards and it will describe the whole protocol.
 There is nothing else to try from here. A browser is the only other way in.
 """
 
-_REMOTE_NOTICE: Final = """\
-**This app's agent API is switched on, but it is not served to you: it accepts \
-loopback callers only.** You are reaching it from another host.
-
-`POST` to the interact path returns `403 not_available`. This is deliberate and \
-there is no request that gets around it -- the check uses the raw peer address, \
-so a forwarded header cannot present a remote caller as local.
-
-To use it, run on the same host as the app, or have whoever operates the app \
-put a proxy of their own in front of it and take responsibility for \
-authenticating callers. Requesting this document from the app's own host will \
-return the full protocol description.
-"""
-
 # What a caller is told when it cannot use the API, keyed by why.
 _UNAVAILABLE_NOTICES: Final = {
     "disabled": _DISABLED_NOTICE,
-    "loopback-only": _REMOTE_NOTICE,
 }
 
 _API_DESCRIPTION: Final = """\
@@ -433,6 +429,12 @@ the script again and can repeat side effects exactly as any other rerun does.
 
 Sessions are reclaimed after `server.agentSessionTTL` of inactivity, so there \
 is nothing to close.
+
+A session runs as whoever created it. Where the deployment maps identity \
+headers into `st.user` (`server.trustedUserHeaders`), the app sees the same \
+user it would for that caller's browser, and a session only answers requests \
+carrying that same identity. Otherwise the session is anonymous: an app \
+behind `st.login` shows its signed-out state.
 """
 
 _ERROR_RESPONSE_DESCRIPTION: Final = """\
@@ -775,9 +777,12 @@ def _schemas() -> dict[str, Any]:
                     "description": (
                         "Why this element is not fully usable here, absent when "
                         "it is. Declared on the element itself so a gap never "
-                        "has to be cross-referenced: `browser_required` for "
-                        "content only a browser can render (custom components, "
-                        "raw HTML, rendered figures), `read_only_in_v1` for "
+                        "has to be cross-referenced: `browser_required` where "
+                        "what renders is produced by JavaScript this interface "
+                        "does not run (custom components, `components.html`, "
+                        "inline iframe HTML, `st.html` with scripts allowed), "
+                        "though the source or arguments are still reported; "
+                        "`read_only_in_v1` for "
                         "elements whose selections or edits cannot be sent yet, "
                         "`not_interactive_in_v1` for controls that cannot be "
                         "driven at all. Detect these and either explain the gap "

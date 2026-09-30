@@ -163,8 +163,9 @@ class HtmlMixin:
                 "html",
                 html_proto,
                 # Style-only HTML renders nothing and goes to the event
-                # container, so there is no content for a client to read.
-                agent_props=agent_spec.element("html", support="browser_required"),
+                # container, so there is no content for a client to read and
+                # the snapshot leaves it out.
+                agent_props=agent_spec.element("html"),
             )
         # Otherwise, send the html to the main container as normal
         # Only set the unsafe JS flag for non-style-only HTML content
@@ -174,11 +175,12 @@ class HtmlMixin:
             "html",
             html_proto,
             layout_config=layout_config,
-            # Raw HTML is only meaningful once rendered, so the body is
-            # reported as source and the element is marked browser-required.
+            # The body is the content, read as source the way Markdown is. Only
+            # scripts the author allowed to run can make what renders differ
+            # from it, and this interface does not run them.
             agent_props=agent_spec.element(
                 "html",
-                support="browser_required",
+                support="browser_required" if unsafe_allow_javascript else None,
                 body=html_content,
                 unsafe_allow_javascript=unsafe_allow_javascript,
             ),

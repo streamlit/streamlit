@@ -193,7 +193,8 @@ agents is the half nobody owns.
 5. **Add a conversational interface to your own app.** An author drops in `st.chat_input`
    and hands the question to an agent that reads the app through this interface, so
    "which region dropped?" is answered from the app's own numbers and definitions. This
-   needs nothing beyond v1, since the agent runs server-side and calls loopback. Two
+   needs nothing beyond v1, since the agent runs server-side and calls the app's own
+   endpoint. Two
    caveats: it gets its own session, so it reports rather than changing what the human is
    looking at; and it does not inherit the asking user's identity unless the deployment
    maps it, which matters in an app with per-user data access.
@@ -267,10 +268,11 @@ not:
   its session state kept, so a coding agent can edit and re-check in one session, or omit
   `session_id` for a clean start.
 - **Absent, because a browser supplies it:** `st.context.headers` and `cookies` are
-  empty, and its URL, theme, and embedding fields are `None` rather than guessed;
-  `st.user` is anonymous. Timezone and locale are `None` too unless the request states
-  them in `context`, which is what lets an app that formats times from
-  `st.context.timezone` render them as it would for a user.
+  empty, and its URL, theme, and embedding fields are `None` rather than guessed.
+  Timezone and locale are `None` too unless the request states them in `context`, which
+  is what lets an app that formats times from `st.context.timezone` render them as it
+  would for a user. `st.user` comes from the deployment's trusted identity headers when
+  it maps them, and is anonymous otherwise.
 
 **Navigation is the one-round-trip parameterization channel.** Widgets
 declared with `bind="query-params"` can be set on the creating call, so "run this
@@ -732,8 +734,8 @@ without introducing a new authorization surface.
 | Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order, not objects: repeating the column names per row is most of a long preview's size, and halved a 100-row catalog. A CSV blob would save no more — inside a JSON string it escapes its own quotes twice — while costing the types `columns` just declared. |
 | Lazy dataframe                 | The same shape, with the chunk already emitted as the preview and `complete: false`. `data.url` serves that chunk; fetching further ranges is a follow-up.                                                                                                 |
 | Chart                          | Public properties in `props`, the native specification inline when it fits the size budget and behind `data.url` otherwise, and chart data under `data` exactly as a dataframe's.                                                                          |
-| Image, audio, video, PDF       | Caption, MIME type, and the existing `/media/...` URL the app already exposed to its own client.                                                                                                                                                           |
-| HTML, iframe, custom component | Type, safe metadata, and `support: browser_required`. Component JavaScript is never executed.                                                                                                                                                          |
+| Image, audio, video, PDF       | Caption, MIME type, and the existing `/media/...` URL the app already exposed to its own client. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way.                                                                   |
+| HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML and a URL iframe are fully readable. |
 | Download                       | Label, file metadata, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, so it needs nothing new; only deferred generation (which carries a file ID instead of a URL) requires an action. |
 
 Arrow bytes and oversized chart specifications are registered in the existing media-file
@@ -750,20 +752,20 @@ re-resolve it later. Two reasons that contract matters:
   against active sessions and collected once nothing holds them, so a URL from an earlier
   snapshot may already be gone. v1 pins whatever the returned snapshot references for a
   bounded lease so the response is usable, and nothing beyond that.
-- **It keeps remote enablement non-breaking.** Today's file IDs are content hashes, which
-  makes a URL an unexpiring bearer token: fine for an image an app chose to display, and a
-  poor fit for a full dataset inside a JSON document that gets logged, retained in a model's
-  context, and forwarded between tools. Remote enablement replaces these with
-  principal-scoped or expiring links. Because clients were never allowed to persist a URL,
-  that tightening changes guarantees rather than shape.
+- **It keeps tightening non-breaking.** Today's file IDs are content hashes, which makes a
+  URL an unexpiring bearer token: fine for an image an app chose to display, and a poor
+  fit for a full dataset inside a JSON document that gets logged, retained in a model's
+  context, and forwarded between tools. Before the interface is on by default, these
+  become principal-scoped or expiring links. Because clients were never allowed to
+  persist a URL, that tightening changes guarantees rather than shape.
 
 Note what content-hash IDs do _not_ imply: an identical URL means identical bytes, so this
 is not a confidentiality hole between sessions of one app, and storage belongs to the
 server's single runtime instance, so it does not span app processes.
 
 Serving full data has a cost worth bounding, since storage is in memory and the bytes are
-retained separately from the emitted message: v1 caps what it will externalize and marks
-an oversized artifact unavailable on the node rather than registering it.
+retained separately from the emitted message: v1 externalizes up to 200 MB per element and
+marks anything larger unavailable on the node rather than registering it.
 
 Truncation is always explicit. **A preview must never look like the complete answer to
 an aggregate question.** If the structural document itself cannot fit the response
@@ -771,8 +773,10 @@ budget, the request fails rather than truncating silently.
 
 **`data.complete` is the field a client branches on, and it resolves three ways, never
 none.** Either the data here is everything (`complete: true`), or a `url` serves the rest,
-or an explicit `unavailable` says the data was too large to hold a second copy of. One
-byte threshold for both the preview and the externalization would leave a hole: a
+or an explicit `unavailable` says the data was too large to hold a second copy of. It
+is not a lazy-loading flag: an eagerly sent 5,000-row table is incomplete too, because
+only its first 100 rows are inlined, and a lazy dataframe is one way among several to end
+up with `complete: false`. One byte threshold for both the preview and the externalization would leave a hole: a
 206-row table is about 8 KB, so it would be truncated *and* have no URL, while its own
 caption tells the agent to fetch one. Whether a client needs a URL is a question about row
 count, not payload size, so there is no size floor for externalizing — only a ceiling
@@ -811,26 +815,51 @@ back to a browser rather than mistake it for missing content:
 
 | Not in v1                                                                  | Behavior                                                                                                                                                                      |
 | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Custom components, `st.html`, `st.iframe`, `st.pyplot`                     | `support: browser_required` with safe metadata; a pyplot figure keeps its image URL. Component JavaScript never runs. See [Data, charts, and media](#data-charts-and-media-in-v1). |
+| Rendering that depends on JavaScript                                       | Custom components, `components.html`, inline iframe HTML, and `st.html` with scripts allowed report their source or arguments with `support: browser_required`, because what renders may differ from it. See [Data, charts, and media](#data-charts-and-media-in-v1). |
 | `st.file_uploader`, `st.camera_input`, `st.audio_input`                    | Inspectable, not interactive: `support: not_interactive_in_v1`.                                                                                                                |
 | `st.chat_input` attachments                                                | Text only. `accept_file` is reported, but a request cannot attach files.                                                                                                      |
 | `st.data_editor` edits, dataframe and chart selections                     | Read-only, with `support: read_only_in_v1` on the element when the app enabled them.                                                                                          |
 | Deferred downloads and download callbacks                                  | Not triggerable. Eager downloads expose their existing URL.                                                                                                                   |
 | Lazy dataframe continuation                                                | `complete: false`, and `data.url` serves only the chunk already loaded.                                                                                                       |
-| Data too large to hold a second copy of                                    | `data.unavailable` instead of a `url`.                                                                                                                                        |
+| Data too large to hold a second copy of                                    | Over 200 MB per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                                     |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again; the interval is not reported, since it would not change when a caller chooses to.                                         |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.                  |
 | `bind="query-params"` write-back                                           | Setting a bound widget changes its value but not `query_params`; the browser is what writes the address bar. See [Actions in v1](#actions-in-v1).                             |
-| Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`. The session is anonymous, so an app behind `st.login` shows its signed-out state. Identity mapping is part of remote enablement; see [Enablement](#enablement). |
+| Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun.                                                                                               |
 | Long-running interactions                                                  | No polling or partial results; the request either settles or returns `run_timed_out`.                                                                                         |
+
+### Limits and configuration
+
+Every bound v1 applies, in one place. The three agent budget options are hidden from
+`streamlit config show` until their defaults settle ([open question 4](#open-questions)).
+
+| Limit                                  | Default                                               | Set by                                                                        |
+| -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Whether the API is served              | Off                                                   | `server.enableAgentApi`                                                       |
+| Time for one interaction to settle     | 60 s, then `run_timed_out`                            | `server.agentRunTimeout`                                                      |
+| Idle time before a session is reclaimed | 15 min                                                | `server.agentSessionTTL`                                                      |
+| Agent sessions held at once            | 100, then `too_many_sessions`                         | `server.agentMaxSessions`                                                     |
+| Interactions in flight per session     | 1, then `session_busy`                                | Fixed                                                                         |
+| Request body                           | 25 MB, the same bound as a WebSocket message          | `server.maxWidgetStateSize`                                                   |
+| Preview rows per table                 | 100                                                   | Fixed                                                                         |
+| Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | Fixed                                                                         |
+| Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 7](#open-questions))                                    |
+| Response size                          | No cap                                                | [Open question 4](#open-questions)                                            |
+| Wait for a follow-up run to start      | 50 ms after a run finishes                            | Fixed ([potential follow-ups](potential-follow-ups.md))                       |
+| `data.url` lifetime                    | While the element that produced it is still rendered  | Fixed; a fetch-now handle, never persisted                                    |
+| Who may call                           | The WebSocket's Host and Origin rules                 | `server.allowedHosts`, `server.enableCORS`, `server.corsAllowedOrigins`       |
+| Who the caller is                      | Anonymous                                             | `server.trustedUserHeaders`                                                   |
+| Error detail in a failed run           | As in the browser                                     | `client.showErrorDetails`                                                     |
+| Where the routes live                  | `/_stcore/agent/v1/…`                                 | `server.baseUrlPath`                                                          |
 
 ### Security
 
 This is a new programmatic execution surface and needs an explicit review.
 
-- **Conservatively gated in v1.** Upgrading Streamlit must not open a new API, and the
-  first release cannot be reached from another host. See [Enablement](#enablement).
+- **Opt-in, and no stricter than the app once on.** Upgrading Streamlit must not open a
+  new API. Once enabled, the route applies the WebSocket's Host, Origin, and identity
+  rules. See [Enablement](#enablement).
 - **Validate semantically, then serialize.** Never accept a raw `BackMsg`, element ID,
   delta path, fragment ID, or `WidgetState` protobuf. Reject stale, disabled, removed,
   out-of-range, wrong-shape, cross-form, cross-dialog, and oversized requests
@@ -848,20 +877,23 @@ This is a new programmatic execution surface and needs an explicit review.
 - **Preserve the existing output boundary.** Expose only content already emitted to this
   session's client, with the same error redaction. No secrets, session state, Python
   values, local paths, or source.
-- **Bound everything.** One in-flight interaction per session, plus limits on sessions,
-  request bytes, response bytes, preview size, run time, and request rate.
+- **Bound everything.** One in-flight interaction per session and a cap on sessions
+  (`server.agentMaxSessions`), plus limits on request bytes, response bytes, preview
+  size, run time, and request rate.
 - **Audit without content.** Log session hashes, action kinds, outcomes, latency, and
   sizes — never labels, values, table contents, or queries.
 
 - **Resource authorization is the one prerequisite with an implementation detail worth
   stating here.** The media route is a bare content-hash lookup with no session check, and
   identical bytes deduplicate to the same URL across sessions. That is acceptable for
-  media an app already chose to display, and not for newly externalized table and chart
-  data, which is why principal-scoped links are a prerequisite for remote enablement.
+  media an app already chose to display, and less so for newly externalized table and
+  chart data, which is why v1 treats those URLs as fetch-now handles and principal-scoped
+  links are a prerequisite for turning the interface on by default.
 
-What must be true before the interface can be reached remotely at all is one list, in
-[Enablement](#enablement), rather than a second one here. Note only that CORS is not
-authentication: a cookie-authenticated mutating route needs Origin and XSRF handling.
+What stands between opt-in and on-by-default is one list, in [Enablement](#enablement),
+rather than a second one here. Note only that CORS is not authentication: the route
+checks `Origin` itself, and never reads the `st.login` cookie, which the WebSocket honors
+only behind an XSRF token.
 
 ### Enablement
 
@@ -895,13 +927,9 @@ the schema route to be registered even when the API is off — otherwise the pat
 through to the single-page-app fallback and returns *the app's own HTML with a `200`*,
 which is a failure that reads as success.
 
-Answering well needs three states rather than two, because the remedies differ:
-`available`; `disabled`, which tells an operator which setting to change; and
-`loopback-only`, which tells a remote caller that the setting is already on and that no
-request will get around the peer check. Collapsing the last two sends half of all callers
-after the wrong fix. Since this document is then the one response an unauthenticated
-caller can reach, it should omit the exact Streamlit version unless the caller can
-actually use the API.
+The document says which state the app is in: `available`, or `disabled`, which tells an
+operator which setting to change. A disabled document is the one agent API response an
+app that never opted in serves, so it omits the exact Streamlit version.
 
 What this does *not* solve is worth stating: discovery is not capability. Most agent
 harnesses' web tools only issue GET requests, so an agent can find the protocol and still
@@ -936,22 +964,22 @@ very agents this serves, so neither obscurity nor implementation difficulty is a
 boundary worth defending. Meanwhile, requiring every author to find and flip a flag would
 forfeit the installed base of existing apps, which is most of the value here.
 
-What is genuinely new is not capability but _practicality_, and that is what has to be
-settled before the default flips:
+**So v1 is opt-in, and once on it is served wherever the app is.** Restricting the route
+more than the app would contradict that invariant: anyone who can reach the app's
+WebSocket can already drive it. What v1 does instead is close the few ways this route
+differs from the WebSocket. What is genuinely new is not capability but _practicality_,
+and the rest of it is what stands between opt-in and on-by-default:
 
-| Concern           | Why it is new                                                                                                                                                                                    | What resolves it                                                                                                                                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Bulk data access  | A dataframe becomes typed data rather than a scrolled viewport, and v1 serves the full Arrow bytes over a link. The same data an app already sent its client, far easier to take in one request. | Response, preview, and artifact-size budgets in v1; principal-scoped or expiring resource links before remote enablement.                                                                                                     |
-| Request volume    | An agent loops faster than a human clicks.                                                                                                                                                       | Session caps, one in-flight interaction per session, and request rate limits.                                                                                                                                                 |
-| Cross-origin POST | The WebSocket has origin checks; a new cookie-authenticated mutating route needs its own.                                                                                                        | Origin and XSRF handling on the route.                                                                                                                                                                                        |
-| Identity          | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose route or identity mapping is skipped, leaving `st.user` unset so per-user access branches silently take the anonymous path. | **Parity** with the app's existing gate: the same authentication on the route, and an authenticated caller resolving to the same `st.user` and access-control branches as an equivalent browser session — which routing behind middleware does not achieve by itself, and which is never taken from the request body. A hard requirement for default-on, not a later refinement. |
+| Concern               | Why it is new                                                                                                                                                                                         | In v1                                                                                                                                                                                                                                                      | Before default-on                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and the full Arrow bytes sit behind a content-hash URL with no session check. The same data the app already sent its client, far easier to take. | Preview and artifact-size budgets, and URLs that are fetch-now handles a client must not persist.                                                                                                                                                         | Principal-scoped or expiring resource links, and a response budget.                                |
+| Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits.                                                                               |
+| Cross-origin requests | The WebSocket checks `Origin`. Without the same check, a page on another site could drive any app the visitor's browser can reach.                                                                  | The WebSocket's own Host and Origin rules. Non-browser clients send no `Origin` and are unaffected.                                                                                                                                                       | —                                                                                                  |
+| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. | A credential flow that maps an `st.login` user to an agent ([open question 2](#open-questions)). |
 
-So v1 is **off by default and served only to loopback peers**, matching the existing
-conservative gate used for the skills-install backend operation. That makes the first
-release useful for local verification and CI while the four rows above are being settled,
-and it keeps the decision reversible: turning a flag on later is easy, while walking back
-an insecure default is not. Widening to self-hosted deployments, then flipping the
-default, are follow-ups with their own gates.
+That keeps the decision reversible. An app opts in, deployments that authenticate every
+path — an auth proxy, a private Community Cloud app, SiS — gate the route exactly as they
+gate the app, and flipping the default later is its own reviewed change.
 
 ## Key design decisions
 
@@ -1029,11 +1057,11 @@ Each of these is additive to the v1 contract and independently shippable. They a
 ordered roughly by expected value. Smaller implementation follow-ups and alternatives
 considered while building the prototype are in [potential-follow-ups.md](potential-follow-ups.md).
 
-1. **Remote enablement, then on by default.** Identity mapping into `st.user`, Origin
-   and XSRF handling, and the response and rate budgets that make bulk access and request
-   volume safe — then flip the flag to opt-out. Per-platform
-   routing, session affinity for multi-worker deployments, and quotas. Unlocks use cases
-   2–4.
+1. **On by default.** A credential flow that maps an `st.login` user to an agent,
+   authorized resource links (#3), and the response and rate budgets that make bulk
+   access and request volume safe — then flip the flag to opt-out. Per-platform routing,
+   session affinity for multi-worker deployments, and quotas. Brings use cases 2–4 to
+   apps whose authors never opted in.
 2. **Authored descriptions** — a standalone project worth doing on its own accessibility
    merits: static `app_title`/`app_description` on `st.App`, `page_description` on
    `st.set_page_config` and optionally `st.Page`
@@ -1048,7 +1076,7 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
    across images, charts, tables, and audio, so element-appropriate public names
    normalized into a single `description` field in the JSON may be the better shape.
 3. **Authorized resource links and lazy continuation.** Replace content-hash media URLs
-   with principal-scoped or expiring links, which is a prerequisite for remote enablement
+   with principal-scoped or expiring links, which is a prerequisite for default-on
    rather than an addition to the v1 shape. Then add range reads for lazy dataframes,
    reusing the existing chunk machinery and its limits rather than building a query API.
 4. **Long-run handling.** `202` with an operation handle,
@@ -1226,11 +1254,11 @@ new command or significant parameter should ship with all of the following, or a
 
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ v1 is loopback-only. Self-hosted, Cloud, and SiS each require identity mapping, routing, session affinity, and quota validation first. A platform that serves apps behind a prefix, as Community Cloud does, also has to get that prefix to the client, or every path in the document resolves to the platform instead of the app.                                                                                                                                                                                                                                                                                                                                                                     |
+| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until a credential flow maps them. Multi-worker deployments need session affinity, since an agent session lives in one process. A platform that serves apps behind a prefix, as Community Cloud does, also has to get that prefix to the client, or every path in the document resolves to the platform instead of the app. |
 | No breaking API changes    | ✅ Additive: one config option, off in v1, and new routes under `/_stcore/agent/`. No `st.*` changes in v1. Flipping the default later is itself a reviewed change, not a silent one.                                                                                                                                                                                                                                                                                                                         |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP adapter should use the official SDK behind an optional extra.                                                                                                                                                                                                                                                                                                                                                                                               |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
-| Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: off and loopback-gated in v1, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, cross-origin POST, and identity mapping — the four gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
+| Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: opt-in in v1 and no stricter than the app once on, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, cross-origin POST, and identity mapping — the four gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
 | Any docs changes needed?   | Protocol reference and coverage matrix, an authoring guide ("write `key=`, explain the app in the app"), verification guidance next to `AppTest` and Playwright, and a security/deployment page.                                                                                                                                                                                                                                                                                                              |
 | Any other risks?           | The snapshot is a long-lived compatibility surface and needs a version field and a written stability policy from the first release. Adoption risk: if it stays experimental too long, the ecosystem standardizes on browser automation instead.                                                                                                                                                                                                                                                               |
 

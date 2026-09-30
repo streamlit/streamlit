@@ -20,19 +20,16 @@ endpoint can learn the protocol without being handed documentation.
 
 Both routes are always registered, because the app's HTML always links the
 schema; with ``server.enableAgentApi`` off they only say so. When it is on,
-they serve loopback peers only.
-
-That is the same conservative gate the skills-install operation uses, and it
-keeps the first release useful for local verification and CI while remote
-enablement (identity mapping into ``st.user``, Origin and XSRF handling, and
-response and rate budgets) is settled separately.
+they are served wherever the app is. A caller gets no more access than the app
+gives a browser, so the interact route applies the checks the WebSocket does:
+the same Host and Origin rules, and the same trusted identity headers mapped
+into ``st.user``.
 """
 
 from __future__ import annotations
 
 # ruff: noqa: RUF029  # Async route handlers are idiomatic even without await
 import json
-from ipaddress import ip_address
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config
@@ -44,6 +41,10 @@ from streamlit.runtime.agent.interaction import (
 from streamlit.runtime.agent.protocol import build_openapi_document, error_status
 from streamlit.runtime.agent.widget_patch import AgentRequestError
 from streamlit.runtime.runtime_util import get_max_widget_state_size_bytes
+from streamlit.web.server.starlette.starlette_websocket import (
+    _gather_user_info,
+    _is_origin_allowed,
+)
 
 if TYPE_CHECKING:
     from starlette.requests import Request
@@ -89,21 +90,6 @@ def _server_prefix(request: Request, schema_path: str) -> str:
     return prefix or "/"
 
 
-def _is_loopback_peer(request: Request) -> bool:
-    """True when the TCP peer is on a loopback address.
-
-    Uses the raw peer address rather than a forwarded header, so a proxy cannot
-    present a remote caller as local.
-    """
-    client = request.client
-    if client is None or not client.host:
-        return False
-    try:
-        return ip_address(client.host).is_loopback
-    except ValueError:
-        return False
-
-
 def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRoute]:
     """Create the agent API routes.
 
@@ -124,37 +110,18 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
     interact_path = make_url_path(base_url or "", _ROUTE_AGENT_INTERACT)
     schema_path = make_url_path(base_url or "", _ROUTE_AGENT_SCHEMA)
 
-    def _refuse_non_loopback(request: Request) -> JSONResponse:
-        _LOGGER.warning(
-            "Refusing agent API request from non-loopback peer %s",
-            request.client.host if request.client else "unknown",
-        )
-        return _error(
-            "not_available",
-            "The agent API is only served to loopback callers.",
-            status=error_status("not_available"),
-        )
-
     async def _schema_endpoint(request: Request) -> JSONResponse:
         """Serve the OpenAPI document, so the protocol is discoverable.
 
-        Unlike the operation it describes, this is answered for any caller. It
-        is documentation rather than access: a remote caller that followed the
-        app's link is better told what this is, that it is loopback-only, and
-        whether it is even on, than given a bare refusal it cannot interpret.
+        Answered whether or not the API is on. It is documentation rather than
+        access: a caller that followed the app's link is better told what this
+        is and whether it is on than given a bare refusal it cannot interpret.
         """
-        if not enabled:
-            availability = "disabled"
-        elif not _is_loopback_peer(request):
-            availability = "loopback-only"
-        else:
-            availability = "available"
-
         response = JSONResponse(
             build_openapi_document(
                 interact_path=interact_path,
                 schema_path=schema_path,
-                availability=availability,
+                availability="available" if enabled else "disabled",
                 server_prefix=_server_prefix(request, schema_path),
             )
         )
@@ -170,8 +137,24 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 f"{schema_path} for what it would offer.",
                 status=error_status("not_available"),
             )
-        if not _is_loopback_peer(request):
-            return _refuse_non_loopback(request)
+        # The WebSocket's rule, so a web page on another origin cannot drive
+        # the app through this route when it could not through the socket. A
+        # non-browser client sends no Origin and passes; the Host allow-list
+        # (`server.allowedHosts`) applies either way.
+        origin = request.headers.get("Origin")
+        if not _is_origin_allowed(origin, request.headers.get("Host")):
+            _LOGGER.warning(
+                "Refusing agent API request with disallowed Origin or Host: "
+                "origin=%s, host=%s",
+                origin,
+                request.headers.get("Host"),
+            )
+            return _error(
+                "origin_not_allowed",
+                "Requests from a web page on another origin are refused, as "
+                "they are for the app's WebSocket.",
+                status=error_status("origin_not_allowed"),
+            )
 
         # The same bound the WebSocket handler applies to an inbound frame, so
         # the agent path is no more permissive than the browser path.
@@ -194,7 +177,16 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
 
         try:
             assert registry is not None  # noqa: S101 - guarded by `enabled`
-            snapshot = await interact(runtime, registry, payload)
+            snapshot = await interact(
+                runtime,
+                registry,
+                payload,
+                # The same trusted headers the WebSocket maps for a browser.
+                # Never the auth cookie: it is only honored on the WebSocket
+                # behind an XSRF token, which a cross-site request here could
+                # otherwise ride.
+                user_info=_gather_user_info(request.headers),
+            )
         except AgentRequestError as exc:
             return _error(
                 exc.code,

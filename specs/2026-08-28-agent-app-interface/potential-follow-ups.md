@@ -50,18 +50,6 @@ It matters because every divergence found so far was found by accident: the
 `st.context` reporting empty strings instead of `None`. All four are behaviors the
 frontend owns, and the next one will be too.
 
-## Session cap
-
-Nothing limits how many agent sessions exist. A WebSocket session ends with its
-connection, but an agent session is created by one cheap request and lives until
-`server.agentSessionTTL` reclaims it, so a loop of creating calls grows memory for the
-length of the TTL. A `server.agentMaxSessions` option, next to `server.agentSessionTTL`
-and `server.agentRunTimeout`, would bound that: when the cap is reached, reclaim idle
-sessions first, then refuse creation with `429 too_many_sessions`.
-
-A server-wide cap that also covers browser sessions would bound scripted WebSocket
-clients too, but it changes behavior for every app and is a separate decision.
-
 ## Settle on the script runner's shutdown, not a grace period
 
 One interaction can cause several runs. The response has to wait until no further run

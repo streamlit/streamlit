@@ -195,6 +195,10 @@ class AgentSession:
     # a browser resends its own. None until a request supplies them, so the app
     # reads `st.context.timezone` as unknown rather than as a guess.
     context_info: ContextInfo | None = None
+    # Who created the session, from the deployment's trusted identity headers.
+    # The handle alone is a bearer credential, so a request carrying a
+    # different identity is treated as not knowing the session at all.
+    user_info: dict[str, Any] = field(default_factory=dict)
     last_used: float = field(default_factory=time.monotonic)
     element_states: dict[str, ElementState] = field(default_factory=dict)
     # Guards against a second interaction arriving while one is still running.
@@ -208,10 +212,10 @@ class AgentSessionRegistry:
         self._runtime = runtime
         self._sessions: dict[str, AgentSession] = {}
 
-    def get(self, handle: str) -> AgentSession:
+    def get(self, handle: str, user_info: dict[str, Any]) -> AgentSession:
         self._reclaim_idle()
         session = self._sessions.get(handle)
-        if session is None:
+        if session is None or session.user_info != user_info:
             raise AgentRequestError(
                 "unknown_session",
                 f"Session {handle!r} does not exist or has expired. Omit "
@@ -220,19 +224,31 @@ class AgentSessionRegistry:
         session.last_used = time.monotonic()
         return session
 
-    def create(self) -> AgentSession:
+    def create(self, user_info: dict[str, Any]) -> AgentSession:
         self._reclaim_idle()
+        max_sessions = int(config.get_option("server.agentMaxSessions"))
+        if len(self._sessions) >= max_sessions:
+            raise AgentRequestError(
+                "too_many_sessions",
+                f"This server already holds {max_sessions} agent sessions. "
+                "Reuse an existing `session_id`, or retry once idle sessions "
+                "expire.",
+            )
 
         client = AgentSessionClient()
-        session_id = self._runtime.connect_session(client=client, user_info={})
+        session_id = self._runtime.connect_session(
+            client=client, user_info=dict(user_info)
+        )
         # Tell the element layer that this session's commands should describe
         # themselves. Sessions not registered here -- every browser session --
         # build nothing, so their messages never carry a description.
         agent_spec.register_agent_session(session_id)
-        # An opaque handle, so a client cannot address a browser session by
-        # guessing its id.
-        handle = f"s_{secrets.token_hex(8)}"
-        session = AgentSession(handle=handle, session_id=session_id, client=client)
+        # An opaque bearer handle, long enough to be unguessable, so a client
+        # cannot address another session, or a browser session, by trying ids.
+        handle = f"s_{secrets.token_hex(16)}"
+        session = AgentSession(
+            handle=handle, session_id=session_id, client=client, user_info=user_info
+        )
         self._sessions[handle] = session
         return session
 
@@ -255,8 +271,14 @@ async def interact(
     runtime: Runtime,
     registry: AgentSessionRegistry,
     request: dict[str, Any],
+    *,
+    user_info: dict[str, Any],
 ) -> dict[str, Any]:
-    """Run one interaction and return the resulting snapshot document."""
+    """Run one interaction and return the resulting snapshot document.
+
+    ``user_info`` is what the deployment's trusted identity headers say about
+    the caller, mapped the way the WebSocket maps them for a browser.
+    """
     _validate_request_shape(request)
 
     handle = request.get("session_id")
@@ -273,11 +295,11 @@ async def interact(
                     "element keys only exist once the app has run. Create the "
                     "session first, then act on the keys it returns.",
                 )
-        session = registry.create()
+        session = registry.create(user_info)
     else:
         if not isinstance(handle, str):
             raise AgentRequestError("invalid_request", "`session_id` must be a string.")
-        session = registry.get(handle)
+        session = registry.get(handle, user_info)
 
     if session.lock.locked():
         raise AgentRequestError(
