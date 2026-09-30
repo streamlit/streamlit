@@ -61,6 +61,19 @@ _PREVIEW_ROW_LIMIT: Final = 100
 # filled, blank space, and style-only HTML. See `_SnapshotBuilder._is_contentless`.
 _CONTENTLESS_TYPES: Final = {"empty", "space", "html"}
 
+# The payload fields a table's or chart's `data` summary is computed from. A
+# buffered message is compacted once its run settles: these are cleared and the
+# summary rides in its description instead. See `compact_delta`.
+_BULK_FIELDS: Final = {
+    "dataframe": ("arrow_data", "lazy_data"),
+    "table": ("arrow_data",),
+    "vega_lite_chart": ("data", "datasets", "spec"),
+    "plotly_chart": ("spec",),
+    "echarts_chart": ("spec",),
+    "deck_gl_json_chart": ("json",),
+}
+_DATA_SUMMARY_KEY: Final = "data_summary"
+
 _ROOT_CONTAINER_NAMES: Final = {
     RootContainer.MAIN: "main",
     RootContainer.SIDEBAR: "sidebar",
@@ -346,7 +359,12 @@ class _SnapshotBuilder:
                 # resets right after the run that observed it.
                 result["value"] = value
 
-        data = _element_data(proto_field, payload) or {}
+        # A compacted message carries its summary instead of the payload it was
+        # computed from; see `compact_delta`.
+        if _DATA_SUMMARY_KEY in description:
+            data = description[_DATA_SUMMARY_KEY] or {}
+        else:
+            data = _element_data(proto_field, payload) or {}
         if data_url := description.get("data_url"):
             # A fetch-now handle for the complete data, registered while the
             # script ran. Do not persist it: the media file is reference
@@ -513,6 +531,43 @@ def _is_write_only(description: dict[str, Any]) -> bool:
     """
     props = description.get("props") or {}
     return description.get("type") == "text_input" and props.get("type") == "password"
+
+
+def compact_delta(msg: ForwardMsg) -> ForwardMsg:
+    """Replace a table's or chart's bulk payload with the summary a snapshot reads.
+
+    A session keeps the messages that built its page, because a fragment rerun
+    re-emits only the fragment and the rest of the tree has to come from
+    somewhere. Kept as emitted, that would hold every table's full Arrow bytes
+    for the life of the session, beside the copy `data.url` already serves,
+    while a snapshot only ever reads the bounded summary. So the summary is
+    what is kept.
+
+    Returns ``msg`` itself when it carries no bulk payload or is already
+    compacted. Otherwise returns a copy, so a message the runtime still holds
+    is never modified.
+    """
+    if msg.delta.WhichOneof("type") != "new_element":
+        return msg
+    element = msg.delta.new_element
+    proto_field = element.WhichOneof("type") or ""
+    bulk_fields = _BULK_FIELDS.get(proto_field)
+    if not bulk_fields or not msg.metadata.HasField("agent_props"):
+        return msg
+    description = agent_spec.decode(msg.metadata.agent_props)
+    if not description or _DATA_SUMMARY_KEY in description:
+        return msg
+
+    description[_DATA_SUMMARY_KEY] = _element_data(
+        proto_field, getattr(element, proto_field)
+    )
+    compacted = ForwardMsg()
+    compacted.CopyFrom(msg)
+    payload = getattr(compacted.delta.new_element, proto_field)
+    for name in bulk_fields:
+        payload.ClearField(name)
+    compacted.metadata.agent_props = json.dumps(description)
+    return compacted
 
 
 def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:

@@ -29,6 +29,51 @@ while making the naming rule — a release gate in the spec — mechanically enf
 **Revisit if** coverage sweeps keep finding commands nobody described, or names drift
 from signatures despite the test.
 
+## Widget constraint validation (#16203)
+
+Widget constraints are enforced only in the browser today, for every client:
+[#16203](https://github.com/streamlit/streamlit/issues/16203) moves them into the widgets'
+server-side deserialize path. The agent API should rely on that rather than keep its own
+checks, which exist in the prototype only as a stopgap for options and bounds.
+
+**One requirement on the shape.** #16203 proposes coercing a violation to a valid value,
+which suits a browser racing a rerun. An agent needs the opposite, because a silently
+reset value reads as success. So each validator should report the violation and leave
+the policy to its caller: the browser path coerces, the agent path rejects with
+`invalid_value`.
+
+**Ranked by how much apps rely on the constraint as a safeguard:**
+
+1. **`disabled=True`**, on every widget including form submit buttons. A forged message
+   still applies the value and runs the callback, and apps use `disabled` to gate actions
+   by role or state, such as an "Approve" button only a reviewer can press.
+2. **`options` allow-lists**: selectbox, radio, multiselect, pills, segmented control,
+   select slider, and `accept_new_options=False`. Apps filter options per user — the
+   regions someone may see — so an out-of-list value reaches data the UI never offered.
+3. **`st.data_editor` edit rules**: `disabled` columns, `num_rows="fixed"`, and column
+   options and validation. Edits to locked columns, or added and deleted rows, write into
+   data the app treats as read-only.
+4. **Numeric and temporal bounds**: `min_value` and `max_value` on number inputs, sliders,
+   and date, time, and datetime inputs. Apps use them to cap cost and scope, such as a
+   date window that bounds a query.
+5. **Size limits**: `max_selections` on multiselect, and `max_chars` on text inputs, text
+   areas, and chat input.
+6. **Shape consistency**: two-value ranges staying two ordered values, and `step`
+   alignment. A violation here usually raises in app code rather than leaking data.
+
+Uploaded file types are already checked server-side, in each upload widget's
+deserializer, so they need nothing new.
+
+## Drop the buffer on pages without fragments
+
+After compaction, a session holds about one snapshot's worth of messages between
+interactions: 12 KB for a page with 2 MB of tables. On a page without fragments, even that
+is never read again, because the next run is a full one and replaces everything. It is
+not dropped, because "no fragments" cannot be read from the tree: a fragment that rendered
+nothing leaves no node, and `st.rerun("<key>")` can still rerun it. That would need the
+fragment registry to answer the question, and a few kilobytes per session does not
+justify reaching into it.
+
 ## One headless client for `AppTest` and the agent API
 
 `AgentSessionClient` drives a real `AppSession` — the runtime's own reruns, callbacks,

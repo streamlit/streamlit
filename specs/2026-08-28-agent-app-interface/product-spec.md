@@ -626,20 +626,30 @@ forged key cannot set a disabled widget, an out-of-range value, or a control tha
 longer exists, and validation rejects the whole request before anything is applied.
 
 **Validation is against the last snapshot, not against live widget state**, which is not
-the obvious implementation. `WidgetMetadata` survives a page
-switch and a collapsed conditional branch — only the *value* is cleaned up — so a
-validator built on the widget registry accepts a key for a control that is no longer on
-the page, runs the script, changes nothing, and returns `200`: a silent no-op that reads
-as success. The registry also never had a reason to record several things a client needs
-checked, namely numeric and temporal bounds, the arity of a range, the options of a
-payload-bearing trigger, and which `st.form` an element belongs to. All of them are in the
-document the client was given, which is the deeper point: **the snapshot is the contract,
-so the snapshot is what a write is judged against.** The server therefore keeps, per
+the obvious implementation. `WidgetMetadata` survives a page switch and a collapsed
+conditional branch — only the *value* is cleaned up — so a validator built on the widget
+registry accepts a key for a control that is no longer on the page, runs the script,
+changes nothing, and returns `200`: a silent no-op that reads as success. The registry
+also does not record which `st.form` an element belongs to. The document the client was
+given has both facts, which is the deeper point: **the snapshot is the contract, so the
+snapshot is what a write is judged against.** The server keeps, per
 session, what each addressable element advertised — actionable, disabled, `support`, form,
-options, bounds, and current value — and checks the next request against that. A
-consequence worth keeping is that rejections name the actual problem: `disabled_widget`
-for a disabled control, `unsupported_element` for one this interface cannot drive, and
-`not_on_page` only when the key really is absent.
+and current value — and checks the next request against that, so rejections name the
+actual problem: `disabled_widget` for a disabled control, `unsupported_element` for one
+this interface cannot drive, and `not_on_page` only when the key really is absent.
+
+**Widget constraints are a separate layer, and they belong to the widgets.** Whether a
+value is one of a selectbox's `options`, inside a slider's bounds, or within `max_chars`
+is not a question about this interface. Today only the frontend enforces those checks, for
+every client, and [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them
+server-side for all of them. The agent path should call those validators rather than keep
+its own, with one requirement on their shape. #16203 proposes coercing a violation to a
+valid value, which is right for a browser racing a rerun and wrong for an agent, where a
+silently reset value reads as success. So a validator should report the violation and let
+the caller decide: the browser path coerces, the agent path rejects with `invalid_value`.
+Until #16203 lands, the prototype checks options and bounds against the snapshot, as a
+stopgap meant to be deleted. [Potential follow-ups](potential-follow-ups.md) ranks the
+validations by how much apps rely on them.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -746,26 +756,27 @@ browser, so those are simply forwarded.
 
 **Media URLs are fetch-now handles, not durable references.** A client fetches what it
 needs while working with the snapshot that produced the URL, and must not store, share, or
-re-resolve it later. Two reasons that contract matters:
+re-resolve it later, because that is all the implementation promises. Media files are
+reference-counted against the sessions that render them and collected once nothing does,
+so a URL from an earlier snapshot may already be gone.
 
-- **It is what the implementation can actually promise.** Media files are reference-counted
-  against active sessions and collected once nothing holds them, so a URL from an earlier
-  snapshot may already be gone. v1 pins whatever the returned snapshot references for a
-  bounded lease so the response is usable, and nothing beyond that.
-- **It keeps tightening non-breaking.** Today's file IDs are content hashes, which makes a
-  URL an unexpiring bearer token: fine for an image an app chose to display, and a poor
-  fit for a full dataset inside a JSON document that gets logged, retained in a model's
-  context, and forwarded between tools. Before the interface is on by default, these
-  become principal-scoped or expiring links. Because clients were never allowed to
-  persist a URL, that tightening changes guarantees rather than shape.
+**They are protected exactly as the app's other media is.** A file ID is a content hash,
+unguessable without already knowing the content, and it stops resolving once no session
+renders the element. That is the protection every image, video, and eager
+`st.download_button` has today — and a download button already serves arbitrary app data
+this way — so a table behind the same kind of URL is not a new class of exposure and needs
+no scheme of its own. Two properties hold for all media storage and are worth knowing
+rather than fixing here. Identical bytes share one URL across sessions, so an identical URL
+means identical content. And in an app with per-user data, a user who learns another
+user's URL can fetch it while it is still rendered. Either would be changed in media
+storage for every client, not in this interface ([open question 3](#open-questions)).
 
-Note what content-hash IDs do _not_ imply: an identical URL means identical bytes, so this
-is not a confidentiality hole between sessions of one app, and storage belongs to the
-server's single runtime instance, so it does not span app processes.
-
-Serving full data has a cost worth bounding, since storage is in memory and the bytes are
-retained separately from the emitted message: v1 externalizes up to 200 MB per element and
-marks anything larger unavailable on the node rather than registering it.
+Serving full data has a cost worth bounding, since media storage is in memory: v1
+externalizes up to 200 MB per element and marks anything larger unavailable on the node
+rather than registering it. That copy is the only one held. The session keeps the page's
+messages between interactions, so a fragment rerun can return the whole page, but it keeps
+a table or chart as the summary the snapshot reads rather than its full payload. A page
+with a 50,000-row table holds 38 KB per session instead of 1.7 MB.
 
 Truncation is always explicit. **A preview must never look like the complete answer to
 an aggregate question.** If the structural document itself cannot fit the response
@@ -857,23 +868,22 @@ Every bound v1 applies, in one place. The three agent budget options are hidden 
 
 This is a new programmatic execution surface and needs an explicit review.
 
-- **Opt-in, and no stricter than the app once on.** Upgrading Streamlit must not open a
-  new API. Once enabled, the route applies the WebSocket's Host, Origin, and identity
-  rules. See [Enablement](#enablement).
+- **Off by default in v1, on by default as the goal.** Upgrading Streamlit should not open
+  a new route until the concerns in [Enablement](#enablement) are settled; after that, the
+  default flips. Either way the route applies the WebSocket's Host, Origin, and identity
+  rules, and is never stricter than the app.
 - **Validate semantically, then serialize.** Never accept a raw `BackMsg`, element ID,
   delta path, fragment ID, or `WidgetState` protobuf. Reject stale, disabled, removed,
-  out-of-range, wrong-shape, cross-form, cross-dialog, and oversized requests
-  atomically, before any callback runs — against the last snapshot rather than live widget
-  state, for the reasons in [Actions in v1](#actions-in-v1).
-  Note that this makes the agent path _stricter_ than the WebSocket path, where several
-  constraints are still only browser-enforced
+  wrong-shape, cross-form, cross-dialog, and oversized requests atomically, before any
+  callback runs — against the last snapshot rather than live widget state, for the
+  reasons in [Actions in v1](#actions-in-v1). Widget constraints such as option lists,
+  bounds, and `max_chars` are enforced only in the browser today, for every client
   ([#16203](https://github.com/streamlit/streamlit/issues/16203)). That gap is
-  pre-existing and already reachable by anyone scripting the WebSocket, so this interface
-  neither creates nor widens it, and closing it is not a prerequisite. It is still worth
-  investing in: two validation implementations will drift, and the per-element validators
-  defined here are the natural foundation for doing it runtime-wide. Meanwhile the
-  guidance for authors is unchanged — a widget's range or option list is a UI affordance,
-  not an access control, so anything that actually matters belongs in app code.
+  pre-existing and reachable by anyone scripting the WebSocket, so this interface neither
+  creates nor widens it. The fix belongs in the widgets, where both paths share it, not
+  in a second implementation here. Meanwhile the guidance for authors is unchanged: a
+  widget's range or option list is a UI affordance, not an access control, so anything
+  that actually matters belongs in app code.
 - **Preserve the existing output boundary.** Expose only content already emitted to this
   session's client, with the same error redaction. No secrets, session state, Python
   values, local paths, or source.
@@ -882,13 +892,9 @@ This is a new programmatic execution surface and needs an explicit review.
   size, run time, and request rate.
 - **Audit without content.** Log session hashes, action kinds, outcomes, latency, and
   sizes — never labels, values, table contents, or queries.
-
-- **Resource authorization is the one prerequisite with an implementation detail worth
-  stating here.** The media route is a bare content-hash lookup with no session check, and
-  identical bytes deduplicate to the same URL across sessions. That is acceptable for
-  media an app already chose to display, and less so for newly externalized table and
-  chart data, which is why v1 treats those URLs as fetch-now handles and principal-scoped
-  links are a prerequisite for turning the interface on by default.
+- **Reuse media storage's protection for data URLs.** A table's `data.url` is a content
+  hash that stops resolving once the element does, like every image and eager download.
+  See [Data, charts, and media](#data-charts-and-media-in-v1).
 
 What stands between opt-in and on-by-default is one list, in [Enablement](#enablement),
 rather than a second one here. Note only that CORS is not authentication: the route
@@ -972,7 +978,7 @@ and the rest of it is what stands between opt-in and on-by-default:
 
 | Concern               | Why it is new                                                                                                                                                                                         | In v1                                                                                                                                                                                                                                                      | Before default-on                                                                                  |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and the full Arrow bytes sit behind a content-hash URL with no session check. The same data the app already sent its client, far easier to take. | Preview and artifact-size budgets, and URLs that are fetch-now handles a client must not persist.                                                                                                                                                         | Principal-scoped or expiring resource links, and a response budget.                                |
+| Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | A response budget.                                                                                 |
 | Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits.                                                                               |
 | Cross-origin requests | The WebSocket checks `Origin`. Without the same check, a page on another site could drive any app the visitor's browser can reach.                                                                  | The WebSocket's own Host and Origin rules. Non-browser clients send no `Origin` and are unaffected.                                                                                                                                                       | —                                                                                                  |
 | Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. | A credential flow that maps an `st.login` user to an agent ([open question 2](#open-questions)). |
@@ -1057,9 +1063,9 @@ Each of these is additive to the v1 contract and independently shippable. They a
 ordered roughly by expected value. Smaller implementation follow-ups and alternatives
 considered while building the prototype are in [potential-follow-ups.md](potential-follow-ups.md).
 
-1. **On by default.** A credential flow that maps an `st.login` user to an agent,
-   authorized resource links (#3), and the response and rate budgets that make bulk
-   access and request volume safe — then flip the flag to opt-out. Per-platform routing,
+1. **On by default.** A credential flow that maps an `st.login` user to an agent, and
+   the response and rate budgets that make bulk access and request volume safe — then
+   flip the flag to opt-out. Per-platform routing,
    session affinity for multi-worker deployments, and quotas. Brings use cases 2–4 to
    apps whose authors never opted in.
 2. **Authored descriptions** — a standalone project worth doing on its own accessibility
@@ -1075,10 +1081,8 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
    for vocabulary consistency but collapses genuinely different accessibility semantics
    across images, charts, tables, and audio, so element-appropriate public names
    normalized into a single `description` field in the JSON may be the better shape.
-3. **Authorized resource links and lazy continuation.** Replace content-hash media URLs
-   with principal-scoped or expiring links, which is a prerequisite for default-on
-   rather than an addition to the v1 shape. Then add range reads for lazy dataframes,
-   reusing the existing chunk machinery and its limits rather than building a query API.
+3. **Lazy continuation.** Range reads for lazy dataframes, reusing the existing chunk
+   machinery and its limits rather than building a query API.
 4. **Long-run handling.** `202` with an operation handle,
    `GET /_stcore/agent/v1/sessions/{id}` to poll the committed snapshot without executing
    code, and `DELETE` to close early. Once clients poll rather than resubmit, add
@@ -1258,7 +1262,7 @@ new command or significant parameter should ship with all of the following, or a
 | No breaking API changes    | ✅ Additive: one config option, off in v1, and new routes under `/_stcore/agent/`. No `st.*` changes in v1. Flipping the default later is itself a reviewed change, not a silent one.                                                                                                                                                                                                                                                                                                                         |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP adapter should use the official SDK behind an optional extra.                                                                                                                                                                                                                                                                                                                                                                                               |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
-| Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: opt-in in v1 and no stricter than the app once on, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, cross-origin POST, and identity mapping — the four gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
+| Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: off by default in v1 with on-by-default as the goal, no stricter than the app once on, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, and identity mapping — the gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
 | Any docs changes needed?   | Protocol reference and coverage matrix, an authoring guide ("write `key=`, explain the app in the app"), verification guidance next to `AppTest` and Playwright, and a security/deployment page.                                                                                                                                                                                                                                                                                                              |
 | Any other risks?           | The snapshot is a long-lived compatibility surface and needs a version field and a written stability policy from the first release. Adoption risk: if it stays experimental too long, the ecosystem standardizes on browser automation instead.                                                                                                                                                                                                                                                               |
 
@@ -1270,9 +1274,10 @@ new command or significant parameter should ship with all of the following, or a
 2. Which hosted credential flow can map an agent to the correct `st.user` without
    introducing a second identity system? A browser's signed auth cookie is not a general
    agent credential.
-3. Which resource authorization mechanism — principal-scoped references or expiring
-   signed capabilities — can reuse media storage across OSS, Cloud, and SiS without
-   turning resource URLs into durable bearer tokens?
+3. **Should media storage as a whole move to session-scoped URLs?** Content-hash URLs let
+   a user of a per-user app who learns another user's URL fetch it while it is still
+   rendered. That holds for every image and eager download today, so it is a decision for
+   media storage and every client, not a prerequisite for this interface.
 4. What run timeout, session, preview, and response budgets should ship? Some of it is
    settled: a 100-row preview keeps most filtered tables complete, and the
    externalization ceiling only has to prevent holding a second copy of something

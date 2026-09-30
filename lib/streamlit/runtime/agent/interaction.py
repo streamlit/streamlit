@@ -126,7 +126,19 @@ class AgentSessionClient(SessionClient):
 
         if msg_type == "script_finished" and msg.script_finished in _SETTLING_STATUSES:
             self._drop_stale_deltas()
+            self._compact_deltas()
             self._run_finished.set()
+
+    def _compact_deltas(self) -> None:
+        """Hold each table's and chart's summary rather than its bulk payload.
+
+        What stays buffered after a run settles is what the session costs
+        between interactions, so a table is kept as the preview the snapshot
+        reads, not the full Arrow bytes `data.url` already serves.
+        """
+        self._deltas = [
+            (run_id, snapshot_module.compact_delta(msg)) for run_id, msg in self._deltas
+        ]
 
     def _drop_stale_deltas(self) -> None:
         """Drop what the finished run was responsible for and did not re-emit.
