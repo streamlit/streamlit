@@ -780,6 +780,17 @@ def _schemas() -> dict[str, Any]:
                         "triggers; omitted fields keep their current values."
                     ),
                 },
+                "fragment": {
+                    "type": "string",
+                    "description": (
+                        "The owning `st.fragment`, for nodes inside one, as an "
+                        "opaque id. Acting on such a node reruns that fragment "
+                        "alone, and every key in one request must belong to the "
+                        "same fragment or to none. Compare the id for equality "
+                        "against other nodes and against `stale_fragments`; do "
+                        "not parse or persist it."
+                    ),
+                },
             },
         },
         "ElementData": {
