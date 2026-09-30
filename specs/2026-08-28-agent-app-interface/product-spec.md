@@ -393,7 +393,7 @@ right now. Naming follows the public API, for the reason above:
               "complete": false,
               "preview": {
                 "truncated": true,
-                "rows": [{ "month": "2026-01", "revenue": 120000 }]
+                "rows": [["2026-01", 120000]]
               },
               "url": "/media/4f1c8ab27d9e5306.arrow"
             }
@@ -674,7 +674,7 @@ without introducing a new authorization surface.
 
 | Output                         | v1 representation                                                                                                                                                                                                                                          |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with logical types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes.                                                |
+| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with logical types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order, not objects: repeating the column names per row is most of a long preview's size, and halved a 100-row catalog. A CSV blob would save no more — inside a JSON string it escapes its own quotes twice — while costing the types `columns` just declared. |
 | Lazy dataframe                 | The same shape, with the chunk already emitted as the preview and `complete: false`. `data.url` serves that chunk; fetching further ranges is a follow-up.                                                                                                 |
 | Chart                          | Public properties in `props`, the native specification inline when it fits the size budget and behind `data.url` otherwise, and chart data under `data` exactly as a dataframe's.                                                                          |
 | Image, audio, video, PDF       | Caption, MIME type, and the existing `/media/...` URL the app already exposed to its own client.                                                                                                                                                           |

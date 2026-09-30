@@ -656,12 +656,14 @@ def _arrow_data(arrow_bytes: bytes) -> dict[str, Any] | None:
         "complete": table.num_rows <= _PREVIEW_ROW_LIMIT,
         "preview": {
             "truncated": table.num_rows > _PREVIEW_ROW_LIMIT,
+            # Rows are values in `columns` order rather than objects, because
+            # repeating the column names on every row is most of a preview's
+            # size once it gets long: a 100-row catalog halves. Types and nested
+            # cells survive, which is what a CSV blob would cost -- and a CSV
+            # inside a JSON string escapes its own quotes twice, so it does not
+            # even come out smaller.
             "rows": [
-                {
-                    name: json_encoding.to_json_value(cell)
-                    for name, cell in row.items()
-                    if not _is_index_column(name)
-                }
+                [json_encoding.to_json_value(row[name]) for name, _ in columns]
                 for row in preview.to_pylist()
             ],
         },

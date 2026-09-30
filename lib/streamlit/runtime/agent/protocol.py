@@ -814,7 +814,18 @@ def _schemas() -> dict[str, Any]:
                             "type": "boolean",
                             "description": "The inverse of `complete`.",
                         },
-                        "rows": {"type": "array", "items": {"type": "object"}},
+                        "rows": {
+                            "type": "array",
+                            "items": {"type": "array"},
+                            "description": (
+                                "Rows as values in `columns` order, so zip them "
+                                "with `columns` to get names and types. Values "
+                                "keep their JSON types, and a cell that holds a "
+                                "list stays a list.\n\n"
+                                "Not objects: repeating the column names on "
+                                "every row is most of a long preview's size."
+                            ),
+                        },
                     },
                 },
                 "url": {
