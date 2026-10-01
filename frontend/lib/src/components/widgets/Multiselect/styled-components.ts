@@ -242,7 +242,7 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
   borderRadius: theme.radii.default,
   background: "transparent",
   cursor: "pointer",
-  ...getSecondaryIconButtonColorStyles(theme, { includeDataHovered: true }),
+  ...getSecondaryIconButtonColorStyles(theme),
   "&:focus-visible": {
     boxShadow: theme.shadows.focusRing,
   },

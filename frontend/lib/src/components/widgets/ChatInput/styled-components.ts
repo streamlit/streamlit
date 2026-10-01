@@ -183,7 +183,15 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       }
     }
 
-    const secondaryColorStyles = getSecondaryIconButtonColorStyles(theme)
+    const secondaryColorStyles = getSecondaryIconButtonColorStyles(
+      theme,
+      hasError
+        ? {
+            restColor: theme.colors.redTextColor,
+            hoverColor: theme.colors.redColor,
+          }
+        : undefined
+    )
 
     return {
       border: "none",
@@ -197,16 +205,6 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       padding: theme.spacing.none,
       pointerEvents: "auto",
       ...secondaryColorStyles,
-      // Error / disabled override the shared secondary chrome colors.
-      ...(hasError && {
-        color: theme.colors.redTextColor,
-        "&:hover:not(:disabled), &:focus:not(:disabled)": {
-          color: theme.colors.redColor,
-        },
-      }),
-      ...(disabled && {
-        color: theme.colors.fadedText40,
-      }),
       "&:focus": {
         outline: "none",
       },
@@ -216,15 +214,20 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       "&:focus-visible": {
         boxShadow: theme.shadows.focusRing,
       },
-      "&:active": {
+      // Higher specificity than the helper's hover selector so press still
+      // flashes primary while the pointer is down.
+      "&:active:not(:disabled)": {
         color: theme.colors.primary,
       },
-      "&:disabled, &:disabled:hover, &:disabled:focus, &:disabled:active": {
-        backgroundColor: theme.colors.transparent,
-        borderColor: theme.colors.transparent,
-        color: theme.colors.fadedText40,
-        cursor: "not-allowed",
-      },
+      // Helper already sets disabled color/cursor; keep transparent resets and
+      // cover `:disabled:active` so press does not flash primary when disabled.
+      "&:disabled, &:disabled:hover, &:disabled:focus-visible, &:disabled:active":
+        {
+          backgroundColor: theme.colors.transparent,
+          borderColor: theme.colors.transparent,
+          color: theme.colors.fadedText40,
+          cursor: "not-allowed",
+        },
       "& svg": {
         width: theme.iconSizes.lg,
         height: theme.iconSizes.lg,

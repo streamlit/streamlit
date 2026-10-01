@@ -20,29 +20,40 @@ import { getSecondaryIconButtonColorStyles } from "./styled-components"
 
 describe("getSecondaryIconButtonColorStyles", () => {
   const theme = lightTheme.emotion
+  const hoverSelector =
+    "&:hover:not(:disabled), &:focus-visible:not(:disabled), &[data-hovered]:not(:disabled)"
 
-  it("uses fadedText60 at rest and bodyText on hover/focus", () => {
+  it("uses fadedText60 at rest, bodyText on hover/focus-visible, and fadedText40 when disabled", () => {
     const styles = getSecondaryIconButtonColorStyles(theme)
 
     expect(styles.color).toBe(theme.colors.fadedText60)
-    expect(styles["&:hover:not(:disabled), &:focus:not(:disabled)"]).toEqual({
+    expect(styles[hoverSelector]).toEqual({
       color: theme.colors.bodyText,
     })
-    expect(styles["&:disabled, &:disabled:hover, &:disabled:focus"]).toEqual({
+    expect(
+      styles["&:disabled, &:disabled:hover, &:disabled:focus-visible"]
+    ).toEqual({
       color: theme.colors.fadedText40,
       cursor: "not-allowed",
     })
   })
 
-  it("includes data-hovered when requested", () => {
+  it("accepts rest/hover/disabled color overrides", () => {
     const styles = getSecondaryIconButtonColorStyles(theme, {
-      includeDataHovered: true,
+      restColor: theme.colors.redTextColor,
+      hoverColor: theme.colors.redColor,
+      disabledColor: theme.colors.fadedText10,
     })
 
+    expect(styles.color).toBe(theme.colors.redTextColor)
+    expect(styles[hoverSelector]).toEqual({
+      color: theme.colors.redColor,
+    })
     expect(
-      styles["&:hover:not(:disabled), &:focus:not(:disabled), &[data-hovered]"]
+      styles["&:disabled, &:disabled:hover, &:disabled:focus-visible"]
     ).toEqual({
-      color: theme.colors.bodyText,
+      color: theme.colors.fadedText10,
+      cursor: "not-allowed",
     })
   })
 })

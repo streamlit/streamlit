@@ -109,18 +109,21 @@ export const getBorderColor = (
 }
 
 export type SecondaryIconButtonColorOptions = {
-  /**
-   * Also apply the hover color when React Aria sets `data-hovered` (used by
-   * Multiselect / Selectbox clear buttons).
-   */
-  includeDataHovered?: boolean
+  /** Override resting color (defaults to `fadedText60`). */
+  restColor?: string
+  /** Override hover / keyboard-focus color (defaults to `bodyText`). */
+  hoverColor?: string
+  /** Override disabled color (defaults to `fadedText40`). */
+  disabledColor?: string
 }
 
 /**
- * Resting / hover / disabled colors for secondary chrome icon buttons.
- * Resting uses muted `fadedText60`; hover uses `bodyText`; disabled uses
- * `fadedText40`. Do not use `grayTextColor` here — that token is for gray text
- * content, not secondary chrome icons.
+ * Shared colors for muted icon buttons in widgets (clear, mic, play, chat add).
+ * Rest uses `fadedText60`, hover/focus-visible uses `bodyText`, and disabled uses
+ * `fadedText40`. Avoid `grayTextColor` — that token is for gray text content.
+ *
+ * Callers that also set `&:active` must use at least `&:active:not(:disabled)`
+ * so active is not overridden by the hover selectors.
  *
  * @see NumberInput StyledClearButton
  * @see TextInput StyledClearButton
@@ -133,19 +136,22 @@ export type SecondaryIconButtonColorOptions = {
  */
 export function getSecondaryIconButtonColorStyles(
   theme: EmotionTheme,
-  { includeDataHovered = false }: SecondaryIconButtonColorOptions = {}
+  {
+    restColor = theme.colors.fadedText60,
+    hoverColor = theme.colors.bodyText,
+    disabledColor = theme.colors.fadedText40,
+  }: SecondaryIconButtonColorOptions = {}
 ): CSSObject {
-  const hoverSelectors = includeDataHovered
-    ? "&:hover:not(:disabled), &:focus:not(:disabled), &[data-hovered]"
-    : "&:hover:not(:disabled), &:focus:not(:disabled)"
-
   return {
-    color: theme.colors.fadedText60,
-    [hoverSelectors]: {
-      color: theme.colors.bodyText,
-    },
-    "&:disabled, &:disabled:hover, &:disabled:focus": {
-      color: theme.colors.fadedText40,
+    color: restColor,
+    // Always include `[data-hovered]` for React Aria consumers; inert on plain
+    // <button>s. Prefer `:focus-visible` so pointer clicks do not stick at hover.
+    "&:hover:not(:disabled), &:focus-visible:not(:disabled), &[data-hovered]:not(:disabled)":
+      {
+        color: hoverColor,
+      },
+    "&:disabled, &:disabled:hover, &:disabled:focus-visible": {
+      color: disabledColor,
       cursor: "not-allowed",
     },
   }

@@ -141,7 +141,7 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
   border: "none",
   background: "transparent",
   cursor: "pointer",
-  ...getSecondaryIconButtonColorStyles(theme, { includeDataHovered: true }),
+  ...getSecondaryIconButtonColorStyles(theme),
 }))
 
 /**
