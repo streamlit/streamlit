@@ -997,6 +997,7 @@ function RangeDateInput({
             aria-controls={popoverId}
             data-testid="stDateInputCalendarButton"
             disabled={disabled}
+            tabIndex={-1}
             onMouseDown={e => e.preventDefault()}
           >
             <Icon content={DateRange} size="base" />

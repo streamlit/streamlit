@@ -889,6 +889,7 @@ function SingleDateTimeInput({
             aria-controls={popoverId}
             data-testid="stDateTimeInputCalendarButton"
             disabled={disabled}
+            tabIndex={-1}
             onMouseDown={e => e.preventDefault()}
           >
             <Icon content={CalendarToday} size="base" />
