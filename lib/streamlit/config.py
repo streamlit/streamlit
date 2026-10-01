@@ -1266,8 +1266,6 @@ _create_option(
         what a loop of creating calls can hold in memory. When the limit is
         reached, sessions idle past `server.agentSessionTTL` are reclaimed
         first, and new sessions are then refused.
-
-        Note: This is an experimental API subject to change.
     """,
     default_val=100,
     type_=int,
@@ -1282,8 +1280,6 @@ _create_option(
         This bounds the wait, not the run: the app keeps running, and a retry
         of the same request waits for it instead of starting it over. Keep it
         at or below the request timeout of the clients you expect.
-
-        Note: This is an experimental API subject to change.
     """,
     default_val=60,
     type_=int,
@@ -1296,8 +1292,6 @@ _create_option(
 
         An agent session is reclaimed after this much time without an
         interaction, so clients do not have to close sessions explicitly.
-
-        Note: This is an experimental API subject to change.
     """,
     default_val=900,
     type_=int,
