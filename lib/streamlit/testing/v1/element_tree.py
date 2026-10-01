@@ -27,6 +27,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    Final,
     Generic,
     NoReturn,
     TypeAlias,
@@ -39,6 +40,7 @@ from typing_extensions import Self
 
 from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
+from streamlit.elements.lib.layout_utils import SIZE_TO_REM_MAPPING, SpaceSize
 from streamlit.elements.widgets.select_slider import SelectSliderSerde
 from streamlit.elements.widgets.slider import SliderSerde, SliderStep
 from streamlit.elements.widgets.time_widgets import (
@@ -93,6 +95,7 @@ if TYPE_CHECKING:
     from streamlit.proto.TextInput_pb2 import TextInput as TextInputProto
     from streamlit.proto.TimeInput_pb2 import TimeInput as TimeInputProto
     from streamlit.proto.Toast_pb2 import Toast as ToastProto
+    from streamlit.proto.WidthConfig_pb2 import WidthConfig
     from streamlit.runtime.state.safe_session_state import SafeSessionState
     from streamlit.testing.v1.app_test import AppTest
     from streamlit.typing import ChatInputValue
@@ -120,6 +123,32 @@ def _unknown_element_content(proto: Any) -> Any:
             if name in fields:
                 return getattr(proto, name)
     return getattr(proto, "value", None)
+
+
+# Inverse of SIZE_TO_REM_MAPPING so rem_width round-trips to the named size.
+# Named sizes must map to distinct rem values that are exact in float32, or
+# the lookup below silently misses and returns None; test_space_named_size
+# covers every name.
+_REM_TO_SPACE_SIZE: Final = {
+    rem: cast("SpaceSize", name) for name, rem in SIZE_TO_REM_MAPPING.items()
+}
+
+
+def _space_size_from_width_config(width_config: WidthConfig) -> SpaceSize | None:
+    """Reconstruct the ``st.space`` size from ``Element.width_config``.
+
+    The Space proto does not store the size. ``st.space`` writes the same
+    value into both the width and height configs and lets the frontend pick
+    the relevant axis, so reading width alone recovers the original argument.
+    """
+    spec = width_config.WhichOneof("width_spec")
+    if spec == "use_stretch":
+        return "stretch"
+    if spec == "pixel_width":
+        return width_config.pixel_width
+    if spec == "rem_width":
+        return _REM_TO_SPACE_SIZE.get(width_config.rem_width)
+    return None  # pragma: no cover - defensive
 
 
 def _format_value_for_widget(format_func: Callable[[Any], str], value: Any) -> str:
@@ -177,7 +206,10 @@ class Element(ABC):
     key: str | None
 
     @abstractmethod
-    def __init__(self, proto: ElementProto, root: ElementTree) -> None: ...
+    def __init__(self, proto: Any, root: ElementTree) -> None:
+        # Shared proto/root assignment for subclasses that call super().__init__.
+        self.proto = proto
+        self.root = root
 
     def __iter__(self) -> Iterator[Self]:
         yield self
@@ -908,16 +940,32 @@ class Latex(Markdown):
 
 @dataclass(repr=False)
 class Space(Element):
-    """A representation of st.space for testing."""
+    """A representation of ``st.space``."""
 
     proto: SpaceProto = field(repr=False)
+    key: None
+    size: SpaceSize | None
 
-    key: None = None
-
-    def __init__(self, proto: SpaceProto, root: ElementTree) -> None:
-        self.proto = proto
-        self.root = root
+    def __init__(
+        self,
+        proto: SpaceProto,
+        root: ElementTree,
+        *,
+        size: SpaceSize | None,
+    ) -> None:
+        super().__init__(proto, root)
+        self.key = None
         self.type = "space"
+        self.size = size
+
+    @property
+    def value(self) -> SpaceSize | None:
+        """The ``size`` argument passed to ``st.space`` (``"small"`` when omitted).
+
+        This is ``None`` only if the size could not be reconstructed from the
+        element's width config.
+        """
+        return self.size
 
 
 @dataclass(repr=False)
@@ -2354,6 +2402,10 @@ class Block:
         return WidgetList(self.get("slider"))  # type: ignore
 
     @property
+    def space(self) -> ElementList[Space]:
+        return ElementList(self.get("space"))  # type: ignore
+
+    @property
     def status(self) -> Sequence[Status]:
         return self.get("status")  # type: ignore
 
@@ -2974,6 +3026,12 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     new_node = SelectSlider(elt.slider, root=root)
                 else:
                     new_node = UnknownElement(elt, root=root)
+            elif ty == "space":
+                new_node = Space(
+                    elt.space,
+                    root=root,
+                    size=_space_size_from_width_config(elt.width_config),
+                )
             elif ty == "text":
                 new_node = Text(elt.text, root=root)
             elif ty == "text_area":
