@@ -1583,6 +1583,22 @@ class ScriptRunnerTest(unittest.TestCase):
         Runtime._instance.media_file_mgr.remove_orphaned_files.assert_called_once()
         Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_called_once()
 
+    def test_orphan_cleanup_skipped_when_runtime_missing(self):
+        """Orphan cleanup must not crash the script thread when no Runtime exists.
+
+        ScriptRunner unit tests can run without a Runtime singleton.
+        ``get_instance()`` would raise ``RuntimeError`` on the script thread.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        Runtime._instance = None
+
+        # has_script_started=True so only the missing-Runtime gate is under test.
+        scriptrunner._on_script_finished(
+            _finished_run_ctx(has_script_started=True),
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            premature_stop=False,
+        )
+
     def test_stale_widget_removal_skipped_when_stopped_for_rerun(self):
         """A run stopped for rerun must reset triggers without dropping widgets.
 
