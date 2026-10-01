@@ -214,20 +214,16 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       "&:focus-visible": {
         boxShadow: theme.shadows.focusRing,
       },
-      // Higher specificity than the helper's hover selector so press still
-      // flashes primary while the pointer is down.
+      // Must stay below the `...secondaryColorStyles` spread: same specificity
+      // as the helper's hover rule, so source order keeps press color on top.
       "&:active:not(:disabled)": {
         color: theme.colors.primary,
       },
-      // Helper already sets disabled color/cursor; keep transparent resets and
-      // cover `:disabled:active` so press does not flash primary when disabled.
-      "&:disabled, &:disabled:hover, &:disabled:focus-visible, &:disabled:active":
-        {
-          backgroundColor: theme.colors.transparent,
-          borderColor: theme.colors.transparent,
-          color: theme.colors.fadedText40,
-          cursor: "not-allowed",
-        },
+      // Helper already sets disabled color/cursor; keep transparent resets.
+      "&:disabled, &:disabled:hover, &:disabled:focus-visible": {
+        backgroundColor: theme.colors.transparent,
+        borderColor: theme.colors.transparent,
+      },
       "& svg": {
         width: theme.iconSizes.lg,
         height: theme.iconSizes.lg,

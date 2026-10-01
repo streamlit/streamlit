@@ -108,10 +108,13 @@ export const getBorderColor = (
   return borderColor
 }
 
-export type SecondaryIconButtonColorOptions = {
+type SecondaryIconButtonColorOptions = {
   /** Override resting color (defaults to `fadedText60`). */
   restColor?: string
-  /** Override hover / keyboard-focus color (defaults to `bodyText`). */
+  /**
+   * Override hover, keyboard-focus, and React Aria `data-hovered` color
+   * (defaults to `bodyText`).
+   */
   hoverColor?: string
   /** Override disabled color (defaults to `fadedText40`). */
   disabledColor?: string
@@ -122,8 +125,9 @@ export type SecondaryIconButtonColorOptions = {
  * Rest uses `fadedText60`, hover/focus-visible uses `bodyText`, and disabled uses
  * `fadedText40`. Avoid `grayTextColor` — that token is for gray text content.
  *
- * Callers that also set `&:active` must use at least `&:active:not(:disabled)`
- * so active is not overridden by the hover selectors.
+ * Callers that also set `&:active` should use `&:active:not(:disabled)` and place
+ * that rule after spreading these styles so source order keeps press color on top
+ * (same specificity as the hover rule).
  *
  * @see NumberInput StyledClearButton
  * @see TextInput StyledClearButton
