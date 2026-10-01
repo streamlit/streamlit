@@ -1871,9 +1871,11 @@ export class App extends PureComponent<Props, State> {
     // Best-effort durable suppression: the localStorage flag already suppresses
     // the nudge in this browser, so a failed marker write only means a fresh
     // browser could see it again — log it rather than failing the dismissal.
-    this.backendOperationClient.requestDismissSkillsNudge().catch(error => {
-      LOG.warn("Failed to persist skills nudge dismissal", error)
-    })
+    this.backendOperationClient
+      .requestDismissSkillsNudge()
+      .catch((error: unknown) => {
+        LOG.warn("Failed to persist skills nudge dismissal", error)
+      })
     this.trackSkillsNudge("skillsNudgeDontShowAgain", "toast")
   }
 

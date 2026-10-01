@@ -38,7 +38,7 @@ import {
 } from "./constants"
 import type { ErrorDetails, IHostConfigProperties, OnRetry } from "./types"
 import {
-  type FetchError,
+  FetchError,
   fetchWithTimeout,
   parseUriIntoBaseParts,
   serializeForDisplay,
@@ -217,9 +217,14 @@ If you are trying to access a Streamlit app running on another server, this coul
         resolve(uriNumber)
         return
       })
-      .catch((error: FetchError) => {
+      .catch((error: unknown) => {
         if (cancelled) {
           return
+        }
+        if (!(error instanceof FetchError)) {
+          const message =
+            error instanceof Error ? error.message : String(error)
+          return retry({ message })
         }
         // If its our 6th try (retry count at which we show connection error dialog), send a client error
         // to inform the host of connection error

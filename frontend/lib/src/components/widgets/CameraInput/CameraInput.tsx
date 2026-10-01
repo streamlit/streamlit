@@ -49,6 +49,7 @@ import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper
 import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import useTimeout from "~lib/hooks/useTimeout"
+import { ensureError } from "~lib/util/ErrorHandling"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -416,7 +417,7 @@ const CameraInput = ({
           abortController.signal
         )
         .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
-        .catch(err => {
+        .catch((err: unknown) => {
           // If this was an abort error, we don't show the user an error -
           // the cancellation was in response to an action they took.
           if (!(err instanceof DOMException && err.name === "AbortError")) {
@@ -424,7 +425,7 @@ const CameraInput = ({
               uploadingFileInfo.id,
               uploadingFileInfo.setStatus({
                 type: "error",
-                errorMessage: err ? err.toString() : "Unknown error",
+                errorMessage: ensureError(err).toString(),
               })
             )
           }
@@ -503,7 +504,7 @@ const CameraInput = ({
           setMinShutterEffectPassed(true)
           return
         })
-        .catch(err => {
+        .catch((err: unknown) => {
           LOG.error(err)
         })
         .finally(() => {

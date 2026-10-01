@@ -40,6 +40,7 @@ import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLa
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { ensureError } from "~lib/util/ErrorHandling"
 import {
   type FileRejection,
   FileSize,
@@ -393,13 +394,13 @@ const FileUploader = ({
           abortController.signal
         )
         .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
-        .catch(err => {
+        .catch((err: unknown) => {
           if (!(err instanceof DOMException && err.name === "AbortError")) {
             updateFile(
               uploadingFileInfo.id,
               uploadingFileInfo.setStatus({
                 type: "error",
-                errorMessage: err ? err.toString() : "Unknown error",
+                errorMessage: ensureError(err).toString(),
               })
             )
           }
@@ -508,13 +509,13 @@ const FileUploader = ({
           )
           return
         })
-        .catch((errorMessage: string) => {
+        .catch((error: unknown) => {
           addFiles(
             acceptedFiles.map(
               f =>
                 new UploadFileInfo(f.name, f.size, nextLocalFileId(), {
                   type: "error",
-                  errorMessage,
+                  errorMessage: ensureError(error).message,
                 })
             )
           )
