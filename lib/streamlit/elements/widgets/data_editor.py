@@ -1532,6 +1532,11 @@ class DataEditorMixin:
                     proto.arrow_data.data,
                     coordinates=self.dg._get_delta_path_str(),
                 ),
+                # Edits cannot be sent through this interface. Kept even when
+                # the app locks the editor: unlike a chart without selections,
+                # it is still an editor, and a rejection should say it cannot be
+                # driven here rather than send the caller looking for whatever
+                # enables it.
                 support="read_only_in_v1",
                 column_config=agent_spec.described_column_config(column_config_mapping),
                 column_order=list(column_order) if column_order else None,

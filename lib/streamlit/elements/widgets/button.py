@@ -1492,6 +1492,11 @@ class ButtonMixin:
             save_for_app_testing(ctx, element_id, button_state.value)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
+        # An eager download is fully usable: its file is at `url`, and a click's
+        # effect on the server -- a rerun or the `on_click` callback -- is an
+        # ordinary trigger. A deferred one only generates its file when clicked,
+        # and that file has no URL this interface could report.
+        is_deferred = download_button_proto.HasField("deferred_file_id")
         self.dg._enqueue(
             "download_button",
             download_button_proto,
@@ -1499,16 +1504,17 @@ class ButtonMixin:
             agent_props=agent_spec.element(
                 "download_button",
                 key=element_id,
-                # Deferred generation and download callbacks cannot be fired
-                # through this interface; an eager download exposes its URL.
-                support="not_interactive_in_v1",
+                action=None if is_deferred or on_click == "ignore" else "trigger",
+                support="not_interactive_in_v1" if is_deferred else None,
                 label=label,
                 help=help,
                 icon=icon,
                 type=type,
                 disabled=disabled,
-                file_name=download_button_proto.url or None,
+                url=download_button_proto.url or None,
+                file_name=file_name,
                 mime=mime,
+                on_click="ignore" if on_click == "ignore" else "rerun",
             ),
         )
         return button_state.value
