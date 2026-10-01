@@ -45,6 +45,8 @@ from streamlit.watcher.util import calc_hash_with_blocking_retries
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from websockets.sync.client import ClientConnection
+
 _STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS = 30
 # Budget for opening the smoke WebSocket and, separately, for the session
 # from rerun request to script finish. Kept independent of the server-startup
@@ -331,75 +333,83 @@ def _run_streamlit_websocket_session(port: int, log_path: Path) -> None:
     if "proxy" in connect_params:
         connect_kwargs["proxy"] = None
 
-    websocket = None
     last_connect_error: BaseException | None = None
     connect_deadline = time.monotonic() + _FIPS_SMOKE_SESSION_TIMEOUT_SECS
     while time.monotonic() < connect_deadline:
+        # Retry handshake failures only. connect() completes the handshake
+        # eagerly, so keep the session outside this try: errors after the
+        # socket opens must propagate instead of being retried as a connect.
         try:
             websocket = connect(
                 websocket_url,
                 open_timeout=min(5, max(0.1, connect_deadline - time.monotonic())),
                 **connect_kwargs,
             )
-            break
         except (OSError, InvalidHandshake) as ex:
             last_connect_error = ex
             time.sleep(0.2)
+            continue
+        # Use the connection as a context manager so websockets 17.1+ does
+        # not warn and the client still closes if the session helper returns
+        # early.
+        with websocket:
+            _drive_fips_smoke_websocket(websocket, rerun_request, log_path)
+        return
 
-    if websocket is None:
-        _fail_with_server_log(
-            log_path,
-            f"Timed out opening the FIPS smoke WebSocket at {websocket_url}. "
-            f"Last error: {last_connect_error!r}",
-        )
+    _fail_with_server_log(
+        log_path,
+        f"Timed out opening the FIPS smoke WebSocket at {websocket_url}. "
+        f"Last error: {last_connect_error!r}",
+    )
 
+
+def _drive_fips_smoke_websocket(
+    websocket: ClientConnection, rerun_request: bytes, log_path: Path
+) -> None:
+    """Send the rerun request and wait for the smoke marker and a successful finish."""
     saw_smoke_marker = False
     # Start the session budget after the socket is open so a slow handshake
     # cannot starve the rerun round-trip or misreport "did not finish".
     deadline = time.monotonic() + _FIPS_SMOKE_SESSION_TIMEOUT_SECS
     try:
-        try:
-            websocket.send(rerun_request)
-            while time.monotonic() < deadline:
-                try:
-                    payload = websocket.recv(
-                        timeout=max(0.1, deadline - time.monotonic())
-                    )
-                except TimeoutError:
-                    _fail_with_server_log(
-                        log_path,
-                        "Timed out waiting for the FIPS smoke app's messages",
-                    )
-                assert isinstance(payload, bytes)
-
-                forward_msg = ForwardMsg.FromString(payload)
-                if (
-                    forward_msg.HasField("delta")
-                    and forward_msg.delta.HasField("new_element")
-                    and forward_msg.delta.new_element.HasField("markdown")
-                    and forward_msg.delta.new_element.markdown.body
-                    == _FIPS_SMOKE_MARKER
-                ):
-                    saw_smoke_marker = True
-
-                if forward_msg.WhichOneof("type") == "script_finished":
-                    assert (
-                        forward_msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
-                    )
-                    break
-            else:
+        websocket.send(rerun_request)
+        while time.monotonic() < deadline:
+            try:
+                payload = websocket.recv(timeout=max(0.1, deadline - time.monotonic()))
+            except TimeoutError:
                 _fail_with_server_log(
-                    log_path, "Streamlit did not finish the FIPS smoke app"
+                    log_path,
+                    "Timed out waiting for the FIPS smoke app's messages",
                 )
-        except ConnectionClosed as ex:
+            assert isinstance(payload, bytes)
+
+            forward_msg = ForwardMsg.FromString(payload)
+            if (
+                forward_msg.HasField("delta")
+                and forward_msg.delta.HasField("new_element")
+                and forward_msg.delta.new_element.HasField("markdown")
+                and forward_msg.delta.new_element.markdown.body == _FIPS_SMOKE_MARKER
+            ):
+                saw_smoke_marker = True
+
+            if forward_msg.WhichOneof("type") == "script_finished":
+                assert forward_msg.script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
+                break
+        else:
             _fail_with_server_log(
-                log_path,
-                "FIPS smoke WebSocket closed before the session finished. "
-                f"Last error: {ex!r}",
+                log_path, "Streamlit did not finish the FIPS smoke app"
             )
+    except ConnectionClosed as ex:
+        _fail_with_server_log(
+            log_path,
+            "FIPS smoke WebSocket closed before the session finished. "
+            f"Last error: {ex!r}",
+        )
     finally:
-        # Close is best-effort: a close-handshake timeout must not replace a
-        # real session failure (or fail a session that already succeeded).
+        # Close is best-effort: a close-handshake timeout must not replace the
+        # session result. Close here with errors suppressed so connect()'s
+        # context-manager close is a no-op and cannot replace pytest.fail
+        # or a successful return.
         with contextlib.suppress(Exception):
             websocket.close()
 
