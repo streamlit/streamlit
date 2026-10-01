@@ -17,6 +17,6 @@
 An agent posts widget values to ``/_stcore/agent/v1/interact`` and gets back a
 typed snapshot of the finished app, named after the public ``st.*`` API. The
 whole surface is off unless ``server.enableAgentApi`` is set, and once on it
-is served wherever the app is, behind the same Host and Origin checks as the
-app's WebSocket.
+is served wherever the app is, behind the same Host allow-list as the app's
+WebSocket.
 """

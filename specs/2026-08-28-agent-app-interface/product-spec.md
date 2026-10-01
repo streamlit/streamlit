@@ -427,7 +427,7 @@ right now. Naming follows the public API, for the reason above:
                   ["2026-Q4", 318000]
                 ]
               },
-              "url": "/media/4f1c8ab27d9e5306"
+              "url": "../../../media/4f1c8ab27d9e5306"
             }
           },
           {
@@ -859,7 +859,7 @@ Every bound v1 applies, in one place. The three agent budget options are hidden 
 | Response size                          | No cap                                                | [Open question 4](#open-questions)                                            |
 | Wait for a follow-up run to start      | 50 ms after a run finishes                            | Fixed ([potential follow-ups](potential-follow-ups.md))                       |
 | `data.url` lifetime                    | While the element that produced it is still rendered  | Fixed; a fetch-now handle, never persisted                                    |
-| Who may call                           | The WebSocket's Host and Origin rules                 | `server.allowedHosts`, `server.enableCORS`, `server.corsAllowedOrigins`       |
+| Who may call                           | The WebSocket's Host allow-list; no Origin check      | `server.allowedHosts`                                                         |
 | Who the caller is                      | Anonymous                                             | `server.trustedUserHeaders`                                                   |
 | Error detail in a failed run           | As in the browser                                     | `client.showErrorDetails`                                                     |
 | Where the routes live                  | `/_stcore/agent/v1/…`                                 | `server.baseUrlPath`                                                          |
@@ -870,8 +870,8 @@ This is a new programmatic execution surface and needs an explicit review.
 
 - **Off by default in v1, on by default as the goal.** Upgrading Streamlit should not open
   a new route until the concerns in [Enablement](#enablement) are settled; after that, the
-  default flips. Either way the route applies the WebSocket's Host, Origin, and identity
-  rules, and is never stricter than the app.
+  default flips. Either way the route applies the WebSocket's Host allow-list and
+  identity mapping, and is never stricter than the app.
 - **Validate semantically, then serialize.** Never accept a raw `BackMsg`, element ID,
   delta path, fragment ID, or `WidgetState` protobuf. Reject stale, disabled, removed,
   wrong-shape, cross-form, cross-dialog, and oversized requests atomically, before any
@@ -897,9 +897,12 @@ This is a new programmatic execution surface and needs an explicit review.
   See [Data, charts, and media](#data-charts-and-media-in-v1).
 
 What stands between opt-in and on-by-default is one list, in [Enablement](#enablement),
-rather than a second one here. Note only that CORS is not authentication: the route
-checks `Origin` itself, and never reads the `st.login` cookie, which the WebSocket honors
-only behind an XSRF token.
+rather than a second one here. Note only that the route reads no cookie at all — not the
+`st.login` one, which the WebSocket honors only behind an XSRF token — so a cross-site
+request carries no credential, and the route does not check `Origin`. A page on another
+site that sends one gains nothing over opening the app's URL. An Origin check would not
+stop DNS rebinding either, since a rebound page is same-origin with the `Host` it sends;
+the `Host` allow-list does, where a deployment configures one.
 
 ### Enablement
 
@@ -942,20 +945,24 @@ harnesses' web tools only issue GET requests, so an agent can find the protocol 
 be unable to `POST` to it. Closing that gap needs a caller with a general HTTP tool, or
 the MCP endpoint in follow-up #6.
 
-**The document has to say where the app is, because a hosted app is not at the root a
-client would guess.** Community Cloud serves embedded apps under `/~/+/`, so an agent that
-joins the public origin with `/_stcore/agent/v1/interact` gets a redirect to a login page
-and concludes the app has no API. Root-relative `data.url`s fail the same way. So the
-served document carries an OpenAPI `servers` entry describing where it was reached from,
-and the paths and any `data.url` resolve against it.
+**Every URL the API hands out is relative to the request that returned it, because a
+hosted app is not at the root a client would guess, and cannot always tell where it is.**
+Community Cloud serves embedded apps under `/~/+/`, so an agent that joins the public
+origin with `/_stcore/agent/v1/interact` gets a redirect to a login page and concludes
+the app has no API. Worse, Community Cloud strips that prefix before forwarding and
+announces nothing, and terminates TLS without saying so: the app sees
+`http://issues.streamlit.app/_stcore/...` for a request to
+`https://issues.streamlit.app/~/+/_stcore/...`. Any URL built from what the app sees —
+absolute or root-relative — points at the platform instead of the app, and no forwarded
+header fixes a proxy that sends none.
 
-Two deliberate choices there. It is a *relative* URL, because behind a proxy the scheme
-and host this process sees are not necessarily the ones the client used, while a relative
-server URL resolves against wherever the document was fetched. And where a proxy strips
-its prefix before forwarding, `X-Forwarded-Prefix` is honored, which is safe because a
-forged value can only misdirect the caller that forged it. A proxy that strips silently
-and announces nothing cannot be detected, which is a real limit rather than something to
-paper over.
+The one base that is always right is the URL the client called. So the OpenAPI `servers`
+entry is a relative reference such as `../../..`, resolved against the document's own
+URL, and every `data.url` and media URL in a snapshot is relative to the request that
+returned it, such as `../../../media/<id>`. Resolved with ordinary URL joining, they climb
+out of `_stcore/agent/v1/` to the app's root, whatever prefix sits in front of it and
+whether or not the app can see it. The MCP endpoint uses the same form, resolved against
+the MCP server's URL.
 
 A proxy may also strip `Link: rel="service-desc"` from responses. Headers are the more
 fragile channel, which is the argument for keeping the document self-describing rather
@@ -980,7 +987,7 @@ and the rest of it is what stands between opt-in and on-by-default:
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | A response budget.                                                                                 |
 | Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits.                                                                               |
-| Cross-origin requests | The WebSocket checks `Origin`. Without the same check, a page on another site could drive any app the visitor's browser can reach.                                                                  | The WebSocket's own Host and Origin rules. Non-browser clients send no `Origin` and are unaffected.                                                                                                                                                       | —                                                                                                  |
+| Cross-origin requests | A page on another site can make a visitor's browser send a request to any app that browser can reach. The WebSocket checks `Origin` because it carries the auth cookie; this route carries none. | No Origin check: without a cookie, such a request gains nothing over opening the app's URL. DNS rebinding is stopped by the Host allow-list (`server.allowedHosts`) where one is configured.                                                                                     | —                                                                                                  |
 | Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. | A credential flow that maps an `st.login` user to an agent ([open question 2](#open-questions)). |
 
 That keeps the decision reversible. An app opts in, deployments that authenticate every

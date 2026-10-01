@@ -1248,8 +1248,8 @@ _create_option(
         over HTTP at `/_stcore/agent/v1/interact`.
 
         The API is off by default. Once on, it is served wherever the app is,
-        with the same Host and Origin checks as the app's WebSocket, and a
-        caller gets no more access than the app gives a browser. Identity
+        with the same Host allow-list as the app's WebSocket, and a caller gets
+        no more access than the app gives a browser. Identity
         comes from `server.trustedUserHeaders`; without it, agent sessions are
         anonymous.
     """,

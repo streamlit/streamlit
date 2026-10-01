@@ -21,7 +21,7 @@ model's behalf.
 
 The route lives next to the agent API and inherits all of its rules. It is served only
 when `server.enableAgentApi` is on, it respects `server.baseUrlPath`, and it applies the
-same Host, Origin, identity, and session limits.
+same Host allow-list, identity mapping, and session limits.
 
 ## Which clients can use it
 
@@ -64,13 +64,15 @@ Three details:
 - **Errors are tool results, not protocol errors.** An `AgentRequestError` becomes a
   result marked as an error, carrying the same code and message the HTTP API returns,
   because MCP expects a model to see a tool failure and correct itself.
-- **URLs are absolute.** An MCP client has no OpenAPI `servers` entry to resolve a
-  root-relative `/media/...` against, so results carry URLs built from the address the
-  request arrived on, honoring `X-Forwarded-Prefix`, `X-Forwarded-Proto`, and
-  `X-Forwarded-Host` where a proxy sets them. Without that, a client that can fetch a
-  `data.url` would not know where to fetch it from. Building this surfaced a bug in the
-  HTTP API too: media URLs lacked `server.baseUrlPath`, so under a base path every
-  `data.url` was a 404. Both transports now include it.
+- **URLs are relative to the MCP server's URL**, the same rule the HTTP API uses for
+  its own responses: a table's `data.url` is `../../../media/<id>`, and resolving it
+  against the URL the client connected to reaches the file. The client knows that URL
+  and the app may not: Community Cloud strips its `/~/+/` prefix and terminates TLS
+  before forwarding, so a URL built from what the app sees points at the platform's
+  login page. The clients that can use a `data.url` at all — coding agents that fetch
+  and parse Arrow with code — are the ones that configured the URL. Building this also
+  surfaced a bug in the HTTP API: media URLs ignored `server.baseUrlPath`, so under a
+  base path every `data.url` was a 404. The relative form covers that too.
 
 There is no `get_state` or `close_session`, which the product spec's follow-up #6 listed.
 A read that does not execute arrives with the polling work in follow-up #4, and sessions
@@ -136,12 +138,19 @@ is where it saves real work.
 
 Nothing new beyond the agent API's rules, applied to one more route:
 
-- **Origin validation**, which the MCP transport specification requires of servers to
-  prevent DNS rebinding. The agent route's check already does it: a page on another
-  origin is refused, and a non-browser client sends no `Origin`.
-- **Host allow-list**, trusted identity headers mapped into `st.user`, one interaction
-  in flight per session, and `server.agentMaxSessions`.
+- **Host allow-list** (`server.allowedHosts`), the defense against DNS rebinding,
+  plus trusted identity headers mapped into `st.user`, one interaction in flight per
+  session, and `server.agentMaxSessions`.
 - **No read-only annotation on `interact`**, so clients that confirm writes keep doing so.
+
+**No Origin check, which departs from the MCP transport specification.** It asks
+servers to validate `Origin` against DNS rebinding. Here that check would buy little:
+the route reads no cookies, so a page on another site that sends a request gains nothing
+over opening the app's URL. Nor would it stop DNS rebinding: a rebound page is
+same-origin with the `Host` it sends, so it passes an Origin check. What stops rebinding
+is the `Host` allow-list, where a deployment configures one. The check would, however, turn
+away a legitimate browser-based client on another origin. If a deployment needs the
+stricter behavior, it is one call to the WebSocket's own Origin rule.
 
 ## Result size
 
@@ -158,7 +167,7 @@ About 2 days for a prototype-quality endpoint, roughly 320 lines including tests
 | Piece                                                                              | Size       |
 | ---------------------------------------------------------------------------------- | ---------- |
 | JSON-RPC endpoint and the four messages                                            | ~150 lines |
-| `interact` tool: schema, errors, absolute URLs                                     | ~60 lines  |
+| `interact` tool: schema, errors, relative URLs                                     | ~60 lines  |
 | Tool description and `instructions`, shared with the OpenAPI text                  | ~40 lines  |
 | Discovery: mention the endpoint in the OpenAPI document and the `index.html` hint  | ~20 lines  |
 | Tests, plus a pass with MCP Inspector and one or two real clients                  | ~150 lines |

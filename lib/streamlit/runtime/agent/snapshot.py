@@ -755,12 +755,13 @@ def _is_index_column(name: str) -> bool:
 def rebase_media_urls(
     document: dict[str, Any], *, media_path: str, prefix: str
 ) -> None:
-    """Prefix a snapshot's media URLs with where the app is served, in place.
+    """Prefix a snapshot's media URLs with the way back to the app's root, in place.
 
     Media storage hands out URLs relative to the app's root (``/media/<id>``),
-    which a browser resolves against its own base path. A client of this API has
-    no base path to resolve against, so the URL has to carry it: without
-    ``server.baseUrlPath`` in front, a table's ``data.url`` is a 404.
+    which a browser resolves against its own base path. A client of this API
+    has no base path to resolve against, so the URL has to say how to reach the
+    root: as is, behind ``server.baseUrlPath`` or a hosting prefix, a table's
+    ``data.url`` is a 404 or a login redirect.
 
     Only ``data.url`` and the ``url`` and ``src`` props are touched, and only
     values under ``media_path``, so an external link an app displays is never

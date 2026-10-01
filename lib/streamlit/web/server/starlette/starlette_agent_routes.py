@@ -22,10 +22,9 @@ for AI applications that connect to servers by URL.
 
 All three are always registered, because the app's HTML always links the
 schema; with ``server.enableAgentApi`` off they only say so. When it is on,
-they are served wherever the app is. A caller gets no more access than the app
-gives a browser, so the operations apply the checks the WebSocket does: the
-same Host and Origin rules, and the same trusted identity headers mapped into
-``st.user``.
+they are served wherever the app is, to any caller the app would serve: the
+WebSocket's Host allow-list applies, and the same trusted identity headers are
+mapped into ``st.user``.
 """
 
 from __future__ import annotations
@@ -48,7 +47,7 @@ from streamlit.runtime.runtime_util import get_max_widget_state_size_bytes
 from streamlit.web.server.starlette.starlette_routes import BASE_ROUTE_MEDIA
 from streamlit.web.server.starlette.starlette_websocket import (
     _gather_user_info,
-    _is_origin_allowed,
+    _is_host_allowed,
 )
 
 if TYPE_CHECKING:
@@ -64,82 +63,32 @@ _ROUTE_AGENT_INTERACT: Final = "_stcore/agent/v1/interact"
 _ROUTE_AGENT_SCHEMA: Final = "_stcore/agent/v1/openapi.json"
 _ROUTE_AGENT_MCP: Final = "_stcore/agent/v1/mcp"
 
+# How many path segments every agent route sits below the app's root, so how
+# far a URL relative to the request has to climb to reach it.
+_ROUTE_DEPTH: Final = _ROUTE_AGENT_INTERACT.count("/")
+
 # Where media storage's URLs start, relative to the app's root.
 _MEDIA_PATH: Final = f"/{BASE_ROUTE_MEDIA}"
 
 
-def _server_prefix(request: Request, schema_path: str) -> str:
-    """Whatever sits in front of the API paths on the way this caller reached it.
+def _climb(levels: int) -> str:
+    """A relative URL that climbs this many path segments, such as ``../../..``."""
+    return "/".join([".."] * levels)
 
-    A hosted app is not always served at the root a client would guess. Community
-    Cloud serves embedded apps under `/~/+/`, so an agent that joins the public
-    origin with `/_stcore/agent/v1/interact` gets a redirect to a login page and
-    never reaches the app. The document has to say where it is, and the only
-    authority on that is the request that just arrived.
 
-    Deliberately a path and not an absolute URL: behind a proxy the scheme and
-    host this process sees are not necessarily the ones the client used, and a
-    relative OpenAPI server URL resolves against wherever the document was
-    fetched from, which is exactly right.
+def _refused_host(request: Request) -> bool:
+    """Whether the request's Host is outside `server.allowedHosts`.
+
+    The allow-list the WebSocket enforces, and the defense against DNS
+    rebinding. The Origin is deliberately not checked: these routes read no
+    cookies, so a page on another site that sends a request here gains nothing
+    over opening the app's URL, and a client that legitimately calls from a
+    browser on another origin is not turned away.
     """
-    path = request.url.path
-    prefix = (
-        path[: -len(schema_path)] if schema_path and path.endswith(schema_path) else ""
-    )
-
-    if not prefix:
-        # A proxy that strips its prefix before forwarding has to announce it,
-        # or nothing here can know. Trusting the header is safe for this one
-        # use: it only changes where this caller is told to look, so a forged
-        # value misdirects the caller that forged it.
-        prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
-
-    # "/" rather than "" so the field is never an empty string, which OpenAPI
-    # does not allow as a server URL.
-    return prefix or "/"
-
-
-def _absolute_app_root(request: Request, route: str) -> str:
-    """The app's root as an absolute URL, the way this caller reached it.
-
-    An MCP client has no OpenAPI server entry to resolve a root-relative
-    `/media/...` against, so the URLs it is given have to be absolute. Forwarded
-    headers are honored where a proxy supplies them, for the same reason as in
-    `_server_prefix`: they only change where this caller is told to fetch from.
-    """
-    path = request.url.path
-    root = path[: -len(route)] if path.endswith(route) else "/"
-    forwarded_prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
-    if forwarded_prefix and not root.startswith(forwarded_prefix + "/"):
-        root = forwarded_prefix + root
-
-    scheme = (
-        request.headers.get("X-Forwarded-Proto", "").split(",")[0].strip()
-        or request.url.scheme
-    )
-    host = (
-        request.headers.get("X-Forwarded-Host", "").split(",")[0].strip()
-        or request.headers.get("Host")
-        or request.url.netloc
-    )
-    return f"{scheme}://{host}{root.rstrip('/')}"
-
-
-def _refused_origin(request: Request) -> bool:
-    """Whether the WebSocket would refuse this request's Origin or Host.
-
-    A web page on another origin must not drive the app through these routes
-    when it could not through the socket. A non-browser client sends no Origin
-    and passes; the Host allow-list (`server.allowedHosts`) applies either way.
-    """
-    origin = request.headers.get("Origin")
-    if _is_origin_allowed(origin, request.headers.get("Host")):
+    host = request.headers.get("Host")
+    if _is_host_allowed(host):
         return False
-    _LOGGER.warning(
-        "Refusing agent API request with disallowed Origin or Host: origin=%s, host=%s",
-        origin,
-        request.headers.get("Host"),
-    )
+    _LOGGER.warning("Refusing agent API request with disallowed Host: %s", host)
     return True
 
 
@@ -179,19 +128,28 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
     interact_path = make_url_path(base_url or "", _ROUTE_AGENT_INTERACT)
     schema_path = make_url_path(base_url or "", _ROUTE_AGENT_SCHEMA)
     mcp_path = make_url_path(base_url or "", _ROUTE_AGENT_MCP)
-    # Media URLs are relative to the app's root, which a browser prepends and a
-    # client of this API has no way to know.
-    base_path = f"/{base_url.strip('/')}" if base_url and base_url.strip("/") else ""
+
+    # Every URL a response carries is relative to the request that returned it,
+    # because that is the one base that is always right. A proxy that serves the
+    # app under a prefix and strips it before forwarding -- Community Cloud's
+    # `/~/+/` -- leaves nothing on the request that says where the app is, so a
+    # URL built from the request points at the hosting platform instead.
+    media_prefix = _climb(_ROUTE_DEPTH)
+    # The documented paths include the base URL path, so the server sits above
+    # it as well.
+    base_segments = len([segment for segment in (base_url or "").split("/") if segment])
+    server_url = _climb(_ROUTE_DEPTH + base_segments)
+
     disabled_message = (
         "This app does not serve the agent API. Its operator can turn it on with "
         f"`server.enableAgentApi`; see {schema_path} for what it would offer."
     )
-    origin_message = (
-        "Requests from a web page on another origin are refused, as they are "
-        "for the app's WebSocket."
+    host_message = (
+        "This request's Host is not in `server.allowedHosts`, which the app "
+        "enforces for its WebSocket too."
     )
 
-    async def _schema_endpoint(request: Request) -> JSONResponse:
+    async def _schema_endpoint(_request: Request) -> JSONResponse:
         """Serve the OpenAPI document, so the protocol is discoverable.
 
         Answered whether or not the API is on. It is documentation rather than
@@ -203,7 +161,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 interact_path=interact_path,
                 schema_path=schema_path,
                 availability="available" if enabled else "disabled",
-                server_prefix=_server_prefix(request, schema_path),
+                server_url=server_url,
                 mcp_path=mcp_path,
             )
         )
@@ -211,7 +169,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         return response
 
     async def _run_interact(
-        request: Request, payload: dict[str, Any], media_prefix: str
+        request: Request, payload: dict[str, Any]
     ) -> tuple[int, dict[str, Any]]:
         """Run one interaction and return its HTTP status and JSON body."""
         try:
@@ -257,11 +215,11 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             return _error(
                 "not_available", disabled_message, status=error_status("not_available")
             )
-        if _refused_origin(request):
+        if _refused_host(request):
             return _error(
-                "origin_not_allowed",
-                origin_message,
-                status=error_status("origin_not_allowed"),
+                "host_not_allowed",
+                host_message,
+                status=error_status("host_not_allowed"),
             )
 
         # The same bound the WebSocket handler applies to an inbound frame, so
@@ -285,7 +243,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         if not isinstance(payload, dict):
             return _error("invalid_request", "Body must be a JSON object.", status=400)
 
-        status, result = await _run_interact(request, payload, base_path)
+        status, result = await _run_interact(request, payload)
         return _json_response(result, status)
 
     async def _mcp_endpoint(request: Request) -> Response:
@@ -301,10 +259,9 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 mcp.error_response(None, mcp.SERVER_ERROR, disabled_message),
                 status_code=403,
             )
-        if _refused_origin(request):
-            # The MCP transport requires this check, against DNS rebinding.
+        if _refused_host(request):
             return JSONResponse(
-                mcp.error_response(None, mcp.SERVER_ERROR, origin_message),
+                mcp.error_response(None, mcp.SERVER_ERROR, host_message),
                 status_code=403,
             )
 
@@ -329,12 +286,10 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 status_code=400,
             )
 
-        media_prefix = _absolute_app_root(request, _ROUTE_AGENT_MCP)
-
         async def call_interact(
             arguments: dict[str, Any],
         ) -> tuple[dict[str, Any], bool]:
-            status, result = await _run_interact(request, arguments, media_prefix)
+            status, result = await _run_interact(request, arguments)
             return result, status >= 400
 
         response = await mcp.handle(message, call_interact)

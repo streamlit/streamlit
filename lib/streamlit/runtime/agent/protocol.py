@@ -171,12 +171,11 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
             "`server.enableAgentApi` is set."
         ),
     ),
-    "origin_not_allowed": (
+    "host_not_allowed": (
         403,
         (
-            "The request came from a web page on another origin, which the app "
-            "refuses the same way it refuses that page's WebSocket. Non-browser "
-            "clients send no `Origin` header and are not affected."
+            "The request's `Host` is not in `server.allowedHosts`, which the app "
+            "enforces for its WebSocket too."
         ),
     ),
     "too_many_sessions": (
@@ -252,7 +251,7 @@ def build_openapi_document(
     interact_path: str,
     schema_path: str,
     availability: str = "available",
-    server_prefix: str = "/",
+    server_url: str = "/",
     mcp_path: str | None = None,
 ) -> dict[str, Any]:
     """Build the OpenAPI document for the agent API.
@@ -274,11 +273,12 @@ def build_openapi_document(
         The served path of the interact operation, including any base URL path.
     schema_path
         The served path of this document, so it is self-locating.
-    server_prefix
-        What precedes the API paths on the way this caller reached them, reported
-        as the OpenAPI server so paths resolve where the app actually is. Hosted
-        deployments are not always at the root: Community Cloud serves embedded
-        apps under ``/~/+/``.
+    server_url
+        The OpenAPI server, relative to this document's own URL, so the paths
+        resolve where the app actually is. A hosted app is not always at the root
+        of its origin, and a proxy that strips its prefix before forwarding
+        leaves the app no way to see it: Community Cloud serves embedded apps
+        under ``/~/+/`` and forwards them without it.
     mcp_path
         The served path of the MCP endpoint, mentioned so a caller that found
         this document knows the same interaction is available over MCP.
@@ -312,13 +312,14 @@ def build_openapi_document(
         "info": info,
         "servers": [
             {
-                "url": server_prefix,
+                "url": server_url,
                 "description": (
-                    "Where this app is served, as seen by the request that "
-                    "fetched this document. Join it with the paths below, and "
-                    "with any relative `data.url` from a snapshot: a hosted app "
-                    "may sit behind a prefix, and skipping it reaches the "
-                    "platform rather than the app."
+                    "Relative to this document's own URL: resolve it against the "
+                    "URL you fetched this document from, then join the paths "
+                    "below. It is relative so it stays right when the app is "
+                    "served behind a prefix, including one a proxy strips "
+                    "before the app can see it. Joining the paths with the "
+                    "origin instead reaches the hosting platform there."
                 ),
             }
         ],
@@ -886,10 +887,11 @@ def schemas() -> dict[str, Any]:
                     "description": (
                         "Where to fetch the complete data as an Arrow IPC "
                         "stream (`application/vnd.apache.arrow.stream`).\n\n"
-                        "Relative to the server above, not to the app's public "
-                        "origin. Joining it with the origin instead reaches the "
-                        "hosting platform on a deployment served behind a "
-                        "prefix.\n\n"
+                        "Relative to the URL of the request that returned this "
+                        "snapshot, like every URL in it: resolve it against that "
+                        "URL, for example with `urljoin`. Joining it with the "
+                        "app's origin instead reaches the hosting platform on a "
+                        "deployment served behind a prefix.\n\n"
                         "A fetch-now handle, not a durable reference: it is "
                         "reference counted against the elements currently on "
                         "the page and collected once they stop rendering. "
