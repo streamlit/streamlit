@@ -627,9 +627,6 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
             map_data["row_count"] = row_count
         return map_data
 
-    if proto_field == "metric" and payload.chart_data:
-        return {"chart_data": list(payload.chart_data)}
-
     return None
 
 

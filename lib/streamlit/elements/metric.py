@@ -503,7 +503,8 @@ class MetricMixin:
                 help=help,
                 icon=icon,
                 format=format,
-                chart_type=chart_type if chart_data is not None else None,
+                chart_data=list(metric_proto.chart_data) or None,
+                chart_type=chart_type if metric_proto.chart_data else None,
                 label_visibility=label_visibility,
             ),
         )
