@@ -371,6 +371,8 @@ export default defineConfig([
       "@typescript-eslint/return-await": ["error", "in-try-catch"],
       // Treat @deprecated API usage as errors
       "@typescript-eslint/no-deprecated": "error",
+      // Require Promise .catch/.then rejection params to be unknown so callers must narrow before use
+      "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
       // Mixed string/numeric members compare and reverse-map inconsistently;
       // keep hand-written enums single-typed like generated protobuf ones.
       "@typescript-eslint/no-mixed-enums": "error",
