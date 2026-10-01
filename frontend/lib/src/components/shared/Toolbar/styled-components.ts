@@ -19,9 +19,11 @@ import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
-// Offset so the toolbar sits above the element with a small gap. Keep in sync
-// with overlay button height (see StyledElementToolbarButton min size) and the
-// bare-embed littlePadding in AppView.
+/**
+ * Absolute `top` for the overlay toolbar wrapper so a small gap remains
+ * above the element. Keep in sync with `StyledElementToolbarButton` min
+ * size and AppView's bare-embed `littlePadding`.
+ */
 export const TOP_DISTANCE = "-2.75rem"
 
 /** A styled component usable as a CSS selector in template literals. */
