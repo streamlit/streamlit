@@ -151,10 +151,12 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
     "run_timed_out": (
         504,
         (
-            "The app did not finish within `server.agentRunTimeout`. It may still "
-            "be running; the session's next interaction stops it at its next "
-            "Streamlit call and starts a fresh run, as a browser interaction "
-            "would, so whether the rest of that run happened is not knowable."
+            "The app did not finish within `server.agentRunTimeout` and is still "
+            "running. This is expected for slow work, such as an app's first "
+            "load of data it has not cached yet, and nothing is lost: send the "
+            "same request again, or an empty one with only `session_id`, and it "
+            "waits for that run instead of starting it over. A different request "
+            "stops the run and starts a new one, as a browser interaction would."
         ),
     ),
     "internal_error": (
@@ -437,7 +439,16 @@ several script runs through callbacks, `st.rerun()`, or a page redirect; "one \
 interaction" means one submission, not one execution.
 
 An interaction with no changes is an explicit rerun, not a read. It executes \
-the script again and can repeat side effects exactly as any other rerun does.
+the script again and can repeat side effects exactly as any other rerun does. \
+The one exception is a retry after a timeout, below.
+
+**A timeout is not a failure.** Slow work -- typically an app's first load of \
+data it has not cached yet -- can outlast `server.agentRunTimeout`, and the \
+request then returns `run_timed_out` while the app keeps running. Send the \
+same request again, or an empty one with only `session_id`: the retry waits \
+for that run instead of starting it over, and returns its result once it \
+finishes, so a slow run completes over several retries. A retry never fires a \
+trigger twice. Any other request stops the run and starts a new one.
 
 Sessions are reclaimed after `server.agentSessionTTL` of inactivity, so there \
 is nothing to close.

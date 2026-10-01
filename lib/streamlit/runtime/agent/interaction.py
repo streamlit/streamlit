@@ -191,6 +191,22 @@ class AgentSessionClient(SessionClient):
                 return
 
 
+# The request fields that say what an interaction does. Two requests with the
+# same values ask for the same thing.
+_ACTION_FIELDS: Final = ("widget_state", "trigger", "page", "query_params", "context")
+
+
+@dataclass
+class _Interaction:
+    """What a sent interaction needs once its run chain settles."""
+
+    # The request's action fields, so a retry can be recognized.
+    action: dict[str, Any]
+    # The query string the request sent, kept unless the run reports a change.
+    query_string: str
+    page: Any
+
+
 @dataclass
 class AgentSession:
     """Server-side bookkeeping for one agent session."""
@@ -215,6 +231,9 @@ class AgentSession:
     element_states: dict[str, ElementState] = field(default_factory=dict)
     # Guards against a second interaction arriving while one is still running.
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    # An interaction that outlasted the run timeout and whose result nobody has
+    # collected yet. Its run keeps going, and a retry waits for it.
+    timed_out: _Interaction | None = None
 
 
 class AgentSessionRegistry:
@@ -338,6 +357,20 @@ async def _run_interaction(
 ) -> dict[str, Any]:
     app_session = _app_session(runtime, session)
 
+    action = {
+        name: request[name] for name in _ACTION_FIELDS if request.get(name) is not None
+    }
+    pending = session.timed_out
+    if pending is not None and (not action or action == pending.action):
+        # A retry of an interaction that outlasted the timeout. Starting another
+        # run would interrupt the one doing the work, so a run that always took
+        # longer than the timeout could never finish, and sending a trigger
+        # again would fire it twice. Collect the original instead: wait for its
+        # run, or return its result if it has finished. The result is collected
+        # once; the same request after that is a new interaction.
+        session.timed_out = None
+        return await _settle(app_session, session, pending)
+
     widget_state = request.get("widget_state")
     trigger = request.get("trigger")
     page = request.get("page")
@@ -394,18 +427,33 @@ async def _run_interaction(
     back_msg.rerun_script.CopyFrom(rerun)
 
     session.context_info = context_info
+    # A different interaction supersedes one that timed out: its run stops at
+    # the next interrupt point, as it would for a browser interaction.
+    session.timed_out = None
     session.client.begin_interaction()
     runtime.handle_backmsg(session.session_id, back_msg)
 
+    return await _settle(
+        app_session,
+        session,
+        _Interaction(action=action, query_string=rerun.query_string, page=page),
+    )
+
+
+async def _settle(
+    app_session: Any, session: AgentSession, interaction: _Interaction
+) -> dict[str, Any]:
+    """Wait for a sent interaction's run chain to settle, then snapshot it."""
     timeout = float(config.get_option("server.agentRunTimeout"))
     try:
         await session.client.wait_until_settled(timeout)
     except TimeoutError as exc:
+        session.timed_out = interaction
         raise AgentRequestError(
             "run_timed_out",
-            f"The app did not finish within {timeout:g} seconds. It may still be "
-            "running; the next interaction on this session stops it and starts "
-            "a fresh run.",
+            f"The app did not finish within {timeout:g} seconds, and is still "
+            "running. Nothing is lost: send this request again, or an empty one "
+            "with only `session_id`, to wait for it without starting it over.",
         ) from exc
 
     # Keep the query string the way a browser keeps its address bar: what was
@@ -415,7 +463,7 @@ async def _run_interaction(
     if session.client.query_string_update is not None:
         session.query_string = session.client.query_string_update
     else:
-        session.query_string = rerun.query_string
+        session.query_string = interaction.query_string
 
     result = snapshot_module.build_snapshot(
         session_id=session.handle,
@@ -426,7 +474,7 @@ async def _run_interaction(
     session.element_states = result.element_states
     session.last_used = time.monotonic()
 
-    _verify_navigation_landed(page, result.document)
+    _verify_navigation_landed(interaction.page, result.document)
     return result.document
 
 

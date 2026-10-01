@@ -242,18 +242,31 @@ Later calls reference keys from the snapshot they just read:
 
 The request blocks until the run chain settles, then returns the snapshot. An accepted
 interaction may cause more than one script run through callbacks, `st.rerun()`, or a page
-redirect; "one interaction" means one client submission, not one execution. If the run
-exceeds `server.agentRunTimeout`, the response is an explicit `run_timed_out` error —
-v1 has no partial or streaming result. What comes back is the end state, so output a
+redirect; "one interaction" means one client submission, not one execution. What comes
+back is the end state, so output a
 browser shows only while a run is in progress — a spinner, `st.write_stream` arriving
 chunk by chunk — never appears, while a toast the run raised does, even though a browser
 hides it after a few seconds.
 
+**A run that outlasts `server.agentRunTimeout` keeps going, and a retry collects it.** The
+request returns `run_timed_out`, but nothing is lost. Sending the same request again, or
+an empty one with only `session_id`, waits for that run instead of starting another, or
+returns its result at once if it has finished. That matters because the obvious behavior
+is a trap: a retry that starts a new run interrupts the one doing the work, so a script
+whose uncached first load always takes longer than the timeout could never finish
+through the API, and a retried click would fire twice. With collection, a slow run
+completes over several retries, each within the client's own timeout — many MCP clients
+give up on a tool call after about a minute — and a request sends its trigger once. A
+result is collected once; after that the same request is a new interaction, and any
+different request stops the slow run and starts a new one, as a browser interaction
+would.
+
 Sessions are reclaimed after `server.agentSessionTTL` of inactivity, so there is nothing
 to close. There is no separate read or delete route in v1, and no passive way to re-read
-the last result: **an `interact` with no changes is an explicit rerun, not a read.** It
-executes the script again and can repeat side effects exactly as any other Streamlit
-rerun does. A non-executing read arrives with the polling work in follow-up #4.
+the last result: **an `interact` with no changes is an explicit rerun, not a read**, apart
+from collecting a timed-out run. It executes the script again and can repeat side effects
+exactly as any other Streamlit rerun does. A non-executing read arrives with the polling
+work in follow-up #4.
 
 **An agent session is an ordinary Streamlit session with a different client.** The
 runtime treats it as one more browser tab, which settles what it shares and what it does
@@ -596,7 +609,7 @@ stays usable, so an agent can correct its input and interact again.
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
 | Script failed to compile                                                             | `status: "error"` with the compile error and no usable action list.                                                                      |
 | Another interaction on the same session is still in flight                           | `session_busy`. One interaction per session at a time, so a client never interrupts its own run by accident.                             |
-| Run exceeded `server.agentRunTimeout`                                                | `run_timed_out`. The app may still be running; the session's next interaction stops it at its next Streamlit call and starts a fresh run, as a browser interaction would, so whether the rest of the timed-out run happened is not knowable. |
+| Run exceeded `server.agentRunTimeout`                                                | `run_timed_out`, while the app keeps running. The same request again, or an empty one, waits for that run and returns its result; a different request stops it and starts a new one, as a browser interaction would. |
 
 ### Actions in v1
 
@@ -839,7 +852,7 @@ back to a browser rather than mistake it for missing content:
 | `bind="query-params"` write-back                                           | Setting a bound widget changes its value but not `query_params`; the browser is what writes the address bar. See [Actions in v1](#actions-in-v1).                             |
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun.                                                                                               |
-| Long-running interactions                                                  | No polling or partial results; the request either settles or returns `run_timed_out`.                                                                                         |
+| Long-running interactions                                                  | No polling or partial results. A run past the timeout returns `run_timed_out` and keeps going; a retry waits for it rather than restarting it.                                |
 
 ### Limits and configuration
 
@@ -849,7 +862,7 @@ Every bound v1 applies, in one place. The three agent budget options are hidden 
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Whether the API is served              | Off                                                   | `server.enableAgentApi`                                                       |
-| Time for one interaction to settle     | 60 s, then `run_timed_out`                            | `server.agentRunTimeout`                                                      |
+| How long one request waits for its run | 60 s, then `run_timed_out`; a retry keeps waiting     | `server.agentRunTimeout`                                                      |
 | Idle time before a session is reclaimed | 15 min                                                | `server.agentSessionTTL`                                                      |
 | Agent sessions held at once            | 100, then `too_many_sessions`                         | `server.agentMaxSessions`                                                     |
 | Interactions in flight per session     | 1, then `session_busy`                                | Fixed                                                                         |
@@ -1090,9 +1103,11 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
    machinery and its limits rather than building a query API.
 4. **Long-run handling.** `202` with an operation handle,
    `GET /_stcore/agent/v1/sessions/{id}` to poll the committed snapshot without executing
-   code, and `DELETE` to close early. Once clients poll rather than resubmit, add
-   optional `request_id` (retry idempotency) and `expected_revision` (reject actions based
-   on a stale observation) for callers that batch or parallelize.
+   code, and `DELETE` to close early. v1 already makes the common case safe — a retry
+   after `run_timed_out` collects the run instead of repeating it — so what remains is
+   general: optional `request_id` for retry idempotency beyond timeouts, and
+   `expected_revision` to reject actions based on a stale observation, for callers that
+   batch or parallelize.
 5. **CLI.** `streamlit agent interact <url> --json @request.json` over the same routes, as
    a debugging and verification convenience. An agent with shell access can already curl
    the endpoint, which is why this is not v1.
@@ -1290,12 +1305,14 @@ new command or significant parameter should ship with all of the following, or a
    externalization ceiling only has to prevent holding a second copy of something
    enormous. Two are still open. The response document itself is unbounded, and a page
    with a 3,000-option selectbox ships those options in every snapshot, which is the
-   realistic budget problem rather than table data. And the run timeout has no
-   defensible default yet: opening a single lazy expander whose contents fetch from
-   the network can take **over two minutes**, so any timeout comfortable for a filtered
-   dashboard will cut off a legitimate interaction somewhere.
-   That argues the answer is the long-run handling in follow-up #4 rather than a larger
-   number.
+   realistic budget problem rather than table data. And the run timeout needs a
+   default chosen deliberately. It bounds how long one request waits, not how long the
+   run may take, since a retry collects the run in progress — which matters, because
+   opening a single lazy expander whose contents fetch from the network took **over two
+   minutes** in one trial. So the default should sit at or below the clients' own
+   request timeouts, about a minute for many MCP clients, rather than grow to fit the
+   slowest app. Follow-up #4's operation handle would make even the retries
+   unnecessary.
 5. **Should `clear_on_submit` move server-side?** It is implemented in React today, so no
    headless client can honor it, and the browser is already inconsistent with itself
    immediately after a submit. Fixing it properly is a change to core form semantics and
