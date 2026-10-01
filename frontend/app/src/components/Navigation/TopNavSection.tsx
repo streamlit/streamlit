@@ -22,7 +22,7 @@ import {
 } from "@emotion-icons/material-outlined"
 import { FloatingPortal } from "@floating-ui/react"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   convertRemToPx,
   Icon,

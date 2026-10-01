@@ -32,9 +32,11 @@ import { buildHttpUri } from "@streamlit/utils"
 
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
-// Mock the dynamic import to return the same axios instance we're using for testing
+// Mock the dynamic import to return the same axios instance we're using for testing.
+// Type only axios's default export: a namespace import is blocked by the
+// no-restricted-imports CancelToken restriction.
 vi.mock("axios", async importOriginal => {
-  const actual = await importOriginal<typeof import("axios")>()
+  const actual = await importOriginal<{ default: typeof axios }>()
   return {
     ...actual,
     default: actual.default,

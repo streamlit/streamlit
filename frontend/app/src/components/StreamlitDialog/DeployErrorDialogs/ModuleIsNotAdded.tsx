@@ -16,7 +16,7 @@
 
 import { StreamlitMarkdown } from "@streamlit/lib"
 
-import { IDeployErrorDialog } from "./types"
+import type { IDeployErrorDialog } from "./types"
 
 function ModuleIsNotAdded(module: string): IDeployErrorDialog {
   return {

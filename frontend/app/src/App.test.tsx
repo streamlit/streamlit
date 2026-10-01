@@ -18,7 +18,7 @@ import { act } from "react"
 
 import {
   render,
-  RenderResult,
+  type RenderResult,
   screen,
   waitFor,
   within,
@@ -37,12 +37,12 @@ import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   ConnectionManager,
   ConnectionState,
-  ErrorDetails,
+  type ErrorDetails,
   mockEndpoints,
 } from "@streamlit/connection"
 import {
   BackendOperationClient,
-  CachedTheme,
+  type CachedTheme,
   CONNECTION_CLOSED_MESSAGE,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
@@ -74,11 +74,11 @@ import {
   type AutoRerun,
   Config,
   CustomThemeConfig,
-  Delta,
-  Element,
+  type Delta,
+  type Element,
   Exception,
   ForwardMsg,
-  ForwardMsgMetadata,
+  type ForwardMsgMetadata,
   type Logo,
   Navigation,
   type NewSession,
@@ -87,12 +87,12 @@ import {
   type PageNotFound,
   type ParentMessage,
   SessionEvent,
-  SessionStatus,
+  type SessionStatus,
   type StopAutoRerun,
   TextInput,
 } from "@streamlit/protobuf"
 
-import { App, LOG, Props } from "./App"
+import { App, LOG, type Props } from "./App"
 import { SKILLS_NUDGE_SNOOZED_AT_KEY } from "./components/SkillsNudgeToast/skillsNudge"
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 
@@ -187,11 +187,13 @@ vi.mock("@streamlit/connection", async () => {
   }
 })
 
+// Type each mock from the already-imported class. `typeof import()` is
+// forbidden by `consistent-type-imports` (`disallowTypeAnnotations`), and
+// app tests cannot `import type * as` from `~lib/*`.
 vi.mock("~lib/SessionInfo", async () => {
-  const actualModule =
-    await vi.importActual<typeof import("~lib/SessionInfo")>(
-      "~lib/SessionInfo"
-    )
+  const actualModule = await vi.importActual<{
+    SessionInfo: typeof SessionInfo
+  }>("~lib/SessionInfo")
 
   const MockedClass = vi.fn().mockImplementation(function (this: SessionInfo) {
     return new actualModule.SessionInfo()
@@ -210,9 +212,9 @@ vi.mock("~lib/SessionInfo", async () => {
 })
 
 vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("~lib/hostComm/HostCommunicationManager")
-  >("~lib/hostComm/HostCommunicationManager")
+  const actualModule = await vi.importActual<{
+    default: typeof HostCommunicationManager
+  }>("~lib/hostComm/HostCommunicationManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: HostCommunicationManager,
@@ -233,9 +235,9 @@ vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
 })
 
 vi.mock("~lib/WidgetStateManager", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("~lib/WidgetStateManager")
-  >("~lib/WidgetStateManager")
+  const actualModule = await vi.importActual<{
+    WidgetStateManager: typeof WidgetStateManager
+  }>("~lib/WidgetStateManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: WidgetStateManager,
@@ -255,9 +257,9 @@ vi.mock("~lib/WidgetStateManager", async () => {
 })
 
 vi.mock("@streamlit/app/src/MetricsManager", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("@streamlit/app/src/MetricsManager")
-  >("@streamlit/app/src/MetricsManager")
+  const actualModule = await vi.importActual<{
+    MetricsManager: typeof MetricsManager
+  }>("@streamlit/app/src/MetricsManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: MetricsManager,
@@ -276,9 +278,9 @@ vi.mock("@streamlit/app/src/MetricsManager", async () => {
 })
 
 vi.mock("~lib/FileUploadClient", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("~lib/FileUploadClient")
-  >("~lib/FileUploadClient")
+  const actualModule = await vi.importActual<{
+    FileUploadClient: typeof FileUploadClient
+  }>("~lib/FileUploadClient")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: FileUploadClient,

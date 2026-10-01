@@ -15,11 +15,11 @@
  */
 
 import { keyframes } from "@emotion/react"
-import { Keyframes } from "@emotion/serialize"
+import type { Keyframes } from "@emotion/serialize"
 import styled from "@emotion/styled"
 
 import {
-  EmotionTheme,
+  type EmotionTheme,
   getOverlayZIndex,
   getPopoverContainerStyle,
   getToggleTrackColor,

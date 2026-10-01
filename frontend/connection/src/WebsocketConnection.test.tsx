@@ -25,7 +25,7 @@ vi.mock("@streamlit/utils", async () => {
   }
 })
 
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
 import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
@@ -41,8 +41,8 @@ import {
 } from "./constants"
 import { doInitPings, PingCancelledError } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
-import { ErrorDetails, OnRetry } from "./types"
-import { Args, WebsocketConnection } from "./WebsocketConnection"
+import type { ErrorDetails, OnRetry } from "./types"
+import { type Args, WebsocketConnection } from "./WebsocketConnection"
 
 const expectedFirstReconnectDelayMs =
   RECONNECT_MINIMUM_RETRY_PERIOD_MS +
