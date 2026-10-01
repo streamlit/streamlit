@@ -187,6 +187,8 @@ vi.mock("@streamlit/connection", async () => {
   }
 })
 
+// Type from the already-imported class: `typeof import()` is forbidden, and
+// app tests cannot `import type * as` from `~lib/*`.
 vi.mock("~lib/SessionInfo", async () => {
   const actualModule = await vi.importActual<{
     SessionInfo: typeof SessionInfo
