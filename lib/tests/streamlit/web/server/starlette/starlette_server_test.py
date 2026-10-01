@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from typing import Any
 
 from streamlit import config
+from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.runtime import Runtime
 from streamlit.web.server.server import Server
 from streamlit.web.server.starlette.starlette_server import (
@@ -1396,3 +1397,47 @@ class TestUvicornRunner:
             runner = UvicornRunner("myapp:app")
             with pytest.raises(RuntimeError, match="Unix sockets are not supported"):
                 runner.run()
+
+
+class TestServerProperties:
+    """Lightweight Server helpers that do not require a live uvicorn bind."""
+
+    @pytest.fixture(autouse=True)
+    def _isolate_runtime(self) -> Iterator[None]:
+        """Reset the Runtime singleton and skip component file watching."""
+        Runtime._instance = None
+        with patch.object(BidiComponentManager, "discover_and_register_components"):
+            yield
+        runtime = Runtime._instance
+        if runtime is not None:
+            runtime.bidi_component_registry.stop_file_watching()
+        Runtime._instance = None
+
+    def test_repr_includes_class_name(self) -> None:
+        """repr() includes the class name."""
+        server = Server("mock/script/path", is_hello=False)
+        assert "Server" in repr(server)
+
+    def test_browser_is_connected_is_false_before_sessions(self) -> None:
+        """No connected sessions means the browser is not connected."""
+        server = Server("mock/script/path", is_hello=False)
+        assert server.browser_is_connected is False
+
+    def test_is_running_hello_when_script_is_hello_app(self) -> None:
+        """Hello detection matches the hello app script path."""
+        from streamlit.hello import streamlit_app
+
+        hello_server = Server(streamlit_app.__file__, is_hello=False)
+        assert hello_server.is_running_hello is True
+
+    def test_is_running_hello_ignores_is_hello_flag(self) -> None:
+        """The is_hello constructor flag does not control is_running_hello."""
+        other_server = Server("mock/script/path", is_hello=True)
+        assert other_server.is_running_hello is False
+
+    def test_stop_without_starlette_server_stops_runtime(self) -> None:
+        """If uvicorn was never started, stop() still shuts down the runtime."""
+        server = Server("mock/script/path", is_hello=False)
+        with patch.object(server._runtime, "stop") as mock_stop:
+            server.stop()
+            mock_stop.assert_called_once()

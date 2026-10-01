@@ -22,7 +22,7 @@ import { lightTheme } from "~lib/theme/themeConfigs"
 
 import BaseButton, {
   BaseButtonKind,
-  BaseButtonProps,
+  type BaseButtonProps,
   BaseButtonSize,
 } from "./BaseButton"
 

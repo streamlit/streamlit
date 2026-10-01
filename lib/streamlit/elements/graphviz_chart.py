@@ -214,6 +214,7 @@ class GraphvizMixin:
                 "graphviz_chart",
                 spec=graphviz_chart_proto.spec,
                 engine=graphviz_chart_proto.engine or None,
+                alt=agent_spec.proto_alt(graphviz_chart_proto),
             ),
         )
 

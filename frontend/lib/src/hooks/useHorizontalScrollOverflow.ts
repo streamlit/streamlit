@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { RefObject, useCallback, useEffect, useRef, useState } from "react"
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 /**
  * Pixel slack so floating-point scrollWidth/clientWidth rounding does not

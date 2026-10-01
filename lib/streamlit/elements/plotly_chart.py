@@ -833,6 +833,7 @@ class PlotlyMixin:
                         if isinstance(selection_mode, str)
                         else set(selection_mode)
                     ),
+                    alt=agent_spec.proto_alt(plotly_chart_proto),
                 ),
             )
             return widget_state.value
@@ -842,7 +843,11 @@ class PlotlyMixin:
             "plotly_chart",
             plotly_chart_proto,
             layout_config=layout_config,
-            agent_props=agent_spec.element("plotly_chart", theme=theme),
+            agent_props=agent_spec.element(
+                "plotly_chart",
+                theme=theme,
+                alt=agent_spec.proto_alt(plotly_chart_proto),
+            ),
         )
 
     @property

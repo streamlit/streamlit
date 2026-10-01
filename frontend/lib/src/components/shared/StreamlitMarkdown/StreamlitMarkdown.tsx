@@ -16,7 +16,7 @@
 
 import {
   createContext,
-  CSSProperties,
+  type CSSProperties,
   type FC,
   type HTMLProps,
   type JSX,
@@ -36,20 +36,20 @@ import {
 
 import slugify from "@sindresorhus/slugify"
 import { parseToRgba } from "color2k"
-import { type Element, type Root as HastRoot } from "hast"
+import type { Element, Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
 import type { Root as MdastRoot, Text } from "mdast"
 import { findAndReplace } from "mdast-util-find-and-replace"
 import { Link2 as LinkIcon } from "react-feather"
 import ReactMarkdown, {
-  Components,
-  Options as ReactMarkdownProps,
+  type Components,
+  type Options as ReactMarkdownProps,
 } from "react-markdown"
 import remarkDirective from "remark-directive"
 import remarkGfm from "remark-gfm"
 import remarkMathPlugin from "remark-math"
 import remend, { type RemendHandler } from "remend"
-import { PluggableList } from "unified"
+import type { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
 

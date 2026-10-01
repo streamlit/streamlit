@@ -468,6 +468,7 @@ class IframeMixin:
                 "iframe",
                 support="browser_required" if iframe_proto.srcdoc else None,
                 src=iframe_proto.src or iframe_proto.srcdoc or None,
+                alt=agent_spec.proto_alt(iframe_proto),
             ),
         )
 

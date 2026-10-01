@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { GridCell, NumberCell } from "@glideapps/glide-data-grid"
+import type { GridCell, NumberCell } from "@glideapps/glide-data-grid"
 import { act, renderHook } from "@testing-library/react"
 import { Field, Int64, Utf8 } from "apache-arrow"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   NumberColumn,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"

@@ -281,6 +281,14 @@ if TYPE_CHECKING:
     assert_type(dataframe(df, placeholder="-", on_select="rerun"), DataframeState)
 
     # =====================================================================
+    # Test alt parameter (str or None)
+    # =====================================================================
+
+    assert_type(dataframe(df, alt="Top customers"), DeltaGenerator)
+    assert_type(dataframe(df, alt=None), DeltaGenerator)
+    assert_type(dataframe(df, alt="Top customers", on_select="rerun"), DataframeState)
+
+    # =====================================================================
     # Test lazy parameter (bool or None)
     # =====================================================================
 
@@ -307,6 +315,7 @@ if TYPE_CHECKING:
             selection_default=None,
             row_height=35,
             placeholder="-",
+            alt="Top customers",
         ),
         DeltaGenerator,
     )

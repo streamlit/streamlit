@@ -16,13 +16,13 @@
 
 import { getLogger } from "loglevel"
 
-import { type CustomThemeConfig, WidgetStates } from "@streamlit/protobuf"
+import type { CustomThemeConfig, WidgetStates } from "@streamlit/protobuf"
 
-import { PresetThemeName } from "~lib/theme/types"
+import type { PresetThemeName } from "~lib/theme/types"
 import { isValidOrigin } from "~lib/util/UriUtil"
 import { normalizeQueryString } from "~lib/util/utils"
 
-import {
+import type {
   AppConfig,
   DeployedAppMetadata,
   GuestToHostEnvelope,

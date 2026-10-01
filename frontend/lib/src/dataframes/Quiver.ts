@@ -16,19 +16,23 @@
 
 // Private members use _.
 
-import { Field, Vector } from "apache-arrow"
+import { type Field, Vector } from "apache-arrow"
 
-import { ArrowData } from "@streamlit/protobuf"
+import type { ArrowData } from "@streamlit/protobuf"
 
 import { hashString } from "~lib/util/utils"
 
 import {
-  ColumnNames,
-  Data,
-  IndexData,
+  type ColumnNames,
+  type Data,
+  type IndexData,
   parseArrowIpcBytes,
 } from "./arrowParseUtils"
-import { ArrowType, DataFrameCellType, DataType } from "./arrowTypeUtils"
+import {
+  type ArrowType,
+  DataFrameCellType,
+  type DataType,
+} from "./arrowTypeUtils"
 
 /**
  * Pandas Styler data from proto message.

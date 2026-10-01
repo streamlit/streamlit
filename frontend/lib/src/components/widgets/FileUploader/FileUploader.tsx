@@ -20,9 +20,9 @@ import { isEqual, zip } from "lodash-es"
 import { flushSync } from "react-dom"
 
 import {
-  FileUploader as FileUploaderProto,
+  type FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
-  FileURLs as FileURLsProto,
+  type FileURLs as FileURLsProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
@@ -32,13 +32,13 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import {
-  UploadedStatus,
+  type UploadedStatus,
   UploadFileInfo,
 } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import {
   type FileRejection,
@@ -51,7 +51,7 @@ import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
@@ -288,6 +288,10 @@ const FileUploader = ({
         formId: element.formId,
         fragmentId,
         fromUser: true,
+        // on_change="ignore" buffers the value without scheduling a rerun.
+        // WidgetStateManager ignores triggerRerun inside forms (the form owns
+        // commit timing).
+        ...(element.ignoreRerun ? { triggerRerun: false } : {}),
       })
     }
   }, [status, files, widgetMgr, element, fragmentId])

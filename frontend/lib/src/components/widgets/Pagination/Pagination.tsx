@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useMemo } from "react"
+import { memo, type ReactElement, useCallback, useMemo } from "react"
 
-import { Pagination as PaginationProto, streamlit } from "@streamlit/protobuf"
+import type {
+  Pagination as PaginationProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useResizeObserver } from "~lib/hooks/useResizeObserver"
 import { convertRemToPx } from "~lib/theme/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledArrowButton,

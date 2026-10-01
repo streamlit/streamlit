@@ -19,11 +19,11 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { Field, Utf8 } from "apache-arrow"
 import { describe, expect, it, vi } from "vitest"
 
-import { type DataframeChunkResponsePayload } from "@streamlit/protobuf"
+import type { DataframeChunkResponsePayload } from "@streamlit/protobuf"
 
-import { BackendOperationClient } from "~lib/BackendOperationClient"
+import type { BackendOperationClient } from "~lib/BackendOperationClient"
 import {
-  BaseColumn,
+  type BaseColumn,
   isErrorCell,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"

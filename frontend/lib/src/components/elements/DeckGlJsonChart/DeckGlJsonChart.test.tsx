@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type ReactNode } from "react"
+import type { ReactNode } from "react"
 
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -22,6 +22,7 @@ import { userEvent } from "@testing-library/user-event"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
 import { render } from "~lib/components/shared/ElementFullscreen/testUtils"
+import type * as GetColors from "~lib/theme/getColors"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { DeckGlJsonChart } from "./DeckGlJsonChart"
@@ -73,9 +74,7 @@ const mockInitialViewState = {
 const mockHasLightBackgroundColor = vi.fn(() => false)
 
 vi.mock("~lib/theme/getColors", async () => ({
-  ...(await vi.importActual<typeof import("~lib/theme/getColors")>(
-    "~lib/theme/getColors"
-  )),
+  ...(await vi.importActual<typeof GetColors>("~lib/theme/getColors")),
   hasLightBackgroundColor: () => mockHasLightBackgroundColor(),
 }))
 

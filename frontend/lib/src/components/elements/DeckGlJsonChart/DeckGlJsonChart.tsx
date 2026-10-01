@@ -15,7 +15,7 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
   useCallback,
   useContext,
@@ -26,7 +26,7 @@ import {
 
 import "./patchLumaCanvasContext"
 
-import { LayersList, PickingInfo } from "@deck.gl/core"
+import type { LayersList, PickingInfo } from "@deck.gl/core"
 import { DeckGL } from "@deck.gl/react"
 import { Close } from "@emotion-icons/material-outlined"
 import { registerLoaders } from "@loaders.gl/core"

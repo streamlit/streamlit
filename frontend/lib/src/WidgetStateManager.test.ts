@@ -18,23 +18,23 @@ import { waitFor } from "@testing-library/react"
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
 import { type Long, util } from "protobufjs/minimal"
-import { Mock } from "vitest"
+import type { Mock } from "vitest"
 
 import {
   ArrowTable as ArrowTableProto,
   Button as ButtonProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-  WidgetState,
+  type WidgetState,
 } from "@streamlit/protobuf"
 
 import { makeTriggerAggregatorId } from "~lib/components/widgets/BidiComponent/utils/idBuilder"
 
 import {
   createFormsData,
-  FormsData,
+  type FormsData,
   microsToIsoString,
-  WidgetInfo,
+  type WidgetInfo,
   WidgetStateDict,
   WidgetStateManager,
 } from "./WidgetStateManager"

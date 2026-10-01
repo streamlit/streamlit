@@ -17,7 +17,7 @@
 import { useCallback } from "react"
 
 import { updateColumnConfigTypeProps } from "./columnConfigUtils"
-import { ColumnConfigProps } from "./useColumnLoader"
+import type { ColumnConfigProps } from "./useColumnLoader"
 
 type ColumnVisibilityReturn = {
   // Hides a column.

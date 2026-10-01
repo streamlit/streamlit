@@ -2830,6 +2830,7 @@ class VegaChartsMixin:
             ),
             theme=theme,
             selection_mode=selection_mode or None,
+            alt=agent_spec.proto_alt(proto),
             **(encoding or {}),
         )
 

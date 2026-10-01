@@ -88,6 +88,7 @@ class PyplotMixin:
         *,
         width: Width = "stretch",
         use_container_width: bool | None = None,
+        alt: str | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
         """Display a matplotlib.pyplot figure.
@@ -144,6 +145,15 @@ class PyplotMixin:
                 ``width="stretch"``. For ``use_container_width=False``, use
                 ``width="content"``.
 
+        alt : str or None
+            A description of the figure image for screen readers and other
+            assistive technologies. If this is ``None`` (default), Streamlit
+            does not provide an accessible name for the figure.
+
+            An empty string (``""``) marks the image as decorative. Whitespace-
+            only values are treated as ``None`` and logged. Prefer naming the
+            chart's takeaway rather than pasting axis tick labels.
+
         **kwargs : any
             Arguments to pass to Matplotlib's ``savefig`` function.
 
@@ -164,7 +174,7 @@ class PyplotMixin:
         >>> fig, ax = plt.subplots()
         >>> ax.hist(arr, bins=20)
         >>>
-        >>> st.pyplot(fig)
+        >>> st.pyplot(fig, alt="Histogram of sample values, roughly normal")
 
         .. output::
            https://doc-pyplot.streamlit.app/
@@ -215,6 +225,7 @@ class PyplotMixin:
             layout_config,
             fig,
             clear_figure,
+            alt=alt,
             **kwargs,
         )
         return self.dg._enqueue(
@@ -226,6 +237,11 @@ class PyplotMixin:
             agent_props=agent_spec.element(
                 "pyplot",
                 url=[img.url for img in image_list_proto.imgs] or None,
+                # `""` is kept: it marks the figure as decorative.
+                alt=next(
+                    (img.alt for img in image_list_proto.imgs if img.HasField("alt")),
+                    None,
+                ),
             ),
         )
 
@@ -241,6 +257,7 @@ def marshall(
     layout_config: LayoutConfig,
     fig: Figure,
     clear_figure: bool = False,
+    alt: str | None = None,
     **kwargs: Any,
 ) -> None:
     try:
@@ -282,6 +299,7 @@ def marshall(
         clamp=False,
         channels="RGB",
         output_format="PNG",
+        alt=alt,
     )
 
     # Clear the figure after rendering so later draws on this figure start empty.

@@ -16,7 +16,7 @@
 
 import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
-import { Mock, MockInstance } from "vitest"
+import type { Mock, MockInstance } from "vitest"
 
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/protobuf"
 
@@ -24,7 +24,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 
 import GraphVizChart, {
-  GraphVizChartProps,
+  type GraphVizChartProps,
   LOG,
   sanitizeGraphVizLinkUris,
 } from "./GraphVizChart"

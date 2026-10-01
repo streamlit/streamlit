@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
-import { Text as TextProto } from "@streamlit/protobuf"
+import type { Text as TextProto } from "@streamlit/protobuf"
 
 import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"

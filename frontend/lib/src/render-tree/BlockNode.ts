@@ -16,10 +16,10 @@
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
-import { ElementNode } from "./ElementNode"
+import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
+import type { ElementNode } from "./ElementNode"
 import { TransientNode } from "./TransientNode"
-import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 

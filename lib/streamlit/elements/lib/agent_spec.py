@@ -212,6 +212,16 @@ def _describe_props(props: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def proto_alt(proto: Any) -> str | None:
+    """The `alt` an element was given, as its proto carries it, or None.
+
+    Read from the proto because that is where each command's normalization has
+    already landed, and checked for presence because `""` is a real value: it
+    marks an image as decorative.
+    """
+    return proto.alt if proto.HasField("alt") else None
+
+
 def described_column_config(column_config_mapping: Any) -> Any:
     """Describe a column configuration from the mapping Streamlit resolved.
 

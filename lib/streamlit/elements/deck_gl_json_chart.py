@@ -680,6 +680,7 @@ class PydeckMixin:
                     key=pydeck_proto.id,
                     support="read_only_in_v1",
                     selection_mode=selection_mode,
+                    alt=agent_spec.proto_alt(pydeck_proto),
                 ),
             )
 
@@ -689,7 +690,9 @@ class PydeckMixin:
             "deck_gl_json_chart",
             pydeck_proto,
             layout_config=layout_config,
-            agent_props=agent_spec.element("pydeck_chart"),
+            agent_props=agent_spec.element(
+                "pydeck_chart", alt=agent_spec.proto_alt(pydeck_proto)
+            ),
         )
 
     @property

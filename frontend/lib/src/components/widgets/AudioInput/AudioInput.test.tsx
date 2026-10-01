@@ -27,9 +27,9 @@ import type {
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { FormClearHelper } from "src/components/widgets/Form/FormClearHelper"
+import type { FormClearHelper } from "src/components/widgets/Form/FormClearHelper"
 
-import AudioInput, { Props } from "./AudioInput"
+import AudioInput, { type Props } from "./AudioInput"
 
 const useWaveformControllerMock = vi.fn()
 const uploadFilesMock = vi.fn()

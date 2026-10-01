@@ -13,19 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
+import { type Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { AppNode, BlockNode } from "~lib/AppNode"
+import { type AppNode, BlockNode } from "~lib/AppNode"
 import { Direction } from "~lib/components/core/Layout/utils"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { ElementsSetVisitor } from "~lib/render-tree/visitors/ElementsSetVisitor"
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { getDividerColors } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isValidElementId } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export function getClassnamePrefix(direction: Direction): string {
   return direction === Direction.HORIZONTAL

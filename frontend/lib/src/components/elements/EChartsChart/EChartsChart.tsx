@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useMemo,
@@ -31,7 +31,7 @@ import { getLogger } from "loglevel"
 
 import {
   EChartsChart as EChartsChartProto,
-  streamlit,
+  type streamlit,
 } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -49,7 +49,7 @@ import {
   applyAltToOption,
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
-  EChartsOptionObject,
+  type EChartsOptionObject,
   insideDataZoomConsumesWheelEvent,
   optionHasInsideDataZoom,
   STREAMLIT_THEME,

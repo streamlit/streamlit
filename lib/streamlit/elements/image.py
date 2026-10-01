@@ -40,6 +40,8 @@ from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import Width
 
@@ -66,6 +68,7 @@ class ImageMixin:
         link: str | None = None,
         # Compatibility no-op for pre-1.61 callers.
         use_column_width: Any = None,
+        alt: str | Sequence[str | None] | None = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -165,10 +168,29 @@ class ImageMixin:
                 fully removed in a future version. Use ``width="stretch"``,
                 ``width="content"``, or an integer pixel value instead.
 
+        alt : str, sequence of str or None, or None
+            A description of the image(s) for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the image.
+
+            An empty string (``""``) marks the image as decorative. Whitespace-
+            only values are treated as ``None`` and logged. For multiple
+            images, pass a sequence of the same length (use ``None`` to skip
+            an image, or ``""`` for a decorative entry). A single string with
+            several images raises a ``StreamlitAPIException``.
+
+            Prefer describing what the image shows rather than repeating a
+            visible ``caption``. Caption and ``alt`` are independent; a
+            caption never becomes the image's ``alt``.
+
         Examples
         --------
         >>> import streamlit as st
-        >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
+        >>> st.image(
+        ...     "sunrise.jpg",
+        ...     caption="Sunrise by the mountains",
+        ...     alt="Sunrise over a mountain ridge",
+        ... )
 
         .. output::
            https://doc-image.streamlit.app/
@@ -213,6 +235,7 @@ class ImageMixin:
             clamp,
             channels,
             output_format,
+            alt=alt,
         )
 
         if link:
@@ -225,6 +248,11 @@ class ImageMixin:
                 )
             image_list_proto.link = link
 
+        # One entry per image, None where an image has no alt text. `""` is kept:
+        # it marks an image as decorative, which is not the same as unlabeled.
+        alts = [
+            img.alt if img.HasField("alt") else None for img in image_list_proto.imgs
+        ]
         return self.dg._enqueue(
             "imgs",
             image_list_proto,
@@ -235,6 +263,7 @@ class ImageMixin:
                 "image",
                 caption=[img.caption for img in image_list_proto.imgs] or None,
                 url=[img.url for img in image_list_proto.imgs] or None,
+                alt=alts if any(value is not None for value in alts) else None,
                 link=link,
             ),
         )

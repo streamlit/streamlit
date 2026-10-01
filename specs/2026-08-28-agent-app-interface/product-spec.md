@@ -1069,18 +1069,15 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
    session affinity for multi-worker deployments, and quotas. Brings use cases 2–4 to
    apps whose authors never opted in.
 2. **Authored descriptions** — a standalone project worth doing on its own accessibility
-   merits: static `app_title`/`app_description` on `st.App`, `page_description` on
-   `st.set_page_config` and optionally `st.Page`
-   ([#16878](https://github.com/streamlit/streamlit/issues/16878)), author-written
-   alternative text for images, charts, and tabular
-   displays ([#8563](https://github.com/streamlit/streamlit/issues/8563)), and `help` on
-   media ([#3133](https://github.com/streamlit/streamlit/issues/3133)). No such parameter
-   exists today, and `st.image` currently renders its `alt` attribute from an internal
-   loop key, so this fixes a real screen-reader defect before it does anything for
-   agents. One design question to settle deliberately: a universal `alt=` is attractive
-   for vocabulary consistency but collapses genuinely different accessibility semantics
-   across images, charts, tables, and audio, so element-appropriate public names
-   normalized into a single `description` field in the JSON may be the better shape.
+   merits. Element-level alternative text has landed
+   ([#8563](https://github.com/streamlit/streamlit/issues/8563)): `alt` exists on
+   images, `st.pyplot`, tables, dataframes, the data editor, charts, maps, Mermaid and
+   Graphviz diagrams, audio, video, iframes, and `st.pdf`, and the snapshot reports it
+   as `props.alt` — exactly the author-written meaning this interface exists to surface.
+   What remains is the app and page level: static `app_title`/`app_description` on
+   `st.App`, `page_description` on `st.set_page_config` and optionally `st.Page`
+   ([#16878](https://github.com/streamlit/streamlit/issues/16878)), and `help` on media
+   ([#3133](https://github.com/streamlit/streamlit/issues/3133)).
 3. **Lazy continuation.** Range reads for lazy dataframes, reusing the existing chunk
    machinery and its limits rather than building a query API.
 4. **Long-run handling.** `202` with an operation handle,

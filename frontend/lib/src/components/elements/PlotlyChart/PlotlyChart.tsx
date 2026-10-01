@@ -15,9 +15,9 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useMemo,
@@ -38,7 +38,7 @@ import useTimeout from "~lib/hooks/useTimeout"
 import Plot, {
   type Figure as PlotlyFigureType,
 } from "~lib/util/reactPlotlyCompat"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   migratePlotlyMapboxConfig,

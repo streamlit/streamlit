@@ -21,7 +21,7 @@ import type {
   streamlit,
 } from "@streamlit/protobuf"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 type SerializedLayer = {
   /** @see https://deck.gl/docs/api-reference/json/conversion-reference */

@@ -319,6 +319,7 @@ class MapMixin:
                 size=size if isinstance(size, str) else None,
                 color=color if isinstance(color, str) else None,
                 zoom=zoom,
+                alt=agent_spec.proto_alt(map_proto),
             ),
         )
 

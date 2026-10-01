@@ -27,7 +27,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import TextArea, { Props } from "./TextArea"
+import TextArea, { type Props } from "./TextArea"
 
 // Mock Element for tests
 class MockElement implements Element {

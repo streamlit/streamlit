@@ -22,7 +22,7 @@ import { Radio as RadioProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Radio, { Props } from "./Radio"
+import Radio, { type Props } from "./Radio"
 
 const getProps = (
   elementProps: Partial<RadioProto> = {},

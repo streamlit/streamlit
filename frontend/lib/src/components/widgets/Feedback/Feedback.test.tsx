@@ -22,7 +22,7 @@ import { Feedback as FeedbackProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Feedback, { Props } from "./Feedback"
+import Feedback, { type Props } from "./Feedback"
 
 const getProps = (
   elementProps: Partial<FeedbackProto> = {},

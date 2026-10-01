@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, ReactNode, useEffect } from "react"
+import { memo, type ReactElement, type ReactNode, useEffect } from "react"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledForm } from "./styled-components"
 

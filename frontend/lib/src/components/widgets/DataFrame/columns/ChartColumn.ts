@@ -15,11 +15,11 @@
  */
 
 import {
-  GridCell,
+  type GridCell,
   GridCellKind,
-  LoadingCell,
+  type LoadingCell,
 } from "@glideapps/glide-data-grid"
-import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
+import type { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
 import { resolveNamedColor } from "~lib/theme/getColors"
 import type { ChartColor, EmotionTheme } from "~lib/theme/types"
@@ -27,8 +27,8 @@ import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getEmptyCell,
   getErrorCell,
   mergeColumnParameters,

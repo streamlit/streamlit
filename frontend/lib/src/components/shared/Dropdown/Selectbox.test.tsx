@@ -25,7 +25,7 @@ import { render } from "~lib/test_util"
 import * as MobileUtil from "~lib/util/isMobile"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import Selectbox, { getInsertedText, Props } from "./Selectbox"
+import Selectbox, { getInsertedText, type Props } from "./Selectbox"
 
 vi.mock("~lib/WidgetStateManager")
 

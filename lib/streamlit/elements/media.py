@@ -262,6 +262,7 @@ class MediaMixin:
                 # The already-registered media URL, which is all a non-browser
                 # client can act on.
                 url=audio_proto.url or None,
+                alt=agent_spec.proto_alt(audio_proto),
                 format=format,
                 start_time=start_time,
                 end_time=end_time,
@@ -472,6 +473,7 @@ class MediaMixin:
             agent_props=agent_spec.element(
                 "video",
                 url=video_proto.url or None,
+                alt=agent_spec.proto_alt(video_proto),
                 format=video_proto.type or None,
                 start_time=start_time,
                 end_time=end_time,

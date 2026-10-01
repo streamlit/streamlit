@@ -245,6 +245,44 @@ describe("MermaidChart", () => {
 
     it.each([
       {
+        name: "Streamlit stAlt marker before diagram type",
+        source: [
+          "%% stAlt: Streamlit taxonomy",
+          "mindmap",
+          "root((App))",
+        ].join("\n"),
+        expectedAlt: "Streamlit taxonomy",
+      },
+      {
+        name: "Streamlit stAlt marker after diagram type",
+        source: [
+          "mindmap",
+          "%% stAlt: Streamlit taxonomy",
+          "root((App))",
+        ].join("\n"),
+        expectedAlt: "Streamlit taxonomy",
+      },
+      {
+        name: "stAlt preferred over accTitle",
+        source: [
+          "flowchart TD",
+          "%% stAlt: From Streamlit",
+          "accTitle: From Mermaid",
+          "A-->B",
+        ].join("\n"),
+        expectedAlt: "From Streamlit",
+      },
+      {
+        name: "empty stAlt does not capture the next line",
+        source: [
+          "%% stAlt:",
+          "accTitle: Checkout",
+          "flowchart TD",
+          "A-->B",
+        ].join("\n"),
+        expectedAlt: "Checkout",
+      },
+      {
         name: "title and description",
         source: [
           "flowchart TD",
@@ -280,15 +318,12 @@ describe("MermaidChart", () => {
         ].join("\n"),
         expectedAlt: "First line Second line",
       },
-    ])(
-      "uses $name from accessibility directives",
-      async ({ source, expectedAlt }) => {
-        render(<MermaidChart source={source} />)
+    ])("uses $name for the image alt", async ({ source, expectedAlt }) => {
+      render(<MermaidChart source={source} />)
 
-        const img = await waitForChartImage()
-        expect(img).toHaveAttribute("alt", expectedAlt)
-      }
-    )
+      const img = await waitForChartImage()
+      expect(img).toHaveAttribute("alt", expectedAlt)
+    })
 
     it.each([
       {
