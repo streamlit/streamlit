@@ -37,8 +37,10 @@
       Machine-readable pointer to the agent API's own description, per RFC 8631.
       Always present: the endpoint answers whether or not the API is enabled, so
       following this link reports which, and enabling it needs no HTML change.
+      Relative, like the static assets, so it resolves under a base URL path or
+      a hosting prefix.
     -->
-    <link rel="service-desc" href="/_stcore/agent/v1/openapi.json" />
+    <link rel="service-desc" href="./_stcore/agent/v1/openapi.json" />
 
     <!-- initialize window.prerenderReady to false and then set to true in React app when app is ready for indexing -->
     <script>
@@ -62,12 +64,13 @@
       </p>
       <p>
         Start at
-        <a href="/_stcore/agent/v1/openapi.json"
-          >/_stcore/agent/v1/openapi.json</a
-        >, which describes the protocol, or reports that this app does not
-        offer it. The same interface is also an MCP server at
-        <code>/_stcore/agent/v1/mcp</code>, for AI applications that connect to
-        MCP servers by URL.
+        <a href="./_stcore/agent/v1/openapi.json"
+          >_stcore/agent/v1/openapi.json</a
+        >
+        under this app's URL, which describes the protocol, or reports that
+        this app does not offer it. The same interface is also an MCP server at
+        <code>_stcore/agent/v1/mcp</code> under the same URL, for AI
+        applications that connect to MCP servers by URL.
       </p>
     </noscript>
     <div id="root"></div>

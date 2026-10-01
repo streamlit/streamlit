@@ -114,3 +114,17 @@ The guess fails in two directions. Under load, as in CI, the gap between one run
 finishing and a queued run starting can exceed 50 ms, so the response describes an
 intermediate state while the app keeps running. In the common case it adds 50 ms to
 every interaction for no reason.
+
+## Build the snapshot's values on the script thread
+
+The snapshot is assembled on the server's event loop after the run settles. Two parts of
+it are more than reading: a widget's `value` goes through `st.session_state`, which
+deserializes and caches, and through the widget's serializer, which runs the app's own
+`format_func`; and compacting a settled run reads every table's Arrow buffer to build its
+preview. A slow `format_func` or a large table therefore stalls every session the
+server holds, and a run that starts meanwhile — a rerun on file save, or the run a
+timed-out interaction left going — can change the state being read.
+
+Capturing those values on the script thread, at the end of the run that produced them,
+would leave the event loop only serializing finished data. The natural place is the same
+hook that already decides when a run's stale deltas are dropped.

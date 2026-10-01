@@ -86,6 +86,10 @@ class AgentSessionClient(SessionClient):
     run before it emits anything, so clearing at the start would throw away the
     app and leave a snapshot containing nothing but the fragment.
 
+    One deliberate difference: a compile error prunes too. The browser keeps
+    the previous page visible behind the error, but a snapshot of it would
+    offer actions for a script that no longer runs.
+
     Cached-message references are never produced for this client because it does
     not advertise cached hashes, so every message arrives with its payload.
     """
@@ -94,6 +98,11 @@ class AgentSessionClient(SessionClient):
         # Deltas with the id of the run that produced them, in arrival order,
         # so a later write to the same position wins.
         self._deltas: list[tuple[str, ForwardMsg]] = []
+        # Where in `_deltas` the current run last wrote an element at each
+        # position. An element rewritten in place -- `st.write_stream` chunks,
+        # a progress loop, a placeholder updated in a loop -- then replaces its
+        # earlier write instead of piling up until the run ends.
+        self._element_at: dict[tuple[int, ...], int] = {}
         # Standing facts about the app -- the page list, the title, how the last
         # run ended. Only the most recent of each kind matters, and a fragment
         # run does not re-emit them, so they are kept by type rather than
@@ -114,10 +123,11 @@ class AgentSessionClient(SessionClient):
         if msg_type == "new_session":
             self._run_id = msg.new_session.script_run_id
             self.fragments_last_run = list(msg.new_session.fragment_ids_this_run)
+            self._element_at = {}
             self._run_finished.clear()
 
         if msg_type == "delta":
-            self._deltas.append((self._run_id, msg))
+            self._add_delta(msg)
             return
 
         if msg_type == "page_info_changed":
@@ -130,6 +140,20 @@ class AgentSessionClient(SessionClient):
             self._drop_stale_deltas()
             self._compact_deltas()
             self._run_finished.set()
+
+    def _add_delta(self, msg: ForwardMsg) -> None:
+        position = tuple(msg.metadata.delta_path)
+        if msg.delta.WhichOneof("type") == "new_element":
+            index = self._element_at.get(position)
+            if index is not None:
+                self._deltas[index] = (self._run_id, msg)
+                return
+            self._element_at[position] = len(self._deltas)
+        else:
+            # A block written here supersedes the element, and an element
+            # written after it has to come after it, so stop replacing.
+            self._element_at.pop(position, None)
+        self._deltas.append((self._run_id, msg))
 
     def _compact_deltas(self) -> None:
         """Hold each table's and chart's summary rather than its bulk payload.
@@ -150,6 +174,8 @@ class AgentSessionClient(SessionClient):
         replaces only its own region and leaves the rest of the app standing.
         """
         running = set(self.fragments_last_run)
+        # Indexes into the list being rebuilt.
+        self._element_at = {}
         self._deltas = [
             (run_id, msg)
             for run_id, msg in self._deltas
@@ -206,7 +232,9 @@ class _Interaction:
     action: dict[str, Any]
     # The query string the request sent, kept unless the run reports a change.
     query_string: str
-    page: Any
+    # A `page` handed to the runtime unresolved, which can only be checked once
+    # the run has produced the page list.
+    unverified_page: str | None
 
 
 @dataclass
@@ -367,7 +395,9 @@ async def interact(
 
     try:
         async with session.lock:
-            return await _run_interaction(runtime, session, request)
+            return await _run_interaction(
+                runtime, session, request, is_new_session=is_new_session
+            )
     except AgentRequestError as exc:
         # A creating call that fails after the session exists has still run the
         # app, so the session is real and usable. Hand its id back rather than
@@ -381,6 +411,8 @@ async def _run_interaction(
     runtime: Runtime,
     session: AgentSession,
     request: dict[str, Any],
+    *,
+    is_new_session: bool,
 ) -> dict[str, Any]:
     app_session = _app_session(runtime, session)
 
@@ -424,8 +456,13 @@ async def _run_interaction(
     if context_info is not None:
         rerun.context_info.CopyFrom(context_info)
 
+    unverified_page: str | None = None
     if page is not None:
-        page_hash, page_name = _resolve_page(app_session, page)
+        page_hash, page_name = _resolve_page(
+            app_session, page, can_defer=is_new_session
+        )
+        if not page_hash:
+            unverified_page = page_name
         if page_hash != rerun.page_script_hash:
             rerun.query_string = _query_string_for_page_change(
                 app_session.session_state.query_params, rerun.query_string
@@ -467,7 +504,11 @@ async def _run_interaction(
     return await _settle(
         app_session,
         session,
-        _Interaction(action=action, query_string=rerun.query_string, page=page),
+        _Interaction(
+            action=action,
+            query_string=rerun.query_string,
+            unverified_page=unverified_page,
+        ),
     )
 
 
@@ -505,31 +546,31 @@ async def _settle(
     session.element_states = result.element_states
     session.last_used = time.monotonic()
 
-    _verify_navigation_landed(interaction.page, result.document)
+    if interaction.unverified_page is not None:
+        _verify_page_exists(interaction.unverified_page, result.document)
     return result.document
 
 
-def _verify_navigation_landed(requested_page: Any, document: dict[str, Any]) -> None:
-    """Reject a `page` that the app did not actually navigate to.
+def _verify_page_exists(url_path: str, document: dict[str, Any]) -> None:
+    """Reject a `page` that the run showed does not exist.
 
     On a creating call the page list does not exist yet, so `_resolve_page`
     hands an unrecognized path to the runtime rather than rejecting it -- which
     is right for a valid path, and silently lands on the default page for a
     typo. The page list exists by the time the run finishes, so check then. The
     run has already happened, which is why the message says so.
+
+    Checked against the page list rather than where the run ended up: an app
+    may redirect with `st.switch_page`, which is not the client's mistake.
     """
-    if not isinstance(requested_page, str):
-        return
-
-    landed = document.get("page", {}).get("url_path")
-    if landed is None or landed == requested_page.strip("/"):
-        return
-
     pages = document.get("pages", [])
     available = [page["url_path"] for page in pages]
+    if not pages or url_path in available:
+        return
+
     raise AgentRequestError(
         "unknown_page",
-        f"No page with url_path {requested_page!r}; the app ran its default "
+        f"No page with url_path {url_path!r}; the app ran its default "
         f"page instead. Available: {sorted(available)}.",
         # The page list is the whole remedy, so it travels as data rather than
         # only inside the message.
@@ -566,9 +607,15 @@ def _validate_request_shape(request: dict[str, Any]) -> None:
             "invalid_request",
             "`trigger` must be an object with a `key`, and at most one may be sent.",
         )
+    if trigger is not None and (extra := set(trigger) - {"key", "value"}):
+        raise AgentRequestError(
+            "invalid_request",
+            f"Unknown `trigger` fields: {', '.join(sorted(extra))}. A trigger "
+            "has a `key` and, for payload-bearing triggers, a `value`.",
+        )
 
 
-def _resolve_page(app_session: Any, page: Any) -> tuple[str, str]:
+def _resolve_page(app_session: Any, page: Any, *, can_defer: bool) -> tuple[str, str]:
     """Map a public ``url_path`` to a rerun target.
 
     Returns the internal page script hash when it is already known, and
@@ -577,6 +624,9 @@ def _resolve_page(app_session: Any, page: Any) -> tuple[str, str]:
     run once, so a creating call that names a page cannot look up a hash. The
     browser has the same problem on a cold load and solves it the same way, by
     sending ``page_name`` and letting the runtime resolve it.
+
+    Only a creating call defers. Once the app has run, its page list is known,
+    so an unknown path is refused before anything runs.
     """
     if not isinstance(page, str):
         raise AgentRequestError("invalid_request", "`page` must be a string.")
@@ -589,7 +639,7 @@ def _resolve_page(app_session: Any, page: Any) -> tuple[str, str]:
         if info.get("url_pathname", "") == url_path:
             return str(page_hash), ""
 
-    if known_paths <= {""}:
+    if can_defer and known_paths <= {""}:
         # Only the default page is registered, so the app has not declared its
         # pages yet. Hand the path to the runtime rather than guessing.
         return "", url_path

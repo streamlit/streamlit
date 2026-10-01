@@ -68,8 +68,6 @@ from __future__ import annotations
 import json
 from typing import Any, Final, Literal
 
-from streamlit import config
-
 # What a client may do with an element on the next interaction. ``value`` means
 # it holds a value that can be set; ``trigger`` means it can be fired once and
 # resets afterwards. Omit it for a display element.
@@ -119,11 +117,10 @@ def is_recording() -> bool:
     nothing, so its messages never carry a description and there is nothing to
     strip on the way out.
 
-    Two cheap checks in the order that fails fastest. On a server with the API
-    off -- the normal case -- this is one cached config read per element.
+    The set is checked first: it is empty unless the API is on and has a
+    session, so the normal case costs one set lookup per element and never
+    takes the config lock.
     """
-    if not config.get_option("server.enableAgentApi"):
-        return False
     if not _AGENT_SESSION_IDS:
         return False
 
@@ -197,8 +194,8 @@ def _describe_props(props: dict[str, Any]) -> dict[str, Any]:
     That matters most for a nested parameter object: the column type helpers
     build a full dict per column, so a `column_config` arrives carrying
     `"width": null, "help": null, "disabled": null, ...` for everything the
-    author did not set. On a real page that made `column_config` 17% of the
-    whole snapshot, two thirds of it nulls.
+    author did not set, which would make it one of the largest parts of a
+    snapshot.
 
     A caller that wants to say something with `None` has to say it another way,
     which Streamlit already does: `column_config={"Notes": None}` means hidden,

@@ -91,11 +91,17 @@ def serve_arrow_over_http(arrow_bytes: bytes, *, coordinates: str) -> str | None
         )
         return None
 
-    from streamlit.runtime import exists, get_instance
+    from streamlit.runtime import caching, exists, get_instance
 
     if not exists():
         # No runtime means no media storage and no HTTP server to fetch from,
         # which is the "python myscript.py" and bare-AppTest case.
         return None
 
-    return get_instance().media_file_mgr.add(arrow_bytes, ARROW_MIMETYPE, coordinates)
+    url = get_instance().media_file_mgr.add(arrow_bytes, ARROW_MIMETYPE, coordinates)
+    # Recorded like an image's bytes, so an element replayed from an
+    # `st.cache_data` result registers its file again: the replayed
+    # description carries this URL, and without that the file is collected
+    # after the run that replayed it.
+    caching.save_media_data(arrow_bytes, ARROW_MIMETYPE, coordinates)
+    return url

@@ -417,7 +417,8 @@ class TableMixin:
             proto,
             layout_config=layout_config,
             # The schema and row preview are derived facts and are filled in by
-            # the snapshot serializer from `arrow_data`.
+            # the snapshot serializer from `arrow_data`. Guarded before the
+            # call, because reading the Arrow bytes off the proto copies them.
             agent_props=agent_spec.element(
                 "table",
                 data_url=data_offload.serve_arrow_over_http(
@@ -428,7 +429,9 @@ class TableMixin:
                 hide_index=hide_index,
                 hide_header=hide_header,
                 alt=normalized_alt,
-            ),
+            )
+            if agent_spec.is_recording()
+            else None,
         )
 
     @property

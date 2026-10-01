@@ -80,6 +80,12 @@ _BULK_FIELDS: Final = {
 }
 _DATA_SUMMARY_KEY: Final = "data_summary"
 
+# Widgets whose wire value is text. Their serializer is what turns a stored
+# Python value into that text -- a `format_func` label, an ISO date -- so a
+# value reported through it is one a request can send back, whether or not the
+# widget registered an option list.
+_STRING_WIRE_TYPES: Final = {"string_value", "string_array_value"}
+
 _ROOT_CONTAINER_NAMES: Final = {
     RootContainer.MAIN: "main",
     RootContainer.SIDEBAR: "sidebar",
@@ -262,8 +268,8 @@ class _SnapshotBuilder:
 
         `st.empty()` reserves a slot and `st.space()` adds blank space, so an
         unfilled one of either says only "there is nothing here", which is what
-        its absence says too. Reporting them costs a fifth of the nodes on a
-        real page -- 15 of 85 on one -- for no reading a client can do.
+        its absence says too, and on a typical page they are a large share of
+        the nodes.
 
         Checked against the props rather than the name alone, so either command
         gaining something meaningful to say starts being reported again.
@@ -318,8 +324,12 @@ class _SnapshotBuilder:
         # registers one whose value is the open tab. Without this it would be
         # keyed in the tree but missing from `actions`, and the views behind its
         # other tabs would be unreachable.
-        if description.get("action") and (element_id := description.get("key")):
-            result["value"] = self._widget_value(element_id)
+        action = description.get("action")
+        if action and (element_id := description.get("key")):
+            value = self._widget_value(element_id)
+            # As for elements, a trigger's value only means anything while set.
+            if action == "value" or value:
+                result["value"] = value
         self._record_state(
             description, result, inherited_support, None, node.fragment_id
         )
@@ -328,7 +338,7 @@ class _SnapshotBuilder:
         return [result]
 
     def _note_fragment(self, node: _Node, result: dict[str, Any]) -> None:
-        """Report the fragment a node belongs to, and remember it was seen."""
+        """Report the fragment a node belongs to, if it belongs to one."""
         if node.fragment_id is None:
             return
         result["fragment"] = node.fragment_id
@@ -417,9 +427,10 @@ class _SnapshotBuilder:
         action = description.get("action")
         support = description.get("support") or inherited_support
         disabled = bool(props.get("disabled"))
-        # A trigger's choices, such as `st.menu_button`'s. A value widget's
-        # options are checked against the widget registry instead.
-        options = props.get("options")
+        # What a request may choose from: a trigger's choices, such as
+        # `st.menu_button`'s, and the options of a widget that registers none
+        # of its own. Not a limit for a widget that accepts new options.
+        options = None if props.get("accept_new_options") else props.get("options")
         actionable = bool(action) and not support and not disabled
 
         self.element_states[element_id] = ElementState(
@@ -484,7 +495,10 @@ class _SnapshotBuilder:
             return None
 
         metadata = self._session_state._new_widget_state.widget_metadata.get(element_id)
-        if metadata is not None and metadata.formatted_options is not None:
+        if metadata is not None and (
+            metadata.formatted_options is not None
+            or metadata.value_type in _STRING_WIRE_TYPES
+        ):
             try:
                 serialized = metadata.serializer(value)
                 if not isinstance(value, (list, tuple)) and isinstance(
@@ -642,9 +656,8 @@ def _figure_data(spec: Any) -> dict[str, Any] | None:
     """Describe a chart whose values live inside its own specification.
 
     The theme is dropped, because it is weight without meaning for a non-visual
-    client: Plotly's `layout.template` is about nine tenths of a small figure --
-    7.1 KB of a 7.6 KB bar chart -- and a page of them measured 549 KB on a live
-    app. Dropping it is named in `spec_omitted`, so a client can tell a trimmed
+    client: Plotly's `layout.template` is about nine tenths of a small figure.
+    Dropping it is named in `spec_omitted`, so a client can tell a trimmed
     figure from one the app never configured.
 
     Nothing else is dropped, at any size. For these charts the specification
@@ -696,10 +709,16 @@ def _deck_gl_row_count(spec: Any) -> int | None:
 
 
 def _parse_json(value: str) -> Any:
+    """Parse a chart or map specification for the response.
+
+    `NaN` and infinities become null, as they do in table previews: the
+    specifications are written with Python's lenient encoder, so a missing
+    value in a layer's data arrives as `NaN`, which strict JSON cannot carry.
+    """
     if not value:
         return None
     try:
-        return json.loads(value)
+        return json.loads(value, parse_constant=lambda _constant: None)
     except json.JSONDecodeError:
         return None
 
@@ -716,11 +735,11 @@ def _arrow_data(arrow_bytes: bytes) -> dict[str, Any] | None:
     except pa.ArrowInvalid:
         return None
 
-    columns = [
-        (name, dtype)
-        for name, dtype in zip(table.schema.names, table.schema.types, strict=True)
-        if not _is_index_column(name)
-    ]
+    # Every column the bytes behind `data.url` carry, under the same names, so
+    # the reported schema is the schema of what a client fetches. That
+    # includes an unnamed, non-range index, which pandas stores as
+    # `__index_level_N__` and `st.dataframe` displays.
+    columns = list(zip(table.schema.names, table.schema.types, strict=True))
     limit = _preview_row_limit()
     preview = table.slice(0, limit)
     return {
@@ -735,27 +754,14 @@ def _arrow_data(arrow_bytes: bytes) -> dict[str, Any] | None:
             "truncated": table.num_rows > limit,
             # Rows are values in `columns` order rather than objects, because
             # repeating the column names on every row is most of a preview's
-            # size once it gets long: a 100-row catalog halves. Types and nested
-            # cells survive, which is what a CSV blob would cost -- and a CSV
-            # inside a JSON string escapes its own quotes twice, so it does not
-            # even come out smaller.
+            # size once it gets long. Types and nested cells survive, which a
+            # CSV blob would cost without coming out smaller.
             "rows": [
                 [json_encoding.to_json_value(row[name]) for name, _ in columns]
                 for row in preview.to_pylist()
             ],
         },
     }
-
-
-def _is_index_column(name: str) -> bool:
-    """True for a column that only exists to carry a dataframe's index.
-
-    pandas serializes a non-trivial index into the Arrow buffer as
-    ``__index_level_N__``. It is positional bookkeeping rather than data, and
-    reporting it would put a column in the snapshot that the app never
-    displayed and that no author named.
-    """
-    return name.startswith("__index_level_") or name == "__index__"
 
 
 def rebase_media_urls(
@@ -769,7 +775,8 @@ def rebase_media_urls(
     root: as is, behind ``server.baseUrlPath`` or a hosting prefix, a table's
     ``data.url`` is a 404 or a login redirect.
 
-    Only ``data.url`` and the ``url`` and ``src`` props are touched, and only
+    Only ``data.url`` and the ``url``, ``src``, and ``avatar`` props are
+    touched, and only
     values under ``media_path``, so an external link an app displays is never
     rewritten.
     """
@@ -788,7 +795,7 @@ def rebase_media_urls(
             data["url"] = rebase(data["url"])
         props = node.get("props")
         if isinstance(props, dict):
-            for name in ("url", "src"):
+            for name in ("url", "src", "avatar"):
                 if name in props:
                     props[name] = rebase(props[name])
         for child in node.get("children") or []:

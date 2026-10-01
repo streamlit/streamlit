@@ -2814,6 +2814,10 @@ class VegaChartsMixin:
         encoding arguments are only known at the command -- so both halves meet
         here.
         """
+        # Checked first: reading the buffers off the proto copies them, which a
+        # browser session would pay for nothing.
+        if not agent_spec.is_recording():
+            return None
         buffers = agent_spec.vega_arrow_buffers(proto)
         return agent_spec.element(
             command,

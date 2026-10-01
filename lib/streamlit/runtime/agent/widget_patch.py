@@ -29,7 +29,6 @@ from __future__ import annotations
 import datetime
 import json
 import math
-import operator
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -49,11 +48,11 @@ if TYPE_CHECKING:
 class AgentRequestError(Exception):
     """A request the interface refuses.
 
-    Usually nothing has executed. The exception is a creating call that could
-    only be judged after the app ran -- an unrecognized ``page``, which cannot
-    be checked until the page list exists. Those carry ``session_id`` so the
-    caller can continue with or close the session that was created, instead of
-    leaking it until its TTL expires.
+    Usually nothing has executed. Two cases have: ``run_timed_out``, whose run
+    is still going, and a creating call whose ``page`` could only be judged
+    after the app ran, because the page list did not exist before. A creating
+    call that fails after its session exists carries ``session_id``, so the
+    caller can continue with that session rather than strand it.
     """
 
     def __init__(
@@ -206,11 +205,17 @@ def build_widget_states(
                 "interface cannot supply.",
             )
 
-        _validate_options(key, metadata, value)
-        _validate_bounded(
-            key, element_states[element_id], value, clearable=metadata.clearable
+        state = element_states[element_id]
+        _validate_options(key, metadata, value, advertised=state.options)
+        _validate_bounded(key, state, value, clearable=metadata.clearable)
+        states.widgets.append(
+            _encode(
+                element_id,
+                metadata.value_type,
+                _temporal_to_wire(key, metadata, value),
+                key,
+            )
         )
-        states.widgets.append(_encode(element_id, metadata.value_type, value, key))
         touched_forms.add(_form_of(element_states, element_id))
 
     submitted_form: str | None = None
@@ -324,15 +329,48 @@ def _is_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
-def _comparable(left: Any, right: Any) -> bool:
-    """Whether two advertised values can be ordered against each other.
+def _parse_iso(value: Any) -> datetime.date | datetime.time | None:
+    """The date, time, or datetime that ISO text denotes, or None."""
+    if not isinstance(value, str):
+        return None
+    parsers: tuple[Any, ...] = (
+        datetime.date.fromisoformat,
+        datetime.datetime.fromisoformat,
+        datetime.time.fromisoformat,
+    )
+    for parse in parsers:
+        try:
+            parsed: datetime.date | datetime.time = parse(value)
+            return parsed
+        except ValueError:  # noqa: PERF203
+            continue
+    return None
 
-    Dates, times, and datetimes are reported as ISO strings, which sort in
-    chronological order, so bounds on them are ordinary string comparisons.
+
+def _ordering(value: Any) -> Any:
+    """What a bounds check orders a value by, or None if it cannot be ordered.
+
+    Dates, times, and datetimes are reported as ISO text, which does not order
+    them reliably -- `10:00:00` sorts after `10:00` -- so they are compared as
+    what they denote.
     """
-    if _is_number(left) and _is_number(right):
-        return True
-    return isinstance(left, str) and isinstance(right, str)
+    return value if _is_number(value) else _parse_iso(value)
+
+
+def _precedes(left: Any, right: Any) -> bool | None:
+    """Whether ``left`` orders before ``right``, or None if they cannot be ordered."""
+    left_key, right_key = _ordering(left), _ordering(right)
+    if left_key is None or right_key is None:
+        return None
+    if not (_is_number(left_key) and _is_number(right_key)) and type(
+        left_key
+    ) is not type(right_key):
+        return None
+    try:
+        return bool(left_key < right_key)
+    except TypeError:
+        # A timezone-aware value against a naive one.
+        return None
 
 
 def _validate_bounded(
@@ -374,28 +412,31 @@ def _validate_bounded(
             "invalid_value",
             f"{key!r} takes a single value, like {expected!r}; got {value!r}.",
         )
-    elif value is None and not clearable:
+    elif value is None:
         # A widget that started empty, such as `st.number_input(value=None)`,
         # can be emptied again; one that started with a value cannot.
+        if clearable:
+            return
         raise AgentRequestError(
             "invalid_value",
             f"{key!r} cannot be cleared; it always holds a value.",
         )
 
     for item in value if isinstance(value, list) else [value]:
-        for bound, comparison, label in (
-            (state.min_value, operator.lt, "below the minimum"),
-            (state.max_value, operator.gt, "above the maximum"),
+        for below, bound, label in (
+            (True, state.min_value, "below the minimum"),
+            (False, state.max_value, "above the maximum"),
         ):
             if bound is None:
                 continue
-            if not _comparable(item, bound):
+            outside = _precedes(item, bound) if below else _precedes(bound, item)
+            if outside is None:
                 raise AgentRequestError(
                     "invalid_value",
                     f"{item!r} is not a value {key!r} accepts; its range is "
                     f"{state.min_value!r} to {state.max_value!r}.",
                 )
-            if comparison(item, bound):
+            if outside:
                 raise AgentRequestError(
                     "invalid_value",
                     f"{item!r} is {label} for {key!r} ({bound!r}).",
@@ -405,16 +446,31 @@ def _validate_bounded(
     # app renders an empty result rather than reporting a bad request.
     if isinstance(value, list) and len(value) == 2:
         low, high = value
-        if _comparable(low, high) and low > high:
+        if _precedes(high, low):
             raise AgentRequestError(
                 "invalid_value",
                 f"The range for {key!r} is reversed: {low!r} is greater than {high!r}.",
             )
 
 
-def _validate_options(key: str, metadata: WidgetMetadata[Any], value: Any) -> None:
-    """Reject values outside a selection widget's declared options."""
-    options = metadata.formatted_options
+def _validate_options(
+    key: str,
+    metadata: WidgetMetadata[Any],
+    value: Any,
+    *,
+    advertised: list[Any] | None,
+) -> None:
+    """Reject values outside a selection widget's declared options.
+
+    The widget registry's list is preferred, and the snapshot's stands in for a
+    widget that registers none, such as `st.select_slider`. Neither exists for
+    a widget that accepts new options.
+    """
+    options = (
+        metadata.formatted_options
+        if metadata.formatted_options is not None
+        else advertised
+    )
     if options is None:
         return
 
@@ -437,6 +493,33 @@ def _validate_options(key: str, metadata: WidgetMetadata[Any], value: Any) -> No
             "invalid_value",
             f"{key!r} accepts at most {metadata.max_array_length} selections.",
         )
+
+
+def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> Any:
+    """Turn the ISO text a temporal slider reports into what it carries.
+
+    A date, time, or datetime slider is reported in ISO text but sends
+    microseconds, and the widget's own serializer is what defines that mapping.
+    Anything else passes through unchanged.
+    """
+    if metadata.value_type != "double_array_value":
+        return value
+    items = value if isinstance(value, list) else [value]
+    if not any(isinstance(item, str) for item in items):
+        return value
+    parsed = [_parse_iso(item) for item in items]
+    if any(item is None for item in parsed):
+        raise AgentRequestError(
+            "invalid_value",
+            f"{value!r} is not a value {key!r} accepts; send ISO dates or times "
+            "like the snapshot reports.",
+        )
+    try:
+        return metadata.serializer(parsed if isinstance(value, list) else parsed[0])
+    except Exception as exc:
+        raise AgentRequestError(
+            "invalid_value", f"{value!r} is not a value {key!r} accepts."
+        ) from exc
 
 
 def _encode(

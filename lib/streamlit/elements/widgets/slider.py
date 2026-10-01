@@ -1117,6 +1117,11 @@ class SliderMixin:
             # Empty list, so let's just use the outer bounds
             prepared_value = [min_value, max_value]
 
+        # The effective bounds and step in their own types, for the agent API:
+        # below, dates and times become microseconds, which is the wire format
+        # rather than anything a client could compare a date against.
+        described_bounds = (min_value, max_value, step)
+
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we re-raise as StreamlitJSNumberBoundsError.
         # (We check `min_value` and `max_value` here; `value` and `step` are
@@ -1297,12 +1302,9 @@ class SliderMixin:
                 key=element_id,
                 action="value",
                 label=label,
-                # The authored bounds and step, in their own types. The proto
-                # stores all three as doubles regardless of whether the slider
-                # is over ints, dates, or times.
-                min_value=min_value,
-                max_value=max_value,
-                step=step,
+                min_value=described_bounds[0],
+                max_value=described_bounds[1],
+                step=described_bounds[2],
                 format=format,
                 help=help,
                 disabled=disabled,

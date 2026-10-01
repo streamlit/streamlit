@@ -92,6 +92,34 @@ def _refused_host(request: Request) -> bool:
     return True
 
 
+async def _read_body(request: Request, limit: int) -> bytes | None:
+    """The request body, or None once it is larger than ``limit`` bytes.
+
+    Checked while reading rather than after, so an oversized body is refused
+    without being held in memory first.
+    """
+    declared = request.headers.get("Content-Length", "")
+    if declared.isdigit() and int(declared) > limit:
+        return None
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > limit:
+            return None
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _reject_constant(constant: str) -> None:
+    raise json.JSONDecodeError(f"{constant} is not valid JSON", constant, 0)
+
+
+def _parse_body(body: bytes) -> Any:
+    """Parse a request body as strict JSON, which has no NaN or Infinity."""
+    return json.loads(body, parse_constant=_reject_constant)
+
+
 def _error_body(
     code: str,
     message: str,
@@ -204,10 +232,23 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         return _json_response(_error_body(code, message), status)
 
     def _json_response(body: dict[str, Any], status: int) -> JSONResponse:
-        response = JSONResponse(body, status_code=status)
+        try:
+            response = JSONResponse(body, status_code=status)
+        except ValueError:
+            # A value strict JSON cannot carry, such as NaN, slipped into the
+            # document. Fail as an error the client can read, not a bare 500.
+            _LOGGER.exception("Agent API response is not valid JSON")
+            response = JSONResponse(
+                _error_body(
+                    "internal_error",
+                    "The response could not be encoded as JSON.",
+                ),
+                status_code=error_status("internal_error"),
+            )
         # Point a caller at the protocol description from every response,
-        # errors most of all.
-        response.headers["Link"] = f'<{schema_path}>; rel="service-desc"'
+        # errors most of all. Relative to the request, like every URL here: the
+        # document sits beside the operation that answered.
+        response.headers["Link"] = '<openapi.json>; rel="service-desc"'
         return response
 
     async def _interact_endpoint(request: Request) -> JSONResponse:
@@ -225,8 +266,8 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         # The same bound the WebSocket handler applies to an inbound frame, so
         # the agent path is no more permissive than the browser path.
         max_request_bytes = get_max_widget_state_size_bytes()
-        body = await request.body()
-        if len(body) > max_request_bytes:
+        body = await _read_body(request, max_request_bytes)
+        if body is None:
             return _error(
                 "invalid_request",
                 f"Request body exceeds {max_request_bytes} bytes.",
@@ -234,7 +275,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             )
 
         try:
-            payload: Any = json.loads(body) if body.strip() else {}
+            payload: Any = _parse_body(body) if body.strip() else {}
         except json.JSONDecodeError as exc:
             return _error(
                 "invalid_request", f"Body is not valid JSON: {exc.msg}.", status=400
@@ -266,8 +307,8 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             )
 
         max_request_bytes = get_max_widget_state_size_bytes()
-        body = await request.body()
-        if len(body) > max_request_bytes:
+        body = await _read_body(request, max_request_bytes)
+        if body is None:
             return JSONResponse(
                 mcp.error_response(
                     None,
@@ -277,7 +318,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 status_code=413,
             )
         try:
-            message: Any = json.loads(body)
+            message: Any = _parse_body(body)
         except json.JSONDecodeError as exc:
             return JSONResponse(
                 mcp.error_response(

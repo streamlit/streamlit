@@ -1278,25 +1278,37 @@ class ArrowMixin:
             width=width, height=height if height != "auto" else None
         )
 
-        # The schema, row counts, and row preview deliberately stay out of this
-        # description: they are derived facts rather than parameters, and how
-        # much of them to include is a response-budget decision only the
-        # snapshot serializer can make. It reads them from `arrow_data`.
-        agent_props = agent_spec.element(
-            "dataframe",
-            data_url=data_offload.serve_arrow_over_http(
-                proto.arrow_data.data, coordinates=self.dg._get_delta_path_str()
-            ),
-            # Selections cannot be sent through this interface. A display-only
-            # table has nothing to send, so it is fully supported.
-            support="read_only_in_v1" if is_selection_activated else None,
-            column_config=agent_spec.described_column_config(column_config_mapping),
-            column_order=list(column_order) if column_order else None,
-            hide_index=hide_index,
-            selection_mode=sorted(selection_mode_set) or None,
-            row_height=row_height,
-            alt=normalized_alt,
-        )
+        def describe() -> str | None:
+            """The agent-API description, built once `proto.id` is set.
+
+            Guarded up front because the arguments are not free: reading the
+            Arrow bytes off the proto copies them, which a browser session
+            would pay for nothing. The schema, row counts, and row preview
+            stay out of the description: they are derived facts, read by the
+            snapshot serializer from the payload.
+            """
+            if not agent_spec.is_recording():
+                return None
+            return agent_spec.element(
+                "dataframe",
+                key=proto.id or None,
+                data_url=data_offload.serve_arrow_over_http(
+                    proto.arrow_data.data or proto.lazy_data.initial_chunk.data,
+                    coordinates=self.dg._get_delta_path_str(),
+                ),
+                # Selections and button columns cannot be driven through this
+                # interface. A display-only table has nothing to drive, so it
+                # is fully supported.
+                support="read_only_in_v1"
+                if is_selection_activated or button_columns
+                else None,
+                column_config=agent_spec.described_column_config(column_config_mapping),
+                column_order=list(column_order) if column_order else None,
+                hide_index=hide_index,
+                selection_mode=sorted(selection_mode_set) or None,
+                row_height=row_height,
+                alt=normalized_alt,
+            )
 
         if is_selection_activated:
             # If selection events are activated, we need to register the dataframe
@@ -1370,7 +1382,7 @@ class ArrowMixin:
                     proto,
                     layout_config=layout_config,
                     has_one_shot_effect=True,
-                    agent_props=agent_props,
+                    agent_props=describe(),
                 )
                 # Eagerly wrap like deserialize so nested selection identity
                 # stays stable on this one-shot programmatic path.
@@ -1386,11 +1398,11 @@ class ArrowMixin:
                 "dataframe",
                 proto,
                 layout_config=layout_config,
-                agent_props=agent_props,
+                agent_props=describe(),
             )
             return DataframeState(widget_state.value)
         return self.dg._enqueue(
-            "dataframe", proto, layout_config=layout_config, agent_props=agent_props
+            "dataframe", proto, layout_config=layout_config, agent_props=describe()
         )
 
     @property

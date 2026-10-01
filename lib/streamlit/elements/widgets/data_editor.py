@@ -1524,7 +1524,8 @@ class DataEditorMixin:
             layout_config=layout_config,
             # st.dataframe and st.data_editor share this proto. The schema and
             # row preview are derived facts, filled in by the snapshot
-            # serializer from `arrow_data`.
+            # serializer from `arrow_data`. Guarded before the call, because
+            # reading the Arrow bytes off the proto copies them.
             agent_props=agent_spec.element(
                 "data_editor",
                 key=proto.id or None,
@@ -1544,7 +1545,9 @@ class DataEditorMixin:
                 num_rows=num_rows,
                 disabled=disabled is True,
                 alt=normalized_alt,
-            ),
+            )
+            if agent_spec.is_recording()
+            else None,
         )
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 

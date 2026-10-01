@@ -40,9 +40,10 @@ from streamlit.runtime.agent.snapshot import SCHEMA_VERSION
 
 # Every failure the route can report, as code -> (HTTP status, meaning).
 #
-# These are the request-level failures, which are the client's fault and never
-# execute app code. A run that raised is not one of them: it is a 200 with
-# ``status: "error"`` and a truncated tree, because the script did run.
+# Request-level outcomes. Most are refusals before any app code runs; the
+# exceptions are `run_timed_out`, whose run is still going, and `unknown_page`
+# on a creating call, judged after the run. A run that raised is not one of
+# them: it is a 200 with ``status: "error"`` and a truncated tree.
 ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
     "invalid_request": (
         400,
@@ -1050,10 +1051,11 @@ def schemas() -> dict[str, Any]:
             "required": ["error"],
             "description": (
                 "A refused request. Nothing ran and the app is unchanged, so "
-                "the previous snapshot is still current -- except for a "
-                "creating call that named an unrecognized `page`, which can "
-                "only be judged after the app has run. That case carries "
-                "`session_id`."
+                "the previous snapshot is still current -- except for "
+                "`run_timed_out`, whose run is still going, and a creating call "
+                "that named an unrecognized `page`, which can only be judged "
+                "after the app has run. A creating call that fails once its "
+                "session exists carries that `session_id`."
             ),
             "properties": {
                 "session_id": {

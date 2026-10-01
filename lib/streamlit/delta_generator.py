@@ -528,9 +528,9 @@ class DeltaGenerator(
         element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
         agent_props : str or None
-            Semantic properties the command supplied for the agent API that its
-            proto cannot carry, from ``agent_spec.inline_props``. ``None``
-            whenever the agent API is off, which is the normal case.
+            The command's description for the agent API, from
+            ``agent_spec.element``. ``None`` for every session the agent API
+            did not create, which is the normal case.
 
         Returns
         -------

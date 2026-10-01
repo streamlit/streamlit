@@ -27,9 +27,6 @@ import enum
 import math
 from typing import Any
 
-# ISO 8601, which is what the public API accepts back.
-_DATE_FORMAT = "date"
-
 
 def to_json_value(value: Any) -> Any:
     """Convert a Python value into its JSON representation.
@@ -59,6 +56,7 @@ def to_json_value(value: Any) -> Any:
         # someone choose Decimal.
         return str(value)
 
+    # ISO 8601, which is also what the public API accepts back.
     if isinstance(value, datetime.datetime):
         return value.isoformat()
     if isinstance(value, datetime.date):
