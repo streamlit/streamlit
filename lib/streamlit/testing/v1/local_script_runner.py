@@ -210,8 +210,10 @@ class LocalScriptRunner(ScriptRunner):
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
-        # Skip if the body never ran (nothing was re-registered, so everything
-        # would look orphaned) or no Runtime exists (get_instance() would raise).
+        # Skip orphan cleanup when:
+        # - The body never ran (nothing was re-registered, so everything
+        #   would look orphaned)
+        # - No Runtime exists (get_instance() would raise)
         if ctx.has_script_started and runtime.exists():
             runtime.get_instance().media_file_mgr.remove_orphaned_files()
 

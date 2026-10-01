@@ -45,6 +45,8 @@ from streamlit.watcher.util import calc_hash_with_blocking_retries
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from websockets.sync.client import ClientConnection
+
 _STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS = 30
 # Budget for opening the smoke WebSocket and, separately, for the session
 # from rerun request to script finish. Kept independent of the server-startup
@@ -334,26 +336,25 @@ def _run_streamlit_websocket_session(port: int, log_path: Path) -> None:
     last_connect_error: BaseException | None = None
     connect_deadline = time.monotonic() + _FIPS_SMOKE_SESSION_TIMEOUT_SECS
     while time.monotonic() < connect_deadline:
-        # Retry handshake failures only. Errors after the socket opens must
-        # propagate so a failed session is not retried as a new connect.
-        handshake_complete = False
+        # Retry handshake failures only. connect() completes the handshake
+        # eagerly, so keep the session outside this try: errors after the
+        # socket opens must propagate instead of being retried as a connect.
         try:
-            # Use connect() as a context manager so websockets 17.1+ does not
-            # warn and the client still closes if the session helper returns
-            # early.
-            with connect(
+            websocket = connect(
                 websocket_url,
                 open_timeout=min(5, max(0.1, connect_deadline - time.monotonic())),
                 **connect_kwargs,
-            ) as websocket:
-                handshake_complete = True
-                _drive_fips_smoke_websocket(websocket, rerun_request, log_path)
-                return
+            )
         except (OSError, InvalidHandshake) as ex:
-            if handshake_complete:
-                raise
             last_connect_error = ex
             time.sleep(0.2)
+            continue
+        # Use the connection as a context manager so websockets 17.1+ does
+        # not warn and the client still closes if the session helper returns
+        # early.
+        with websocket:
+            _drive_fips_smoke_websocket(websocket, rerun_request, log_path)
+        return
 
     _fail_with_server_log(
         log_path,
@@ -363,7 +364,7 @@ def _run_streamlit_websocket_session(port: int, log_path: Path) -> None:
 
 
 def _drive_fips_smoke_websocket(
-    websocket: Any, rerun_request: bytes, log_path: Path
+    websocket: ClientConnection, rerun_request: bytes, log_path: Path
 ) -> None:
     """Send the rerun request and wait for the smoke marker and a successful finish."""
     saw_smoke_marker = False
@@ -406,8 +407,9 @@ def _drive_fips_smoke_websocket(
         )
     finally:
         # Close is best-effort: a close-handshake timeout must not replace the
-        # session result. Close here before connect()'s context manager exits
-        # so its close cannot mask the outcome.
+        # session result. Close here with errors suppressed so connect()'s
+        # context-manager close is a no-op and cannot replace pytest.fail
+        # or a successful return.
         with contextlib.suppress(Exception):
             websocket.close()
 

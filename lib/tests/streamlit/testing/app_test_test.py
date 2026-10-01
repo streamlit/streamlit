@@ -16,12 +16,16 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit.runtime import Runtime
 from streamlit.runtime.pages_manager import PagesManager
+from streamlit.runtime.scriptrunner import ScriptRunnerEvent
 from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.testing.v1 import AppTest, local_script_runner
+from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.util import calc_hash
 
 
@@ -109,6 +113,28 @@ def test_local_script_runner_closes_loop_when_initialization_fails(
         for loop in created_loops:
             if not loop.is_closed():
                 loop.close()
+
+
+def test_local_script_runner_skips_orphan_cleanup_when_runtime_missing() -> None:
+    """LocalScriptRunner must not call get_instance when no Runtime exists."""
+    runner = MagicMock()
+    runner._session_state = MagicMock()
+    ctx = MagicMock()
+    ctx.has_script_started = True
+    ctx.shared.widget_ids_this_run.snapshot.return_value = frozenset()
+    previous_runtime = Runtime._instance
+    Runtime._instance = None
+    try:
+        with patch("streamlit.runtime.get_instance") as mock_get_instance:
+            LocalScriptRunner._on_script_finished(
+                runner,
+                ctx,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                premature_stop=False,
+            )
+        mock_get_instance.assert_not_called()
+    finally:
+        Runtime._instance = previous_runtime
 
 
 def test_from_file_str():
