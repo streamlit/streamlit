@@ -37,9 +37,9 @@ import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import type { FileUploadClient } from "~lib/FileUploadClient"
 import useDownloadUrl from "~lib/hooks/useDownloadUrl"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { plainTextWithBlockGaps } from "~lib/hooks/useLabelTitleTooltip"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
+import { plainTextWithBlockGaps } from "~lib/util/plainText"
 import { uploadFiles } from "~lib/util/uploadFiles"
 import {
   isNullOrUndefined,
@@ -583,7 +583,6 @@ const AudioInput: React.FC<Props> = ({
           isFullScreen={false}
           disableFullscreenMode={true}
           target={StyledWaveformContainerDiv}
-          labelContext={labelContext}
         >
           {recordingUrl && (
             <ToolbarAction

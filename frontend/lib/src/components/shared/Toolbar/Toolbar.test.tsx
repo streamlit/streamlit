@@ -345,6 +345,8 @@ describe("ToolbarAction Button element", () => {
   it("meets the 24px minimum target size", () => {
     render(<ToolbarAction {...getToolbarActionsProps()} />)
 
+    // Asserts the CSS rule is present (jsdom does not resolve max() to a used
+    // pixel value). Playwright snapshots cover the rendered WCAG 2.5.8 size.
     const button = screen.getByRole("button", { name: /^info$/ })
     expect(button).toHaveStyle("min-width: max(1.5rem, 24px)")
     expect(button).toHaveStyle("min-height: max(1.5rem, 24px)")

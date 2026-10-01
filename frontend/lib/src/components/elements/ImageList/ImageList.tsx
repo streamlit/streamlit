@@ -38,9 +38,9 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
-import { plainTextWithBlockGaps } from "~lib/hooks/useLabelTitleTooltip"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { plainTextWithBlockGaps } from "~lib/util/plainText"
 import { isDangerousLinkUri } from "~lib/util/UriUtil"
 import { isNullOrUndefined } from "~lib/util/utils"
 
@@ -125,9 +125,10 @@ const Image = ({
 
   // Watch the caption for text that arrives late: async Markdown plugins
   // (KaTeX, emoji) swap a loading skeleton for real content after the first
-  // render. Linked images use captionHasText; the parent may also need the
-  // rendered plain text for toolbar aria-labels. Skip the observer when
-  // neither consumer is active (e.g. unlinked gallery members).
+  // render. Linked images use captionHasText; the parent additionally asks
+  // for the rendered plain text when this is the only image and it has no
+  // alt. Skip the observer when neither consumer is active (for example,
+  // unlinked gallery members).
   useLayoutEffect(() => {
     const node = captionRef.current
     if ((!safeLink && !onCaptionPlainTextChange) || !image.caption || !node) {
@@ -207,16 +208,6 @@ const Image = ({
   )
 }
 
-/** Returns a single image's non-blank alt, or undefined for empty or multi-image lists. */
-function getSingleImageAltContext(
-  imgs: readonly ImageProto[]
-): string | undefined {
-  if (imgs.length !== 1) {
-    return undefined
-  }
-  return imgs[0].alt?.trim() || undefined
-}
-
 /**
  * Functional element for a horizontal list of images.
  */
@@ -279,13 +270,13 @@ function ImageList({
   // The gallery has one list-level Fullscreen button, so borrow a name only
   // when there is exactly one image; otherwise the button would be named after
   // an arbitrary member. Prefer alt, else the caption's rendered plain text.
-  const isSingleImage = element.imgs.length === 1
-  const altContext = getSingleImageAltContext(element.imgs as ImageProto[])
+  // Gated on singleImage so a 1→N rerun cannot leak a stale caption.
+  const singleImage = element.imgs.length === 1 ? element.imgs[0] : undefined
+  const altContext = singleImage?.alt?.trim() || undefined
   const labelContext =
-    altContext ?? (isSingleImage ? captionPlainText : undefined)
-  // Gated on isSingleImage so a 1→N rerun cannot leak a stale caption.
+    altContext ?? (singleImage ? captionPlainText : undefined)
   const reportCaptionPlainText =
-    isSingleImage && !altContext ? setCaptionPlainText : undefined
+    singleImage && !altContext ? setCaptionPlainText : undefined
 
   return (
     <StyledToolbarElementContainer

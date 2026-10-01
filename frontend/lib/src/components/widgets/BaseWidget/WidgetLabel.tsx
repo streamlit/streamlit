@@ -40,7 +40,10 @@ export interface LabelProps {
   // Omitted for hidden/collapsed labels.
   required?: boolean
 
-  /** Ref to the rendered (aria-hidden) label text so callers can read plain text (for example toolbar names). */
+  /**
+   * Ref to the aria-hidden label text node so callers can read rendered
+   * Markdown as plain text (for example toolbar names).
+   */
   labelTextRef?: React.Ref<HTMLSpanElement>
 }
 

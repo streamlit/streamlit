@@ -113,7 +113,10 @@ export interface ToolbarProps {
   locked?: boolean
   target?: StyledToolbarWrapperProps["target"]
   disableFullscreenMode?: boolean
-  /** Element name composed into Fullscreen / Close fullscreen aria-labels. */
+  /**
+   * Element name composed into Fullscreen / Close fullscreen aria-labels.
+   * Child ToolbarActions must pass the same prop.
+   */
   labelContext?: string
 }
 
