@@ -239,34 +239,6 @@ export function getBlue80(theme: EmotionTheme): string {
     ? theme.colors.blue80
     : theme.colors.blue40
 }
-function getBlueArrayAsc(colors: GenericColors): string[] {
-  return [
-    colors.blue10,
-    colors.blue20,
-    colors.blue30,
-    colors.blue40,
-    colors.blue50,
-    colors.blue60,
-    colors.blue70,
-    colors.blue80,
-    colors.blue90,
-    colors.blue100,
-  ]
-}
-function getBlueArrayDesc(colors: GenericColors): string[] {
-  return [
-    colors.blue100,
-    colors.blue90,
-    colors.blue80,
-    colors.blue70,
-    colors.blue60,
-    colors.blue50,
-    colors.blue40,
-    colors.blue30,
-    colors.blue20,
-    colors.blue10,
-  ]
-}
 
 function defaultDivergingColorsArray(genericColors: GenericColors): string[] {
   return [
@@ -283,40 +255,69 @@ function defaultDivergingColorsArray(genericColors: GenericColors): string[] {
   ]
 }
 
+// Default chart palettes from the design handoff. These are deployed chart
+// hues (not stops on the named-color 10–100 scale); light/dark variants are
+// selected from background luminance like other createEmotionColors defaults.
+const LIGHT_CHART_CATEGORICAL_COLORS = [
+  "#2165ce",
+  "#80ced8",
+  "#d45f68",
+  "#e6bb64",
+  "#4eaf7c",
+  "#f3d1b9",
+  "#ad9fdb",
+  "#f2ced7",
+]
+
+const DARK_CHART_CATEGORICAL_COLORS = [
+  "#4c94ff",
+  "#64d8e7",
+  "#f4737f",
+  "#fcc349",
+  "#48c183",
+  "#ffaf73",
+  "#a58eec",
+  "#fda1b9",
+]
+
+const LIGHT_CHART_SEQUENTIAL_COLORS = [
+  "#fff8f9",
+  "#fdedee",
+  "#fbd8dc",
+  "#f7b8c0",
+  "#f18c98",
+  "#e86b79",
+  "#d94a57", // Red 70
+  "#c13f4b",
+  "#a6353f",
+  "#8e2d36",
+]
+
+const DARK_CHART_SEQUENTIAL_COLORS = [
+  "#3a2024",
+  "#4c292d",
+  "#5f2f37",
+  "#873545",
+  "#a12033",
+  "#cf2641",
+  "#d94a57", // Red 70
+  "#e35f6b",
+  "#f18c98",
+  "#f7b8c0",
+]
+
 function defaultSequentialColorsArray(genericColors: GenericColors): string[] {
   return _isLightBackground(genericColors.bgColor)
-    ? getBlueArrayAsc(genericColors)
-    : getBlueArrayDesc(genericColors)
+    ? LIGHT_CHART_SEQUENTIAL_COLORS
+    : DARK_CHART_SEQUENTIAL_COLORS
 }
 
 function defaultCategoricalColorsArray(
   genericColors: GenericColors
 ): string[] {
   return _isLightBackground(genericColors.bgColor)
-    ? [
-        genericColors.blue80,
-        genericColors.blue40,
-        genericColors.red80,
-        genericColors.red40,
-        genericColors.blueGreen80,
-        genericColors.green40,
-        genericColors.orange80,
-        genericColors.orange50,
-        genericColors.purple80,
-        genericColors.gray40,
-      ]
-    : [
-        genericColors.blue40,
-        genericColors.blue80,
-        genericColors.red40,
-        genericColors.red80,
-        genericColors.green40,
-        genericColors.blueGreen80,
-        genericColors.orange50,
-        genericColors.orange80,
-        genericColors.purple80,
-        genericColors.gray40,
-      ]
+    ? LIGHT_CHART_CATEGORICAL_COLORS
+    : DARK_CHART_CATEGORICAL_COLORS
 }
 
 export function getDecreasingRed(theme: EmotionTheme): string {

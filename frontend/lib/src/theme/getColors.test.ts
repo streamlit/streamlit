@@ -445,3 +445,55 @@ describe("resolveNamedBackgroundColor", () => {
     expect(bgColors.purplebg).not.toBe(bgColors.violetbg)
   })
 })
+
+describe("default chart colors", () => {
+  it("uses the light handoff categorical and sequential palettes", () => {
+    expect(lightTheme.emotion.colors.chartCategoricalColors).toEqual([
+      "#2165ce",
+      "#80ced8",
+      "#d45f68",
+      "#e6bb64",
+      "#4eaf7c",
+      "#f3d1b9",
+      "#ad9fdb",
+      "#f2ced7",
+    ])
+    expect(lightTheme.emotion.colors.chartSequentialColors).toEqual([
+      "#fff8f9",
+      "#fdedee",
+      "#fbd8dc",
+      "#f7b8c0",
+      "#f18c98",
+      "#e86b79",
+      "#d94a57",
+      "#c13f4b",
+      "#a6353f",
+      "#8e2d36",
+    ])
+  })
+
+  it("uses the dark handoff categorical and sequential palettes", () => {
+    expect(darkTheme.emotion.colors.chartCategoricalColors).toEqual([
+      "#4c94ff",
+      "#64d8e7",
+      "#f4737f",
+      "#fcc349",
+      "#48c183",
+      "#ffaf73",
+      "#a58eec",
+      "#fda1b9",
+    ])
+    expect(darkTheme.emotion.colors.chartSequentialColors).toEqual([
+      "#3a2024",
+      "#4c292d",
+      "#5f2f37",
+      "#873545",
+      "#a12033",
+      "#cf2641",
+      "#d94a57",
+      "#e35f6b",
+      "#f18c98",
+      "#f7b8c0",
+    ])
+  })
+})

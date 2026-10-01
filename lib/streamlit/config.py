@@ -2544,29 +2544,25 @@ _create_theme_options(
 
         For light themes, the following colors are the default:
         [
-            "#0068c9", # blue80
-            "#83c9ff", # blue40
-            "#ff2b2b", # red80
-            "#ffabab", # red40
-            "#29b09d", # blueGreen80
-            "#7defa1", # green40
-            "#ff8700", # orange80
-            "#ffd16a", # orange50
-            "#6d3fc0", # purple80
-            "#d5dae5", # gray40
+            "#2165ce",
+            "#80ced8",
+            "#d45f68",
+            "#e6bb64",
+            "#4eaf7c",
+            "#f3d1b9",
+            "#ad9fdb",
+            "#f2ced7",
         ]
         For dark themes, the following colors are the default:
         [
-            "#83c9ff", # blue40
-            "#0068c9", # blue80
-            "#ffabab", # red40
-            "#ff2b2b", # red80
-            "#7defa1", # green40
-            "#29b09d", # blueGreen80
-            "#ffd16a", # orange50
-            "#ff8700", # orange80
-            "#6d3fc0", # purple80
-            "#d5dae5", # gray40
+            "#4c94ff",
+            "#64d8e7",
+            "#f4737f",
+            "#fcc349",
+            "#48c183",
+            "#ffaf73",
+            "#a58eec",
+            "#fda1b9",
         ]
     """,
 )
@@ -2596,29 +2592,29 @@ _create_theme_options(
 
          For light themes, the following colors are the default:
         [
-            "#e4f5ff", #blue10
-            "#c7ebff", #blue20
-            "#a6dcff", #blue30
-            "#83c9ff", #blue40
-            "#60b4ff", #blue50
-            "#3d9df3", #blue60
-            "#1c83e1", #blue70
-            "#0068c9", #blue80
-            "#0054a3", #blue90
-            "#004280", #blue100
+            "#fff8f9",
+            "#fdedee",
+            "#fbd8dc",
+            "#f7b8c0",
+            "#f18c98",
+            "#e86b79",
+            "#d94a57",
+            "#c13f4b",
+            "#a6353f",
+            "#8e2d36",
         ]
         For dark themes, the following colors are the default:
         [
-            "#004280", #blue100
-            "#0054a3", #blue90
-            "#0068c9", #blue80
-            "#1c83e1", #blue70
-            "#3d9df3", #blue60
-            "#60b4ff", #blue50
-            "#83c9ff", #blue40
-            "#a6dcff", #blue30
-            "#c7ebff", #blue20
-            "#e4f5ff", #blue10
+            "#3a2024",
+            "#4c292d",
+            "#5f2f37",
+            "#873545",
+            "#a12033",
+            "#cf2641",
+            "#d94a57",
+            "#e35f6b",
+            "#f18c98",
+            "#f7b8c0",
         ]
     """,
 )
