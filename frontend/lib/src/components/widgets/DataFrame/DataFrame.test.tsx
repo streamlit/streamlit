@@ -880,6 +880,31 @@ describe("DataFrame widget", () => {
     expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
   })
 
+  it("applies a later identical non-empty selectionState after a user reselects", () => {
+    const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
+
+    selectRow(3)
+    rerender(undefined)
+    rerender(ROW_SELECTION_STATE)
+
+    const { gridSelection } = getDataEditorProps() as {
+      gridSelection: GridSelection
+    }
+    expect(gridSelection.rows.toArray()).toEqual([1])
+  })
+
+  it("does not re-apply the same selectionState after a user selection", () => {
+    const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
+
+    selectRow(3)
+    rerender(ROW_SELECTION_STATE)
+
+    const { gridSelection } = getDataEditorProps() as {
+      gridSelection: GridSelection
+    }
+    expect(gridSelection.rows.toArray()).toEqual([3])
+  })
+
   it("adds a row from the toolbar in dynamic editing mode", async () => {
     const user = userEvent.setup()
 
