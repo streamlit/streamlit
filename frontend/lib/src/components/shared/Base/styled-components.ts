@@ -135,9 +135,15 @@ type SecondaryIconButtonColorOptions = {
  * @see TimeInput StyledClearButton
  * @see Multiselect StyledClearButton
  * @see Selectbox StyledClearButton
- * @see AudioInput StyledSecondaryIconActionButton / StyledStopRecordingActionButton
+ * @see AudioInput StyledSecondaryIconActionButton
  * @see ChatInput StyledSendIconButton (non-primary)
  */
+export const SECONDARY_ICON_HOVER_SELECTOR =
+  "&:hover:not(:disabled):not([data-disabled]), &:focus-visible:not(:disabled):not([data-disabled]), &[data-hovered]:not(:disabled):not([data-disabled])"
+
+export const SECONDARY_ICON_DISABLED_SELECTOR =
+  "&:disabled, &:disabled:hover, &:disabled:active, &:disabled:focus-visible, &[data-disabled], &[data-disabled]:hover, &[data-disabled]:active, &[data-disabled]:focus-visible"
+
 export function getSecondaryIconButtonColorStyles(
   theme: EmotionTheme,
   {
@@ -150,14 +156,14 @@ export function getSecondaryIconButtonColorStyles(
     color: restColor,
     // Always include React Aria `data-*` attrs for RAC consumers; inert on
     // plain <button>s. Prefer `:focus-visible` so pointer clicks do not stick.
-    "&:hover:not(:disabled):not([data-disabled]), &:focus-visible:not(:disabled):not([data-disabled]), &[data-hovered]:not(:disabled):not([data-disabled])":
-      {
-        color: hoverColor,
-      },
-    "&:disabled, &:disabled:hover, &:disabled:focus-visible, &[data-disabled], &[data-disabled]:hover, &[data-disabled]:focus-visible":
-      {
-        color: disabledColor,
-        cursor: "not-allowed",
-      },
+    // Callers with `&:active` need matching `:not([data-disabled])` specificity
+    // (and source order after this rule) so press color can win while hovered.
+    [SECONDARY_ICON_HOVER_SELECTOR]: {
+      color: hoverColor,
+    },
+    [SECONDARY_ICON_DISABLED_SELECTOR]: {
+      color: disabledColor,
+      cursor: "not-allowed",
+    },
   }
 }

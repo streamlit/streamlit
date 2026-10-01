@@ -15,7 +15,10 @@
  */
 import styled from "@emotion/styled"
 
-import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/Base/styled-components"
+import {
+  getSecondaryIconButtonColorStyles,
+  SECONDARY_ICON_DISABLED_SELECTOR,
+} from "~lib/components/shared/Base/styled-components"
 
 export const StyledChatInputContainer = styled.div<{
   isStretchHeight?: boolean
@@ -192,13 +195,6 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
           }
         : undefined
     )
-    // Must match the disabled key from getSecondaryIconButtonColorStyles.
-    const disabledSelector =
-      "&:disabled, &:disabled:hover, &:disabled:focus-visible, &[data-disabled], &[data-disabled]:hover, &[data-disabled]:focus-visible"
-    const {
-      [disabledSelector]: secondaryDisabledStyles,
-      ...secondaryRestStyles
-    } = secondaryColorStyles
 
     return {
       border: "none",
@@ -211,7 +207,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       margin: theme.spacing.none,
       padding: theme.spacing.none,
       pointerEvents: "auto",
-      ...secondaryRestStyles,
+      ...secondaryColorStyles,
       "&:focus": {
         outline: "none",
       },
@@ -221,15 +217,16 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       "&:focus-visible": {
         boxShadow: theme.shadows.focusRing,
       },
-      // Must stay below the secondary rest styles: same specificity as the
-      // helper's hover rule, so source order keeps press color on top.
-      "&:active:not(:disabled)": {
+      // Match helper hover specificity (`:not([data-disabled])`) and stay below
+      // that rule so source order keeps primary press color on top while hovered.
+      "&:active:not(:disabled):not([data-disabled])": {
         color: theme.colors.primary,
       },
-      // Merge with the helper's disabled color/cursor — object keys do not
-      // deep-merge, so a second disabled block would replace them.
-      [disabledSelector]: {
-        ...secondaryDisabledStyles,
+      // Object keys do not deep-merge — restate disabled color/cursor with the
+      // transparent background/border resets this button needs.
+      [SECONDARY_ICON_DISABLED_SELECTOR]: {
+        color: theme.colors.fadedText40,
+        cursor: "not-allowed",
         backgroundColor: theme.colors.transparent,
         borderColor: theme.colors.transparent,
       },
