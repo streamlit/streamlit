@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import math
 import operator
 from typing import TYPE_CHECKING, Any, Final
 
@@ -206,7 +207,9 @@ def build_widget_states(
             )
 
         _validate_options(key, metadata, value)
-        _validate_bounded(key, element_states[element_id], value)
+        _validate_bounded(
+            key, element_states[element_id], value, clearable=metadata.clearable
+        )
         states.widgets.append(_encode(element_id, metadata.value_type, value, key))
         touched_forms.add(_form_of(element_states, element_id))
 
@@ -332,12 +335,16 @@ def _comparable(left: Any, right: Any) -> bool:
     return isinstance(left, str) and isinstance(right, str)
 
 
-def _validate_bounded(key: str, state: ElementState, value: Any) -> None:
+def _validate_bounded(
+    key: str, state: ElementState, value: Any, *, clearable: bool
+) -> None:
     """Check a write against the shape and bounds the element advertised.
 
-    This covers every widget that reports a `min_value` or a `max_value`:
+    This covers every widget that reports a `min_value` or a `max_value` --
     numbers, sliders, and the date and time widgets, whose bounds are ISO
-    strings. Without it the runtime silently discards what it cannot use and
+    strings -- and any widget holding a number, since a number input the
+    author left unbounded reports no bounds but still has a shape. Without it
+    the runtime silently discards what it cannot use and
     the widget falls back to its default, so the response is a 200 whose
     `value` is neither what was sent nor what was there before -- detectable
     only by diffing every field after every write.
@@ -347,7 +354,11 @@ def _validate_bounded(key: str, state: ElementState, value: Any) -> None:
     and sending one date, three, or `null` leaves the app on its default with
     no indication anything was rejected.
     """
-    if state.min_value is None and state.max_value is None:
+    if (
+        state.min_value is None
+        and state.max_value is None
+        and not _is_number(state.value)
+    ):
         return
 
     expected = state.value
@@ -363,9 +374,9 @@ def _validate_bounded(key: str, state: ElementState, value: Any) -> None:
             "invalid_value",
             f"{key!r} takes a single value, like {expected!r}; got {value!r}.",
         )
-    elif value is None and expected is not None:
-        # Only meaningful for a widget that reported `null` itself, such as
-        # `st.number_input(value=None)`.
+    elif value is None and not clearable:
+        # A widget that started empty, such as `st.number_input(value=None)`,
+        # can be emptied again; one that started with a value cannot.
         raise AgentRequestError(
             "invalid_value",
             f"{key!r} cannot be cleared; it always holds a value.",
@@ -448,9 +459,9 @@ def _encode(
         if value_type == "bool_value":
             state.bool_value = _as_bool(value)
         elif value_type == "double_value":
-            state.double_value = float(value)
+            state.double_value = _as_number(value)
         elif value_type == "int_value":
-            state.int_value = int(value)
+            state.int_value = _as_integer(value)
         elif value_type == "string_value":
             state.string_value = _as_string(value)
         elif value_type == "json_value":
@@ -461,9 +472,9 @@ def _encode(
             if value_type == "string_array_value":
                 array.data.extend(_as_string(item) for item in items)
             elif value_type == "double_array_value":
-                array.data.extend(float(item) for item in items)
+                array.data.extend(_as_number(item) for item in items)
             else:
-                array.data.extend(int(item) for item in items)
+                array.data.extend(_as_integer(item) for item in items)
         else:  # pragma: no cover - guarded by _UNSETTABLE_VALUE_TYPES
             raise AgentRequestError(
                 "unsupported_element",
@@ -543,6 +554,23 @@ def _as_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
     raise TypeError(f"{value!r} is not a boolean")
+
+
+def _as_number(value: Any) -> float:
+    """A finite JSON number, refusing what ``float()`` would quietly accept.
+
+    ``true`` would become 1 and a numeric string would parse, and ``NaN``,
+    which Python's JSON parser accepts, passes every bounds comparison.
+    """
+    if not _is_number(value) or not math.isfinite(value):
+        raise TypeError(f"{value!r} is not a finite number")
+    return float(value)
+
+
+def _as_integer(value: Any) -> int:
+    if not float(_as_number(value)).is_integer():
+        raise TypeError(f"{value!r} is not a whole number")
+    return int(value)
 
 
 def _as_string(value: Any) -> str:

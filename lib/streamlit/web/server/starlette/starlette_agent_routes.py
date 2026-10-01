@@ -290,6 +290,8 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             arguments: dict[str, Any],
         ) -> tuple[dict[str, Any], bool]:
             status, result = await _run_interact(request, arguments)
+            # A run still going after the timeout (202) is not a failure: the
+            # result says to call again, and the retry collects the run.
             return result, status >= 400
 
         response = await mcp.handle(message, call_interact)

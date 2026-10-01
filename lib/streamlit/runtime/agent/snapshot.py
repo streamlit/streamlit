@@ -417,8 +417,9 @@ class _SnapshotBuilder:
         action = description.get("action")
         support = description.get("support") or inherited_support
         disabled = bool(props.get("disabled"))
-        # The values a client may send, under the command's own parameter name.
-        options = props.get("tabs" if description["type"] == "tabs" else "options")
+        # A trigger's choices, such as `st.menu_button`'s. A value widget's
+        # options are checked against the widget registry instead.
+        options = props.get("options")
         actionable = bool(action) and not support and not disabled
 
         self.element_states[element_id] = ElementState(

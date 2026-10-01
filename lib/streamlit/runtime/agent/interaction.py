@@ -29,7 +29,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final
-from urllib.parse import parse_qsl, urlencode
+from urllib.parse import parse_qs, parse_qsl, urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from streamlit import config
@@ -244,6 +244,7 @@ class AgentSessionRegistry:
     def __init__(self, runtime: Runtime) -> None:
         self._runtime = runtime
         self._sessions: dict[str, AgentSession] = {}
+        self._reclaim_timer: asyncio.TimerHandle | None = None
 
     def get(self, handle: str, user_info: dict[str, Any]) -> AgentSession:
         self._reclaim_idle()
@@ -283,6 +284,7 @@ class AgentSessionRegistry:
             handle=handle, session_id=session_id, client=client, user_info=user_info
         )
         self._sessions[handle] = session
+        self._schedule_reclaim()
         return session
 
     def close(self, handle: str) -> None:
@@ -298,6 +300,29 @@ class AgentSessionRegistry:
             if now - session.last_used > ttl and not session.lock.locked():
                 _LOGGER.debug("Reclaiming idle agent session %s", handle)
                 self.close(handle)
+
+    def _schedule_reclaim(self) -> None:
+        """Reclaim idle sessions when the oldest one expires, request or not.
+
+        Requests reclaim on arrival too, but a burst of clients that then go
+        quiet would otherwise hold every session, and its page's data, until
+        some later request happened to arrive.
+        """
+        if self._reclaim_timer is not None or not self._sessions:
+            return
+        ttl = float(config.get_option("server.agentSessionTTL"))
+        oldest = min(session.last_used for session in self._sessions.values())
+        # At least a second, so a session held past its TTL by a long
+        # interaction is rechecked rather than spun on.
+        delay = max(1.0, oldest + ttl - time.monotonic())
+        self._reclaim_timer = asyncio.get_running_loop().call_later(
+            delay, self._on_reclaim_timer
+        )
+
+    def _on_reclaim_timer(self) -> None:
+        self._reclaim_timer = None
+        self._reclaim_idle()
+        self._schedule_reclaim()
 
 
 async def interact(
@@ -662,6 +687,4 @@ def _parse_context(context: Any) -> ContextInfo:
 
 
 def _decode_query_params(query_string: str) -> dict[str, list[str]]:
-    from urllib.parse import parse_qs
-
     return parse_qs(query_string, keep_blank_values=True)
