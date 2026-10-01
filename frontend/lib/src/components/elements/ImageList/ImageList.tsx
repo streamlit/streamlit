@@ -40,6 +40,7 @@ import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { plainTextWithBlockGaps } from "~lib/util/plainText"
 import { isDangerousLinkUri } from "~lib/util/UriUtil"
 import { isNullOrUndefined } from "~lib/util/utils"
 
@@ -96,6 +97,7 @@ const Image = ({
   handleImageError,
   shouldStretch,
   link,
+  onCaptionPlainTextChange,
 }: {
   image: ImageProto
   imgStyle: CSSProperties
@@ -103,6 +105,8 @@ const Image = ({
   handleImageError: (e: React.SyntheticEvent<HTMLImageElement>) => void
   shouldStretch?: boolean
   link?: string
+  /** Reports rendered caption plain text (not markdown source) for toolbar naming. */
+  onCaptionPlainTextChange?: (text: string | undefined) => void
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
   const captionDomId = useId()
@@ -121,29 +125,34 @@ const Image = ({
 
   // Watch the caption for text that arrives late: async Markdown plugins
   // (KaTeX, emoji) swap a loading skeleton for real content after the first
-  // render. Only linked images consume captionHasText.
+  // render. Linked images use captionHasText; the parent additionally asks
+  // for the rendered plain text when this is the only image and it has no
+  // alt. Skip the observer when neither consumer is active (for example,
+  // unlinked gallery members).
   useLayoutEffect(() => {
     const node = captionRef.current
-    if (!safeLink || !image.caption || !node) {
+    if ((!safeLink && !onCaptionPlainTextChange) || !image.caption || !node) {
       setCaptionHasText(false)
+      onCaptionPlainTextChange?.(undefined)
       return
     }
 
-    const syncCaptionHasText = (): void => {
-      const text = node.textContent?.trim() ?? ""
+    const syncCaptionPlainText = (): void => {
+      const text = plainTextWithBlockGaps(node)
       setCaptionHasText(text.length > 0)
+      onCaptionPlainTextChange?.(text || undefined)
     }
 
-    syncCaptionHasText()
+    syncCaptionPlainText()
 
-    const observer = new MutationObserver(syncCaptionHasText)
+    const observer = new MutationObserver(syncCaptionPlainText)
     observer.observe(node, {
       childList: true,
       subtree: true,
       characterData: true,
     })
     return () => observer.disconnect()
-  }, [image.caption, safeLink])
+  }, [image.caption, onCaptionPlainTextChange, safeLink])
 
   const imageElement = (
     // oxlint-disable-next-line jsx-a11y/alt-text
@@ -253,6 +262,22 @@ function ImageList({
     )
   }
 
+  // Rendered caption plain text for the single-image toolbar fallback.
+  const [captionPlainText, setCaptionPlainText] = useState<
+    string | undefined
+  >()
+
+  // The gallery has one list-level Fullscreen button, so borrow a name only
+  // when there is exactly one image; otherwise the button would be named after
+  // an arbitrary member. Prefer alt, else the caption's rendered plain text.
+  // Gated on singleImage so a 1→N rerun cannot leak a stale caption.
+  const singleImage = element.imgs.length === 1 ? element.imgs[0] : undefined
+  const altContext = singleImage?.alt?.trim() || undefined
+  const labelContext =
+    altContext ?? (singleImage ? captionPlainText : undefined)
+  const reportCaptionPlainText =
+    singleImage && !altContext ? setCaptionPlainText : undefined
+
   return (
     <StyledToolbarElementContainer
       width={containerWidth}
@@ -266,6 +291,7 @@ function ImageList({
         onExpand={expand}
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
+        labelContext={labelContext}
       ></Toolbar>
       <StyledImageList
         className="stImage"
@@ -283,6 +309,9 @@ function ImageList({
             handleImageError={handleImageError}
             shouldStretch={shouldStretch}
             link={element.imgs.length === 1 ? element.link : undefined}
+            onCaptionPlainTextChange={
+              idx === 0 ? reportCaptionPlainText : undefined
+            }
           />
         ))}
       </StyledImageList>

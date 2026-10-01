@@ -249,12 +249,14 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         onCollapse={collapse}
         target={StyledDeckGlChart}
         locked={hasActiveSelection && !disabled ? true : undefined}
+        labelContext={accessibleName}
       >
         {hasActiveSelection && !disabled && (
           <ToolbarAction
             label="Clear selection"
             onClick={handleClearSelectionClick}
             icon={Close}
+            labelContext={accessibleName}
           />
         )}
       </Toolbar>

@@ -290,6 +290,19 @@ def test_echarts_chart_alt_sets_accessible_name(app: Page):
     """`alt` becomes the ECharts chart's accessible name."""
     labeled = _get_chart(app, "c_echarts_alt")
     expect(labeled).to_have_accessible_name("Bar chart of categories A, B, and C")
+    labeled_container = get_element_by_key(app, "c_echarts_alt")
+    # Playwright treats opacity:0 as visible, so assert the toolbar is revealed.
+    labeled_container.hover()
+    expect(labeled_container.get_by_test_id("stElementToolbar")).to_have_css(
+        "opacity", "1"
+    )
+    expect(
+        labeled_container.get_by_role(
+            "button",
+            name="Fullscreen: Bar chart of categories A, B, and C",
+            exact=True,
+        )
+    ).to_be_visible()
 
     unlabeled = _get_chart(app, "c_echarts_no_alt")
     # ECharts generates a data-derived name when aria.enabled is on.

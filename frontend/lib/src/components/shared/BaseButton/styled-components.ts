@@ -534,7 +534,12 @@ export const StyledElementToolbarButton = styled(
     display: "flex",
     gap: theme.spacing.xs,
     alignItems: "center",
-    minHeight: "unset",
+    // WCAG 2.2 SC 2.5.8 Target Size (Minimum): ≥24×24 CSS px for every
+    // supported root font size. Prefer the rem token so targets grow with
+    // theme.baseFontSize; floor at 24px so a smaller root (e.g. 14) cannot
+    // shrink below the criterion.
+    minWidth: `max(${theme.sizes.smallElementHeight}, 24px)`,
+    minHeight: `max(${theme.sizes.smallElementHeight}, 24px)`,
     // line height should be the same as the icon size
     lineHeight: theme.iconSizes.md,
     width: "auto",

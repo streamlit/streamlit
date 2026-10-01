@@ -1014,6 +1014,7 @@ function DataFrame({
         onExpand={expand}
         onCollapse={collapse}
         target={StyledResizableContainer}
+        labelContext={accessibleName}
       >
         {customToolbarActions?.map(action => action)}
         {((isRowSelectionActivated &&
@@ -1033,6 +1034,7 @@ function DataFrame({
               clearSelection()
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
         {canDeleteRows && isRowSelected && (
@@ -1045,6 +1047,7 @@ function DataFrame({
                 clearTooltip()
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {canAddRows && !isRowSelected && (
@@ -1061,6 +1064,7 @@ function DataFrame({
                 dataEditorRef.current?.scrollTo(0, numRows, "vertical")
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {!isEmptyTable && allColumns.length > 0 && (
@@ -1077,6 +1081,7 @@ function DataFrame({
               label="Show/hide columns"
               icon={Visibility}
               onClick={handleToggleColumnVisibilityMenu}
+              labelContext={accessibleName}
             />
           </ColumnVisibilityMenu>
         )}
@@ -1085,6 +1090,7 @@ function DataFrame({
             label="Download as CSV"
             icon={FileDownload}
             onClick={exportToCsv}
+            labelContext={accessibleName}
           />
         )}
         {canSearch && (
@@ -1100,6 +1106,7 @@ function DataFrame({
               }
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
       </Toolbar>

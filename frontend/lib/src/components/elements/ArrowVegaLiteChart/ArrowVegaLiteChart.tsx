@@ -434,6 +434,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
   }, [data, datasets])
 
+  const labelContext = inputElement.alt?.trim() || undefined
+
   if (showData) {
     const derivedHeight =
       fullScreenHeight ??
@@ -444,6 +446,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         data={data ?? datasets[0]?.data}
         height={derivedHeight}
         width={widthConfig ?? undefined}
+        alt={labelContext}
         customToolbarActions={[
           <ToolbarAction
             key="show-chart"
@@ -452,6 +455,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             onClick={() => {
               setShowData(false)
             }}
+            labelContext={labelContext}
           />,
         ]}
       />
@@ -478,6 +482,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         onExpand={expand}
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
+        labelContext={labelContext}
       >
         {enableShowData && (
           <ToolbarAction
@@ -486,6 +491,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             onClick={() => {
               setShowData(true)
             }}
+            labelContext={labelContext}
           />
         )}
         {isViewReady && (
@@ -493,6 +499,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             label="Download as PNG"
             icon={FileDownload}
             onClick={handleDownloadPng}
+            labelContext={labelContext}
           />
         )}
         {showCopySpecAction && (
@@ -503,6 +510,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
             label={isCopied ? "Copied!" : "Copy Vega-Lite spec"}
             icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySpec}
+            // Skip context while on the transient "Copied!" label so the name
+            // stays "Copied!" rather than "Copied!: {context}".
+            labelContext={isCopied ? undefined : labelContext}
           />
         )}
       </Toolbar>
