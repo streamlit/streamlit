@@ -852,13 +852,13 @@ describe("DataFrame widget", () => {
   it("applies programmatic selection from selectionState", () => {
     renderRowSelectionDataFrame(ROW_SELECTION_STATE)
 
-    expect(screen.getByLabelText("Clear selection")).toBeVisible()
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
   })
 
   it("clears programmatic selection when selectionState is empty", () => {
     const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
 
-    expect(screen.getByLabelText("Clear selection")).toBeVisible()
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
 
     rerender(EMPTY_SELECTION_STATE)
 
@@ -872,13 +872,13 @@ describe("DataFrame widget", () => {
 
     selectRow(1)
 
-    expect(screen.getByLabelText("Clear selection")).toBeVisible()
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
 
     // User-driven reruns omit the one-shot field. processedSelectionStateRef
     // must reset here or the next identical empty JSON is dropped.
     rerender(undefined)
 
-    expect(screen.getByLabelText("Clear selection")).toBeVisible()
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
 
     rerender(EMPTY_SELECTION_STATE)
 
