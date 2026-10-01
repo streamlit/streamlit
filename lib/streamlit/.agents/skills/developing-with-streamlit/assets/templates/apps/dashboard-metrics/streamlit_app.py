@@ -395,10 +395,12 @@ def metric_card(
                     filtered_df,
                     height=CHART_HEIGHT,
                     hide_index=True,
+                    alt=f"{title} data",
                 )
             elif y_cols:
                 st.altair_chart(
                     render_chart(filtered_df, "ds", y_cols, labels),
+                    alt=f"{title} over time",
                 )
             else:
                 st.info("Select at least one line option.")

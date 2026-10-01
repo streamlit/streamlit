@@ -32,7 +32,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import CameraInput, { Props } from "./CameraInput"
+import CameraInput, { type Props } from "./CameraInput"
 import { WebcamPermission } from "./WebcamComponent"
 
 // Records the props passed to the (mocked) react-webcam on each render so tests

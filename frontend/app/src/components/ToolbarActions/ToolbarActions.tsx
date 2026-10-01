@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import type { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   BaseButton,
   BaseButtonKind,
-  IGuestToHostMessage,
-  IToolbarItem,
+  type IGuestToHostMessage,
+  type IToolbarItem,
 } from "@streamlit/lib"
 
 import {

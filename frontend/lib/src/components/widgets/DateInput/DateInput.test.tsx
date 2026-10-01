@@ -33,7 +33,7 @@ import {
 import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import DateInput, { Props } from "./DateInput"
+import DateInput, { type Props } from "./DateInput"
 
 // Wire format (ISO 8601) — proto fields + setStringArrayValue calls
 const originalDateWire = "1970-01-20"

@@ -2,15 +2,32 @@
 
 Present data clearly.
 
+## Accessible names (`alt`)
+
+Pass keyword-only `alt=` on charts, maps, tables, and grids so assistive technologies can name them. Write a short, plain-text accessible name (about one sentence); Markdown syntax is announced literally. Prefer the chart's takeaway, the map's subject, or the table's purpose — not a data dump and not a paste of the dataframe.
+
+```python
+st.bar_chart(
+    df, x="category", y="revenue", alt="Revenue by product line, highest for Enterprise"
+)
+st.dataframe(df, alt="Top 20 customers by revenue")
+st.table(summary, alt="Quarterly KPI summary")
+```
+
+- Charts and maps (`st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart`, `st.altair_chart`, `st.vega_lite_chart`, `st.plotly_chart`, `st.graphviz_chart`, `st.map`, `st.pydeck_chart`, `st.mermaid_chart`): describe the chart's takeaway or the map's subject, not the chart type or a data dump.
+- **`st.echarts_chart`:** `alt` replaces the description ECharts generates from the data, so a vague name is worse than passing none.
+- **`st.dataframe` / `st.data_editor` / `st.table`:** name the grid or table; do not paste cell values into `alt`.
+- A whitespace-only `alt` is ignored (same as not passing `alt`) and logged on every command. Empty `alt=""` is decorative only on `st.image` / `st.pyplot` (see [media-display.md](media-display.md)).
+
 ## Native charts first
 
 Prefer Streamlit's native charts for simple cases.
 
 ```python
-st.line_chart(df, x="date", y="revenue")
-st.bar_chart(df, x="category", y="count")
-st.scatter_chart(df, x="age", y="salary")
-st.area_chart(df, x="date", y="value")
+st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
+st.bar_chart(df, x="category", y="count", alt="Order count by category")
+st.scatter_chart(df, x="age", y="salary", alt="Salary versus age")
+st.area_chart(df, x="date", y="value", alt="Value over time")
 ```
 
 Native charts support additional parameters: `color` for series grouping, `stack` for bar/area stacking, `size` for scatter point sizing, `horizontal` for horizontal bars. See the [chart API reference](https://docs.streamlit.io/develop/api-reference/charts) for full options.
@@ -24,10 +41,12 @@ Use clear labels—not column names or abbreviations. Skip `x_label`/`y_label` i
 st.line_chart(df, x="dt", y="rev")
 
 # GOOD: readable columns, no labels needed
-st.line_chart(df, x="date", y="revenue")
+st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
 
 # GOOD: cryptic columns, add labels
-st.line_chart(df, x="dt", y="rev", x_label="Date", y_label="Revenue")
+st.line_chart(
+    df, x="dt", y="rev", x_label="Date", y_label="Revenue", alt="Monthly revenue trend"
+)
 ```
 
 ## Altair for complex charts
@@ -46,7 +65,7 @@ chart = (
         color="region:N",
     )
 )
-st.altair_chart(chart)
+st.altair_chart(chart, alt="Revenue by region over time")
 ```
 
 **When to use Altair:**
@@ -68,7 +87,8 @@ st.echarts_chart(
         "xAxis": {"type": "category", "data": ["Mon", "Tue", "Wed"]},
         "yAxis": {"type": "value"},
         "series": [{"type": "bar", "data": [120, 200, 150]}],
-    }
+    },
+    alt="Weekday traffic, peak on Tuesday",
 )
 ```
 

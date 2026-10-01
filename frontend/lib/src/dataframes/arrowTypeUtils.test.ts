@@ -51,7 +51,7 @@ import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import {
-  ArrowType,
+  type ArrowType,
   convertVectorToList,
   DataFrameCellType,
   getPandasTypeName,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { PointerEvent } from "react"
+import type { PointerEvent } from "react"
 
 import { act, renderHook } from "@testing-library/react"
 import { vi } from "vitest"

@@ -23,14 +23,15 @@ import {
   GridCellKind,
   type TextCell,
 } from "@glideapps/glide-data-grid"
+import type * as GlideDataGrid from "@glideapps/glide-data-grid"
 import { cleanup, screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
 vi.mock("@glideapps/glide-data-grid", async () => {
-  const actual = await vi.importActual<
-    typeof import("@glideapps/glide-data-grid")
-  >("@glideapps/glide-data-grid")
+  const actual = await vi.importActual<typeof GlideDataGrid>(
+    "@glideapps/glide-data-grid"
+  )
   return {
     ...actual,
     drawTextCell: vi.fn(),

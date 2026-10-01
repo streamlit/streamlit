@@ -19,6 +19,7 @@ import {
   type ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
@@ -38,6 +39,7 @@ import useDownloadUrl from "~lib/hooks/useDownloadUrl"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
+import { plainTextWithBlockGaps } from "~lib/util/plainText"
 import { uploadFiles } from "~lib/util/uploadFiles"
 import {
   isNullOrUndefined,
@@ -527,6 +529,34 @@ const AudioInput: React.FC<Props> = ({
   const showNoMicPermissionsOrPlaceholderOrError =
     hasNoMicPermissions || showPlaceholder || isError
 
+  const labelTextRef = useRef<HTMLSpanElement>(null)
+  // Widget labels are markdown; compose rendered plain text into toolbar names,
+  // not the markdown source. Observe the visual label node for late markdown
+  // (KaTeX/emoji skeletons), matching the image-caption path.
+  const [labelContext, setLabelContext] = useState<string | undefined>()
+  useLayoutEffect(() => {
+    const node = labelTextRef.current
+    if (!element.label || !node) {
+      setLabelContext(undefined)
+      return
+    }
+
+    const syncLabelPlainText = (): void => {
+      const text = plainTextWithBlockGaps(node)
+      setLabelContext(text || undefined)
+    }
+
+    syncLabelPlainText()
+
+    const observer = new MutationObserver(syncLabelPlainText)
+    observer.observe(node, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+    return () => observer.disconnect()
+  }, [element.label])
+
   return (
     <StyledAudioInputContainerDiv
       className="stAudioInput"
@@ -538,6 +568,7 @@ const AudioInput: React.FC<Props> = ({
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
+        labelTextRef={labelTextRef}
       >
         {element.help && (
           <WidgetLabelHelpIcon
@@ -558,6 +589,7 @@ const AudioInput: React.FC<Props> = ({
               label="Download as WAV"
               icon={FileDownload}
               onClick={handleDownloadClick}
+              labelContext={labelContext}
             />
           )}
           {deleteFileUrl && (
@@ -565,6 +597,7 @@ const AudioInput: React.FC<Props> = ({
               label="Clear recording"
               icon={Delete}
               onClick={handleDeleteClick}
+              labelContext={labelContext}
             />
           )}
         </Toolbar>

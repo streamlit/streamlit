@@ -26,7 +26,7 @@ import { render } from "~lib/test_util"
 import { iconSizes } from "~lib/theme/primitives/iconSizes"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import MenuButton, { Props } from "./MenuButton"
+import MenuButton, { type Props } from "./MenuButton"
 
 vi.mock("~lib/WidgetStateManager")
 

@@ -36,9 +36,9 @@ import {
   PING_TIMEOUT_MS,
   SERVER_PING_PATH,
 } from "./constants"
-import { ErrorDetails, IHostConfigProperties, OnRetry } from "./types"
+import type { ErrorDetails, IHostConfigProperties, OnRetry } from "./types"
 import {
-  FetchError,
+  type FetchError,
   fetchWithTimeout,
   parseUriIntoBaseParts,
   serializeForDisplay,

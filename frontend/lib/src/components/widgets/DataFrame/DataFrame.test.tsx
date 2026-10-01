@@ -31,7 +31,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render, renderWithContexts } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 // Track DataEditor calls for assertions - separate from the component so we can use forwardRef
 const dataEditorMockFn = vi.fn()
@@ -60,7 +60,7 @@ vi.mock("@glideapps/glide-data-grid", async () => ({
 // distribution. But the file picker most likely wouldn't work anyways in jest-dom.
 vi.mock("native-file-system-adapter", () => ({}))
 
-import DataFrame, { DataFrameProps } from "./DataFrame"
+import DataFrame, { type DataFrameProps } from "./DataFrame"
 
 const getProps = (
   data: Uint8Array,
@@ -220,6 +220,69 @@ describe("DataFrame widget", () => {
     const styledResizableContainer = screen.getByTestId("stDataFrame")
 
     expect(styledResizableContainer).toHaveClass("stDataFrame")
+  })
+
+  it("sets role=region and aria-label on the grid host when alt is provided", () => {
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          alt: "Top 20 customers by revenue",
+        })}
+      />
+    )
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).toHaveAttribute("role", "region")
+    expect(gridHost).toHaveAccessibleName("Top 20 customers by revenue")
+    // Outer wrapper stays unnamed so the toolbar is outside the named region.
+    expect(screen.getByTestId("stDataFrame")).not.toHaveAttribute("role")
+    expect(screen.getByTestId("stDataFrame")).not.toHaveAttribute("aria-label")
+    // Toolbar chrome reuses alt as button context (separate from the region name).
+    expect(
+      screen.getByRole("button", {
+        name: /^Fullscreen: Top 20 customers by revenue$/,
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: /^Download as CSV: Top 20 customers by revenue$/,
+      })
+    ).toBeInTheDocument()
+    // Glide still mounts under the named host and is not aria-hidden
+    // (unit tests mock DataEditor as mock-data-editor).
+    const glideEditor = screen.getByTestId("mock-data-editor")
+    expect(glideEditor).toBeVisible()
+    expect(gridHost).toContainElement(glideEditor)
+    expect(gridHost).not.toHaveAttribute("aria-hidden")
+    expect(glideEditor).not.toHaveAttribute("aria-hidden")
+  })
+
+  it("omits role and aria-label when alt is not provided", () => {
+    render(<DataFrame {...props} />)
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).not.toHaveAttribute("role")
+    expect(gridHost).not.toHaveAttribute("aria-label")
+  })
+
+  it.each(["", "   "])("omits role and aria-label when alt is %j", alt => {
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          alt,
+        })}
+      />
+    )
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).not.toHaveAttribute("role")
+    expect(gridHost).not.toHaveAttribute("aria-label")
   })
 
   it("should have a toolbar", () => {

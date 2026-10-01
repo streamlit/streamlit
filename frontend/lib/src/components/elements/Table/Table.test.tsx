@@ -24,7 +24,11 @@ import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
-import { FALLBACK_HEADER_ROW_OFFSET_REM, Table, TableProps } from "./Table"
+import {
+  FALLBACK_HEADER_ROW_OFFSET_REM,
+  Table,
+  type TableProps,
+} from "./Table"
 
 const getProps = (
   data: Uint8Array,

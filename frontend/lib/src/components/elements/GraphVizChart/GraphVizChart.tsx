@@ -173,6 +173,7 @@ function GraphVizChart({
         onExpand={expand}
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
+        labelContext={accessibleName}
       ></Toolbar>
       <StyledGraphVizChart
         className="stGraphVizChart"

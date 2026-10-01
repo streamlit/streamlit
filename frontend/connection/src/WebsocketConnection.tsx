@@ -34,12 +34,12 @@ import {
   WEBSOCKET_TIMEOUT_MS,
 } from "./constants"
 import {
-  AsyncPingRequest,
+  type AsyncPingRequest,
   doInitPings,
   PingCancelledError,
 } from "./DoInitPings"
 import { ForwardMsgCache } from "./ForwardMessageCache"
-import {
+import type {
   ErrorDetails,
   Event,
   IHostConfigProperties,

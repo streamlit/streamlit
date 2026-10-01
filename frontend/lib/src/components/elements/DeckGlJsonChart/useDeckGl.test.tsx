@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { FC } from "react"
+import type { FC } from "react"
 
 import {
   MapView,
   OrbitView,
-  PickingInfo,
-  ViewStateChangeParameters,
+  type PickingInfo,
+  type ViewStateChangeParameters,
 } from "@deck.gl/core"
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -40,7 +40,7 @@ import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
+import { useDeckGl, type UseDeckGlProps } from "./useDeckGl"
 import { PYDECK_UNSET_MAP_STYLE } from "./utils/mapShell"
 
 /** Test component that wires useDeckGl to the ElementFullscreenContext expand button. */

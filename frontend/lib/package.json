@@ -130,7 +130,7 @@
     "vega-interpreter": "^2.3.2",
     "vega-lite": "6.4.3",
     "vfile": "^6.0.0",
-    "wavesurfer.js": "^8.0.0",
+    "wavesurfer.js": "^8.0.1",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {
@@ -166,9 +166,9 @@
     "@vitejs/plugin-react-swc": "^4.3.3",
     "timezone-mock": "^1.4.3",
     "typesync": "^0.14.3",
-    "vite": "^8.3.0",
+    "vite": "^8.3.1",
     "vite-plugin-dts": "^5.1.1",
-    "vitest": "^5.0.1",
+    "vitest": "^5.0.2",
     "vitest-fetch-mock": "^0.4.5"
   },
   "typesync": {

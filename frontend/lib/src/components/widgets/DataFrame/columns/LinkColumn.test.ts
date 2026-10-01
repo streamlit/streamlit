@@ -16,13 +16,13 @@
 
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
-import { GridCellKind, UriCell } from "@glideapps/glide-data-grid"
+import { GridCellKind, type UriCell } from "@glideapps/glide-data-grid"
 import { Field, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import LinkColumn from "./LinkColumn"
-import { ErrorCell, isErrorCell, isMissingValueCell } from "./utils"
+import { type ErrorCell, isErrorCell, isMissingValueCell } from "./utils"
 
 const MOCK_LINK_COLUMN_PROPS = {
   id: "1",

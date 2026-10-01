@@ -15,7 +15,7 @@
  */
 
 import {
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -25,16 +25,16 @@ import {
 } from "react"
 
 import {
-  NumberSize,
+  type NumberSize,
   Resizable,
-  ResizeCallback,
-  ResizeDirection,
+  type ResizeCallback,
+  type ResizeDirection,
 } from "re-resizable"
 
 import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
 import SidebarNav from "@streamlit/app/src/components/Navigation/SidebarNav"
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   BaseButton,
   BaseButtonKind,

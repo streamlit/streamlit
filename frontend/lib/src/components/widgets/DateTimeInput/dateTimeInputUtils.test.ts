@@ -17,10 +17,10 @@
 import { CalendarDateTime } from "@internationalized/date"
 import { describe, expect, it, vi } from "vitest"
 
-import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
+import type { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
-import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   calendarDateTimeToIso,

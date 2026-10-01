@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import { cleanup, screen, within } from "@testing-library/react"
 import { transparentize } from "color2k"
@@ -33,7 +33,7 @@ import StreamlitMarkdown, {
   containsMathSyntax,
   createAnchorFromText,
   CustomCodeTag,
-  CustomCodeTagProps,
+  type CustomCodeTagProps,
   CustomMediaTag,
   CustomPreTag,
   HeadingWithActionElements,

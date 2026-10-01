@@ -134,6 +134,7 @@ export const extractComponentsV2Theme = (
     dataframeBorderColor: theme.colors.dataframeBorderColor,
     dataframeHeaderBackgroundColor:
       theme.colors.dataframeHeaderBackgroundColor,
+    dataframeHeaderTextColor: theme.colors.dataframeHeaderTextColor,
     codeBackgroundColor: theme.colors.codeBackgroundColor,
     font: theme.genericFonts.bodyFont,
     chartCategoricalColors: theme.colors.chartCategoricalColors,

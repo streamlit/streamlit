@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactNode, useEffect, useRef } from "react"
+import { type ReactNode, useEffect, useRef } from "react"
 
 import { isKeyboardEventFromEditableTarget } from "@streamlit/lib"
 

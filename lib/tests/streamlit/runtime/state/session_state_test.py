@@ -847,7 +847,7 @@ def test_callback_switch_page_wins_over_a_competing_callback_rerun() -> None:
 
     assert len(at.exception) == 0
     assert [text.value for text in at.text] == ["other page"]
-    assert at.query_params == {"utm_source": ["home"]}
+    assert at.query_params == {"utm_source": "home"}
 
 
 def _state_with_unregistered_widgets() -> SessionState:

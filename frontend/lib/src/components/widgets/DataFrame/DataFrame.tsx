@@ -940,6 +940,11 @@ function DataFrame({
   // disabled in that case.
   const isSearchOpen = canSearch && showSearch
 
+  // Name the grid (not the toolbar wrapper) only when alt is non-blank.
+  // role="region" (not "img") exposes the name without making Glide's
+  // operable canvas presentational.
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -1009,6 +1014,7 @@ function DataFrame({
         onExpand={expand}
         onCollapse={collapse}
         target={StyledResizableContainer}
+        labelContext={accessibleName}
       >
         {customToolbarActions?.map(action => action)}
         {((isRowSelectionActivated &&
@@ -1028,6 +1034,7 @@ function DataFrame({
               clearSelection()
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
         {canDeleteRows && isRowSelected && (
@@ -1040,6 +1047,7 @@ function DataFrame({
                 clearTooltip()
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {canAddRows && !isRowSelected && (
@@ -1056,6 +1064,7 @@ function DataFrame({
                 dataEditorRef.current?.scrollTo(0, numRows, "vertical")
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {!isEmptyTable && allColumns.length > 0 && (
@@ -1072,6 +1081,7 @@ function DataFrame({
               label="Show/hide columns"
               icon={Visibility}
               onClick={handleToggleColumnVisibilityMenu}
+              labelContext={accessibleName}
             />
           </ColumnVisibilityMenu>
         )}
@@ -1080,6 +1090,7 @@ function DataFrame({
             label="Download as CSV"
             icon={FileDownload}
             onClick={exportToCsv}
+            labelContext={accessibleName}
           />
         )}
         {canSearch && (
@@ -1095,12 +1106,15 @@ function DataFrame({
               }
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
       </Toolbar>
       <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}
+        aria-label={accessibleName}
+        {...(accessibleName ? { role: "region" } : {})}
         defaultSize={resizableSize}
         style={{
           border: `${gridTheme.tableBorderWidth}px solid ${gridTheme.glideTheme.borderColor}`,
