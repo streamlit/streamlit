@@ -15,14 +15,17 @@ file records what *using* it as an agent is like, including two downstream
 tasks the spec names as consumers of the same snapshot: a personalized email
 report and a static HTML export.
 
-Six trials, same protocol, growing app set. The first found holes where the
+Eight trials, same protocol, growing app set. The first found holes where the
 snapshot was dishonest. Later trials re-ran after patches. The fifth added an
 element gallery to sweep many `st.*` commands at once. The sixth is the first
 that can drive `@st.fragment` regions and `st.dialog` bodies the way a browser
 would. The seventh left the kitchen-sink apps and drove a real Community Cloud
 host: [issues.streamlit.app](https://issues.streamlit.app/), Streamlit’s
 internal `streamlit/streamlit` dashboard, using only the iframe-prefixed agent
-API. Callers were not allowed to read GitHub or the app source.
+API. The eighth stayed on that host with harder cross-page questions (feature
+reaction rollups, interrupt vs dedicated KPIs, coverage windows, load-test
+isolation, MCP `tools/call`, spec/wiki reads). Callers were not allowed to
+read GitHub or the app source.
 
 Challenge apps and raw notes live under `work-tmp/agent-challenges/` (gitignored).
 The apps are not the product; they exist to exercise the API.
@@ -82,7 +85,11 @@ Five challenges, each a separate agent pointed at
     open-issue catalog + `type:bug` one-shot, interrupt-rotation health,
     AI workflow pills, flaky tests, community PRs, coverage (blocked
     row-select), company requests from a table URL, wiki one-shot, email +
-    HTML briefing. No GitHub API.
+    HTML briefing. Eighth trial added feature-label reaction rollups,
+    P2/P3 intersections, interrupt vs dedicated-page KPI check, coverage
+    slider windows, load-test scenario isolation, Playwright tab/test
+    switch, 2025 reaction closers, spec renderer, MCP `tools/call`,
+    company hop from a P2 URL. No GitHub API.
 
 Answers matched independent aggregates of the Vega catalogs in every trial.
 
@@ -575,6 +582,196 @@ one.
 | Fragments | Present on Interrupt; not how the page’s widgets are scoped. Lazy expander 139 s. |
 | Email / HTML | **True** for KPI + inlined Arrow, with the iframe-prefix caveat. |
 
+## Eighth trial (advanced questions on the live host)
+
+Same host and prefix as the seventh, now on Streamlit **1.64.0** (caption still
+Python 3.13.0). Same black-box rule: OpenAPI + HTTP only, iframe base
+`https://issues.streamlit.app/~/+/`, no GitHub, no app source.
+
+Artifacts: `work-tmp/agent-challenges/reports-r8/` (`probes.json`,
+`probes2.json`, `probes3.json`, `bug.arrow`). A first session died after
+several sequential page navigations (`Connection refused`); remaining pages
+were re-run as one-shot creates.
+
+### Protocol that landed since round 7
+
+| Probe | Result |
+| --- | --- |
+| OpenAPI `servers` | `[{url: "/", description: … hosted app may sit behind a prefix …}]` |
+| Join `servers.url` to the **naked** origin | **303** auth HTML (same as round 7) |
+| Fetch OpenAPI under `/~/+/` then join `/` | Correct: the relative server is the iframe prefix |
+| `info.x-streamlit-agent-api` / version | `available` / `1.64.0` |
+| `InteractRequest.context` | Present (`timezone`, `locale`). Create with `Europe/Berlin` + `de-DE` is 200. This app does not echo `st.context`, so the values are not observable. |
+| `Fragment` schema | **Dropped**. `Node.fragment` remains. Top-level `fragments` still `null` on Interrupt. |
+| MCP in OpenAPI `paths` | **Absent**. Description text mentions MCP. |
+| `POST …/mcp` initialize | **200** on the prefix (`protocolVersion` 2025-03-26, `serverInfo.version` 1.64.0). **303** naked. |
+| `GET …/mcp` | **405** |
+| MCP `tools/list` | One tool: `interact` |
+| MCP `tools/call` `{}` | **200**; snapshot is a JSON string inside `result.content[0].text` (landing page, 21 pages) |
+| `unknown_page` | **404** with `pages` as **data** (21 entries). Round-7 **AA is fixed** on this host. |
+| `Link: rel="service-desc"` | Still **absent** on 200 and 4xx |
+
+The iframe prefix is still load-bearing. `servers: [{url: "/"}]` only helps a
+client that already fetched the document from the prefixed URL. An agent that
+opens the human URL and concatenates `/_stcore/...` never sees the document.
+
+### Challenges (answers from this snapshot / Arrow only)
+
+**Open bugs, by feature.** One-shot
+`{"page":"Open_Issues","query_params":{"label":["type:bug"]}}`: caption and
+iframe Arrow both **115** issues, **962** reactions, **24,467** views. Summing
+`total_reactions` per `feature:*` label: `st.dataframe` 75, `st.plotly_chart`
+59, `authentication` 55, `st.login` 52, `st.selectbox` 52. Priority counts on
+the same table: **P2 = 1**, P3 = 74, P4 = 35. Highest `importance` is still
+the `st.login()` / `st.logout()` regression (#14290), same as round 7.
+
+**P2 ∩ bug.** Adding `priority:P2` to the bound label widget: **1** issue, 5
+reactions, 33 views — Safari pills/segmented-control “selected” style on
+fresh load (#17074). Pasting that catalog URL into Company requests: title
+matches, metrics **0 / 0 / 0 / 0**, info “No users with company information
+found.” Honest empty, ~2 s, still no GitHub client.
+
+**P3 ∩ bug, then “worth working on”.** P3 ∩ bug: **74** / 704 / 17,894. The
+checkbox then leaves **59** / 507 / 11,614. The caption’s GitHub search URL
+still only has `label:type:bug+label:priority:P3` — the checkbox is not in
+the cited query. After the filter, the previous 115-row Arrow **404**s; the
+new hash is a different `/media/…`.
+
+**Interrupt vs dedicated pages.** One-shot Interrupt (0.82 s; the in-session
+`page` navigation had timed out at 180 s): Python **98.88%** (+0.17),
+frontend **95.85%** (−0.01), wheel **9.8 MiB**, total bundle gzip **8.7 MiB**,
+Playwright tests **6,454** (**+57**), failed CI **1%** (2/227), failed
+nightly **6** (75% · 6/8), E2E memory **9.1 GB**, median duration **0.72 s**.
+Six `node.fragment` ids; top-level `fragments` still `null`. Dedicated
+Python / frontend / bundle pages match those headline values. Playwright
+**stats** page is 6,454 tests but delta **+101**, not +57 — same KPI, two
+deltas, no way to tell which window the mosaic used. Wheel dedicated page
+reports average **9.6 MiB** / max **9.8 MiB** against Interrupt’s single
+“Wheel Size” **9.8 MiB**.
+
+**Coverage window.** Slider bounds are **min 50 / max 250 / value 50**, not
+10. Sending `10` is 400 `invalid_value` (“below the minimum”). Setting 100
+returns a 99-row complete Arrow: coverage 0.987–0.989, newest ~0.9888.
+Metrics stay 98.88% / 28,808 / 323; only the deltas move. After Open-issues
+filtering, these pages still carry `query_params.label: ["type:bug",
+"priority:P3"]` (leak from round 7, still true).
+
+**Load testing.** Default snapshot **492 KB**, 12 Plotly figures with
+`spec_omitted: ["layout.template"]` (~38 k characters each, ~461 k of spec
+in the JSON), **36** metrics whose labels repeat (`Initial load (p50)` six
+times — one per scenario). Setting Scenarios to `["fragment_app"]` is 200
+in 1.5 s and shrinks the snapshot to **81.5 KB**, but the tree still has 12
+Plotly nodes and the same 36 duplicate-labeled metrics (overview markdown
+still names `many_messages_app`, `caching_app`, …). The widget value
+changed; the numbers an agent would cite did not become
+fragment-app-only.
+
+**Playwright performance.** Authored keys `playwright_tab` /
+`selected_test`. Default tab `Runs` is also written to `query_params.tab`.
+Switching test to `test_dialog_open_and_close_performance` (5.3 s) retargets
+the Plotly `key`s. Switching tab to “Interpret metrics” (0.48 s) replaces
+charts with markdown. Snapshot **317.5 KB** (seven Plotly specs ~40–46 k
+chars). Stats page: 6,454 tests, 13.7 min session, mean 1.43 s, median
+0.72 s, 9.1 GB memory.
+
+**Issue reactions, 2025.** Default: 5,150 issues / 24,785 reactions / 4.81
+average. Date range `["2025-01-01","2025-12-31"]`: **778** / **7,169** /
+9.21. Arrow top closers: lukasmasuch 2,703 reactions (275 closed), jrieke
+1,242 (104), kajarenc 669 (22). Captions still say “Click on a bar.” First
+create timed out at 120 s; retry was 1.7 s.
+
+**Community PRs, Feature, last year.** Default still 403 / 15 open / 191
+merged / 197 closed without merge; 21.5 days to merge. Combined
+`widget_state` Feature + `["2025-10-01","2026-10-01"]`: **88** / 5 / 14 /
+69; 33.1 days to merge. Contributor Arrow authors are GitHub profile URLs;
+top Feature-year: tysoncung 6, harshang03 4.
+
+**Spec renderer / wiki.** 48 merged specs; none titled with “agent”.
+Selecting “2026-09-14 - Element Alt Text” inlines the product-spec markdown
+(`# Alt text for images…`). Wiki `file` options: **325** files;
+`prototype-feedback` is not among them. One-shot
+`query_params.file=["pull-requests/16843/2026-08-28-agent-app-api-gptsol-product-spec.md"]`
+opens that markdown. Bound `file` still seeds on create.
+
+**Flaky tests.** Caption: **76** flaky reruns in 200 successful runs
+(2026-09-24), 26 tests / 19 scripts; top 5 would cut reruns **52.63%**;
+rolling average **33.0%**. Arrow: `st_form_test.py::test_secondary_submit_buttons_enabled[chromium]`
+13, `test_form_disabled_submit_on_click[chromium]` 8, plotly-select
+webkit 7.
+
+**AI workflow usage.** 2,943 runs / 95% / 147 failed / avg 9m 5s. Duplicate
+labels remain: “AI PR Review” is both 2,538 runs and 9m 30s. Captions still
+say click a bar. Snapshot 134.7 KB (one Plotly spec 81 k chars).
+
+**GitHub stats.** Two one-shot creates, 120 s then **180 s**, both client
+timeouts. The only 21-page path this trial could not observe.
+
+**Session lifetime.** After Open issues → P2/P3 → coverage (~6 min on one
+`session_id`), later `page` navigations returned `Connection refused`.
+Health was fine minutes later. One-shot `{page: …}` creates recovered
+bundle (68 s), Playwright stats (62 s), load testing (63 s), coverage
+(78–90 s). Heavy first paints are slow; a reused session can disappear
+without an application-level error.
+
+### Previously open, now fixed or improved
+
+- **AA.** `unknown_page` now puts the 21 pages in `error`/`pages`, not only
+  in the message.
+- **W, partially.** OpenAPI has `servers: [{url: "/"}]`. That is the right
+  shape if the document was fetched from the iframe prefix. It does not
+  help a caller that never gets that far. `Link` is still stripped.
+- **Y, partially.** Plotly reports `spec_omitted: ["layout.template"]`.
+  Coverage figures are 4–19 k characters. Load testing and Playwright
+  performance are still hundreds of kilobytes because they ship **many**
+  figures, not because of the theme.
+
+### New issues this round
+
+**AC. MCP is a sibling of interact, not a documented path.** `tools/list` /
+`tools/call` work on the iframe prefix. OpenAPI `paths` still only lists
+interact + the schema route. GET is 405. The snapshot arrives as escaped
+JSON in a text content block, so an MCP client that expects structured
+tool output has to parse a string.
+
+**AD. Some pages exceed a patient agent’s read timeout; some sessions die.**
+`github_stats` never returned in 180 s. Interrupt `page` navigation on a
+busy session timed out; a fresh one-shot was 0.82 s. Sequential reuse ended
+in `Connection refused` with no `too_many_sessions` / `status: error`
+snapshot. One-shot creates are the reliable strategy on this host.
+
+**AE. Mosaic vs dedicated deltas.** Interrupt Playwright Tests **+57** vs
+Playwright stats **+101**, same absolute 6,454. Wheel Size 9.8 vs dedicated
+average 9.6. An agent that cites “the” coverage or bundle number should
+name the page, not assume the mosaic is a projection of the dedicated
+pages.
+
+**AF. Duplicate metric labels hide filter effects.** Load-testing
+`Initial load (p50)` is six values. After isolating `fragment_app`, all
+six are still in the tree. Keying by `props.label` (round-7 **AB**) now
+also mis-cites a filter that the widget `value` claims is on.
+
+**AG. Caption GitHub URLs omit some applied widgets.** “Issues worth
+working on” changes the table and the counts; the caption’s GitHub link
+does not. Same class as citing `query_params` as the filters: the
+human-facing citation and the snapshot’s widgets can disagree.
+
+### Scorecard deltas
+
+| Item | Eighth trial |
+| --- | --- |
+| One-shot `page` + bound `query_params` | **Works** (`label`, wiki `file`). Combined `widget_state` patches too. |
+| Arrow | **Works**; 115 = 115. Unreferenced hash **404**s after the next filter. |
+| Generated keys | **Work**. Coverage slider, worth-working-on, labels are `$$ID-…`. |
+| `unknown_page.pages` | **Fixed** (21 pages as data). |
+| `servers` | Present as `/`. Naked origin still **303**. |
+| MCP | **Works** on the prefix (`interact` tool). Not in OpenAPI `paths`. |
+| `context` | Accepted. Not visible on this app. |
+| `Link` | **Missing**. |
+| Plotly `spec_omitted` | **Yes** (`layout.template`). Load testing still **492 KB**. |
+| Long first paint / session death | **github_stats** unobserved; reused session died. One-shot recovers. |
+| Interrupt vs dedicated | Headlines match; **deltas do not**. |
+| Email / HTML | **True** for KPI + inlined Arrow, same iframe caveat. Prefer one-shot creates and fetch Arrow immediately. |
+
 ## Remaining issues (prioritized)
 
 ### 1. `clear_on_submit`
@@ -592,7 +789,9 @@ Pills/`format_func` now round-trip: snapshot `value` is the formatted label.
 Unchanged from earlier trials: string query params coerced; no structured
 `applied_filters`. **New from the live app:** `query_params` is session-global.
 A bound `label=type:bug` on Open issues was still sitting on Interrupt
-rotation and AI workflow usage after `page` navigation. A creating-call
+rotation and AI workflow usage after `page` navigation. Round 8: after
+P3 ∩ bug, Python coverage still showed
+`label: ["type:bug", "priority:P3"]`. A creating-call
 `query_params.ai_usage_workflows` was stored but did **not** seed the pills
 (those keys are not bound). Bound ones (`label`, wiki `file`) do seed on
 create. Do not cite `query_params` as “the filters that produced this page.”
@@ -601,9 +800,9 @@ create. Do not cite `query_params` as “the filters that produced this page.”
 
 Vega/Altair charts and **`st.map` now have Arrow.** **`st.echarts_chart` and
 `st.plotly_chart` do not.** Plotly reports `data.complete: true` with the
-figure `spec` inlined — including the default theme template and base64
-`bdata` traces — so a “complete” chart can be hundreds of kilobytes without
-a table a briefing can sum. The live load-testing page was **549 KB**.
+figure `spec` inlined and now names `spec_omitted: ["layout.template"]`.
+Small coverage figures are a few kilobytes; load testing was still
+**492 KB** (twelve ~38 k-char specs) and Playwright performance **317 KB**.
 Displayed `st.exception` still flips interact `status` to `error`.
 `st.mermaid_chart` is `markdown`.
 
@@ -611,17 +810,20 @@ Displayed `st.exception` still flips interact `status` to `error`.
 
 - **Watchlist `wl_title.options`** dumps ~3176 strings into every snapshot on that page. Live Issue explorer dumps 497 / 157 / 591 / 256 the same way.
 - **Generated keys** are the default on a real app. Copy from `actions`; do not persist.
-- **Iframe / embed prefix** is required on Community Cloud (`/~/+/`) and is not in OpenAPI.
+- **Iframe / embed prefix** is required on Community Cloud (`/~/+/`). OpenAPI now has `servers: [{url: "/"}]`; that only helps if the document was fetched under the prefix. Naked origin is still 303. `Link` is still stripped.
+- **MCP** works on the prefix (`tools/list` + `tools/call`) but is not an OpenAPI `paths` entry. GET is 405. Tool output is a JSON string in text content.
 - **`clear_on_submit`** is advertised and not applied (see #1).
 - **Tabs** with `on_change="rerun"` are now addressable. Eager tabs still dump every child.
-- **Metric values** are still display strings when the author formats them (`98.71%`, `8m 56s`). Duplicate labels collide. `chart_data` is under `data`.
+- **Metric values** are still display strings when the author formats them (`98.88%`, `9m 5s`). Duplicate labels collide (AI usage, load-testing scenarios). `chart_data` is under `data`.
 - **Empty interact is a rerun**, not a read.
 - **Catalog preview order** is not “top by the page’s sort.”
-- **Plotly / echarts** inline a spec with `complete: true` and no Arrow.
+- **Plotly / echarts** inline a spec with `complete: true` and no Arrow (`spec_omitted` drops the theme only).
 - **Dataframe and chart selection** are not in `actions`; captions may still say “click.”
 - **Dialog overlay** still has a generated tree `key` that is not in `actions` (acting on it is `unknown_key`). Confirm *is* in `actions` while the dialog is open.
 - **No dismiss action.** `props.dismissible: true` is advertised; closing is a full rerun, not an overlay-only X.
 - **Popover children** are in the tree and addressable while closed.
+- **Long first paints / dead sessions** on this host: `github_stats` >180 s; reused `session_id` ended in connection refused. Prefer one-shot `{page}` creates.
+- **`unknown_page.pages`** is now populated (was AA).
 
 ## Downstream tasks specifically
 
@@ -669,6 +871,14 @@ the iframe base `https://issues.streamlit.app/~/+/` for both interact and
 metrics and Altair/dataframe Arrow, not from figure specs. `query_params`
 was not used as a citation of filters after a later `page` change.
 
+**Round 8:** still true if the exporter **one-shots** each page (do not
+reuse a session across many heavy navigations) and fetches Arrow before
+the next filter (the 115-row bug Arrow 404’d after P2). Cross-page
+comparisons need the page named: Interrupt Playwright delta ≠ Playwright
+stats delta. Load-testing scenario filters are not safe to cite from
+duplicate metric labels. MCP `tools/call` is an equivalent observe path
+for the landing snapshot, with the snapshot nested as text.
+
 ## First trial (baseline)
 
 Same apps and challenges, before the patches. All five completed without a browser.
@@ -691,7 +901,11 @@ After the fragment work, acting inside a region reruns only that region.
 On the live host the new load-bearing facts are **where** to send the
 request (`/~/+/` on Community Cloud, including `/media/`) and **not** to
 treat `query_params` as the current page’s filters after a navigation.
-Plotly is not a data contract. Dataframe clicks are not actions. Email and
-HTML still work if the exporter fetches iframe-prefixed Arrow immediately
-and inlines it — that is how the 109-row `type:bug` catalog and the
-interrupt metrics were cited, without GitHub.
+OpenAPI `servers: [{url: "/"}]` confirms the prefix only if the document
+was fetched from it. Plotly is not a data contract, even with
+`spec_omitted`. Dataframe clicks are not actions. MCP `interact` works
+beside HTTP. Some pages never return inside 180 s; a reused session can
+vanish. Email and HTML still work if the exporter one-shots the page,
+fetches iframe-prefixed Arrow immediately, and inlines it — that is how
+the 115-row `type:bug` catalog, the 2025 closer table, and the interrupt
+metrics were cited, without GitHub.

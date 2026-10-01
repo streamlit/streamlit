@@ -47,7 +47,9 @@ snapshot.
   `components` section to point into and not every client resolves `$ref`, so
   referenced schemas are inlined.
 - **Result:** the snapshot, as structured content and as JSON text for clients that do
-  not read structured output.
+  not read structured output. Structured content arrived in protocol version
+  2025-06-18, so a client that negotiates an earlier version, as the eighth trial's
+  did, only has the text.
 - **Annotations:** not read-only and not idempotent, because any action may write.
 
 **Data stays behind `data.url`, as in the HTTP API.** A snapshot inlines up to 100 rows
@@ -169,7 +171,7 @@ About 2 days for a prototype-quality endpoint, roughly 320 lines including tests
 | JSON-RPC endpoint and the four messages                                            | ~150 lines |
 | `interact` tool: schema, errors, relative URLs                                     | ~60 lines  |
 | Tool description and `instructions`, shared with the OpenAPI text                  | ~40 lines  |
-| Discovery: mention the endpoint in the OpenAPI document and the `index.html` hint  | ~20 lines  |
+| Discovery: an OpenAPI `paths` entry and the `index.html` hint                      | ~20 lines  |
 | Tests, plus a pass with MCP Inspector and one or two real clients                  | ~150 lines |
 
 Not included: OAuth for signed-in apps, result-size budgets, and the data follow-up

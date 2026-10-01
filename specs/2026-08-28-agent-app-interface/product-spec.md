@@ -261,8 +261,19 @@ result is collected once; after that the same request is a new interaction, and 
 different request stops the slow run and starts a new one, as a browser interaction
 would.
 
+**That response is `202 Accepted`, not a `5xx`.** The request was accepted and its run is
+still going, which is what 202 says. A 504 says a gateway gave up, and gateways and HTTP
+client libraries retry 502–504 on their own. A retried creating call starts another
+session and another full run, and drops the `session_id` the first response carried. In
+the eighth trial on Community Cloud, three requests that should have answered with
+`run_timed_out` at 60 seconds returned nothing within 120 to 180 seconds, and the app
+later stopped accepting connections. That is consistent with the platform retrying the
+504 and multiplying runs, though it was inferred from the outside rather than confirmed.
+
 Sessions are reclaimed after `server.agentSessionTTL` of inactivity, so there is nothing
-to close. There is no separate read or delete route in v1, and no passive way to re-read
+to close. A client should still reuse one: every creating call runs the app from the start
+and holds a session until it idles out, so a client that creates one per request multiplies
+the server's work and memory by the number of requests it makes. There is no separate read or delete route in v1, and no passive way to re-read
 the last result: **an `interact` with no changes is an explicit rerun, not a read**, apart
 from collecting a timed-out run. It executes the script again and can repeat side effects
 exactly as any other Streamlit rerun does. A non-executing read arrives with the polling
@@ -526,7 +537,10 @@ Rules:
   client state — sent with each rerun, replaced when the server says it changed — rather
   than replaying whatever the last request carried. Replaying is what makes a snapshot
   report a filter the app has already discarded, on a page where nothing reads it, and
-  what lets a stale parameter overwrite a widget value on the way back. Even reported
+  what lets a stale parameter overwrite a widget value on the way back. Switching pages
+  also clears what a browser clears: only embed and widget-bound parameters carry over,
+  unless the request sends its own `query_params`, so a parameter one page was opened with
+  does not follow the client to the next. Even reported
   correctly, these are URL parameters rather than a description of what produced a number;
   widget `value`s are that.
 - **A label is not an identifier.** Nothing stops an app from giving two elements the
@@ -611,7 +625,7 @@ stays usable, so an agent can correct its input and interact again.
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
 | Script failed to compile                                                             | `status: "error"` with the compile error and no usable action list.                                                                      |
 | Another interaction on the same session is still in flight                           | `session_busy`. One interaction per session at a time, so a client never interrupts its own run by accident.                             |
-| Run exceeded `server.agentRunTimeout`                                                | `run_timed_out`, while the app keeps running. The same request again, or an empty one, waits for that run and returns its result; a different request stops it and starts a new one, as a browser interaction would. |
+| Run exceeded `server.agentRunTimeout`                                                | `202` with `run_timed_out`, while the app keeps running. The same request again, or an empty one, waits for that run and returns its result; a different request stops it and starts a new one, as a browser interaction would. |
 
 ### Actions in v1
 
@@ -988,9 +1002,17 @@ out of `_stcore/agent/v1/` to the app's root, whatever prefix sits in front of i
 whether or not the app can see it. The MCP endpoint uses the same form, resolved against
 the MCP server's URL.
 
-A proxy may also strip `Link: rel="service-desc"` from responses. Headers are the more
-fragile channel, which is the argument for keeping the document self-describing rather
-than relying on the header alone.
+A proxy may also strip `Link: rel="service-desc"` from responses, and Community Cloud
+does. Headers are the more fragile channel, which is the argument for keeping the
+document self-describing rather than relying on the header alone.
+
+**Discovery is the one part that needs the platform.** Relative URLs make the API work
+once a client has reached the app, but on Community Cloud the public URL serves the
+platform's own page, and the app's `index.html`, with its hint, sits behind `/~/+/`. An
+agent that fetches the URL a person would share never sees the hint, and joining that
+origin with `/_stcore/agent/v1/...` reaches a login redirect. Until the platform carries
+the same hint and link on its page, or routes the agent paths from the public origin to
+the app, "point an agent at an app URL" works there only for a client told the prefix.
 
 **The intended end state is on by default, with a deployment or platform opt-out.** The
 governing invariant is that a caller gets **no more authority and no more information than
@@ -1290,7 +1312,7 @@ new command or significant parameter should ship with all of the following, or a
 
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until a credential flow maps them. Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. |
+| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until a credential flow maps them. Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
 | No breaking API changes    | ✅ Additive: one config option, off in v1, and new routes under `/_stcore/agent/`. No `st.*` changes in v1. Flipping the default later is itself a reviewed change, not a silent one.                                                                                                                                                                                                                                                                                                                         |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either; see [mcp-support.md](mcp-support.md).                                                                                                                                                                                                                                                                                                                                                                                          |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
@@ -1339,8 +1361,10 @@ new command or significant parameter should ship with all of the following, or a
    20,000-point scatter is half a megabyte. And table previews are already capped, which
    is the one case where a `url` makes truncation safe. The candidate answer is to extend
    that pattern — serve oversized option lists and figure specifications behind
-   `data.url` — rather than to cap and discard. Worth deciding with measurements from real
-   apps rather than in the abstract.
+   `data.url` — rather than to cap and discard. A live 21-page dashboard supplied the
+   first measurements: a watchlist selectbox puts 3,176 options in every snapshot of its
+   page, and a load-testing page is 492 KB, nearly all of it twelve Plotly figures of
+   about 38,000 characters each.
 8. **What stability does the snapshot promise, and where does a public contract live?**
    The document is a compatibility surface from its first release: clients will key on
    element types, `props` names, and error codes, and every command's description becomes

@@ -29,7 +29,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from streamlit import config
@@ -45,11 +45,13 @@ from streamlit.runtime.agent.widget_patch import (
     resolve_fragment,
 )
 from streamlit.runtime.session_manager import SessionClient
+from streamlit.runtime.state.query_params import EMBED_QUERY_PARAMS_KEYS
 
 if TYPE_CHECKING:
     from streamlit.runtime.agent.snapshot import ElementState
     from streamlit.runtime.runtime import Runtime
     from streamlit.runtime.session_manager import ClientContext
+    from streamlit.runtime.state.query_params import QueryParams
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -399,6 +401,10 @@ async def _run_interaction(
 
     if page is not None:
         page_hash, page_name = _resolve_page(app_session, page)
+        if page_hash != rerun.page_script_hash:
+            rerun.query_string = _query_string_for_page_change(
+                app_session.session_state.query_params, rerun.query_string
+            )
         rerun.page_script_hash = page_hash
         rerun.page_name = page_name
     if query_params is not None:
@@ -587,6 +593,23 @@ def _encode_query_params(query_params: Any) -> str:
                 )
             pairs.append((str(name), str(value)))
     return urlencode(pairs)
+
+
+def _query_string_for_page_change(bindings: QueryParams, query_string: str) -> str:
+    """Keep what a browser keeps when it switches pages.
+
+    That is the embed parameters and the ones bound to a widget; everything
+    else is cleared, so a parameter one page was opened with does not follow
+    the caller to the next. The run then drops bound parameters that belong to
+    another page, and reports the result like any other change.
+    """
+    return urlencode(
+        [
+            (name, value)
+            for name, value in parse_qsl(query_string, keep_blank_values=True)
+            if name.lower() in EMBED_QUERY_PARAMS_KEYS or bindings.is_bound(name)
+        ]
+    )
 
 
 def _parse_context(context: Any) -> ContextInfo:

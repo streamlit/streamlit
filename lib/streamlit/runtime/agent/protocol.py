@@ -149,8 +149,12 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
             "session at a time."
         ),
     ),
+    # 202 rather than 504: the request was accepted and its run is still going,
+    # and gateways and HTTP clients retry 502-504 on their own. A retried
+    # creating call would start another session and another run, and lose the
+    # `session_id` this response carries.
     "run_timed_out": (
-        504,
+        202,
         (
             "The app did not finish within `server.agentRunTimeout` and is still "
             "running. This is expected for slow work, such as an app's first "
@@ -310,7 +314,7 @@ def build_openapi_document(
     if notice is None:
         info["x-streamlit-version"] = __version__
 
-    return {
+    document: dict[str, Any] = {
         "openapi": "3.1.0",
         "info": info,
         "servers": [
@@ -354,6 +358,21 @@ def build_openapi_document(
                                 }
                             },
                         },
+                        "202": {
+                            "description": (
+                                "Accepted, but the run is still going after "
+                                "`server.agentRunTimeout`: an `Error` with code "
+                                "`run_timed_out` and the `session_id`. Not a "
+                                "failure. Send the same request again, or one with "
+                                "only `session_id`, to wait for the run and get its "
+                                "snapshot."
+                            ),
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Error"}
+                                }
+                            },
+                        },
                         "default": {
                             "description": _ERROR_RESPONSE_DESCRIPTION,
                             "content": {
@@ -380,6 +399,46 @@ def build_openapi_document(
         },
         "components": {"schemas": schemas()},
     }
+    if mcp_path:
+        document["paths"][mcp_path] = _MCP_PATH_ITEM
+    return document
+
+
+_MCP_PATH_ITEM: Final = {
+    "post": {
+        "operationId": "mcp",
+        "summary": "The same interaction, as an MCP server.",
+        "description": (
+            "The Model Context Protocol over HTTP: send JSON-RPC 2.0 messages "
+            "(`initialize`, `tools/list`, `tools/call`). It offers one tool, "
+            "`interact`, which takes the interact operation's request body as its "
+            "arguments and returns the snapshot both as `structuredContent` and as "
+            "a JSON text block, for clients that only read text. There is no "
+            "server-sent stream, so `GET` answers `405`, as the MCP specification "
+            "prescribes for a server without one."
+        ),
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": ["object", "array"],
+                        "description": "A JSON-RPC 2.0 message, or a batch of them.",
+                    }
+                }
+            },
+        },
+        "responses": {
+            "200": {
+                "description": "The JSON-RPC response, or a batch of them.",
+                "content": {
+                    "application/json": {"schema": {"type": ["object", "array"]}}
+                },
+            },
+            "202": {"description": "A notification, accepted with no response."},
+        },
+    }
+}
 
 
 _DISABLED_NOTICE: Final = """\
@@ -445,14 +504,17 @@ The one exception is a retry after a timeout, below.
 
 **A timeout is not a failure.** Slow work -- typically an app's first load of \
 data it has not cached yet -- can outlast `server.agentRunTimeout`, and the \
-request then returns `run_timed_out` while the app keeps running. Send the \
-same request again, or an empty one with only `session_id`: the retry waits \
-for that run instead of starting it over, and returns its result once it \
-finishes, so a slow run completes over several retries. A retry never fires a \
-trigger twice. Any other request stops the run and starts a new one.
+request then returns `202` with `run_timed_out` and the `session_id` while the \
+app keeps running. Send the same request again, or an empty one with only \
+`session_id`: the retry waits for that run instead of starting it over, and \
+returns its result once it finishes, so a slow run completes over several \
+retries. A retry never fires a trigger twice. Any other request stops the run \
+and starts a new one.
 
-Sessions are reclaimed after `server.agentSessionTTL` of inactivity, so there \
-is nothing to close.
+Reuse one session for a sequence of interactions rather than creating one per \
+request. Each creating call runs the app from the start and holds a session \
+until it has been idle for `server.agentSessionTTL`, and the server caps how \
+many it holds. There is nothing to close.
 
 A session runs as whoever created it. Where the deployment maps identity \
 headers into `st.user` (`server.trustedUserHeaders`), the app sees the same \
@@ -638,9 +700,9 @@ def schemas() -> dict[str, Any]:
                         "It is not a claim that every part of the tree was "
                         "rendered at that moment. An interaction scoped to a "
                         "fragment reruns only that region and leaves the rest "
-                        "standing, exactly as the browser does, so check "
-                        "`fragments[].rendered` before citing a number as being "
-                        "as of this instant."
+                        "as the last run left it, exactly as the browser does, "
+                        "so content outside the fragment you acted on may come "
+                        "from an earlier run."
                     ),
                 },
                 "app_title": {

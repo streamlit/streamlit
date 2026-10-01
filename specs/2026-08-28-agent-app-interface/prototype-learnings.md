@@ -881,12 +881,15 @@ rather than schema, and a skill for agents that can be equipped in advance.
 A seventh trial against the live Community Cloud host
 `https://issues.streamlit.app/` made a related discovery gap concrete. The
 public origin is not the agent origin: interact and `/media/` without the
-iframe prefix `/~/+/` **303 to auth HTML**. OpenAPI has no `servers` field,
-`data.url` is root-relative, and this host also stripped `Link:
-rel="service-desc"` on both 200 and 4xx. An agent that follows the spec’s
-paths against the URL a human opens never reaches the API. Hosted / embedded
-apps need the iframe (or equivalent) prefix as part of the advertised base,
-not only in operator folklore.
+iframe prefix `/~/+/` **303 to auth HTML**. OpenAPI then had no `servers`
+field, `data.url` is root-relative, and this host also stripped `Link:
+rel="service-desc"` on both 200 and 4xx. Round 8 found `servers: [{url:
+"/"}]` on Streamlit 1.64.0; joining that to the naked origin is still
+303, so the field only helps a caller that already fetched the document
+under the prefix. An agent that follows the spec’s paths against the URL
+a human opens never reaches the API. Hosted / embedded apps need the
+iframe (or equivalent) prefix as part of the advertised base, not only
+in operator folklore.
 
 The same trial showed `query_params` is session-global leftover rather than
 a citation of the current page: a bound Open-issues `label` was still
@@ -948,6 +951,67 @@ reminder that `props.label` is not a key.
 assumption with the implementation — same origin, no proxy, no platform in between — so no
 number of local rounds could have found this. Externally hosted coverage is a different
 axis from feature coverage.
+
+## 7f. Eighth trial: advanced questions on the live host
+
+Round 7 found the prefix. Round 8 stayed on
+[issues.streamlit.app](https://issues.streamlit.app/~/+/) (now Streamlit 1.64.0)
+and asked harder questions of the same 21 pages. The protocol patches predicted
+in 7e are on the wire:
+
+- OpenAPI `servers: [{url: "/"}]`. Joining that to the naked origin is still
+  303. The relative server only works if the document was fetched under `/~/+/`.
+- `unknown_page` carries `pages` as data (21 entries).
+- Plotly names `spec_omitted: ["layout.template"]`. Load testing is still
+  ~492 KB because it ships twelve figures, not because of the theme.
+- `context` is accepted; this app never echoes `st.context`.
+- MCP `initialize` / `tools/list` / `tools/call` work on the prefix. MCP is
+  not in OpenAPI `paths`. `tools/call` returns the snapshot as a JSON string
+  inside text content.
+
+What the advanced tasks added, which local kitchen-sinks also would not have
+shown:
+
+- **One-shot creates outlive reused sessions.** Sequential `page` navigation
+  on one `session_id` ended in `Connection refused` after ~6 minutes of heavy
+  pages. `github_stats` never returned inside 180 s. Fresh `{page: …}` creates
+  recovered Interrupt in 0.82 s and coverage / bundle / load in 60–90 s.
+- **Mosaic KPIs are not a view of the dedicated pages.** Interrupt Playwright
+  Tests 6,454 **+57** vs Playwright stats 6,454 **+101**. Duplicate metric
+  labels on load testing (six `Initial load (p50)` values) survive a
+  Scenarios filter that the widget `value` claims isolated to `fragment_app`.
+- **Caption citations can omit applied widgets.** “Issues worth working on”
+  changes the table; the caption’s GitHub URL does not. Same family as
+  session-global `query_params`.
+- Arrow hashes still 404 once the next filter unreferences them (115-row
+  `type:bug` table after P2). Fetch immediately.
+
+The live host remains the only way to see iframe discovery, session death
+under production load, and pages whose first paint exceeds the client's
+read timeout.
+
+**What changed in response.** The deployment predated several fixes already on the
+branch: relative `servers` and media URLs, retries that collect a timed-out run instead
+of restarting it, `index` dropped from selection widgets, and `chart_data` reported as a
+prop. This round added:
+
+- **`run_timed_out` is a 202, not a 504.** Three requests that should have returned it
+  at 60 s returned nothing within 120–180 s. That fits a gateway retrying 504s, which
+  for a creating call also starts another session and another full run each time, and
+  fits the later `Connection refused`. It is inferred from the outside, not confirmed;
+  202 is the accurate status either way, and nothing retries a 2xx.
+- **Switching pages keeps only embed and widget-bound query parameters,** as a browser
+  does; unbound ones no longer follow the client. The trial's leaking `label` did not
+  reproduce: a bound parameter whose widget belongs to the page being left is dropped by
+  the server on navigation, in this branch and in the deployed build. One bound in code
+  every page runs stays everywhere, in a browser too.
+- **MCP is an OpenAPI `paths` entry.** `GET` answering 405 is what the MCP transport
+  prescribes for a server without a stream, and structured content needs protocol
+  2025-06-18, which the trial's client did not negotiate, so it only had the text.
+- **`observed_at` no longer points at `fragments[].rendered`**, a field removed when
+  staleness stopped being reported.
+- **A displayed `st.exception` leaves `status` as it is**, checked locally; an `error`
+  status on the live app means the page itself raised.
 
 ## 8. Open questions the prototype surfaced
 
