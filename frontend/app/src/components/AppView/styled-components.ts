@@ -16,7 +16,10 @@
 
 import styled, { type CSSObject } from "@emotion/styled"
 
-import type { EmotionTheme } from "@streamlit/lib"
+import {
+  type EmotionTheme,
+  getBareEmbedOverlayToolbarPadding,
+} from "@streamlit/lib"
 
 export const StyledAppViewContainer = styled.div({
   display: "flex",
@@ -142,11 +145,10 @@ export const StyledAppViewBlockContainer =
       embedded,
       theme,
     }) => {
-      // Bare-embed top padding must clear the first element's overlay toolbar.
-      // Toolbar's TOP_DISTANCE places the wrapper above the element; wrapper
-      // padding insets the visible chrome, so this is slightly less than that
-      // offset's magnitude. Keep in sync with Toolbar's TOP_DISTANCE.
-      const littlePadding = "2.35rem"
+      // Clears the first element's overlay toolbar in a bare embed / print.
+      // Derived from the same button-min + padding formula as Toolbar's
+      // TOP_DISTANCE so the gap holds at every supported baseFontSize.
+      const littlePadding = getBareEmbedOverlayToolbarPadding(theme)
 
       // Top padding logic per specification:
       let topPadding = littlePadding

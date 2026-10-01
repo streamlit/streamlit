@@ -24,6 +24,7 @@ import {
   ComponentRegistry,
   ElementNode,
   FileUploadClient,
+  getBareEmbedOverlayToolbarPadding,
   makeElementWithInfoText,
   mockEndpoints,
   mockSessionInfo,
@@ -661,7 +662,7 @@ describe("AppView element", () => {
       })
 
       describe("without show_padding or show_toolbar options", () => {
-        it("uses 2.35rem top padding when no header content", () => {
+        it("uses overlay-toolbar clearance padding when no header content", () => {
           render(
             <AppView
               {...getProps({
@@ -673,9 +674,13 @@ describe("AppView element", () => {
             />
           )
 
-          const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("2.35rem")
-          expect(style.paddingBottom).toEqual("1rem")
+          const mainBlock = screen.getByTestId("stMainBlockContainer")
+          // calc(...) keeps clearance at baseFontSize < 16; equals 2.35rem at 16px.
+          // Use toHaveStyle (not getComputedStyle): jsdom does not resolve max() in calc.
+          expect(mainBlock).toHaveStyle(
+            `padding-top: ${getBareEmbedOverlayToolbarPadding(mockTheme.emotion)}`
+          )
+          expect(getMainBlockContainerStyle().paddingBottom).toEqual("1rem")
         })
 
         it("uses 4.5rem top padding when header content exists (logo)", () => {
