@@ -2814,11 +2814,7 @@ class VegaChartsMixin:
         encoding arguments are only known at the command -- so both halves meet
         here.
         """
-        # Inline data goes in `data`; the built-in charts and Altair use a
-        # named dataset instead.
-        arrow_bytes = proto.data.data or (
-            proto.datasets[0].data.data if proto.datasets else b""
-        )
+        buffers = agent_spec.vega_arrow_buffers(proto)
         return agent_spec.element(
             command,
             key=proto.id or None,
@@ -2826,8 +2822,10 @@ class VegaChartsMixin:
             # them has nothing to send, so it is fully supported.
             support="read_only_in_v1" if selection_mode else None,
             data_url=data_offload.serve_arrow_over_http(
-                arrow_bytes, coordinates=self.dg._get_delta_path_str()
-            ),
+                buffers[0], coordinates=self.dg._get_delta_path_str()
+            )
+            if len(buffers) == 1
+            else None,
             theme=theme,
             selection_mode=selection_mode or None,
             alt=agent_spec.proto_alt(proto),

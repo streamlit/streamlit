@@ -372,10 +372,11 @@ class _SnapshotBuilder:
             # produced it stops rendering.
             data["url"] = data_url
         elif data.get("complete") is False:
-            # Incomplete with nowhere to fetch the rest. The only way to reach
-            # this is a buffer too large to hold a second copy of, so say so
-            # rather than leaving a client to infer it from a missing key.
-            data["unavailable"] = "too_large_to_serve"
+            # Incomplete with nowhere to fetch the rest. Unless the data block
+            # already says why, the buffer was too large to hold a second copy
+            # of; say so rather than leaving a client to infer it from a
+            # missing key.
+            data.setdefault("unavailable", "too_large_to_serve")
         if data:
             result["data"] = data
 
@@ -600,12 +601,11 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
         return _arrow_data(payload.arrow_data.data)
 
     if proto_field == "vega_lite_chart":
-        # Inline data goes in `data`; the built-in charts and Altair use a
-        # named dataset instead.
-        arrow_bytes = payload.data.data or (
-            payload.datasets[0].data.data if payload.datasets else b""
-        )
-        data = _arrow_data(arrow_bytes) or {}
+        buffers = agent_spec.vega_arrow_buffers(payload)
+        if len(buffers) > 1:
+            data = {"complete": False, "unavailable": "multiple_datasets"}
+        else:
+            data = (_arrow_data(buffers[0]) if buffers else None) or {}
         spec = _parse_json(payload.spec)
         if spec is not None:
             data["spec"] = spec

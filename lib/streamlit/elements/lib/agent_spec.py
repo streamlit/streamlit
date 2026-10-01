@@ -222,6 +222,21 @@ def proto_alt(proto: Any) -> str | None:
     return proto.alt if proto.HasField("alt") else None
 
 
+def vega_arrow_buffers(proto: Any) -> list[bytes]:
+    """Every Arrow buffer a Vega-Lite chart's data is split across.
+
+    Inline data and named datasets are both Arrow. The built-in charts and a
+    single-dataframe Altair chart have one; Altair gives each dataframe in a
+    layered or concatenated chart its own named dataset. Only a single buffer
+    is served or previewed: several cannot be described as one table, and
+    serving just the first would claim `complete` while leaving the rest out,
+    so callers report several as unavailable instead.
+    """
+    buffers = [proto.data.data] if proto.data.data else []
+    buffers.extend(dataset.data.data for dataset in proto.datasets)
+    return buffers
+
+
 def described_column_config(column_config_mapping: Any) -> Any:
     """Describe a column configuration from the mapping Streamlit resolved.
 

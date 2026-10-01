@@ -801,7 +801,7 @@ budget, the request fails rather than truncating silently.
 
 **`data.complete` is the field a client branches on, and it resolves three ways, never
 none.** Either the data here is everything (`complete: true`), or a `url` serves the rest,
-or an explicit `unavailable` says the data was too large to hold a second copy of. It
+or an explicit `unavailable` says why the data could not be served. It
 is not a lazy-loading flag: an eagerly sent 5,000-row table is incomplete too, because
 only its first 100 rows are inlined, and a lazy dataframe is one way among several to end
 up with `complete: false`. One byte threshold for both the preview and the externalization would leave a hole: a
@@ -850,6 +850,7 @@ back to a browser rather than mistake it for missing content:
 | Deferred downloads                                                         | `support: not_interactive_in_v1`: the file is only generated on click and has no URL to report. An eager download is fully supported.                                         |
 | Lazy dataframe continuation                                                | `complete: false`, and `data.url` serves only the chunk already loaded.                                                                                                       |
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
+| Charts that combine several dataframes                                     | A layered or concatenated Altair chart over different dataframes reports its `spec` with `data.unavailable: multiple_datasets` and serves none of them, rather than serve the first and claim `complete`. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again; the interval is not reported, since it would not change when a caller chooses to.                                         |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.                  |
 | `bind="query-params"` write-back                                           | Setting a bound widget changes its value but not `query_params`; the browser is what writes the address bar. See [Actions in v1](#actions-in-v1).                             |

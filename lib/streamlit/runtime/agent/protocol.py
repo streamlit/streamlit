@@ -844,8 +844,8 @@ def schemas() -> dict[str, Any]:
                 "given a figure or an option object rather than a dataframe. "
                 "When it is false, `url` is where the rest lives — a preview "
                 "is never the complete answer to an aggregate question. "
-                "`complete: false` without a `url` means the data was too "
-                "large to serve; `unavailable` says so."
+                "`complete: false` without a `url` means the data could not "
+                "be served; `unavailable` says why."
             ),
             "properties": {
                 "columns": {
@@ -912,14 +912,17 @@ def schemas() -> dict[str, Any]:
                 },
                 "unavailable": {
                     "type": "string",
-                    "enum": ["too_large_to_serve"],
+                    "enum": ["too_large_to_serve", "multiple_datasets"],
                     "description": (
                         "Why incomplete data has no `url`. Present only when "
-                        "`complete` is false and `url` is absent. "
-                        "`too_large_to_serve`: the data is larger than "
+                        "`complete` is false and `url` is absent.\n\n"
+                        "- `too_large_to_serve`: the data is larger than "
                         "`server.maxMessageSize`, the bound the app's own "
                         "WebSocket messages have. Narrow the app's filters to "
-                        "get under it."
+                        "get under it.\n"
+                        "- `multiple_datasets`: the chart combines several "
+                        "dataframes, such as a layered Altair chart, and none "
+                        "of them is served. `spec` still describes the chart."
                     ),
                 },
                 "spec": {
