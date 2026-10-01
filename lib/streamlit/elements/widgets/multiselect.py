@@ -880,8 +880,22 @@ class MultiSelectMixin:
                 )
             )
 
-        if value_needs_reset or widget_state.value_changed:
-            proto.raw_values[:] = serde.serialize(current_values)
+        # Resend set_value when the selected option's formatted label changed
+        # between reruns (e.g. format_func embeds a count or timestamp). The
+        # frontend tracks the selection by label and resends it verbatim, so
+        # without this a later rerun can't map the stale label back to an
+        # option and resets the widget (gh-17175).
+        # Only compare when every value is a real option, so user-entered values
+        # (accept_new_options) are never rewritten with format_func applied.
+        serialized_values = serde.serialize(current_values)
+        labels_changed = (
+            widget_state.incoming_serialized_values is not None
+            and widget_state.incoming_serialized_values != serialized_values
+            and all(v in formatted_option_to_option_index for v in serialized_values)
+        )
+
+        if value_needs_reset or widget_state.value_changed or labels_changed:
+            proto.raw_values[:] = serialized_values
             proto.set_value = True
 
         layout_config = create_layout_config(width=width)
@@ -893,7 +907,9 @@ class MultiSelectMixin:
             widget_name,
             proto,
             layout_config=layout_config,
-            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            has_one_shot_effect=value_needs_reset
+            or widget_state.value_changed
+            or labels_changed,
         )
 
         return current_values
