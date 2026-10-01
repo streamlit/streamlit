@@ -264,11 +264,9 @@ would.
 **That response is `202 Accepted`, not a `5xx`.** The request was accepted and its run is
 still going, which is what 202 says. A 504 says a gateway gave up, and gateways and HTTP
 client libraries retry 502–504 on their own. A retried creating call starts another
-session and another full run, and drops the `session_id` the first response carried. In
-the eighth trial on Community Cloud, three requests that should have answered with
-`run_timed_out` at 60 seconds returned nothing within 120 to 180 seconds, and the app
-later stopped accepting connections. That is consistent with the platform retrying the
-504 and multiplying runs, though it was inferred from the outside rather than confirmed.
+session and another full run, and drops the `session_id` the first response carried. On
+a slow page, every retry adds to the load that caused the timeout, and the client sees
+nothing until the gateway gives up.
 
 Sessions are reclaimed after `server.agentSessionTTL` of inactivity, so there is nothing
 to close. A client should still reuse one: every creating call runs the app from the start
@@ -878,9 +876,8 @@ back to a browser rather than mistake it for missing content:
 
 ### Limits and configuration
 
-Every bound v1 applies, in one place. The three agent budget options are public and
-marked experimental, since their defaults are still open
-([open question 4](#open-questions)).
+Every bound v1 applies, in one place. The three agent budget options are public, and
+their defaults are still open ([open question 4](#open-questions)).
 
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -989,8 +986,8 @@ Community Cloud serves embedded apps under `/~/+/`, so an agent that joins the p
 origin with `/_stcore/agent/v1/interact` gets a redirect to a login page and concludes
 the app has no API. Worse, Community Cloud strips that prefix before forwarding and
 announces nothing, and terminates TLS without saying so: the app sees
-`http://issues.streamlit.app/_stcore/...` for a request to
-`https://issues.streamlit.app/~/+/_stcore/...`. Any URL built from what the app sees —
+`http://example.streamlit.app/_stcore/...` for a request to
+`https://example.streamlit.app/~/+/_stcore/...`. Any URL built from what the app sees —
 absolute or root-relative — points at the platform instead of the app, and no forwarded
 header fixes a proxy that sends none.
 
@@ -1273,8 +1270,8 @@ Task success is the metric Streamlit most directly controls, so it is the primar
 outcome. Framework selection is a strategic indicator, not a release gate: it is a
 lagging, momentum-amplified signal, and a one-time recommendation snapshot is not
 evidence. Keep a stable cohort for trends plus a rotating holdout for new features, run
-repeated trials with skills both enabled and disabled, and report sample size and
-uncertainty.
+each evaluation repeatedly with skills both enabled and disabled, and report sample size
+and uncertainty.
 
 Because model knowledge lags releases, a feature is not done when its code merges. Every
 new command or significant parameter should ship with all of the following, or an explicit
@@ -1340,8 +1337,8 @@ new command or significant parameter should ship with all of the following, or a
    realistic budget problem rather than table data. And the run timeout needs a
    default chosen deliberately. It bounds how long one request waits, not how long the
    run may take, since a retry collects the run in progress — which matters, because
-   opening a single lazy expander whose contents fetch from the network took **over two
-   minutes** in one trial. So the default should sit at or below the clients' own
+   opening a single lazy expander whose contents fetch from the network can take
+   minutes. So the default should sit at or below the clients' own
    request timeouts, about a minute for many MCP clients, rather than grow to fit the
    slowest app. Follow-up #4's operation handle would make even the retries
    unnecessary.
@@ -1361,10 +1358,9 @@ new command or significant parameter should ship with all of the following, or a
    20,000-point scatter is half a megabyte. And table previews are already capped, which
    is the one case where a `url` makes truncation safe. The candidate answer is to extend
    that pattern — serve oversized option lists and figure specifications behind
-   `data.url` — rather than to cap and discard. A live 21-page dashboard supplied the
-   first measurements: a watchlist selectbox puts 3,176 options in every snapshot of its
-   page, and a load-testing page is 492 KB, nearly all of it twelve Plotly figures of
-   about 38,000 characters each.
+   `data.url` — rather than to cap and discard. For scale: a selectbox over a few thousand
+   values puts all of them in every snapshot of its page, and a page of a dozen Plotly
+   figures reaches about half a megabyte.
 8. **What stability does the snapshot promise, and where does a public contract live?**
    The document is a compatibility surface from its first release: clients will key on
    element types, `props` names, and error codes, and every command's description becomes

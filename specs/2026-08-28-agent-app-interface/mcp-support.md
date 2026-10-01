@@ -48,8 +48,7 @@ snapshot.
   referenced schemas are inlined.
 - **Result:** the snapshot, as structured content and as JSON text for clients that do
   not read structured output. Structured content arrived in protocol version
-  2025-06-18, so a client that negotiates an earlier version, as the eighth trial's
-  did, only has the text.
+  2025-06-18, so a client that negotiates an earlier version only has the text.
 - **Annotations:** not read-only and not idempotent, because any action may write.
 
 **Data stays behind `data.url`, as in the HTTP API.** A snapshot inlines up to 100 rows
