@@ -15,6 +15,8 @@
  */
 import styled from "@emotion/styled"
 
+import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/secondaryIconButtonStyles"
+
 export const StyledChatInputContainer = styled.div<{
   isStretchHeight?: boolean
 }>(({ isStretchHeight }) => ({
@@ -181,11 +183,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       }
     }
 
-    const getSendIconColor = (): string => {
-      if (hasError) return theme.colors.redTextColor
-      if (disabled) return theme.colors.fadedText40
-      return theme.colors.fadedText60
-    }
+    const secondaryColorStyles = getSecondaryIconButtonColorStyles(theme)
 
     return {
       border: "none",
@@ -197,8 +195,18 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       lineHeight: theme.lineHeights.none,
       margin: theme.spacing.none,
       padding: theme.spacing.none,
-      color: getSendIconColor(),
       pointerEvents: "auto",
+      ...secondaryColorStyles,
+      // Error / disabled override the shared secondary chrome colors.
+      ...(hasError && {
+        color: theme.colors.redTextColor,
+        "&:hover:not(:disabled), &:focus:not(:disabled)": {
+          color: theme.colors.redColor,
+        },
+      }),
+      ...(disabled && {
+        color: theme.colors.fadedText40,
+      }),
       "&:focus": {
         outline: "none",
       },
@@ -208,13 +216,10 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       "&:focus-visible": {
         boxShadow: theme.shadows.focusRing,
       },
-      "&:hover": {
-        color: hasError ? theme.colors.redColor : theme.colors.bodyText,
-      },
       "&:active": {
         color: theme.colors.primary,
       },
-      "&:disabled, &:disabled:hover, &:disabled:active": {
+      "&:disabled, &:disabled:hover, &:disabled:focus, &:disabled:active": {
         backgroundColor: theme.colors.transparent,
         borderColor: theme.colors.transparent,
         color: theme.colors.fadedText40,

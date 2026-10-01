@@ -41,6 +41,7 @@ import {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
+import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/secondaryIconButtonStyles"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 export const StyledDateFieldContainer = styled.div({
@@ -198,11 +199,8 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
   marginRight: theme.spacing.sm,
-  color: theme.colors.grayTextColor,
   flexShrink: 0,
-  "&:hover": {
-    color: theme.colors.bodyText,
-  },
+  ...getSecondaryIconButtonColorStyles(theme),
   "&:focus-visible": {
     outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
     borderRadius: theme.radii.sm,

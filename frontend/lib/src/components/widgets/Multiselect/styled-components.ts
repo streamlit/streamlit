@@ -30,6 +30,7 @@ import {
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
 import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
+import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/secondaryIconButtonStyles"
 import type { EmotionTheme } from "~lib/theme/types"
 
 /** Right padding that shrinks when a scrollbar appears, keeping content aligned. */
@@ -241,10 +242,7 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
   borderRadius: theme.radii.default,
   background: "transparent",
   cursor: "pointer",
-  color: theme.colors.grayTextColor,
-  "&:hover, &[data-hovered]": {
-    color: theme.colors.bodyText,
-  },
+  ...getSecondaryIconButtonColorStyles(theme, { includeDataHovered: true }),
   "&:focus-visible": {
     boxShadow: theme.shadows.focusRing,
   },

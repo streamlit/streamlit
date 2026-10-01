@@ -16,6 +16,8 @@
 
 import styled from "@emotion/styled"
 
+import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/secondaryIconButtonStyles"
+
 export const StyledAudioInputContainerDiv = styled.div()
 
 export const StyledWaveformContainerDiv = styled.div<{ disabled?: boolean }>(
@@ -128,10 +130,7 @@ export const StyledActionButtonStartRecordingDiv = styled.span(
   ({ theme }) => ({
     "& > button": {
       padding: theme.spacing.threeXS,
-      color: theme.colors.fadedText60,
-    },
-    "& > button:hover, & > button:focus": {
-      color: theme.colors.bodyText,
+      ...getSecondaryIconButtonColorStyles(theme),
     },
   })
 )
@@ -139,10 +138,7 @@ export const StyledActionButtonStartRecordingDiv = styled.span(
 export const StyledActionButtonPlayPauseDiv = styled.span(({ theme }) => ({
   "& > button": {
     padding: theme.spacing.threeXS,
-    color: theme.colors.fadedText60,
-  },
-  "& > button:hover, & > button:focus": {
-    color: theme.colors.bodyText,
+    ...getSecondaryIconButtonColorStyles(theme),
   },
 }))
 

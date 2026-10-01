@@ -19,6 +19,7 @@ import { getLuminance } from "color2k"
 import { DateInput, DateSegment, TimeField } from "react-aria-components"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/secondaryIconButtonStyles"
 
 /** Outermost wrapper for layout. */
 export const StyledTimeFieldContainer = styled.div({
@@ -128,11 +129,8 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
   marginRight: theme.spacing.sm,
-  color: theme.colors.grayTextColor,
   flexShrink: 0,
-  "&:hover": {
-    color: theme.colors.bodyText,
-  },
+  ...getSecondaryIconButtonColorStyles(theme),
   "&:focus-visible": {
     outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
     borderRadius: theme.radii.sm,

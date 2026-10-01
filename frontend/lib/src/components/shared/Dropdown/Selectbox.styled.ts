@@ -29,6 +29,7 @@ import {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
+import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/secondaryIconButtonStyles"
 import type { EmotionTheme } from "~lib/theme/types"
 
 /**
@@ -140,10 +141,7 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
   border: "none",
   background: "transparent",
   cursor: "pointer",
-  color: theme.colors.grayTextColor,
-  "&:hover, &[data-hovered]": {
-    color: theme.colors.bodyText,
-  },
+  ...getSecondaryIconButtonColorStyles(theme, { includeDataHovered: true }),
 }))
 
 /**
