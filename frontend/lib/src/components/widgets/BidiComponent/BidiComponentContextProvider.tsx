@@ -75,7 +75,7 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
       }
 
       try {
-        return JSON.parse(raw)
+        return JSON.parse(raw) as Record<string, unknown>
       } catch (e) {
         const err = ensureError(e)
         LOG.warn(

@@ -85,7 +85,7 @@ function parsePandasSchema(table: Table): PandasSchema | undefined {
     // did not touch Pandas during serialization.
     return undefined
   }
-  return JSON.parse(schema)
+  return JSON.parse(schema) as PandasSchema
 }
 
 /** Parse DataFrame's index data values. */
@@ -137,12 +137,19 @@ function parseHeaderName(name: string, numLevels: number): string[] {
   }
 
   try {
-    return JSON.parse(
+    const parsed: unknown = JSON.parse(
       name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replaceAll("'", '"')
     )
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((part): part is string => typeof part === "string")
+    ) {
+      return parsed
+    }
+    return [...Array.from({ length: numLevels - 1 }, () => ""), name]
   } catch {
     // Add empty strings for the missing levels
-    return [...Array(numLevels - 1).fill(""), name]
+    return [...Array.from({ length: numLevels - 1 }, () => ""), name]
   }
 }
 /** Parse DataFrame's column header names.

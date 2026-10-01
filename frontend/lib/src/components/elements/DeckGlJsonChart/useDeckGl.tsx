@@ -641,12 +641,14 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         return null
       }
 
-      const parsedTooltip = JSON5.parse(tooltip)
+      const parsedTooltip = JSON5.parse<{ html?: string; text?: string }>(
+        tooltip
+      )
 
       if (parsedTooltip.html) {
         parsedTooltip.html = interpolate(info, parsedTooltip.html, true)
       } else {
-        parsedTooltip.text = interpolate(info, parsedTooltip.text)
+        parsedTooltip.text = interpolate(info, parsedTooltip.text ?? "")
       }
 
       return parsedTooltip

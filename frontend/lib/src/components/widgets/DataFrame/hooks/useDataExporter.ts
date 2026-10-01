@@ -92,7 +92,10 @@ type DataExporterReturn = {
  * @returns {Promise<void>} Promise that resolves when the CSV has been fully written.
  */
 async function writeCsv(
-  writable: WritableStreamDefaultWriter,
+  writable: {
+    write: (chunk: Uint8Array) => Promise<unknown>
+    close: () => Promise<unknown>
+  },
   getCellContent: DataEditorProps["getCellContent"],
   columns: BaseColumn[],
   numRows: number
@@ -147,17 +150,24 @@ function useDataExporter(
       // in all of the common browser, but might cause some trouble in
       // less common browsers. To not crash the whole app, we just lazy import
       // this here.
-      const nativeFileSystemAdapter =
-        await import("native-file-system-adapter")
-      const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
+      const { showSaveFilePicker } = await import("native-file-system-adapter")
+      const fileHandle = await showSaveFilePicker({
         suggestedName,
         types: [{ accept: { "text/csv": [".csv"] } }],
         excludeAcceptAllOption: false,
       })
 
-      const writer = await fileHandle.createWritable()
+      const stream = await fileHandle.createWritable()
 
-      await writeCsv(writer, getCellContent, columns, numRows)
+      await writeCsv(
+        {
+          write: chunk => stream.write(chunk as FileSystemWriteChunkType),
+          close: () => stream.close(),
+        },
+        getCellContent,
+        columns,
+        numRows
+      )
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         // The user has canceled the save dialog. Do nothing.

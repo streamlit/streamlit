@@ -214,11 +214,12 @@ export class Streamlit {
 
   private static readonly argsDataframeToObject = (
     argsDataframe: ArgsDataframe[]
-  ): object => {
-    const argsDataframeArrow = argsDataframe.map(
-      ({ key, value }: ArgsDataframe) => [key, Streamlit.toArrowTable(value)]
-    )
-    return Object.fromEntries(argsDataframeArrow)
+  ): Record<string, ArrowTable> => {
+    const args: Record<string, ArrowTable> = {}
+    for (const { key, value } of argsDataframe) {
+      args[key] = Streamlit.toArrowTable(value)
+    }
+    return args
   }
 
   private static readonly toArrowTable = (

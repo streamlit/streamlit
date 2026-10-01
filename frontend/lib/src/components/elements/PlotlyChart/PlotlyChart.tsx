@@ -154,7 +154,7 @@ export function PlotlyChart({
 
   const plotlyConfig = useMemo(() => {
     const config = migratePlotlyMapboxConfig(
-      element.config ? JSON.parse(element.config) : {}
+      (element.config ? JSON.parse(element.config) : {}) as Plotly.Config
     )
 
     // Customize the plotly toolbar:
@@ -163,6 +163,7 @@ export function PlotlyChart({
       config.modeBarButtonsToAdd = [
         {
           name: isFullScreen ? "Close fullscreen" : "Fullscreen",
+          title: isFullScreen ? "Close fullscreen" : "Fullscreen",
           icon: isFullScreen
             ? FULLSCREEN_COLLAPSE_ICON
             : FULLSCREEN_EXPAND_ICON,
@@ -190,13 +191,13 @@ export function PlotlyChart({
       config.displaylogo = false
     }
 
-    const modeBarButtonsToRemove: string[] = Array.isArray(
-      config.modeBarButtonsToRemove
-    )
+    const modeBarButtonsToRemove: NonNullable<
+      Plotly.Config["modeBarButtonsToRemove"]
+    > = Array.isArray(config.modeBarButtonsToRemove)
       ? [...config.modeBarButtonsToRemove]
       : []
 
-    const removeModeBarButton = (name: string): void => {
+    const removeModeBarButton = (name: Plotly.ModeBarDefaultButtons): void => {
       if (!modeBarButtonsToRemove.includes(name)) {
         modeBarButtonsToRemove.push(name)
       }

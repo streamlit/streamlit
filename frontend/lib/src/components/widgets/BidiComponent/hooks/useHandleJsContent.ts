@@ -69,7 +69,11 @@ const loadAndRunModule = async <T extends FrontendState>({
   parentElement: HTMLElement | ShadowRoot
   widgetMgr: WidgetStateManager
 }): Promise<CleanupFunction | void> => {
-  const module = await import(/* @vite-ignore */ moduleUrl)
+  const module = (await import(/* @vite-ignore */ moduleUrl)) as {
+    default?: (
+      args: FrontendRendererArgs
+    ) => CleanupFunction | void | Promise<CleanupFunction | void>
+  }
 
   if (!module) {
     throw new Error("JS module does not exist.")

@@ -99,14 +99,23 @@ export function isFacetChart(spec: string | object): boolean {
 // Exported for testing
 export function hasNestedComposition(spec: string | object): boolean {
   try {
-    const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
+    const parsedSpec: unknown =
+      typeof spec === "string" ? JSON.parse(spec) : spec
+    if (
+      parsedSpec === null ||
+      typeof parsedSpec !== "object" ||
+      Array.isArray(parsedSpec)
+    ) {
+      return false
+    }
 
-    if (!("vconcat" in parsedSpec) || !Array.isArray(parsedSpec.vconcat)) {
+    const { vconcat } = parsedSpec as { vconcat?: unknown }
+    if (!Array.isArray(vconcat)) {
       return false
     }
 
     // Check if any child in vconcat contains a composition operator
-    return parsedSpec.vconcat.some(
+    return vconcat.some(
       (child: unknown) =>
         child !== null &&
         typeof child === "object" &&

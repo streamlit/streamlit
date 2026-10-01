@@ -307,8 +307,10 @@ export default defineConfig([
       // New rules in @eslint-react v4/v5 — disable until existing violations are addressed
       "@eslint-react/exhaustive-deps": "off",
       // TypeScript rules with type-checking
-      // We want to use these, but we have far too many instances of these rules
-      // for it to be realistic right now. Over time, we should fix these.
+      // Production src enables no-unsafe-call / no-unsafe-return (see overlay).
+      // Argument, assignment, and member-access stay off until those clusters
+      // (Vega, Arrow, Plotly, DeckGL) are typed. Tests stay exempt until a
+      // later test-typing pass. unbound-method is noisy on expect(obj.method).
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
@@ -512,6 +514,11 @@ export default defineConfig([
       // Require type on raw <button> JSX (not styled.button); omitted type submits the enclosing form.
       // Tests still use <button> fixtures without type, so this stays production-only.
       "@eslint-react/dom-no-missing-button-type": "error",
+      // Calling or returning `any` infects typed APIs. Tests stay exempt until
+      // the test-typing pass; assignment/member-access/argument stay off until
+      // those Vega/Arrow/Plotly cleanups.
+      "@typescript-eslint/no-unsafe-call": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
     },
   },
   // Test files specific configuration
