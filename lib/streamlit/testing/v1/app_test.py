@@ -1052,8 +1052,9 @@ class AppTest:
         Returns
         -------
         BlockList
-            Individual forms can be accessed by index or form ID. For example,
-            ``at.form[0]`` or ``at.form(key="name-form")``.
+            Individual forms can be accessed by index or by the form's
+            ``key`` (the form ID). For example, ``at.form[0]`` or
+            ``at.form(key="name-form")``.
         """
         return self._tree.form
 
@@ -1061,9 +1062,9 @@ class AppTest:
     def form_submit_button(self) -> WidgetList[Button]:
         """Sequence of all ``st.form_submit_button`` widgets.
 
-        These are also included in ``at.button``. Submit a form by clicking
-        the submit button (``at.form_submit_button[0].click().run()``);
-        there is no ``Form.submit()``.
+        These are also included in ``at.button``. Form widget values are only
+        sent to the script when the form's submit button is clicked, for
+        example ``at.form_submit_button[0].click().run()``.
 
         Returns
         -------

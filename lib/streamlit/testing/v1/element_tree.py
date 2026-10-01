@@ -2348,6 +2348,8 @@ class Block:
             [
                 e
                 for e in self
+                # Skip this node so a form does not match itself when querying
+                # descendants (same contract as ``container``).
                 if isinstance(e, Block) and e is not self and e.type == "form"
             ]
         )

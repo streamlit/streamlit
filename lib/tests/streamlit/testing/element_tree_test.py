@@ -2273,6 +2273,8 @@ def test_form_collection_lookup() -> None:
     assert at.form("inner-form").text_input[0].label == "Inner"
     assert at.container("wrap").form[0].key == "inner-form"
     assert list(at.get("form")) == list(at.form)
+    assert len(at.form("name-form").form) == 0
+    assert at.form("name-form").get("form") == []
     with pytest.raises(KeyError):
         at.form("missing")
 
