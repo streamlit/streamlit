@@ -95,18 +95,23 @@ _DATA_URL_KEY: Final = "data_url"
 
 # Sessions created by the agent API. The registry that creates them owns this
 # set, so "is this an agent session" is answerable on the script thread, where
-# only the session id is at hand.
-_AGENT_SESSION_IDS: Final[set[str]] = set()
+# only the session id is at hand. Written on the event loop and read on script
+# threads, so it is replaced rather than mutated: a reader always sees a whole
+# set, with no lock on the per-element path.
+_agent_session_ids: frozenset[str] = frozenset()
 
 
 def register_agent_session(session_id: str) -> None:
     """Mark a session as driven by the agent API."""
-    _AGENT_SESSION_IDS.add(session_id)
+    global _agent_session_ids  # noqa: PLW0603
+    # A frozenset has no in-place union, so this builds a new set and rebinds.
+    _agent_session_ids |= {session_id}
 
 
 def forget_agent_session(session_id: str) -> None:
     """Forget a closed agent session."""
-    _AGENT_SESSION_IDS.discard(session_id)
+    global _agent_session_ids  # noqa: PLW0603
+    _agent_session_ids -= {session_id}
 
 
 def is_recording() -> bool:
@@ -118,10 +123,11 @@ def is_recording() -> bool:
     strip on the way out.
 
     The set is checked first: it is empty unless the API is on and has a
-    session, so the normal case costs one set lookup per element and never
+    session, so the normal case costs one truth test per element and never
     takes the config lock.
     """
-    if not _AGENT_SESSION_IDS:
+    session_ids = _agent_session_ids
+    if not session_ids:
         return False
 
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -129,7 +135,7 @@ def is_recording() -> bool:
     )
 
     ctx = get_script_run_ctx()
-    return ctx is not None and ctx.session_id in _AGENT_SESSION_IDS
+    return ctx is not None and ctx.session_id in session_ids
 
 
 def element(

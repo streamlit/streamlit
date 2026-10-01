@@ -563,7 +563,8 @@ def _encode(
                 "unsupported_element",
                 f"Values of type {value_type} cannot be set through this interface.",
             )
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
+        # OverflowError: an integer too large to become a float.
         raise AgentRequestError(
             "invalid_value",
             f"{value!r} is not a valid value for {key!r}.",

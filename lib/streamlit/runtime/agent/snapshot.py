@@ -485,7 +485,11 @@ class _SnapshotBuilder:
         reads `12` but only accepts `"December"`.
 
         The widget's own serializer is the mapping the runtime will apply in
-        reverse, so it is what keeps read and write in the same space.
+        reverse, so it is what keeps read and write in the same space. It is
+        used for every widget with an option list and every widget whose wire
+        value is text. Others -- numbers, booleans, temporal sliders -- are
+        reported as their Python value in JSON, which is also what a request
+        sends for them.
         """
         if self._session_state is None:
             return None

@@ -31,6 +31,8 @@ from __future__ import annotations
 
 # ruff: noqa: RUF029  # Async route handlers are idiomatic even without await
 import json
+import logging
+import time
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config
@@ -39,6 +41,7 @@ from streamlit.runtime.agent import mcp
 from streamlit.runtime.agent.interaction import (
     AgentSessionRegistry,
     interact,
+    session_digest,
 )
 from streamlit.runtime.agent.protocol import build_openapi_document, error_status
 from streamlit.runtime.agent.snapshot import rebase_media_urls
@@ -116,8 +119,45 @@ def _reject_constant(constant: str) -> None:
 
 
 def _parse_body(body: bytes) -> Any:
-    """Parse a request body as strict JSON, which has no NaN or Infinity."""
-    return json.loads(body, parse_constant=_reject_constant)
+    """Parse a request body as strict JSON, which has no NaN or Infinity.
+
+    Every way a body can fail to parse surfaces as ``JSONDecodeError``: the
+    parser also raises plain ``ValueError`` (bytes that are not UTF-8, an
+    integer longer than Python converts from text) and ``RecursionError``
+    (nesting deeper than the interpreter allows).
+    """
+    try:
+        return json.loads(body, parse_constant=_reject_constant)
+    except json.JSONDecodeError:
+        raise
+    except (ValueError, RecursionError) as exc:
+        raise json.JSONDecodeError(str(exc), "", 0) from exc
+
+
+def _log_interaction(
+    payload: dict[str, Any],
+    session_id: Any,
+    outcome: str,
+    status: int,
+    started: float,
+) -> None:
+    """Log an interaction without its content.
+
+    What was asked for, never what was sent: the request's fields, not its
+    keys or values, and a digest of the session handle, never the handle.
+    """
+    if not _LOGGER.isEnabledFor(logging.DEBUG):
+        return
+    handle = payload.get("session_id") or session_id
+    session = session_digest(handle) if isinstance(handle, str) else "new"
+    _LOGGER.debug(
+        "Agent interaction session=%s fields=%s outcome=%s status=%d %.0fms",
+        session,
+        ",".join(sorted(name for name in payload if name != "session_id")) or "-",
+        outcome,
+        status,
+        (time.monotonic() - started) * 1000,
+    )
 
 
 def _error_body(
@@ -200,6 +240,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         request: Request, payload: dict[str, Any]
     ) -> tuple[int, dict[str, Any]]:
         """Run one interaction and return its HTTP status and JSON body."""
+        started = time.monotonic()
         try:
             assert registry is not None  # noqa: S101 - guarded by `enabled`
             snapshot = await interact(
@@ -213,18 +254,21 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 user_info=_gather_user_info(request.headers),
             )
         except AgentRequestError as exc:
-            return error_status(exc.code), _error_body(
+            status = error_status(exc.code)
+            _log_interaction(payload, exc.session_id, exc.code, status, started)
+            return status, _error_body(
                 exc.code,
                 exc.message,
                 session_id=exc.session_id,
                 details=exc.details,
             )
-        except Exception as exc:
+        except Exception:
             _LOGGER.exception("Agent API interaction failed")
+            # The cause is in the server log; the response does not name it.
             return error_status("internal_error"), _error_body(
-                "internal_error",
-                f"The interaction could not be completed: {type(exc).__name__}.",
+                "internal_error", "The interaction could not be completed."
             )
+        _log_interaction(payload, snapshot.get("session_id"), "ok", 200, started)
         rebase_media_urls(snapshot, media_path=_MEDIA_PATH, prefix=media_prefix)
         return 200, snapshot
 

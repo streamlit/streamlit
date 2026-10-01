@@ -12,7 +12,8 @@ a typed output tree. That makes an app an _executable semantic layer_ over its d
 rather than merely a UI over Python — and it is essentially the same observe → act →
 observe loop an agent runs. Today that loop is only reachable through a browser.
 
-This spec adds an HTTP operation (with a CLI and an MCP endpoint as follow-ups) that lets an
+This spec adds an HTTP operation (with an MCP endpoint, which the prototype already serves,
+and a CLI as follow-ups) that lets an
 agent run a real Streamlit app without a browser: send JSON widget values, get back the
 finished app as a typed tree of containers and elements named after the public `st.*`
 API, plus the list of things it can do next. It is a second client of the execution

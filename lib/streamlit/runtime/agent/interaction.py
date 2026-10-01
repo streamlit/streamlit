@@ -24,6 +24,7 @@ existing behavior rather than a second implementation.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import secrets
 import time
 from dataclasses import dataclass, field
@@ -109,6 +110,9 @@ class AgentSessionClient(SessionClient):
         # accumulated.
         self._lifecycle: dict[str, ForwardMsg] = {}
         self._run_finished = asyncio.Event()
+        # When the last run settled, which is session activity even when no
+        # request is waiting for it.
+        self.finished_at = time.monotonic()
         self._run_id = ""
         # Set when this interaction's run changed the query string, which is
         # how the server tells a browser to update its address bar.
@@ -139,6 +143,7 @@ class AgentSessionClient(SessionClient):
         if msg_type == "script_finished" and msg.script_finished in _SETTLING_STATUSES:
             self._drop_stale_deltas()
             self._compact_deltas()
+            self.finished_at = time.monotonic()
             self._run_finished.set()
 
     def _add_delta(self, msg: ForwardMsg) -> None:
@@ -182,6 +187,10 @@ class AgentSessionClient(SessionClient):
             if run_id == self._run_id
             or (running and msg.delta.fragment_id not in running)
         ]
+
+    @property
+    def run_finished(self) -> bool:
+        return self._run_finished.is_set()
 
     @property
     def messages(self) -> list[ForwardMsg]:
@@ -325,8 +334,11 @@ class AgentSessionRegistry:
         ttl = float(config.get_option("server.agentSessionTTL"))
         now = time.monotonic()
         for handle, session in list(self._sessions.items()):
-            if now - session.last_used > ttl and not session.lock.locked():
-                _LOGGER.debug("Reclaiming idle agent session %s", handle)
+            idle_since = _idle_since(session)
+            if idle_since is not None and now - idle_since > ttl:
+                _LOGGER.debug(
+                    "Reclaiming idle agent session %s", session_digest(handle)
+                )
                 self.close(handle)
 
     def _schedule_reclaim(self) -> None:
@@ -339,10 +351,13 @@ class AgentSessionRegistry:
         if self._reclaim_timer is not None or not self._sessions:
             return
         ttl = float(config.get_option("server.agentSessionTTL"))
-        oldest = min(session.last_used for session in self._sessions.values())
-        # At least a second, so a session held past its TTL by a long
-        # interaction is rechecked rather than spun on.
-        delay = max(1.0, oldest + ttl - time.monotonic())
+        now = time.monotonic()
+        idle = [_idle_since(session) for session in self._sessions.values()]
+        # A busy session is rechecked a TTL from now: its idle time only
+        # starts once it is free.
+        oldest = min((since for since in idle if since is not None), default=now)
+        # At least a second, so a session at its TTL is not spun on.
+        delay = max(1.0, oldest + ttl - now)
         self._reclaim_timer = asyncio.get_running_loop().call_later(
             delay, self._on_reclaim_timer
         )
@@ -351,6 +366,30 @@ class AgentSessionRegistry:
         self._reclaim_timer = None
         self._reclaim_idle()
         self._schedule_reclaim()
+
+
+def session_digest(handle: str) -> str:
+    """A session handle as it may appear in a log.
+
+    The handle is a bearer credential, so a log line names its digest: enough
+    to correlate one session's lines, and useless for addressing it.
+    """
+    return hashlib.sha256(handle.encode()).hexdigest()[:12]
+
+
+def _idle_since(session: AgentSession) -> float | None:
+    """When a session last did anything, or None while it is busy.
+
+    A run that outlasted `run_timed_out` keeps going, and its client was told
+    to come back for it, so the session stays busy until that run finishes and
+    its idle time counts from then: reclaiming it would stop the run and lose
+    the result the client is about to collect.
+    """
+    if session.lock.locked():
+        return None
+    if session.timed_out is not None and not session.client.run_finished:
+        return None
+    return max(session.last_used, session.client.finished_at)
 
 
 async def interact(
