@@ -659,7 +659,7 @@ class FileUploaderMixin:
                 key=element_id,
                 # Inspectable but not interactive: a JSON widget-state patch
                 # cannot deliver bytes.
-                support="not_interactive_in_v1",
+                support="read_only_in_v1",
                 label=label,
                 type=list(file_uploader_proto.type) or None,
                 accept_multiple_files=accept_multiple_files,

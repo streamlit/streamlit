@@ -1505,7 +1505,7 @@ class ButtonMixin:
                 "download_button",
                 key=element_id,
                 action=None if is_deferred or on_click == "ignore" else "trigger",
-                support="not_interactive_in_v1" if is_deferred else None,
+                support="read_only_in_v1" if is_deferred else None,
                 label=label,
                 help=help,
                 icon=icon,

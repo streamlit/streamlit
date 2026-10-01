@@ -539,9 +539,11 @@ Rules:
   widget appears in the tree but not in `actions`. Form membership is visible from
   nesting.
 - **Unsupported things stay visible, on the element itself.** An element that is not
-  fully supported carries a `support` field with a machine-readable reason —
-  `browser_required` for a custom component, for example — and absent means fully
-  supported. Keeping it on the node means an agent never has to cross-reference a summary
+  fully supported carries a `support` field with a machine-readable reason, and absent
+  means fully supported. There are two: `browser_required` where what renders may differ
+  from what is reported, such as a custom component, and `read_only_in_v1` where what is
+  reported is accurate but some input the element accepts cannot be sent, such as an
+  upload. Keeping it on the node means an agent never has to cross-reference a summary
   list to find out which element a gap belongs to. A table or chart is fully supported
   until the app enables selections on it; then it is `read_only_in_v1`, which marks
   exactly the element an app's "select a row" caption is talking about. Tagging every
@@ -844,10 +846,10 @@ back to a browser rather than mistake it for missing content:
 | Not in v1                                                                  | Behavior                                                                                                                                                                      |
 | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rendering that depends on JavaScript                                       | Custom components, `components.html`, inline iframe HTML, and `st.html` with scripts allowed report their source or arguments with `support: browser_required`, because what renders may differ from it. See [Data, charts, and media](#data-charts-and-media-in-v1). |
-| `st.file_uploader`, `st.camera_input`, `st.audio_input`                    | Inspectable, not interactive: `support: not_interactive_in_v1`.                                                                                                                |
+| `st.file_uploader`, `st.camera_input`, `st.audio_input`                    | Inspectable, not interactive: `support: read_only_in_v1`.                                                                                                                      |
 | `st.chat_input` attachments                                                | Text only. `accept_file` is reported, but a request cannot attach files.                                                                                                      |
 | `st.data_editor` edits, dataframe and chart selections                     | Read-only, with `support: read_only_in_v1` on the element when the app enabled them.                                                                                          |
-| Deferred downloads                                                         | `support: not_interactive_in_v1`: the file is only generated on click and has no URL to report. An eager download is fully supported.                                         |
+| Deferred downloads                                                         | `support: read_only_in_v1`: the file is only generated on click and has no URL to report. An eager download is fully supported.                                         |
 | Lazy dataframe continuation                                                | `complete: false`, and `data.url` serves only the chunk already loaded.                                                                                                       |
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
 | Charts that combine several dataframes                                     | A layered or concatenated Altair chart over different dataframes reports its `spec` with `data.unavailable: multiple_datasets` and serves none of them, rather than serve the first and claim `complete`. |

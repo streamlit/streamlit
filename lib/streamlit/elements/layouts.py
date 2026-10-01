@@ -1213,7 +1213,7 @@ class LayoutsMixin:
                 "tabs",
                 key=element_id or key,
                 action="value" if is_stateful else None,
-                options=list(tabs),
+                tabs=list(tabs),
             ),
         )
 
