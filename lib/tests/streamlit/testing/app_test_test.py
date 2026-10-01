@@ -116,7 +116,12 @@ def test_local_script_runner_closes_loop_when_initialization_fails(
 
 
 def test_local_script_runner_skips_orphan_cleanup_when_runtime_missing() -> None:
-    """LocalScriptRunner must not call get_instance when no Runtime exists."""
+    """Orphan cleanup is skipped when no Runtime singleton exists.
+
+    Without the gate, ``runtime.get_instance()`` raises ``RuntimeError`` on the
+    script thread. AppTest itself installs a Runtime for the run; this covers
+    the override when tests call ``_on_script_finished`` directly.
+    """
     runner = MagicMock()
     runner._session_state = MagicMock()
     ctx = MagicMock()

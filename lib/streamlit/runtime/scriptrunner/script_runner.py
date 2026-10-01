@@ -1020,7 +1020,7 @@ class ScriptRunner:
         #   registered nothing, so collecting now would delete files the app
         #   still displays. The next run that renders re-registers them.
         # - No Runtime singleton exists: get_instance() would raise on the
-        #   script thread (ScriptRunner unit tests without a Runtime).
+        #   script thread. There is nothing registered to collect without a Runtime.
         if ctx.has_script_started and runtime.exists():
             # Remove orphaned files now that the script has run and files in use
             # are marked as active.
