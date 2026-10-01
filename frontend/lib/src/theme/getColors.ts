@@ -255,55 +255,54 @@ function defaultDivergingColorsArray(genericColors: GenericColors): string[] {
   ]
 }
 
-// Default chart palettes from the design handoff. These are deployed chart
-// hues (not stops on the named-color 10–100 scale); light/dark variants are
-// selected from background luminance like other createEmotionColors defaults.
+// Default chart palettes; light/dark variants are selected from background
+// luminance like other createEmotionColors defaults.
 const LIGHT_CHART_CATEGORICAL_COLORS = [
-  "#2165ce",
-  "#80ced8",
-  "#d45f68",
-  "#e6bb64",
-  "#4eaf7c",
-  "#f3d1b9",
-  "#ad9fdb",
-  "#f2ced7",
+  "#2165ce", // blue
+  "#80ced8", // light cyan
+  "#d45f68", // coral red
+  "#e6bb64", // gold
+  "#4eaf7c", // green
+  "#f3d1b9", // peach
+  "#ad9fdb", // lavender
+  "#f2ced7", // light pink
 ]
 
 const DARK_CHART_CATEGORICAL_COLORS = [
-  "#4c94ff",
-  "#64d8e7",
-  "#f4737f",
-  "#fcc349",
-  "#48c183",
-  "#ffaf73",
-  "#a58eec",
-  "#fda1b9",
+  "#4c94ff", // bright blue
+  "#64d8e7", // cyan
+  "#f4737f", // light coral
+  "#fcc349", // yellow
+  "#48c183", // green
+  "#ffaf73", // light orange
+  "#a58eec", // violet
+  "#fda1b9", // pink
 ]
 
 const LIGHT_CHART_SEQUENTIAL_COLORS = [
-  "#fff8f9",
-  "#fdedee",
-  "#fbd8dc",
-  "#f7b8c0",
-  "#f18c98",
-  "#e86b79",
-  "#d94a57", // Red 70
-  "#c13f4b",
-  "#a6353f",
-  "#8e2d36",
+  "#fff8f9", // near-white pink
+  "#fdedee", // very light pink
+  "#fbd8dc", // light pink
+  "#f7b8c0", // soft pink
+  "#f18c98", // medium pink
+  "#e86b79", // coral
+  "#d94a57", // red
+  "#c13f4b", // dark red
+  "#a6353f", // deeper red
+  "#8e2d36", // darkest red
 ]
 
 const DARK_CHART_SEQUENTIAL_COLORS = [
-  "#3a2024",
-  "#4c292d",
-  "#5f2f37",
-  "#873545",
-  "#a12033",
-  "#cf2641",
-  "#d94a57", // Red 70
-  "#e35f6b",
-  "#f18c98",
-  "#f7b8c0",
+  "#3a2024", // near-black red
+  "#4c292d", // very dark red
+  "#5f2f37", // dark red-brown
+  "#873545", // deep red
+  "#a12033", // dark crimson
+  "#cf2641", // crimson
+  "#d94a57", // red
+  "#e35f6b", // coral
+  "#f18c98", // medium pink
+  "#f7b8c0", // soft pink
 ]
 
 function defaultSequentialColorsArray(genericColors: GenericColors): string[] {
