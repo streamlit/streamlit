@@ -743,16 +743,17 @@ without introducing a new authorization surface.
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order, not objects: repeating the column names per row is most of a long preview's size, and halved a 100-row catalog. A CSV blob would save no more — inside a JSON string it escapes its own quotes twice — while costing the types `columns` just declared. |
 | Lazy dataframe                 | The same shape, with the chunk already emitted as the preview and `complete: false`. `data.url` serves that chunk; fetching further ranges is a follow-up.                                                                                                 |
-| Chart                          | Public properties in `props`, the native specification inline when it fits the size budget and behind `data.url` otherwise, and chart data under `data` exactly as a dataframe's.                                                                          |
-| Image, audio, video, PDF       | Caption, MIME type, and the existing `/media/...` URL the app already exposed to its own client. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way.                                                                   |
+| Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped, and chart data under `data` exactly as a dataframe's.                                                                                       |
+| Image, audio, video, PDF       | Caption, `alt`, MIME type, and the media URL the app already exposed to its own client. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way.                                                                          |
 | HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML and a URL iframe are fully readable. |
 | Download                       | Label, file metadata, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, so it needs nothing new; only deferred generation (which carries a file ID instead of a URL) requires an action. |
 
-Arrow bytes and oversized chart specifications are registered in the existing media-file
-storage and served from the existing `/media/...` endpoint, which is the agent-session
-half of [#16378](https://github.com/streamlit/streamlit/issues/16378). Images, media, and
-eager download buttons already have such a URL because the app registered it for the
-browser, so those are simply forwarded.
+Arrow bytes are registered in the existing media-file storage and served from the
+existing `/media/...` endpoint, which is the agent-session half of
+[#16378](https://github.com/streamlit/streamlit/issues/16378). Images, media, and eager
+download buttons already have such a URL because the app registered it for the browser,
+so those are forwarded. Every one of these URLs is relative to the request that returned
+the snapshot, for the reason in [Enablement](#enablement).
 
 **Media URLs are fetch-now handles, not durable references.** A client fetches what it
 needs while working with the snapshot that produced the URL, and must not store, share, or
@@ -1174,8 +1175,8 @@ agent access alone.
 - A filtered dashboard, a form with two submit buttons, a chat flow, and a multi-turn
   dialog all complete without a browser.
 - Large dataframes produce bounded snapshots and a fetchable `data.url`.
-- With `enableAgentApi` unset, `interact` executes nothing and the schema route only
-  reports that the API is disabled.
+- With `enableAgentApi` unset, `interact` and the MCP endpoint execute nothing, and the
+  schema route only reports that the API is disabled.
 
 **Coverage is a runtime property, not a static check.** A CI assertion that every
 `Element` and `Block` variant has a declaration cannot work when descriptions are built
@@ -1264,7 +1265,7 @@ new command or significant parameter should ship with all of the following, or a
 
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until a credential flow maps them. Multi-worker deployments need session affinity, since an agent session lives in one process. A platform that serves apps behind a prefix, as Community Cloud does, also has to get that prefix to the client, or every path in the document resolves to the platform instead of the app. |
+| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until a credential flow maps them. Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. |
 | No breaking API changes    | ✅ Additive: one config option, off in v1, and new routes under `/_stcore/agent/`. No `st.*` changes in v1. Flipping the default later is itself a reviewed change, not a silent one.                                                                                                                                                                                                                                                                                                                         |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either; see [mcp-support.md](mcp-support.md).                                                                                                                                                                                                                                                                                                                                                                                          |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
