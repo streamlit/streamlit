@@ -142,9 +142,10 @@ export const StyledAppViewBlockContainer =
       embedded,
       theme,
     }) => {
-      // Room for the first element's overlay toolbar in a bare embed.
-      // Visible chrome sits above the element by less than |TOP_DISTANCE|
-      // because of the toolbar wrapper padding; keep in sync with that offset.
+      // Bare-embed top padding must clear the first element's overlay toolbar.
+      // Toolbar's TOP_DISTANCE places the wrapper above the element; wrapper
+      // padding insets the visible chrome, so this is slightly less than that
+      // offset's magnitude. Keep in sync with Toolbar's TOP_DISTANCE.
       const littlePadding = "2.35rem"
 
       // Top padding logic per specification:
