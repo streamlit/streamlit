@@ -108,7 +108,6 @@ class StatusContainer(DeltaGenerator):
         status_container._delta_path = status_container._block_delta_path
         status_container._current_proto = block_proto
         status_container._current_state = state
-        status_container._current_label = label
         status_container._current_expanded = expanded
 
         # We need to sleep here for a very short time to prevent issues when
@@ -131,7 +130,8 @@ class StatusContainer(DeltaGenerator):
         # Initialized in `_create()`:
         self._current_proto: BlockProto | None = None
         self._current_state: States | None = None
-        self._current_label: str | None = None
+        # `update()` clears `expanded` on the re-sent proto to leave it as the
+        # user set it, so the proto cannot report it.
         self._current_expanded: bool | None = None
         self._delta_path: list[int] | None = None
 
@@ -189,8 +189,6 @@ class StatusContainer(DeltaGenerator):
             msg.delta.add_block.expandable.state = _STATE_PROTO_VALUES[state]
             self._current_state = state
 
-        if label is not None:
-            self._current_label = label
         if expanded is not None:
             self._current_expanded = expanded
 
@@ -200,7 +198,7 @@ class StatusContainer(DeltaGenerator):
         # `running` after it completed.
         agent_props = agent_spec.block(
             "status",
-            label=self._current_label,
+            label=msg.delta.add_block.expandable.label,
             expanded=self._current_expanded,
             state=self._current_state,
         )
