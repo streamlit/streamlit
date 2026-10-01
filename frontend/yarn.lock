@@ -5800,7 +5800,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"brace-expansion@npm:^2.1.4":
+"brace-expansion@npm:^2.1.7":
   version: 2.1.7
   resolution: "brace-expansion@npm:2.1.7"
   dependencies:
@@ -5809,12 +5809,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"brace-expansion@npm:^5.0.9":
-  version: 5.0.9
-  resolution: "brace-expansion@npm:5.0.9"
+"brace-expansion@npm:^5.0.12":
+  version: 5.0.12
+  resolution: "brace-expansion@npm:5.0.12"
   dependencies:
     balanced-match: "npm:^4.0.2"
-  checksum: 10c0/3dea38884a1c3c8b1c9c44a7402a0c76fca460f70cffb3127242b0b4cbf4472019e022ade021eec44838ff19f1dac2625dfd11dd459d7e1e055b0698a8d52fec
+  checksum: 10c0/a40ac64d3bdb5bb222456514d3633c1f627f03b844f509c69e70f98b78be0ce85e21b44bbfecdd0ddd4cc0855ca4242b41ea96ddccf88c7c3c7a84405474bb3a
   languageName: node
   linkType: hard
 
@@ -9258,12 +9258,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"image-size@npm:^0.7.4":
-  version: 0.7.5
-  resolution: "image-size@npm:0.7.5"
+"image-size@npm:^2.0.4":
+  version: 2.0.4
+  resolution: "image-size@npm:2.0.4"
   bin:
     image-size: bin/image-size.js
-  checksum: 10c0/74e978c525e7d777df145bc66cfc4a4a7aa56de8e5daead3a69b0872082dbe385deb4a3b80799810df9e34b2031467412ae28810f2f65ec2e5fe08b895aa3491
+  checksum: 10c0/af01b8c2b7c536df1b866fc6daaa7e58ee909cde42fcae27562612ea77181f473445bc8acf0dfb5b9e8590e966a7a1f3f0fbf4c87ec6d1d4d60d68d87d529d76
   languageName: node
   linkType: hard
 

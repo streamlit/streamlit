@@ -7639,11 +7639,11 @@ THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: image-size. A copy of the source code may be downloaded from git+https://github.com/image-size/image-size.git. This software contains the following license and notice below:
+The following software may be included in this product: image-size. A copy of the source code may be downloaded from https://codeberg.org/image-size/image-size.git. This software contains the following license and notice below:
 
 The MIT License (MIT)
 
-Copyright © 2017 Aditya Yadav, http://netroy.in
+Copyright © 2013-Present Aditya Yadav, http://netroy.in
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
