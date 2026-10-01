@@ -2311,6 +2311,24 @@ def test_form_submit_button_filters_regular_buttons() -> None:
     assert at.text[0].value == "submitted='Ada'"
 
 
+def test_form_submit_button_is_scoped_to_block() -> None:
+    """A form's ``form_submit_button`` collection only includes that form."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("form-a"):
+            st.form_submit_button("A", key="save-a")
+        with st.form("form-b"):
+            st.form_submit_button("B", key="save-b")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.form_submit_button) == 2
+    scoped = at.form("form-a").form_submit_button
+    assert len(scoped) == 1
+    assert scoped[0].key == "save-a"
+
+
 def test_form_collections_empty_without_forms() -> None:
     """Apps with only a regular button have empty form collections."""
 
