@@ -142,10 +142,12 @@ export const StyledAppViewBlockContainer =
       embedded,
       theme,
     }) => {
-      const littlePadding = "2.25rem"
+      // Sized so the first element's overlay toolbar (TOP_DISTANCE above it)
+      // is not clipped at the top of a bare embed.
+      const littlePadding = "2.35rem"
 
       // Top padding logic per specification:
-      let topPadding = littlePadding // Default: 2.25rem
+      let topPadding = littlePadding // Default: 2.35rem
 
       if (!embedded) {
         // Non-embedded apps always get 6rem or 8rem
@@ -157,7 +159,7 @@ export const StyledAppViewBlockContainer =
         // 4.5rem if embedded with header but no padding/toolbar
         topPadding = "4.5rem"
       }
-      // Otherwise use default: 2.25rem if embedded with no header and no padding/toolbar
+      // Otherwise use default: 2.35rem if embedded with no header and no padding/toolbar
 
       const bottomEmbedPadding =
         showPadding && !hasBottom ? "10rem" : theme.spacing.lg

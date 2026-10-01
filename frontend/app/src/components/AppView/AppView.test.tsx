@@ -661,7 +661,7 @@ describe("AppView element", () => {
       })
 
       describe("without show_padding or show_toolbar options", () => {
-        it("uses 2.25rem top padding when no header content", () => {
+        it("uses 2.35rem top padding when no header content", () => {
           render(
             <AppView
               {...getProps({
@@ -674,7 +674,7 @@ describe("AppView element", () => {
           )
 
           const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("2.25rem")
+          expect(style.paddingTop).toEqual("2.35rem")
           expect(style.paddingBottom).toEqual("1rem")
         })
 

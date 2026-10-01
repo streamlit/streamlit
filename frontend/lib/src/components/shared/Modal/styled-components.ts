@@ -94,7 +94,7 @@ const shouldForwardValidNonTransientProp = (prop: string): boolean =>
  * overflow-y: auto allows the dialog panel to grow to its natural height and
  * scroll via the backdrop when content is taller than the viewport. This keeps
  * the body free of any overflow container so that absolutely-positioned element
- * toolbars (which use top: -2.65rem) are never clipped.
+ * toolbars (which use top: -2.75rem) are never clipped.
  *
  * Side drawers are viewport-tall, so the overlay does not scroll; overflow
  * moves inside the panel instead.
@@ -187,7 +187,7 @@ export const StyledDialogPanel = styled(RAModal, {
  * Flex column wrapper that fills the panel and contains the close button,
  * header, body, and footer. Styled as the role="dialog" element.
  *
- * overflow: visible ensures absolutely-positioned toolbar overlays (top: -2.65rem)
+ * overflow: visible ensures absolutely-positioned toolbar overlays (top: -2.75rem)
  * are not clipped between the body and the panel boundary.
  *
  * Side drawers fill the panel height so the body can scroll instead.
