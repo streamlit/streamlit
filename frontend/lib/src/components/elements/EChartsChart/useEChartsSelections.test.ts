@@ -15,14 +15,14 @@
  */
 
 import { act, renderHook } from "@testing-library/react"
-import { Mock, Mocked } from "vitest"
+import type { Mock, Mocked } from "vitest"
 
 import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  EChartsSelectionInstance,
+  type EChartsSelectionInstance,
   useEChartsSelections,
 } from "./useEChartsSelections"
 
