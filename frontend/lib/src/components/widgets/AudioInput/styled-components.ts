@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/secondaryIconButtonStyles"
+import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/Base/styled-components"
 
 export const StyledAudioInputContainerDiv = styled.div()
 

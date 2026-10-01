@@ -40,8 +40,8 @@ import {
   getBorderColor,
   getOverlayZIndex,
   getPopoverContainerStyle,
+  getSecondaryIconButtonColorStyles,
 } from "~lib/components/shared/Base/styled-components"
-import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/secondaryIconButtonStyles"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 export const StyledDateFieldContainer = styled.div({

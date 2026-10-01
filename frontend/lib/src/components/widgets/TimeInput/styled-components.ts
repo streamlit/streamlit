@@ -18,8 +18,10 @@ import styled from "@emotion/styled"
 import { getLuminance } from "color2k"
 import { DateInput, DateSegment, TimeField } from "react-aria-components"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
-import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/secondaryIconButtonStyles"
+import {
+  getBorderColor,
+  getSecondaryIconButtonColorStyles,
+} from "~lib/components/shared/Base/styled-components"
 
 /** Outermost wrapper for layout. */
 export const StyledTimeFieldContainer = styled.div({

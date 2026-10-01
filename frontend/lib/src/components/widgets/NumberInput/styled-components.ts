@@ -17,8 +17,10 @@
 import styled from "@emotion/styled"
 import { Input as RAInput } from "react-aria-components"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
-import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/secondaryIconButtonStyles"
+import {
+  getBorderColor,
+  getSecondaryIconButtonColorStyles,
+} from "~lib/components/shared/Base/styled-components"
 
 interface StyledInputContainerProps {
   $isFocused: boolean

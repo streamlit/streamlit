@@ -16,7 +16,7 @@
 
 import { lightTheme } from "~lib/theme/themeConfigs"
 
-import { getSecondaryIconButtonColorStyles } from "./secondaryIconButtonStyles"
+import { getSecondaryIconButtonColorStyles } from "./styled-components"
 
 describe("getSecondaryIconButtonColorStyles", () => {
   const theme = lightTheme.emotion

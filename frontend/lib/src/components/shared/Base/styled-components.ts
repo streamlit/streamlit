@@ -16,6 +16,7 @@
 
 import type { CSSProperties } from "react"
 
+import type { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
@@ -105,4 +106,47 @@ export const getBorderColor = (
     borderColor = colors.primary
   }
   return borderColor
+}
+
+export type SecondaryIconButtonColorOptions = {
+  /**
+   * Also apply the hover color when React Aria sets `data-hovered` (used by
+   * Multiselect / Selectbox clear buttons).
+   */
+  includeDataHovered?: boolean
+}
+
+/**
+ * Resting / hover / disabled colors for secondary chrome icon buttons.
+ * Resting uses muted `fadedText60`; hover uses `bodyText`; disabled uses
+ * `fadedText40`. Do not use `grayTextColor` here — that token is for gray text
+ * content, not secondary chrome icons.
+ *
+ * @see NumberInput StyledClearButton
+ * @see TextInput StyledClearButton
+ * @see DateInput StyledClearButton
+ * @see TimeInput StyledClearButton
+ * @see Multiselect StyledClearButton
+ * @see Selectbox StyledClearButton
+ * @see AudioInput StyledActionButtonStartRecordingDiv / PlayPauseDiv
+ * @see ChatInput StyledSendIconButton (non-primary)
+ */
+export function getSecondaryIconButtonColorStyles(
+  theme: EmotionTheme,
+  { includeDataHovered = false }: SecondaryIconButtonColorOptions = {}
+): CSSObject {
+  const hoverSelectors = includeDataHovered
+    ? "&:hover:not(:disabled), &:focus:not(:disabled), &[data-hovered]"
+    : "&:hover:not(:disabled), &:focus:not(:disabled)"
+
+  return {
+    color: theme.colors.fadedText60,
+    [hoverSelectors]: {
+      color: theme.colors.bodyText,
+    },
+    "&:disabled, &:disabled:hover, &:disabled:focus": {
+      color: theme.colors.fadedText40,
+      cursor: "not-allowed",
+    },
+  }
 }
