@@ -861,8 +861,10 @@ back to a browser rather than mistake it for missing content:
 
 ### Limits and configuration
 
-Every bound v1 applies, in one place. The three agent budget options are public, and
-their defaults are still open ([open question 4](#open-questions)).
+Every bound v1 applies, in one place. The session, timeout, and TTL options are public,
+and their defaults are still open ([open question 4](#open-questions)). The preview size
+is a hidden option: the default is meant to be right, and the setting is there for
+operators and tests rather than for tuning per app.
 
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -872,7 +874,7 @@ their defaults are still open ([open question 4](#open-questions)).
 | Agent sessions held at once            | 100, then `too_many_sessions`                         | `server.agentMaxSessions`                                                     |
 | Interactions in flight per session     | 1, then `session_busy`                                | Fixed                                                                         |
 | Request body                           | 25 MB, the same bound as a WebSocket message          | `server.maxWidgetStateSize`                                                   |
-| Preview rows per table                 | 100                                                   | Fixed                                                                         |
+| Preview rows per table                 | 100                                                   | `server.agentPreviewRows` (hidden)                                            |
 | Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
 | Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 7](#open-questions))                                    |
 | Response size                          | No cap                                                | [Open question 7](#open-questions)                                            |

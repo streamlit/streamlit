@@ -1272,6 +1272,20 @@ _create_option(
 )
 
 _create_option(
+    "server.agentPreviewRows",
+    description="""
+        Maximum number of rows the agent API inlines in a table's
+        `data.preview`.
+
+        A table with more rows is reported as incomplete, with a URL that
+        serves its full data.
+    """,
+    visibility="hidden",
+    default_val=100,
+    type_=int,
+)
+
+_create_option(
     "server.agentRunTimeout",
     description="""
         Maximum number of seconds an agent API request waits for the app's run

@@ -32,6 +32,7 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
+from streamlit import config
 from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -50,12 +51,17 @@ _LOGGER: Final = get_logger(__name__)
 
 SCHEMA_VERSION: Final = 1
 
-# Rows included in a `data.preview`. Large enough that most filtered tables are
-# reported complete and need no second request, small enough that a page of
-# them does not dominate the response. A preview must never look like the
-# complete answer to an aggregate question, which is what `data.complete` says
-# outright.
-_PREVIEW_ROW_LIMIT: Final = 100
+
+def _preview_row_limit() -> int:
+    """Rows included in a `data.preview`, from `server.agentPreviewRows`.
+
+    The default is large enough that most filtered tables are reported complete
+    and need no second request, and small enough that a page of them does not
+    dominate the response. A preview must never look like the complete answer
+    to an aggregate question, which is what `data.complete` says outright.
+    """
+    return max(0, int(config.get_option("server.agentPreviewRows")))
+
 
 # Commands whose whole contribution is layout or styling: a placeholder nobody
 # filled, blank space, and style-only HTML. See `_SnapshotBuilder._is_contentless`.
@@ -714,7 +720,8 @@ def _arrow_data(arrow_bytes: bytes) -> dict[str, Any] | None:
         for name, dtype in zip(table.schema.names, table.schema.types, strict=True)
         if not _is_index_column(name)
     ]
-    preview = table.slice(0, _PREVIEW_ROW_LIMIT)
+    limit = _preview_row_limit()
+    preview = table.slice(0, limit)
     return {
         "columns": [{"name": name, "type": str(dtype)} for name, dtype in columns],
         "row_count": table.num_rows,
@@ -722,9 +729,9 @@ def _arrow_data(arrow_bytes: bytes) -> dict[str, Any] | None:
         # Whether `preview.rows` is the whole dataset. Stated at the top level
         # of `data` because "did I get everything?" is the first question a
         # client asks, and a flag nested inside `preview` is easy to miss.
-        "complete": table.num_rows <= _PREVIEW_ROW_LIMIT,
+        "complete": table.num_rows <= limit,
         "preview": {
-            "truncated": table.num_rows > _PREVIEW_ROW_LIMIT,
+            "truncated": table.num_rows > limit,
             # Rows are values in `columns` order rather than objects, because
             # repeating the column names on every row is most of a preview's
             # size once it gets long: a 100-row catalog halves. Types and nested

@@ -798,6 +798,7 @@ class ConfigTest(unittest.TestCase):
                 "secrets.files",
                 "server.address",
                 "server.agentMaxSessions",
+                "server.agentPreviewRows",
                 "server.agentRunTimeout",
                 "server.agentSessionTTL",
                 "server.allowedHosts",
