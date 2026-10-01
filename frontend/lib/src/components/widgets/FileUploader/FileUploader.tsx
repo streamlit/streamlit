@@ -40,7 +40,7 @@ import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLa
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
-import { ensureError } from "~lib/util/ErrorHandling"
+import { ensureError, formatRejectionMessage } from "~lib/util/ErrorHandling"
 import {
   type FileRejection,
   FileSize,
@@ -400,7 +400,7 @@ const FileUploader = ({
               uploadingFileInfo.id,
               uploadingFileInfo.setStatus({
                 type: "error",
-                errorMessage: ensureError(err).toString(),
+                errorMessage: formatRejectionMessage(err),
               })
             )
           }
@@ -515,6 +515,7 @@ const FileUploader = ({
               f =>
                 new UploadFileInfo(f.name, f.size, nextLocalFileId(), {
                   type: "error",
+                  // fetchFileURLs rejects with the backend error string
                   errorMessage: ensureError(error).message,
                 })
             )

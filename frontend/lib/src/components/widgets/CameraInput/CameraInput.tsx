@@ -49,7 +49,7 @@ import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper
 import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import useTimeout from "~lib/hooks/useTimeout"
-import { ensureError } from "~lib/util/ErrorHandling"
+import { formatRejectionMessage } from "~lib/util/ErrorHandling"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -425,7 +425,7 @@ const CameraInput = ({
               uploadingFileInfo.id,
               uploadingFileInfo.setStatus({
                 type: "error",
-                errorMessage: ensureError(err).toString(),
+                errorMessage: formatRejectionMessage(err),
               })
             )
           }

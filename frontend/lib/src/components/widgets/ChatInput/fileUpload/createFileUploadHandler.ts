@@ -20,7 +20,7 @@ import type { FileURLs } from "@streamlit/protobuf"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import type { FileUploadClient } from "~lib/FileUploadClient"
-import { ensureError } from "~lib/util/ErrorHandling"
+import { formatRejectionMessage } from "~lib/util/ErrorHandling"
 import type { WidgetInfo } from "~lib/WidgetStateManager"
 
 interface CreateUploadFileParams {
@@ -83,7 +83,7 @@ export const createUploadFileHandler =
             uploadingFileInfo.id,
             uploadingFileInfo.setStatus({
               type: "error",
-              errorMessage: ensureError(err).toString(),
+              errorMessage: formatRejectionMessage(err),
             })
           )
         }

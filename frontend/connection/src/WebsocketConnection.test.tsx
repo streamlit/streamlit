@@ -362,6 +362,47 @@ describe("doInitPings", () => {
     )
   })
 
+  it("retries with the thrown message when onHostConfigResp is not a FetchError", async () => {
+    const hostConfigError = new Error("invalid host config")
+    const setAllowedOrigins = vi
+      .fn()
+      .mockImplementationOnce(() => {
+        throw hostConfigError
+      })
+      .mockImplementation(() => undefined)
+
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+
+    const retryCallback = createTimerAdvancingRetryCallback(
+      MOCK_PING_DATA.retryCallback
+    )
+    const sendClientErrorSpy = vi.fn()
+
+    const { promise } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      retryCallback,
+      sendClientErrorSpy,
+      setAllowedOrigins
+    )
+
+    await vi.runAllTimersAsync()
+    await promise
+
+    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ message: "invalid host config" }),
+      expect.anything()
+    )
+    expect(sendClientErrorSpy).not.toHaveBeenCalled()
+  })
+
   it("calls retry with the corresponding error message if there was an error", async () => {
     const TEST_ERROR_MESSAGE = "ERROR_MESSAGE"
 

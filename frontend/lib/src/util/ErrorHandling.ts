@@ -22,3 +22,23 @@ export function ensureError(err: unknown): Error {
   // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
   return new Error(`${err}`)
 }
+
+/**
+ * Display text for a Promise rejection. Falsy values use `fallback`.
+ */
+export function formatRejectionMessage(
+  err: unknown,
+  fallback = "Unknown error"
+): string {
+  if (!err) {
+    return fallback
+  }
+  if (err instanceof Error) {
+    return err.toString()
+  }
+  if (typeof err === "string") {
+    return err
+  }
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string -- remaining objects use Object.prototype.toString
+  return String(err)
+}

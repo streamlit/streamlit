@@ -183,6 +183,7 @@ export const createDropHandler =
               getNextLocalFileId(),
               {
                 type: "error",
+                // fetchFileURLs rejects with the backend error string
                 errorMessage: ensureError(error).message,
               },
               f
