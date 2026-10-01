@@ -250,8 +250,11 @@ def described_column_config(column_config_mapping: Any) -> Any:
     written -- so no null in it carries meaning, and every remaining one can be
     dropped as unset.
 
-    Only the index entry is removed, because its key is an internal identifier
-    and `hide_index` is reported as a parameter in its own right.
+    The index entry is removed, because its key is an internal identifier and
+    `hide_index` is reported as a parameter in its own right. So is each
+    column's presentation -- its width, pinning, and alignment -- which, like
+    geometry everywhere else in the snapshot, means nothing to a non-visual
+    client.
     """
     if not isinstance(column_config_mapping, dict):
         return column_config_mapping
@@ -259,10 +262,19 @@ def described_column_config(column_config_mapping: Any) -> Any:
     from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 
     return {
-        name: config
+        name: {
+            key: value
+            for key, value in config.items()
+            if key not in _COLUMN_PRESENTATION_KEYS
+        }
+        if isinstance(config, dict)
+        else config
         for name, config in column_config_mapping.items()
         if name != INDEX_IDENTIFIER
     } or None
+
+
+_COLUMN_PRESENTATION_KEYS: Final = frozenset({"width", "pinned", "alignment"})
 
 
 def _drop_unset(value: Any) -> Any:

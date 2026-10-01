@@ -171,7 +171,8 @@ def _error_body(
     if details:
         body["error"].update(details)
     if session_id is not None:
-        # Only set when a creating call already produced a usable session.
+        # Set when the remedy is a request on a session: a creating call that
+        # already produced one, or a run still going after the timeout.
         body["session_id"] = session_id
     return body
 
@@ -295,7 +296,13 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         response.headers["Link"] = '<openapi.json>; rel="service-desc"'
         return response
 
-    async def _interact_endpoint(request: Request) -> JSONResponse:
+    async def _interact_endpoint(request: Request) -> Response:
+        if request.method != "POST":
+            # Registered for every method so anything else is answered here.
+            # Otherwise a GET falls through to the single-page-app fallback
+            # wherever the app serves its own frontend, and returns the app's
+            # HTML with a 200.
+            return Response(status_code=405, headers={"Allow": "POST"})
         if not enabled:
             return _error(
                 "not_available", disabled_message, status=error_status("not_available")
@@ -386,7 +393,11 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         return JSONResponse(response)
 
     return [
-        Route(interact_path, _interact_endpoint, methods=["POST"]),
+        Route(
+            interact_path,
+            _interact_endpoint,
+            methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        ),
         Route(schema_path, _schema_endpoint, methods=["GET"]),
         Route(mcp_path, _mcp_endpoint, methods=["GET", "POST", "DELETE"]),
     ]

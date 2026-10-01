@@ -1054,16 +1054,17 @@ def schemas() -> dict[str, Any]:
                 "the previous snapshot is still current -- except for "
                 "`run_timed_out`, whose run is still going, and a creating call "
                 "that named an unrecognized `page`, which can only be judged "
-                "after the app has run. A creating call that fails once its "
-                "session exists carries that `session_id`."
+                "after the app has run. Both carry `session_id`."
             ),
             "properties": {
                 "session_id": {
                     "type": "string",
                     "description": (
-                        "Present only when a creating call created a usable "
-                        "session before failing. Continue with it or let it "
-                        "expire; a later call without it starts a new one."
+                        "The session to continue with, present on "
+                        "`run_timed_out` and on any failure of a creating call "
+                        "that had already created a usable session. Continue "
+                        "with it or let it expire; a later call without it "
+                        "starts a new one."
                     ),
                 },
                 "error": {

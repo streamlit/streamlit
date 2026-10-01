@@ -673,7 +673,9 @@ valid value, which is right for a browser racing a rerun and wrong for an agent,
 silently reset value reads as success. So a validator should report the violation and let
 the caller decide: the browser path coerces, the agent path rejects with `invalid_value`.
 Until #16203 lands, options and bounds are checked against the snapshot, as a stopgap
-meant to be deleted. [Potential follow-ups](potential-follow-ups.md) ranks the
+meant to be deleted, and so are the two limits the runtime would otherwise apply by
+changing the value: a fraction sent to an integer input is truncated, and text past
+`max_chars` is cut. [Potential follow-ups](potential-follow-ups.md) ranks the
 validations by how much apps rely on them.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -745,9 +747,9 @@ to be the last pair.
 
 Actions do not carry a JSON Schema in v1. The element's `type` plus its constraint
 properties (`options`, `min_value`, `max_value`, `max_chars`, `required`, `validate`)
-already tell a model what to send. Options and bounds are checked against the snapshot;
-the rest are reported for the client to respect, because today only the browser enforces
-them (see [Security](#security)).
+already tell a model what to send. Options, bounds, whole-number inputs, and `max_chars`
+are checked against the snapshot; `required` and `validate` are reported for the client
+to respect, because today only the browser enforces them (see [Security](#security)).
 
 **Every action must be treated as consequential.** A selectbox can trigger a database
 write just as a button can, so Streamlit does not label any action read-only, idempotent,
@@ -899,8 +901,8 @@ This is a new programmatic execution surface and needs an explicit review.
   wrong-shape, cross-form, cross-dialog, and oversized requests atomically, before any
   callback runs — against the last snapshot rather than live widget state, for the
   reasons in [Actions in v1](#actions-in-v1). Widget constraints such as option lists,
-  bounds, `max_chars`, `required`, and `validate` are enforced only in the browser today,
-  for every client
+  bounds, `required`, and `validate` are enforced only in the browser today, for every
+  client
   ([#16203](https://github.com/streamlit/streamlit/issues/16203)). That gap is
   pre-existing and reachable by anyone scripting the WebSocket, so this interface neither
   creates nor widens it. The fix belongs in the widgets, where both paths share it, not

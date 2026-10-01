@@ -565,6 +565,8 @@ async def _settle(
             f"The app did not finish within {timeout:g} seconds, and is still "
             "running. Nothing is lost: send this request again, or an empty one "
             "with only `session_id`, to wait for it without starting it over.",
+            # Always included, because the remedy is a request on this session.
+            session_id=session.handle,
         ) from exc
 
     # Keep the query string the way a browser keeps its address bar: what was

@@ -36,7 +36,9 @@ from streamlit import config
 from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.agent import json_encoding
 from streamlit.runtime.state.common import user_key_from_element_id
 
@@ -208,6 +210,11 @@ class ElementState(NamedTuple):
     options: list[Any] | None
     min_value: Any
     max_value: Any
+    # Constraints the runtime would otherwise apply by changing the value
+    # silently: an integer number input or slider truncates 7.5 to 7, and a
+    # text input cuts what is past `max_chars`.
+    integer: bool
+    max_chars: int | None
     value: Any
     # The fragment this element lives in, if any. A request that targets it is
     # scoped to that fragment, the way the browser scopes a widget change.
@@ -401,7 +408,12 @@ class _SnapshotBuilder:
             result["form_id"] = form_id
 
         self._record_state(
-            description, result, inherited_support, form_id or None, node.fragment_id
+            description,
+            result,
+            inherited_support,
+            form_id or None,
+            node.fragment_id,
+            integer=_holds_integers(proto_field, payload),
         )
         return result
 
@@ -412,6 +424,8 @@ class _SnapshotBuilder:
         inherited_support: str | None,
         form_id: str | None,
         fragment_id: str | None = None,
+        *,
+        integer: bool = False,
     ) -> None:
         """Record what a node offers, and list it in `actions` if it is usable.
 
@@ -441,6 +455,10 @@ class _SnapshotBuilder:
             options=options if isinstance(options, list) else None,
             min_value=props.get("min_value"),
             max_value=props.get("max_value"),
+            integer=integer,
+            max_chars=max_chars
+            if isinstance(max_chars := props.get("max_chars"), int)
+            else None,
             value=result.get("value"),
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
@@ -524,6 +542,20 @@ class _SnapshotBuilder:
             return json_encoding.to_json_value(value)
         except Exception:
             return None
+
+
+def _holds_integers(proto_field: str, payload: Any) -> bool:
+    """Whether a number input or slider is over integers.
+
+    Neither says so in its parameters -- the type follows from the values the
+    author passed -- but the runtime truncates a fraction sent to one, so the
+    next request has to be checked for it.
+    """
+    if proto_field == "number_input":
+        return bool(payload.data_type == NumberInputProto.INT)
+    if proto_field == "slider":
+        return bool(payload.data_type == SliderProto.INT)
+    return False
 
 
 def _fallback_description(proto_field: str, payload: Message | None) -> dict[str, Any]:

@@ -73,10 +73,12 @@ def _agent_description(block_proto: BlockProto, is_open: bool) -> dict[str, Any]
     it and get `unknown_key`.
     """
     dialog = block_proto.dialog
+    # `width` and `position` are left out: geometry means nothing to a
+    # non-visual client.
     description: dict[str, Any] = {
         "title": dialog.title,
+        "icon": dialog.icon or None,
         "dismissible": dialog.dismissible,
-        "width": BlockProto.Dialog.DialogWidth.Name(dialog.width).lower(),
         "is_open": is_open,
     }
     if dialog.id:

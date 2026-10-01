@@ -208,6 +208,7 @@ def build_widget_states(
         state = element_states[element_id]
         _validate_options(key, metadata, value, advertised=state.options)
         _validate_bounded(key, state, value, clearable=metadata.clearable)
+        _validate_unaltered(key, state, value)
         states.widgets.append(
             _encode(
                 element_id,
@@ -237,13 +238,16 @@ def build_widget_states(
                 "through `widget_state` instead of firing it.",
             )
 
+        trigger_state = element_states[element_id]
+        if trigger_state.max_chars is not None:
+            _validate_unaltered(trigger_key, trigger_state, trigger.get("value"))
         states.widgets.append(
             _encode_trigger(
                 element_id,
                 metadata.value_type,
                 trigger.get("value"),
                 trigger_key,
-                element_states[element_id].options,
+                trigger_state.options,
             )
         )
         submitted_form = _form_of(element_states, element_id)
@@ -451,6 +455,31 @@ def _validate_bounded(
                 "invalid_value",
                 f"The range for {key!r} is reversed: {low!r} is greater than {high!r}.",
             )
+
+
+def _validate_unaltered(key: str, state: ElementState, value: Any) -> None:
+    """Reject a value the runtime would accept only by changing it.
+
+    An integer number input or slider truncates 7.5 to 7, and a text input cuts
+    what is past `max_chars`. Both would answer 200 with a value the caller did
+    not send, which reads as success.
+    """
+    items = value if isinstance(value, list) else [value]
+    if state.integer:
+        for item in items:
+            # Only a float can be a fraction; an int of any size is whole.
+            if isinstance(item, float) and not item.is_integer():
+                raise AgentRequestError(
+                    "invalid_value", f"{key!r} takes whole numbers; got {item!r}."
+                )
+    if state.max_chars is not None:
+        for item in items:
+            if isinstance(item, str) and len(item) > state.max_chars:
+                raise AgentRequestError(
+                    "invalid_value",
+                    f"{key!r} takes at most {state.max_chars} characters; got "
+                    f"{len(item)}.",
+                )
 
 
 def _validate_options(
