@@ -909,6 +909,7 @@ class MultiSelectMixin:
                 accept_new_options=accept_new_options,
                 disabled=disabled,
                 label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
             ),
         )
 

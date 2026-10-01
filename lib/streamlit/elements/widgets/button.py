@@ -30,6 +30,7 @@ from typing import (
     cast,
     overload,
 )
+from urllib.parse import parse_qs
 
 from streamlit import runtime
 from streamlit.elements.lib import agent_spec
@@ -137,12 +138,15 @@ def _page_link_agent_props(proto: PageLinkProto) -> str | None:
     Built from the proto because st.page_link resolves `page` through several
     branches (an st.Page, a script path, an external URL) and only the proto
     holds the outcome. `page` is reported as the public ``url_path`` a client
-    can navigate to; the internal script hash stays internal.
+    can navigate to; the internal script hash stays internal. `query_params`
+    has the shape a navigation request takes, so a client can follow the link
+    by sending both.
     """
     return agent_spec.element(
         "page_link",
         label=proto.label or None,
         page=proto.page or None,
+        query_params=parse_qs(proto.query_string, keep_blank_values=True) or None,
         help=proto.help or None,
         icon=proto.icon or None,
         external=proto.external,
@@ -1885,7 +1889,6 @@ class ButtonMixin:
                 icon=icon,
                 type=type,
                 disabled=disabled,
-                shortcut=normalized_shortcut,
             ),
         )
 

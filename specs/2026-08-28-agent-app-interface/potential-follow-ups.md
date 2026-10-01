@@ -58,7 +58,11 @@ the policy to its caller: the browser path coerces, the agent path rejects with
    date window that bounds a query.
 5. **Size limits**: `max_selections` on multiselect, and `max_chars` on text inputs, text
    areas, and chat input.
-6. **Shape consistency**: two-value ranges staying two ordered values, and `step`
+6. **Input format rules**: `required` and `validate` on text inputs, and `required` on
+   number inputs. Apps use them to keep malformed input out, such as a badly formed email
+   address, though their docs already tell authors to re-check anything security-relevant
+   in app code.
+7. **Shape consistency**: two-value ranges staying two ordered values, and `step`
    alignment. A violation here usually raises in app code rather than leaking data.
 
 Uploaded file types are already checked server-side, in each upload widget's

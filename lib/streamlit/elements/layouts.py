@@ -1214,6 +1214,9 @@ class LayoutsMixin:
                 key=element_id or key,
                 action="value" if is_stateful else None,
                 tabs=list(tabs),
+                on_change=("ignore" if on_change == "ignore" else "rerun")
+                if is_stateful
+                else None,
             ),
         )
 
@@ -1643,6 +1646,9 @@ class LayoutsMixin:
                     label=label,
                     expanded=current_expanded,
                     icon=icon,
+                    on_change=("ignore" if on_change == "ignore" else "rerun")
+                    if is_stateful
+                    else None,
                 ),
             ),
         )
@@ -2049,6 +2055,7 @@ class LayoutsMixin:
                     key=element_id or key,
                     action="value" if is_stateful else None,
                     label=label,
+                    type=type,
                     help=help,
                     icon=icon,
                     disabled=disabled,

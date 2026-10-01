@@ -1179,6 +1179,7 @@ class ChatMixin:
             max_chars=max_chars,
             accept_file=accept_file,
             file_type=list(file_type) if file_type else None,
+            accept_audio=accept_audio,
             disabled=disabled,
             submit_mode=submit_mode,
         )

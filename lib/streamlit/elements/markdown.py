@@ -681,7 +681,7 @@ class MarkdownMixin:
             # payload: it emits NATIVE markdown with the color and icon
             # directives already expanded into `body`.
             agent_props=agent_spec.element(
-                "badge", label=label, icon=icon, color=color
+                "badge", label=label, icon=icon, color=color, help=help
             ),
         )
 

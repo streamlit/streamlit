@@ -742,8 +742,10 @@ changes behavior for browser sessions too and belongs in its own change. This is
 to be the last pair.
 
 Actions do not carry a JSON Schema in v1. The element's `type` plus its constraint
-properties (`options`, `min_value`, `max_value`) already tell a model what to send, and
-the server validates regardless.
+properties (`options`, `min_value`, `max_value`, `max_chars`, `required`, `validate`)
+already tell a model what to send. Options and bounds are checked against the snapshot;
+the rest are reported for the client to respect, because today only the browser enforces
+them (see [Security](#security)).
 
 **Every action must be treated as consequential.** A selectbox can trigger a database
 write just as a button can, so Streamlit does not label any action read-only, idempotent,
@@ -847,7 +849,7 @@ back to a browser rather than mistake it for missing content:
 | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rendering that depends on JavaScript                                       | Custom components, `components.html`, inline iframe HTML, and `st.html` with scripts allowed report their source or arguments with `support: browser_required`, because what renders may differ from it. See [Data, charts, and media](#data-charts-and-media-in-v1). |
 | `st.file_uploader`, `st.camera_input`, `st.audio_input`                    | Inspectable, not interactive: `support: read_only_in_v1`.                                                                                                                      |
-| `st.chat_input` attachments                                                | Text only. `accept_file` is reported, but a request cannot attach files.                                                                                                      |
+| `st.chat_input` attachments                                                | Text only. `accept_file` and `accept_audio` are reported, but a request cannot attach files or audio.                                                                         |
 | `st.data_editor` edits, dataframe and chart selections                     | Read-only, with `support: read_only_in_v1` on the element when the app enabled them.                                                                                          |
 | Deferred downloads                                                         | `support: read_only_in_v1`: the file is only generated on click and has no URL to report. An eager download is fully supported.                                         |
 | Lazy dataframe continuation                                                | `complete: false`, and `data.url` serves only the chunk already loaded.                                                                                                       |
@@ -898,7 +900,8 @@ This is a new programmatic execution surface and needs an explicit review.
   wrong-shape, cross-form, cross-dialog, and oversized requests atomically, before any
   callback runs — against the last snapshot rather than live widget state, for the
   reasons in [Actions in v1](#actions-in-v1). Widget constraints such as option lists,
-  bounds, and `max_chars` are enforced only in the browser today, for every client
+  bounds, `max_chars`, `required`, and `validate` are enforced only in the browser today,
+  for every client
   ([#16203](https://github.com/streamlit/streamlit/issues/16203)). That gap is
   pre-existing and reachable by anyone scripting the WebSocket, so this interface neither
   creates nor widens it. The fix belongs in the widgets, where both paths share it, not

@@ -958,17 +958,19 @@ class NumberInputMixin:
                 key=element_id,
                 action="value",
                 label=label,
-                # The authored bounds, which are absent rather than 0 when the
-                # author set none. The proto needs `has_min` / `has_max` flags
-                # to express that.
-                min_value=min_value,
-                max_value=max_value,
+                # The authored bounds, absent when the author set none: unset
+                # bounds were backfilled with JavaScript safe-number sentinels
+                # above, which are not limits anyone chose.
+                min_value=min_value if has_user_min else None,
+                max_value=max_value if has_user_max else None,
                 step=step,
                 format=format,
                 help=help,
                 placeholder=placeholder,
                 icon=icon,
                 disabled=disabled,
+                # Checked by the browser, not by this interface.
+                required=required,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",
             ),

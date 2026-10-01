@@ -848,9 +848,6 @@ class TextWidgetsMixin:
             effective_validate
         )
 
-        if autocomplete is None:
-            autocomplete = type_defaults.autocomplete
-
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
             value = None
@@ -887,7 +884,9 @@ class TextWidgetsMixin:
 
         text_input_proto.type = type_defaults.proto_type
 
-        text_input_proto.autocomplete = autocomplete
+        text_input_proto.autocomplete = (
+            type_defaults.autocomplete if autocomplete is None else autocomplete
+        )
 
         # Prevent binding password inputs to query params (exposes secrets in URL)
         if bind == "query-params" and type == "password":
@@ -950,6 +949,19 @@ class TextWidgetsMixin:
                 placeholder=placeholder if placeholder != " " else "",
                 icon=icon,
                 disabled=disabled,
+                # `required` and `validate` are checked by the browser, not by
+                # this interface, so a client has to send values that pass
+                # them. `validate` is the effective rule, including the one
+                # `type` implies. `live` is left out: it only times the
+                # browser's commits, and every value a client sets reruns.
+                required=required,
+                validate=(
+                    [validate_regex, validate_message]
+                    if validate_message
+                    else validate_regex
+                )
+                or None,
+                autocomplete=autocomplete or None,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",
             ),
@@ -1373,6 +1385,7 @@ class TextWidgetsMixin:
                 placeholder=placeholder if placeholder != " " else "",
                 disabled=disabled,
                 label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
             ),
         )
         return widget_state.value
