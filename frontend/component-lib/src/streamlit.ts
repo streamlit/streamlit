@@ -215,11 +215,14 @@ export class Streamlit {
   private static readonly argsDataframeToObject = (
     argsDataframe: ArgsDataframe[]
   ): Record<string, ArrowTable> => {
-    const args: Record<string, ArrowTable> = {}
-    for (const { key, value } of argsDataframe) {
-      args[key] = Streamlit.toArrowTable(value)
-    }
-    return args
+    // Object.fromEntries keeps keys such as "__proto__" as own properties.
+    // Assignment to a plain object would invoke the prototype setter instead.
+    return Object.fromEntries(
+      argsDataframe.map(({ key, value }): [string, ArrowTable] => [
+        key,
+        Streamlit.toArrowTable(value),
+      ])
+    )
   }
 
   private static readonly toArrowTable = (

@@ -647,8 +647,10 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
       if (parsedTooltip.html) {
         parsedTooltip.html = interpolate(info, parsedTooltip.html, true)
+      } else if (parsedTooltip.text) {
+        parsedTooltip.text = interpolate(info, parsedTooltip.text)
       } else {
-        parsedTooltip.text = interpolate(info, parsedTooltip.text ?? "")
+        return null
       }
 
       return parsedTooltip

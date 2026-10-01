@@ -157,6 +157,11 @@ describe("useDeckGl", () => {
         props: { tooltip: "" },
         info: { object: { elevationValue: 10 } } as PickingInfo,
       },
+      {
+        description: "tooltip has neither html nor text",
+        props: { tooltip: JSON.stringify({ style: { color: "red" } }) },
+        info: { object: { elevationValue: 10 } } as PickingInfo,
+      },
     ])("should return null when $description", ({ props, info }) => {
       const {
         result: { current },

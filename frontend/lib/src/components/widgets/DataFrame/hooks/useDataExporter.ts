@@ -84,7 +84,7 @@ type DataExporterReturn = {
  * column headers and rows constructed from the cell values obtained through `getCellContent`.
  * The function handles encoding and CSV formatting, concluding by closing the writable stream.
  *
- * @param {WritableStreamDefaultWriter} writable - Target stream for CSV data.
+ * @param writable - Target stream for CSV data (`write` + `close`).
  * @param {DataEditorProps["getCellContent"]} getCellContent - The cell content getter compatible with glide-data-grid.
  * @param {BaseColumn[]} columns - The columns of the table.
  * @param {number} numRows - The number of rows of the current state.

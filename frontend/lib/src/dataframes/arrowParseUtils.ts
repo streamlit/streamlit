@@ -140,11 +140,10 @@ function parseHeaderName(name: string, numLevels: number): string[] {
     const parsed: unknown = JSON.parse(
       name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replaceAll("'", '"')
     )
-    if (
-      Array.isArray(parsed) &&
-      parsed.every((part): part is string => typeof part === "string")
-    ) {
-      return parsed
+    if (Array.isArray(parsed)) {
+      // pandas/pyarrow stringifies MultiIndex levels, so names look like
+      // "('1','red')". Coerce leftover non-strings rather than flattening.
+      return parsed.map(part => String(part))
     }
     return [...Array.from({ length: numLevels - 1 }, () => ""), name]
   } catch {

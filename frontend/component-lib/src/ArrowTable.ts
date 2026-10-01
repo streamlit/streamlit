@@ -226,7 +226,7 @@ export class ArrowTable {
         return this.nanosToDate(column.get(rowIndex))
       }
       default: {
-        // apache-arrow types Vector.get() as T | null, but untyped tables are T=any.
+        // Apache Arrow types Vector.get() as T | null; untyped tables use T = any.
         return column.get(rowIndex) as DataType
       }
     }
@@ -247,7 +247,7 @@ export class ArrowTable {
    * Returns apache-arrow specific typeId of column.
    */
   private getColumnTypeId(table: Table, columnIndex: number): Type {
-    // Untyped Arrow tables expose Field.type as any.
+    // Field.type is any on untyped Arrow tables.
     return table.schema.fields[columnIndex].type.typeId as Type
   }
 

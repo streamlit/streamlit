@@ -307,10 +307,9 @@ export default defineConfig([
       // New rules in @eslint-react v4/v5 — disable until existing violations are addressed
       "@eslint-react/exhaustive-deps": "off",
       // TypeScript rules with type-checking
-      // Production src enables no-unsafe-call / no-unsafe-return (see overlay).
-      // Argument, assignment, and member-access stay off until those clusters
-      // (Vega, Arrow, Plotly, DeckGL) are typed. Tests stay exempt until a
-      // later test-typing pass. unbound-method is noisy on expect(obj.method).
+      // Production src enables no-unsafe-call / no-unsafe-return (see the
+      // production overlay below). Remaining no-unsafe-* and unbound-method
+      // stay off globally so tests stay exempt.
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
