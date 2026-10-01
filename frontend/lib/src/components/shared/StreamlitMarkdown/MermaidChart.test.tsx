@@ -423,6 +423,35 @@ describe("MermaidChart", () => {
       ).toBeInTheDocument()
     })
 
+    it("drops author context from the accessible name while showing Copied", async () => {
+      const source = ["flowchart TD", "%% stAlt: Checkout flow", "A-->B"].join(
+        "\n"
+      )
+      render(<MermaidChart source={source} />)
+      await waitForChartImage()
+
+      // Toolbar is opacity:0 until hover; fireEvent avoids userEvent visibility checks.
+      // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: /^Copy to clipboard: Checkout flow$/,
+        })
+      )
+
+      await waitFor(() => {
+        expect(mockWriteText).toHaveBeenCalledWith(source)
+      })
+
+      expect(
+        await screen.findByRole("button", { name: /^Copied$/ })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Copied: Checkout flow/,
+        })
+      ).not.toBeInTheDocument()
+    })
+
     it("downloads a PNG when the download toolbar action succeeds", async () => {
       stubImageLoad("load")
 

@@ -346,7 +346,7 @@ describe("ToolbarAction Button element", () => {
     render(<ToolbarAction {...getToolbarActionsProps()} />)
 
     const button = screen.getByRole("button", { name: /^info$/ })
-    expect(button).toHaveStyle("min-width: 1.5rem")
-    expect(button).toHaveStyle("min-height: 1.5rem")
+    expect(button).toHaveStyle("min-width: max(1.5rem, 24px)")
+    expect(button).toHaveStyle("min-height: max(1.5rem, 24px)")
   })
 })
