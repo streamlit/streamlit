@@ -33,8 +33,9 @@ disagree with the implementation about error codes or the schema version.
 
 from __future__ import annotations
 
-from typing import Any, Final
+from typing import Any, Final, get_args
 
+from streamlit.elements.lib.agent_spec import ActionKind, SupportReason
 from streamlit.runtime.agent.snapshot import SCHEMA_VERSION
 
 # Every failure the route can report, as code -> (HTTP status, meaning).
@@ -793,11 +794,9 @@ def schemas() -> dict[str, Any]:
                 },
                 "support": {
                     "type": "string",
-                    "enum": [
-                        "browser_required",
-                        "read_only_in_v1",
-                        "not_interactive_in_v1",
-                    ],
+                    # From the type commands are checked against, so a new
+                    # reason cannot be emitted without being documented.
+                    "enum": list(get_args(SupportReason)),
                     "description": (
                         "Why this element is not fully usable here, absent when "
                         "it is. Declared on the element itself so a gap never "
@@ -956,7 +955,7 @@ def schemas() -> dict[str, Any]:
                 },
                 "kind": {
                     "type": "string",
-                    "enum": ["value", "trigger"],
+                    "enum": list(get_args(ActionKind)),
                     "description": (
                         "`value` holds a value you set through `widget_state`. "
                         "`trigger` is fired once through `trigger` and resets "
