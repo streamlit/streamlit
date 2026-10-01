@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import styled, { CSSObject } from "@emotion/styled"
+import styled, { type CSSObject } from "@emotion/styled"
 
-import { EmotionTheme } from "@streamlit/lib"
+import type { EmotionTheme } from "@streamlit/lib"
 
 export const StyledAppViewContainer = styled.div({
   display: "flex",

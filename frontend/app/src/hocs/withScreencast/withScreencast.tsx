@@ -15,9 +15,9 @@
  */
 
 import {
-  ComponentType,
-  FC,
-  PropsWithChildren,
+  type ComponentType,
+  type FC,
+  type PropsWithChildren,
   useCallback,
   useRef,
   useState,

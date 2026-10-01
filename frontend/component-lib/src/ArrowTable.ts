@@ -15,12 +15,12 @@
  */
 
 import {
-  StructRow,
-  Table,
+  type StructRow,
+  type Table,
   tableFromIPC,
   tableToIPC,
   Type,
-  Vector,
+  type Vector,
 } from "apache-arrow"
 
 export type CellType = "blank" | "index" | "columns" | "data"

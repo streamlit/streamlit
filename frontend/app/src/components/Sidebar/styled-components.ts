@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+import { type EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 
 import {
   getSidebarResizeHandleBackgroundImage,

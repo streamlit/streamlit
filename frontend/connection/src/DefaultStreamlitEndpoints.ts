@@ -30,7 +30,7 @@ import {
   StreamlitConfig,
 } from "@streamlit/utils"
 
-import { FileUploadClientConfig, StreamlitEndpoints } from "./types"
+import type { FileUploadClientConfig, StreamlitEndpoints } from "./types"
 import { parseUriIntoBaseParts } from "./utils"
 
 const LOG = getLogger("DefaultStreamlitEndpoints")

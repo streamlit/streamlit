@@ -18,10 +18,10 @@
 // @ts-nocheck
 
 import {
-  MetricsEvent,
+  type MetricsEvent,
   mockSessionInfo,
   mockSessionInfoProps,
-  SessionInfo,
+  type SessionInfo,
   setCookie,
 } from "@streamlit/lib"
 

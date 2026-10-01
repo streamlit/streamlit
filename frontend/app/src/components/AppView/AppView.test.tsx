@@ -28,7 +28,7 @@ import {
   mockEndpoints,
   mockSessionInfo,
   mockTheme,
-  NavigationContextProps,
+  type NavigationContextProps,
   toastQueue,
   TransientNode,
   WidgetStateManager,
@@ -36,7 +36,7 @@ import {
 import {
   render,
   renderWithContexts,
-  RenderWithContextsOptions,
+  type RenderWithContextsOptions,
 } from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
@@ -47,7 +47,7 @@ import {
   PageConfig,
 } from "@streamlit/protobuf"
 
-import AppView, { AppViewProps } from "./AppView"
+import AppView, { type AppViewProps } from "./AppView"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 

@@ -18,7 +18,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { ArrowTable } from "./ArrowTable"
 import { EXAMPLE_DF } from "./mock_data"
-import { Streamlit, Theme } from "./streamlit"
+import { Streamlit, type Theme } from "./streamlit"
 import { tick } from "./test_utils"
 
 const dispatchMessage = (data: Record<string, unknown>): void => {

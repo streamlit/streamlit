@@ -34,7 +34,7 @@ import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
 // Mock the dynamic import to return the same axios instance we're using for testing
 vi.mock("axios", async importOriginal => {
-  const actual = await importOriginal<typeof import("axios")>()
+  const actual = await importOriginal<{ default: typeof axios }>()
   return {
     ...actual,
     default: actual.default,
