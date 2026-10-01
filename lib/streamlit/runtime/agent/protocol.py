@@ -916,7 +916,11 @@ def schemas() -> dict[str, Any]:
                     "enum": ["too_large_to_serve"],
                     "description": (
                         "Why incomplete data has no `url`. Present only when "
-                        "`complete` is false and `url` is absent."
+                        "`complete` is false and `url` is absent. "
+                        "`too_large_to_serve`: the data is larger than "
+                        "`server.maxMessageSize`, the bound the app's own "
+                        "WebSocket messages have. Narrow the app's filters to "
+                        "get under it."
                     ),
                 },
                 "spec": {

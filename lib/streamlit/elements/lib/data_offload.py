@@ -52,12 +52,6 @@ _LOGGER: Final = get_logger(__name__)
 # Streamlit's Arrow serializer produces.
 ARROW_MIMETYPE: Final = "application/vnd.apache.arrow.stream"
 
-# Refuse to hold a second copy of something enormous. An element over this
-# reports no URL, and a client that needs the full data has to narrow the
-# app's own filters instead. The snapshot says so with `data.unavailable`
-# rather than leaving the client to infer it from a missing key.
-_MAX_OFFLOAD_SIZE_BYTES: Final = 200 * 1024 * 1024
-
 
 def serve_arrow_over_http(arrow_bytes: bytes, *, coordinates: str) -> str | None:
     """Register Arrow data for HTTP fetch and return its URL.
@@ -78,13 +72,22 @@ def serve_arrow_over_http(arrow_bytes: bytes, *, coordinates: str) -> str | None
     if not arrow_bytes or not agent_spec.is_recording():
         return None
 
+    from streamlit.runtime.runtime_util import get_max_message_size_bytes
+
+    # The bound the app's own WebSocket messages have, so an agent is served no
+    # more data than the app could send its browser, and raising one raises
+    # both. Above it the element reports no URL and the snapshot says so with
+    # `data.unavailable`; a client that needs the data narrows the app's
+    # filters instead.
     size = len(arrow_bytes)
-    if size > _MAX_OFFLOAD_SIZE_BYTES:
+    max_size = get_max_message_size_bytes()
+    if size > max_size:
         _LOGGER.warning(
-            "Not serving %s bytes of Arrow data over HTTP: above the %s byte "
-            "limit. Clients will only see the inline preview.",
+            "Not serving %s bytes of Arrow data over HTTP: above "
+            "`server.maxMessageSize` (%s bytes). Clients will only see the "
+            "inline preview.",
             size,
-            _MAX_OFFLOAD_SIZE_BYTES,
+            max_size,
         )
         return None
 

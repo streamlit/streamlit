@@ -786,8 +786,11 @@ user's URL can fetch it while it is still rendered. Either would be changed in m
 storage for every client, not in this interface ([open question 3](#open-questions)).
 
 Serving full data has a cost worth bounding, since media storage is in memory: v1
-externalizes up to 200 MB per element and marks anything larger unavailable on the node
-rather than registering it. That copy is the only one held. The session keeps the page's
+externalizes each element's data up to `server.maxMessageSize` (200 MB by default) and
+marks anything larger unavailable on the node rather than registering it. That reuses
+the bound the app's own WebSocket messages have, so an agent is served no more than the
+app could send its browser, and an operator who raises the limit for large dataframes
+raises both. That copy is the only one held. The session keeps the page's
 messages between interactions, so a fragment rerun can return the whole page, but it keeps
 a table or chart as the summary the snapshot reads rather than its full payload. A page
 with a 50,000-row table holds 38 KB per session instead of 1.7 MB.
@@ -846,7 +849,7 @@ back to a browser rather than mistake it for missing content:
 | `st.data_editor` edits, dataframe and chart selections                     | Read-only, with `support: read_only_in_v1` on the element when the app enabled them.                                                                                          |
 | Deferred downloads and download callbacks                                  | Not triggerable. Eager downloads expose their existing URL.                                                                                                                   |
 | Lazy dataframe continuation                                                | `complete: false`, and `data.url` serves only the chunk already loaded.                                                                                                       |
-| Data too large to hold a second copy of                                    | Over 200 MB per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                                     |
+| Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again; the interval is not reported, since it would not change when a caller chooses to.                                         |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.                  |
 | `bind="query-params"` write-back                                           | Setting a bound widget changes its value but not `query_params`; the browser is what writes the address bar. See [Actions in v1](#actions-in-v1).                             |
@@ -868,7 +871,7 @@ Every bound v1 applies, in one place. The three agent budget options are hidden 
 | Interactions in flight per session     | 1, then `session_busy`                                | Fixed                                                                         |
 | Request body                           | 25 MB, the same bound as a WebSocket message          | `server.maxWidgetStateSize`                                                   |
 | Preview rows per table                 | 100                                                   | Fixed                                                                         |
-| Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | Fixed                                                                         |
+| Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
 | Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 7](#open-questions))                                    |
 | Response size                          | No cap                                                | [Open question 4](#open-questions)                                            |
 | Wait for a follow-up run to start      | 50 ms after a run finishes                            | Fixed ([potential follow-ups](potential-follow-ups.md))                       |
