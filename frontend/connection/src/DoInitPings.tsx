@@ -221,9 +221,11 @@ If you are trying to access a Streamlit app running on another server, this coul
         if (cancelled) {
           return
         }
-        // fetchWithTimeout always rejects FetchError. Other rejections (for
-        // example onHostConfigResp throwing) have no HTTP metadata, so retry
-        // with the error text only and skip sendClientError.
+        // fetchWithTimeout always rejects with a FetchError. Other rejections
+        // (for example onHostConfigResp throwing) have no HTTP metadata, so
+        // retry with the error text only and skip sendClientError. Hosts are
+        // not sent a CLIENT_ERROR for this failure mode, which would otherwise
+        // be a misleading empty-URL event.
         if (!(error instanceof FetchError)) {
           const message =
             error instanceof Error ? error.message : String(error)
