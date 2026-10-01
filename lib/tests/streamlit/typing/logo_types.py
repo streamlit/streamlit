@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from typing_extensions import assert_type
 
@@ -24,13 +24,20 @@ if TYPE_CHECKING:
     import io
     from pathlib import Path
 
+    import numpy.typing as npt
+    from PIL import Image
+
     from streamlit.commands.logo import logo
+
+    numpy_image = cast("npt.NDArray[Any]", object())
+    pil_image = cast("Image.Image", object())
 
     # =====================================================================
     # st.logo return type tests
     # =====================================================================
 
-    # image: path, URL, emoji, material icon, bytes, BytesIO
+    # image accepts str (path, URL, emoji, material icon), Path, bytes, BytesIO,
+    # numpy arrays, and PIL images.
     assert_type(logo("path/to/logo.png"), None)
     assert_type(logo("https://example.com/logo.png"), None)
     assert_type(logo("🏠"), None)
@@ -38,13 +45,15 @@ if TYPE_CHECKING:
     assert_type(logo(Path("path/to/logo.png")), None)
     assert_type(logo(b"binary image"), None)
     assert_type(logo(io.BytesIO(b"binary image")), None)
+    assert_type(logo(numpy_image), None)
+    assert_type(logo(pil_image), None)
 
-    # size is keyword-only: "small", "medium", or "large"
+    # size accepts "small", "medium", or "large"
     assert_type(logo("logo.png", size="small"), None)
     assert_type(logo("logo.png", size="medium"), None)
     assert_type(logo("logo.png", size="large"), None)
 
-    # link is keyword-only: str or None
+    # link accepts str or None
     assert_type(logo("logo.png", link="https://streamlit.io"), None)
     assert_type(logo("logo.png", link=None), None)
 
@@ -55,6 +64,8 @@ if TYPE_CHECKING:
     assert_type(logo("logo.png", icon_image=io.BytesIO(b"binary image")), None)
     assert_type(logo("logo.png", icon_image="🏠"), None)
     assert_type(logo("logo.png", icon_image=":material/home:"), None)
+    assert_type(logo("logo.png", icon_image=numpy_image), None)
+    assert_type(logo("logo.png", icon_image=pil_image), None)
     assert_type(logo("logo.png", icon_image=None), None)
 
     # All parameters combined
@@ -80,6 +91,8 @@ if TYPE_CHECKING:
 
     # image does not accept an int
     logo(123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # image is not optional
     logo(None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid size value (not "small", "medium", or "large")
@@ -97,5 +110,5 @@ if TYPE_CHECKING:
     # icon_image does not accept a list
     logo("logo.png", icon_image=["a.png", "b.png"])  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
-    # Unknown argument
+    # Unknown argument (width is st.image, not st.logo)
     logo("logo.png", width="stretch")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
