@@ -32,4 +32,8 @@ describe("parseHeaderName", () => {
   it("pads a non-tuple multi-level header", () => {
     expect(parseHeaderName("5", 2)).toEqual(["", "5"])
   })
+
+  it("pads a multi-level header that is not valid JSON", () => {
+    expect(parseHeaderName("foo", 2)).toEqual(["", "foo"])
+  })
 })

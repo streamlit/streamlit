@@ -353,6 +353,10 @@ describe("Streamlit", () => {
     expect(streamlitEventsListener.mock.calls).toHaveLength(1)
     const renderEvent = streamlitEventsListener.mock.calls[0][0]
     expect(Object.hasOwn(renderEvent.detail.args, "__proto__")).toBe(true)
+    expect(Object.getPrototypeOf(renderEvent.detail.args)).toBe(
+      Object.prototype
+    )
+    expect(({} as { rows?: number }).rows).toBeUndefined()
     const arrowTable = Object.getOwnPropertyDescriptor(
       renderEvent.detail.args,
       "__proto__"

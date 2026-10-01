@@ -136,6 +136,11 @@ export function parseHeaderName(name: string, numLevels: number): string[] {
     return [name]
   }
 
+  const padLevels = (): string[] => [
+    ...Array.from({ length: numLevels - 1 }, () => ""),
+    name,
+  ]
+
   try {
     const parsed: unknown = JSON.parse(
       name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replaceAll("'", '"')
@@ -146,10 +151,9 @@ export function parseHeaderName(name: string, numLevels: number): string[] {
       // level stays a separate header.
       return parsed.map(part => String(part))
     }
-    return [...Array.from({ length: numLevels - 1 }, () => ""), name]
+    return padLevels()
   } catch {
-    // Add empty strings for the missing levels
-    return [...Array.from({ length: numLevels - 1 }, () => ""), name]
+    return padLevels()
   }
 }
 
