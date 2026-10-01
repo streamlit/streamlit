@@ -192,6 +192,13 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
           }
         : undefined
     )
+    // Must match the disabled key from getSecondaryIconButtonColorStyles.
+    const disabledSelector =
+      "&:disabled, &:disabled:hover, &:disabled:focus-visible, &[data-disabled], &[data-disabled]:hover, &[data-disabled]:focus-visible"
+    const {
+      [disabledSelector]: secondaryDisabledStyles,
+      ...secondaryRestStyles
+    } = secondaryColorStyles
 
     return {
       border: "none",
@@ -204,7 +211,7 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       margin: theme.spacing.none,
       padding: theme.spacing.none,
       pointerEvents: "auto",
-      ...secondaryColorStyles,
+      ...secondaryRestStyles,
       "&:focus": {
         outline: "none",
       },
@@ -214,13 +221,15 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       "&:focus-visible": {
         boxShadow: theme.shadows.focusRing,
       },
-      // Must stay below the `...secondaryColorStyles` spread: same specificity
-      // as the helper's hover rule, so source order keeps press color on top.
+      // Must stay below the secondary rest styles: same specificity as the
+      // helper's hover rule, so source order keeps press color on top.
       "&:active:not(:disabled)": {
         color: theme.colors.primary,
       },
-      // Helper already sets disabled color/cursor; keep transparent resets.
-      "&:disabled, &:disabled:hover, &:disabled:focus-visible": {
+      // Merge with the helper's disabled color/cursor — object keys do not
+      // deep-merge, so a second disabled block would replace them.
+      [disabledSelector]: {
+        ...secondaryDisabledStyles,
         backgroundColor: theme.colors.transparent,
         borderColor: theme.colors.transparent,
       },

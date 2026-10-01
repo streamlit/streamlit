@@ -656,6 +656,7 @@ const Selectbox: FC<Props> = ({
               <StyledClearButton
                 aria-label="Clear value"
                 slot={null}
+                isDisabled={selectDisabled}
                 onPress={handleClearValue}
               >
                 <Cancel size={theme.iconSizes.base} aria-hidden="true" />

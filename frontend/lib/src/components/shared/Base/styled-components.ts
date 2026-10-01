@@ -135,7 +135,7 @@ type SecondaryIconButtonColorOptions = {
  * @see TimeInput StyledClearButton
  * @see Multiselect StyledClearButton
  * @see Selectbox StyledClearButton
- * @see AudioInput StyledActionButtonStartRecordingDiv / PlayPauseDiv
+ * @see AudioInput StyledSecondaryIconActionButton / StyledStopRecordingActionButton
  * @see ChatInput StyledSendIconButton (non-primary)
  */
 export function getSecondaryIconButtonColorStyles(
@@ -148,15 +148,16 @@ export function getSecondaryIconButtonColorStyles(
 ): CSSObject {
   return {
     color: restColor,
-    // Always include `[data-hovered]` for React Aria consumers; inert on plain
-    // <button>s. Prefer `:focus-visible` so pointer clicks do not stick at hover.
-    "&:hover:not(:disabled), &:focus-visible:not(:disabled), &[data-hovered]:not(:disabled)":
+    // Always include React Aria `data-*` attrs for RAC consumers; inert on
+    // plain <button>s. Prefer `:focus-visible` so pointer clicks do not stick.
+    "&:hover:not(:disabled):not([data-disabled]), &:focus-visible:not(:disabled):not([data-disabled]), &[data-hovered]:not(:disabled):not([data-disabled])":
       {
         color: hoverColor,
       },
-    "&:disabled, &:disabled:hover, &:disabled:focus-visible": {
-      color: disabledColor,
-      cursor: "not-allowed",
-    },
+    "&:disabled, &:disabled:hover, &:disabled:focus-visible, &[data-disabled], &[data-disabled]:hover, &[data-disabled]:focus-visible":
+      {
+        color: disabledColor,
+        cursor: "not-allowed",
+      },
   }
 }

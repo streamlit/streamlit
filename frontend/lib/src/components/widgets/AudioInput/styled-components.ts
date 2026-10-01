@@ -17,6 +17,7 @@
 import styled from "@emotion/styled"
 
 import { getSecondaryIconButtonColorStyles } from "~lib/components/shared/Base/styled-components"
+import { StyledBorderlessIconButton } from "~lib/components/shared/BaseButton/styled-components"
 
 export const StyledAudioInputContainerDiv = styled.div()
 
@@ -116,30 +117,30 @@ export const StyledPlaceholderDotsDiv = styled.div(({ theme }) => {
   }
 })
 
-export const StyledActionButtonStopRecordingDiv = styled.span(({ theme }) => ({
-  "& > button": {
-    color: theme.colors.primary,
-    padding: theme.spacing.threeXS,
-  },
-  "& > button:hover, & > button:focus": {
+/**
+ * Stop-recording icon: primary at rest, red on hover/focus.
+ * Extends BORDERLESS_ICON so colors apply on the button element.
+ */
+export const StyledStopRecordingActionButton = styled(
+  StyledBorderlessIconButton
+)(({ theme }) => ({
+  padding: theme.spacing.threeXS,
+  color: theme.colors.primary,
+  "&:hover, &:focus": {
     color: theme.colors.redColor,
   },
 }))
 
-export const StyledActionButtonStartRecordingDiv = styled.span(
-  ({ theme }) => ({
-    "& > button": {
-      padding: theme.spacing.threeXS,
-      ...getSecondaryIconButtonColorStyles(theme),
-    },
-  })
-)
-
-export const StyledActionButtonPlayPauseDiv = styled.span(({ theme }) => ({
-  "& > button": {
-    padding: theme.spacing.threeXS,
-    ...getSecondaryIconButtonColorStyles(theme),
-  },
+/**
+ * Record / play / pause / reset icon button. Extends BORDERLESS_ICON so the
+ * secondary-icon disabled color wins over BaseButton's fadedText10 (same
+ * element class, later source order).
+ */
+export const StyledSecondaryIconActionButton = styled(
+  StyledBorderlessIconButton
+)(({ theme }) => ({
+  padding: theme.spacing.threeXS,
+  ...getSecondaryIconButtonColorStyles(theme),
 }))
 
 export const StyledActionButtonContainerDiv = styled.div(({ theme }) => ({
