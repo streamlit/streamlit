@@ -2251,6 +2251,78 @@ def test_form_key_and_get_by_key() -> None:
     assert form.key == "form-key"
 
 
+def test_form_collection_lookup() -> None:
+    """``at.form`` is a BlockList of ``st.form`` blocks, keyed by form ID."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form"):
+            st.text_input("Name")
+            st.form_submit_button("Submit")
+        with st.container(key="wrap"):
+            with st.form("inner-form"):
+                st.text_input("Inner")
+                st.form_submit_button("Go")
+
+    at = AppTest.from_function(script).run()
+    assert isinstance(at.form, type(at.container))
+    assert len(at.form) == 2
+    assert at.form[0].type == "form"
+    assert at.form("name-form").key == "name-form"
+    assert at.form("inner-form").text_input[0].label == "Inner"
+    assert at.container("wrap").form[0].key == "inner-form"
+    assert list(at.get("form")) == list(at.form)
+    with pytest.raises(KeyError):
+        at.form("missing")
+
+
+def test_form_submit_button_filters_regular_buttons() -> None:
+    """``at.form_submit_button`` is the subset of ``at.button`` inside a form.
+
+    Regular ``st.button`` stays in ``at.button`` only. Clicking a form submit
+    button still commits that form.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        st.button("Outside")
+        with st.form("name-form"):
+            name = st.text_input("Name")
+            st.form_submit_button("Save", key="save")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.button) == 2
+    assert len(at.form_submit_button) == 1
+    assert at.form_submit_button[0].label == "Save"
+    assert at.form_submit_button("save").form_id == "name-form"
+    assert list(at.get("form_submit_button")) == list(at.form_submit_button)
+
+    at.text_input[0].set_value("Ada")
+    at.run()
+    assert at.text[0].value == "submitted=''"
+
+    at.text_input[0].set_value("Ada")
+    at.form_submit_button("save").click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+
+def test_form_collections_empty_without_forms() -> None:
+    """Apps with only a regular button have empty form collections."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.button("Go")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.form) == 0
+    assert len(at.form_submit_button) == 0
+    assert len(at.button) == 1
+
+
 def test_form_values_apply_only_on_submit() -> None:
     """Form widget values stay uncommitted until the submit button is clicked.
 
