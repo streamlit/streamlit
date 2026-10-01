@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { forwardRef, useImperativeHandle } from "react"
+import { forwardRef, type ReactElement, useImperativeHandle } from "react"
 
 import {
   CompactSelection,
@@ -145,19 +145,36 @@ describe("DataFrame widget", () => {
     })
   }
 
-  const renderRowSelectionDataFrame = (selectionState?: string): void => {
-    render(
+  const EMPTY_SELECTION_STATE = JSON.stringify({
+    selection: { rows: [], columns: [], cells: [] },
+  })
+  const ROW_SELECTION_STATE = JSON.stringify({
+    selection: { rows: [1], columns: [], cells: [] },
+  })
+
+  const renderRowSelectionDataFrame = (
+    selectionState?: string
+  ): { rerender: (nextSelectionState?: string) => void } => {
+    const widgetMgr = createWidgetMgr()
+    const frame = (state?: string): ReactElement => (
       <DataFrame
         {...getProps(TEN_BY_TEN)}
         element={DataframeProto.create({
           arrowData: { data: TEN_BY_TEN },
           editingMode: DataframeProto.EditingMode.READ_ONLY,
           selectionMode: [DataframeProto.SelectionMode.MULTI_ROW],
-          selectionState,
+          selectionState: state,
         })}
-        widgetMgr={createWidgetMgr()}
+        widgetMgr={widgetMgr}
       />
     )
+
+    const { rerender } = render(frame(selectionState))
+    return {
+      rerender: (nextSelectionState?: string): void => {
+        rerender(frame(nextSelectionState))
+      },
+    }
   }
 
   beforeEach(() => {
@@ -828,13 +845,39 @@ describe("DataFrame widget", () => {
   })
 
   it("applies programmatic selection from selectionState", () => {
-    renderRowSelectionDataFrame(
-      JSON.stringify({
-        selection: { rows: [1], columns: [], cells: [] },
-      })
-    )
+    renderRowSelectionDataFrame(ROW_SELECTION_STATE)
 
     expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+  })
+
+  it("clears programmatic selection when selectionState is empty", () => {
+    const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
+
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+
+    rerender(EMPTY_SELECTION_STATE)
+
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
+  })
+
+  it("applies a later identical empty selectionState after a user reselects", () => {
+    const { rerender } = renderRowSelectionDataFrame(EMPTY_SELECTION_STATE)
+
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
+
+    selectRow(1)
+
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+
+    // User-driven reruns omit the one-shot field. The skip token must reset
+    // here or the next identical empty JSON is dropped.
+    rerender(undefined)
+
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+
+    rerender(EMPTY_SELECTION_STATE)
+
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
   })
 
   it("adds a row from the toolbar in dynamic editing mode", async () => {
