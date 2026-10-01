@@ -859,8 +859,9 @@ back to a browser rather than mistake it for missing content:
 
 ### Limits and configuration
 
-Every bound v1 applies, in one place. The three agent budget options are hidden from
-`streamlit config show` until their defaults settle ([open question 4](#open-questions)).
+Every bound v1 applies, in one place. The three agent budget options are public and
+marked experimental, since their defaults are still open
+([open question 4](#open-questions)).
 
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |

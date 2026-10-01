@@ -1271,22 +1271,22 @@ _create_option(
     """,
     default_val=100,
     type_=int,
-    # Hide until the budgets are settled.
-    visibility="hidden",
 )
 
 _create_option(
     "server.agentRunTimeout",
     description="""
-        Maximum number of seconds an agent API interaction waits for the app's
-        run chain to settle before failing the request.
+        Maximum number of seconds an agent API request waits for the app's run
+        chain to settle before returning `run_timed_out`.
+
+        This bounds the wait, not the run: the app keeps running, and a retry
+        of the same request waits for it instead of starting it over. Keep it
+        at or below the request timeout of the clients you expect.
 
         Note: This is an experimental API subject to change.
     """,
     default_val=60,
     type_=int,
-    # Hide until the budgets are settled.
-    visibility="hidden",
 )
 
 _create_option(
@@ -1301,8 +1301,6 @@ _create_option(
     """,
     default_val=900,
     type_=int,
-    # Hide until the budgets are settled.
-    visibility="hidden",
 )
 
 _create_option(
