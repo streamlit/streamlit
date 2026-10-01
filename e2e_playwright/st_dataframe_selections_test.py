@@ -967,6 +967,18 @@ def _get_programmatic_row_selection_df(app: Page) -> Locator:
     )
 
 
+def _wait_for_programmatic_selection_applied(app: Page) -> None:
+    """Wait for glide-data-grid to apply a programmatic selection internally.
+
+    The selection debounce is 150ms and the React effect that applies the
+    programmatic selection runs after DOM commit. ``expect``/``wait_until``
+    cannot observe this because glide-data-grid renders to a <canvas>, so
+    selected-row state is not exposed as a DOM attribute, CSS class, or ARIA
+    property.
+    """
+    app.wait_for_timeout(250)
+
+
 def test_programmatic_row_selection_via_session_state(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -1020,14 +1032,7 @@ def test_programmatic_row_selection_via_session_state(
     # Row position 2 in the grid corresponds to row index 1 (since hide_index=True
     # and position 1 is the header). Clicking it should toggle (add) row 1.
     canvas.scroll_into_view_if_needed()
-    # Wait for glide-data-grid to apply the programmatic selection internally.
-    # The selection debounce is 150ms and the React effect that applies the
-    # programmatic selection runs after DOM commit. We cannot use expect/wait_until
-    # here because glide-data-grid renders to a <canvas> — selected-row state is
-    # not exposed as a DOM attribute, CSS class, or ARIA property that Playwright
-    # could observe. Without this wait the subsequent click may land before the
-    # grid has updated its internal selection, producing wrong results.
-    app.wait_for_timeout(250)
+    _wait_for_programmatic_selection_applied(app)
     select_row(canvas, 2)
     wait_for_app_run(app)
 
@@ -1081,14 +1086,7 @@ def test_programmatic_clear_row_selection_via_session_state(app: Page):
     expect(toolbar_buttons.get_by_label("Clear selection")).to_have_count(0)
 
     canvas.scroll_into_view_if_needed()
-    # Wait for glide-data-grid to apply the programmatic selection internally.
-    # The selection debounce is 150ms and the React effect that applies the
-    # programmatic selection runs after DOM commit. We cannot use expect/wait_until
-    # here because glide-data-grid renders to a <canvas> — selected-row state is
-    # not exposed as a DOM attribute, CSS class, or ARIA property that Playwright
-    # could observe. Without this wait the subsequent click may land before the
-    # grid has updated its internal selection, producing wrong results.
-    app.wait_for_timeout(250)
+    _wait_for_programmatic_selection_applied(app)
     select_row(canvas, 2)
     wait_for_app_run(app)
 

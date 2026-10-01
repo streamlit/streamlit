@@ -663,10 +663,10 @@ function DataFrame({
 
   /**
    * Apply programmatic selection changes set via st.session_state.
-   * selectionState is a one-shot signal from the backend (only present on
-   * the rerun where the value changed). Identical payloads are skipped
-   * across re-renders; the skip token is cleared when the field is absent
-   * so a later identical value can apply.
+   * The backend sends selectionState only on the rerun where the value
+   * changed. This effect skips identical payloads across React re-renders
+   * of that message, and clears processedSelectionStateRef when
+   * selectionState is absent so a later identical value can apply.
    */
   useEffect(() => {
     if (!element.selectionState) {

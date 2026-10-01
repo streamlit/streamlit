@@ -177,6 +177,11 @@ describe("DataFrame widget", () => {
     }
   }
 
+  const selectedRows = (): number[] =>
+    (
+      getDataEditorProps() as { gridSelection: GridSelection }
+    ).gridSelection.rows.toArray()
+
   beforeEach(() => {
     vi.clearAllMocks()
     dataEditorMockFn.mockClear()
@@ -847,13 +852,13 @@ describe("DataFrame widget", () => {
   it("applies programmatic selection from selectionState", () => {
     renderRowSelectionDataFrame(ROW_SELECTION_STATE)
 
-    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+    expect(screen.getByLabelText("Clear selection")).toBeVisible()
   })
 
   it("clears programmatic selection when selectionState is empty", () => {
     const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
 
-    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+    expect(screen.getByLabelText("Clear selection")).toBeVisible()
 
     rerender(EMPTY_SELECTION_STATE)
 
@@ -867,13 +872,13 @@ describe("DataFrame widget", () => {
 
     selectRow(1)
 
-    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+    expect(screen.getByLabelText("Clear selection")).toBeVisible()
 
-    // User-driven reruns omit the one-shot field. The skip token must reset
-    // here or the next identical empty JSON is dropped.
+    // User-driven reruns omit the one-shot field. processedSelectionStateRef
+    // must reset here or the next identical empty JSON is dropped.
     rerender(undefined)
 
-    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+    expect(screen.getByLabelText("Clear selection")).toBeVisible()
 
     rerender(EMPTY_SELECTION_STATE)
 
@@ -884,13 +889,11 @@ describe("DataFrame widget", () => {
     const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
 
     selectRow(3)
+    expect(selectedRows()).toEqual([3])
     rerender(undefined)
     rerender(ROW_SELECTION_STATE)
 
-    const { gridSelection } = getDataEditorProps() as {
-      gridSelection: GridSelection
-    }
-    expect(gridSelection.rows.toArray()).toEqual([1])
+    expect(selectedRows()).toEqual([1])
   })
 
   it("does not re-apply the same selectionState after a user selection", () => {
@@ -899,10 +902,7 @@ describe("DataFrame widget", () => {
     selectRow(3)
     rerender(ROW_SELECTION_STATE)
 
-    const { gridSelection } = getDataEditorProps() as {
-      gridSelection: GridSelection
-    }
-    expect(gridSelection.rows.toArray()).toEqual([3])
+    expect(selectedRows()).toEqual([3])
   })
 
   it("adds a row from the toolbar in dynamic editing mode", async () => {
