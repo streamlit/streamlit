@@ -84,12 +84,12 @@ type DataExporterReturn = {
  * column headers and rows constructed from the cell values obtained through `getCellContent`.
  * The function handles encoding and CSV formatting, concluding by closing the writable stream.
  *
- * @param writable - Target stream for CSV data (`write` + `close`).
- * @param {DataEditorProps["getCellContent"]} getCellContent - The cell content getter compatible with glide-data-grid.
- * @param {BaseColumn[]} columns - The columns of the table.
- * @param {number} numRows - The number of rows of the current state.
+ * @param writable - CSV sink used by both the File System Access writer and the in-memory fallback.
+ * @param getCellContent - Reads a cell through glide-data-grid.
+ * @param columns - Table columns to export.
+ * @param numRows - Number of rows in the current table state.
  *
- * @returns {Promise<void>} Promise that resolves when the CSV has been fully written.
+ * @returns Resolves after all CSV data has been written.
  */
 async function writeCsv(
   writable: {
@@ -159,15 +159,7 @@ function useDataExporter(
 
       const stream = await fileHandle.createWritable()
 
-      await writeCsv(
-        {
-          write: chunk => stream.write(chunk as FileSystemWriteChunkType),
-          close: () => stream.close(),
-        },
-        getCellContent,
-        columns,
-        numRows
-      )
+      await writeCsv(stream, getCellContent, columns, numRows)
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         // The user has canceled the save dialog. Do nothing.

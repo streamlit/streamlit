@@ -131,7 +131,7 @@ function parsePandasIndexData(
  * "foo" -> ["foo"]
  * "('1','foo (bar)')" -> ["1", "foo (bar)"]
  */
-function parseHeaderName(name: string, numLevels: number): string[] {
+export function parseHeaderName(name: string, numLevels: number): string[] {
   if (numLevels === 1) {
     return [name]
   }
@@ -141,8 +141,9 @@ function parseHeaderName(name: string, numLevels: number): string[] {
       name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replaceAll("'", '"')
     )
     if (Array.isArray(parsed)) {
-      // pandas/pyarrow stringifies MultiIndex levels, so names look like
-      // "('1','red')". Coerce leftover non-strings rather than flattening.
+      // pandas/pyarrow stringifies MultiIndex levels as tuple strings like
+      // "('1','red')". Convert non-string levels to display strings so each
+      // level stays a separate header.
       return parsed.map(part => String(part))
     }
     return [...Array.from({ length: numLevels - 1 }, () => ""), name]
@@ -151,6 +152,7 @@ function parseHeaderName(name: string, numLevels: number): string[] {
     return [...Array.from({ length: numLevels - 1 }, () => ""), name]
   }
 }
+
 /** Parse DataFrame's column header names.
  *
  * This function is used to parse the column header names into a matrix of

@@ -650,6 +650,8 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       } else if (parsedTooltip.text) {
         parsedTooltip.text = interpolate(info, parsedTooltip.text)
       } else {
+        // A tooltip with neither html nor text has nothing to render; returning
+        // null also avoids interpolating an undefined body.
         return null
       }
 

@@ -160,10 +160,12 @@ export function PlotlyChart({
     // Customize the plotly toolbar:
     if (!disableFullscreenMode) {
       // Add a fullscreen button to the plotly toolbar:
+      const fullscreenLabel = isFullScreen ? "Close fullscreen" : "Fullscreen"
       config.modeBarButtonsToAdd = [
         {
-          name: isFullScreen ? "Close fullscreen" : "Fullscreen",
-          title: isFullScreen ? "Close fullscreen" : "Fullscreen",
+          name: fullscreenLabel,
+          // ModeBarButton requires title (hover / accessible name); keep it aligned with name.
+          title: fullscreenLabel,
           icon: isFullScreen
             ? FULLSCREEN_COLLAPSE_ICON
             : FULLSCREEN_EXPAND_ICON,

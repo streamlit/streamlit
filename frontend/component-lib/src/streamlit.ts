@@ -215,8 +215,8 @@ export class Streamlit {
   private static readonly argsDataframeToObject = (
     argsDataframe: ArgsDataframe[]
   ): Record<string, ArrowTable> => {
-    // Object.fromEntries keeps keys such as "__proto__" as own properties.
-    // Assignment to a plain object would invoke the prototype setter instead.
+    // Build with Object.fromEntries so keys such as "__proto__" stay own
+    // properties; plain assignment would hit the prototype setter instead.
     return Object.fromEntries(
       argsDataframe.map(({ key, value }): [string, ArrowTable] => [
         key,
