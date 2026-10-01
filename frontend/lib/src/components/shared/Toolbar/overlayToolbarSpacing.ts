@@ -14,32 +14,28 @@
  * limitations under the License.
  */
 
+import { ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX } from "~lib/components/shared/BaseButton/styled-components"
 import { sizes } from "~lib/theme/primitives/sizes"
 import { spacing } from "~lib/theme/primitives/spacing"
 
-/**
- * Theme tokens needed to position overlay toolbars above their element.
- * Matches `StyledElementToolbarButton`'s `max(smallElementHeight, 24px)` floor.
- */
+/** Spacing/size tokens used to position overlay toolbars above their element. */
 export type OverlayToolbarSpacingTheme = {
   spacing: { sm: string; twoXS: string }
   sizes: { smallElementHeight: string }
 }
 
-/** Absolute CSS px floor for overlay toolbar hit targets (WCAG 2.2 SC 2.5.8). */
-export const OVERLAY_TOOLBAR_BUTTON_MIN_SIZE_PX = "24px"
-
 /**
  * Absolute `top` for the overlay toolbar wrapper.
  *
- * Leaves ~`twoXS` between the visible toolbar chrome and the element:
- * `-(sm + twoXS + buttonMin + twoXS + gap)`. Using `max(smallElementHeight, 24px)`
- * keeps that gap stable when `theme.baseFontSize` is below 16.
+ * Leaves ~`twoXS` between the visible toolbar chrome and the element.
+ * Offset is `-(wrapper pad + toolbar pad + button + toolbar pad + gap)`
+ * where `button` is `max(smallElementHeight, 24px)` so the gap holds when
+ * `baseFontSize` is below 16.
  */
 export function getOverlayToolbarTopDistance(
   theme: OverlayToolbarSpacingTheme
 ): string {
-  return `calc(-1 * (${theme.spacing.sm} + ${theme.spacing.twoXS} + max(${theme.sizes.smallElementHeight}, ${OVERLAY_TOOLBAR_BUTTON_MIN_SIZE_PX}) + ${theme.spacing.twoXS} + ${theme.spacing.twoXS}))`
+  return `calc(-1 * (${theme.spacing.sm} + ${theme.spacing.twoXS} + max(${theme.sizes.smallElementHeight}, ${ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX}) + ${theme.spacing.twoXS} + ${theme.spacing.twoXS}))`
 }
 
 /**
@@ -50,8 +46,8 @@ export function getOverlayToolbarTopDistance(
 export function getBareEmbedOverlayToolbarPadding(
   theme: OverlayToolbarSpacingTheme
 ): string {
-  return `calc(${theme.spacing.twoXS} + ${theme.spacing.twoXS} + ${theme.spacing.twoXS} + 0.1rem + max(${theme.sizes.smallElementHeight}, ${OVERLAY_TOOLBAR_BUTTON_MIN_SIZE_PX}))`
+  return `calc(${theme.spacing.twoXS} + ${theme.spacing.twoXS} + ${theme.spacing.twoXS} + 0.1rem + max(${theme.sizes.smallElementHeight}, ${ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX}))`
 }
 
-/** Default-token `top` used by tests and as the styled-component baseline. */
+/** Default-token top used by unit tests. */
 export const TOP_DISTANCE = getOverlayToolbarTopDistance({ spacing, sizes })

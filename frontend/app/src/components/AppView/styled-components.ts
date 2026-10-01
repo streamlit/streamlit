@@ -146,8 +146,9 @@ export const StyledAppViewBlockContainer =
       theme,
     }) => {
       // Clears the first element's overlay toolbar in a bare embed / print.
-      // Derived from the same button-min + padding formula as Toolbar's
-      // TOP_DISTANCE so the gap holds at every supported baseFontSize.
+      // Derived from the same button-min + padding formula as the toolbar's
+      // getOverlayToolbarTopDistance, so the gap holds at every supported
+      // baseFontSize.
       const littlePadding = getBareEmbedOverlayToolbarPadding(theme)
 
       // Top padding logic per specification:

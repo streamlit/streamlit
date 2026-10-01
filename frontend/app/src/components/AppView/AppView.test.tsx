@@ -24,7 +24,6 @@ import {
   ComponentRegistry,
   ElementNode,
   FileUploadClient,
-  getBareEmbedOverlayToolbarPadding,
   makeElementWithInfoText,
   mockEndpoints,
   mockSessionInfo,
@@ -678,7 +677,7 @@ describe("AppView element", () => {
           // calc(...) keeps clearance at baseFontSize < 16; equals 2.35rem at 16px.
           // Use toHaveStyle (not getComputedStyle): jsdom does not resolve max() in calc.
           expect(mainBlock).toHaveStyle(
-            `padding-top: ${getBareEmbedOverlayToolbarPadding(mockTheme.emotion)}`
+            "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
           )
           expect(getMainBlockContainerStyle().paddingBottom).toEqual("1rem")
         })

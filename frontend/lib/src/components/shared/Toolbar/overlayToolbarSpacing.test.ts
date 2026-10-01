@@ -22,7 +22,6 @@ import { spacing } from "~lib/theme/primitives/spacing"
 import {
   getBareEmbedOverlayToolbarPadding,
   getOverlayToolbarTopDistance,
-  OVERLAY_TOOLBAR_BUTTON_MIN_SIZE_PX,
   TOP_DISTANCE,
 } from "./overlayToolbarSpacing"
 
@@ -31,14 +30,14 @@ describe("overlayToolbarSpacing", () => {
 
   it("builds TOP_DISTANCE from default tokens", () => {
     expect(TOP_DISTANCE).toBe(
-      `calc(-1 * (${spacing.sm} + ${spacing.twoXS} + max(${sizes.smallElementHeight}, ${OVERLAY_TOOLBAR_BUTTON_MIN_SIZE_PX}) + ${spacing.twoXS} + ${spacing.twoXS}))`
+      "calc(-1 * (0.5rem + 0.25rem + max(1.5rem, 24px) + 0.25rem + 0.25rem))"
     )
     expect(getOverlayToolbarTopDistance(defaultTheme)).toBe(TOP_DISTANCE)
   })
 
   it("builds bare-embed padding from the same button floor", () => {
     expect(getBareEmbedOverlayToolbarPadding(defaultTheme)).toBe(
-      `calc(${spacing.twoXS} + ${spacing.twoXS} + ${spacing.twoXS} + 0.1rem + max(${sizes.smallElementHeight}, ${OVERLAY_TOOLBAR_BUTTON_MIN_SIZE_PX}))`
+      "calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
     )
   })
 
@@ -48,7 +47,10 @@ describe("overlayToolbarSpacing", () => {
       sizes: { smallElementHeight: "1.25rem" },
     }
     expect(getOverlayToolbarTopDistance(custom)).toBe(
-      `calc(-1 * (0.4rem + 0.2rem + max(1.25rem, 24px) + 0.2rem + 0.2rem))`
+      "calc(-1 * (0.4rem + 0.2rem + max(1.25rem, 24px) + 0.2rem + 0.2rem))"
+    )
+    expect(getBareEmbedOverlayToolbarPadding(custom)).toBe(
+      "calc(0.2rem + 0.2rem + 0.2rem + 0.1rem + max(1.25rem, 24px))"
     )
   })
 })
