@@ -266,15 +266,12 @@ def test_space() -> None:
     assert not at.exception
     assert at.space.len == 4
     assert isinstance(at.space[0], Space)
-    assert [s.value for s in at.space] == [
-        "small",
-        "stretch",
-        100,
-        "large",
-    ]
+    expected_sizes: list[str | int] = ["small", "stretch", 100, "large"]
+    assert [s.value for s in at.space] == expected_sizes
+    assert [s.size for s in at.space] == expected_sizes
     assert list(at.get("space")) == list(at.space)
     assert at.container("box").space[0].value == "large"
-    repr(at.space[0])
+    assert "size='small'" in repr(at.space[0])
 
     with pytest.raises(AppTestError, match="set_value"):
         at.space[0].set_value("large")
@@ -284,7 +281,9 @@ def test_space() -> None:
 def test_space_named_size(size: str) -> None:
     """Every named ``st.space`` size round-trips through ``Space.value``."""
     at = AppTest.from_string(f"import streamlit as st\nst.space({size!r})").run()
+    assert not at.exception
     assert at.space[0].value == size
+    assert at.space[0].size == size
 
 
 def test_image():

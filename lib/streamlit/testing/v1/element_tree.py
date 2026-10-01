@@ -125,7 +125,10 @@ def _unknown_element_content(proto: Any) -> Any:
     return getattr(proto, "value", None)
 
 
-# Rem values must be unique and exactly representable in proto float32 (rem_width).
+# Inverse of SIZE_TO_REM_MAPPING so rem_width round-trips to the named size.
+# Named sizes must map to distinct rem values that are exact in float32, or
+# the lookup below silently misses and returns None; test_space_named_size
+# covers every name.
 _REM_TO_SPACE_SIZE: Final = {
     rem: cast("SpaceSize", name) for name, rem in SIZE_TO_REM_MAPPING.items()
 }
@@ -142,7 +145,7 @@ def _space_size_from_width_config(width_config: WidthConfig) -> SpaceSize | None
     if spec == "use_stretch":
         return "stretch"
     if spec == "pixel_width":
-        return int(width_config.pixel_width)
+        return width_config.pixel_width
     if spec == "rem_width":
         return _REM_TO_SPACE_SIZE.get(width_config.rem_width)
     return None  # pragma: no cover - defensive
@@ -204,6 +207,7 @@ class Element(ABC):
 
     @abstractmethod
     def __init__(self, proto: Any, root: ElementTree) -> None:
+        # Shared proto/root assignment for subclasses that call super().__init__.
         self.proto = proto
         self.root = root
 
@@ -940,7 +944,7 @@ class Space(Element):
 
     proto: SpaceProto = field(repr=False)
     key: None
-    _size: SpaceSize | None = field(repr=False)
+    size: SpaceSize | None
 
     def __init__(
         self,
@@ -952,12 +956,16 @@ class Space(Element):
         super().__init__(proto, root)
         self.key = None
         self.type = "space"
-        self._size = size
+        self.size = size
 
     @property
     def value(self) -> SpaceSize | None:
-        """The ``size`` used by ``st.space``, including the default."""
-        return self._size
+        """The ``size`` argument passed to ``st.space`` (``"small"`` when omitted).
+
+        This is ``None`` only if the size could not be reconstructed from the
+        element's width config.
+        """
+        return self.size
 
 
 @dataclass(repr=False)
