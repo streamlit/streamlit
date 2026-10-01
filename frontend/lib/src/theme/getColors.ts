@@ -239,34 +239,6 @@ export function getBlue80(theme: EmotionTheme): string {
     ? theme.colors.blue80
     : theme.colors.blue40
 }
-function getBlueArrayAsc(colors: GenericColors): string[] {
-  return [
-    colors.blue10,
-    colors.blue20,
-    colors.blue30,
-    colors.blue40,
-    colors.blue50,
-    colors.blue60,
-    colors.blue70,
-    colors.blue80,
-    colors.blue90,
-    colors.blue100,
-  ]
-}
-function getBlueArrayDesc(colors: GenericColors): string[] {
-  return [
-    colors.blue100,
-    colors.blue90,
-    colors.blue80,
-    colors.blue70,
-    colors.blue60,
-    colors.blue50,
-    colors.blue40,
-    colors.blue30,
-    colors.blue20,
-    colors.blue10,
-  ]
-}
 
 function defaultDivergingColorsArray(genericColors: GenericColors): string[] {
   return [
@@ -283,40 +255,68 @@ function defaultDivergingColorsArray(genericColors: GenericColors): string[] {
   ]
 }
 
+// Default chart palettes; light/dark variants are selected from background
+// luminance like other createEmotionColors defaults.
+const LIGHT_CHART_CATEGORICAL_COLORS = [
+  "#2165ce", // blue
+  "#80ced8", // light cyan
+  "#d45f68", // coral red
+  "#e6bb64", // gold
+  "#4eaf7c", // green
+  "#f3d1b9", // peach
+  "#ad9fdb", // lavender
+  "#f2ced7", // light pink
+]
+
+const DARK_CHART_CATEGORICAL_COLORS = [
+  "#4c94ff", // bright blue
+  "#64d8e7", // cyan
+  "#f4737f", // light coral
+  "#fcc349", // yellow
+  "#48c183", // green
+  "#ffaf73", // light orange
+  "#a58eec", // violet
+  "#fda1b9", // pink
+]
+
+const LIGHT_CHART_SEQUENTIAL_COLORS = [
+  "#fff8f9", // near-white pink
+  "#fdedee", // very light pink
+  "#fbd8dc", // light pink
+  "#f7b8c0", // soft pink
+  "#f18c98", // medium pink
+  "#e86b79", // coral
+  "#d94a57", // red
+  "#c13f4b", // dark red
+  "#a6353f", // deeper red
+  "#8e2d36", // darkest red
+]
+
+const DARK_CHART_SEQUENTIAL_COLORS = [
+  "#3a2024", // near-black red
+  "#4c292d", // very dark red
+  "#5f2f37", // dark red-brown
+  "#873545", // deep red
+  "#a12033", // dark crimson
+  "#cf2641", // crimson
+  "#d94a57", // red
+  "#e35f6b", // coral
+  "#f18c98", // medium pink
+  "#f7b8c0", // soft pink
+]
+
 function defaultSequentialColorsArray(genericColors: GenericColors): string[] {
   return _isLightBackground(genericColors.bgColor)
-    ? getBlueArrayAsc(genericColors)
-    : getBlueArrayDesc(genericColors)
+    ? LIGHT_CHART_SEQUENTIAL_COLORS
+    : DARK_CHART_SEQUENTIAL_COLORS
 }
 
 function defaultCategoricalColorsArray(
   genericColors: GenericColors
 ): string[] {
   return _isLightBackground(genericColors.bgColor)
-    ? [
-        genericColors.blue80,
-        genericColors.blue40,
-        genericColors.red80,
-        genericColors.red40,
-        genericColors.blueGreen80,
-        genericColors.green40,
-        genericColors.orange80,
-        genericColors.orange50,
-        genericColors.purple80,
-        genericColors.gray40,
-      ]
-    : [
-        genericColors.blue40,
-        genericColors.blue80,
-        genericColors.red40,
-        genericColors.red80,
-        genericColors.green40,
-        genericColors.blueGreen80,
-        genericColors.orange50,
-        genericColors.orange80,
-        genericColors.purple80,
-        genericColors.gray40,
-      ]
+    ? LIGHT_CHART_CATEGORICAL_COLORS
+    : DARK_CHART_CATEGORICAL_COLORS
 }
 
 export function getDecreasingRed(theme: EmotionTheme): string {
