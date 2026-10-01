@@ -29,7 +29,7 @@ import {
   useState,
 } from "react"
 
-import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { CalendarToday, ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
 import { CalendarDate, CalendarDateTime, Time } from "@internationalized/date"
@@ -71,6 +71,7 @@ import {
   validateDateTime,
 } from "./dateTimeInputUtils"
 import {
+  StyledCalendarButton,
   StyledCalendarCell,
   StyledCalendarGrid,
   StyledCalendarHeaderCell,
@@ -146,6 +147,7 @@ function SingleDateTimeInput({
   const popoverDescId = `${id}-calendar-desc`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
+  const calendarButtonRef = useRef<HTMLButtonElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
   // Suppresses `handleFocus` while focus is being moved programmatically, so a
   // restore is not mistaken for the user arriving in the field — see
@@ -537,9 +539,12 @@ function SingleDateTimeInput({
     lastTimeSourceRef.current = "popover"
   }, [])
 
+  // Capture-phase fires before trailing buttons' own handlers; without this
+  // gate, clear / calendar clicks would immediately reopen a passive popover.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
       if (clearButtonRef.current?.contains(e.target as Node)) return
+      if (calendarButtonRef.current?.contains(e.target as Node)) return
       setIsCalendarActive(false)
       handleFocus()
     },
@@ -553,6 +558,32 @@ function SingleDateTimeInput({
     onChange(null)
     formCommitRef.current?.(null)
   }, [onChange])
+
+  const handleCalendarButtonClick = useCallback(
+    (e: MouseEvent<HTMLButtonElement>): void => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (disabled) return
+      if (isOpen && isCalendarActive) {
+        setIsOpen(false)
+        setIsCalendarActive(false)
+        restoreFocusToField()
+        return
+      }
+      const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
+        '[role="spinbutton"]'
+      )
+      const focusedInField =
+        document.activeElement instanceof HTMLElement &&
+        triggerRef.current?.contains(document.activeElement)
+          ? document.activeElement
+          : undefined
+      activeOriginRef.current = focusedInField ?? segments?.[0] ?? null
+      if (!isOpen) setIsOpen(true)
+      setIsCalendarActive(true)
+    },
+    [disabled, isOpen, isCalendarActive, restoreFocusToField]
+  )
 
   // Custom paste handler: ISO datetime or display-format datetime.
   const handlePaste = useCallback(
@@ -784,9 +815,6 @@ function SingleDateTimeInput({
       <StyledDateInputWrapper
         ref={setTriggerRef}
         aria-keyshortcuts="Alt+ArrowDown"
-        aria-haspopup="dialog"
-        aria-expanded={isCalendarActive}
-        aria-controls={isCalendarActive ? popoverId : undefined}
         data-testid="stDateTimeInputField"
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
@@ -851,6 +879,20 @@ function SingleDateTimeInput({
               <Icon content={Cancel} size="base" />
             </StyledClearButton>
           )}
+          <StyledCalendarButton
+            ref={calendarButtonRef}
+            type="button"
+            onClick={handleCalendarButtonClick}
+            aria-label="Choose date and time"
+            aria-haspopup="dialog"
+            aria-expanded={isOpen || isCalendarActive}
+            aria-controls={popoverId}
+            data-testid="stDateTimeInputCalendarButton"
+            disabled={disabled}
+            onMouseDown={e => e.preventDefault()}
+          >
+            <Icon content={CalendarToday} size="base" />
+          </StyledCalendarButton>
         </StyledTrailingIcons>
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">

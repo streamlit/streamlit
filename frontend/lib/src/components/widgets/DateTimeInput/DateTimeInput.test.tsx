@@ -1669,6 +1669,54 @@ describe("DateTimeInput widget", () => {
     })
   })
 
+  describe("Calendar button ARIA", () => {
+    it("puts popup ARIA on the calendar button, not the field wrapper", () => {
+      render(
+        <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+      )
+      const field = screen.getByTestId("stDateTimeInputField")
+      expect(field).not.toHaveAttribute("aria-expanded")
+      expect(field).not.toHaveAttribute("aria-haspopup")
+      expect(field).not.toHaveAttribute("aria-controls")
+      expect(field).toHaveAttribute("aria-keyshortcuts", "Alt+ArrowDown")
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      expect(calendarButton).toHaveAttribute(
+        "aria-label",
+        "Choose date and time"
+      )
+      expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
+      expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+      expect(calendarButton).toHaveAttribute("aria-controls")
+    })
+
+    it("calendar button opens active calendar and toggles aria-expanded", async () => {
+      const user = userEvent.setup()
+      render(
+        <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+      )
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      await user.click(calendarButton)
+
+      const calendar = await screen.findByTestId("stDateTimeInputCalendar")
+      expect(calendar).toHaveAttribute("role", "dialog")
+      expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+
+      await user.click(calendarButton)
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    })
+  })
+
   describe("Active calendar (Alt+ArrowDown)", () => {
     it("Alt+ArrowDown opens calendar in active mode with focus on grid cell", async () => {
       const user = userEvent.setup()

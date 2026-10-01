@@ -29,7 +29,7 @@ import {
   useState,
 } from "react"
 
-import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { CalendarToday, ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
 import type { CalendarDate } from "@internationalized/date"
@@ -67,6 +67,7 @@ import {
 } from "./dateInputUtils"
 import { ReorderedSegments } from "./ReorderedSegments"
 import {
+  StyledCalendarButton,
   StyledCalendarCell,
   StyledCalendarGrid,
   StyledCalendarHeaderCell,
@@ -143,6 +144,7 @@ function SingleDateInput({
   const popoverDescId = `${id}-calendar-desc`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
+  const calendarButtonRef = useRef<HTMLButtonElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
   // Guards against `handleFocus` reopening the popover it's in the middle
   // of closing — see `restoreFocusToField` below.
@@ -417,11 +419,12 @@ function SingleDateInput({
     if (!disabled) setIsOpen(true)
   }, [disabled])
 
-  // Capture-phase fires before the clear button's own handler; without this
-  // gate, clearing a value would immediately reopen the popover.
+  // Capture-phase fires before trailing buttons' own handlers; without this
+  // gate, clear / calendar clicks would immediately reopen a passive popover.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
       if (clearButtonRef.current?.contains(e.target as Node)) return
+      if (calendarButtonRef.current?.contains(e.target as Node)) return
       // Pointer-only: active mode enters via rAF, so handleFocus can't reset
       // it without breaking Tab cycling inside the calendar.
       setIsCalendarActive(false)
@@ -434,6 +437,34 @@ function SingleDateInput({
     setDisplayValue(null)
     onChange(null)
   }, [onChange])
+
+  // Toggle the active calendar dialog (React Aria DatePicker pattern: popup
+  // state lives on this button, not the roleless field wrapper).
+  const handleCalendarButtonClick = useCallback(
+    (e: MouseEvent<HTMLButtonElement>): void => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (disabled) return
+      if (isOpen && isCalendarActive) {
+        setIsOpen(false)
+        setIsCalendarActive(false)
+        restoreFocusToField()
+        return
+      }
+      const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
+        '[role="spinbutton"]'
+      )
+      const focusedInField =
+        document.activeElement instanceof HTMLElement &&
+        triggerRef.current?.contains(document.activeElement)
+          ? document.activeElement
+          : undefined
+      activeOriginRef.current = focusedInField ?? segments?.[0] ?? null
+      if (!isOpen) setIsOpen(true)
+      setIsCalendarActive(true)
+    },
+    [disabled, isOpen, isCalendarActive, restoreFocusToField]
+  )
 
   // Custom paste: DateField's built-in paste uses the locale-derived segment
   // order (en-US), which is out of sync with our reordered segments.
@@ -575,9 +606,6 @@ function SingleDateInput({
       <StyledDateInputWrapper
         ref={setTriggerRef}
         aria-keyshortcuts="Alt+ArrowDown"
-        aria-haspopup="dialog"
-        aria-expanded={isCalendarActive}
-        aria-controls={isCalendarActive ? popoverId : undefined}
         data-testid="stDateInputField"
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
@@ -636,6 +664,20 @@ function SingleDateInput({
               <Icon content={Cancel} size="base" />
             </StyledClearButton>
           )}
+          <StyledCalendarButton
+            ref={calendarButtonRef}
+            type="button"
+            onClick={handleCalendarButtonClick}
+            aria-label="Choose date"
+            aria-haspopup="dialog"
+            aria-expanded={isOpen || isCalendarActive}
+            aria-controls={popoverId}
+            data-testid="stDateInputCalendarButton"
+            disabled={disabled}
+            onMouseDown={e => e.preventDefault()}
+          >
+            <Icon content={CalendarToday} size="base" />
+          </StyledCalendarButton>
         </StyledTrailingIcons>
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">
