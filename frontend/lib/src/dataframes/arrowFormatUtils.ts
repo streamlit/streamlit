@@ -108,6 +108,14 @@ function getArrowTimeUnit(
     const unit: unknown = dataType.unit
     return typeof unit === "number" ? unit : fallback
   }
+  // Arrow `Field.type` is `any` on untyped tables, and some tests pass a
+  // `{ unit }` stub without a `typeId`.
+  if (typeof dataType === "object" && dataType !== null) {
+    const unit: unknown = (dataType as { unit?: unknown }).unit
+    if (typeof unit === "number") {
+      return unit
+    }
+  }
   return fallback
 }
 
@@ -116,6 +124,10 @@ function getArrowTimezone(field: Field | undefined): string | undefined {
   if (ArrowDataType.isTimestamp(dataType) && dataType.timezone) {
     return dataType.timezone
   }
+  if (typeof dataType === "object" && dataType !== null) {
+    const timezone: unknown = (dataType as { timezone?: unknown }).timezone
+    return typeof timezone === "string" && timezone ? timezone : undefined
+  }
   return undefined
 }
 
@@ -123,6 +135,10 @@ function getArrowScale(field: Field | undefined): number {
   const dataType: unknown = field?.type
   if (ArrowDataType.isDecimal(dataType)) {
     return dataType.scale
+  }
+  if (typeof dataType === "object" && dataType !== null) {
+    const scale: unknown = (dataType as { scale?: unknown }).scale
+    return typeof scale === "number" ? scale : 0
   }
   return 0
 }
