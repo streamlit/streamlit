@@ -59,6 +59,13 @@ if TYPE_CHECKING:
     sql_name: Literal["sql"] = "sql"
     assert_type(connection(sql_name), SQLConnection)
 
+    def first_party_name() -> Literal["sql", "snowflake"]:
+        return "sql"
+
+    # A Literal union of first-party names does not match the name-only
+    # overloads; both checkers use the fallback `str` overload.
+    assert_type(connection(first_party_name()), BaseConnection[Any])
+
     # =====================================================================
     # Explicit first-party type (keyword or positional)
     # =====================================================================
@@ -91,6 +98,12 @@ if TYPE_CHECKING:
 
     sql_type: Literal["sql"] = "sql"
     assert_type(connection("pets", type=sql_type), SQLConnection)
+
+    def first_party_type() -> Literal["sql", "snowflake"]:
+        return "sql"
+
+    # Same fallback: a Literal union of first-party types is treated as `str`.
+    assert_type(connection("pets", type=first_party_type()), BaseConnection[Any])
 
     # A non-literal type string cannot be narrowed
     dynamic_type: str = "my.custom.Connection"
@@ -139,12 +152,12 @@ if TYPE_CHECKING:
     )
     assert_type(connection("pets", "sql", 4, 60.0), SQLConnection)
 
-    # autocommit is declared on first-party overloads
+    # First-party overloads accept autocommit and still return the concrete class
     assert_type(connection("sql", autocommit=True), SQLConnection)
     assert_type(connection("sql", autocommit=False), SQLConnection)
     assert_type(connection("pets", type="sql", autocommit=True), SQLConnection)
 
-    # Connection-specific kwargs are passed through to _connect()
+    # Extra connection keywords are accepted and do not change the inferred class
     assert_type(connection("sql", url="sqlite://"), SQLConnection)
     assert_type(connection("pets", type="sql", dialect="sqlite"), SQLConnection)
 
@@ -198,6 +211,9 @@ if TYPE_CHECKING:
 
     # A second positional is type, not max_entries
     connection("sql", 10)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+
+    # type cannot be passed both positionally and as a keyword
+    connection("sql", "sql", type="snowflake")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     # max_entries does not accept a str
     connection("sql", max_entries="10")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]

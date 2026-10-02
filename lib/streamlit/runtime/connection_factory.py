@@ -34,13 +34,15 @@ if TYPE_CHECKING:
 
 # NOTE: Adding support for a new first party connection requires:
 #   1. Adding the new connection name and class to this dict.
-#   2. Writing two new @overloads for connection_factory (one for the case where the
-#      only the connection name is specified and another when both name and type are).
-#      The name-only overload still takes `type: Literal["..."] | None = None` so a
-#      second positional binds to `type` (as at runtime) and a conflicting `type=`
-#      is not swallowed by **kwargs. First-party overloads declare `autocommit` as
-#      keyword-only because the implementation only accepts four positionals
-#      (`name`, `type`, `max_entries`, `ttl`); `autocommit` is a **kwarg.
+#   2. Writing two new @overloads for connection_factory: one for a
+#      first-party name alone, and one for an explicit `type`.
+#      - The name-only overload must declare `type: Literal["..."] | None = None`.
+#        Otherwise the type checker binds a second positional argument to
+#        `max_entries` (runtime binds it to `type`) and absorbs a conflicting
+#        `type=` into `**kwargs`.
+#      - Declare `autocommit` as keyword-only. The implementation accepts only
+#        `name`, `type`, `max_entries`, and `ttl` positionally; `autocommit`
+#        arrives through `**kwargs`.
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
 _FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
     "snowflake": SnowflakeConnection,
