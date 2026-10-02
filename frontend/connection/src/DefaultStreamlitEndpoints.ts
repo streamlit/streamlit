@@ -389,7 +389,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     if (this.csrfEnabled) {
       const xsrfCookie = getCookie("_streamlit_xsrf")
       if (notNullOrUndefined(xsrfCookie)) {
-        // AxiosHeaders is a class; spreading it copies the wrong shape.
+        // AxiosHeaders is a class instance; flatten it with toJSON() before spreading.
         params.headers = {
           "X-Xsrftoken": xsrfCookie,
           ...toPlainRequestHeaders(params.headers),

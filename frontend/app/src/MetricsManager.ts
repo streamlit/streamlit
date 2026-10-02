@@ -265,7 +265,8 @@ export class MetricsManager {
         eventProperties.surface = data.surface
       }
     } else if (evName === "pageProfile") {
-      // Spread the plain properties object, not the MetricsEvent class instance.
+      // Spreading a MetricsEvent instance copies only enumerable own fields,
+      // so the constructor has to receive this properties object.
       return new MetricsEvent({ ...eventProperties, ...data })
     }
 
