@@ -38,7 +38,9 @@ if TYPE_CHECKING:
 #      only the connection name is specified and another when both name and type are).
 #      The name-only overload still takes `type: Literal["..."] | None = None` so a
 #      second positional binds to `type` (as at runtime) and a conflicting `type=`
-#      is not swallowed by **kwargs.
+#      is not swallowed by **kwargs. First-party overloads declare `autocommit` as
+#      keyword-only because the implementation only accepts four positionals
+#      (`name`, `type`, `max_entries`, `ttl`); `autocommit` is a **kwarg.
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
 _FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
     "snowflake": SnowflakeConnection,
@@ -150,6 +152,7 @@ def connection_factory(
     type: Literal["sql"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SQLConnection:
@@ -162,6 +165,7 @@ def connection_factory(
     type: Literal["sql"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SQLConnection:
@@ -174,6 +178,7 @@ def connection_factory(
     type: Literal["snowflake"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeConnection:
@@ -186,6 +191,7 @@ def connection_factory(
     type: Literal["snowflake"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeConnection:
@@ -198,6 +204,7 @@ def connection_factory(
     type: Literal["snowflake-callers-rights"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeCallersRightsConnection:
@@ -210,6 +217,7 @@ def connection_factory(
     type: Literal["snowflake-callers-rights"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeCallersRightsConnection:

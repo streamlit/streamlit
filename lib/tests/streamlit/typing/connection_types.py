@@ -205,5 +205,5 @@ if TYPE_CHECKING:
     # ttl does not accept a list
     connection("sql", ttl=[60])  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
-    # Too many positional arguments (name, type, max_entries, ttl, autocommit)
-    connection("sql", "sql", 1, 30.0, True, "extra")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+    # autocommit is keyword-only (runtime only accepts four positionals)
+    connection("sql", "sql", 1, 30.0, True)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
