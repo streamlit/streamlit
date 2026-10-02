@@ -115,11 +115,21 @@ const LogoComponent = ({
 
   const iconSize = LOGO_SIZE_TO_ICON_SIZE[appLogo.size] || "xl"
 
+  // Linked / home-nav wrappers name the control. Unlinked icon/emoji logos are
+  // otherwise nameless once Material/emoji glyphs are aria-hidden (#12873).
+  const hasExternalLink = Boolean(appLogo.link)
+  const isHomeNavButton =
+    !hasExternalLink && isMultiPageApp && Boolean(homePage) && !isOnHomePage
+  const nameUnlinkedIconLogo =
+    isIconOrEmoji && !hasExternalLink && !isHomeNavButton
+
   const logo = isIconOrEmoji ? (
     <StyledIconLogo
       size={appLogo.size}
       className="stLogo"
       data-testid={dataTestId}
+      role={nameUnlinkedIconLogo ? "img" : undefined}
+      aria-label={nameUnlinkedIconLogo ? "App Logo" : undefined}
     >
       <DynamicIcon iconValue={displayImage} size={iconSize} />
     </StyledIconLogo>
@@ -137,7 +147,7 @@ const LogoComponent = ({
   )
 
   // If an explicit link is provided, use it (opens in new tab)
-  if (appLogo.link) {
+  if (hasExternalLink) {
     return (
       <StyledLogoLink
         href={appLogo.link}
@@ -154,7 +164,7 @@ const LogoComponent = ({
 
   // In multi-page apps without an explicit link, clicking the logo navigates to home page
   // Only use the clickable button when not already on the home page
-  if (isMultiPageApp && homePage && !isOnHomePage) {
+  if (isHomeNavButton) {
     return (
       <StyledLogoButton
         onClick={handleLogoClick}
