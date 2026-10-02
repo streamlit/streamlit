@@ -135,6 +135,7 @@ Per-level convenience variables:
 
 - `--st-dataframe-border-color`
 - `--st-dataframe-header-background-color`
+- `--st-dataframe-header-text-color`
 
 ### Data visualization tokens (chart palettes)
 
@@ -200,6 +201,7 @@ Families:
 - `--st-code-text-color`
 - `--st-dataframe-border-color`
 - `--st-dataframe-header-background-color`
+- `--st-dataframe-header-text-color`
 - `--st-font`
 - `--st-gray-background-color`
 - `--st-gray-color`

@@ -46,12 +46,17 @@ if TYPE_CHECKING:
     assert_type(pdf("file.pdf", key="my_pdf"), DeltaGenerator)
     assert_type(pdf("file.pdf", key=None), DeltaGenerator)
 
+    # pdf with alt parameter - str or None
+    assert_type(pdf("file.pdf", alt="Q3 2026 financial report"), DeltaGenerator)
+    assert_type(pdf("file.pdf", alt=None), DeltaGenerator)
+
     # pdf with all parameters combined
     assert_type(
         pdf(
             "file.pdf",
             height="stretch",
             key="my_pdf",
+            alt="Q3 2026 financial report",
         ),
         DeltaGenerator,
     )
@@ -62,6 +67,9 @@ if TYPE_CHECKING:
 
     # Invalid height value (not int or "stretch")
     pdf("file.pdf", height="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid alt value (must be a string or None)
+    pdf("file.pdf", alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # height is keyword-only and cannot be passed positionally
     pdf("file.pdf", 600)  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

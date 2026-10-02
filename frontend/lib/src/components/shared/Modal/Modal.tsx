@@ -16,14 +16,14 @@
 
 import {
   createContext,
-  FunctionComponent,
-  ReactElement,
-  ReactNode,
+  type FunctionComponent,
+  type ReactElement,
+  type ReactNode,
   useContext,
 } from "react"
 
 import BaseButton, {
-  BaseButtonProps,
+  type BaseButtonProps,
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 

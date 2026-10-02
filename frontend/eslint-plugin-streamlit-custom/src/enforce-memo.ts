@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { AST_NODE_TYPES, TSESTree } from "@typescript-eslint/utils"
-import { RuleFix, RuleFixer } from "@typescript-eslint/utils/ts-eslint"
+import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils"
+import type { RuleFix, RuleFixer } from "@typescript-eslint/utils/ts-eslint"
 
 import { createRule } from "./utils/createRule"
 

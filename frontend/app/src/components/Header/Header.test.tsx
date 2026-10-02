@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/testing"
 
-import Header, { HeaderProps } from "./Header"
+import Header, { type HeaderProps } from "./Header"
 
 const getProps = (propOverrides: Partial<HeaderProps> = {}): HeaderProps => ({
   hasSidebar: false,

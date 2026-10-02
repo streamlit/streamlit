@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useCallback, useContext, useMemo } from "react"
+import { type ReactElement, useCallback, useContext, useMemo } from "react"
 
 import { getLogger } from "loglevel"
 
@@ -24,11 +24,11 @@ import {
   StyledLogoButton,
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   DynamicIcon,
   getCrossOriginAttribute,
-  IconSize,
+  type IconSize,
   LibConfigContext,
   NavigationContext,
 } from "@streamlit/lib"

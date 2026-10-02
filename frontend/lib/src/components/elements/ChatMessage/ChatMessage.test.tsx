@@ -21,7 +21,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 
-import ChatMessage, { ChatMessageProps } from "./ChatMessage"
+import ChatMessage, { type ChatMessageProps } from "./ChatMessage"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {

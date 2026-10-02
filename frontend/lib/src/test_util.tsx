@@ -14,54 +14,59 @@
  * limitations under the License.
  */
 
-import { FC, PropsWithChildren, ReactElement, useRef } from "react"
+import {
+  type FC,
+  type PropsWithChildren,
+  type ReactElement,
+  useRef,
+} from "react"
 
 import {
   render as reactTestingLibraryRender,
-  RenderOptions,
-  RenderResult,
+  type RenderOptions,
+  type RenderResult,
 } from "@testing-library/react"
 
 import { Config, PageConfig } from "@streamlit/protobuf"
 
 import {
   BackendOperationContext,
-  BackendOperationContextProps,
+  type BackendOperationContextProps,
 } from "./components/core/BackendOperationContext"
 import {
   FormsContext,
-  FormsContextProps,
+  type FormsContextProps,
 } from "./components/core/FormsContext"
 import { FlexContext } from "./components/core/Layout/FlexContext"
 import { Direction } from "./components/core/Layout/utils"
 import {
   LibConfigContext,
-  LibConfigContextProps,
+  type LibConfigContextProps,
 } from "./components/core/LibConfigContext"
 import {
   NavigationContext,
-  NavigationContextProps,
+  type NavigationContextProps,
 } from "./components/core/NavigationContext"
 import {
   ScriptRunContext,
-  ScriptRunContextProps,
+  type ScriptRunContextProps,
 } from "./components/core/ScriptRunContext"
 import {
   SidebarConfigContext,
-  SidebarConfigContextProps,
+  type SidebarConfigContextProps,
 } from "./components/core/SidebarConfigContext"
 import {
   SkillsInstallContext,
-  SkillsInstallContextProps,
+  type SkillsInstallContextProps,
 } from "./components/core/SkillsInstallContext"
 import {
   ThemeContext,
-  ThemeContextProps,
+  type ThemeContextProps,
 } from "./components/core/ThemeContext"
 import ThemeProvider from "./components/core/ThemeProvider"
 import {
   ViewStateContext,
-  ViewStateContextProps,
+  type ViewStateContextProps,
 } from "./components/core/ViewStateContext"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
 import { mockTheme } from "./mocks/mockTheme"

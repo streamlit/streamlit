@@ -25,11 +25,11 @@ import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { renderWithContexts } from "~lib/test_util"
 import {
   createFormsData,
-  FormsData,
+  type FormsData,
   WidgetStateManager,
 } from "~lib/WidgetStateManager"
 
-import { FormSubmitButton, Props } from "./FormSubmitButton"
+import { FormSubmitButton, type Props } from "./FormSubmitButton"
 
 vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),

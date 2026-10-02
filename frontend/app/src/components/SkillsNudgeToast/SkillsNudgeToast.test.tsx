@@ -19,7 +19,9 @@ import userEvent from "@testing-library/user-event"
 
 import { render } from "@streamlit/lib/testing"
 
-import SkillsNudgeToast, { SkillsNudgeToastProps } from "./SkillsNudgeToast"
+import SkillsNudgeToast, {
+  type SkillsNudgeToastProps,
+} from "./SkillsNudgeToast"
 
 type NudgeHandlers = Pick<
   SkillsNudgeToastProps,

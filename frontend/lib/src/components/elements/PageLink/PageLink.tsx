@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useContext } from "react"
+import { memo, type ReactElement, useContext } from "react"
 
-import { PageLink as PageLinkProto } from "@streamlit/protobuf"
+import type { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
 import { NavigationContext } from "~lib/components/core/NavigationContext"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"

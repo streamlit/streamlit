@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { forwardRef, ReactElement, Ref } from "react"
+import { forwardRef, type ReactElement, type Ref } from "react"
 
 import {
   BaseButtonKind,
-  BaseButtonProps as BaseButtonPropsT,
+  type BaseButtonProps as BaseButtonPropsT,
   BaseButtonSize,
   StyledBorderlessIconButton,
   StyledBorderlessIconButtonActive,

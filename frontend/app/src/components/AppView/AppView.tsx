@@ -15,7 +15,7 @@
  */
 
 import {
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -35,16 +35,16 @@ import {
   saveSidebarState,
   shouldCollapse,
 } from "@streamlit/app/src/components/Sidebar/utils"
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
-  AppNode,
-  AppRoot,
+  type AppNode,
+  type AppRoot,
   BlockNode,
-  ComponentRegistry,
+  type ComponentRegistry,
   ContainerContentsWrapper,
   ElementNode,
-  FileUploadClient,
-  IGuestToHostMessage,
+  type FileUploadClient,
+  type IGuestToHostMessage,
   NavigationContext,
   Profiler,
   SidebarConfigContext,
@@ -56,7 +56,7 @@ import {
   useEmotionTheme,
   useExecuteWhenChanged,
   useWindowDimensionsContext,
-  WidgetStateManager,
+  type WidgetStateManager,
 } from "@streamlit/lib"
 import { Navigation } from "@streamlit/protobuf"
 

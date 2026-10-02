@@ -23,7 +23,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Expander, { ExpanderProps } from "./Expander"
+import Expander, { type ExpanderProps } from "./Expander"
 
 const createWidgetMgr = (): WidgetStateManager =>
   new WidgetStateManager({

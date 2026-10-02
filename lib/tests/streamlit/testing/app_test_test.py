@@ -16,12 +16,16 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit.runtime import Runtime
 from streamlit.runtime.pages_manager import PagesManager
+from streamlit.runtime.scriptrunner import ScriptRunnerEvent
 from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.testing.v1 import AppTest, local_script_runner
+from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.util import calc_hash
 
 
@@ -111,6 +115,33 @@ def test_local_script_runner_closes_loop_when_initialization_fails(
                 loop.close()
 
 
+def test_local_script_runner_skips_orphan_cleanup_when_runtime_missing() -> None:
+    """Orphan cleanup is skipped when no Runtime singleton exists.
+
+    Without the gate, ``runtime.get_instance()`` raises ``RuntimeError`` on the
+    script thread. AppTest itself installs a Runtime for the run; this covers
+    the override when tests call ``_on_script_finished`` directly.
+    """
+    runner = MagicMock()
+    runner._session_state = MagicMock()
+    ctx = MagicMock()
+    ctx.has_script_started = True
+    ctx.shared.widget_ids_this_run.snapshot.return_value = frozenset()
+    previous_runtime = Runtime._instance
+    Runtime._instance = None
+    try:
+        with patch("streamlit.runtime.get_instance") as mock_get_instance:
+            LocalScriptRunner._on_script_finished(
+                runner,
+                ctx,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                premature_stop=False,
+            )
+        mock_get_instance.assert_not_called()
+    finally:
+        Runtime._instance = previous_runtime
+
+
 def test_from_file_str():
     script = AppTest.from_file("../test_data/widgets_script.py")
     script.run()
@@ -147,7 +178,9 @@ def test_from_file_raises_immediately_for_missing_script():
     assert str(missing_script.resolve()) in str(exc_info.value)
 
 
-def test_get_query_params():
+def test_get_query_params() -> None:
+    """Query params set on AppTest are visible to the script as strings."""
+
     def script():
         import streamlit as st
 
@@ -159,17 +192,50 @@ def test_get_query_params():
     at.query_params["bar"] = "baz"
     at.run()
     assert at.json[0].value == '{"foo": "5", "bar": "baz"}'
+    assert at.query_params["foo"] == "5"
+    assert at.query_params["bar"] == "baz"
 
 
-def test_set_query_params():
+def test_set_query_params() -> None:
+    """Single query param values set by the app stay str after .run()."""
+
     def script():
         import streamlit as st
 
         st.query_params["foo"] = "bar"
 
     at = AppTest.from_function(script).run()
-    # parse.parse_qs puts everything in lists
-    assert at.query_params["foo"] == ["bar"]
+    assert at.query_params["foo"] == "bar"
+
+
+def test_query_params_round_trip() -> None:
+    """AppTest preserves single, repeated, and blank query parameters across runs."""
+
+    def script():
+        import streamlit as st
+
+        st.query_params["from_app"] = "bar"
+
+    at = AppTest.from_function(script)
+    at.query_params["x"] = "1"
+    at.query_params["one"] = ["solo"]
+    at.query_params["tags"] = ["a", "b"]
+    at.query_params["empty"] = ""
+    at.run()
+
+    assert at.query_params["x"] == "1"
+    assert at.query_params["one"] == "solo"
+    assert at.query_params["tags"] == ["a", "b"]
+    assert at.query_params["empty"] == ""
+    assert at.query_params["from_app"] == "bar"
+
+    # Second run re-encodes the collapsed dict; values must stay stable.
+    at.run()
+    assert at.query_params["x"] == "1"
+    assert at.query_params["one"] == "solo"
+    assert at.query_params["tags"] == ["a", "b"]
+    assert at.query_params["empty"] == ""
+    assert at.query_params["from_app"] == "bar"
 
 
 def test_secrets():

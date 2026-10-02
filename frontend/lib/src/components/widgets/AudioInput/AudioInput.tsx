@@ -16,16 +16,17 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
 
 import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 
-import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
+import type { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 
 import { useWaveformController } from "~lib/components/audio/core/useWaveformController"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
@@ -33,18 +34,19 @@ import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import useDownloadUrl from "~lib/hooks/useDownloadUrl"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
+import { plainTextWithBlockGaps } from "~lib/util/plainText"
 import { uploadFiles } from "~lib/util/uploadFiles"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import AudioInputActionButtons from "./AudioInputActionButtons"
 import AudioInputErrorState from "./AudioInputErrorState"
@@ -527,6 +529,34 @@ const AudioInput: React.FC<Props> = ({
   const showNoMicPermissionsOrPlaceholderOrError =
     hasNoMicPermissions || showPlaceholder || isError
 
+  const labelTextRef = useRef<HTMLSpanElement>(null)
+  // Widget labels are markdown; compose rendered plain text into toolbar names,
+  // not the markdown source. Observe the visual label node for late markdown
+  // (KaTeX/emoji skeletons), matching the image-caption path.
+  const [labelContext, setLabelContext] = useState<string | undefined>()
+  useLayoutEffect(() => {
+    const node = labelTextRef.current
+    if (!element.label || !node) {
+      setLabelContext(undefined)
+      return
+    }
+
+    const syncLabelPlainText = (): void => {
+      const text = plainTextWithBlockGaps(node)
+      setLabelContext(text || undefined)
+    }
+
+    syncLabelPlainText()
+
+    const observer = new MutationObserver(syncLabelPlainText)
+    observer.observe(node, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+    return () => observer.disconnect()
+  }, [element.label])
+
   return (
     <StyledAudioInputContainerDiv
       className="stAudioInput"
@@ -538,6 +568,7 @@ const AudioInput: React.FC<Props> = ({
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
+        labelTextRef={labelTextRef}
       >
         {element.help && (
           <WidgetLabelHelpIcon
@@ -558,6 +589,7 @@ const AudioInput: React.FC<Props> = ({
               label="Download as WAV"
               icon={FileDownload}
               onClick={handleDownloadClick}
+              labelContext={labelContext}
             />
           )}
           {deleteFileUrl && (
@@ -565,6 +597,7 @@ const AudioInput: React.FC<Props> = ({
               label="Clear recording"
               icon={Delete}
               onClick={handleDeleteClick}
+              labelContext={labelContext}
             />
           )}
         </Toolbar>

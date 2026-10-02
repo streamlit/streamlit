@@ -291,7 +291,13 @@ def test_pydeck_chart_alt_sets_accessible_name(app: Page) -> None:
     # Mapbox zoom controls are chromium-only in CI, so assert Fullscreen only.
     labeled.hover()
     expect(labeled.get_by_test_id("stElementToolbar")).to_have_css("opacity", "1")
-    expect(labeled.get_by_role("button", name="Fullscreen")).to_be_visible()
+    expect(
+        labeled.get_by_role(
+            "button",
+            name="Fullscreen: Scatter map of sample points near San Francisco",
+            exact=True,
+        )
+    ).to_be_visible()
 
     unlabeled = get_element_by_key(app, "pydeck_without_alt").get_by_test_id(
         "stDeckGlJsonChart"

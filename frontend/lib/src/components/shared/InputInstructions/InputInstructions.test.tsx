@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import InputInstructions, { Props } from "./InputInstructions"
+import InputInstructions, { type Props } from "./InputInstructions"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   dirty: true,

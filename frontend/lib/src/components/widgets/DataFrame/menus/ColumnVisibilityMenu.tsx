@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useRef } from "react"
+import { memo, type ReactElement, useEffect, useRef } from "react"
 
 import { FloatingFocusManager } from "@floating-ui/react"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"

@@ -17,7 +17,10 @@
 import styled from "@emotion/styled"
 import { Input as RAInput } from "react-aria-components"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getSecondaryIconButtonColorStyles,
+} from "~lib/components/shared/Base/styled-components"
 
 interface StyledInputContainerProps {
   $isFocused: boolean
@@ -144,14 +147,8 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   border: "none",
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
-  color: theme.colors.grayTextColor,
   flexShrink: 0,
-  "&:hover:not(:disabled)": {
-    color: theme.colors.bodyText,
-  },
-  "&:disabled": {
-    cursor: "not-allowed",
-  },
+  ...getSecondaryIconButtonColorStyles(theme),
 }))
 
 export const StyledEndEnhancer = styled.div(({ theme }) => ({

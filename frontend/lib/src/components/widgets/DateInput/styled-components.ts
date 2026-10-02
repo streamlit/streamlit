@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { ComponentType } from "react"
+import type { ComponentType } from "react"
 
 import styled from "@emotion/styled"
-import { CalendarDate } from "@internationalized/date"
+import type { CalendarDate } from "@internationalized/date"
 import { getLuminance, transparentize } from "color2k"
 import {
   Button,
@@ -25,14 +25,14 @@ import {
   CalendarCell,
   CalendarGrid,
   CalendarHeaderCell,
-  CalendarProps,
+  type CalendarProps,
   DateSegment,
   Group,
   ListBox,
   ListBoxItem,
   Popover,
   RangeCalendar,
-  RangeCalendarProps,
+  type RangeCalendarProps,
   Select,
 } from "react-aria-components"
 
@@ -40,6 +40,7 @@ import {
   getBorderColor,
   getOverlayZIndex,
   getPopoverContainerStyle,
+  getSecondaryIconButtonColorStyles,
 } from "~lib/components/shared/Base/styled-components"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
@@ -198,11 +199,8 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
   marginRight: theme.spacing.sm,
-  color: theme.colors.grayTextColor,
   flexShrink: 0,
-  "&:hover": {
-    color: theme.colors.bodyText,
-  },
+  ...getSecondaryIconButtonColorStyles(theme),
   "&:focus-visible": {
     outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
     borderRadius: theme.radii.sm,

@@ -17,13 +17,13 @@
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { DatePickerType } from "@glideapps/glide-data-grid-cells"
+import type { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import { DateDay, Field, Time, Timestamp, TimeUnit } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
-import { BaseColumnProps, isErrorCell } from "./utils"
+import { type BaseColumnProps, isErrorCell } from "./utils"
 
 const MOCK_DATETIME_COLUMN_TEMPLATE: BaseColumnProps = {
   id: "1",

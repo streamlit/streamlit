@@ -110,7 +110,7 @@ snowflake = [
   "snowflake-connector-python>=3.3.0",
 ]
 # Optional dependency required for PDF rendering:
-pdf = ["streamlit-pdf>=1.0.0"]
+pdf = ["streamlit-pdf>=2.1.0"]
 # Optional dependencies required for auth:
 auth = [
   "Authlib>=1.3.2",

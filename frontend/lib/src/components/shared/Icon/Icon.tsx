@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, ReactNode } from "react"
+import { memo, type ReactElement, type ReactNode } from "react"
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 
 import type { IconSizeProp } from "~lib/theme/types"
 

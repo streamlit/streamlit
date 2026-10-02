@@ -15,7 +15,7 @@
  */
 
 import {
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -25,16 +25,16 @@ import {
 } from "react"
 
 import {
-  NumberSize,
+  type NumberSize,
   Resizable,
-  ResizeCallback,
-  ResizeDirection,
+  type ResizeCallback,
+  type ResizeDirection,
 } from "re-resizable"
 
 import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
 import SidebarNav from "@streamlit/app/src/components/Navigation/SidebarNav"
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   BaseButton,
   BaseButtonKind,
@@ -106,25 +106,16 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const sidebarRef = useRef<HTMLDivElement>(null)
 
-  const cachedSidebarWidth = localStorageAvailable()
-    ? window.localStorage.getItem("sidebarWidth")
-    : undefined
-
   const [sidebarWidth, setSidebarWidth] = useState<string>(() => {
-    const getCachedWidth = (): string | null => {
-      if (cachedSidebarWidth) {
-        const cached = Number.parseInt(cachedSidebarWidth, 10)
-        return Number.isNaN(cached)
-          ? null
-          : clampSidebarWidth(cached, sidebarWidthLimits).toString()
+    const cachedSidebarWidth = localStorageAvailable()
+      ? window.localStorage.getItem("sidebarWidth")
+      : undefined
+
+    if (cachedSidebarWidth) {
+      const cached = Number.parseInt(cachedSidebarWidth, 10)
+      if (!Number.isNaN(cached)) {
+        return clampSidebarWidth(cached, sidebarWidthLimits).toString()
       }
-      return null
-    }
-
-    const clampedCached = getCachedWidth()
-
-    if (clampedCached) {
-      return clampedCached
     }
 
     if (notNullOrUndefined(initialSidebarWidth)) {

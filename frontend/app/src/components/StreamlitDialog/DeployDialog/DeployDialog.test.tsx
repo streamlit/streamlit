@@ -29,7 +29,7 @@ import { mockSessionInfo } from "@streamlit/lib"
 import { render } from "@streamlit/lib/testing"
 import { GitInfo } from "@streamlit/protobuf"
 
-import { DeployDialog, DeployDialogProps } from "./DeployDialog"
+import { DeployDialog, type DeployDialogProps } from "./DeployDialog"
 
 const { GitStates } = GitInfo
 

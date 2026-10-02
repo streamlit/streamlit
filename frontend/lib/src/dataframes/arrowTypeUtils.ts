@@ -16,11 +16,11 @@
 
 import {
   DataType as ArrowDataType,
-  Dictionary,
-  Field,
-  Struct,
-  StructRow,
-  Vector,
+  type Dictionary,
+  type Field,
+  type Struct,
+  type StructRow,
+  type Vector,
 } from "apache-arrow"
 
 import { isNullOrUndefined } from "~lib/util/utils"
@@ -155,10 +155,10 @@ export interface ArrowType {
  * @returns The list of strings.
  */
 export function convertVectorToList(vector: Vector): string[] {
-  const values = []
+  const values: string[] = []
 
   for (let i = 0; i < vector.length; i++) {
-    values.push(vector.get(i))
+    values.push(vector.get(i) as string)
   }
   return values
 }

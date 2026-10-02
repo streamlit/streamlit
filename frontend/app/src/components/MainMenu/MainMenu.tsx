@@ -15,10 +15,10 @@
  */
 
 import {
-  FocusEvent,
-  KeyboardEvent,
+  type FocusEvent,
+  type KeyboardEvent,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useLayoutEffect,
@@ -32,7 +32,7 @@ import { FloatingPortal } from "@floating-ui/react"
 import { getLogger } from "loglevel"
 
 import type { Steps } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import type { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   BaseButton,
@@ -41,14 +41,14 @@ import {
   CopyButton,
   DynamicIcon,
   Icon,
-  IGuestToHostMessage,
-  IMenuItem,
+  type IGuestToHostMessage,
+  type IMenuItem,
   ThemeContext,
   useEmotionTheme,
   useFloatingOverlay,
   useOverlayDismissal,
 } from "@streamlit/lib"
-import { Config, PageConfig } from "@streamlit/protobuf"
+import { Config, type PageConfig } from "@streamlit/protobuf"
 
 import { focusNextTabbable, focusPrevTabbable } from "./focusTabbable"
 import {

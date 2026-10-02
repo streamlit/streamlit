@@ -16,14 +16,14 @@
 
 import { CalendarDate, CalendarDateTime, Time } from "@internationalized/date"
 
-import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
+import type { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
 import {
   parseFormatOrder,
   SEGMENT_SELECTOR,
 } from "~lib/components/widgets/DateInput/dateInputUtils"
-import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export { SEGMENT_SELECTOR }
 

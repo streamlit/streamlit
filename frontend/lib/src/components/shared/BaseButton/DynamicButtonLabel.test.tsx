@@ -22,7 +22,7 @@ import * as utils from "~lib/util/utils"
 
 import {
   DynamicButtonLabel,
-  DynamicButtonLabelProps,
+  type DynamicButtonLabelProps,
 } from "./DynamicButtonLabel"
 
 const getProps = (

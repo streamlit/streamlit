@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useState } from "react"
+import { memo, type ReactElement, useCallback, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -27,10 +27,10 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  StepIconTone,
+  type StepIconTone,
   StyledDetails,
   StyledDetailsPanel,
   StyledExpandableContainer,

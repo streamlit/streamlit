@@ -17,7 +17,7 @@
 import "../../../utils/src/polyfills/index"
 
 import { getLogger } from "loglevel"
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import HostCommunicationManager, {
   HOST_COMM_VERSION,

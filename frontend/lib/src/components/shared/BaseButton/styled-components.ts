@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { MouseEvent, ReactNode } from "react"
+import type { MouseEvent, ReactNode } from "react"
 
-import styled, { CSSObject } from "@emotion/styled"
+import styled, { type CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
@@ -522,6 +522,12 @@ export const StyledTooltipMobile = styled.div(({ theme }) => ({
   },
 }))
 
+/**
+ * Absolute CSS px floor for element-toolbar hit targets (WCAG 2.2 SC 2.5.8).
+ * Overlay toolbar offsets import this so a floor change cannot drift from spacing.
+ */
+export const ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX = "24px"
+
 export const StyledElementToolbarButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
@@ -535,7 +541,12 @@ export const StyledElementToolbarButton = styled(
     display: "flex",
     gap: theme.spacing.xs,
     alignItems: "center",
-    minHeight: "unset",
+    // WCAG 2.2 SC 2.5.8 Target Size (Minimum): ≥24×24 CSS px for every
+    // supported root font size. Prefer the rem token so targets grow with
+    // theme.baseFontSize; floor so a smaller root (e.g. 14) cannot shrink
+    // below the criterion.
+    minWidth: `max(${theme.sizes.smallElementHeight}, ${ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX})`,
+    minHeight: `max(${theme.sizes.smallElementHeight}, ${ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX})`,
     // line height should be the same as the icon size
     lineHeight: theme.iconSizes.md,
     width: "auto",

@@ -18,14 +18,14 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
-import { IToolbarItem, mockSessionInfo } from "@streamlit/lib"
+import { type IToolbarItem, mockSessionInfo } from "@streamlit/lib"
 import { render } from "@streamlit/lib/testing"
 
 import ToolbarActions, {
   ActionButton,
-  ActionButtonProps,
   getToolbarActionAccessibleName,
-  ToolbarActionsProps,
+  type ActionButtonProps,
+  type ToolbarActionsProps,
 } from "./ToolbarActions"
 
 describe("getToolbarActionAccessibleName", () => {

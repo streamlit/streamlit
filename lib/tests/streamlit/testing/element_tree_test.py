@@ -24,6 +24,7 @@ import pytest
 
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.dataframe import lazy_df_source as dataframe_source
+from streamlit.elements.lib.layout_utils import SIZE_TO_REM_MAPPING
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -32,6 +33,7 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
     AppTestError,
+    Space,
     UnknownElement,
     _form_clear_flags,
     _format_value_for_widget,
@@ -246,6 +248,42 @@ def test_columns():
     assert at.columns[1].radio[0].value == "a"
 
     repr(at.columns[0])
+
+
+def test_space() -> None:
+    """``st.space`` parses as ``Space``; ``value`` is the reconstructed size."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.space()
+        st.space("stretch")
+        st.space(100)
+        with st.container(key="box"):
+            st.space("large")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    assert at.space.len == 4
+    assert isinstance(at.space[0], Space)
+    expected_sizes: list[str | int] = ["small", "stretch", 100, "large"]
+    assert [s.value for s in at.space] == expected_sizes
+    assert [s.size for s in at.space] == expected_sizes
+    assert list(at.get("space")) == list(at.space)
+    assert at.container("box").space[0].value == "large"
+    assert "size='small'" in repr(at.space[0])
+
+    with pytest.raises(AppTestError, match="set_value"):
+        at.space[0].set_value("large")
+
+
+@pytest.mark.parametrize("size", list(SIZE_TO_REM_MAPPING))
+def test_space_named_size(size: str) -> None:
+    """Every named ``st.space`` size round-trips through ``Space.value``."""
+    at = AppTest.from_string(f"import streamlit as st\nst.space({size!r})").run()
+    assert not at.exception
+    assert at.space[0].value == size
+    assert at.space[0].size == size
 
 
 def test_image():
@@ -2211,6 +2249,98 @@ def test_form_key_and_get_by_key() -> None:
     form = at.get_by_key("form-key")
     assert form.type == "form"
     assert form.key == "form-key"
+
+
+def test_form_collection_lookup() -> None:
+    """``at.form`` is a BlockList of ``st.form`` blocks, keyed by form ID."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form"):
+            st.text_input("Name")
+            st.form_submit_button("Submit")
+        with st.container(key="wrap"):
+            with st.form("inner-form"):
+                st.text_input("Inner")
+                st.form_submit_button("Go")
+
+    at = AppTest.from_function(script).run()
+    assert isinstance(at.form, type(at.container))
+    assert len(at.form) == 2
+    assert at.form[0].type == "form"
+    assert at.form("name-form").key == "name-form"
+    assert at.form("inner-form").text_input[0].label == "Inner"
+    assert at.container("wrap").form[0].key == "inner-form"
+    assert list(at.get("form")) == list(at.form)
+    assert len(at.form("name-form").form) == 0
+    assert at.form("name-form").get("form") == []
+    with pytest.raises(KeyError):
+        at.form("missing")
+
+
+def test_form_submit_button_filters_regular_buttons() -> None:
+    """``at.form_submit_button`` is the subset of ``at.button`` inside a form.
+
+    Regular ``st.button`` stays in ``at.button`` only. Clicking a form submit
+    button still commits that form.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        st.button("Outside")
+        with st.form("name-form"):
+            name = st.text_input("Name")
+            st.form_submit_button("Save", key="save")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.button) == 2
+    assert len(at.form_submit_button) == 1
+    assert at.form_submit_button[0].label == "Save"
+    assert at.form_submit_button("save").form_id == "name-form"
+    assert list(at.get("form_submit_button")) == list(at.form_submit_button)
+
+    at.text_input[0].set_value("Ada")
+    at.run()
+    assert at.text[0].value == "submitted=''"
+
+    at.text_input[0].set_value("Ada")
+    at.form_submit_button("save").click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+
+def test_form_submit_button_is_scoped_to_block() -> None:
+    """A form's ``form_submit_button`` collection only includes that form."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("form-a"):
+            st.form_submit_button("A", key="save-a")
+        with st.form("form-b"):
+            st.form_submit_button("B", key="save-b")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.form_submit_button) == 2
+    scoped = at.form("form-a").form_submit_button
+    assert len(scoped) == 1
+    assert scoped[0].key == "save-a"
+
+
+def test_form_collections_empty_without_forms() -> None:
+    """Apps with only a regular button have empty form collections."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.button("Go")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.form) == 0
+    assert len(at.form_submit_button) == 0
+    assert len(at.button) == 1
 
 
 def test_form_values_apply_only_on_submit() -> None:

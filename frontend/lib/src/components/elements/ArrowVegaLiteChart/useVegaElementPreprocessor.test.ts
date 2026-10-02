@@ -19,7 +19,7 @@ import { compile, type TopLevelSpec } from "vega-lite"
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
 import { lightTheme } from "~lib/theme/themeConfigs"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import type { VegaLiteChartElement } from "./arrowUtils"
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 
 type VegaLiteSpec = {

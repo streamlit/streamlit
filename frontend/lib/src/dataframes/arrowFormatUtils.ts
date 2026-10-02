@@ -19,7 +19,13 @@
  * a human-readable format.
  */
 
-import { Field, Struct, StructRow, TimeUnit, util } from "apache-arrow"
+import {
+  type Field,
+  Struct,
+  type StructRow,
+  TimeUnit,
+  util,
+} from "apache-arrow"
 import { trimEnd } from "lodash-es"
 import { getLogger } from "loglevel"
 import moment from "moment-timezone"
@@ -28,9 +34,9 @@ import numbro from "numbro"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  ArrowType,
+  type ArrowType,
   DataFrameCellType,
-  DataType,
+  type DataType,
   isDatetimeType,
   isDateType,
   isDecimalType,
@@ -82,6 +88,34 @@ type PandasPeriodFrequency =
 
 const LOG = getLogger("arrowFormatUtils")
 const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+
+/**
+ * Arrow `Field.type` is `any` on untyped tables, and some tests pass a
+ * `{ unit }` stub without a `typeId`. Read the property as `unknown` so
+ * both real Arrow instances (including a duplicate apache-arrow copy)
+ * and duck-typed fixtures stay `no-unsafe-argument` clean.
+ */
+function getArrowTimeUnit(
+  field: Field | undefined,
+  fallback: TimeUnit
+): TimeUnit {
+  const dataType = field?.type as { unit?: unknown } | undefined
+  const unit: unknown = dataType?.unit
+  return typeof unit === "number" ? unit : fallback
+}
+
+function getArrowTimezone(field: Field | undefined): string | undefined {
+  const dataType = field?.type as { timezone?: unknown } | undefined
+  const timezone: unknown = dataType?.timezone
+  return typeof timezone === "string" && timezone ? timezone : undefined
+}
+
+function getArrowScale(field: Field | undefined): number {
+  const dataType = field?.type as { scale?: unknown } | undefined
+  const scale: unknown = dataType?.scale
+  return typeof scale === "number" ? scale : 0
+}
+
 const formatMs = (duration: number): string =>
   moment("19700101", "YYYYMMDD")
     .add(duration, "ms")
@@ -231,7 +265,7 @@ export function convertTimeToDate(
     timestamp,
     // The default is SECOND because that is the default unit for time values in pandas.
     // Though we believe that actually always a unit is populated by arrow.
-    field?.type?.unit ?? TimeUnit.SECOND
+    getArrowTimeUnit(field, TimeUnit.SECOND)
   )
   return moment.unix(timeInSeconds).utc().toDate()
 }
@@ -294,7 +328,7 @@ function formatDatetime(date: number | Date, field?: Field): string {
 
   let datetime = moment.utc(date)
 
-  const timezone = field?.type?.timezone
+  const timezone = getArrowTimezone(field)
   if (timezone) {
     if (moment.tz.zone(timezone)) {
       // If timezone is a valid timezone name (e.g., "America/New_York")
@@ -325,7 +359,7 @@ function formatDuration(duration: number | bigint, field?: Field): string {
         duration,
         // The default is NANOSECOND because that is the default unit for duration in pandas.
         // Though we believe that actually always a unit is populated by arrow.
-        field?.type?.unit ?? TimeUnit.NANOSECOND
+        getArrowTimeUnit(field, TimeUnit.NANOSECOND)
       ),
       "seconds"
     )
@@ -344,7 +378,7 @@ function formatDuration(duration: number | bigint, field?: Field): string {
  * https://github.com/apache/arrow/issues/35745
  */
 function formatDecimal(value: Uint32Array, field?: Field): string {
-  const scale = field?.type?.scale || 0
+  const scale = getArrowScale(field)
 
   // Format Uint32Array to a numerical string and pad it with zeros
   // So that it is exactly the length of the scale.
@@ -428,9 +462,21 @@ function formatPeriod(duration: number | bigint, field?: Field): string {
     return String(duration)
   }
 
-  const parsedExtensionMetadata = JSON.parse(extensionMetadata)
+  const parsedExtensionMetadata: unknown = JSON.parse(extensionMetadata)
+  if (
+    typeof parsedExtensionMetadata !== "object" ||
+    parsedExtensionMetadata === null ||
+    !("freq" in parsedExtensionMetadata)
+  ) {
+    LOG.warn("Arrow period extension metadata is missing freq")
+    return String(duration)
+  }
   const { freq } = parsedExtensionMetadata
-  return formatPeriodFromFreq(duration, freq)
+  if (typeof freq !== "string") {
+    LOG.warn(`Unsupported period frequency: ${String(freq)}`)
+    return String(duration)
+  }
+  return formatPeriodFromFreq(duration, freq as PandasPeriodFrequency)
 }
 
 /**
@@ -444,7 +490,7 @@ function formatObject(object: unknown, field?: Field): string {
   if (field?.type instanceof Struct) {
     // This type is used by python dictionary values
 
-    return JSON.stringify(object, (_key, value) => {
+    return JSON.stringify(object, (_key, value: unknown) => {
       if (!notNullOrUndefined(value)) {
         // Workaround: Arrow JS adds all properties from all cells
         // as fields. When you convert to string, it will contain lots of fields with
@@ -463,7 +509,7 @@ function formatObject(object: unknown, field?: Field): string {
   }
 
   // TODO(lukasmasuch): Investigate if we can unify this with the logic above.
-  return JSON.stringify(object, (_key, value) =>
+  return JSON.stringify(object, (_key, value: unknown) =>
     typeof value === "bigint" ? Number(value) : value
   )
 }

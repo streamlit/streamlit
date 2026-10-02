@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, PureComponent, ReactNode } from "react"
+import { type FC, PureComponent, type ReactNode } from "react"
 
 import { screen } from "@testing-library/react"
 

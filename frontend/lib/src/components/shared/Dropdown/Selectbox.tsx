@@ -15,7 +15,7 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
   type ReactElement,
   useCallback,
@@ -57,7 +57,7 @@ import { isMobile } from "~lib/util/isMobile"
 import {
   getSelectPlaceholder,
   isNullOrUndefined,
-  LabelVisibilityOptions,
+  type LabelVisibilityOptions,
 } from "~lib/util/utils"
 
 import {
@@ -656,6 +656,7 @@ const Selectbox: FC<Props> = ({
               <StyledClearButton
                 aria-label="Clear value"
                 slot={null}
+                isDisabled={selectDisabled}
                 onPress={handleClearValue}
               >
                 <Cancel size={theme.iconSizes.base} aria-hidden="true" />

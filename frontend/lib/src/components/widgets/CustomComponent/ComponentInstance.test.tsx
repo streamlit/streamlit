@@ -15,7 +15,7 @@
  */
 
 import { act, screen } from "@testing-library/react"
-import { Mock, MockInstance } from "vitest"
+import type { Mock, MockInstance } from "vitest"
 
 import {
   ComponentInstance as ComponentInstanceProto,

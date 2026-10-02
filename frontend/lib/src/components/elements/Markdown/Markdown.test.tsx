@@ -26,11 +26,11 @@ import {
 
 import { ElementNode } from "~lib/AppNode"
 import ElementNodeRenderer, {
-  ElementNodeRendererProps,
+  type ElementNodeRendererProps,
 } from "~lib/components/core/Block/ElementNodeRenderer"
 import {
   FlexContext,
-  IFlexContext,
+  type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
@@ -39,7 +39,7 @@ import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Markdown, { MarkdownProps } from "./Markdown"
+import Markdown, { type MarkdownProps } from "./Markdown"
 
 const getProps = (
   elementProps: Partial<MarkdownProps["element"]> = {}

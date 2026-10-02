@@ -21,7 +21,10 @@ import Webcam from "react-webcam"
 import { render } from "~lib/test_util"
 
 import { FacingMode } from "./SwitchFacingModeButton"
-import WebcamComponent, { Props, WebcamPermission } from "./WebcamComponent"
+import WebcamComponent, {
+  type Props,
+  WebcamPermission,
+} from "./WebcamComponent"
 
 vi.mock("react-webcam")
 

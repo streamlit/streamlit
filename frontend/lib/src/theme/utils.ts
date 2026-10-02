@@ -28,7 +28,7 @@ import { getLogger } from "loglevel"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
-import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
+import type { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import { LocalStore } from "~lib/util/storageUtils"
 import {
   isDarkThemeInQueryParams,
@@ -745,6 +745,7 @@ export const createEmotionTheme = (
     textColor: bodyText,
     dataframeBorderColor,
     dataframeHeaderBackgroundColor,
+    dataframeHeaderTextColor,
     borderColor,
     linkColor,
     codeTextColor,
@@ -814,6 +815,13 @@ export const createEmotionTheme = (
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
     dataframeHeaderBackgroundColor ??
     conditionalOverrides.colors.dataframeHeaderBackgroundColor
+
+  // Use the configured header text color when set. Otherwise keep the
+  // fadedText60 default from createEmotionColors (which already tracks
+  // textColor).
+  conditionalOverrides.colors.dataframeHeaderTextColor =
+    dataframeHeaderTextColor ??
+    conditionalOverrides.colors.dataframeHeaderTextColor
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor

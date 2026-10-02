@@ -16,7 +16,7 @@
 
 import {
   type JSX,
-  ReactElement,
+  type ReactElement,
   type ReactNode,
   useContext,
   useMemo,
@@ -24,7 +24,7 @@ import {
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { BlockNode } from "~lib/AppNode"
+import type { BlockNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
@@ -37,7 +37,7 @@ import {
 import {
   Direction,
   getDirectionOfBlock,
-  MinFlexElementWidth,
+  type MinFlexElementWidth,
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
@@ -56,12 +56,12 @@ import {
   StyledColumn,
   StyledDialogContentEndPad,
   StyledFlexContainerBlock,
-  StyledFlexContainerBlockProps,
+  type StyledFlexContainerBlockProps,
   StyledLayoutWrapper,
 } from "./styled-components"
 import {
   assignDividerColor,
-  BaseBlockProps,
+  type BaseBlockProps,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
   getBorderBackwardsCompatible,

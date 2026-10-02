@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { createRef, type JSX, PureComponent, ReactNode } from "react"
+import { createRef, type JSX, PureComponent, type ReactNode } from "react"
 
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
@@ -41,16 +41,16 @@ import StreamlitContextProvider from "@streamlit/app/src/components/StreamlitCon
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 import DialogErrorMessage from "@streamlit/app/src/components/StreamlitDialog/DialogErrorMessage"
 import {
-  ConnectionErrorProps,
-  DialogProps,
-  ScriptCompileErrorProps,
+  type ConnectionErrorProps,
+  type DialogProps,
+  type ScriptCompileErrorProps,
   StreamlitDialog,
-  WarningProps,
+  type WarningProps,
 } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
-import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
+import type { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 import ToolbarActions from "@streamlit/app/src/components/ToolbarActions/ToolbarActions"
 import withScreencast, {
-  ScreenCastHOC,
+  type ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
 import { useViewportSize } from "@streamlit/app/src/hooks/useViewportSize"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -58,21 +58,21 @@ import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatche
 import { StyledApp } from "@streamlit/app/src/styled-components"
 import getBrowserInfo from "@streamlit/app/src/util/getBrowserInfo"
 import {
-  AppConfig,
+  type AppConfig,
   ConnectionManager,
   ConnectionState,
   DefaultStreamlitEndpoints,
-  ErrorDetails,
-  IHostConfigProperties,
+  type ErrorDetails,
+  type IHostConfigProperties,
   isHostConfigBypassEnabled,
-  LibConfig,
+  type LibConfig,
   parseUriIntoBaseParts,
-  StreamlitEndpoints,
+  type StreamlitEndpoints,
 } from "@streamlit/connection"
 import {
   AppRoot,
   BackendOperationClient,
-  CircularBuffer,
+  type CircularBuffer,
   ComponentRegistry,
   createAutoTheme,
   createCustomThemes,
@@ -80,12 +80,12 @@ import {
   createPresetThemes,
   CUSTOM_THEME_AUTO_NAME,
   darkTheme,
-  DeployedAppMetadata,
+  type DeployedAppMetadata,
   ensureError,
   ensureHotkeysFilterConfigured,
   extractPageNameFromPathName,
   FileUploadClient,
-  FormsData,
+  type FormsData,
   generateUID,
   getElementId,
   getEmbeddingIdClassName,
@@ -101,7 +101,7 @@ import {
   hashString,
   hasLightBackgroundColor,
   HostCommunicationManager,
-  IMenuItem,
+  type IMenuItem,
   INITIAL_SCRIPT_RUN_ID,
   isEmbed,
   isInChildFrame,
@@ -110,47 +110,47 @@ import {
   isPresetTheme,
   isScrollingHidden,
   isToolbarDisplayed,
-  IToolbarItem,
+  type IToolbarItem,
   lightTheme,
   mark,
   measure,
   normalizeQueryString,
   notUndefined,
   preserveEmbedQueryParams,
-  PresetThemeName,
+  type PresetThemeName,
   ScriptRunState,
   SessionInfo,
   sortThemeInputKeys,
-  ThemeConfig,
+  type ThemeConfig,
   toExportedTheme,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
   type AppPage,
-  AuthRedirect,
-  AutoRerun,
-  BackendOperationResponse,
+  type AuthRedirect,
+  type AutoRerun,
+  type BackendOperationResponse,
   BackMsg,
   Config,
-  CustomThemeConfig,
-  Delta,
-  FileURLsResponse,
+  type CustomThemeConfig,
+  type Delta,
+  type FileURLsResponse,
   ForwardMsg,
-  ForwardMsgMetadata,
-  GitInfo,
-  Initialize,
-  Logo,
+  type ForwardMsgMetadata,
+  type GitInfo,
+  type Initialize,
+  type Logo,
   Navigation,
-  NewSession,
+  type NewSession,
   PageConfig,
-  PageInfo,
-  PageNotFound,
+  type PageInfo,
+  type PageNotFound,
   PageProfile,
-  ParentMessage,
-  SessionEvent,
-  SessionStatus,
-  StopAutoRerun,
-  WidgetStates,
+  type ParentMessage,
+  type SessionEvent,
+  type SessionStatus,
+  type StopAutoRerun,
+  type WidgetStates,
 } from "@streamlit/protobuf"
 import {
   isLocalhost,
@@ -163,12 +163,12 @@ import {
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Import @font-face rules for app and icon fonts
 import "@streamlit/app/src/assets/css/fonts.css"
-import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
+import { AppNavigation, type MaybeStateUpdate } from "./util/AppNavigation"
 import {
   includeIfDefined,
   reconcileHostConfigValues,
 } from "./util/hostConfigHelpers"
-import { ThemeManager } from "./util/useThemeManager"
+import type { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
 declare const PACKAGE_METADATA: {
@@ -1871,9 +1871,11 @@ export class App extends PureComponent<Props, State> {
     // Best-effort durable suppression: the localStorage flag already suppresses
     // the nudge in this browser, so a failed marker write only means a fresh
     // browser could see it again — log it rather than failing the dismissal.
-    this.backendOperationClient.requestDismissSkillsNudge().catch(error => {
-      LOG.warn("Failed to persist skills nudge dismissal", error)
-    })
+    this.backendOperationClient
+      .requestDismissSkillsNudge()
+      .catch((error: unknown) => {
+        LOG.warn("Failed to persist skills nudge dismissal", error)
+      })
     this.trackSkillsNudge("skillsNudgeDontShowAgain", "toast")
   }
 

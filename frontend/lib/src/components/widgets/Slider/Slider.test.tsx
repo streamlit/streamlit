@@ -27,7 +27,7 @@ import { render } from "~lib/test_util"
 import { withTimezones } from "~lib/util/withTimezones"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Slider, { Props } from "./Slider"
+import Slider, { type Props } from "./Slider"
 
 const getProps = (
   elementProps: Partial<SliderProto> = {},

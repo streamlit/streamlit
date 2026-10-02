@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import Checkmark from "@streamlit/app/src/assets/svg/checkmark.svg"
 
