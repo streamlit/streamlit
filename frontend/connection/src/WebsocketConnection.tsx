@@ -696,9 +696,9 @@ export class WebsocketConnection {
       if (checkWebsocket()) {
         const payload: unknown = event.data
         if (!(payload instanceof ArrayBuffer)) {
-          LOG.error(
-            `Unexpected Websocket message type: ${Object.prototype.toString.call(payload)}`
-          )
+          const err = `Unexpected Websocket message type: ${Object.prototype.toString.call(payload)}`
+          LOG.error(err)
+          this.stepFsm("FATAL_ERROR", err)
           return
         }
         this.handleMessage(payload).catch((reason: unknown) => {

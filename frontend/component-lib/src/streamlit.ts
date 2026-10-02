@@ -161,12 +161,13 @@ export class Streamlit {
   /** Receive a ForwardMsg from the Streamlit app */
   private static readonly onMessageEvent = (event: MessageEvent): void => {
     const data: unknown = event.data
-    if (!isRenderEventData(data)) {
+    if (typeof data !== "object" || data === null) {
       return
     }
-    switch (data.type) {
+    const type = (data as { type?: unknown }).type
+    switch (type) {
       case Streamlit.RENDER_EVENT:
-        Streamlit.onRenderMessage(data)
+        Streamlit.onRenderMessage(data as RenderEventData)
         break
     }
   }
@@ -287,10 +288,6 @@ type RenderEventData<ArgType = any> = {
   dfs?: ArgsDataframe[]
   disabled?: boolean
   theme?: Theme
-}
-
-function isRenderEventData(data: unknown): data is RenderEventData {
-  return typeof data === "object" && data !== null
 }
 
 // The TypedArray JavaScript types
