@@ -41,7 +41,7 @@ const shadows = createShadows(colors)
 
 export default {
   inSidebar: false,
-  showSidebarBorder: false,
+  showSidebarBorder: true,
   linkUnderline: true,
   breakpoints,
   colors,
