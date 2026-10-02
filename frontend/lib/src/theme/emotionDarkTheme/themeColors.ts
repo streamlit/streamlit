@@ -53,6 +53,6 @@ export default {
   violetTextColor: colors.purple50,
   grayTextColor: transparentize(colors.gray10, 0.4),
 
-  // Stock main + sidebar border (same hex). Opaque until named primitives land.
+  // Stock main + sidebar border (same hex).
   borderColor: "#4A4742",
 }
