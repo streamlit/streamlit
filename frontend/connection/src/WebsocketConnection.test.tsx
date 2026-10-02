@@ -25,7 +25,7 @@ vi.mock("@streamlit/utils", async () => {
   }
 })
 
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
 import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
@@ -41,8 +41,8 @@ import {
 } from "./constants"
 import { doInitPings, PingCancelledError } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
-import { ErrorDetails, OnRetry } from "./types"
-import { Args, WebsocketConnection } from "./WebsocketConnection"
+import type { ErrorDetails, OnRetry } from "./types"
+import { type Args, WebsocketConnection } from "./WebsocketConnection"
 
 const expectedFirstReconnectDelayMs =
   RECONNECT_MINIMUM_RETRY_PERIOD_MS +
@@ -360,6 +360,52 @@ describe("doInitPings", () => {
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_ORIGINS_CONFIG
     )
+  })
+
+  it("retries with the thrown message when onHostConfigResp throws a non-FetchError", async () => {
+    const hostConfigFailure = "invalid host config"
+    // Two URIs per try; keep throwing through the sendClientError threshold.
+    const throwsBeforeSuccess =
+      MAX_RETRIES_BEFORE_CLIENT_ERROR * MOCK_PING_DATA.uri.length
+    let hostConfigCalls = 0
+    const setAllowedOrigins = vi.fn().mockImplementation(() => {
+      hostConfigCalls += 1
+      if (hostConfigCalls <= throwsBeforeSuccess) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- pin String(error) retry text
+        throw hostConfigFailure
+      }
+    })
+
+    globalThis.fetch = createFetchMock()
+
+    const retryCallback = createTimerAdvancingRetryCallback(
+      MOCK_PING_DATA.retryCallback
+    )
+    const sendClientErrorSpy = vi.fn()
+
+    const { promise } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      retryCallback,
+      sendClientErrorSpy,
+      setAllowedOrigins
+    )
+
+    await vi.runAllTimersAsync()
+    await promise
+
+    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ message: hostConfigFailure }),
+      expect.anything()
+    )
+    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
+      MAX_RETRIES_BEFORE_CLIENT_ERROR,
+      expect.objectContaining({ message: hostConfigFailure }),
+      expect.anything()
+    )
+    expect(sendClientErrorSpy).not.toHaveBeenCalled()
   })
 
   it("calls retry with the corresponding error message if there was an error", async () => {

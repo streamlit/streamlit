@@ -386,7 +386,7 @@ export function useWaveformController({
 
         readyResolversRef.current.add(resolver)
 
-        playerRef.current.load(rawBlob).catch(error => {
+        playerRef.current.load(rawBlob).catch((error: unknown) => {
           readyResolversRef.current.delete(resolver)
           reject(error instanceof Error ? error : new Error(String(error)))
         })

@@ -15,7 +15,7 @@
  */
 
 // Safari doesn't support the EventTarget class, so we use a shim.
-import { ArrowDataframeProto, ArrowTable } from "./ArrowTable"
+import { type ArrowDataframeProto, ArrowTable } from "./ArrowTable"
 
 /** Object defining the currently set theme. */
 export interface Theme {
@@ -214,11 +214,15 @@ export class Streamlit {
 
   private static readonly argsDataframeToObject = (
     argsDataframe: ArgsDataframe[]
-  ): object => {
-    const argsDataframeArrow = argsDataframe.map(
-      ({ key, value }: ArgsDataframe) => [key, Streamlit.toArrowTable(value)]
+  ): Record<string, ArrowTable> => {
+    // Build with Object.fromEntries so keys such as "__proto__" stay own
+    // properties; plain assignment would hit the prototype setter instead.
+    return Object.fromEntries(
+      argsDataframe.map(({ key, value }): [string, ArrowTable] => [
+        key,
+        Streamlit.toArrowTable(value),
+      ])
     )
-    return Object.fromEntries(argsDataframeArrow)
   }
 
   private static readonly toArrowTable = (

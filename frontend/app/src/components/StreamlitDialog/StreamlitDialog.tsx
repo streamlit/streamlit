@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
 
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 import {
@@ -29,7 +29,10 @@ import {
 } from "@streamlit/lib"
 import type { Exception } from "@streamlit/protobuf"
 
-import { DeployDialog, DeployDialogProps } from "./DeployDialog/DeployDialog"
+import {
+  DeployDialog,
+  type DeployDialogProps,
+} from "./DeployDialog/DeployDialog"
 import { StyledDeployErrorContent } from "./styled-components"
 
 export type PlainEventHandler = () => void

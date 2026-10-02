@@ -352,7 +352,7 @@ function ChatInput({
         // Fire-and-forget deletion - errors are not critical to user flow
         uploadClient
           .deleteFile(file.status.fileUrls.deleteUrl)
-          .catch(error => {
+          .catch((error: unknown) => {
             // Log deletion errors for observability, but don't block the user
             // File may already be deleted or server unavailable
             LOG.error("Failed to delete file from server:", error)

@@ -77,18 +77,29 @@ def test_initial_setup(app: Page):
 
 def test_graphviz_chart_alt_sets_accessible_name(app: Page):
     """`alt` becomes the GraphViz chart container's accessible name."""
-    labeled = get_element_by_key(app, "c_graphviz_alt").get_by_test_id(
-        "stGraphVizChart"
-    )
+    labeled_container = get_element_by_key(app, "c_graphviz_alt")
+    labeled = labeled_container.get_by_test_id("stGraphVizChart")
     expect(labeled).to_have_attribute("role", "figure")
     expect(labeled).to_have_accessible_name("Directed graph of Hello to World")
+    # Toolbar is a sibling of the chart node, not a descendant.
+    labeled_container.hover()
+    expect(
+        labeled_container.get_by_role(
+            "button",
+            name="Fullscreen: Directed graph of Hello to World",
+            exact=True,
+        )
+    ).to_be_visible()
 
-    unlabeled = get_element_by_key(app, "c_graphviz_no_alt").get_by_test_id(
-        "stGraphVizChart"
-    )
+    unlabeled_container = get_element_by_key(app, "c_graphviz_no_alt")
+    unlabeled = unlabeled_container.get_by_test_id("stGraphVizChart")
     expect(unlabeled).not_to_have_attribute("role")
     expect(unlabeled).not_to_have_attribute("aria-label")
     expect(unlabeled).to_have_accessible_name("")
+    unlabeled_container.hover()
+    expect(
+        unlabeled_container.get_by_role("button", name="Fullscreen", exact=True)
+    ).to_be_visible()
 
     # role=figure (not img) keeps GraphViz URL nodes in the a11y tree.
     linked = get_element_by_key(app, "c_graphviz_alt_link").get_by_test_id(

@@ -19,9 +19,9 @@ import { getLogger } from "loglevel"
 
 import { IS_DEV_ENV } from "@streamlit/connection"
 import {
-  DeployedAppMetadata,
-  IGuestToHostMessage,
-  SessionInfo,
+  type DeployedAppMetadata,
+  type IGuestToHostMessage,
+  type SessionInfo,
   setCookie,
 } from "@streamlit/lib"
 import { MetricsEvent } from "@streamlit/protobuf"

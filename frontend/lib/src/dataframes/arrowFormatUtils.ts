@@ -450,7 +450,7 @@ function formatObject(object: unknown, field?: Field): string {
   if (field?.type instanceof Struct) {
     // This type is used by python dictionary values
 
-    return JSON.stringify(object, (_key, value) => {
+    return JSON.stringify(object, (_key, value: unknown) => {
       if (!notNullOrUndefined(value)) {
         // Workaround: Arrow JS adds all properties from all cells
         // as fields. When you convert to string, it will contain lots of fields with
@@ -469,7 +469,7 @@ function formatObject(object: unknown, field?: Field): string {
   }
 
   // TODO(lukasmasuch): Investigate if we can unify this with the logic above.
-  return JSON.stringify(object, (_key, value) =>
+  return JSON.stringify(object, (_key, value: unknown) =>
     typeof value === "bigint" ? Number(value) : value
   )
 }

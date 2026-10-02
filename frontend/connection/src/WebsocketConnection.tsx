@@ -34,12 +34,12 @@ import {
   WEBSOCKET_TIMEOUT_MS,
 } from "./constants"
 import {
-  AsyncPingRequest,
+  type AsyncPingRequest,
   doInitPings,
   PingCancelledError,
 } from "./DoInitPings"
 import { ForwardMsgCache } from "./ForwardMessageCache"
-import {
+import type {
   ErrorDetails,
   Event,
   IHostConfigProperties,
@@ -694,8 +694,8 @@ export class WebsocketConnection {
 
     this.websocket.addEventListener("message", (event: MessageEvent) => {
       if (checkWebsocket()) {
-        this.handleMessage(event.data).catch(reason => {
-          const err = `Failed to process a Websocket message. ${reason}`
+        this.handleMessage(event.data).catch((reason: unknown) => {
+          const err = `Failed to process a Websocket message. ${String(reason)}`
           LOG.error(err)
           this.stepFsm("FATAL_ERROR", err)
         })
