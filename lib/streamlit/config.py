@@ -1249,9 +1249,10 @@ _create_option(
 
         The API is off by default. Once on, it is served wherever the app is,
         with the same Host allow-list as the app's WebSocket, and a caller gets
-        no more access than the app gives a browser. Identity
-        comes from `server.trustedUserHeaders`; without it, agent sessions are
-        anonymous.
+        no more access than the app gives a browser. Requests from web pages
+        are refused unless their origin is in `server.corsAllowedOrigins`.
+        Identity comes from `server.trustedUserHeaders`; without it, agent
+        sessions are anonymous.
     """,
     default_val=False,
     type_=bool,

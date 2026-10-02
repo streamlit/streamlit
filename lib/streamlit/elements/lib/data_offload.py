@@ -82,7 +82,9 @@ def serve_arrow_over_http(arrow_bytes: bytes, *, coordinates: str) -> str | None
     size = len(arrow_bytes)
     max_size = get_max_message_size_bytes()
     if size > max_size:
-        _LOGGER.warning(
+        # Debug, not warning: this repeats for the element on every run, and
+        # the snapshot already tells the client, through `data.unavailable`.
+        _LOGGER.debug(
             "Not serving %s bytes of Arrow data over HTTP: above "
             "`server.maxMessageSize` (%s bytes). Clients will only see the "
             "inline preview.",

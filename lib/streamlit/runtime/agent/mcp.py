@@ -43,16 +43,20 @@ if TYPE_CHECKING:
 
 # Newest first. A client that asks for one of these gets it back; any other
 # request is answered with the newest, which the client accepts or disconnects
-# over, as the protocol's version negotiation prescribes. Nothing this server
-# does differs between them.
+# over, as these versions' negotiation prescribes. Nothing this server does
+# differs between them. Only versions whose `initialize` handshake this server
+# implements are listed.
 SUPPORTED_PROTOCOL_VERSIONS: Final = (
-    "2026-07-28",
     "2025-11-25",
     "2025-06-18",
     "2025-03-26",
 )
 
 TOOL_NAME: Final = "interact"
+
+# Batches exist for clients on protocol versions that still send them, which
+# need a handshake's worth of messages, not an unbounded queue of interactions.
+MAX_BATCH_SIZE: Final = 8
 
 # JSON-RPC 2.0 error codes.
 PARSE_ERROR: Final = -32700
@@ -166,6 +170,14 @@ async def handle(payload: Any, interact: InteractCall) -> Any:
             return error_response(
                 None, INVALID_REQUEST, "An empty batch is not a request."
             )
+        if len(payload) > MAX_BATCH_SIZE:
+            # Each `tools/call` in a batch is a full interaction, run in turn
+            # within this one request.
+            return error_response(
+                None,
+                INVALID_REQUEST,
+                f"A batch may hold at most {MAX_BATCH_SIZE} messages.",
+            )
         responses = [await _handle_one(message, interact) for message in payload]
         answered = [response for response in responses if response is not None]
         return answered or None
@@ -258,13 +270,21 @@ async def _call_tool(
         )
 
     body, is_error = await interact(arguments)
+    try:
+        # Strict, as the HTTP response is: NaN in the text would be invalid
+        # JSON to every client that parses it.
+        text = json.dumps(body, allow_nan=False)
+    except ValueError:
+        return error_response(
+            request_id, SERVER_ERROR, "The result could not be encoded as JSON."
+        )
     # A failed interaction is a tool result, not a protocol error: MCP expects
     # the model to read what went wrong and correct itself, and the body says
     # what to do next the same way the HTTP API's does.
     return _result(
         request_id,
         {
-            "content": [{"type": "text", "text": json.dumps(body)}],
+            "content": [{"type": "text", "text": text}],
             "structuredContent": body,
             "isError": is_error,
         },

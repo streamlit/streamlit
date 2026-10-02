@@ -104,7 +104,6 @@ _agent_session_ids: frozenset[str] = frozenset()
 def register_agent_session(session_id: str) -> None:
     """Mark a session as driven by the agent API."""
     global _agent_session_ids  # noqa: PLW0603
-    # A frozenset has no in-place union, so this builds a new set and rebinds.
     _agent_session_ids |= {session_id}
 
 

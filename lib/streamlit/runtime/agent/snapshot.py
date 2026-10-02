@@ -197,6 +197,9 @@ class ElementState(NamedTuple):
     actual reason instead of blaming the page.
     """
 
+    # The command, for checks that depend on it: a date range takes zero to two
+    # dates, however many it holds now.
+    element_type: str
     actionable: bool
     disabled: bool
     support: str | None
@@ -448,6 +451,7 @@ class _SnapshotBuilder:
         actionable = bool(action) and not support and not disabled
 
         self.element_states[element_id] = ElementState(
+            element_type=str(description.get("type", "")),
             actionable=actionable,
             disabled=disabled,
             support=support,
@@ -766,9 +770,23 @@ def _arrow_data(arrow_bytes: bytes) -> dict[str, Any] | None:
 
     import pyarrow as pa
 
+    limit = _preview_row_limit()
     try:
         table = pa.RecordBatchStreamReader(arrow_bytes).read_all()
-    except pa.ArrowInvalid:
+        # By position rather than by name, so a table with two columns of the
+        # same name keeps both.
+        rows = [
+            [json_encoding.to_json_value(cell) for cell in row]
+            for row in zip(
+                *(column.to_pylist() for column in table.slice(0, limit).columns),
+                strict=True,
+            )
+        ]
+    except Exception:
+        # Any failure, not just a malformed stream: this also runs inside the
+        # runtime's message loop, and an element without a summary costs far
+        # less than every session's messages.
+        _LOGGER.debug("Could not summarize an Arrow payload.", exc_info=True)
         return None
 
     # Every column the bytes behind `data.url` carry, under the same names, so
@@ -776,8 +794,6 @@ def _arrow_data(arrow_bytes: bytes) -> dict[str, Any] | None:
     # includes an unnamed, non-range index, which pandas stores as
     # `__index_level_N__` and `st.dataframe` displays.
     columns = list(zip(table.schema.names, table.schema.types, strict=True))
-    limit = _preview_row_limit()
-    preview = table.slice(0, limit)
     return {
         "columns": [{"name": name, "type": str(dtype)} for name, dtype in columns],
         "row_count": table.num_rows,
@@ -792,10 +808,7 @@ def _arrow_data(arrow_bytes: bytes) -> dict[str, Any] | None:
             # repeating the column names on every row is most of a preview's
             # size once it gets long. Types and nested cells survive, which a
             # CSV blob would cost without coming out smaller.
-            "rows": [
-                [json_encoding.to_json_value(row[name]) for name, _ in columns]
-                for row in preview.to_pylist()
-            ],
+            "rows": rows,
         },
     }
 
@@ -812,9 +825,8 @@ def rebase_media_urls(
     ``data.url`` is a 404 or a login redirect.
 
     Only ``data.url`` and the ``url``, ``src``, and ``avatar`` props are
-    touched, and only
-    values under ``media_path``, so an external link an app displays is never
-    rewritten.
+    touched, and only values under ``media_path``, so an external link an app
+    displays is never rewritten.
     """
     media_prefix = media_path.rstrip("/") + "/"
 

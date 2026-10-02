@@ -38,6 +38,7 @@ from typing import TYPE_CHECKING, Any, Final
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime.agent import mcp
+from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.agent.interaction import (
     AgentSessionRegistry,
     interact,
@@ -45,8 +46,8 @@ from streamlit.runtime.agent.interaction import (
 )
 from streamlit.runtime.agent.protocol import build_openapi_document, error_status
 from streamlit.runtime.agent.snapshot import rebase_media_urls
-from streamlit.runtime.agent.widget_patch import AgentRequestError
 from streamlit.runtime.runtime_util import get_max_widget_state_size_bytes
+from streamlit.web.server.server_util import is_allowed_origin
 from streamlit.web.server.starlette.starlette_routes import BASE_ROUTE_MEDIA
 from streamlit.web.server.starlette.starlette_websocket import (
     _gather_user_info,
@@ -82,16 +83,34 @@ def _climb(levels: int) -> str:
 def _refused_host(request: Request) -> bool:
     """Whether the request's Host is outside `server.allowedHosts`.
 
-    The allow-list the WebSocket enforces, and the defense against DNS
-    rebinding. The Origin is deliberately not checked: these routes read no
-    cookies, so a page on another site that sends a request here gains nothing
-    over opening the app's URL, and a client that legitimately calls from a
-    browser on another origin is not turned away.
+    The allow-list the WebSocket enforces. Where an operator configures one, it
+    also stops DNS rebinding; `_refused_origin` stops it where they do not.
     """
     host = request.headers.get("Host")
     if _is_host_allowed(host):
         return False
-    _LOGGER.warning("Refusing agent API request with disallowed Host: %s", host)
+    # Debug, not warning: the value is the caller's, and a warning per refused
+    # request would let anyone fill the log.
+    _LOGGER.debug("Refusing agent API request with disallowed Host: %r", host)
+    return True
+
+
+def _refused_origin(request: Request) -> bool:
+    """Whether the request came from a web page the operator did not allow.
+
+    Browsers send `Origin` on every cross-origin request and every POST, and
+    agents and other programmatic clients send none, so any `Origin` not
+    listed in `server.corsAllowedOrigins` is refused. This is what stops DNS
+    rebinding where no Host allow-list is configured: a page whose domain was
+    rebound to the app's address is same-origin with the Host it sends, which
+    a same-origin rule would accept, but it still sends its own `Origin`.
+    Nothing legitimate is lost: these routes send no CORS headers, so no page
+    on another origin could read a response anyway.
+    """
+    origin = request.headers.get("Origin")
+    if origin is None or is_allowed_origin(origin):
+        return False
+    _LOGGER.debug("Refusing agent API request from Origin %r", origin)
     return True
 
 
@@ -199,10 +218,8 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
     mcp_path = make_url_path(base_url or "", _ROUTE_AGENT_MCP)
 
     # Every URL a response carries is relative to the request that returned it,
-    # because that is the one base that is always right. A proxy that serves the
-    # app under a prefix and strips it before forwarding -- Community Cloud's
-    # `/~/+/` -- leaves nothing on the request that says where the app is, so a
-    # URL built from the request points at the hosting platform instead.
+    # because a proxy that strips a path prefix before forwarding leaves the app
+    # no way to see where it is (for example, Community Cloud's `/~/+/`).
     media_prefix = _climb(_ROUTE_DEPTH)
     # The documented paths include the base URL path, so the server sits above
     # it as well.
@@ -216,6 +233,11 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
     host_message = (
         "This request's Host is not in `server.allowedHosts`, which the app "
         "enforces for its WebSocket too."
+    )
+    origin_message = (
+        "This request came from a web page (it has an `Origin` header) whose "
+        "origin is not in `server.corsAllowedOrigins`. Call the API from a "
+        "program rather than from a page, or have the operator allow the origin."
     )
 
     async def _schema_endpoint(_request: Request) -> JSONResponse:
@@ -313,6 +335,12 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 host_message,
                 status=error_status("host_not_allowed"),
             )
+        if _refused_origin(request):
+            return _error(
+                "origin_not_allowed",
+                origin_message,
+                status=error_status("origin_not_allowed"),
+            )
 
         # The same bound the WebSocket handler applies to an inbound frame, so
         # the agent path is no more permissive than the browser path.
@@ -356,6 +384,13 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 mcp.error_response(None, mcp.SERVER_ERROR, host_message),
                 status_code=403,
             )
+        if _refused_origin(request):
+            # The MCP transport requires servers to validate `Origin`, for the
+            # same DNS-rebinding reason.
+            return JSONResponse(
+                mcp.error_response(None, mcp.SERVER_ERROR, origin_message),
+                status_code=403,
+            )
 
         max_request_bytes = get_max_widget_state_size_bytes()
         body = await _read_body(request, max_request_bytes)
@@ -390,7 +425,16 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         if response is None:
             # Only notifications, which the transport acknowledges without a body.
             return Response(status_code=202)
-        return JSONResponse(response)
+        try:
+            return JSONResponse(response)
+        except ValueError:
+            _LOGGER.exception("Agent API MCP response is not valid JSON")
+            return JSONResponse(
+                mcp.error_response(
+                    None, mcp.SERVER_ERROR, "The response could not be encoded."
+                ),
+                status_code=500,
+            )
 
     return [
         Route(

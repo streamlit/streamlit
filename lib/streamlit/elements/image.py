@@ -248,11 +248,6 @@ class ImageMixin:
                 )
             image_list_proto.link = link
 
-        # Reported the way the author passed the images: one image as single
-        # values, several as parallel lists. None marks an image without a
-        # caption or alt text; `""` alt text is kept, because it marks an image
-        # as decorative, which is not the same as unlabeled.
-        several = _is_image_list(image)
         imgs = image_list_proto.imgs
         return self.dg._enqueue(
             "imgs",
@@ -260,21 +255,35 @@ class ImageMixin:
             layout_config=layout_config,
             # st.image and st.pyplot both emit ImageList, and nothing in the
             # payload says which one ran.
-            agent_props=agent_spec.element(
-                "image",
-                caption=_as_authored([img.caption or None for img in imgs], several),
-                url=_as_authored([img.url for img in imgs], several),
-                alt=_as_authored(
-                    [img.alt if img.HasField("alt") else None for img in imgs], several
-                ),
-                link=link,
-            ),
+            agent_props=_describe_images(image, imgs, link)
+            if agent_spec.is_recording()
+            else None,
         )
 
     @property
     def dg(self) -> DeltaGenerator:
         """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _describe_images(image: Any, imgs: Sequence[Any], link: str | None) -> str | None:
+    """Describe an `st.image` call for the agent API.
+
+    Reported the way the author passed the images: one image as single values,
+    several as parallel lists. None marks an image without a caption or alt
+    text; `""` alt text is kept, because it marks an image as decorative, which
+    is not the same as unlabeled.
+    """
+    several = _is_image_list(image)
+    return agent_spec.element(
+        "image",
+        caption=_as_authored([img.caption or None for img in imgs], several),
+        url=_as_authored([img.url for img in imgs], several),
+        alt=_as_authored(
+            [img.alt if img.HasField("alt") else None for img in imgs], several
+        ),
+        link=link,
+    )
 
 
 def _is_image_list(image: Any) -> bool:

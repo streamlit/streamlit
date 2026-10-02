@@ -186,6 +186,14 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
             "enforces for its WebSocket too."
         ),
     ),
+    "origin_not_allowed": (
+        403,
+        (
+            "The request carries an `Origin` -- it was sent by a web page -- that "
+            "is not in `server.corsAllowedOrigins`. Programmatic clients send no "
+            "`Origin` and are not affected."
+        ),
+    ),
     "too_many_sessions": (
         429,
         (
@@ -271,22 +279,18 @@ def build_openapi_document(
 
     Parameters
     ----------
-    availability
-        ``"available"``, or ``"disabled"`` when the server does not offer the
-        API. A disabled document also omits the exact Streamlit version: it is
-        the one agent API response an app that never opted in serves, and a
-        precise version is worth more to someone matching it against
-        advisories than to a client that cannot call anything.
     interact_path
         The served path of the interact operation, including any base URL path.
     schema_path
         The served path of this document, so it is self-locating.
+    availability
+        ``"available"``, or ``"disabled"`` when the server does not offer the
+        API.
     server_url
         The OpenAPI server, relative to this document's own URL, so the paths
-        resolve where the app actually is. A hosted app is not always at the root
-        of its origin, and a proxy that strips its prefix before forwarding
-        leaves the app no way to see it: Community Cloud serves embedded apps
-        under ``/~/+/`` and forwards them without it.
+        resolve where the app actually is. URLs are relative to the request
+        because a proxy that strips a path prefix leaves the app no way to see
+        it (for example, Community Cloud's ``/~/+/``).
     mcp_path
         The served path of the MCP endpoint, mentioned so a caller that found
         this document knows the same interaction is available over MCP.
@@ -313,10 +317,14 @@ def build_openapi_document(
         "x-streamlit-agent-api": availability,
     }
     if notice is None:
+        # Omitted when the API is off: a disabled document is the one agent API
+        # response an app that never opted in serves, and a precise version
+        # helps someone matching it against advisories more than a client
+        # that cannot call anything.
         info["x-streamlit-version"] = __version__
 
-    # JSON object: the MCP operation's request schema uses a type array
-    # (`["object", "array"]`), which only fits this wider mapping.
+    # `dict[str, Any]` rather than inferred, because the MCP path item's schema
+    # uses a list for `type`.
     paths: dict[str, Any] = {
         interact_path: {
             "post": {

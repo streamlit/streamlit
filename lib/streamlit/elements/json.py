@@ -174,9 +174,13 @@ class JsonMixin:
             "json",
             json_proto,
             layout_config=layout_config,
+            # Guarded before the call, because reading the body off the proto
+            # copies it.
             agent_props=agent_spec.element(
                 "json", body=json_proto.body, expanded=expanded
-            ),
+            )
+            if agent_spec.is_recording()
+            else None,
         )
 
     @property

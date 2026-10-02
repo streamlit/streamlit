@@ -139,19 +139,16 @@ is where it saves real work.
 
 Nothing new beyond the agent API's rules, applied to one more route:
 
-- **Host allow-list** (`server.allowedHosts`), the defense against DNS rebinding,
-  plus trusted identity headers mapped into `st.user`, one interaction in flight per
-  session, and `server.agentMaxSessions`.
+- **Host allow-list** (`server.allowedHosts`), plus trusted identity headers mapped
+  into `st.user`, one interaction in flight per session, and `server.agentMaxSessions`.
+- **`Origin` validated, as the MCP transport requires**, against DNS rebinding. A
+  request that carries an `Origin` not listed in `server.corsAllowedOrigins` is refused.
+  A same-origin rule would not do: a rebound page is same-origin with the `Host` it
+  sends. But browsers send `Origin` on every POST and MCP clients send none, so refusing
+  any unlisted `Origin` stops rebinding without turning away a client, and costs no
+  browser caller anything, because the route sends no CORS headers for one to read a
+  response with.
 - **No read-only annotation on `interact`**, so clients that confirm writes keep doing so.
-
-**No Origin check, which departs from the MCP transport specification.** It asks
-servers to validate `Origin` against DNS rebinding. Here that check would buy little:
-the route reads no cookies, so a page on another site that sends a request gains nothing
-over opening the app's URL. Nor would it stop DNS rebinding: a rebound page is
-same-origin with the `Host` it sends, so it passes an Origin check. What stops rebinding
-is the `Host` allow-list, where a deployment configures one. The check would, however, turn
-away a legitimate browser-based client on another origin. If a deployment needs the
-stricter behavior, it is one call to the WebSocket's own Origin rule.
 
 ## Result size
 

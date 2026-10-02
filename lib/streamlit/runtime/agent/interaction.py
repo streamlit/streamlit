@@ -15,10 +15,9 @@
 """Drive a real AppSession from an HTTP request and wait for it to settle.
 
 An agent session is an ordinary ``AppSession`` whose client accumulates
-ForwardMsgs instead of writing them to a WebSocket. That is the whole trick:
-input goes through the same ``rerun_script`` path the browser uses, so
-callbacks, widget reconciliation, and stale-node cleanup are the runtime's
-existing behavior rather than a second implementation.
+ForwardMsgs instead of writing them to a WebSocket. Input goes through the same
+``rerun_script`` path the browser uses, so callbacks, widget reconciliation, and
+stale-node cleanup are the runtime's own behavior.
 """
 
 from __future__ import annotations
@@ -40,8 +39,8 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ContextInfo
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import snapshot as snapshot_module
+from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.agent.widget_patch import (
-    AgentRequestError,
     build_widget_states,
     resolve_fragment,
 )
@@ -71,6 +70,18 @@ _SETTLING_STATUSES: Final = frozenset(
         ForwardMsg.FINISHED_WITH_COMPILE_ERROR,
     }
 )
+
+
+def _compacted(msg: ForwardMsg) -> ForwardMsg:
+    """``msg`` compacted, or ``msg`` itself if it cannot be summarized."""
+    try:
+        return snapshot_module.compact_delta(msg)
+    except Exception:
+        _LOGGER.warning(
+            "Could not summarize an agent session payload; keeping it whole.",
+            exc_info=True,
+        )
+        return msg
 
 
 class AgentSessionClient(SessionClient):
@@ -110,6 +121,8 @@ class AgentSessionClient(SessionClient):
         # accumulated.
         self._lifecycle: dict[str, ForwardMsg] = {}
         self._run_finished = asyncio.Event()
+        # Set while an interaction has asked for a run that has not started.
+        self._awaiting_run = False
         # When the last run settled, which is session activity even when no
         # request is waiting for it.
         self.finished_at = time.monotonic()
@@ -122,12 +135,25 @@ class AgentSessionClient(SessionClient):
         self.fragments_last_run: list[str] = []
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
+        """Buffer a message. Never raises.
+
+        Called inside the runtime's message loop, which an exception would end
+        for every session on the server, browsers included. A failure here is
+        logged, and costs at most this session's snapshot.
+        """
+        try:
+            self._write(msg)
+        except Exception:
+            _LOGGER.exception("Agent session client failed to buffer a message.")
+
+    def _write(self, msg: ForwardMsg) -> None:
         msg_type = msg.WhichOneof("type")
 
         if msg_type == "new_session":
             self._run_id = msg.new_session.script_run_id
             self.fragments_last_run = list(msg.new_session.fragment_ids_this_run)
             self._element_at = {}
+            self._awaiting_run = False
             self._run_finished.clear()
 
         if msg_type == "delta":
@@ -144,7 +170,10 @@ class AgentSessionClient(SessionClient):
             self._drop_stale_deltas()
             self._compact_deltas()
             self.finished_at = time.monotonic()
-            self._run_finished.set()
+            # A run the interaction superseded can still finish before the one
+            # it asked for starts, and its result would answer the request.
+            if not self._awaiting_run:
+                self._run_finished.set()
 
     def _add_delta(self, msg: ForwardMsg) -> None:
         position = tuple(msg.metadata.delta_path)
@@ -165,10 +194,13 @@ class AgentSessionClient(SessionClient):
 
         What stays buffered after a run settles is what the session costs
         between interactions, so a table is kept as the preview the snapshot
-        reads, not the full Arrow bytes `data.url` already serves.
+        reads, not the full Arrow bytes `data.url` already serves. Only the
+        finished run's deltas need it: older ones were compacted when their own
+        run settled.
         """
         self._deltas = [
-            (run_id, snapshot_module.compact_delta(msg)) for run_id, msg in self._deltas
+            (run_id, _compacted(msg) if run_id == self._run_id else msg)
+            for run_id, msg in self._deltas
         ]
 
     def _drop_stale_deltas(self) -> None:
@@ -189,10 +221,6 @@ class AgentSessionClient(SessionClient):
         ]
 
     @property
-    def run_finished(self) -> bool:
-        return self._run_finished.is_set()
-
-    @property
     def messages(self) -> list[ForwardMsg]:
         return [*self._lifecycle.values(), *(msg for _, msg in self._deltas)]
 
@@ -202,6 +230,7 @@ class AgentSessionClient(SessionClient):
 
     def begin_interaction(self) -> None:
         self._run_finished.clear()
+        self._awaiting_run = True
         self.query_string_update = None
 
     async def wait_until_settled(self, timeout: float) -> None:
@@ -378,16 +407,16 @@ def session_digest(handle: str) -> str:
 
 
 def _idle_since(session: AgentSession) -> float | None:
-    """When a session last did anything, or None while it is busy.
+    """When a session last did anything, or None while a request is in flight.
 
-    A run that outlasted `run_timed_out` keeps going, and its client was told
-    to come back for it, so the session stays busy until that run finishes and
-    its idle time counts from then: reclaiming it would stop the run and lose
-    the result the client is about to collect.
+    Activity is the client's last request or the last run finishing, whichever
+    is later. A run that outlasted `run_timed_out` is therefore kept while the
+    client keeps coming back for it, and gets a full TTL after it finishes to
+    be collected. One nobody comes back for -- including a run that never
+    finishes, such as a `while True` dashboard -- is stopped a TTL after the
+    last request, rather than holding the session forever.
     """
     if session.lock.locked():
-        return None
-    if session.timed_out is not None and not session.client.run_finished:
         return None
     return max(session.last_used, session.client.finished_at)
 
@@ -655,6 +684,15 @@ def _validate_request_shape(request: dict[str, Any]) -> None:
             "has a `key` and, for payload-bearing triggers, a `value`.",
         )
 
+    # Checked here, before a creating call allocates a session, rather than
+    # where they are applied; parsing them has no effect.
+    if request.get("page") is not None and not isinstance(request["page"], str):
+        raise AgentRequestError("invalid_request", "`page` must be a string.")
+    if request.get("query_params") is not None:
+        _encode_query_params(request["query_params"])
+    if request.get("context") is not None:
+        _parse_context(request["context"])
+
 
 def _resolve_page(app_session: Any, page: Any, *, can_defer: bool) -> tuple[str, str]:
     """Map a public ``url_path`` to a rerun target.
@@ -761,7 +799,9 @@ def _parse_context(context: Any) -> ContextInfo:
     if timezone is not None:
         try:
             zone = ZoneInfo(timezone) if isinstance(timezone, str) else None
-        except (ZoneInfoNotFoundError, ValueError):
+        # OSError: some Python versions raise IsADirectoryError for a name
+        # that is a directory of zones, such as "America".
+        except (ZoneInfoNotFoundError, ValueError, OSError):
             zone = None
         if zone is None:
             raise AgentRequestError(

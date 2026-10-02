@@ -15,7 +15,7 @@ file records what *using* it as an agent is like, including two downstream
 tasks the spec names as consumers of the same snapshot: a personalized email
 report and a static HTML export.
 
-Nine trials, same protocol, growing app set. The first found holes where the
+Ten trials, same protocol, growing app set. The first found holes where the
 snapshot was dishonest. Later trials re-ran after patches. The fifth added an
 element gallery to sweep many `st.*` commands at once. The sixth is the first
 that can drive `@st.fragment` regions and `st.dialog` bodies the way a browser
@@ -25,8 +25,9 @@ internal `streamlit/streamlit` dashboard, using only the iframe-prefixed agent
 API. The eighth stayed on that host with harder cross-page questions. The
 ninth asked a different set (enhancement rollup, P2 identity, AI-workflow
 isolation, pytest / lighthouse / wheel / GitHub stats, query-param retention,
-MCP structured content). Callers were not allowed to read GitHub or the app
-source.
+MCP structured content). The tenth left that host and drove two new
+multipage Vega apps on localhost. Callers were not allowed to read GitHub
+or the app source.
 
 Challenge apps and raw notes live under `work-tmp/agent-challenges/` (gitignored).
 The apps are not the product; they exist to exercise the API.
@@ -47,6 +48,8 @@ be one-shot parameterizable:
 | Equity tape | Vega `stocks` | 8516 | Ticker pills; `1Y`/`5Y`/`YTD`/`All` time range; `st.toggle` index-to-100; Altair lines; calendar-year page; overlay rebuild button |
 | Element gallery | Vega cars / airports / weather | 8520 | Coverage sweep of public `st` widgets, display, charts, layouts, forms, chat, tabs, status, two named fragments, a driveable dialog, media |
 | Issue explorer (live) | `streamlit/streamlit` dashboards | [issues.streamlit.app](https://issues.streamlit.app/~/+/) | 21 pages; open issues + labels; interrupt rotation fragments; AI workflow pills; flaky tests; coverage; community PRs; wiki `file` bind |
+| Delay network | Vega `flights-10k` | 8531 | February origin → destination; lazy chart tabs; route fragment; desk form, chat, dialog |
+| Strike ledger | Vega `birdstrikes` | 8532 | Year / phase / night filters; airport drill-down; species fragment; case-file form and errors |
 
 The extra apps follow the bundled developing-with-streamlit guidance
 (`st.navigation` + `app_pages/` with titles in `streamlit_app.py`, top nav for
@@ -94,6 +97,16 @@ Five challenges, each a separate agent pointed at
     bugs those are, AI Issue Triage isolated vs the mosaic tiles, pytest /
     lighthouse / wheel / GitHub stats, whether `label` survives navigation,
     MCP `structuredContent`. No GitHub API.
+12. **Delay network** — February 2001 PHX, highest late-rate destination at
+    the default minimum size; route hour fragment; desk note, watch, dialog,
+    chat, CSV download; lazy tabs; read-only selection and editor.
+13. **Strike ledger** — 2000 costliest species and year totals; Night
+    substantial count; busiest airport vs highest-cost airport; species
+    fragment; case-file form, chat, handled and uncaught errors.
+14. **Interaction sweep** — both apps: value widgets, forms, fragments,
+    dialogs, lazy and eager tabs, charts, protocol errors, MCP.
+15. **February PHX briefing** — email plus static HTML for one persona,
+    citing app, page, filters, and `observed_at`.
 
 Answers matched independent aggregates of the Vega catalogs in every trial.
 
@@ -919,12 +932,139 @@ recovered; the naked origin’s health check did not, in that window.
 | Click / row-select captions | Still not in `actions` (pytest, lighthouse, frontend coverage). |
 | Email / HTML | **True** for these KPIs and for the 2-row P2 Arrow, if `/media/` is fetched before the next filter. |
 
+## Tenth trial (two new Vega apps)
+
+Library as of this branch, `x-streamlit-version` **1.64.0**, `schema_version` 1.
+Four callers, OpenAPI only, no app source. Apps on localhost with
+`server.enableAgentApi`: Delay network (`flights-10k`, port 8531) and Strike
+ledger (`birdstrikes`, port 8532). Notes:
+`work-tmp/agent-challenges/r10/reports/`.
+
+### Answers (matched an independent aggregate)
+
+**February 2001, PHX, late means delay greater than 15, minimum group size 20.**
+SAN is the highest late-rate destination: **28** flights, **10** late, rate
+**0.357143**, mean delay **24.8571** min, median distance **304** miles. PHX
+that month: **202** flights, rate **0.301980**, mean **14.5743**. All origins:
+**3110** flights, rate **0.233762**, mean **10.0653**. Route page for PHX→SAN
+repeats the 304-mile median. Busiest hour is **12** (4 flights, mean delay
+23.5). Changing only the hour slider left the full-app run counter still and
+incremented the hour-inspector counter.
+
+**Year 2000, costly means cost greater than zero.** Canada goose: **20**
+strikes, **$4,187,957**, **10** costly. Year: **1065** strikes, **40** costly,
+**$7,259,985**, top phase Approach **495**. Night: **371** strikes, **4**
+Substantial (those 4 are a base64 int16 array inside the Plotly spec, not a
+table). Dallas/Fort Worth has the most strikes (**103**, **$0**). Philadelphia
+has the highest cost (**22** strikes, **$3,367,644**). The species inspector
+changed species without moving the full-app counter.
+
+**Briefing.** Email and static HTML for February PHX cite app title, page
+title, empty `url_path`, `observed_at` `2026-10-02T11:08:35Z`, and the active-filter
+caption. `query_params` on that snapshot was `{}`. The destination table was
+inlined from Arrow. The histogram needed no URL: delays sit in `spec` as
+`bdata`. A scatter `data.url` returned all 202 rows and was inlined. Those
+media URLs still answered 200 a few minutes after the element left the page.
+
+### What this round could drive
+
+Value widgets on both apps, including cascading destination options, a range
+slider that stays disabled until a checkbox, multi pills, `select_slider`,
+date, time, color, and feedback. Forms reject fields without that form’s
+submit (`400 missing_form_submit`) and accept one `FormSubmitter:…` trigger.
+Menu options reject unknowns with `400 invalid_value` and the legal list.
+Chat replies show up as `chat_message` markdown. Lazy tabs omit the unselected
+chart. Eager desk tabs include both children. A popover’s selectbox is in
+`actions` while `open` is false. Download buttons expose `props.url` before
+the trigger; GET returns the CSV. Fragments rerun alone. Handled
+`st.exception` stays `status: ready`. An uncaught raise is HTTP 200
+`status: error` and the next interact is `ready`.
+
+MCP `POST /_stcore/agent/v1/mcp` is an OpenAPI path. `initialize` negotiates
+`2025-06-18`. `tools/call` returns `structuredContent` and a text block. GET
+is 405 with an empty body.
+
+### Previously open, now different
+
+| Issue | Tenth trial |
+| --- | --- |
+| MCP missing from OpenAPI `paths` | **Fixed.** The path is listed. GET is still an empty 405, not the JSON error envelope. |
+| Dialog key not in `actions`; no dismiss | **Partly fixed.** While open, `actions` includes `confirm_clear_*` and the dialog key `$$ID-…-None`. Firing that key closes the dialog and keeps the note. Confirm clears the log. There is still no control labeled dismiss. |
+| `st.mermaid_chart` is `markdown` | **Not this round.** The node type is `mermaid_chart` and the source is `props.body`. |
+| `unknown_page` without pages | **Still fixed.** `404 unknown_page` includes `session_id` and `error.pages`. The message says the default page ran. |
+| Fragment-scoped rerun | **Works** on the hour slider and the species selectbox. |
+| One-shot bound `query_params` | **Works** (`month`, `origins`, `late_minutes`, `exclude_early`, `strike_year`). Values come back as string lists; widgets are typed. |
+| `clear_on_submit` | **Still open.** See below. |
+
+### New or sharper this round
+
+**AJ. A stale `query_params` entry is applied again on navigation and overwrites a later edit.**
+On Delay, clearing `origins` to `[]` updated the widget and left the previous
+list in `query_params`. The next `page` put that list back. On Strike, a
+session created with `strike_year: ["2000"]` then set to `2001` kept
+`query_params` at 2000; navigating to Airport restored the year widget to
+2000. The navigation snapshot itself often shows `query_params: {}` while the
+widgets still hold the values, and a later rerun or a return to the first page
+puts the echoed keys back. Echo is not uniform: Delay wrote `month`,
+`origins`, `late_minutes`, and `exclude_early` into `query_params` on some
+patches; Strike’s year slider on a session whose query string was still empty
+did not echo until a later page, while `costly_only` did echo once a query
+string already existed. Bool strings flipped between `True` and `true` across
+a round trip.
+
+**AK. Unbound keys are stored in `query_params` and do not change the widget.**
+A creating call with `min_flights: ["100"]`, `wildlife_size: ["Large"]`,
+`time_of_day: ["Night"]`, or `limit_distance: ["true"]` echoes those keys and
+leaves the widgets at their defaults. The help text on minimum flights, size,
+and time of day says they are not bound. Citing `query_params` from that
+snapshot describes filters the page did not apply. Metrics stayed on the
+unfiltered catalog (10,000 flights, 10,000 strikes).
+
+**AL. An open expander’s body is the next sibling, not `children`.**
+`definitions` with `expanded: true` has `children: []`. The methodology
+paragraph is the following `markdown` node. The same shape holds for the
+strike field-name expander. A closed expander does not include that paragraph.
+Lazy tabs, by contrast, put the open tab’s charts in that tab’s `children`
+and leave the others empty.
+
+**AM. `st.progress` reports an integer percent.** The app passed a 0–1 late
+rate. The snapshot says `value: 20` next to text `Late rate 20.7%`. Page
+metrics are display strings (`"10,000"`, `"14.6 min"`, `"30.2%"`,
+`"$40,545,276"`). The hour-fragment metric is the exception: numeric `value`
+plus `display_value`. `st.json` `props.body` is a string. Feedback sent as
+`4` comes back as `"4"`, and `props.options` is `"stars"` rather than a list.
+
+**AN. Plotly `complete: true` is not an Arrow table.** The histogram inlines
+`{dtype: "i2", bdata: …}` and sets `spec_omitted: ["layout.template"]`. No
+`url`. Selection is `support: read_only_in_v1` (`400 unsupported_element`).
+ECharts is an inlined spec, also `complete: true`, also no Arrow. `st.map` is
+`complete: true` with `row_count` and a media URL, but no `preview` and no
+`columns`; the points are in the deck layer and in that Arrow file. A native
+`line_chart` spec still carries `width: 0` and `height: 0`. Altair, bar, and
+scatter on these pages have both a spec and Arrow.
+
+### Scorecard deltas
+
+| Item | Tenth trial |
+| --- | --- |
+| Drill-down numbers | **Match** the Vega aggregates, from captions and from Arrow/CSV. |
+| Fragment rerun | **Works.** Full-app counter stays; fragment counter moves. |
+| `clear_on_submit: true` | **Still does not clear** on save or discard, on both apps. The success line is what shows the submit landed. |
+| `query_params` as the filter citation | **Unsafe.** Empty, stale, partial, or holding unbound keys. Widget values and the active-filter caption matched the numbers. |
+| Lazy tabs | **Honest.** Unselected charts are absent. |
+| Dialog dismiss | **Possible**, via `$$ID-…-None`. |
+| Read-only selection, editor, uploader, Plotly select | **`400 unsupported_element`.** A selection key the current filter does not render is **`409 not_on_page`**. Disabled writes are **`409 disabled_widget`**. |
+| MCP | **In OpenAPI**, with `structuredContent`. |
+| Email / HTML | **True** for this KPI briefing if the exporter trusts captions over `query_params` and inlines Arrow or `bdata` immediately. |
+
 ## Remaining issues (prioritized)
 
 ### 1. `clear_on_submit`
 
 Form `clear_on_submit: true` still leaves submitted field values in the snapshot.
-Lazy expanders of the same shape as lazy tabs are now addressable.
+The tenth trial saw this on save and on discard, on both apps, including the
+next interact. Lazy expanders are addressable, but an open expander’s
+paragraph is the next sibling: `children` stays empty.
 
 ### 2. `props` that contradict `value`
 
@@ -947,6 +1087,16 @@ widget and still returned `label: ["type:bug", "priority:P2"]`. A creating-call
 do seed on create. Do not cite `query_params` as “the filters that produced
 this page.”
 
+**Tenth trial, local Vega apps.** One-shot bound params still seed the
+widgets, and the echo is a list of strings (`late_minutes: ["30"]`,
+`exclude_early: ["True"]`, later `["true"]`). A later `widget_state` edit
+does not reliably replace that echo. Navigation then reapplies the stale
+entry (cleared origins come back; year 2001 reverts to the created 2000)
+while the navigation snapshot often shows `query_params: {}`. Unbound create
+params (`min_flights`, `wildlife_size`, `time_of_day`, `limit_distance`) are
+stored and do not move the widget. The active-filter caption and the widget
+`value`s matched the numbers. `query_params` did not.
+
 ### 4. Surfaces without a full data contract
 
 Vega/Altair charts and **`st.map` now have Arrow.** **`st.echarts_chart` and
@@ -954,15 +1104,20 @@ Vega/Altair charts and **`st.map` now have Arrow.** **`st.echarts_chart` and
 figure `spec` inlined and now names `spec_omitted: ["layout.template"]`.
 Small coverage figures are a few kilobytes; load testing was still
 **492 KB** (twelve ~38 k-char specs) and Playwright performance **317 KB**.
-Displayed `st.exception` still flips interact `status` to `error`.
-`st.mermaid_chart` is `markdown`.
+Displayed `st.exception` still flips interact `status` to `error` when the
+exception is uncaught. A handled `st.exception` stays `status: ready`.
+On the tenth trial `st.mermaid_chart` is its own node and the source is
+`props.body`. Plotly `complete: true` can be a `bdata` blob with no Arrow
+URL. `st.map` has an Arrow URL and no `preview` or `columns`. A native
+`line_chart` spec still has `width: 0` and `height: 0`. `st.progress`
+`value` was the integer `20` beside `Late rate 20.7%`.
 
 ### 5. Other papercuts
 
 - **Watchlist `wl_title.options`** dumps ~3176 strings into every snapshot on that page. Live Issue explorer dumps 497 / 157 / 591 / 256 the same way.
 - **Generated keys** are the default on a real app. Copy from `actions`; do not persist.
 - **Iframe / embed prefix** is required on Community Cloud (`/~/+/`). OpenAPI now has `servers: [{url: "/"}]`; that only helps if the document was fetched under the prefix. Naked origin is still 303. `Link` is still stripped.
-- **MCP** works on the prefix (`tools/list` + `tools/call`) but is not an OpenAPI `paths` entry. GET is 405. Tool output is a JSON string in text content.
+- **MCP** is an OpenAPI path as of the tenth trial (`POST /_stcore/agent/v1/mcp`). `structuredContent` arrives at protocol `2025-06-18`, with a JSON text block beside it. GET is 405 with an empty body, same as GET interact.
 - **`clear_on_submit`** is advertised and not applied (see #1).
 - **Tabs** with `on_change="rerun"` are now addressable. Eager tabs still dump every child.
 - **Metric values** are still display strings when the author formats them (`98.88%`, `9m 5s`). Duplicate labels collide (AI usage, load-testing scenarios). On this host `chart_data` is under `data`.
@@ -972,8 +1127,8 @@ Displayed `st.exception` still flips interact `status` to `error`.
 - **Catalog preview order** is not “top by the page’s sort.”
 - **Plotly / echarts** inline a spec with `complete: true` and no Arrow (`spec_omitted` drops the theme only).
 - **Dataframe and chart selection** are not in `actions`; captions may still say “click.”
-- **Dialog overlay** still has a generated tree `key` that is not in `actions` (acting on it is `unknown_key`). Confirm *is* in `actions` while the dialog is open.
-- **No dismiss action.** `props.dismissible: true` is advertised; closing is a full rerun, not an overlay-only X.
+- **Dialog dismiss** is the generated trigger `$$ID-…-None`, listed in `actions` while the dialog is open. Firing it closes the dialog and leaves the saved note. Confirm is a separate trigger. There is still no control labeled dismiss.
+- **`st.json` body is a string.** Feedback `value` is a string (`"4"`) and `props.options` is `"stars"`, not a list. `page_link` to a default page whose `url_path` is `""` omits `page`.
 - **Popover children** are in the tree and addressable while closed.
 - **Long first paints / dead sessions** on this host: `github_stats` >180 s; reused `session_id` ended in connection refused. Prefer one-shot `{page}` creates.
 - **`unknown_page.pages`** is now populated (was AA).
@@ -1040,6 +1195,15 @@ stats (194 KB) and the enhancement catalog (867 rows) are the same shape
 of briefing: metrics and captions from the snapshot, tables from Arrow,
 figures left as `spec_omitted` charts.
 
+**Round 10:** still true for a February PHX briefing, with one extra
+footnote. The email cited the active-filter caption and the widget values.
+`query_params` on that snapshot was empty, and on other sessions it was
+stale or held keys the page did not apply. The HTML inlined the 3-row
+destination Arrow and two extremes from a 202-row scatter Arrow. The
+histogram was inlined from Plotly `bdata`, not from a media URL. Media URLs
+in that session still returned 200 after the chart had left the tree; the
+exporter fetched them before relying on that.
+
 ## First trial (baseline)
 
 Same apps and challenges, before the patches. All five completed without a browser.
@@ -1071,4 +1235,9 @@ fetches iframe-prefixed Arrow immediately, and inlines it — that is how
 the 115-row `type:bug` catalog, the 2025 closer table, and the interrupt
 metrics were cited, without GitHub. Round 9 added the enhancement catalog,
 the two current P2 bugs, and the GitHub-stats KPIs the same way. `label`
-in `query_params` is still not a citation of the page you are on.
+in `query_params` is still not a citation of the page you are on. Round 10,
+on two local Vega apps, is the same citation rule with a sharper failure:
+a stale query param is written back onto the widgets at the next page
+change, and an unbound param can sit in `query_params` without filtering
+anything. Fragments, lazy tabs, one-shot bound params, Arrow, and MCP
+`structuredContent` held. `clear_on_submit` still does not clear.

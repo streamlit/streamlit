@@ -32,6 +32,7 @@ import math
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
     is_array_value_field_name,
@@ -43,33 +44,6 @@ if TYPE_CHECKING:
     from streamlit.runtime.agent.snapshot import ElementState
     from streamlit.runtime.state.common import ValueFieldName, WidgetMetadata
     from streamlit.runtime.state.session_state import SessionState
-
-
-class AgentRequestError(Exception):
-    """A request the interface refuses.
-
-    Usually nothing has executed. Two cases have: ``run_timed_out``, whose run
-    is still going, and a creating call whose ``page`` could only be judged
-    after the app ran, because the page list did not exist before. A creating
-    call that fails after its session exists carries ``session_id``, so the
-    caller can continue with that session rather than strand it.
-    """
-
-    def __init__(
-        self,
-        code: str,
-        message: str,
-        *,
-        session_id: str | None = None,
-        details: dict[str, Any] | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
-        self.session_id = session_id
-        # Machine-readable fields for errors whose remedy is a choice from a
-        # list, so a client does not have to parse the message to recover.
-        self.details = details or {}
 
 
 # Value types that reset after the run that observed them. These are the only
@@ -404,7 +378,15 @@ def _validate_bounded(
         return
 
     expected = state.value
-    if isinstance(expected, list):
+    if isinstance(expected, list) and state.element_type == "date_input":
+        # A date range holds zero, one, or two dates, so the one it holds now,
+        # possibly empty, is not the arity to enforce.
+        if not isinstance(value, list) or len(value) > 2:
+            raise AgentRequestError(
+                "invalid_value",
+                f"{key!r} takes a list of up to two dates; got {value!r}.",
+            )
+    elif isinstance(expected, list):
         if not isinstance(value, list) or len(value) != len(expected):
             raise AgentRequestError(
                 "invalid_value",
