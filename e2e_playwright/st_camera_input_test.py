@@ -256,7 +256,12 @@ def test_camera_input_on_change_ignore(app: Page):
     expect(take_photo_button).to_be_enabled()
     take_photo_button.click()
 
+    # "Clear photo" is briefly visible before the JPEG upload starts, so it is
+    # not a completion signal. Snapshot opacity reaches 1 only after upload
+    # finishes (shutter is cleared in onUploadComplete).
+    expect(ignore_camera.get_by_alt_text("Snapshot")).to_have_css("opacity", "1")
     expect(ignore_camera.get_by_text("Clear photo")).to_be_visible()
+    expect(ignore_camera.get_by_test_id("stCameraInputButton").first).to_be_enabled()
     wait_for_app_run(app)
 
     expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
