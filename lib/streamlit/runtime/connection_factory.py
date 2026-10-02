@@ -36,6 +36,9 @@ if TYPE_CHECKING:
 #   1. Adding the new connection name and class to this dict.
 #   2. Writing two new @overloads for connection_factory (one for the case where the
 #      only the connection name is specified and another when both name and type are).
+#      The name-only overload still takes `type: Literal["..."] | None = None` so a
+#      second positional binds to `type` (as at runtime) and a conflicting `type=`
+#      is not swallowed by **kwargs.
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
 _FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
     "snowflake": SnowflakeConnection,
@@ -144,6 +147,7 @@ def _get_first_party_connection(connection_class: str) -> type[BaseConnection[An
 @overload
 def connection_factory(
     name: Literal["sql"],
+    type: Literal["sql"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     autocommit: bool = False,
@@ -167,6 +171,7 @@ def connection_factory(
 @overload
 def connection_factory(
     name: Literal["snowflake"],
+    type: Literal["snowflake"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     autocommit: bool = False,
@@ -190,6 +195,7 @@ def connection_factory(
 @overload
 def connection_factory(
     name: Literal["snowflake-callers-rights"],
+    type: Literal["snowflake-callers-rights"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
     autocommit: bool = False,
