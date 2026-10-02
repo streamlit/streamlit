@@ -389,7 +389,6 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     if (this.csrfEnabled) {
       const xsrfCookie = getCookie("_streamlit_xsrf")
       if (notNullOrUndefined(xsrfCookie)) {
-        // AxiosHeaders is a class instance; flatten it with toJSON() before spreading.
         params.headers = {
           "X-Xsrftoken": xsrfCookie,
           ...toPlainRequestHeaders(params.headers),
@@ -405,9 +404,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 }
 
 /**
- * Flatten axios request headers to a plain object so object-spread does not
- * copy an AxiosHeaders class instance. Keep supported Axios header values
- * (strings, arrays, numbers, booleans).
+ * Copy axios request headers into a plain object so object-spread does not
+ * copy an AxiosHeaders class instance. Use `Object.entries` rather than
+ * `toJSON()`, which omits `false`/`null` sentinels axios uses to skip later
+ * defaults such as `Content-Type`.
  */
 function toPlainRequestHeaders(
   headers: AxiosRequestConfig["headers"]
@@ -416,10 +416,5 @@ function toPlainRequestHeaders(
     return {}
   }
 
-  const source =
-    "toJSON" in headers && typeof headers.toJSON === "function"
-      ? headers.toJSON()
-      : headers
-
-  return { ...(source as RawAxiosRequestHeaders) }
+  return Object.fromEntries(Object.entries(headers))
 }
