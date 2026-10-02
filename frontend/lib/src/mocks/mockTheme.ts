@@ -18,6 +18,7 @@
 
 import { transparentize } from "color2k"
 
+import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
 import { createEmotionColors } from "~lib/theme/getColors"
 import { createShadows } from "~lib/theme/getShadows"
 import { breakpoints } from "~lib/theme/primitives/breakpoints"
@@ -38,11 +39,11 @@ import { zIndices } from "~lib/theme/primitives/zIndices"
 import type { ThemeConfig } from "~lib/theme/types"
 
 const requiredThemeColors = {
-  bgColor: colors.white,
-  secondaryBg: colors.gray20,
-  bodyText: colors.gray85,
+  bgColor: themeColors.bgColor,
+  secondaryBg: themeColors.secondaryBg,
+  bodyText: themeColors.bodyText,
 
-  primary: colors.red70,
+  primary: themeColors.primary,
   secondary: colors.blue70,
 
   // Default main theme colors (light theme)

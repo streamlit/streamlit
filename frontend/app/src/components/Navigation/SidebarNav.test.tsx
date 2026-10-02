@@ -18,7 +18,11 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import * as LibModule from "@streamlit/lib"
-import { mockEndpoints, type NavigationContextProps } from "@streamlit/lib"
+import {
+  mockEndpoints,
+  mockTheme,
+  type NavigationContextProps,
+} from "@streamlit/lib"
 import {
   renderWithContexts,
   type RenderWithContextsOptions,
@@ -604,7 +608,9 @@ describe("SidebarNav", () => {
 
     // isActive prop used to style background color, so check that
     expect(links[0]).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
-    expect(links[1]).toHaveStyle("background-color: rgba(151, 166, 195, 0.25)")
+    expect(links[1]).toHaveStyle(
+      `background-color: ${mockTheme.emotion.colors.darkenedBgMix25}`
+    )
   })
 
   describe("custom visibleItems via sidebarNavVisibleItems", () => {

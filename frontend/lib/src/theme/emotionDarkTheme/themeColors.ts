@@ -20,11 +20,11 @@ import { colors } from "~lib/theme/primitives/colors"
 
 export default {
   ...colors,
-  bgColor: colors.gray100,
-  bodyText: colors.gray10,
+  bgColor: "#171614",
+  bodyText: "#EDEBE8",
 
-  primary: colors.red70,
-  secondaryBg: colors.gray90,
+  primary: "#F2919A",
+  secondaryBg: "#2D2B27",
 
   // Default main theme colors (dark theme)
   redColor: colors.red80,
