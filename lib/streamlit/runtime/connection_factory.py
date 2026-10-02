@@ -40,10 +40,12 @@ if TYPE_CHECKING:
 #        Otherwise the type checker binds a second positional argument to
 #        `max_entries` (runtime binds it to `type`) and absorbs a conflicting
 #        `type=` into `**kwargs`.
-#      - Declare `autocommit` as keyword-only. The implementation accepts only
-#        `name`, `type`, `max_entries`, and `ttl` positionally; `autocommit`
-#        arrives through `**kwargs`.
+#      - Declare connection-specific parameters (such as `autocommit`) as
+#        keyword-only (`*`). The implementation accepts only `name`, `type`,
+#        `max_entries`, and `ttl` by position; other parameters come through
+#        `**kwargs`.
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
+#   4. Adding assert_type cases in lib/tests/streamlit/typing/connection_types.py.
 _FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
     "snowflake": SnowflakeConnection,
     "snowflake-callers-rights": SnowflakeCallersRightsConnection,

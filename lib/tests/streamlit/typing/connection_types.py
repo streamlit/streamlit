@@ -14,9 +14,9 @@
 
 """Type tests for st.connection.
 
-Overloads distinguish first-party names and types (``SQLConnection``,
-``SnowflakeConnection``, ``SnowflakeCallersRightsConnection``), an explicit
-connection class, and the fallback ``BaseConnection[Any]``.
+Overloads distinguish first-party names and type strings (SQLConnection,
+SnowflakeConnection, SnowflakeCallersRightsConnection), an explicit
+connection class, and the BaseConnection[Any] fallback.
 """
 
 from __future__ import annotations
@@ -45,14 +45,14 @@ if TYPE_CHECKING:
     # First-party name inference
     # =====================================================================
 
-    # name "sql", "snowflake", or "snowflake-callers-rights" infers the class
+    # Name "sql", "snowflake", or "snowflake-callers-rights" infers the class.
     assert_type(connection("sql"), SQLConnection)
     assert_type(connection("snowflake"), SnowflakeConnection)
     assert_type(
         connection("snowflake-callers-rights"), SnowflakeCallersRightsConnection
     )
 
-    # A non-literal name cannot be inferred and falls back to BaseConnection
+    # A non-literal name cannot be inferred and falls back to BaseConnection.
     custom_name: str = "pets"
     assert_type(connection(custom_name), BaseConnection[Any])
 
@@ -62,8 +62,9 @@ if TYPE_CHECKING:
     def first_party_name() -> Literal["sql", "snowflake"]:
         return "sql"
 
-    # A Literal union of first-party names does not match the name-only
-    # overloads; both checkers use the fallback `str` overload.
+    # A union of first-party name literals matches the fallback `str` overload,
+    # so the inferred type is BaseConnection[Any]. mypy does not split the union
+    # across the name-only overloads once that `str` overload matches.
     assert_type(connection(first_party_name()), BaseConnection[Any])
 
     # =====================================================================
@@ -92,8 +93,9 @@ if TYPE_CHECKING:
         SnowflakeCallersRightsConnection,
     )
 
-    # An explicit type wins over a first-party name
+    # An explicit type wins over a first-party name.
     assert_type(connection("sql", type="snowflake"), SnowflakeConnection)
+    assert_type(connection("sql", "snowflake"), SnowflakeConnection)
     assert_type(connection("snowflake", type="sql"), SQLConnection)
 
     sql_type: Literal["sql"] = "sql"
@@ -102,14 +104,15 @@ if TYPE_CHECKING:
     def first_party_type() -> Literal["sql", "snowflake"]:
         return "sql"
 
-    # Same fallback: a Literal union of first-party types is treated as `str`.
+    # A union of first-party type literals matches the str overload, so the
+    # inferred type is BaseConnection[Any].
     assert_type(connection("pets", type=first_party_type()), BaseConnection[Any])
 
-    # A non-literal type string cannot be narrowed
+    # A non-literal type string cannot be narrowed.
     dynamic_type: str = "my.custom.Connection"
     assert_type(connection("pets", type=dynamic_type), BaseConnection[Any])
 
-    # A dotted import path is a plain str, so the class cannot be inferred
+    # A dotted import path is a plain str, so the class cannot be inferred.
     assert_type(
         connection("pets", type="streamlit.connections.SQLConnection"),
         BaseConnection[Any],
@@ -129,20 +132,20 @@ if TYPE_CHECKING:
     assert_type(connection("custom", type=_CustomConnection), _CustomConnection)
     assert_type(connection("custom", _CustomConnection), _CustomConnection)
 
-    # A first-party name plus an explicit class uses the class
+    # A first-party name plus an explicit class uses the class.
     assert_type(connection("sql", type=SnowflakeConnection), SnowflakeConnection)
 
     # =====================================================================
     # max_entries, ttl, autocommit, and connection kwargs
     # =====================================================================
 
-    # max_entries accepts int or None
+    # `max_entries` accepts `int` or `None`.
     assert_type(connection("sql", max_entries=10), SQLConnection)
     assert_type(connection("sql", max_entries=None), SQLConnection)
     assert_type(connection("pets", type="sql", max_entries=4), SQLConnection)
     assert_type(connection("pets", "sql", 4), SQLConnection)
 
-    # ttl accepts float, timedelta, or None (int is compatible with float)
+    # `ttl` accepts `float`, `timedelta`, or `None` (`int` is compatible with `float`).
     assert_type(connection("sql", ttl=60.0), SQLConnection)
     assert_type(connection("sql", ttl=60), SQLConnection)
     assert_type(connection("sql", ttl=timedelta(minutes=5)), SQLConnection)
@@ -152,16 +155,16 @@ if TYPE_CHECKING:
     )
     assert_type(connection("pets", "sql", 4, 60.0), SQLConnection)
 
-    # First-party overloads accept autocommit and still return the concrete class
+    # First-party overloads accept autocommit and still return the concrete class.
     assert_type(connection("sql", autocommit=True), SQLConnection)
     assert_type(connection("sql", autocommit=False), SQLConnection)
     assert_type(connection("pets", type="sql", autocommit=True), SQLConnection)
 
-    # Extra connection keywords are accepted and do not change the inferred class
+    # Extra connection keywords are accepted and do not change the inferred class.
     assert_type(connection("sql", url="sqlite://"), SQLConnection)
     assert_type(connection("pets", type="sql", dialect="sqlite"), SQLConnection)
 
-    # env: prefix is a runtime name lookup; the type cannot be inferred
+    # The `env:` prefix is a runtime name lookup; the type cannot be inferred.
     assert_type(connection("env:MY_SQL_CONN"), BaseConnection[Any])
 
     # =====================================================================
@@ -194,32 +197,32 @@ if TYPE_CHECKING:
     # Invalid usages - should NOT type check
     # =====================================================================
 
-    # name is required
+    # `name` is required.
     connection()  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
-    # name does not accept an int
+    # `name` does not accept an `int`.
     connection(123)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
-    # name does not accept None
+    # `name` does not accept `None`.
     connection(None)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
-    # type does not accept an int (must be a first-party literal, class, or str)
+    # `type` does not accept an `int` (must be a first-party literal, class, or str).
     connection("pets", type=123)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
-    # type does not accept a non-connection class
+    # `type` does not accept a non-connection class.
     connection("pets", type=int)  # type: ignore[type-var]  # ty: ignore[no-matching-overload]
 
-    # A second positional is type, not max_entries
+    # A second positional is `type`, not `max_entries`.
     connection("sql", 10)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
-    # type cannot be passed both positionally and as a keyword
+    # `type` cannot be passed both positionally and as a keyword.
     connection("sql", "sql", type="snowflake")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
-    # max_entries does not accept a str
+    # `max_entries` does not accept a `str`.
     connection("sql", max_entries="10")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
-    # ttl does not accept a list
+    # `ttl` does not accept a list.
     connection("sql", ttl=[60])  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
-    # autocommit is keyword-only (runtime only accepts four positionals)
+    # `autocommit` is keyword-only (runtime only accepts four positionals).
     connection("sql", "sql", 1, 30.0, True)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
