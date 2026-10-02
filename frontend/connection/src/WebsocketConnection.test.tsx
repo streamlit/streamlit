@@ -2036,3 +2036,128 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
     // The test passing without errors verifies the fix works correctly
   })
 })
+
+describe("WebsocketConnection unexpected frames", () => {
+  type SocketListener = (event: MessageEvent) => void
+
+  class MockWebSocket {
+    public url: string
+    public protocols?: string | string[]
+    public binaryType = "blob"
+    public readyState = 0
+    public readonly listeners = new Map<string, SocketListener[]>()
+
+    constructor(url: string, protocols?: string | string[]) {
+      this.url = url
+      this.protocols = protocols
+    }
+
+    public addEventListener(type: string, listener: SocketListener): void {
+      const existing = this.listeners.get(type) ?? []
+      existing.push(listener)
+      this.listeners.set(type, existing)
+    }
+
+    public dispatchMessage(data: unknown): void {
+      for (const listener of this.listeners.get("message") ?? []) {
+        listener({ data } as MessageEvent)
+      }
+    }
+
+    public close(): void {
+      this.readyState = 3
+    }
+
+    public send(_data: unknown): void {
+      // No-op: these tests only dispatch inbound frames
+    }
+  }
+
+  let originalWebSocket: typeof WebSocket
+  let lastSocket: MockWebSocket | undefined
+  let pingServerSpy: MockInstance
+
+  beforeEach(() => {
+    originalWebSocket = globalThis.WebSocket
+    lastSocket = undefined
+    globalThis.WebSocket = class extends MockWebSocket {
+      constructor(url: string, protocols?: string | string[]) {
+        super(url, protocols)
+        lastSocket = this
+      }
+    } as unknown as typeof WebSocket
+
+    pingServerSpy = vi
+      .spyOn(
+        WebsocketConnection.prototype as unknown as Record<
+          string,
+          () => Promise<void>
+        >,
+        "pingServer"
+      )
+      .mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    globalThis.WebSocket = originalWebSocket
+    pingServerSpy.mockRestore()
+  })
+
+  async function connectClient(): Promise<{
+    ws: WebsocketConnection
+    socket: MockWebSocket
+    args: Args
+  }> {
+    const args = createMockArgs()
+    const ws = new WebsocketConnection(args)
+    // @ts-expect-error - private state for test
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - private connectToWebSocket for test
+    await ws.connectToWebSocket()
+    if (!lastSocket) {
+      throw new Error("Expected MockWebSocket to be constructed")
+    }
+    return { ws, socket: lastSocket, args }
+  }
+
+  it("treats a non-ArrayBuffer frame as a fatal protocol mismatch", async () => {
+    const { ws, socket, args } = await connectClient()
+    // @ts-expect-error - private handleMessage for test
+    const handleMessage = vi.spyOn(ws, "handleMessage")
+
+    socket.dispatchMessage("proxy-keepalive")
+
+    expect(handleMessage).not.toHaveBeenCalled()
+    expect(args.sendClientError).toHaveBeenCalledWith(
+      "Websocket connection fatal error encountered",
+      expect.stringContaining("Unexpected Websocket message type"),
+      "Websocket Connection"
+    )
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      expect.objectContaining({
+        message: expect.stringContaining("Unexpected Websocket message type"),
+      })
+    )
+    ws.disconnect()
+  })
+
+  it("forwards ArrayBuffer frames to handleMessage", async () => {
+    const { ws, socket, args } = await connectClient()
+    const handleMessage = vi
+      // @ts-expect-error - private handleMessage for test
+      .spyOn(ws, "handleMessage")
+      .mockResolvedValue(undefined)
+    const payload = new ArrayBuffer(8)
+
+    socket.dispatchMessage(payload)
+
+    expect(handleMessage).toHaveBeenCalledWith(payload)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    expect(args.onConnectionStateChange).not.toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      expect.anything()
+    )
+    ws.disconnect()
+  })
+})

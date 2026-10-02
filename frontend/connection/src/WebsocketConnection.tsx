@@ -696,6 +696,8 @@ export class WebsocketConnection {
       if (checkWebsocket()) {
         const payload: unknown = event.data
         if (!(payload instanceof ArrayBuffer)) {
+          // binaryType is "arraybuffer"; any other frame type is a protocol
+          // mismatch, same as a decode failure.
           const err = `Unexpected Websocket message type: ${Object.prototype.toString.call(payload)}`
           LOG.error(err)
           this.stepFsm("FATAL_ERROR", err)

@@ -20,7 +20,6 @@
  */
 
 import {
-  DataType as ArrowDataType,
   type Field,
   Struct,
   type StructRow,
@@ -91,56 +90,30 @@ const LOG = getLogger("arrowFormatUtils")
 const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
 /**
- * Arrow `Field.type` is `any` on untyped tables. Use Arrow's typeId
- * guards so unit/timezone/scale stay correct even with a duplicate
- * apache-arrow copy in the bundle.
+ * Arrow `Field.type` is `any` on untyped tables, and some tests pass a
+ * `{ unit }` stub without a `typeId`. Read the property as `unknown` so
+ * both real Arrow instances (including a duplicate apache-arrow copy)
+ * and duck-typed fixtures stay `no-unsafe-argument` clean.
  */
 function getArrowTimeUnit(
   field: Field | undefined,
   fallback: TimeUnit
 ): TimeUnit {
-  const dataType: unknown = field?.type
-  if (
-    ArrowDataType.isTimestamp(dataType) ||
-    ArrowDataType.isTime(dataType) ||
-    ArrowDataType.isDuration(dataType)
-  ) {
-    const unit: unknown = dataType.unit
-    return typeof unit === "number" ? unit : fallback
-  }
-  // Arrow `Field.type` is `any` on untyped tables, and some tests pass a
-  // `{ unit }` stub without a `typeId`.
-  if (typeof dataType === "object" && dataType !== null) {
-    const unit: unknown = (dataType as { unit?: unknown }).unit
-    if (typeof unit === "number") {
-      return unit
-    }
-  }
-  return fallback
+  const dataType = field?.type as { unit?: unknown } | undefined
+  const unit: unknown = dataType?.unit
+  return typeof unit === "number" ? unit : fallback
 }
 
 function getArrowTimezone(field: Field | undefined): string | undefined {
-  const dataType: unknown = field?.type
-  if (ArrowDataType.isTimestamp(dataType) && dataType.timezone) {
-    return dataType.timezone
-  }
-  if (typeof dataType === "object" && dataType !== null) {
-    const timezone: unknown = (dataType as { timezone?: unknown }).timezone
-    return typeof timezone === "string" && timezone ? timezone : undefined
-  }
-  return undefined
+  const dataType = field?.type as { timezone?: unknown } | undefined
+  const timezone: unknown = dataType?.timezone
+  return typeof timezone === "string" && timezone ? timezone : undefined
 }
 
 function getArrowScale(field: Field | undefined): number {
-  const dataType: unknown = field?.type
-  if (ArrowDataType.isDecimal(dataType)) {
-    return dataType.scale
-  }
-  if (typeof dataType === "object" && dataType !== null) {
-    const scale: unknown = (dataType as { scale?: unknown }).scale
-    return typeof scale === "number" ? scale : 0
-  }
-  return 0
+  const dataType = field?.type as { scale?: unknown } | undefined
+  const scale: unknown = dataType?.scale
+  return typeof scale === "number" ? scale : 0
 }
 
 const formatMs = (duration: number): string =>

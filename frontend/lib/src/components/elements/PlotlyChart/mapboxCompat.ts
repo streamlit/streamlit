@@ -354,18 +354,17 @@ export function migratePlotlyMapboxFigure(figure: unknown): PlotlyFigureType {
       frames: null,
     }
   }
-  const source = figure
   return {
-    ...source,
-    data: Array.isArray(source.data)
-      ? source.data.map(migratePlotlyMapboxTrace)
-      : (source.data ?? []),
-    layout: isRecord(source.layout)
-      ? migratePlotlyMapboxLayout(source.layout)
-      : (source.layout ?? {}),
-    frames: Array.isArray(source.frames)
-      ? source.frames.map(migratePlotlyMapboxFrame)
-      : (source.frames ?? null),
+    ...figure,
+    data: Array.isArray(figure.data)
+      ? figure.data.map(migratePlotlyMapboxTrace)
+      : (figure.data ?? []),
+    layout: isRecord(figure.layout)
+      ? migratePlotlyMapboxLayout(figure.layout)
+      : (figure.layout ?? {}),
+    frames: Array.isArray(figure.frames)
+      ? figure.frames.map(migratePlotlyMapboxFrame)
+      : (figure.frames ?? null),
   } as PlotlyFigureType
 }
 

@@ -78,7 +78,9 @@ type UseDeckGlShape = {
   hasActiveSelection: boolean
   height: number | string
   isSelectionModeActivated: boolean
-  onViewStateChange: (params: ViewStateChangeParameters) => void
+  onViewStateChange: (
+    params: ViewStateChangeParameters<Record<string, unknown>>
+  ) => void
   selectionMode: DeckGlJsonChartProto.SelectionMode | undefined
   setSelection: React.Dispatch<
     React.SetStateAction<ValueWithSource<DeckGlElementState> | null>
@@ -156,10 +158,11 @@ const interpolate = (
       let rawValue: unknown
       if (Object.hasOwn(pickedObject, variable)) {
         rawValue = pickedObject[variable]
+      } else if (!Object.hasOwn(pickedObject, "properties")) {
+        return
       } else {
         const properties = pickedObject.properties
         if (
-          Object.hasOwn(pickedObject, "properties") &&
           typeof properties === "object" &&
           properties !== null &&
           Object.hasOwn(properties, variable)

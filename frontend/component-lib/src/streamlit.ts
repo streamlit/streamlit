@@ -177,12 +177,9 @@ export class Streamlit {
    * StreamlitRenderEvent.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for implicit component args typing.
-  private static readonly onRenderMessage = <ArgType = any>(data: {
-    args: ArgType
-    dfs?: ArgsDataframe[]
-    disabled?: boolean
-    theme?: Theme
-  }): void => {
+  private static readonly onRenderMessage = <ArgType = any>(
+    data: RenderEventData<ArgType>
+  ): void => {
     let args = data["args"]
     if (args === undefined || args === null) {
       args = {} as ArgType

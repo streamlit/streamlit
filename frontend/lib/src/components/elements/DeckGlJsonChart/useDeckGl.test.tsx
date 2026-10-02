@@ -188,6 +188,15 @@ describe("useDeckGl", () => {
         object: { unexpectedSchema: { elevationValue: 10 } },
         expected: "<b>Elevation Value:</b> {elevationValue}",
       },
+      {
+        description: "inherited properties getter (no interpolation)",
+        object: Object.create({
+          get properties() {
+            throw new Error("inherited properties should not be read")
+          },
+        }),
+        expected: "<b>Elevation Value:</b> {elevationValue}",
+      },
     ])(
       "should interpolate html correctly with $description",
       ({ object, expected }) => {
