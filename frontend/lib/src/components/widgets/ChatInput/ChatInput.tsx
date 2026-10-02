@@ -561,7 +561,7 @@ function ChatInput({
         setFiles(prevFiles => updateFile(id, fileInfo, prevFiles))
       },
       uploadClient,
-      element,
+      element: { id: element.id, formId: "" },
       onUploadProgress: (e: AxiosProgressEvent, fileId: number) => {
         setFiles(prevFiles => {
           const file = getFile(fileId, prevFiles)
@@ -764,10 +764,7 @@ function ChatInput({
         // 2. Upload audio file with progress tracking
         uploadAbortControllerRef.current = new AbortController()
         await uploadClient.uploadFile(
-          {
-            formId: "",
-            ...element,
-          },
+          { id: element.id, formId: "" },
           fileUrls.uploadUrl as string,
           audioFile,
           () => {

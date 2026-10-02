@@ -388,9 +388,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     if (this.csrfEnabled) {
       const xsrfCookie = getCookie("_streamlit_xsrf")
       if (notNullOrUndefined(xsrfCookie)) {
+        // AxiosHeaders is a class; spreading it copies the wrong shape.
         params.headers = {
           "X-Xsrftoken": xsrfCookie,
-          ...params.headers,
+          ...toPlainRequestHeaders(params.headers),
         }
         params.withCredentials = true
       }
@@ -400,4 +401,27 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     const { default: axios } = await import("axios")
     return axios.request<T>(params)
   }
+}
+
+/**
+ * Flatten axios request headers to a plain record so object-spread does not
+ * copy an AxiosHeaders class instance.
+ */
+function toPlainRequestHeaders(
+  headers: AxiosRequestConfig["headers"]
+): Record<string, string> {
+  if (!headers) {
+    return {}
+  }
+
+  const source =
+    "toJSON" in headers && typeof headers.toJSON === "function"
+      ? headers.toJSON()
+      : headers
+
+  return Object.fromEntries(
+    Object.entries(source ?? {}).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string"
+    )
+  )
 }
