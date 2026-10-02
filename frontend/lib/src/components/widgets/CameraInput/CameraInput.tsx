@@ -576,6 +576,10 @@ const CameraInput = ({
         formId: element.formId,
         fragmentId,
         fromUser: true,
+        // on_change="ignore" buffers the value without scheduling a rerun.
+        // WidgetStateManager ignores triggerRerun inside forms (the form owns
+        // commit timing).
+        ...(element.ignoreRerun ? { triggerRerun: false } : {}),
       })
     }
   }, [status, files, widgetMgr, element, fragmentId])
