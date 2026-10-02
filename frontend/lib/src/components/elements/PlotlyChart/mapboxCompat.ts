@@ -30,13 +30,6 @@ import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
 
 const LOG = getLogger("PlotlyChart:mapboxCompat")
 
-/** Figure JSON that may still use plotly.js v3 Mapbox field names. */
-type LoosePlotlyFigure = {
-  data?: unknown
-  layout?: unknown
-  frames?: unknown
-}
-
 const MAPBOX_TRACE_TYPES: Record<string, string> = {
   scattermapbox: "scattermap",
   choroplethmapbox: "choroplethmap",
@@ -352,9 +345,15 @@ function migrateModeBarButtons(buttons: unknown): unknown {
  * Rewrite a plotly.js v3 Mapbox figure to the v4 MapLibre `map` API
  * while preserving already-migrated values.
  */
-export function migratePlotlyMapboxFigure(
-  figure: LoosePlotlyFigure
-): PlotlyFigureType {
+export function migratePlotlyMapboxFigure(figure: unknown): PlotlyFigureType {
+  if (!isRecord(figure)) {
+    LOG.warn("Plotly figure spec is not an object; using an empty figure")
+    return {
+      data: [],
+      layout: {},
+      frames: null,
+    }
+  }
   return {
     ...figure,
     data: Array.isArray(figure.data)

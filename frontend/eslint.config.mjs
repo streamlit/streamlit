@@ -513,11 +513,12 @@ export default defineConfig([
       // Require type on raw <button> JSX (not styled.button); omitted type submits the enclosing form.
       // Tests still use <button> fixtures without type, so this stays production-only.
       "@eslint-react/dom-no-missing-button-type": "error",
-      // Calling or returning `any` infects typed APIs. Tests and the remaining
-      // no-unsafe-* rules (assignment/member-access/argument) stay off for now;
+      // Calling, returning, or passing `any` infects typed APIs. Tests and the
+      // remaining no-unsafe-* rules (assignment/member-access) stay off for now;
       // see the frontend linting plan in the wiki for the remaining queue.
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-return": "error",
+      "@typescript-eslint/no-unsafe-argument": "error",
     },
   },
   // Test files specific configuration

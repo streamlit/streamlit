@@ -122,7 +122,8 @@ export function PlotlyChart({
       return emptyFigure
     }
 
-    return migratePlotlyMapboxFigure(JSON.parse(element.spec))
+    const spec: unknown = JSON.parse(element.spec)
+    return migratePlotlyMapboxFigure(spec)
     // We want to reload the initialFigureSpec object whenever the element id changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [element.id, element.spec])

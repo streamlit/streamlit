@@ -78,7 +78,9 @@ type UseDeckGlShape = {
   hasActiveSelection: boolean
   height: number | string
   isSelectionModeActivated: boolean
-  onViewStateChange: (params: ViewStateChangeParameters) => void
+  onViewStateChange: (
+    params: ViewStateChangeParameters<Record<string, unknown>>
+  ) => void
   selectionMode: DeckGlJsonChartProto.SelectionMode | undefined
   setSelection: React.Dispatch<
     React.SetStateAction<ValueWithSource<DeckGlElementState> | null>
@@ -145,19 +147,30 @@ const interpolate = (
 ): string => {
   const matchedVariables = body.match(/{(.*?)}/g)
   if (matchedVariables) {
+    const pickedObject = info.object as Record<string, unknown> | undefined
+    if (!pickedObject) {
+      return body
+    }
+
     matchedVariables.forEach((match: string) => {
       const variable = match.slice(1, match.length - 1)
 
       let rawValue: unknown
-      if (Object.hasOwn(info.object, variable)) {
-        rawValue = info.object[variable]
-      } else if (
-        Object.hasOwn(info.object, "properties") &&
-        Object.hasOwn(info.object.properties, variable)
-      ) {
-        rawValue = info.object.properties[variable]
-      } else {
+      if (Object.hasOwn(pickedObject, variable)) {
+        rawValue = pickedObject[variable]
+      } else if (!Object.hasOwn(pickedObject, "properties")) {
         return
+      } else {
+        const properties = pickedObject.properties
+        if (
+          typeof properties === "object" &&
+          properties !== null &&
+          Object.hasOwn(properties, variable)
+        ) {
+          rawValue = (properties as Record<string, unknown>)[variable]
+        } else {
+          return
+        }
       }
 
       const value = shouldEscapeHtml ? escapeHtml(rawValue) : String(rawValue)
@@ -661,7 +674,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   )
 
   const onViewStateChange = useCallback(
-    ({ viewState: viewStateArg }: ViewStateChangeParameters) => {
+    ({
+      viewState: viewStateArg,
+    }: ViewStateChangeParameters<Record<string, unknown>>) => {
       setViewState(viewStateArg)
     },
     [setViewState]

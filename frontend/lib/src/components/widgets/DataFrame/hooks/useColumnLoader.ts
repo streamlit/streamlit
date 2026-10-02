@@ -252,7 +252,8 @@ export function getColumnConfig(
     return new Map()
   }
   try {
-    return new Map(Object.entries(JSON.parse(configJson)))
+    const parsed: unknown = JSON.parse(configJson)
+    return new Map(Object.entries(parsed as Record<string, ColumnConfigProps>))
   } catch (error) {
     // This is not expected to happen, but if it does, we'll return an empty map
     // and log the error to the console.
