@@ -73,8 +73,9 @@ const requiredThemeColors = {
   violetTextColor: colors.purple90,
   grayTextColor: transparentize(colors.gray85, 0.4),
 
-  // Keep in sync with emotionBaseTheme stock border.
+  // Keep in sync with emotionBaseTheme stock chrome.
   borderColor: baseThemeColors.borderColor,
+  link: baseThemeColors.link,
 }
 
 interface OptionalThemeColors {

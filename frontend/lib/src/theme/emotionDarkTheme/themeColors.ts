@@ -55,4 +55,6 @@ export default {
 
   // Stock main + sidebar border (same hex).
   borderColor: "#4A4742",
+  // New palette Blue 50 — main and sidebar share this until named primitives land.
+  link: "#85B8F8",
 }

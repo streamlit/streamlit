@@ -1785,18 +1785,18 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.link).toBe("#ff0000")
   })
 
-  it("falls back to configured blueTextColor when linkColor not provided", () => {
+  it("keeps stock link when only blueTextColor is configured", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       blueTextColor: "#0000ff",
       // linkColor intentionally not set
     }
     const theme = createEmotionTheme(themeInput, lightTheme)
 
-    expect(theme.colors.link).toBe("#0000ff")
+    expect(theme.colors.link).toBe("#244FB4")
     expect(theme.colors.blueTextColor).toBe("#0000ff")
   })
 
-  it("falls back to blueTextColor derived from blueColor when linkColor & blueTextColor not provided (light theme)", () => {
+  it("keeps stock link when blueColor derives blueTextColor (light theme)", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       base: CustomThemeConfig.BaseTheme.LIGHT,
       blueColor: "#1c83e1", // blue70
@@ -1806,10 +1806,10 @@ describe("createEmotionTheme", () => {
 
     const expectedDerivedBlueTextColor = darken("#1c83e1", 0.15)
     expect(theme.colors.blueTextColor).toBe(expectedDerivedBlueTextColor)
-    expect(theme.colors.link).toBe(expectedDerivedBlueTextColor)
+    expect(theme.colors.link).toBe("#244FB4")
   })
 
-  it("falls back to blueTextColor derived from blueColor when linkColor & blueTextColor not provided (dark theme)", () => {
+  it("keeps stock link when blueColor derives blueTextColor (dark theme)", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       base: CustomThemeConfig.BaseTheme.DARK,
       blueColor: "#1c83e1", // blue70
@@ -1819,30 +1819,30 @@ describe("createEmotionTheme", () => {
 
     const expectedDerivedBlueTextColor = lighten("#1c83e1", 0.15)
     expect(theme.colors.blueTextColor).toBe(expectedDerivedBlueTextColor)
-    expect(theme.colors.link).toBe(expectedDerivedBlueTextColor)
+    expect(theme.colors.link).toBe("#85B8F8")
   })
 
-  it("falls back to default blueTextColor when no link-related colors are configured (light theme)", () => {
+  it("uses stock link when no link-related colors are configured (light theme)", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       base: CustomThemeConfig.BaseTheme.LIGHT,
       // No linkColor, blueTextColor, or blueColor configured
     }
     const theme = createEmotionTheme(themeInput, lightTheme)
 
-    expect(theme.colors.link).toBe(lightTheme.emotion.colors.blueTextColor)
+    expect(theme.colors.link).toBe("#244FB4")
     expect(theme.colors.blueTextColor).toBe(
       lightTheme.emotion.colors.blueTextColor
     )
   })
 
-  it("falls back to default blueTextColor when no link-related colors are configured (dark theme)", () => {
+  it("uses stock link when no link-related colors are configured (dark theme)", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       base: CustomThemeConfig.BaseTheme.DARK,
       // No linkColor, blueTextColor, or blueColor configured
     }
     const theme = createEmotionTheme(themeInput, darkTheme)
 
-    expect(theme.colors.link).toBe(darkTheme.emotion.colors.blueTextColor)
+    expect(theme.colors.link).toBe("#85B8F8")
     expect(theme.colors.blueTextColor).toBe(
       darkTheme.emotion.colors.blueTextColor
     )
@@ -1858,7 +1858,7 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.blueTextColor).toBe("#0000ff")
   })
 
-  it("handles invalid linkColor by logging warning and falling back to default blueTextColor", () => {
+  it("handles invalid linkColor by logging warning and keeping stock link", () => {
     const logWarningSpy = vi.spyOn(LOG, "warn")
     const themeInput: Partial<CustomThemeConfig> = {
       linkColor: "invalid-color",
@@ -1869,12 +1869,12 @@ describe("createEmotionTheme", () => {
     expect(logWarningSpy).toHaveBeenCalledWith(
       `Invalid color passed for linkColor in theme: "invalid-color"`
     )
-    // Should fall back to blueTextColor since linkColor is invalid
-    expect(theme.colors.link).toBe("#0000ff")
+    // Invalid linkColor is ignored; stock link does not track blueTextColor.
+    expect(theme.colors.link).toBe("#244FB4")
     expect(theme.colors.blueTextColor).toBe("#0000ff")
   })
 
-  it("falls back to default when both linkColor and blueTextColor are invalid", () => {
+  it("keeps stock link when both linkColor and blueTextColor are invalid", () => {
     const logWarningSpy = vi.spyOn(LOG, "warn")
     const themeInput: Partial<CustomThemeConfig> = {
       linkColor: "invalid-color",
@@ -1889,8 +1889,7 @@ describe("createEmotionTheme", () => {
       `Invalid color passed for blueTextColor in theme: "invalid-blue-color"`
     )
 
-    // Should use default blueTextColor since both colors are invalid
-    expect(theme.colors.link).toBe(lightTheme.emotion.colors.blueTextColor)
+    expect(theme.colors.link).toBe("#244FB4")
     expect(theme.colors.blueTextColor).toBe(
       lightTheme.emotion.colors.blueTextColor
     )

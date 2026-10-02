@@ -57,6 +57,8 @@ const requiredThemeColors = {
 
   // Stock main + sidebar border (same hex).
   borderColor: "#DCD8D4",
+  // New palette Blue 90 — main and sidebar share this until named primitives land.
+  link: "#244FB4",
 }
 
 export type RequiredThemeColors = Record<
