@@ -23,8 +23,8 @@ import { render } from "@streamlit/lib/testing"
 
 import ToolbarActions, {
   ActionButton,
-  getToolbarActionAccessibleName,
   type ActionButtonProps,
+  getToolbarActionAccessibleName,
   type ToolbarActionsProps,
 } from "./ToolbarActions"
 

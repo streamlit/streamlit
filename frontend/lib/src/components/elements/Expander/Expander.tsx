@@ -116,10 +116,16 @@ function resolveBlankLabelName(
   if (label.trim()) {
     return undefined
   }
+  // st.status always encodes progress into `icon`. For steps that would
+  // duplicate the appended state text ("Loading — running" / "check icon —
+  // complete"); use the stable "Step" fallback instead.
+  if (isStep) {
+    return "Step"
+  }
   if (icon) {
     return getIconAccessibleName(icon)
   }
-  return isStep ? "Step" : "Expander"
+  return "Expander"
 }
 
 interface ExpanderIconProps {

@@ -766,15 +766,24 @@ describe("step mode (type=STEP)", () => {
     expect(getSummary()).toHaveAccessibleName("Loading data — running")
   })
 
-  it("keeps status text in the name for a blank-label collapsible step", () => {
-    render(
-      <Expander {...getStepProps({ label: "", state: State.RUNNING })}>
-        <div>test</div>
-      </Expander>
-    )
+  it.each([
+    ["running", State.RUNNING, "spinner", "Step — running"],
+    ["complete", State.COMPLETE, ":material/check:", "Step — complete"],
+    ["error", State.ERROR, ":material/error:", "Step — error"],
+  ])(
+    "keeps status text in the name for a blank-label %s step with a state icon",
+    (_description, state, icon, expectedName) => {
+      // st.status always sets icon from state; blank labels must not pick up
+      // that glyph name ("Loading" / "check icon") ahead of "Step".
+      render(
+        <Expander {...getStepProps({ label: "", state, icon })}>
+          <div>test</div>
+        </Expander>
+      )
 
-    expect(getSummary()).toHaveAccessibleName("Step — running")
-  })
+      expect(getSummary()).toHaveAccessibleName(expectedName)
+    }
+  )
 
   it("announces the status state for a step without content", () => {
     render(
