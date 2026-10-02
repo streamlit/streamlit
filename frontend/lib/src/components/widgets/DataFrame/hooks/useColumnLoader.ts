@@ -21,7 +21,7 @@ import {
   useState,
 } from "react"
 
-import { isArray, isEmpty, merge, mergeWith } from "lodash-es"
+import { isEmpty, merge, mergeWith } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import {
@@ -137,12 +137,12 @@ const mergeColumnConfig = (
 ): ColumnConfigProps => {
   // Don't merge arrays, just overwrite the old value with the new value
   const customMergeArrays = (
-    _objValue: object,
-    srcValue: object
-  ): object | undefined => {
+    _objValue: unknown,
+    srcValue: unknown
+  ): unknown[] | undefined => {
     // If the new value is an array, just return it as is (overwriting the old)
-    if (isArray(srcValue)) {
-      return srcValue
+    if (Array.isArray(srcValue)) {
+      return srcValue as unknown[]
     }
     return undefined
   }

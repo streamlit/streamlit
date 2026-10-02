@@ -283,13 +283,15 @@ export class Quiver {
   private getIndexValue(rowIndex: number, columnIndex: number): DataType {
     const index = this._pandasIndexData[columnIndex]
     const value =
-      index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
+      index instanceof Vector
+        ? (index.get(rowIndex) as DataType)
+        : index[rowIndex]
     return value
   }
 
   /** Get the raw value of a data cell. */
   private getDataValue(rowIndex: number, columnIndex: number): DataType {
-    return this._data.getChildAt(columnIndex)?.get(rowIndex)
+    return this._data.getChildAt(columnIndex)?.get(rowIndex) as DataType
   }
 }
 
