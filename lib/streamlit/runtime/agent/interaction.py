@@ -688,6 +688,18 @@ def _resolve_page(app_session: Any, page: Any, *, can_defer: bool) -> tuple[str,
     raise AgentRequestError(
         "unknown_page",
         f"No page with url_path {page!r}. Available: {sorted(known_paths)}.",
+        # As data, in the shape of the snapshot's `pages`, like the check a
+        # creating call gets after its run.
+        details={
+            "pages": [
+                {
+                    "url_path": info.get("url_pathname", ""),
+                    **({"title": info["page_name"]} if info.get("page_name") else {}),
+                    **({"icon": info["icon"]} if info.get("icon") else {}),
+                }
+                for info in pages.values()
+            ]
+        },
     )
 
 

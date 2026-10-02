@@ -316,7 +316,9 @@ page list until it has run once, so looking the page up first would reject a pag
 plainly exists — including the parameterization example above. The browser has the same
 problem on a cold load and sends the page *name* for the runtime to resolve, and so does
 this. The cost is that an unrecognized page is only detected after the run, so that error
-carries the `session_id` of the session it created rather than leaking it.
+carries the `session_id` of the session it created rather than leaking it. On later calls
+the page list is known, so an unknown page is refused before anything runs, and a page
+that exists is never an error, even when the app then redirects with `st.switch_page`.
 
 ### The snapshot
 
@@ -340,8 +342,9 @@ right now. Naming follows the public API, for the reason above:
   read the document, and "absent" should never be ambiguous between false, unsupported,
   and overlooked.
 - **Omit presentation.** Width, height, gaps, alignment, stretch ratios, padding, border
-  or surface styling, a heading's `divider`, and a column's share of its row carry no
-  meaning for a non-visual client. Read this strictly, because the effective-value rule
+  or surface styling, a heading's `divider`, a dialog's width and position, a column's
+  share of its row, and a table column's width, pinning, and alignment carry no meaning
+  for a non-visual client. Read this strictly, because the effective-value rule
   above pulls the other way and would otherwise put styling on most nodes of a page. The
   test is whether a property changes what the element *means* or how it can be *used*,
   not whether the author passed it.
@@ -526,18 +529,15 @@ Rules:
   split: an app that calls `st.set_page_config` on each page makes `app_title` follow the
   page, because that is what the app asked the browser tab to say. `page.url_path` is the
   reliable identity of where a client is.
-- **`query_params` is URL state, and it has to be reported as the app has it.** Streamlit
-  scopes widget-bound parameters by page: navigating to a page that binds none of them
-  drops them, and the server announces the new query string the same way it tells a
-  browser to update its address bar. So the interface holds that string as durable
-  client state — sent with each rerun, replaced when the server says it changed — rather
-  than replaying whatever the last request carried. Replaying is what makes a snapshot
-  report a filter the app has already discarded, on a page where nothing reads it, and
-  what lets a stale parameter overwrite a widget value on the way back. Switching pages
-  also clears what a browser clears: only embed and widget-bound parameters carry over,
-  unless the request sends its own `query_params`, so a parameter one page was opened with,
-  or one the app set itself through `st.query_params`, does not follow the client to the
-  next. Even reported
+- **`query_params` is URL state, and it has to be reported as the app has it.** The
+  interface holds the query string the way a browser holds its address bar: sent with each
+  rerun, and replaced when the server announces a change. Replaying whatever the last
+  request carried instead would report a filter the app has already discarded and let a
+  stale parameter overwrite a widget value on the way back. A page change follows the
+  browser's rule too: unless the request sends its own `query_params`, only embed
+  parameters and widget-bound ones carry over, and a bound one is then dropped unless its
+  widget is on the new page. So a parameter one page was opened with, or one the app set
+  itself through `st.query_params`, does not follow the client to the next. Even reported
   correctly, these are URL parameters rather than a description of what produced a number;
   widget `value`s are that.
 - **A label is not an identifier.** Nothing stops an app from giving two elements the
@@ -618,7 +618,7 @@ stays usable, so an agent can correct its input and interact again.
 | Outcome                                                                              | Response                                                                                                                                 |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Invalid request — unknown key, disabled widget, unsupported element, out-of-range or wrong-shape value, missing form submit, cross-form or cross-dialog batch | Error before any execution, naming which of those it was. Nothing ran and the app is unchanged. |
-| Unrecognized `page` on a creating call                                               | Error after the run, carrying the `session_id` of the session it created, which stays usable, and the available `pages` as data.        |
+| Unrecognized `page`                                                                  | On a creating call, an error after the run, carrying the `session_id` of the session it created, which stays usable; on a later call, refused before anything runs. Both list the available `pages` as data. |
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
 | Script failed to compile                                                             | `status: "error"` with the compile error and no usable action list.                                                                      |
 | Another interaction on the same session is still in flight                           | `session_busy`. One interaction per session at a time, so a client never interrupts its own run by accident.                             |
@@ -665,8 +665,8 @@ actual problem: `disabled_widget` for a disabled control, `unsupported_element` 
 this interface cannot drive, and `not_on_page` only when the key really is absent.
 
 **Widget constraints are a separate layer, and they belong to the widgets.** Whether a
-value is one of a selectbox's `options`, inside a slider's bounds, or within `max_chars`
-is not a question about this interface. Today only the frontend enforces those checks, for
+value is one of a selectbox's `options`, inside a slider's bounds, or a well-formed
+`validate` match is not a question about this interface. Today only the frontend enforces those checks, for
 every client, and [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them
 server-side for all of them. The agent path should call those validators rather than keep
 its own, with one requirement on their shape. #16203 proposes coercing a violation to a
@@ -748,9 +748,8 @@ to be the last pair.
 
 Actions do not carry a JSON Schema in v1. The element's `type` plus its constraint
 properties (`options`, `min_value`, `max_value`, `max_chars`, `required`, `validate`)
-already tell a model what to send. Options, bounds, whole-number inputs, and `max_chars`
-are checked against the snapshot; `required` and `validate` are reported for the client
-to respect, because today only the browser enforces them (see [Security](#security)).
+already tell a model what to send. Of those, `required` and `validate` are reported but
+not checked here, because today only the browser enforces them.
 
 **Every action must be treated as consequential.** A selectbox can trigger a database
 write just as a button can, so Streamlit does not label any action read-only, idempotent,
@@ -860,6 +859,7 @@ back to a browser rather than mistake it for missing content:
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.                  |
 | `bind="query-params"` write-back                                           | Setting a bound widget changes its value but not `query_params`; the browser is what writes the address bar. See [Actions in v1](#actions-in-v1).                             |
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
+| Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
 | Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun.                                                                                               |
 | Long-running interactions                                                  | No polling or partial results; a retry after `run_timed_out` collects the run. Follow-up #4 adds an operation handle.                                                         |
 
@@ -917,8 +917,9 @@ This is a new programmatic execution surface and needs an explicit review.
   bytes, preview rows, served data, and the wait for a run; see
   [Limits and configuration](#limits-and-configuration). Response size and request rate
   are still open, and are among the gates on default-on.
-- **Audit without content.** Log session hashes, action kinds, outcomes, latency, and
-  sizes — never labels, values, table contents, or queries.
+- **Audit without content.** Each interaction is logged, at debug level, with a digest
+  of its session handle, the request fields it used, its outcome, and its latency —
+  never the handle itself, labels, values, table contents, or queries.
 - **Reuse media storage's protection for data URLs.** A table's `data.url` is a content
   hash that stops resolving once the element does, like every image and eager download.
   See [Data, charts, and media](#data-charts-and-media-in-v1).
@@ -993,7 +994,7 @@ URL, and every `data.url` and media URL in a snapshot is relative to the request
 returned it, such as `../../../media/<id>`. Resolved with ordinary URL joining, they climb
 out of `_stcore/agent/v1/` to the app's root, whatever prefix sits in front of it and
 whether or not the app can see it. The MCP endpoint uses the same form, resolved against
-the MCP server's URL.
+the MCP server's URL, and so do the `index.html` hint's links, resolved against the page.
 
 **The intended end state is on by default, with a deployment or platform opt-out.** The
 governing invariant is that a caller gets **no more authority and no more information than
@@ -1082,8 +1083,9 @@ reading the proto reports it as `st.markdown`.
 
 Building the description in the element function costs one JSON object per element, built
 only for sessions the agent API created, so a browser session builds and sends nothing.
-It rides to the serializer on the emitted message's metadata, which also means a cached
-message replays with the description it was created with.
+It rides to the serializer on the emitted message's metadata, so an element replayed from
+an `st.cache_data` result carries the description recorded when the entry was filled —
+which also means an entry a browser session filled has none to replay.
 
 The cost is honest: the description lives next to each command instead of in one file, so
 adding a command means adding a line there, and nothing stops an author from forgetting.
@@ -1294,7 +1296,7 @@ new command or significant parameter should ship with all of the following, or a
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until a credential flow maps them. Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
-| No breaking API changes    | ✅ Additive: one config option, off in v1, and new routes under `/_stcore/agent/`. No `st.*` changes in v1. Flipping the default later is itself a reviewed change, not a silent one.                                                                                                                                                                                                                                                                                                                         |
+| No breaking API changes    | ✅ Additive: `server.enableAgentApi`, off in v1, its budget options, new routes under `/_stcore/agent/`, and the discovery hint in `index.html`. No `st.*` signature changes. One behavior is sharper: an `st.context` field the client never sent reads as `None` rather than an empty default, which browser apps never see, because the frontend always sends them. Flipping the default later is itself a reviewed change, not a silent one. |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either; see [mcp-support.md](mcp-support.md).                                                                                                                                                                                                                                                                                                                                                                                          |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
 | Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: off by default in v1 with on-by-default as the goal, no stricter than the app once on, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, and identity mapping — the gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
