@@ -160,10 +160,13 @@ export class Streamlit {
 
   /** Receive a ForwardMsg from the Streamlit app */
   private static readonly onMessageEvent = (event: MessageEvent): void => {
-    const type = event.data["type"]
-    switch (type) {
+    const data: unknown = event.data
+    if (!isRenderEventData(data)) {
+      return
+    }
+    switch (data.type) {
       case Streamlit.RENDER_EVENT:
-        Streamlit.onRenderMessage(event.data)
+        Streamlit.onRenderMessage(data)
         break
     }
   }
@@ -275,6 +278,19 @@ function injectTheme(theme: Theme): void {
 interface ArgsDataframe {
   key: string
   value: ArrowDataframeProto
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for implicit component args typing.
+type RenderEventData<ArgType = any> = {
+  type?: unknown
+  args: ArgType
+  dfs?: ArgsDataframe[]
+  disabled?: boolean
+  theme?: Theme
+}
+
+function isRenderEventData(data: unknown): data is RenderEventData {
+  return typeof data === "object" && data !== null
 }
 
 // The TypedArray JavaScript types

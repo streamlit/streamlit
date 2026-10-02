@@ -223,7 +223,8 @@ export class ArrowTable {
     const columnTypeId = this.getColumnTypeId(table, columnIndex)
     switch (columnTypeId) {
       case Type.Timestamp: {
-        return this.nanosToDate(column.get(rowIndex))
+        // Untyped Arrow tables leave Vector.get() as any; timestamps are nanos.
+        return this.nanosToDate(column.get(rowIndex) as number)
       }
       default: {
         // Untyped Arrow tables leave Vector.get() as any; assert DataType here.

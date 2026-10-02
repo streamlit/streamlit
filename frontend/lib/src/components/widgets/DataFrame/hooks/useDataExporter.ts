@@ -174,7 +174,7 @@ function useDataExporter(
         // Simulated WritableStream that builds CSV content in-memory for the Blob fallback method
         let csvContent = ""
 
-        const inMemoryWriter = new WritableStream({
+        const inMemoryWriter = new WritableStream<Uint8Array>({
           write: chunk => {
             csvContent += new TextDecoder("utf-8").decode(chunk)
           },

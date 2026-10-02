@@ -20,9 +20,13 @@
  */
 
 import {
+  Decimal,
+  Duration,
   type Field,
   Struct,
   type StructRow,
+  Time,
+  Timestamp,
   TimeUnit,
   util,
 } from "apache-arrow"
@@ -88,6 +92,43 @@ type PandasPeriodFrequency =
 
 const LOG = getLogger("arrowFormatUtils")
 const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+
+/**
+ * Arrow `Field.type` is `any` on untyped tables. Narrow to the DataType
+ * classes that actually expose a time unit.
+ */
+function getArrowTimeUnit(
+  field: Field | undefined,
+  fallback: TimeUnit
+): TimeUnit {
+  const dataType: unknown = field?.type
+  if (
+    dataType instanceof Timestamp ||
+    dataType instanceof Time ||
+    dataType instanceof Duration
+  ) {
+    const unit: unknown = dataType.unit
+    return typeof unit === "number" ? unit : fallback
+  }
+  return fallback
+}
+
+function getArrowTimezone(field: Field | undefined): string | undefined {
+  const dataType: unknown = field?.type
+  if (dataType instanceof Timestamp && dataType.timezone) {
+    return dataType.timezone
+  }
+  return undefined
+}
+
+function getArrowScale(field: Field | undefined): number {
+  const dataType: unknown = field?.type
+  if (dataType instanceof Decimal) {
+    return dataType.scale
+  }
+  return 0
+}
+
 const formatMs = (duration: number): string =>
   moment("19700101", "YYYYMMDD")
     .add(duration, "ms")
@@ -237,7 +278,7 @@ export function convertTimeToDate(
     timestamp,
     // The default is SECOND because that is the default unit for time values in pandas.
     // Though we believe that actually always a unit is populated by arrow.
-    field?.type?.unit ?? TimeUnit.SECOND
+    getArrowTimeUnit(field, TimeUnit.SECOND)
   )
   return moment.unix(timeInSeconds).utc().toDate()
 }
@@ -300,7 +341,7 @@ function formatDatetime(date: number | Date, field?: Field): string {
 
   let datetime = moment.utc(date)
 
-  const timezone = field?.type?.timezone
+  const timezone = getArrowTimezone(field)
   if (timezone) {
     if (moment.tz.zone(timezone)) {
       // If timezone is a valid timezone name (e.g., "America/New_York")
@@ -331,7 +372,7 @@ function formatDuration(duration: number | bigint, field?: Field): string {
         duration,
         // The default is NANOSECOND because that is the default unit for duration in pandas.
         // Though we believe that actually always a unit is populated by arrow.
-        field?.type?.unit ?? TimeUnit.NANOSECOND
+        getArrowTimeUnit(field, TimeUnit.NANOSECOND)
       ),
       "seconds"
     )
@@ -350,7 +391,7 @@ function formatDuration(duration: number | bigint, field?: Field): string {
  * https://github.com/apache/arrow/issues/35745
  */
 function formatDecimal(value: Uint32Array, field?: Field): string {
-  const scale = field?.type?.scale || 0
+  const scale = getArrowScale(field)
 
   // Format Uint32Array to a numerical string and pad it with zeros
   // So that it is exactly the length of the scale.
@@ -434,9 +475,21 @@ function formatPeriod(duration: number | bigint, field?: Field): string {
     return String(duration)
   }
 
-  const parsedExtensionMetadata = JSON.parse(extensionMetadata)
+  const parsedExtensionMetadata: unknown = JSON.parse(extensionMetadata)
+  if (
+    typeof parsedExtensionMetadata !== "object" ||
+    parsedExtensionMetadata === null ||
+    !("freq" in parsedExtensionMetadata)
+  ) {
+    LOG.warn("Arrow period extension metadata is missing freq")
+    return String(duration)
+  }
   const { freq } = parsedExtensionMetadata
-  return formatPeriodFromFreq(duration, freq)
+  if (typeof freq !== "string") {
+    LOG.warn(`Unsupported period frequency: ${String(freq)}`)
+    return String(duration)
+  }
+  return formatPeriodFromFreq(duration, freq as PandasPeriodFrequency)
 }
 
 /**
