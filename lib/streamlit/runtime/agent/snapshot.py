@@ -36,9 +36,7 @@ from streamlit import config
 from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
-from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.runtime.agent import json_encoding
 from streamlit.runtime.state.common import user_key_from_element_id
 
@@ -69,17 +67,6 @@ def _preview_row_limit() -> int:
 # filled, blank space, and style-only HTML. See `_SnapshotBuilder._is_contentless`.
 _CONTENTLESS_TYPES: Final = {"empty", "space", "html"}
 
-# The payload fields a table's or chart's `data` summary is computed from. A
-# buffered message is compacted once its run settles: these are cleared and the
-# summary rides in its description instead. See `compact_delta`.
-_BULK_FIELDS: Final = {
-    "dataframe": ("arrow_data", "lazy_data"),
-    "table": ("arrow_data",),
-    "vega_lite_chart": ("data", "datasets", "spec"),
-    "plotly_chart": ("spec",),
-    "echarts_chart": ("spec",),
-    "deck_gl_json_chart": ("json",),
-}
 _DATA_SUMMARY_KEY: Final = "data_summary"
 
 # Widgets whose wire value is text. Their serializer is what turns a stored
@@ -197,28 +184,17 @@ class ElementState(NamedTuple):
     actual reason instead of blaming the page.
     """
 
-    # The command, for checks that depend on it: a date range takes zero to two
-    # dates, however many it holds now.
-    element_type: str
     actionable: bool
     disabled: bool
     support: str | None
     # The owning st.form, for elements inside one. Form membership exists only
     # on the emitted element, not in the runtime's widget registry.
     form_id: str | None
-    # What this element advertised, so the next request can be checked against
-    # what the client was actually offered. The widget registry carries options
-    # for selection widgets, but not bounds, not a trigger's options, and not
-    # the arity of a range, so the snapshot is the only place that has them.
+    # The options this element advertised, so the next request can be checked
+    # against what the client was offered. The widget registry carries options
+    # for most selection widgets, but not for `st.select_slider` and not for a
+    # trigger such as `st.menu_button`.
     options: list[Any] | None
-    min_value: Any
-    max_value: Any
-    # Constraints the runtime would otherwise apply by changing the value
-    # silently: an integer number input or slider truncates 7.5 to 7, and a
-    # text input cuts what is past `max_chars`.
-    integer: bool
-    max_chars: int | None
-    value: Any
     # The fragment this element lives in, if any. A request that targets it is
     # scoped to that fragment, the way the browser scopes a widget change.
     fragment_id: str | None
@@ -340,9 +316,7 @@ class _SnapshotBuilder:
             # As for elements, a trigger's value only means anything while set.
             if action == "value" or value:
                 result["value"] = value
-        self._record_state(
-            description, result, inherited_support, None, node.fragment_id
-        )
+        self._record_state(description, inherited_support, None, node.fragment_id)
 
         result["children"] = children
         return [result]
@@ -385,8 +359,8 @@ class _SnapshotBuilder:
                 # resets right after the run that observed it.
                 result["value"] = value
 
-        # A compacted message carries its summary instead of the payload it was
-        # computed from; see `compact_delta`.
+        # A command whose payload does not carry its table supplies the summary
+        # itself: `st.map` emits a generated Deck.gl spec.
         if _DATA_SUMMARY_KEY in description:
             data = description[_DATA_SUMMARY_KEY] or {}
         else:
@@ -411,24 +385,16 @@ class _SnapshotBuilder:
             result["form_id"] = form_id
 
         self._record_state(
-            description,
-            result,
-            inherited_support,
-            form_id or None,
-            node.fragment_id,
-            integer=_holds_integers(proto_field, payload),
+            description, inherited_support, form_id or None, node.fragment_id
         )
         return result
 
     def _record_state(
         self,
         description: dict[str, Any],
-        result: dict[str, Any],
         inherited_support: str | None,
         form_id: str | None,
         fragment_id: str | None = None,
-        *,
-        integer: bool = False,
     ) -> None:
         """Record what a node offers, and list it in `actions` if it is usable.
 
@@ -451,19 +417,11 @@ class _SnapshotBuilder:
         actionable = bool(action) and not support and not disabled
 
         self.element_states[element_id] = ElementState(
-            element_type=str(description.get("type", "")),
             actionable=actionable,
             disabled=disabled,
             support=support,
             form_id=form_id,
             options=options if isinstance(options, list) else None,
-            min_value=props.get("min_value"),
-            max_value=props.get("max_value"),
-            integer=integer,
-            max_chars=max_chars
-            if isinstance(max_chars := props.get("max_chars"), int)
-            else None,
-            value=result.get("value"),
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
         )
@@ -552,20 +510,6 @@ class _SnapshotBuilder:
             return None
 
 
-def _holds_integers(proto_field: str, payload: Any) -> bool:
-    """Whether a number input or slider is over integers.
-
-    Neither says so in its parameters -- the type follows from the values the
-    author passed -- but the runtime truncates a fraction sent to one, so the
-    next request has to be checked for it.
-    """
-    if proto_field == "number_input":
-        return bool(payload.data_type == NumberInputProto.INT)
-    if proto_field == "slider":
-        return bool(payload.data_type == SliderProto.INT)
-    return False
-
-
 def _fallback_description(proto_field: str, payload: Message | None) -> dict[str, Any]:
     """Describe an element whose command has no agent-API description yet.
 
@@ -598,49 +542,6 @@ def _is_write_only(description: dict[str, Any]) -> bool:
     """
     props = description.get("props") or {}
     return description.get("type") == "text_input" and props.get("type") == "password"
-
-
-def compact_delta(msg: ForwardMsg) -> ForwardMsg:
-    """Replace a table's or chart's bulk payload with the summary a snapshot reads.
-
-    A session keeps the messages that built its page, because a fragment rerun
-    re-emits only the fragment and the rest of the tree has to come from
-    somewhere. Kept as emitted, that would hold every table's full Arrow bytes
-    for the life of the session, beside the copy `data.url` already serves,
-    while a snapshot only ever reads the bounded summary. So the summary is
-    what is kept.
-
-    Returns ``msg`` itself when it carries no bulk payload or is already
-    compacted. Otherwise returns a copy, so a message the runtime still holds
-    is never modified.
-    """
-    if msg.delta.WhichOneof("type") != "new_element":
-        return msg
-    element = msg.delta.new_element
-    proto_field = element.WhichOneof("type") or ""
-    bulk_fields = _BULK_FIELDS.get(proto_field)
-    if not bulk_fields or not msg.metadata.HasField("agent_props"):
-        return msg
-    description = agent_spec.decode(msg.metadata.agent_props)
-    if not description:
-        return msg
-
-    payload = getattr(element, proto_field)
-    if _DATA_SUMMARY_KEY in description:
-        # Compacted already, or from a command that summarized its own table
-        # because its payload does not carry one (`st.map`). Either way, only
-        # the bulk is left to drop, if it is still there.
-        if not any(field.name in bulk_fields for field, _ in payload.ListFields()):
-            return msg
-    else:
-        description[_DATA_SUMMARY_KEY] = _element_data(proto_field, payload)
-    compacted = ForwardMsg()
-    compacted.CopyFrom(msg)
-    compacted_payload = getattr(compacted.delta.new_element, proto_field)
-    for name in bulk_fields:
-        compacted_payload.ClearField(name)
-    compacted.metadata.agent_props = json.dumps(description)
-    return compacted
 
 
 def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
@@ -841,9 +742,9 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
             )
         ]
     except Exception:
-        # Any failure, not just a malformed stream: this also runs inside the
-        # runtime's message loop, and an element without a summary costs far
-        # less than every session's messages.
+        # Any failure, not just a malformed stream: an element without a
+        # summary costs far less than a failed snapshot, or a failed command
+        # for `st.map`, which summarizes its table while the script runs.
         _LOGGER.debug("Could not summarize an Arrow payload.", exc_info=True)
         return None
 

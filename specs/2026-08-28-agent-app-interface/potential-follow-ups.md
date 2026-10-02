@@ -35,8 +35,10 @@ Widget constraints are enforced mostly in the browser today: the runtime resets 
 out-of-range number or an unknown option to the default, and nothing server-side checks
 the rest. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them into the
 widgets' server-side deserialize path, and the agent API should rely on that. v1 keeps
-one check of its own, that a value is one of the widget's `options`; the prototype's
-checks for bounds, whole numbers, `max_chars`, and date-range arity are left for #16203.
+one check of its own, that a value is one of the widget's `options`; bounds, whole
+numbers, `max_chars`, and date-range shape are left for #16203. The last matters most
+for agents: the runtime stores a reversed or three-date range as sent, where it resets
+an out-of-range number.
 
 **One requirement on the shape.** #16203 proposes coercing a violation to a valid value,
 which suits a browser racing a rerun. An agent needs the opposite, because a silently
@@ -78,8 +80,8 @@ every table's Arrow bytes: a 50,000-row table holds 1.7 MB per session, bounded 
 `server.maxMessageSize`, the session cap, and the idle TTL.
 
 **The alternative:** once a run settles, replace each buffered table's or chart's payload
-with the summary a snapshot reads — 38 KB instead of 1.7 MB for that table. The prototype
-does this in about 90 lines.
+with the summary a snapshot reads — 38 KB instead of 1.7 MB for that table. An earlier
+version of the prototype did this in about 90 lines.
 
 **Why not now:** it gives every table's and chart's `data` a second code path, from the
 payload or from the summary, and it runs inside the runtime's message loop, where an

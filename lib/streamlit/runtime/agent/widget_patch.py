@@ -18,10 +18,14 @@ Nothing from the request reaches a protobuf until it has been checked, and the
 whole request is rejected before any callback runs.
 
 Checks come from two places. The session's widget registry records each
-widget's value type, disabled state, and legal options; the last snapshot
-records what the client was actually shown, including bounds, arity, and a
-trigger's options. The snapshot has the final say, because it is the document
-the client wrote against.
+widget's value type and legal options; the last snapshot records what the
+client was actually shown, including what is disabled or unsupported, form
+membership, and a trigger's options. The snapshot has the final say, because it
+is the document the client wrote against.
+
+Bounds, whole numbers, and `max_chars` are not checked here: the runtime resets
+or trims a value that breaks them, and #16203 moves those checks into the
+widgets for every client.
 """
 
 from __future__ import annotations
@@ -179,10 +183,9 @@ def build_widget_states(
                 "interface cannot supply.",
             )
 
-        state = element_states[element_id]
-        _validate_options(key, metadata, value, advertised=state.options)
-        _validate_bounded(key, state, value, clearable=metadata.clearable)
-        _validate_unaltered(key, state, value)
+        _validate_options(
+            key, metadata, value, advertised=element_states[element_id].options
+        )
         states.widgets.append(
             _encode(
                 element_id,
@@ -212,16 +215,13 @@ def build_widget_states(
                 "through `widget_state` instead of firing it.",
             )
 
-        trigger_state = element_states[element_id]
-        if trigger_state.max_chars is not None:
-            _validate_unaltered(trigger_key, trigger_state, trigger.get("value"))
         states.widgets.append(
             _encode_trigger(
                 element_id,
                 metadata.value_type,
                 trigger.get("value"),
                 trigger_key,
-                trigger_state.options,
+                element_states[element_id].options,
             )
         )
         submitted_form = _form_of(element_states, element_id)
@@ -302,11 +302,6 @@ def resolve_fragment(
     return ""
 
 
-def _is_number(value: Any) -> bool:
-    # bool is an int subclass, and no bounded widget accepts one.
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
-
-
 def _parse_iso(value: Any) -> datetime.date | datetime.time | None:
     """The date, time, or datetime that ISO text denotes, or None."""
     if not isinstance(value, str):
@@ -323,145 +318,6 @@ def _parse_iso(value: Any) -> datetime.date | datetime.time | None:
         except ValueError:  # noqa: PERF203
             continue
     return None
-
-
-def _ordering(value: Any) -> Any:
-    """What a bounds check orders a value by, or None if it cannot be ordered.
-
-    Dates, times, and datetimes are reported as ISO text, which does not order
-    them reliably -- `10:00:00` sorts after `10:00` -- so they are compared as
-    what they denote.
-    """
-    return value if _is_number(value) else _parse_iso(value)
-
-
-def _precedes(left: Any, right: Any) -> bool | None:
-    """Whether ``left`` orders before ``right``, or None if they cannot be ordered."""
-    left_key, right_key = _ordering(left), _ordering(right)
-    if left_key is None or right_key is None:
-        return None
-    if not (_is_number(left_key) and _is_number(right_key)) and type(
-        left_key
-    ) is not type(right_key):
-        return None
-    try:
-        return bool(left_key < right_key)
-    except TypeError:
-        # A timezone-aware value against a naive one.
-        return None
-
-
-def _validate_bounded(
-    key: str, state: ElementState, value: Any, *, clearable: bool
-) -> None:
-    """Check a write against the shape and bounds the element advertised.
-
-    This covers every widget that reports a `min_value` or a `max_value` --
-    numbers, sliders, and the date and time widgets, whose bounds are ISO
-    strings -- and any widget holding a number, since a number input the
-    author left unbounded reports no bounds but still has a shape. Without it
-    the runtime silently discards what it cannot use and
-    the widget falls back to its default, so the response is a 200 whose
-    `value` is neither what was sent nor what was there before -- detectable
-    only by diffing every field after every write.
-
-    The shape check is against the value the snapshot reported, which is the
-    only place the arity is stated: a date range renders as a two-item list,
-    and sending one date, three, or `null` leaves the app on its default with
-    no indication anything was rejected.
-    """
-    if (
-        state.min_value is None
-        and state.max_value is None
-        and not _is_number(state.value)
-    ):
-        return
-
-    expected = state.value
-    if isinstance(expected, list) and state.element_type == "date_input":
-        # A date range holds zero, one, or two dates, so the one it holds now,
-        # possibly empty, is not the arity to enforce.
-        if not isinstance(value, list) or len(value) > 2:
-            raise AgentRequestError(
-                "invalid_value",
-                f"{key!r} takes a list of up to two dates; got {value!r}.",
-            )
-    elif isinstance(expected, list):
-        if not isinstance(value, list) or len(value) != len(expected):
-            raise AgentRequestError(
-                "invalid_value",
-                f"{key!r} takes a list of {len(expected)} values, like "
-                f"{expected!r}; got {value!r}.",
-            )
-    elif isinstance(value, list):
-        raise AgentRequestError(
-            "invalid_value",
-            f"{key!r} takes a single value, like {expected!r}; got {value!r}.",
-        )
-    elif value is None:
-        # A widget that started empty, such as `st.number_input(value=None)`,
-        # can be emptied again; one that started with a value cannot.
-        if clearable:
-            return
-        raise AgentRequestError(
-            "invalid_value",
-            f"{key!r} cannot be cleared; it always holds a value.",
-        )
-
-    for item in value if isinstance(value, list) else [value]:
-        for below, bound, label in (
-            (True, state.min_value, "below the minimum"),
-            (False, state.max_value, "above the maximum"),
-        ):
-            if bound is None:
-                continue
-            outside = _precedes(item, bound) if below else _precedes(bound, item)
-            if outside is None:
-                raise AgentRequestError(
-                    "invalid_value",
-                    f"{item!r} is not a value {key!r} accepts; its range is "
-                    f"{state.min_value!r} to {state.max_value!r}.",
-                )
-            if outside:
-                raise AgentRequestError(
-                    "invalid_value",
-                    f"{item!r} is {label} for {key!r} ({bound!r}).",
-                )
-
-    # A reversed range is stored as sent and quietly selects nothing, so the
-    # app renders an empty result rather than reporting a bad request.
-    if isinstance(value, list) and len(value) == 2:
-        low, high = value
-        if _precedes(high, low):
-            raise AgentRequestError(
-                "invalid_value",
-                f"The range for {key!r} is reversed: {low!r} is greater than {high!r}.",
-            )
-
-
-def _validate_unaltered(key: str, state: ElementState, value: Any) -> None:
-    """Reject a value the runtime would accept only by changing it.
-
-    An integer number input or slider truncates 7.5 to 7, and a text input cuts
-    what is past `max_chars`. Both would answer 200 with a value the caller did
-    not send, which reads as success.
-    """
-    items = value if isinstance(value, list) else [value]
-    if state.integer:
-        for item in items:
-            # Only a float can be a fraction; an int of any size is whole.
-            if isinstance(item, float) and not item.is_integer():
-                raise AgentRequestError(
-                    "invalid_value", f"{key!r} takes whole numbers; got {item!r}."
-                )
-    if state.max_chars is not None:
-        for item in items:
-            if isinstance(item, str) and len(item) > state.max_chars:
-                raise AgentRequestError(
-                    "invalid_value",
-                    f"{key!r} takes at most {state.max_chars} characters; got "
-                    f"{len(item)}.",
-                )
 
 
 def _validate_options(
@@ -655,9 +511,11 @@ def _as_number(value: Any) -> float:
     """A finite JSON number, refusing what ``float()`` would quietly accept.
 
     ``true`` would become 1 and a numeric string would parse, and ``NaN``,
-    which Python's JSON parser accepts, passes every bounds comparison.
+    which Python's JSON parser accepts, would reach the app.
     """
-    if not _is_number(value) or not math.isfinite(value):
+    # bool is an int subclass.
+    is_number = isinstance(value, (int, float)) and not isinstance(value, bool)
+    if not is_number or not math.isfinite(value):
         raise TypeError(f"{value!r} is not a finite number")
     return float(value)
 

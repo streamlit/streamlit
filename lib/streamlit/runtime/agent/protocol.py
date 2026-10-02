@@ -146,8 +146,9 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
     "session_busy": (
         409,
         (
-            "The session already has an interaction in flight. One interaction per "
-            "session at a time."
+            "The session already has an interaction in flight, or is still running "
+            "one that returned `run_timed_out`. One interaction per session at a "
+            "time; collect a timed-out run by sending only `session_id`."
         ),
     ),
     # 202 rather than 504: the request was accepted and its run is still going,
@@ -162,7 +163,7 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
             "load of data it has not cached yet, and nothing is lost: send the "
             "same request again, or an empty one with only `session_id`, and it "
             "waits for that run instead of starting it over. A different request "
-            "stops the run and starts a new one, as a browser interaction would."
+            "gets `session_busy` until the run finishes."
         ),
     ),
     "internal_error": (
@@ -519,8 +520,8 @@ request then returns `202` with `run_timed_out` and the `session_id` while the \
 app keeps running. Send the same request again, or an empty one with only \
 `session_id`: the retry waits for that run instead of starting it over, and \
 returns its result once it finishes, so a slow run completes over several \
-retries. A retry never fires a trigger twice. Any other request stops the run \
-and starts a new one.
+retries. A retry never fires a trigger twice. Any other request gets \
+`session_busy` until the run finishes.
 
 Reuse one session for a sequence of interactions rather than creating one per \
 request. Each creating call runs the app from the start and holds a session \
@@ -567,10 +568,16 @@ def schemas() -> dict[str, Any]:
                         "current values. Only elements listed in the last "
                         "snapshot's `actions` may be set; this is not arbitrary "
                         "session state.\n\n"
-                        "Values are checked against what the element "
-                        "advertised, so an out-of-range number or a reversed "
-                        "range is rejected rather than silently reset to the "
-                        "widget's default.\n\n"
+                        "A value outside an element's `options`, or of the "
+                        "wrong type, is rejected. Other constraints are applied "
+                        "the way the app applies them to any client: a number "
+                        "outside `min_value`/`max_value` resets the widget to "
+                        "its default, a fraction sent to a whole-number input "
+                        "is truncated, and text past `max_chars` is cut. A date "
+                        "range is stored as sent, so send at most two dates, "
+                        "earliest first. Send values within what the element "
+                        "advertises, and read `value` in the response to see "
+                        "what was applied.\n\n"
                         "Fields belonging to an `st.form` must be sent together "
                         "with one of that form's submit triggers, because a "
                         "form defers its values until submitted.\n\n"

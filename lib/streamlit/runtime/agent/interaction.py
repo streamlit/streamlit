@@ -73,18 +73,6 @@ _SETTLING_STATUSES: Final = frozenset(
 )
 
 
-def _compacted(msg: ForwardMsg) -> ForwardMsg:
-    """``msg`` compacted, or ``msg`` itself if it cannot be summarized."""
-    try:
-        return snapshot_module.compact_delta(msg)
-    except Exception:
-        _LOGGER.warning(
-            "Could not summarize an agent session payload; keeping it whole.",
-            exc_info=True,
-        )
-        return msg
-
-
 class AgentSessionClient(SessionClient):
     """A session client that accumulates messages instead of sending them.
 
@@ -122,8 +110,6 @@ class AgentSessionClient(SessionClient):
         # accumulated.
         self._lifecycle: dict[str, ForwardMsg] = {}
         self._run_finished = asyncio.Event()
-        # Set while an interaction has asked for a run that has not started.
-        self._awaiting_run = False
         # When the last run settled, which is session activity even when no
         # request is waiting for it.
         self.finished_at = time.monotonic()
@@ -154,7 +140,6 @@ class AgentSessionClient(SessionClient):
             self._run_id = msg.new_session.script_run_id
             self.fragments_last_run = list(msg.new_session.fragment_ids_this_run)
             self._element_at = {}
-            self._awaiting_run = False
             self._run_finished.clear()
 
         if msg_type == "delta":
@@ -169,12 +154,8 @@ class AgentSessionClient(SessionClient):
 
         if msg_type == "script_finished" and msg.script_finished in _SETTLING_STATUSES:
             self._drop_stale_deltas()
-            self._compact_deltas()
             self.finished_at = time.monotonic()
-            # A run the interaction superseded can still finish before the one
-            # it asked for starts, and its result would answer the request.
-            if not self._awaiting_run:
-                self._run_finished.set()
+            self._run_finished.set()
 
     def _add_delta(self, msg: ForwardMsg) -> None:
         position = tuple(msg.metadata.delta_path)
@@ -189,20 +170,6 @@ class AgentSessionClient(SessionClient):
             # written after it has to come after it, so stop replacing.
             self._element_at.pop(position, None)
         self._deltas.append((self._run_id, msg))
-
-    def _compact_deltas(self) -> None:
-        """Hold each table's and chart's summary rather than its bulk payload.
-
-        What stays buffered after a run settles is what the session costs
-        between interactions, so a table is kept as the preview the snapshot
-        reads, not the full Arrow bytes `data.url` already serves. Only the
-        finished run's deltas need it: older ones were compacted when their own
-        run settled.
-        """
-        self._deltas = [
-            (run_id, _compacted(msg) if run_id == self._run_id else msg)
-            for run_id, msg in self._deltas
-        ]
 
     def _drop_stale_deltas(self) -> None:
         """Drop what the finished run was responsible for and did not re-emit.
@@ -226,12 +193,16 @@ class AgentSessionClient(SessionClient):
         return [*self._lifecycle.values(), *(msg for _, msg in self._deltas)]
 
     @property
+    def run_finished(self) -> bool:
+        """Whether the last run has settled and no follow-up run has started."""
+        return self._run_finished.is_set()
+
+    @property
     def client_context(self) -> ClientContext | None:
         return None
 
     def begin_interaction(self) -> None:
         self._run_finished.clear()
-        self._awaiting_run = True
         self.query_string_update = None
 
     async def wait_until_settled(self, timeout: float) -> None:
@@ -306,12 +277,16 @@ class AgentSession:
 
 
 class AgentSessionRegistry:
-    """Tracks agent sessions and reclaims them once they go idle."""
+    """Tracks agent sessions and reclaims them once they go idle.
+
+    Reclaiming happens when the next request arrives rather than on a timer, so
+    an idle server holds expired sessions a little longer. Nothing waits on
+    them: a reclaimed session is gone either way.
+    """
 
     def __init__(self, runtime: Runtime) -> None:
         self._runtime = runtime
         self._sessions: dict[str, AgentSession] = {}
-        self._reclaim_timer: asyncio.TimerHandle | None = None
 
     def get(self, handle: str, user_info: dict[str, Any]) -> AgentSession:
         self._reclaim_idle()
@@ -351,7 +326,6 @@ class AgentSessionRegistry:
             handle=handle, session_id=session_id, client=client, user_info=user_info
         )
         self._sessions[handle] = session
-        self._schedule_reclaim()
         return session
 
     def close(self, handle: str) -> None:
@@ -370,32 +344,6 @@ class AgentSessionRegistry:
                     "Reclaiming idle agent session %s", session_digest(handle)
                 )
                 self.close(handle)
-
-    def _schedule_reclaim(self) -> None:
-        """Reclaim idle sessions when the oldest one expires, request or not.
-
-        Requests reclaim on arrival too, but a burst of clients that then go
-        quiet would otherwise hold every session, and its page's data, until
-        some later request happened to arrive.
-        """
-        if self._reclaim_timer is not None or not self._sessions:
-            return
-        ttl = float(config.get_option("server.agentSessionTTL"))
-        now = time.monotonic()
-        idle = [_idle_since(session) for session in self._sessions.values()]
-        # A busy session is rechecked a TTL from now: its idle time only
-        # starts once it is free.
-        oldest = min((since for since in idle if since is not None), default=now)
-        # At least a second, so a session at its TTL is not spun on.
-        delay = max(1.0, oldest + ttl - now)
-        self._reclaim_timer = asyncio.get_running_loop().call_later(
-            delay, self._on_reclaim_timer
-        )
-
-    def _on_reclaim_timer(self) -> None:
-        self._reclaim_timer = None
-        self._reclaim_idle()
-        self._schedule_reclaim()
 
 
 def session_digest(handle: str) -> str:
@@ -496,6 +444,14 @@ async def _run_interaction(
         # once; the same request after that is a new interaction.
         session.timed_out = None
         return await _settle(app_session, session, pending)
+    if pending is not None and not session.client.run_finished:
+        # A browser would interrupt the run, but this one's result is still
+        # owed to the client that started it.
+        raise AgentRequestError(
+            "session_busy",
+            "This session is still running an interaction that timed out. "
+            "Send only `session_id` to wait for it, then send this request.",
+        )
 
     widget_state = request.get("widget_state")
     trigger = request.get("trigger")
@@ -575,8 +531,8 @@ async def _run_interaction(
     back_msg.rerun_script.CopyFrom(rerun)
 
     session.context_info = context_info
-    # A different interaction supersedes one that timed out: its run stops at
-    # the next interrupt point, as it would for a browser interaction.
+    # A timed-out run that has since finished is left uncollected: the client
+    # asked for something else.
     session.timed_out = None
     session.client.begin_interaction()
     runtime.handle_backmsg(session.session_id, back_msg)

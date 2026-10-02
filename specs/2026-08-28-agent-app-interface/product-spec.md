@@ -688,7 +688,9 @@ check of its own, against the snapshot: a value must be one of the widget's `opt
 That is the most common mistake, and its error can list the legal values. Everything else
 waits for #16203, and each case shows in the next snapshot's `value`: an out-of-range
 number is reset to the default, a fraction sent to an integer input is truncated, and
-text past `max_chars` is cut. [Potential follow-ups](potential-follow-ups.md) ranks the
+text past `max_chars` is cut. A date range is the one shape the runtime does not fix: it
+is stored as sent, reversed or with a third date, so a client sends at most two dates,
+earliest first. [Potential follow-ups](potential-follow-ups.md) ranks the
 validations by how much apps rely on them.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |

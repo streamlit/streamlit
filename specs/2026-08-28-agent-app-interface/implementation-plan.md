@@ -1,10 +1,11 @@
 # Implementation plan: the agent API as stacked PRs
 
 The prototype on `feature/agent-api-prototype`
-([#16930](https://github.com/streamlit/streamlit/pull/16930)) is about 6,700 lines across
+([#16930](https://github.com/streamlit/streamlit/pull/16930)) is about 6,500 lines across
 77 files, and has almost no tests. This plan splits it into six stacked PRs, each
 reviewable and testable on its own, and lists what to leave out of v1 to keep it small.
-Sizes are estimates measured from the prototype, after the cuts at the end.
+The prototype already has those cuts applied, except the MCP endpoint, which stays in it
+until its own PR. Sizes are estimates measured from the prototype.
 
 ## Ground rules
 
@@ -160,15 +161,16 @@ The launch half then moves into PR 5.
 
 ## What to leave out of v1
 
-Together these remove about 720 lines from the prototype, and with them its most fragile
-parts. None changes whether an app behaves correctly through the API. The product spec
-already describes v1 without them.
+Together these remove about 680 lines, and with them the prototype's most fragile parts:
+about 400 for the MCP endpoint, which the prototype still carries, and about 280 already
+removed from it. None changes whether an app behaves correctly through the API, and the
+product spec describes v1 without them.
 
 | Leave out | Saves | Impact if left out | Where it goes instead |
 | --------- | ----- | ------------------ | --------------------- |
 | The MCP endpoint (`mcp.py`, its route, its OpenAPI path) | ~400 lines, plus tracking a fast-moving external protocol | Low. The same `interact` is available over HTTP, and the spec already lists MCP as follow-up #6. | A PR after the stack, with `mcp-support.md` as its design |
 | Compacting the message buffer | ~90 lines, and a second code path for every table's and chart's `data`, run inside the runtime's message loop | Memory only: a 50,000-row table holds 1.7 MB per session instead of 38 KB, within `server.maxMessageSize`, the session cap, and the TTL | [Potential follow-up](potential-follow-ups.md#keep-only-summaries-in-the-session-buffer) if profiling asks for it. Keep the small path that lets `st.map` supply its own summary. |
-| Input checks beyond options (bounds, whole numbers, `max_chars`, date-range arity) | ~170 lines | Low. The runtime already resets an out-of-range or unknown value to the widget's default, so the request succeeds and `value` shows the reset; a fraction sent to an integer input is truncated and over-long text is cut. | [#16203](https://github.com/streamlit/streamlit/issues/16203), in the runtime for every client |
+| Input checks beyond options (bounds, whole numbers, `max_chars`, date-range arity) | ~170 lines | Low. The runtime already resets an out-of-range or unknown value to the widget's default, so the request succeeds and `value` shows the reset; a fraction sent to an integer input is truncated and over-long text is cut. A date range is stored as sent, reversed or with a third date, which the OpenAPI text warns about. | [#16203](https://github.com/streamlit/streamlit/issues/16203), in the runtime for every client |
 | A new action replacing a run still going after `run_timed_out` | ~25 lines, the `_awaiting_run` gate, and the race where a replaced run's result answers the wrong request — the most stateful code in `interaction.py` | Low. The same request or an empty one still collects the run; anything else gets `session_busy` until it finishes. | Follow-up #4 |
 | The idle-reclaim timer | ~30 lines | Low. A session idle past its TTL is reclaimed on the next request instead of on a timer, so an idle server holds it a little longer. | Add back if idle memory matters |
 
@@ -198,8 +200,9 @@ a bound parameter rather than dropping it.
 ## Mechanics
 
 - Build each PR as a fresh branch off the previous one, bringing files over from the
-  prototype branch and applying the cuts as they are moved. Keep the prototype branch as
-  the reference until PR 6 merges.
+  prototype branch, which already has every cut applied except the MCP endpoint. Leave
+  `mcp.py`, its route, and its OpenAPI path behind. Keep the prototype branch as the
+  reference until PR 6 merges.
 - Each PR description links the spec section it implements and lists the verification
   checks it ported.
 - `make check` on each PR, and each PR adds the e2e tests for the behavior it introduces.
