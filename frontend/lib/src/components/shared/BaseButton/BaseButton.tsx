@@ -99,7 +99,8 @@ const BaseButton = forwardRef(function BaseButton(
       onClick={onClick || (() => {})}
       autoFocus={autoFocus || false}
       data-testid={props["data-testid"] ?? `stBaseButton-${kind}`}
-      aria-label={props["aria-label"] ?? ""}
+      // Omit an empty aria-label so visible button text remains the accessible name.
+      aria-label={props["aria-label"] || undefined}
       aria-haspopup={props["aria-haspopup"]}
       aria-expanded={props["aria-expanded"]}
     >

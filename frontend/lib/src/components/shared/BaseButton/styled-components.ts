@@ -21,6 +21,7 @@ import { darken, transparentize } from "color2k"
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
 import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
+import { VISUALLY_HIDDEN_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 
 export enum BaseButtonKind {
@@ -65,12 +66,12 @@ export interface BaseButtonProps {
   "aria-expanded"?: boolean
 }
 
-// Most props become required via defaults in BaseButton, but ARIA popup
-// attributes stay optional so they only appear in the DOM when explicitly set.
+// Most props become required via defaults in BaseButton, but ARIA attributes
+// stay optional so they only appear in the DOM when explicitly set.
 type RequiredBaseButtonProps = Required<
-  Omit<BaseButtonProps, "aria-haspopup" | "aria-expanded">
+  Omit<BaseButtonProps, "aria-haspopup" | "aria-expanded" | "aria-label">
 > &
-  Pick<BaseButtonProps, "aria-haspopup" | "aria-expanded">
+  Pick<BaseButtonProps, "aria-haspopup" | "aria-expanded" | "aria-label">
 
 function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   switch (size) {
@@ -607,6 +608,9 @@ export const StyledButtonMainLabel = styled.span<{ $truncate?: boolean }>(
     ...($truncate && { maxWidth: "100%" }),
   })
 )
+
+/** Screen-reader-only text used to name icon-only buttons. */
+export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
 
 export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   display: "inline-flex",

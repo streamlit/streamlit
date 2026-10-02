@@ -16,7 +16,10 @@
 
 import { useMemo } from "react"
 
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import {
+  DynamicIcon,
+  getIconAccessibleName,
+} from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 import { formatShortcutForDisplay } from "~lib/hooks/useRegisterShortcut"
@@ -27,6 +30,7 @@ import {
   StyledButtonLabel,
   StyledButtonMainLabel,
   StyledButtonShortcut,
+  StyledVisuallyHidden,
 } from "./styled-components"
 
 export interface DynamicButtonLabelProps {
@@ -71,12 +75,21 @@ export const DynamicButtonLabel = ({
     label
   )
 
+  // Icon glyphs are aria-hidden, so an icon-only control would have no accessible
+  // name. Use hidden text rather than aria-label here: this component does not own
+  // the button, and content-based naming lets a parent aria-label take precedence.
+  const iconOnlyAccessibleName =
+    icon && !label?.trim() ? getIconAccessibleName(icon) : undefined
+
   return (
     <StyledButtonLabel ref={titleRef} $truncate={truncate}>
       <StyledButtonMainLabel
         data-has-shortcut={Boolean(displayShortcut)}
         $truncate={truncate}
       >
+        {iconOnlyAccessibleName && (
+          <StyledVisuallyHidden>{iconOnlyAccessibleName}</StyledVisuallyHidden>
+        )}
         {icon && iconPosition === "left" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
