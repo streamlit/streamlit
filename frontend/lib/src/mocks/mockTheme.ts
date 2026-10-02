@@ -72,6 +72,9 @@ const requiredThemeColors = {
   greenTextColor: colors.green90,
   violetTextColor: colors.purple90,
   grayTextColor: transparentize(colors.gray85, 0.4),
+
+  // Keep in sync with emotionBaseTheme stock border.
+  borderColor: themeColors.borderColor,
 }
 
 interface OptionalThemeColors {
@@ -92,7 +95,7 @@ const shadows = createShadows(emotionColors)
 
 const emotionMockTheme = {
   inSidebar: false,
-  showSidebarBorder: false,
+  showSidebarBorder: true,
   linkUnderline: true,
   breakpoints,
   colors: emotionColors,

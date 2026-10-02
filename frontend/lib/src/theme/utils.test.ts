@@ -390,18 +390,21 @@ describe("Cached theme helpers", () => {
 })
 
 describe("stock theme surfaces", () => {
-  it("uses stock light main surface colors", () => {
+  it("uses stock light main surface and border colors", () => {
     expect(lightTheme.emotion.colors.bgColor).toBe("#FFFFFF")
     expect(lightTheme.emotion.colors.secondaryBg).toBe("#F8F8F7")
     expect(lightTheme.emotion.colors.bodyText).toBe("#2F2D2B")
     expect(lightTheme.emotion.colors.primary).toBe("#D94A57")
+    expect(lightTheme.emotion.colors.borderColor).toBe("#DCD8D4")
+    expect(lightTheme.emotion.showSidebarBorder).toBe(true)
   })
 
-  it("uses stock dark main surface colors", () => {
+  it("uses stock dark main surface and border colors", () => {
     expect(darkTheme.emotion.colors.bgColor).toBe("#171614")
     expect(darkTheme.emotion.colors.secondaryBg).toBe("#2D2B27")
     expect(darkTheme.emotion.colors.bodyText).toBe("#EDEBE8")
     expect(darkTheme.emotion.colors.primary).toBe("#F2919A")
+    expect(darkTheme.emotion.colors.borderColor).toBe("#4A4742")
   })
 })
 
@@ -864,9 +867,9 @@ describe("createEmotionTheme", () => {
 
   // == Theme border/underline properties ==
 
-  it("showSidebarBorder config is set to false by default", () => {
+  it("showSidebarBorder config is set to true by default", () => {
     const theme = createEmotionTheme({})
-    expect(theme.showSidebarBorder).toBe(false)
+    expect(theme.showSidebarBorder).toBe(true)
   })
 
   it("sets the showSidebarBorder config to true if showSidebarBorder=true", () => {
@@ -1017,7 +1020,7 @@ describe("createEmotionTheme", () => {
       expect(theme.colors.bodyText).toBe("orange")
       expect(theme.colors.secondaryBg).toBe("blue")
       expect(theme.colors.bgColor).toBe("pink")
-      expect(theme.colors.borderColor).toBe(theme.colors.fadedText10)
+      expect(theme.colors.borderColor).toBe("#DCD8D4")
     })
   })
 
@@ -1201,11 +1204,16 @@ describe("createEmotionTheme", () => {
 
     expect(theme.colors.borderColor).toBe("blue")
     expect(theme.colors.borderColorLight).toBe(transparentize("blue", 0.55))
-    // Sets the dataframeBorderColor based on borderColor if dataframeBorderColor
-    // not configured
-    expect(theme.colors.dataframeBorderColor).toBe(
-      theme.colors.borderColorLight
-    )
+    // Unset dataframeBorderColor follows borderColor (not borderColorLight).
+    expect(theme.colors.dataframeBorderColor).toBe("blue")
+  })
+
+  it("uses stock borderColor for dataframeBorderColor when neither is configured", () => {
+    const theme = createEmotionTheme({})
+
+    expect(theme.colors.borderColor).toBe("#DCD8D4")
+    expect(theme.colors.dataframeBorderColor).toBe("#DCD8D4")
+    expect(theme.colors.dataframeBorderColor).toBe(theme.colors.borderColor)
   })
 
   it("sets the dataframeBorderColor if configured", () => {

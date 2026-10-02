@@ -2438,6 +2438,9 @@ _create_theme_options(
     ],
     description="""
         The color of the border around elements.
+
+        Defaults to #DCD8D4 for the light theme and #4A4742 for the dark theme.
+        The stock sidebar uses the same border color as the main theme.
     """,
 )
 
@@ -2524,6 +2527,8 @@ _create_theme_options(
     description="""
         Whether to show a vertical separator between the sidebar and the main
         content area.
+
+        Defaults to true.
     """,
     type_=bool,
 )
