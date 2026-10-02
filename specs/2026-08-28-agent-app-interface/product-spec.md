@@ -238,7 +238,7 @@ Later calls reference keys from the snapshot they just read:
 | `widget_state` | Optional patch of element keys → JSON values, the same shape as `st.session_state`. Unmentioned widgets keep their current values. This is _not_ arbitrary session state — only currently addressable elements.         |
 | `trigger`      | Optional, at most one `{"key": ...}`. Payload-bearing triggers such as `st.chat_input` also carry `"value"`.                                                                                                            |
 | `page`         | Optional `url_path` of a page listed in the snapshot's `pages`, resolved by normal navigation. Defaults to the app's default page on creation, the current page otherwise. Never a Python path or internal script hash. |
-| `query_params` | Optional replacement mapping of name → list of strings; omission preserves. A parameter bound to a widget mirrors that widget, so `{}` clears only the unbound ones; see [The snapshot](#the-snapshot).               |
+| `query_params` | Optional replacement mapping of name → list of strings; omission preserves. A widget bound to a parameter keeps its value for the session, so `{}` clears only the unbound ones; see [The snapshot](#the-snapshot).    |
 | `context`      | Optional `timezone` and `locale`, read by the app as `st.context`. What a browser reports about itself without authentication, so accepting it grants nothing. Held for the session; omission preserves, and a new one replaces it. |
 
 The request blocks until the run chain settles, then returns the snapshot. An accepted
@@ -535,11 +535,12 @@ Rules:
   reliable identity of where a client is.
 - **`query_params` is URL state, and it has to be reported as the app has it.** The
   interface holds the query string the way a browser holds its address bar: sent with each
-  rerun, replaced when the server announces a change, and rewritten when a client sets a
-  widget bound with `bind="query-params"`, as the browser rewrites it. A stale copy is not
-  harmless: the runtime reads the address back on every rerun and seeds the next page's
-  widgets from it, so it would put an old value back over the client's own edit. A page
-  change follows the browser's rule too: unless the request sends its own `query_params`,
+  rerun, and replaced when the server announces a change. When a client sets a widget
+  bound with `bind="query-params"`, its parameter is dropped rather than rewritten as the
+  browser would: a stale copy is not harmless, because the runtime reads the address back
+  on every rerun and seeds the next page's widgets from it, so it would put the old value
+  back over the client's own edit. The parameter is then missing until the app writes it
+  back. A page change follows the browser's rule too: unless the request sends its own `query_params`,
   only embed parameters and widget-bound ones carry over, and a bound one is then dropped
   unless its widget is on the new page. So a parameter one page was opened with, or one
   the app set itself through `st.query_params`, does not follow the client to the next. A
@@ -691,7 +692,7 @@ validations by how much apps rely on them.
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | One widget change                | Set the value, run normal callbacks, rerun.                                                                                                                                                                                                                                                                                                                                                                                   |
 | Several widget changes           | One batch, one rerun. A request is one **client-state transition**, not a replay of several human gestures: the patch is validated atomically, merged into the session's current widget state, and handed to the same runtime path the browser uses, which decides what changed and which callbacks run. This skips intermediate observations, so a widget that only appears after its parent changes needs a second request. |
-| Form                             | Send that form's fields plus exactly one of its submit triggers. Omitted fields keep current values. Reject fields without a submit, fields from two forms, and unrelated controls in the same call. After a `clear_on_submit` submit, fields report their defaults, and the form's next submit sends those for any field it omits; see below.             |
+| Form                             | Send that form's fields plus exactly one of its submit triggers. Omitted fields keep current values. Reject fields without a submit, fields from two forms, and unrelated controls in the same call. `clear_on_submit` is not applied; see below.                                                                                                        |
 | Trigger                          | At most one per request. Triggers reset and never persist as `true`.                                                                                                                                                                                                                                                                                                                                                          |
 | Navigation                       | `page` and `query_params` are a navigation transition and cannot be combined with widget changes.                                                                                                                                                                                                                                                                                                                             |
 | Widget inside a fragment         | Interactive, and the rerun is **scoped to that fragment**, as in the browser. A batch spanning regions reruns the whole app, except that an open dialog's widgets are sent on their own. See below.                                                                                                                                                                                                                                                                                                                             |
@@ -747,19 +748,18 @@ client, which is the Streamlit knowledge this interface exists to absorb, and it
 
 **A headless client inherits the frontend's responsibilities.** Any behavior Streamlit
 implements in React rather than in Python is absent for a non-browser client unless the
-interface performs it in the browser's place. Two that change what the app sees are
-performed in the agent session, the layer that stands in for the browser, so browser
-sessions are untouched:
+interface performs it in the browser's place, and v1 does that only where leaving it out
+would make the app do something wrong. Two sit on that line today:
 
 - `bind="query-params"`, whose new value the browser writes into its address bar. Left
-  undone, the stale address puts the old value back at the next page change.
-- `clear_on_submit`, whose reset each widget performs in the browser. A submit resets the
-  form's fields, which then report their defaults and are sent at their defaults on the
-  form's next submit unless the request sets them. Session state keeps the submitted
-  values until then, as it does for a browser; AppTest emulates the reset the same way.
+  alone, the stale address would put the old value back on the next rerun or page, so
+  setting a bound widget drops its parameter. Rewriting it the way the browser does would
+  make `query_params` complete; that is a follow-up.
+- `clear_on_submit`, whose reset each widget performs in the browser. Fields keep their
+  submitted values, which is declared rather than emulated: nothing goes wrong, the form
+  just does not clear. Emulating it the way AppTest does is a follow-up.
 
-`required` and `validate` stay on the other side of that line: reported, not enforced, as
-below.
+The same applies to `required` and `validate`: reported, not enforced, as below.
 
 Actions do not carry a JSON Schema in v1. The element's `type` plus its constraint
 properties (`options`, `min_value`, `max_value`, `max_chars`, `required`, `validate`)
@@ -874,6 +874,8 @@ back to a browser rather than mistake it for missing content:
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
 | Charts that combine several dataframes                                     | A layered or concatenated Altair chart over different dataframes reports its `spec` with `data.unavailable: multiple_datasets` and serves none of them, rather than serve the first and claim `complete`. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
+| `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.                  |
+| `bind="query-params"` write-back                                           | Setting a bound widget drops its parameter from `query_params` instead of rewriting it, until the app writes it back. See [Actions in v1](#actions-in-v1).                    |
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
 | Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun.                                                                                               |

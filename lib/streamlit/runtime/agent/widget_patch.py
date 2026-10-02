@@ -148,7 +148,6 @@ def build_widget_states(
     widget_state: dict[str, Any] | None,
     trigger: dict[str, Any] | None,
     element_states: Mapping[str, ElementState],
-    cleared_forms: set[str],
 ) -> WidgetStates:
     """Validate the patch and the trigger, then encode both as ``WidgetStates``.
 
@@ -159,12 +158,6 @@ def build_widget_states(
     ``element_states`` comes from the last snapshot's tree, because the
     runtime's widget registry does not record form membership or why an element
     is unusable -- both exist only on the emitted element.
-
-    ``cleared_forms`` holds the forms whose last submit reset them, and is
-    updated for a submit here. `clear_on_submit` is the browser's: it resets the
-    form's fields when the form is submitted, and sends those defaults on the
-    next submit. So a submit of a cleared form sends every field the request
-    leaves out at its default, the way AppTest does.
     """
     states = WidgetStates()
     touched_forms: set[str] = set()
@@ -256,30 +249,7 @@ def build_widget_states(
             "form's submit triggers.",
         )
 
-    if submitted_form:
-        if submitted_form in cleared_forms:
-            sent = {state.id for state in states.widgets}
-            # An unset value resolves to the widget's default.
-            states.widgets.extend(
-                WidgetState(id=element_id)
-                for element_id, state in element_states.items()
-                if state.form_id == submitted_form
-                and element_id not in sent
-                and _is_field(session_state, element_id)
-            )
-        form_state = element_states.get(submitted_form)
-        if form_state is not None and form_state.clears_on_submit:
-            cleared_forms.add(submitted_form)
-        else:
-            cleared_forms.discard(submitted_form)
-
     return states
-
-
-def _is_field(session_state: SessionState, element_id: str) -> bool:
-    """Whether an element holds a value a form submits, rather than firing."""
-    metadata = session_state._new_widget_state.widget_metadata.get(element_id)
-    return metadata is not None and metadata.value_type not in _TRIGGER_VALUE_TYPES
 
 
 def _form_of(element_states: Mapping[str, ElementState], element_id: str) -> str:

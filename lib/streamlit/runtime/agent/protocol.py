@@ -608,15 +608,13 @@ def schemas() -> dict[str, Any]:
                     },
                     "description": (
                         "A replacement mapping of name to a list of strings; "
-                        "omitting it preserves the current one. A parameter "
-                        'bound to a widget (`bind="query-params"`) mirrors '
-                        "that widget, as a browser's address bar does: "
-                        "sending it sets the widget, which makes 'run this "
-                        "parameterized report' a single creating call, and "
-                        "setting the widget rewrites it. Leaving a bound "
-                        "parameter out does not reset its widget, which keeps "
-                        "its value for the session and is written back, so "
-                        "`{}` clears only the unbound ones."
+                        "omitting it preserves the current one. Sending a "
+                        'parameter bound to a widget (`bind="query-params"`) '
+                        "sets that widget, which makes 'run this "
+                        "parameterized report' a single creating call. "
+                        "Leaving one out does not reset its widget, which "
+                        "keeps its value for the session and may be written "
+                        "back, so `{}` clears only the unbound ones."
                     ),
                 },
                 "context": {
@@ -755,9 +753,10 @@ def schemas() -> dict[str, Any]:
                     "description": (
                         "The session's current URL parameters, as the app has "
                         'them. One bound to a widget (`bind="query-params"`) '
-                        "tracks that widget: it is present while the widget "
-                        "holds a non-default value. An unbound one is kept as "
-                        "sent and changes only what the app reads from "
+                        "is dropped when a request sets that widget, rather "
+                        "than rewritten as a browser would, and is missing "
+                        "until the app writes it back. An unbound one is kept "
+                        "as sent and changes only what the app reads from "
                         "`st.query_params`. A page change keeps what a "
                         "browser keeps: only bound and embed parameters carry "
                         "over, and a bound one is then dropped unless its "
@@ -838,7 +837,14 @@ def schemas() -> dict[str, Any]:
                         "what the element means or how it can be used "
                         "(`disabled`, `expanded`, `options`, bounds), so "
                         "'absent' is never ambiguous between false, "
-                        "unsupported, and overlooked."
+                        "unsupported, and overlooked.\n\n"
+                        "These are what the author wrote, which is not always "
+                        "what this interface does: a form's "
+                        "`clear_on_submit` is applied by the browser, so "
+                        "fields here keep their submitted values after a "
+                        "submit. Read the committed result from the app's own "
+                        "output rather than treating empty fields as a signal "
+                        "that a submit landed."
                     ),
                 },
                 "value": {
@@ -849,11 +855,6 @@ def schemas() -> dict[str, Any]:
                         "Python value. Sending it unchanged is always valid, "
                         "and its shape is the shape the element accepts -- a "
                         "two-item list stays a two-item list.\n\n"
-                        "After a submit, a field of a `clear_on_submit` form "
-                        "holds its default, as in a browser, and that is what "
-                        "the form's next submit sends for it unless the "
-                        "request sets it. What the submit did shows in the "
-                        "app's own output.\n\n"
                         "Present for elements whose `actions` entry has kind "
                         "`value`, except a `text_input` with `type: "
                         '"password"`, whose value can be set but is never '

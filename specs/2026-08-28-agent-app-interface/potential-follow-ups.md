@@ -87,6 +87,31 @@ snapshot, so the spec's "one definition, not three" would hold for the client as
 the representation. This is a large change to `AppTest` and belongs with its own
 roadmap, not with v1.
 
+## Perform more of the browser's form and URL behavior
+
+**Today:** v1 performs a browser-side behavior only where leaving it out makes the app do
+something wrong. Setting a bound widget drops its parameter, so a stale address cannot
+put the old value back, and `clear_on_submit` is declared but not applied.
+
+**The fuller version**, both prototyped and verified against a browser:
+
+- **Rewrite a bound parameter** when its widget is set, in the runtime's own URL form,
+  and drop it at the widget's default, as the browser does. `query_params` then stays
+  complete instead of missing an edited parameter until the app writes it back. About 40
+  lines, using the runtime's private URL coercion helper.
+- **Emulate `clear_on_submit` the way AppTest does.** A submit marks its form cleared; the
+  fields report their defaults, and the form's next submit sends an unset value (the
+  widget's default) for every field the request omits. About 50 lines across the request
+  validator and the snapshot, plus per-session state that outlives a request.
+
+**Why not now:** neither changes whether the app behaves correctly, only how closely the
+snapshot matches what a browser would show. Both reimplement frontend logic that could
+drift from React, which the fidelity harness below would have to watch.
+
+**What would make it worth doing:** clients that cite `query_params` or rely on cleared
+forms. Trials so far have recovered from both by reading widget values and the app's own
+output.
+
 ## Browser-versus-agent fidelity harness
 
 The spec's success criteria require every advertised interaction to match an equivalent

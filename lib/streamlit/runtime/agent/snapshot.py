@@ -43,8 +43,6 @@ from streamlit.runtime.agent import json_encoding
 from streamlit.runtime.state.common import user_key_from_element_id
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
-
     from google.protobuf.message import Message
 
     from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -228,8 +226,6 @@ class ElementState(NamedTuple):
     # to the dialog's fragment keeps it open, so a request that cannot be
     # scoped that way would discard what it sent to the dialog.
     in_dialog: bool
-    # For an `st.form`, whether a submit resets its fields.
-    clears_on_submit: bool = False
 
 
 @dataclass
@@ -241,16 +237,8 @@ class Snapshot:
 
 
 class _SnapshotBuilder:
-    def __init__(
-        self,
-        session_state: SessionState | None,
-        cleared_forms: Collection[str] = (),
-    ) -> None:
+    def __init__(self, session_state: SessionState | None) -> None:
         self._session_state = session_state
-        # Forms a `clear_on_submit` submit reset. The browser shows their fields
-        # at their defaults, and sends those on the next submit, while session
-        # state keeps the submitted values until then.
-        self._cleared_forms = cleared_forms
         self.actions: list[dict[str, str]] = []
         self.element_states: dict[str, ElementState] = {}
         self.undescribed_types: set[str] = set()
@@ -388,13 +376,10 @@ class _SnapshotBuilder:
         result = self._base(description, inherited_support)
         self._note_fragment(node, result)
         element_id = description.get("key")
-        form_id = getattr(payload, "form_id", "") if payload is not None else ""
 
         action = description.get("action")
         if element_id and action and not _is_write_only(description):
-            value = self._widget_value(
-                element_id, at_default=form_id in self._cleared_forms
-            )
+            value = self._widget_value(element_id)
             if action == "value" or value:
                 # A trigger's value only means anything while it is set, and it
                 # resets right after the run that observed it.
@@ -421,6 +406,7 @@ class _SnapshotBuilder:
         if data:
             result["data"] = data
 
+        form_id = getattr(payload, "form_id", "") if payload is not None else ""
         if form_id and element_id:
             result["form_id"] = form_id
 
@@ -480,8 +466,6 @@ class _SnapshotBuilder:
             value=result.get("value"),
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
-            clears_on_submit=description.get("type") == "form"
-            and bool(props.get("clear_on_submit")),
         )
         if actionable:
             self.actions.append(
@@ -512,11 +496,8 @@ class _SnapshotBuilder:
             result["support"] = support
         return result
 
-    def _widget_value(self, element_id: str, *, at_default: bool = False) -> Any:
+    def _widget_value(self, element_id: str) -> Any:
         """Read a widget's live value, in the form a request may send back.
-
-        ``at_default`` reads the widget's default instead, for a field of a
-        form that a submit cleared.
 
         For a widget with a fixed option set, ``st.session_state`` holds the
         author's Python option while the accepted wire value is the
@@ -535,16 +516,12 @@ class _SnapshotBuilder:
         """
         if self._session_state is None:
             return None
-        metadata = self._session_state._new_widget_state.widget_metadata.get(element_id)
         try:
-            value = (
-                metadata.deserializer(None)
-                if at_default and metadata is not None
-                else self._session_state[element_id]
-            )
+            value = self._session_state[element_id]
         except Exception:
             return None
 
+        metadata = self._session_state._new_widget_state.widget_metadata.get(element_id)
         if metadata is not None and (
             metadata.formatted_options is not None
             or (
@@ -941,11 +918,10 @@ def build_snapshot(
     messages: list[ForwardMsg],
     session_state: SessionState | None,
     query_params: dict[str, list[str]],
-    cleared_forms: Collection[str] = (),
 ) -> Snapshot:
     """Build the complete snapshot document for the run that just settled."""
     tree = merge_deltas(messages)
-    builder = _SnapshotBuilder(session_state, cleared_forms)
+    builder = _SnapshotBuilder(session_state)
     children = builder.serialize_children(tree)
 
     new_session = _last_message(messages, "new_session")

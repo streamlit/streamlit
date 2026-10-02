@@ -703,9 +703,10 @@ information.
 - **No structured `applied_filters`.** A report citing "the filters that produced this
   number" has to walk the widget tree itself, and cannot carry that across a page switch.
 - **`query_params` and widget `value` can diverge.** A `page` navigation materializes
-  URL-bound values; a `widget_state` patch does not. (Resolved in 7h.)
+  URL-bound values; a `widget_state` patch does not. (See 7h: a patch now drops the
+  stale parameter.)
 - **`clear_on_submit` is not honored**, and this one wants a decision rather than a
-  patch. (Resolved in 7h, by emulating it in the agent session.) `lib/streamlit` only writes the flag onto the proto; all the clearing lives in
+  patch. (See 7h: emulation was prototyped and left as a follow-up.) `lib/streamlit` only writes the flag onto the proto; all the clearing lives in
   the browser, where `WidgetStateManager.submitForm` emits `formCleared` and each React
   widget resets itself, writing the defaults back into form-scoped state that the server
   does not see until the next submit. So no headless consumer can observe it, and the
@@ -1058,29 +1059,30 @@ for query parameters. The two new findings both fit that:
   of refused connections after a heavy create is not explained by anything on the wire;
   the app's platform logs would show whether the process restarted.
 
-## 7h. Tenth trial and QA: the agent session has to do the browser's part
+## 7h. Tenth trial and QA: which of the browser's jobs the agent session takes on
 
 The tenth trial (two local Vega apps) and a QA pass found the same root cause from two
-directions: behavior the frontend owns, which the agent session had declared rather than
-performed. Declaring it turned out not to be neutral.
+directions: behavior the frontend owns, which the agent session declared rather than
+performed. Declaring it is not always neutral, so v1 performs one only where leaving it
+out makes the app do something wrong.
 
 - **A stale address bar undoes the client's edits.** Setting a bound widget changed its
   value and left `query_params` alone. But the runtime reads the address back: on a
   same-page rerun it is `st.query_params`, and on a page change it seeds the new page's
   widgets. So cleared `origins` came back at the next page, and a year set to 2001
-  reverted to the created 2000. The session now rewrites a bound parameter when its
-  widget is set, in the runtime's own URL form, dropping it at the default as the browser
-  does.
+  reverted to the created 2000. Setting a bound widget now drops its parameter, which is
+  enough: the edit sticks, and the parameter is missing until the runtime writes it back.
+  Rewriting it as the browser does was prototyped (about 40 lines that reimplement the
+  browser's URL format) and left as a follow-up.
 - **A page change has to list every widget, as the browser does.** Comparing against a
   browser found a second divergence: on a page change the runtime keeps the state and
   binding of only the widgets the rerun lists. The browser lists all of them; the agent
   listed none, so shared sidebar widgets kept their values but lost their parameters.
-  The page-change rerun now carries the session's widget states.
-- **`clear_on_submit` is emulated the way AppTest already does it.** A submit marks the
-  form cleared; its fields report their defaults, and its next submit sends the default
-  for every field the request omits. Session state keeps the submitted values until
-  then, as for a browser. Checked against a browser: save "hello" x3, then save with only
-  the count set to 5, shows `Saved '' x5` in both.
+  The page-change rerun now carries the session's widget states, one call.
+- **`clear_on_submit` stays declared.** Emulating it the way AppTest does was prototyped
+  and matched a browser (save "hello" x3, then save with only the count set to 5, shows
+  `Saved '' x5` in both), but it is about 50 lines plus per-session state, and leaving it
+  out makes nothing wrong: the form just does not clear. It is a follow-up.
 - **A replacement does not reset a bound widget** (QA E18). The widget keeps its value
   for the session, and the runtime writes it back when the parameter is missing — the
   same in a browser. Documented: `{}` clears only unbound parameters.
