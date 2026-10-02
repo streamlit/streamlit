@@ -346,7 +346,15 @@ function migrateModeBarButtons(buttons: unknown): unknown {
  * while preserving already-migrated values.
  */
 export function migratePlotlyMapboxFigure(figure: unknown): PlotlyFigureType {
-  const source = isRecord(figure) ? figure : {}
+  if (!isRecord(figure)) {
+    LOG.warn("Plotly figure spec is not an object; using an empty figure")
+    return {
+      data: [],
+      layout: {},
+      frames: null,
+    }
+  }
+  const source = figure
   return {
     ...source,
     data: Array.isArray(source.data)

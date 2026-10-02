@@ -65,10 +65,7 @@ export const parseBidiComponentData = ({
           }
         })
 
-        return reconstructMixedData(
-          jsonData as string | Record<string, unknown> | unknown[],
-          arrowBlobsMap
-        )
+        return reconstructMixedData(jsonData, arrowBlobsMap)
       }
       return null
     }

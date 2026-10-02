@@ -20,13 +20,10 @@
  */
 
 import {
-  Decimal,
-  Duration,
+  DataType as ArrowDataType,
   type Field,
   Struct,
   type StructRow,
-  Time,
-  Timestamp,
   TimeUnit,
   util,
 } from "apache-arrow"
@@ -94,8 +91,9 @@ const LOG = getLogger("arrowFormatUtils")
 const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
 /**
- * Arrow `Field.type` is `any` on untyped tables. Narrow to the DataType
- * classes that actually expose a time unit.
+ * Arrow `Field.type` is `any` on untyped tables. Use Arrow's typeId
+ * guards so unit/timezone/scale stay correct even with a duplicate
+ * apache-arrow copy in the bundle.
  */
 function getArrowTimeUnit(
   field: Field | undefined,
@@ -103,9 +101,9 @@ function getArrowTimeUnit(
 ): TimeUnit {
   const dataType: unknown = field?.type
   if (
-    dataType instanceof Timestamp ||
-    dataType instanceof Time ||
-    dataType instanceof Duration
+    ArrowDataType.isTimestamp(dataType) ||
+    ArrowDataType.isTime(dataType) ||
+    ArrowDataType.isDuration(dataType)
   ) {
     const unit: unknown = dataType.unit
     return typeof unit === "number" ? unit : fallback
@@ -115,7 +113,7 @@ function getArrowTimeUnit(
 
 function getArrowTimezone(field: Field | undefined): string | undefined {
   const dataType: unknown = field?.type
-  if (dataType instanceof Timestamp && dataType.timezone) {
+  if (ArrowDataType.isTimestamp(dataType) && dataType.timezone) {
     return dataType.timezone
   }
   return undefined
@@ -123,7 +121,7 @@ function getArrowTimezone(field: Field | undefined): string | undefined {
 
 function getArrowScale(field: Field | undefined): number {
   const dataType: unknown = field?.type
-  if (dataType instanceof Decimal) {
+  if (ArrowDataType.isDecimal(dataType)) {
     return dataType.scale
   }
   return 0
