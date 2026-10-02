@@ -18,12 +18,13 @@ import os
 import sys
 import threading
 import unittest
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from parameterized import parameterized
 
+from streamlit import config
 from streamlit.connections import (
     BaseConnection,
     SnowflakeCallersRightsConnection,
@@ -46,6 +47,9 @@ from streamlit.runtime.connection_factory import (
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.secrets import secrets_singleton
 from tests.testutil import create_mock_script_run_ctx
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class MockConnection(BaseConnection[None]):
@@ -400,3 +404,94 @@ type="snowpark"
         patched_create_connection.assert_called_once_with(
             "sql", SQLConnection, max_entries=None, ttl=None
         )
+
+
+@pytest.fixture
+def restore_connection_default_ttl() -> Iterator[None]:
+    """Restore the connection default TTL after the test."""
+    key = "server.connectionDefaultTTL"
+    value = config.get_option(key)
+    where_defined = config.get_where_defined(key)
+    yield
+    config._set_option(key, value, where_defined)
+
+
+def _set_connection_default_ttl(ttl: object) -> None:
+    """Set the server default TTL for the current test."""
+    config._set_option("server.connectionDefaultTTL", ttl, "test")
+
+
+@pytest.mark.usefixtures("restore_connection_default_ttl")
+@patch("streamlit.runtime.connection_factory._create_connection")
+@pytest.mark.parametrize(
+    ("name", "connection_type", "connection_class"),
+    [
+        ("snowflake", None, SnowflakeConnection),
+        (
+            "snowflake-callers-rights",
+            None,
+            SnowflakeCallersRightsConnection,
+        ),
+        ("sql", None, SQLConnection),
+        ("custom", MockConnection, MockConnection),
+    ],
+)
+def test_connection_uses_configured_default_ttl(
+    patched_create_connection: MagicMock,
+    name: str,
+    connection_type: type[BaseConnection[object]] | None,
+    connection_class: type[BaseConnection[object]],
+) -> None:
+    """The server default applies to every connection type."""
+    _set_connection_default_ttl(30)
+    if connection_type is None:
+        connection_factory(name)
+    else:
+        connection_factory(name, type=connection_type)
+
+    patched_create_connection.assert_called_once_with(
+        name, connection_class, max_entries=None, ttl=30.0
+    )
+
+
+@pytest.mark.usefixtures("restore_connection_default_ttl")
+@patch("streamlit.runtime.connection_factory._create_connection")
+def test_explicit_connection_ttl_overrides_server_default(
+    patched_create_connection: MagicMock,
+) -> None:
+    """A caller-supplied ttl, including 0, wins over the server default."""
+    _set_connection_default_ttl(" 12.5 ")
+    connection_factory("snowflake", ttl=0)
+
+    patched_create_connection.assert_called_once_with(
+        "snowflake", SnowflakeConnection, max_entries=None, ttl=0
+    )
+
+
+@pytest.mark.usefixtures("restore_connection_default_ttl")
+@patch("streamlit.runtime.connection_factory._create_connection")
+def test_numeric_connection_default_ttl_string_is_seconds(
+    patched_create_connection: MagicMock,
+) -> None:
+    """A numeric config string is the default ttl in seconds."""
+    _set_connection_default_ttl(" 12.5 ")
+    connection_factory("sql")
+
+    patched_create_connection.assert_called_once_with(
+        "sql", SQLConnection, max_entries=None, ttl=12.5
+    )
+
+
+@pytest.mark.usefixtures("restore_connection_default_ttl")
+@patch("streamlit.runtime.connection_factory._create_connection")
+@pytest.mark.parametrize("configured_ttl", [-1, True, "soon", "inf"])
+def test_invalid_connection_default_ttl_is_rejected(
+    patched_create_connection: MagicMock,
+    configured_ttl: object,
+) -> None:
+    """A bad server default fails instead of caching the connection forever."""
+    _set_connection_default_ttl(configured_ttl)
+    with pytest.raises(StreamlitAPIException, match="connectionDefaultTTL"):
+        connection_factory("snowflake")
+
+    patched_create_connection.assert_not_called()
