@@ -21,6 +21,7 @@ instead of shipping `st.set_page_config` padding as the sole API.
 paddingTop = "1.5rem"
 paddingBottom = "2rem"
 
+# Optional — omit to inherit the [theme] values above
 [theme.sidebar]
 paddingTop = "1rem"
 paddingBottom = "1rem"
@@ -39,8 +40,8 @@ Items 1–5 are the proposed contract. The only unresolved design is
    fast follow.
 3. **[Option naming](#option-naming)** — prefer `paddingTop` / `paddingBottom`;
    alternative `appPadding*`; reject `mainPadding*`.
-4. **[Sidebar support](#sidebar-support)** — yes via `[theme.sidebar]`; main values do
-   not apply to the sidebar.
+4. **[Sidebar support](#sidebar-support)** — yes via `[theme.sidebar]`; main padding
+   applies to the sidebar by default, with `[theme.sidebar]` as the override.
 5. **[How values compose](#how-values-compose)** — prefer **A**: top = gap from Streamlit
    chrome to the first author widget. Bottom = aesthetic only (no footer, no Cloud
    “Manage app” floor).
@@ -151,7 +152,7 @@ page_config (`ForwardMsg.page_config_changed`, mid-script) are already orthogona
 | Grammar | Same rem/px as theme |
 | Flash | Theme/default until page_config arrives — same class as `layout="wide"` flash |
 | Multipage | Like `layout`, value sticks in App state across pages until another page sets it — define clear-on-nav vs sticky in the follow-up |
-| Sidebar | Theme keeps `[theme.sidebar]`; page_config has no sidebar styling today — later override main-only or explicit nested API; main must not leak |
+| Sidebar | Theme keeps `[theme.sidebar]` overrides (main theme padding still flows to sidebar when sidebar unset). Page_config has no sidebar styling today — later main-only or an explicit nested API |
 | Proto | New optional `PageConfig` fields; compose in `AppView` / styled components |
 
 ### Which properties
@@ -200,10 +201,10 @@ under `[theme.sidebar]`.
 
 | Config key | Applies to |
 | ---------- | ---------- |
-| `theme.paddingTop` | Main: gap under header → first widget |
-| `theme.paddingBottom` | Main: aesthetic bottom inset |
-| `theme.sidebar.paddingTop` | Sidebar: gap under chrome → first widget |
-| `theme.sidebar.paddingBottom` | Sidebar: aesthetic bottom inset |
+| `theme.paddingTop` | Main gap under header → first widget; also sidebar unless overridden |
+| `theme.paddingBottom` | Main aesthetic bottom inset; also sidebar unless overridden |
+| `theme.sidebar.paddingTop` | Sidebar override: gap under chrome → first widget |
+| `theme.sidebar.paddingBottom` | Sidebar override: aesthetic bottom inset |
 
 - Pros: Matches `backgroundColor` / `borderColor`; natural under `[theme.sidebar]`
 - Cons: Docs must clarify this is not widget padding
@@ -229,33 +230,38 @@ must allow all three zeros.
 
 #### Config sections (v1)
 
-**`[theme]` and `[theme.sidebar]` only.** Not `[theme.light]` / `[theme.dark]` (or their
-`.sidebar` sections): per-appearance padding would change page height on toggle.
+Register on the usual six theme categories (same as `primaryColor` / `backgroundColor`):
 
-An unrecognized key such as `theme.light.paddingTop` is not rejected at parse time —
-`_set_option` logs that it is not a valid config option and ignores the value. Authors
-who scope padding per appearance get a console warning and no visual change. Docs should
-call that out; a clearer warning is optional in the implementation PR.
+| Section | Applies to |
+| ------- | ---------- |
+| `[theme]` | Main (and sidebar via inheritance below) |
+| `[theme.sidebar]` | Sidebar override |
+| `[theme.light]` / `[theme.dark]` | Appearance-scoped main |
+| `[theme.light.sidebar]` / `[theme.dark.sidebar]` | Appearance-scoped sidebar override |
 
-Some options are already section-limited (`base`, `baseFontSize`, `showSidebarBorder` →
-`[theme]` only). Exact `[theme]` + `[theme.sidebar]` without light/dark is a new combo
-but supported by `_create_theme_options` `categories`. Easy to widen later; hard to
-narrow.
+Different light vs dark values are allowed but change page height on toggle — docs should
+note that; do not special-case the config surface. Some options stay section-limited
+(`base`, `baseFontSize`, `showSidebarBorder` → `[theme]` only); padding does not.
 
 ### Sidebar support
 
-Ship sidebar overrides in the same release. `createSidebarTheme` merges full main
-`themeInput` then sidebar overrides — **special-case padding** (like `headingFontSizes`)
-so main values do **not** leak.
+Ship sidebar overrides in the same release. Use the normal `createSidebarTheme` merge
+(main `themeInput`, then sidebar overrides) — **do not** strip padding the way
+`headingFontSizes` is special-cased. A single `[theme]` setting should tighten (or open)
+main and sidebar together; `[theme.sidebar]` is the advanced override.
+
+Effective sidebar value: `theme.sidebar.* ?? theme.* ?? today’s sidebar defaults` (after
+normal light/dark section inheritance).
 
 | Config | Effect |
 | ------ | ------ |
 | Neither set | Today’s paths ([baseline](#what-authors-get-today); [compose](#how-values-compose)) |
-| Only `[theme]` | Main only |
-| Only `[theme.sidebar]` | Sidebar only |
-| Both | Each section its own value |
+| Only `[theme]` | Main **and** sidebar |
+| Only `[theme.sidebar]` | Sidebar only (main keeps today’s path) |
+| Both | Main uses `[theme]`; sidebar uses `[theme.sidebar]` |
 
-If scope must shrink, drop sidebar to a follow-up — don’t invent a second API later.
+Composition A still applies per surface (main overlay header vs sidebar chrome). If scope
+must shrink, drop sidebar to a follow-up — don’t invent a second API later.
 
 ### How values compose
 
@@ -335,7 +341,8 @@ not a taller header — when set, do **not** also add it.
 
 #### Sidebar (A)
 
-Same meaning as main top. Chrome = logo/collapse row + page nav when above widgets.
+Same meaning as main top. The author value is the **effective** sidebar padding
+(`theme.sidebar.* ?? theme.*`). Chrome = logo/collapse row + page nav when above widgets.
 Main top nav is *inside* the header; sidebar nav is a *sibling* — write the author value
 to **exactly one** CSS property:
 
@@ -343,8 +350,8 @@ to **exactly one** CSS property:
 2. optional `SidebarNav`
 3. `StyledSidebarUserContent` (`paddingTop: twoXL` with page nav, else `0`)
 
-| Config | Page nav? | Header `marginBottom` | User-content `paddingTop` |
-| ------ | --------- | --------------------- | ------------------------- |
+| Effective value | Page nav? | Header `marginBottom` | User-content `paddingTop` |
+| --------------- | --------- | --------------------- | ------------------------- |
 | unset | no | `spacing.lg` | `0` |
 | unset | yes | `spacing.lg` | `spacing.twoXL` |
 | set | no | **author** | `0` |
@@ -352,7 +359,7 @@ to **exactly one** CSS property:
 
 `"0"` = flush under last chrome. Do not also zero the other property.
 
-`theme.sidebar.paddingBottom` replaces today’s `sidebarTopSpace` / `6rem`. No effect on
+Effective `paddingBottom` replaces today’s `sidebarTopSpace` / `6rem`. No effect on
 main bottom or `st.bottom`.
 
 #### Main bottom
@@ -373,15 +380,15 @@ spacer already prevent scroll-under.
 
 ### Behavior
 
-- **Defaults / inheritance:** unset → [baseline](#what-authors-get-today). Main does not
-  flow to sidebar. v1 not light/dark-scoped.
-- **Host themes:** same grammar and section rules as `config.toml`. Hosts may set padding
-  only as a **shared layout value** (same effective padding in light and dark);
-  implementation must not honor appearance-split padding. Cover both host paths in the
-  implementation PR: preloaded `LIGHT_THEME` / `DARK_THEME` merge independently today
-  (`getMergedLightTheme` / `getMergedDarkTheme`), and runtime `SET_CUSTOM_THEME_CONFIG`
-  (`setImportedTheme`) builds a custom theme from the host payload alone — so app
-  `config.toml` padding disappears unless the host includes it (same as other theme keys).
+- **Defaults / inheritance:** unset → [baseline](#what-authors-get-today). Configured
+  `[theme]` padding flows to the sidebar; `[theme.sidebar]` overrides when set. Light/dark
+  sections follow the same inheritance rules as other theme keys.
+- **Host themes:** same grammar and section rules as `config.toml` (including light/dark).
+  Cover both host paths in the implementation PR: preloaded `LIGHT_THEME` / `DARK_THEME`
+  merge independently today (`getMergedLightTheme` / `getMergedDarkTheme`), and runtime
+  `SET_CUSTOM_THEME_CONFIG` (`setImportedTheme`) builds a custom theme from the host
+  payload alone — so app `config.toml` padding disappears unless the host includes it
+  (same as other theme keys).
 - **Print:** main `paddingTop` → absolute `2.25rem` (no added `headerHeight`). When set,
   author value replaces that `2.25rem` with no chrome reservation — so small values may
   overlap a printed logo (accepted exception to reading A’s on-screen “never underlap”
@@ -392,14 +399,20 @@ spacer already prevent scroll-under.
 ### Examples
 
 ```toml
-# Dense main + sidebar
+# Dense main + sidebar (sidebar inherits from [theme])
+[theme]
+paddingTop = "0.5rem"
+paddingBottom = "1rem"
+```
+
+```toml
+# Main tight; sidebar keeps a larger bottom inset
 [theme]
 paddingTop = "0.5rem"
 paddingBottom = "1rem"
 
 [theme.sidebar]
-paddingTop = "0.5rem"
-paddingBottom = "1rem"
+paddingBottom = "3rem"
 ```
 
 ```toml
@@ -413,7 +426,7 @@ paddingBottom = "4rem"
 
 - Left/right — [fast follow](#leftright-fast-follow-open); may pair with #5466
 - Per-page via `st.set_page_config` — [API surface](#api-surface) if demand
-- Runtime theme mutation (#14172); light/dark-scoped padding
+- Runtime theme mutation (#14172)
 - `footer_text`; element `gap`; hiding header/toolbar/deploy
 - Author stylesheets / arbitrary CSS variables
 - Changing defaults when unset; auto-clearing host overlays
@@ -424,14 +437,14 @@ paddingBottom = "4rem"
 No Figma here. Implementation PR: screenshots / e2e + automated tests.
 
 - Visual: default; small inset + header/toolbar (focus-ring); top nav without +`2rem`;
-  sidebar ± page nav; embed minimal unset vs set (author not clamped); host theme
-  grammar + shared light/dark padding; `st.bottom` / chat input; print (small top may
-  overlap logo); optional Cloud corner + near-zero bottom
+  sidebar ± page nav (main-only inherits vs sidebar override); embed minimal unset vs set
+  (author not clamped); host theme grammar including light/dark sections; `st.bottom` /
+  chat input; print (small top may overlap logo); optional Cloud corner + near-zero bottom
 - Automated: parse/fallback in `theme/utils.ts` (including bare numbers as px and all
-  three zeros); config tests like `baseRadius`; AppView unset `6rem`/`8rem`; set =
-  `headerHeight` + author when `hasHeader` (author alone if not; no top-nav bump; no
-  embed clamp); sidebar non-inheritance; host `LIGHT_THEME`/`DARK_THEME` and
-  `SET_CUSTOM_THEME_CONFIG` paths
+  three zeros); config tests like `baseRadius` across the six theme categories; AppView
+  unset `6rem`/`8rem`; set = `headerHeight` + author when `hasHeader` (author alone if
+  not; no top-nav bump; no embed clamp); main-only applies to sidebar; sidebar override
+  wins; host `LIGHT_THEME`/`DARK_THEME` and `SET_CUSTOM_THEME_CONFIG` paths
 
 Screenshots supplement assertions; they do not replace them.
 
@@ -444,4 +457,4 @@ Screenshots supplement assertions; they do not replace them.
 | No new dependencies | Yes |
 | Metrics collected | No — no v1 telemetry |
 | Any security/legal impact? | No — validated CSS lengths only |
-| Any docs changes needed? | Yes — theming docs + `references/theme.md`; point #6336 workarounds here; state vertical-only for v1 and that left/right keys are unrecognized until the fast follow |
+| Any docs changes needed? | Yes — theming docs + `references/theme.md`; point #6336 workarounds here; state vertical-only for v1 and that left/right keys are unrecognized until the fast follow; note mismatched light/dark padding can change page height on toggle |
