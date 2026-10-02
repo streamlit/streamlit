@@ -52,7 +52,7 @@ Represents a single browser tab.
 4. Script produces ForwardMsgs -> queued -> flushed to browser
 5. WebSocket disconnects -> cleanup
 
-**File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes.
+**File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes. On source change, `LocalSourcesWatcher` queues `sys.modules` evictions and flushes them at the next script-run start, waiting if any ScriptRunner is inside user `exec()`.
 
 **Script event loop**: Owns one non-running asyncio loop for the script thread, reused across `ScriptRunner` instances and closed on session shutdown.
 
@@ -72,12 +72,14 @@ This ordering explains why `connect_session()` alone does not start user code ex
 Executes user scripts in isolated thread.
 
 **Execution flow**:
-1. Compile script to bytecode (cached via ScriptCache)
-2. Create fake `__main__` module
-3. Attach `ScriptRunContext` to thread
-4. Execute with `exec()` in modified sys.path
-5. Process widget callbacks before execution
+1. Flush deferred `sys.modules` evictions (`LocalSourcesWatcher.on_script_run`), before any user `exec()`
+2. Compile script to bytecode (cached via ScriptCache)
+3. Create fake `__main__` module
+4. Attach `ScriptRunContext` to thread
+5. Inside `_set_execing_flag` / `script_execution()`: run widget callbacks, then `exec()` the main script in a modified `sys.path`
 6. Handle fragments for partial reruns
+
+User `exec()` (main script and callbacks) runs inside `_set_execing_flag` / `script_execution()`. `flush_pending_evictions()` waits until that barrier is clear before popping `sys.modules`, so a file-change reload cannot race an overlapping ScriptRunner when `runner.fastReruns` is on.
 
 **Script events**:
 - `SCRIPT_STARTED`
