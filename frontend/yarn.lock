@@ -3453,7 +3453,7 @@ __metadata:
     "@streamlit/lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^16.0.0"
+    "@swc/plugin-emotion": "npm:^17.0.0"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
@@ -3562,7 +3562,7 @@ __metadata:
     "@streamlit/connection": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^16.0.0"
+    "@swc/plugin-emotion": "npm:^17.0.0"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
@@ -3838,12 +3838,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/plugin-emotion@npm:^16.0.0":
-  version: 16.0.0
-  resolution: "@swc/plugin-emotion@npm:16.0.0"
+"@swc/plugin-emotion@npm:^17.0.0":
+  version: 17.0.0
+  resolution: "@swc/plugin-emotion@npm:17.0.0"
   dependencies:
     "@swc/counter": "npm:^0.1.3"
-  checksum: 10c0/f7867110e8bd4bd618c81ad65c43ff0fb36c4fddc26abba01fff9966edcc48a26b755785b2a3cc6d1b62538a1589685c6a4dce2463ee0f493c63035791422c35
+  checksum: 10c0/e59c61d41210fc57d017678f3cc5a76f0a0a6ce4e6ffba96ceab663a5d9b094eef201f5daee6f18c2ccf461cdfa868668156dc2209a677c7efef644e719067ed
   languageName: node
   linkType: hard
 
