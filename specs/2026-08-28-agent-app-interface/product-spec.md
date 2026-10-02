@@ -511,7 +511,10 @@ Rules:
   first — is left out: `value` says the same thing on the first run and stays true after
   it, and every tab's contents are in the tree regardless of which one a browser shows. A
   display element has no `value`; its content stays in `props`, so an `st.metric` number
-  is `props.value`.
+  is `props.value`. Where the proto's encoding would mislead, `props` carries what the
+  author meant: `st.progress` reports a fraction whichever form the author passed — an
+  `int` percent and a `float` fraction look alike in JSON — and `st.json` its decoded
+  body rather than a JSON string.
 - **Reported options and values are the form a request may send back.** For a widget with
   a `format_func`, `st.session_state` holds the author's Python option while the accepted
   wire value is the formatted string, and reporting the authored object would make both
@@ -754,10 +757,13 @@ would make the app do something wrong. Two sit on that line today:
 - `bind="query-params"`, whose new value the browser writes into its address bar. Left
   alone, the stale address would put the old value back on the next rerun or page, so
   setting a bound widget drops its parameter. Rewriting it the way the browser does would
-  make `query_params` complete; that is a follow-up.
+  make `query_params` complete.
 - `clear_on_submit`, whose reset each widget performs in the browser. Fields keep their
   submitted values, which is declared rather than emulated: nothing goes wrong, the form
-  just does not clear. Emulating it the way AppTest does is a follow-up.
+  just does not clear, and its next submit resends what a browser would have cleared.
+
+Doing the rest of either is [follow-up #8](#follow-ups); both were prototyped and checked
+against a browser, and each is 40 to 50 lines that reimplement frontend logic.
 
 The same applies to `required` and `validate`: reported, not enforced, as below.
 
@@ -779,7 +785,8 @@ without introducing a new authorization surface.
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order rather than objects, since repeating the column names per row is most of a long preview's size. |
 | Lazy dataframe                 | The same shape, with the chunk already emitted as the preview and `complete: false`. `data.url` serves that chunk; fetching further ranges is a follow-up.                                                                                                 |
-| Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped, and chart data under `data` exactly as a dataframe's.                                                                                       |
+| Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped and its base64 typed arrays expanded into numbers, and chart data under `data` exactly as a dataframe's.                                     |
+| Map                            | `st.map`'s plotted table under `data`, exactly as a dataframe's, without the Deck.gl specification generated from it. `st.pydeck_chart` reports its specification like any chart.                                                                          |
 | Image, audio, video, PDF       | Caption, `alt`, MIME type, and the media URL the app already exposed to its own client. `st.image` reports them as the author passed the images: single values for one image, parallel lists for several. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way. |
 | HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML and a URL iframe are fully readable. |
 | Download                       | Label, `file_name`, MIME type, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, and its click — a rerun or the `on_click` callback — is an ordinary trigger, unless `on_click="ignore"` makes it a no-op. Only deferred generation, which carries a file ID instead of a URL, is unsupported. |
@@ -874,8 +881,8 @@ back to a browser rather than mistake it for missing content:
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
 | Charts that combine several dataframes                                     | A layered or concatenated Altair chart over different dataframes reports its `spec` with `data.unavailable: multiple_datasets` and serves none of them, rather than serve the first and claim `complete`. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
-| `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.                  |
-| `bind="query-params"` write-back                                           | Setting a bound widget drops its parameter from `query_params` instead of rewriting it, until the app writes it back. See [Actions in v1](#actions-in-v1).                    |
+| `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal. Follow-up #8.    |
+| `bind="query-params"` write-back                                           | Setting a bound widget drops its parameter from `query_params` instead of rewriting it, until the app writes it back. See [Actions in v1](#actions-in-v1); follow-up #8.      |
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
 | Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun.                                                                                               |
@@ -1159,8 +1166,11 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
    ([#16878](https://github.com/streamlit/streamlit/issues/16878)). It must never publish
    widget schemas or user-dependent page lists from a shared warm-up run.
 8. **Remaining interaction coverage.** Uploads, including `st.chat_input` attachments;
-   `st.data_editor` edits; dataframe and chart selections; deferred downloads; and
-   per-action JSON Schema.
+   `st.data_editor` edits; dataframe and chart selections; deferred downloads;
+   per-action JSON Schema; and the browser's half of forms and bound parameters —
+   applying `clear_on_submit` and rewriting a bound parameter when its widget is set,
+   both prototyped as described in
+   [potential-follow-ups.md](potential-follow-ups.md#perform-more-of-the-browsers-form-and-url-behavior).
 
 ## Beyond the app surface
 
@@ -1218,7 +1228,8 @@ agent access alone.
 - JSON encodings are pinned for dates, datetimes, decimals, large integers, non-finite
   numbers, ranges, and object-valued options.
 - Every advertised interaction matches an equivalent browser session on callback order,
-  resulting widget value, and emitted output.
+  resulting widget value, and emitted output, except where
+  [What v1 does not support](#what-v1-does-not-support) says otherwise.
 - Whatever the snapshot reports as a value can be sent straight back.
 - A filtered dashboard, a form with two submit buttons, a chat flow, and a multi-turn
   dialog all complete without a browser.
