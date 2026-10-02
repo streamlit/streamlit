@@ -226,10 +226,10 @@ def test_colored_text_hover(app: Page):
         "rgb(0, 84, 163)",  # blueTextColor
     )
     tertiary_button_container.locator("button").hover()
-    # For tertiary buttons, the colored text should be red on hover to match the rest of the text
+    # For tertiary buttons, colored text inherits primary (#D94A57) on hover
     expect(tertiary_text).to_have_css(
         "color",
-        "rgb(255, 75, 75)",
+        "rgb(217, 74, 87)",
     )
 
 
