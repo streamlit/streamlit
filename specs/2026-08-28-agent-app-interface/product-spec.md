@@ -326,7 +326,11 @@ The response is the complete merged tree for the current page plus what is actio
 right now. Naming follows the public API, for the reason above:
 
 - An element's `type` is its **command name** — `selectbox`, `caption`, `expander` — even
-  where several commands share one proto and the command has to be recovered.
+  where several commands share one proto and the command has to be recovered. A command
+  outside the top-level namespace is spelled by its path from `st`, such as
+  `components.v1.html`, and a custom component is typed by the API that declared it
+  (`components.v1.declare_component`, `components.v2.component`), with its own name in
+  `props.component_name`.
 - `props` keys are the command's **parameter names**, spelled exactly as a user would
   write them: `label`, `help`, `options`, `format`, `disabled`, `expanded`, `icon`,
   `column_config`. Never a proto field name, never a synonym.
@@ -765,7 +769,7 @@ without introducing a new authorization surface.
 | Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order rather than objects, since repeating the column names per row is most of a long preview's size. |
 | Lazy dataframe                 | The same shape, with the chunk already emitted as the preview and `complete: false`. `data.url` serves that chunk; fetching further ranges is a follow-up.                                                                                                 |
 | Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped, and chart data under `data` exactly as a dataframe's.                                                                                       |
-| Image, audio, video, PDF       | Caption, `alt`, MIME type, and the media URL the app already exposed to its own client. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way.                                                                          |
+| Image, audio, video, PDF       | Caption, `alt`, MIME type, and the media URL the app already exposed to its own client. `st.image` reports them as the author passed the images: single values for one image, parallel lists for several. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way. |
 | HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML and a URL iframe are fully readable. |
 | Download                       | Label, `file_name`, MIME type, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, and its click — a rerun or the `on_click` callback — is an ordinary trigger, unless `on_click="ignore"` makes it a no-op. Only deferred generation, which carries a file ID instead of a URL, is unsupported. |
 

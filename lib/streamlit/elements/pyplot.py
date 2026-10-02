@@ -236,7 +236,8 @@ class PyplotMixin:
             # the way `st.image` is: by the URL a client can fetch it from.
             agent_props=agent_spec.element(
                 "pyplot",
-                url=[img.url for img in image_list_proto.imgs] or None,
+                # A figure is always one image.
+                url=image_list_proto.imgs[0].url if image_list_proto.imgs else None,
                 # `""` is kept: it marks the figure as decorative.
                 alt=next(
                     (img.alt for img in image_list_proto.imgs if img.HasField("alt")),

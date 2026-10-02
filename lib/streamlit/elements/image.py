@@ -248,11 +248,12 @@ class ImageMixin:
                 )
             image_list_proto.link = link
 
-        # One entry per image, None where an image has no alt text. `""` is kept:
-        # it marks an image as decorative, which is not the same as unlabeled.
-        alts = [
-            img.alt if img.HasField("alt") else None for img in image_list_proto.imgs
-        ]
+        # Reported the way the author passed the images: one image as single
+        # values, several as parallel lists. None marks an image without a
+        # caption or alt text; `""` alt text is kept, because it marks an image
+        # as decorative, which is not the same as unlabeled.
+        several = _is_image_list(image)
+        imgs = image_list_proto.imgs
         return self.dg._enqueue(
             "imgs",
             image_list_proto,
@@ -261,9 +262,11 @@ class ImageMixin:
             # payload says which one ran.
             agent_props=agent_spec.element(
                 "image",
-                caption=[img.caption for img in image_list_proto.imgs] or None,
-                url=[img.url for img in image_list_proto.imgs] or None,
-                alt=alts if any(value is not None for value in alts) else None,
+                caption=_as_authored([img.caption or None for img in imgs], several),
+                url=_as_authored([img.url for img in imgs], several),
+                alt=_as_authored(
+                    [img.alt if img.HasField("alt") else None for img in imgs], several
+                ),
                 link=link,
             ),
         )
@@ -272,3 +275,22 @@ class ImageMixin:
     def dg(self) -> DeltaGenerator:
         """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _is_image_list(image: Any) -> bool:
+    """Whether ``image`` holds several images, by the rule `marshall_images` uses."""
+    if isinstance(image, (list, set, tuple)):
+        return True
+    import numpy as np
+
+    return isinstance(image, np.ndarray) and len(image.shape) == 4
+
+
+def _as_authored(values: list[Any], several: bool) -> Any:
+    """Every image's value as a list, or one image's value alone.
+
+    A list that would only hold None is left out, as an unset parameter is.
+    """
+    if several:
+        return values if any(value is not None for value in values) else None
+    return values[0] if values else None
