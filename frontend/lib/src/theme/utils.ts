@@ -39,7 +39,6 @@ import {
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
-import { stockSidebarSurfaces } from "./stockSidebarSurfaces"
 import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
 import type {
   CachedTheme,
@@ -1584,6 +1583,18 @@ const getActiveThemeBase = (
     ? CustomThemeConfig.BaseTheme.LIGHT
     : CustomThemeConfig.BaseTheme.DARK
 }
+
+/** Stock sidebar surface colors when `[theme.sidebar]` does not set them. */
+export const stockSidebarSurfaces = {
+  [CustomThemeConfig.BaseTheme.LIGHT]: {
+    backgroundColor: "#F8F8F7",
+    secondaryBackgroundColor: "#F4F4F3",
+  },
+  [CustomThemeConfig.BaseTheme.DARK]: {
+    backgroundColor: "#21201D",
+    secondaryBackgroundColor: "#34322E",
+  },
+} as const
 
 /**
  * Create the sidebar's theme, including any sidebar custom theme configurations

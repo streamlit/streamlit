@@ -20,7 +20,6 @@ import type { MockInstance } from "vitest"
 
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
-import { stockSidebarSurfaces } from "~lib/theme/stockSidebarSurfaces"
 import { baseTheme, darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import type { ThemeConfig } from "~lib/theme/types"
 import {
@@ -50,6 +49,7 @@ import {
   removeCachedTheme,
   setCachedThemeSelection,
   sortThemeInputKeys,
+  stockSidebarSurfaces,
   toThemeInput,
 } from "~lib/theme/utils"
 import { LocalStore } from "~lib/util/storageUtils"
