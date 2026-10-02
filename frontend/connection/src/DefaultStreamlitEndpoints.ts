@@ -18,6 +18,7 @@ import type {
   AxiosProgressEvent,
   AxiosRequestConfig,
   AxiosResponse,
+  RawAxiosRequestHeaders,
 } from "axios"
 import { getLogger } from "loglevel"
 
@@ -404,12 +405,13 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 }
 
 /**
- * Flatten axios request headers to a plain record so object-spread does not
- * copy an AxiosHeaders class instance.
+ * Flatten axios request headers to a plain object so object-spread does not
+ * copy an AxiosHeaders class instance. Keep supported Axios header values
+ * (strings, arrays, numbers, booleans).
  */
 function toPlainRequestHeaders(
   headers: AxiosRequestConfig["headers"]
-): Record<string, string> {
+): RawAxiosRequestHeaders {
   if (!headers) {
     return {}
   }
@@ -419,9 +421,5 @@ function toPlainRequestHeaders(
       ? headers.toJSON()
       : headers
 
-  return Object.fromEntries(
-    Object.entries(source ?? {}).filter(
-      (entry): entry is [string, string] => typeof entry[1] === "string"
-    )
-  )
+  return { ...(source as RawAxiosRequestHeaders) }
 }
