@@ -31,10 +31,12 @@ from signatures despite the test.
 
 ## Widget constraint validation (#16203)
 
-Widget constraints are enforced only in the browser today, for every client:
-[#16203](https://github.com/streamlit/streamlit/issues/16203) moves them into the widgets'
-server-side deserialize path. The agent API should rely on that rather than keep its own
-checks, which exist in the prototype only as a stopgap for options and bounds.
+Widget constraints are enforced mostly in the browser today: the runtime resets an
+out-of-range number or an unknown option to the default, and nothing server-side checks
+the rest. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them into the
+widgets' server-side deserialize path, and the agent API should rely on that. v1 keeps
+one check of its own, that a value is one of the widget's `options`; the prototype's
+checks for bounds, whole numbers, `max_chars`, and date-range arity are left for #16203.
 
 **One requirement on the shape.** #16203 proposes coercing a violation to a valid value,
 which suits a browser racing a rerun. An agent needs the opposite, because a silently
@@ -68,15 +70,27 @@ the policy to its caller: the browser path coerces, the agent path rejects with
 Uploaded file types are already checked server-side, in each upload widget's
 deserializer, so they need nothing new.
 
-## Drop the buffer on pages without fragments
+## Keep only summaries in the session buffer
 
-After compaction, a session holds about one snapshot's worth of messages between
-interactions: 12 KB for a page with 2 MB of tables. On a page without fragments, even that
-is never read again, because the next run is a full one and replaces everything. It is
-not dropped, because "no fragments" cannot be read from the tree: a fragment that rendered
-nothing leaves no node, and `st.rerun("<key>")` can still rerun it. That would need the
-fragment registry to answer the question, and a few kilobytes per session does not
-justify reaching into it.
+**Today:** a session keeps the page's last messages between interactions, so a fragment
+rerun can return the whole page. That is what the app last sent its client, including
+every table's Arrow bytes: a 50,000-row table holds 1.7 MB per session, bounded by
+`server.maxMessageSize`, the session cap, and the idle TTL.
+
+**The alternative:** once a run settles, replace each buffered table's or chart's payload
+with the summary a snapshot reads — 38 KB instead of 1.7 MB for that table. The prototype
+does this in about 90 lines.
+
+**Why not now:** it gives every table's and chart's `data` a second code path, from the
+payload or from the summary, and it runs inside the runtime's message loop, where an
+exception stops message delivery for every session on the server. Memory is already
+bounded.
+
+**What would make it worth doing:** profiling of real agent sessions that shows the
+buffer dominating memory. Dropping the buffer entirely on pages without fragments would
+go further, but needs the fragment registry: "no fragments" cannot be read from the tree,
+because a fragment that rendered nothing leaves no node, and `st.rerun("<key>")` can
+still rerun it.
 
 ## One headless client for `AppTest` and the agent API
 

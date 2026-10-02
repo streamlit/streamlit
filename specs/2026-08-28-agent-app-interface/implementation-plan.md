@@ -89,8 +89,10 @@ and run a parameterized report in one call.
 - `AgentSessionClient`, buffering the latest full run; `AgentSessionRegistry` with the
   session cap, idle TTL, and identity binding from `server.trustedUserHeaders`.
 - `interact` for creating calls and reruns; `page` and `query_params`, including the
-  browser's page-change rule and listing widget states with a page change; the run
-  timeout as a `202` that an empty request collects.
+  browser's page-change rule, listing widget states with a page change, and the
+  unknown-page check after a creating call; the run timeout as a `202` that the same
+  request or an empty one collects, with `session_busy` for anything else while the run
+  is still going.
 - `POST interact` and `GET openapi.json` routes, `405` for other methods, and the security
   rules: Host allow-list, `Origin` refusal, bounded body, strict JSON, no cookies read.
   Also the `Link` header, the debug audit log, `errors.py`, and the config options.
@@ -116,7 +118,7 @@ navigate, and a slow app that times out and is collected.
   `cross_form_batch`); the options check.
 - Dropping an edited bound widget's query parameter, so a stale address cannot put the old
   value back.
-- The `context` request field, if it is kept (see the cuts).
+- The `context` request field (timezone and locale).
 
 **Tests:** unit tests for encoding and rejection per widget type; e2e for a form with two
 submit buttons, a `format_func` round trip, a chat flow, and a widget that appears only
@@ -144,8 +146,9 @@ that fetches a table's URL and compares the row count with the snapshot.
   `FINISHED_FRAGMENT_RUN_SUCCESSFULLY`, scoping a request to its fragment, the
   cross-fragment and cross-dialog rules, dialog descriptions (`is_open`, the dismiss
   trigger), and `fragments` in the snapshot.
-- Launch: `<link rel="service-desc">` in `index.html`, the flag made visible, and the
-  user-facing docs.
+- Launch: `<link rel="service-desc">` and the `<noscript>` hint in `index.html` (the
+  hint's wording needs product sign-off), the flag made visible, and the user-facing
+  docs.
 
 **Tests:** e2e that a widget inside a fragment does not rerun the page, that a dialog
 stays open through its own confirm, and that dismissing it works.
@@ -157,16 +160,17 @@ The launch half then moves into PR 5.
 
 ## What to leave out of v1
 
-Together these remove about 870 lines from the prototype, and with them its most fragile
-parts. None changes whether an app behaves correctly through the API.
+Together these remove about 720 lines from the prototype, and with them its most fragile
+parts. None changes whether an app behaves correctly through the API. The product spec
+already describes v1 without them.
 
 | Leave out | Saves | Impact if left out | Where it goes instead |
 | --------- | ----- | ------------------ | --------------------- |
 | The MCP endpoint (`mcp.py`, its route, its OpenAPI path) | ~400 lines, plus tracking a fast-moving external protocol | Low. The same `interact` is available over HTTP, and the spec already lists MCP as follow-up #6. | A PR after the stack, with `mcp-support.md` as its design |
-| Compacting the message buffer | ~90 lines, and a second code path for every table's and chart's `data`, run inside the runtime's message loop | Memory only: a 50,000-row table holds 1.7 MB per session instead of 38 KB, within `server.maxMessageSize`, the session cap, and the TTL | A follow-up if profiling asks for it. Keep the small path that lets `st.map` supply its own summary. |
+| Compacting the message buffer | ~90 lines, and a second code path for every table's and chart's `data`, run inside the runtime's message loop | Memory only: a 50,000-row table holds 1.7 MB per session instead of 38 KB, within `server.maxMessageSize`, the session cap, and the TTL | [Potential follow-up](potential-follow-ups.md#keep-only-summaries-in-the-session-buffer) if profiling asks for it. Keep the small path that lets `st.map` supply its own summary. |
 | Input checks beyond options (bounds, whole numbers, `max_chars`, date-range arity) | ~170 lines | Low. The runtime already resets an out-of-range or unknown value to the widget's default, so the request succeeds and `value` shows the reset; a fraction sent to an integer input is truncated and over-long text is cut. | [#16203](https://github.com/streamlit/streamlit/issues/16203), in the runtime for every client |
-| Half of the timeout handling: an identical request as a retry, and a new action replacing a timed-out run | ~35 lines, and the most stateful code in `interaction.py` | Low. Clients follow the `202`'s instruction to send `session_id` alone; a new action while the run continues gets `session_busy`. | Follow-up #4's operation handle |
-| Small conveniences: the idle-reclaim timer, verifying an unknown page after a creating call, the `context` request field, the `<noscript>` discovery text | ~180 lines | Low each. Idle sessions are reclaimed on the next request instead; the snapshot's `page` shows where an unknown page landed; `st.context.timezone` and `locale` read as unknown; agents still find the API through the `service-desc` link. The `<noscript>` text also needs product sign-off. | Add back individually if a trial misses one |
+| A new action replacing a run still going after `run_timed_out` | ~25 lines, the `_awaiting_run` gate, and the race where a replaced run's result answers the wrong request — the most stateful code in `interaction.py` | Low. The same request or an empty one still collects the run; anything else gets `session_busy` until it finishes. | Follow-up #4 |
+| The idle-reclaim timer | ~30 lines | Low. A session idle past its TTL is reclaimed on the next request instead of on a timer, so an idle server holds it a little longer. | Add back if idle memory matters |
 
 Already deferred, and recorded as follow-up #8: applying `clear_on_submit`, and rewriting
 a bound parameter rather than dropping it.
@@ -182,6 +186,13 @@ a bound parameter rather than dropping it.
 - **The OpenAPI text.** The trials learned the protocol from it alone.
 - **The page-change rule and dropping an edited bound parameter.** Both prevent the app
   from running with a value the client did not choose.
+- **The unknown-page check on creating calls.** Without it, a typo in `page` lands on the
+  default page with a `200`, and an agent answers from the wrong page. One-shot creates
+  on a page were the most common pattern in the trials.
+- **The `context` field.** About 50 stateless lines, and it is what lets an app that
+  formats times answer as it would for a person.
+- **The `<noscript>` discovery text.** Static HTML with no runtime cost, and the only text
+  a plain fetch of the app's URL sees. Its wording still needs product sign-off.
 - **The security rules.** Each closes a specific hole the reviews found.
 
 ## Mechanics
