@@ -323,8 +323,9 @@ CSS `padding-top` = `headerHeight` + author when `hasHeader` is true, else autho
 Do not substitute the author string for today’s `6rem` / `8rem` / embed totals. `"0"`
 with a header → `headerHeight` total (flush under the bar). Today’s token is
 `3.75rem`, so the implied unset author gaps are ~`2.25rem` (no top nav) and ~`4.25rem`
-(with top nav) — that is what makes the “Airier than default” `4rem` example actually
-airier. When composing with a px author value, use CSS
+(with top nav). The “Airier than default” example therefore uses `paddingTop = "5rem"`
+so the total stays above both the `6rem` and `8rem` unset paths (`headerHeight` + `5rem`
+= `8.75rem`). When composing with a px author value, use CSS
 `calc(${theme.sizes.headerHeight} + ${authorPadding})` so mixed units need no runtime
 conversion.
 
@@ -419,10 +420,10 @@ paddingBottom = "3rem"
 ```
 
 ```toml
-# Airier than default
+# Airier than default (top clears both 6rem/8rem unset paths; bottom > 10rem)
 [theme]
-paddingTop = "4rem"
-paddingBottom = "4rem"
+paddingTop = "5rem"
+paddingBottom = "12rem"
 ```
 
 ### Out of scope (future work)
