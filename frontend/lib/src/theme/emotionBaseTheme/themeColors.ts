@@ -57,7 +57,7 @@ const requiredThemeColors = {
 
   // Stock main + sidebar border (same hex).
   borderColor: "#DCD8D4",
-  // New palette Blue 90 — main and sidebar share this until named primitives land.
+  // Stock main + sidebar link (same hex).
   link: "#244FB4",
 }
 
