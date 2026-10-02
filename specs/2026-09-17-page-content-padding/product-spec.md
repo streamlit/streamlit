@@ -383,12 +383,15 @@ spacer already prevent scroll-under.
 - **Defaults / inheritance:** unset → [baseline](#what-authors-get-today). Configured
   `[theme]` padding flows to the sidebar; `[theme.sidebar]` overrides when set. Light/dark
   sections follow the same inheritance rules as other theme keys.
-- **Host themes:** same grammar and section rules as `config.toml` (including light/dark).
-  Cover both host paths in the implementation PR: preloaded `LIGHT_THEME` / `DARK_THEME`
-  merge independently today (`getMergedLightTheme` / `getMergedDarkTheme`), and runtime
-  `SET_CUSTOM_THEME_CONFIG` (`setImportedTheme`) builds a custom theme from the host
-  payload alone — so app `config.toml` padding disappears unless the host includes it
-  (same as other theme keys).
+- **Host themes:** same grammar as `config.toml`. Section support depends on the host
+  path: preloaded `LIGHT_THEME` / `DARK_THEME` merge independently
+  (`getMergedLightTheme` / `getMergedDarkTheme`) — put padding on each object.
+  Runtime `SET_CUSTOM_THEME_CONFIG` (`setImportedTheme`) builds one theme via
+  `createTheme` and does **not** run `handleSectionInheritance`, so nested `light` /
+  `dark` on that payload are ignored today (same as other theme keys); hosts must set
+  padding on the top-level / sidebar fields of that message. Also, that path replaces
+  the custom theme from the host payload alone — app `config.toml` padding disappears
+  unless the host includes it.
 - **Print:** main `paddingTop` → absolute `2.25rem` (no added `headerHeight`). When set,
   author value replaces that `2.25rem` with no chrome reservation — so small values may
   overlap a printed logo (accepted exception to reading A’s on-screen “never underlap”
@@ -438,7 +441,8 @@ No Figma here. Implementation PR: screenshots / e2e + automated tests.
 
 - Visual: default; small inset + header/toolbar (focus-ring); top nav without +`2rem`;
   sidebar ± page nav (main-only inherits vs sidebar override); embed minimal unset vs set
-  (author not clamped); host theme grammar including light/dark sections; `st.bottom` /
+  (author not clamped); host theme grammar (preloaded light/dark objects vs
+  `SET_CUSTOM_THEME_CONFIG` top-level fields); `st.bottom` /
   chat input; print (small top may overlap logo); optional Cloud corner + near-zero bottom
 - Automated: parse/fallback in `theme/utils.ts` (including bare numbers as px and all
   three zeros); config tests like `baseRadius` across the six theme categories; AppView
