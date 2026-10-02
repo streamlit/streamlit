@@ -55,4 +55,6 @@ export default {
 
   // Stock main + sidebar border (same hex).
   borderColor: "#4A4742",
+  // Stock main + sidebar link (same hex).
+  link: "#85B8F8",
 }

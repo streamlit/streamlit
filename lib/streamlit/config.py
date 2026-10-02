@@ -2012,7 +2012,8 @@ _create_theme_options(
     description="""
         Color used for all links.
 
-        This defaults to the resolved value of `blueTextColor`.
+        Defaults to #244FB4 for the light theme and #85B8F8 for the dark theme.
+        The stock sidebar uses the same link color as the main theme.
     """,
 )
 

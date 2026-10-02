@@ -855,10 +855,11 @@ export const createEmotionTheme = (
     parsedColors
   )
 
-  // Link color should use the linkColor config if provided, otherwise
-  // use blueTextColor (configured/derived or default) handled above
-  conditionalOverrides.colors.link =
-    linkColor ?? conditionalOverrides.colors.blueTextColor
+  // Link color should use the linkColor config if provided, otherwise keep the
+  // themeColors default from the light/dark base (not blueTextColor).
+  if (notNullOrUndefined(linkColor)) {
+    conditionalOverrides.colors.link = linkColor
+  }
 
   // Code text color should use the codeTextColor config if provided, otherwise
   // use the greenTextColor (configured/derived or default) handled above

@@ -57,6 +57,8 @@ const requiredThemeColors = {
 
   // Stock main + sidebar border (same hex).
   borderColor: "#DCD8D4",
+  // Stock main + sidebar link (same hex).
+  link: "#244FB4",
 }
 
 export type RequiredThemeColors = Record<
