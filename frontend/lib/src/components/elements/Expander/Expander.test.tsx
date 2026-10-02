@@ -785,6 +785,16 @@ describe("step mode (type=STEP)", () => {
     }
   )
 
+  it("names a blank-label step from its user icon when there is no status state", () => {
+    render(
+      <Expander {...getStepProps({ label: "", icon: "🚨" })}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(getSummary()).toHaveAccessibleName("🚨")
+  })
+
   it("announces the status state for a step without content", () => {
     render(
       <Expander

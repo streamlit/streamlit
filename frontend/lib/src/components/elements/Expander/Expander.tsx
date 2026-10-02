@@ -111,21 +111,23 @@ function resolveStepIcon(
 function resolveBlankLabelName(
   label: string,
   icon: string,
-  isStep: boolean
+  isStep: boolean,
+  hasStepState: boolean
 ): string | undefined {
   if (label.trim()) {
     return undefined
   }
-  // st.status always encodes progress into `icon`. For steps that would
-  // duplicate the appended state text ("Loading — running" / "check icon —
-  // complete"); use the stable "Step" fallback instead.
-  if (isStep) {
+  // st.status always encodes progress into `icon`. For status steps that
+  // would duplicate the appended state text ("Loading — running" / "check
+  // icon — complete"); use the stable "Step" fallback instead. Blank-label
+  // expander steps with a user icon (no status state) still name from icon.
+  if (isStep && hasStepState) {
     return "Step"
   }
   if (icon) {
     return getIconAccessibleName(icon)
   }
-  return "Expander"
+  return isStep ? "Step" : "Expander"
 }
 
 interface ExpanderIconProps {
@@ -295,7 +297,12 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // Material/emoji icons and chevrons are aria-hidden. Inject a content-based
   // name (not aria-label) when the markdown label is blank so step status
   // text (" — running") can still append to the accessible name.
-  const blankLabelAccessibleName = resolveBlankLabelName(label, icon, isStep)
+  const blankLabelAccessibleName = resolveBlankLabelName(
+    label,
+    icon,
+    isStep,
+    Boolean(stepState)
+  )
 
   const summaryHeading = (
     <StyledSummaryHeading expanderType={type}>
