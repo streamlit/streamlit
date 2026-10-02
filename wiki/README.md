@@ -10,7 +10,7 @@ This wiki contains documentation for the Streamlit development process.
 - [Running e2e tests and updating snapshots](running-e2e-tests.md): How to run e2e tests and update snapshots.
 - [Pull Requests](pull-requests.md): Branch naming, labeling, writing principles, and PR description guidelines.
 - [Core Release and Patch Process](release-process.md): Cutoff, branching, cherry-picking, publishing, and verification for regular and patch releases.
-- [WCAG capability inventory](accessibility-wcag.md): How Streamlit enables or blocks WCAG 2.2 A/AA for app authors (audited media, chart, data, embed, and image commands).
+- [WCAG capability inventory](accessibility-wcag.md): How Streamlit enables or blocks WCAG 2.2 A/AA for app authors (audited media, chart, map, data, embed, and image commands).
 
 ## Development Guides
 
