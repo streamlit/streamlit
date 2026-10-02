@@ -179,7 +179,8 @@ describe("Selectbox widget", () => {
     expect(screen.getByRole("combobox")).toBeDisabled()
   })
 
-  it("disables the clear button when clearable with a value", () => {
+  it("disables the clear button when the selectbox is disabled and has a value", async () => {
+    const user = userEvent.setup()
     props = getProps({
       clearable: true,
       value: "a",
@@ -192,6 +193,9 @@ describe("Selectbox widget", () => {
     expect(clearButton).toHaveStyle(
       `color: ${lightTheme.emotion.colors.fadedText40}`
     )
+
+    await user.click(clearButton)
+    expect(props.onChange).not.toHaveBeenCalled()
   })
 
   it("does not open the dropdown when disabled and clicked", async () => {

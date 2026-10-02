@@ -118,23 +118,24 @@ export const StyledPlaceholderDotsDiv = styled.div(({ theme }) => {
 })
 
 /**
- * Stop-recording icon: primary at rest, red on hover/focus.
- * Extends BORDERLESS_ICON so colors apply on the button element.
+ * Stop-recording icon: primary at rest, red on hover/focus-visible.
+ * Extends BORDERLESS_ICON so the color rules apply to the button itself rather
+ * than through a wrapper selector.
  */
 export const StyledStopRecordingActionButton = styled(
   StyledBorderlessIconButton
 )(({ theme }) => ({
   padding: theme.spacing.threeXS,
   color: theme.colors.primary,
-  "&:hover, &:focus": {
+  "&:hover, &:focus-visible": {
     color: theme.colors.redColor,
   },
 }))
 
 /**
- * Record / play / pause / reset icon button. Extends BORDERLESS_ICON so the
- * secondary-icon disabled color wins over BaseButton's fadedText10 (same
- * element class, later source order).
+ * Record / play / pause / reset icon button. Extends BORDERLESS_ICON so this
+ * class is applied with the parent class; later source order lets
+ * `fadedText40` beat BaseButton’s `fadedText10` at the same specificity.
  */
 export const StyledSecondaryIconActionButton = styled(
   StyledBorderlessIconButton

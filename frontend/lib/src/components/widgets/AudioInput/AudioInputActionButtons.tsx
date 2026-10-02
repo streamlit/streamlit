@@ -45,7 +45,6 @@ interface BaseActionButtonProps {
   iconContent: EmotionIcon
 }
 
-/** Record / play / pause / reset — secondary icon color recipe. */
 const SecondaryIconActionButton: React.FC<BaseActionButtonProps> = ({
   onClick,
   disabled,

@@ -222,8 +222,9 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       "&:active:not(:disabled):not([data-disabled])": {
         color: theme.colors.primary,
       },
-      // Object keys do not deep-merge — restate disabled color/cursor with the
-      // transparent background/border resets this button needs.
+      // Same key as the helper spread: replaces that disabled rule in place
+      // (object keys do not deep-merge) so fadedText40/not-allowed stay and we
+      // add transparent background/border resets.
       [SECONDARY_ICON_DISABLED_SELECTOR]: {
         color: theme.colors.fadedText40,
         cursor: "not-allowed",
