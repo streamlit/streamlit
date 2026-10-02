@@ -172,6 +172,9 @@ describe("Header", () => {
       )
 
       const expandButton = screen.getByTestId("stExpandSidebarButton")
+      expect(expandButton).toHaveAttribute("aria-label", "Expand sidebar")
+      expect(expandButton).toHaveAttribute("aria-expanded", "false")
+      expect(expandButton).toHaveAttribute("aria-controls", "stSidebar")
       expandButton.click()
 
       expect(onToggleSidebar).toHaveBeenCalled()

@@ -16,6 +16,7 @@
 
 import { type ReactElement, type ReactNode, useContext } from "react"
 
+import { SIDEBAR_ELEMENT_ID } from "@streamlit/app/src/components/Sidebar/utils"
 import {
   BaseButton,
   BaseButtonKind,
@@ -92,6 +93,9 @@ const Header = ({
                     kind={BaseButtonKind.HEADER_NO_PADDING}
                     onClick={onToggleSidebar}
                     data-testid="stExpandSidebarButton"
+                    aria-label="Expand sidebar"
+                    aria-expanded={false}
+                    aria-controls={SIDEBAR_ELEMENT_ID}
                   >
                     <DynamicIcon
                       size="xl"

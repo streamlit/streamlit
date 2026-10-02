@@ -2442,9 +2442,91 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
       "Alt+ArrowDown"
     )
   })
+
+  it("puts popup ARIA on the calendar button, not the field wrapper", () => {
+    render(<DateInput {...getProps()} />)
+    const field = screen.getByTestId("stDateInputField")
+    expect(field).not.toHaveAttribute("aria-expanded")
+    expect(field).not.toHaveAttribute("aria-haspopup")
+    expect(field).not.toHaveAttribute("aria-controls")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    expect(calendarButton).toHaveAttribute("aria-label", "Choose date")
+    expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).toHaveAttribute("aria-controls")
+  })
+
+  it("calendar button opens active calendar and toggles aria-expanded", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    expect(calendar).toHaveAttribute("role", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+  })
 })
 
 describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
+  it("puts popup ARIA on the calendar button, not the field wrapper", () => {
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+    const field = screen.getByTestId("stDateInputField")
+    expect(field).not.toHaveAttribute("aria-expanded")
+    expect(field).not.toHaveAttribute("aria-haspopup")
+    expect(field).not.toHaveAttribute("aria-controls")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    expect(calendarButton).toHaveAttribute("aria-label", "Choose date range")
+    expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).toHaveAttribute("aria-controls")
+  })
+
+  it("calendar button opens active calendar and toggles aria-expanded", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    expect(calendar).toHaveAttribute("role", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+  })
+
   it("Alt+ArrowDown from start field segment enters active calendar", async () => {
     const user = userEvent.setup()
     render(
