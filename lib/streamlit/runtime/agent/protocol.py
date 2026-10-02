@@ -315,6 +315,76 @@ def build_openapi_document(
     if notice is None:
         info["x-streamlit-version"] = __version__
 
+    # JSON object: the MCP operation's request schema uses a type array
+    # (`["object", "array"]`), which only fits this wider mapping.
+    paths: dict[str, Any] = {
+        interact_path: {
+            "post": {
+                "operationId": "interact",
+                "summary": "Send client state, run the app, read the result.",
+                "description": INTERACT_DESCRIPTION,
+                "requestBody": {
+                    "required": False,
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/InteractRequest"}
+                        }
+                    },
+                },
+                "responses": {
+                    "200": {
+                        "description": (
+                            "The run chain settled. Check `status` to find out "
+                            "whether the app itself raised."
+                        ),
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/Snapshot"}
+                            }
+                        },
+                    },
+                    "202": {
+                        "description": (
+                            "Accepted, but the run is still going after "
+                            "`server.agentRunTimeout`: an `Error` with code "
+                            "`run_timed_out` and the `session_id`. Not a "
+                            "failure. Send the same request again, or one with "
+                            "only `session_id`, to wait for the run and get its "
+                            "snapshot."
+                        ),
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/Error"}
+                            }
+                        },
+                    },
+                    "default": {
+                        "description": _ERROR_RESPONSE_DESCRIPTION,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/Error"}
+                            }
+                        },
+                    },
+                },
+            }
+        },
+        schema_path: {
+            "get": {
+                "operationId": "getOpenApiDocument",
+                "summary": "This document.",
+                "responses": {
+                    "200": {
+                        "description": "The OpenAPI document for this API.",
+                        "content": {"application/json": {"schema": {}}},
+                    }
+                },
+            }
+        },
+    }
+    if mcp_path:
+        paths[mcp_path] = _MCP_PATH_ITEM
+
     document: dict[str, Any] = {
         "openapi": "3.1.0",
         "info": info,
@@ -331,77 +401,9 @@ def build_openapi_document(
                 ),
             }
         ],
-        "paths": {
-            interact_path: {
-                "post": {
-                    "operationId": "interact",
-                    "summary": "Send client state, run the app, read the result.",
-                    "description": INTERACT_DESCRIPTION,
-                    "requestBody": {
-                        "required": False,
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/InteractRequest"
-                                }
-                            }
-                        },
-                    },
-                    "responses": {
-                        "200": {
-                            "description": (
-                                "The run chain settled. Check `status` to find out "
-                                "whether the app itself raised."
-                            ),
-                            "content": {
-                                "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/Snapshot"}
-                                }
-                            },
-                        },
-                        "202": {
-                            "description": (
-                                "Accepted, but the run is still going after "
-                                "`server.agentRunTimeout`: an `Error` with code "
-                                "`run_timed_out` and the `session_id`. Not a "
-                                "failure. Send the same request again, or one with "
-                                "only `session_id`, to wait for the run and get its "
-                                "snapshot."
-                            ),
-                            "content": {
-                                "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/Error"}
-                                }
-                            },
-                        },
-                        "default": {
-                            "description": _ERROR_RESPONSE_DESCRIPTION,
-                            "content": {
-                                "application/json": {
-                                    "schema": {"$ref": "#/components/schemas/Error"}
-                                }
-                            },
-                        },
-                    },
-                }
-            },
-            schema_path: {
-                "get": {
-                    "operationId": "getOpenApiDocument",
-                    "summary": "This document.",
-                    "responses": {
-                        "200": {
-                            "description": "The OpenAPI document for this API.",
-                            "content": {"application/json": {"schema": {}}},
-                        }
-                    },
-                }
-            },
-        },
+        "paths": paths,
         "components": {"schemas": schemas()},
     }
-    if mcp_path:
-        document["paths"][mcp_path] = _MCP_PATH_ITEM
     return document
 
 
