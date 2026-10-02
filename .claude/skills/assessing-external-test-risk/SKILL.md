@@ -1,6 +1,7 @@
 ---
 name: assessing-external-test-risk
 description: Assesses whether branch or PR changes are high-risk for externally hosted or embedded Streamlit usage and recommends whether external e2e coverage with `@pytest.mark.external_test` is needed. Use during code review, PR triage, or test planning when changes touch routing, auth, websocket/session behavior, embedding, assets, cross-origin behavior, SiS/Snowflake runtime, storage, or security headers.
+disable-model-invocation: true
 ---
 
 # Assessing external test risk
