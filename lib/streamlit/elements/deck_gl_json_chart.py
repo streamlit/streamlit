@@ -691,7 +691,7 @@ class PydeckMixin:
             pydeck_proto,
             layout_config=layout_config,
             agent_props=agent_spec.element(
-                "pydeck_chart", alt=agent_spec.proto_alt(pydeck_proto)
+                "pydeck_chart", key=key, alt=agent_spec.proto_alt(pydeck_proto)
             ),
         )
 

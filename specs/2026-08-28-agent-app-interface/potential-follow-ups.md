@@ -95,9 +95,10 @@ checks that yet. A harness would drive one app with the same inputs through Play
 and through `interact`, then compare the two.
 
 It matters because every divergence found so far was found by accident: the
-`clear_on_submit` reset, the `bind="query-params"` URL write-back, `run_every`, and
-`st.context` reporting empty strings instead of `None`. All four are behaviors the
-frontend owns, and the next one will be too.
+`clear_on_submit` reset, the `bind="query-params"` URL write-back, the widget states a
+browser lists with a page change (without them, shared sidebar widgets lost their bound
+parameters), `run_every`, and `st.context` reporting empty strings instead of `None`. All
+of them are behaviors the frontend owns, and the next one will be too.
 
 ## Settle on the script runner's shutdown, not a grace period
 

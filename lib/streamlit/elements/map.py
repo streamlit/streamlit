@@ -306,14 +306,9 @@ class MapMixin:
             "deck_gl_json_chart",
             map_proto,
             layout_config=layout_config,
-            # st.map and st.pydeck_chart share this proto, and the columns the
-            # author chose are compiled into the generated Deck.gl spec. The
-            # points are only in that spec, so the plotted table is offloaded
-            # separately -- reading coordinates back out of Deck.gl layers is
-            # not a data contract.
-            agent_props=agent_spec.element(
-                "map",
-                data_url=_serve_points(data, self.dg._get_delta_path_str()),
+            agent_props=_agent_description(
+                data,
+                self.dg._get_delta_path_str(),
                 latitude=latitude,
                 longitude=longitude,
                 size=size if isinstance(size, str) else None,
@@ -329,24 +324,38 @@ class MapMixin:
         return cast("DeltaGenerator", self)
 
 
-def _serve_points(data: Data, coordinates: str) -> str | None:
-    """Offload the plotted table as Arrow, for the agent API.
+def _agent_description(data: Data, coordinates: str, **props: Any) -> str | None:
+    """Describe a map for the agent API, with the plotted table as its data.
 
-    Returns None when there is nothing to serve, which is also the case
-    outside an agent session.
+    st.map and st.pydeck_chart share a proto, and a map's points are only in
+    the Deck.gl spec generated from the author's columns -- which is not a data
+    contract. So the table the author passed is summarized and served the way
+    a dataframe's is, and the snapshot reports that instead of the spec.
     """
-    if data is None or not agent_spec.is_recording():
+    if not agent_spec.is_recording():
         return None
 
-    try:
-        arrow_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
-    except Exception:
-        _LOGGER.debug("Could not serve map data as Arrow.", exc_info=True)
-        # A map accepts shapes the Arrow conversion may reject. The Deck.gl
-        # spec is emitted either way, so this only costs the fetchable copy.
-        return None
+    arrow_bytes = None
+    if data is not None:
+        try:
+            arrow_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
+        except Exception:
+            # A map accepts shapes the Arrow conversion may reject. The snapshot
+            # then falls back to the Deck.gl spec.
+            _LOGGER.debug("Could not describe map data as Arrow.", exc_info=True)
 
-    return data_offload.serve_arrow_over_http(arrow_bytes, coordinates=coordinates)
+    from streamlit.runtime.agent.snapshot import summarize_arrow
+
+    return agent_spec.element(
+        "map",
+        data_url=data_offload.serve_arrow_over_http(
+            arrow_bytes, coordinates=coordinates
+        )
+        if arrow_bytes
+        else None,
+        data_summary=summarize_arrow(arrow_bytes) if arrow_bytes else None,
+        **props,
+    )
 
 
 def to_deckgl_json(

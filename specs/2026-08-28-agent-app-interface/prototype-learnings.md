@@ -703,9 +703,9 @@ information.
 - **No structured `applied_filters`.** A report citing "the filters that produced this
   number" has to walk the widget tree itself, and cannot carry that across a page switch.
 - **`query_params` and widget `value` can diverge.** A `page` navigation materializes
-  URL-bound values; a `widget_state` patch does not.
+  URL-bound values; a `widget_state` patch does not. (Resolved in 7h.)
 - **`clear_on_submit` is not honored**, and this one wants a decision rather than a
-  patch. `lib/streamlit` only writes the flag onto the proto; all the clearing lives in
+  patch. (Resolved in 7h, by emulating it in the agent session.) `lib/streamlit` only writes the flag onto the proto; all the clearing lives in
   the browser, where `WidgetStateManager.submitForm` emits `formCleared` and each React
   widget resets itself, writing the defaults back into form-scoped state that the server
   does not see until the next submit. So no headless consumer can observe it, and the
@@ -1057,6 +1057,47 @@ for query parameters. The two new findings both fit that:
   attributed to the gateway retrying 504s, so the redeploy is the test of that. The minute
   of refused connections after a heavy create is not explained by anything on the wire;
   the app's platform logs would show whether the process restarted.
+
+## 7h. Tenth trial and QA: the agent session has to do the browser's part
+
+The tenth trial (two local Vega apps) and a QA pass found the same root cause from two
+directions: behavior the frontend owns, which the agent session had declared rather than
+performed. Declaring it turned out not to be neutral.
+
+- **A stale address bar undoes the client's edits.** Setting a bound widget changed its
+  value and left `query_params` alone. But the runtime reads the address back: on a
+  same-page rerun it is `st.query_params`, and on a page change it seeds the new page's
+  widgets. So cleared `origins` came back at the next page, and a year set to 2001
+  reverted to the created 2000. The session now rewrites a bound parameter when its
+  widget is set, in the runtime's own URL form, dropping it at the default as the browser
+  does.
+- **A page change has to list every widget, as the browser does.** Comparing against a
+  browser found a second divergence: on a page change the runtime keeps the state and
+  binding of only the widgets the rerun lists. The browser lists all of them; the agent
+  listed none, so shared sidebar widgets kept their values but lost their parameters.
+  The page-change rerun now carries the session's widget states.
+- **`clear_on_submit` is emulated the way AppTest already does it.** A submit marks the
+  form cleared; its fields report their defaults, and its next submit sends the default
+  for every field the request omits. Session state keeps the submitted values until
+  then, as for a browser. Checked against a browser: save "hello" x3, then save with only
+  the count set to 5, shows `Saved '' x5` in both.
+- **A replacement does not reset a bound widget** (QA E18). The widget keeps its value
+  for the session, and the runtime writes it back when the parameter is missing — the
+  same in a browser. Documented: `{}` clears only unbound parameters.
+
+Smaller fixes from the same round: display dataframes and charts report the author's
+`key` (only selection-enabled ones have an element ID); `st.map`'s `data` is the plotted
+table described like a dataframe, without the generated Deck.gl spec; Plotly's base64
+typed arrays are expanded into numbers; the built-in charts' `width: 0`/`height: 0`
+placeholders are dropped; `st.progress` reports a fraction; `st.feedback` reports its
+integer; `st.json`'s body is the decoded value; and a query parameter value must be a
+list of strings.
+
+Unchanged on purpose: an unbound parameter is stored and only affects what the app reads
+from `st.query_params` (AK); an expander's paragraph written after `if rules.open:`
+rather than inside `with rules:` is a sibling in the browser too (AL); a metric the
+author formatted stays a display string; and `st.echarts_chart` stays a `complete`
+specification with no Arrow.
 
 ## 8. Open questions the prototype surfaced
 

@@ -1291,7 +1291,8 @@ class ArrowMixin:
                 return None
             return agent_spec.element(
                 "dataframe",
-                key=proto.id or None,
+                # A display dataframe has no element ID, only the author's key.
+                key=proto.id or key,
                 data_url=data_offload.serve_arrow_over_http(
                     proto.arrow_data.data or proto.lazy_data.initial_chunk.data,
                     coordinates=self.dg._get_delta_path_str(),

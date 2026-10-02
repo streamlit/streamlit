@@ -845,6 +845,7 @@ class PlotlyMixin:
             layout_config=layout_config,
             agent_props=agent_spec.element(
                 "plotly_chart",
+                key=key,
                 theme=theme,
                 alt=agent_spec.proto_alt(plotly_chart_proto),
             ),

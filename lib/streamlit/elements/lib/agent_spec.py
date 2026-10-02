@@ -91,6 +91,7 @@ _SUPPORT_KEY: Final = "support"
 _PROPS_KEY: Final = "props"
 _TRANSPARENT_KEY: Final = "transparent"
 _DATA_URL_KEY: Final = "data_url"
+_DATA_SUMMARY_KEY: Final = "data_summary"
 
 
 # Sessions created by the agent API. The registry that creates them owns this
@@ -145,6 +146,7 @@ def element(
     action: ActionKind | None = None,
     support: SupportReason | None = None,
     data_url: str | None = None,
+    data_summary: dict[str, Any] | None = None,
     **props: Any,
 ) -> str | None:
     """Describe an element for the agent API, or return ``None`` when it is off.
@@ -158,8 +160,9 @@ def element(
         The public command name, for example ``"selectbox"``. Never a proto
         field name.
     key
-        The element's ID. The snapshot reports the author's ``key=`` when there
-        is one and falls back to this otherwise.
+        The element's ID, or the author's ``key=`` for an element that has no
+        ID. The snapshot reports the author's key when there is one and falls
+        back to the ID otherwise.
     action
         Whether the element holds a value that can be set or is a trigger that
         can be fired. Omit for display elements.
@@ -167,9 +170,13 @@ def element(
         Why the element is not fully usable, when it is not.
     data_url
         Where the element's complete data can be fetched, from
-        ``data_offload.serve_arrow_over_http``. Reported under ``data`` rather
+        ``data_offload.serve_arrow_over_http``.         Reported under ``data`` rather
         than ``props``, because it is a fact about the data rather than
         something the author wrote.
+    data_summary
+        The element's ``data``, for a command whose payload does not carry its
+        table, so the snapshot cannot derive it: ``st.map`` emits a generated
+        Deck.gl specification. Built with ``snapshot.summarize_arrow``.
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.
@@ -188,6 +195,8 @@ def element(
         description[_SUPPORT_KEY] = support
     if data_url is not None:
         description[_DATA_URL_KEY] = data_url
+    if data_summary is not None:
+        description[_DATA_SUMMARY_KEY] = data_summary
     description[_PROPS_KEY] = _describe_props(props)
     return json.dumps(description)
 

@@ -49,6 +49,19 @@ def _ensure_serialization(o: object) -> str | list[Any]:
     return list(o) if isinstance(o, set) else repr(o)
 
 
+def _described_body(body: str) -> Any:
+    """The JSON value the body encodes, for the agent API.
+
+    The proto carries it serialized, which would make a client parse JSON out
+    of a JSON string. `NaN` and infinities become null, as in table previews;
+    a string body that is not valid JSON is reported as written.
+    """
+    try:
+        return json.loads(body, parse_constant=lambda _constant: None)
+    except ValueError:
+        return body
+
+
 class JsonMixin:
     @gather_metrics("json")
     def json(
@@ -177,7 +190,7 @@ class JsonMixin:
             # Guarded before the call, because reading the body off the proto
             # copies it.
             agent_props=agent_spec.element(
-                "json", body=json_proto.body, expanded=expanded
+                "json", body=_described_body(json_proto.body), expanded=expanded
             )
             if agent_spec.is_recording()
             else None,

@@ -154,7 +154,7 @@ Nothing new beyond the agent API's rules, applied to one more route:
 
 A snapshot is usually 2–8 KB, but a large Plotly figure or a selectbox with thousands of
 options makes it much larger, and some clients truncate large tool results by default.
-That is the product spec's open question 7 with a concrete consumer. Tables are already
+That is the product spec's open question 6 with a concrete consumer. Tables are already
 bounded by the 100-row preview; figures and option lists need the answer that question
 settles.
 

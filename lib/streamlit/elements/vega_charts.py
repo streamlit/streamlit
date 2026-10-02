@@ -2795,6 +2795,7 @@ class VegaChartsMixin:
                 command=agent_command,
                 encoding=agent_encoding,
                 theme=theme,
+                key=key,
             ),
         )
 
@@ -2806,6 +2807,7 @@ class VegaChartsMixin:
         encoding: dict[str, Any] | None,
         theme: str | None,
         selection_mode: list[str] | None = None,
+        key: str | None = None,
     ) -> str | None:
         """Describe a Vega chart for the agent API.
 
@@ -2821,7 +2823,8 @@ class VegaChartsMixin:
         buffers = agent_spec.vega_arrow_buffers(proto)
         return agent_spec.element(
             command,
-            key=proto.id or None,
+            # A chart without selections has no element ID, only the author's key.
+            key=proto.id or key,
             # Selections cannot be sent through this interface. A chart without
             # them has nothing to send, so it is fully supported.
             support="read_only_in_v1" if selection_mode else None,

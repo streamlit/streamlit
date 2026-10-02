@@ -45,13 +45,20 @@ from streamlit.runtime.agent.widget_patch import (
     resolve_fragment,
 )
 from streamlit.runtime.session_manager import SessionClient
-from streamlit.runtime.state.query_params import EMBED_QUERY_PARAMS_KEYS
+from streamlit.runtime.state.common import is_array_value_field_name
+from streamlit.runtime.state.query_params import (
+    EMBED_QUERY_PARAMS_KEYS,
+    _coerce_value_for_query_url,
+)
 
 if TYPE_CHECKING:
+    from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
     from streamlit.runtime.agent.snapshot import ElementState
     from streamlit.runtime.runtime import Runtime
     from streamlit.runtime.session_manager import ClientContext
+    from streamlit.runtime.state.common import WidgetMetadata
     from streamlit.runtime.state.query_params import QueryParams
+    from streamlit.runtime.state.session_state import SessionState
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -283,9 +290,9 @@ class AgentSession:
     session_id: str
     client: AgentSessionClient
     # The query string this client holds, kept the way a browser keeps its
-    # address bar: sent with each rerun, and updated when the server says it
-    # changed. Deriving it per request instead would replay parameters a page
-    # transition has already dropped.
+    # address bar: sent with each rerun, updated when the server says it
+    # changed, and rewritten when a bound widget is set. Deriving it per request
+    # instead would replay parameters a page transition has already dropped.
     query_string: str = ""
     # Browser facts the client chose to state, resent with every rerun the way
     # a browser resends its own. None until a request supplies them, so the app
@@ -297,6 +304,9 @@ class AgentSession:
     user_info: dict[str, Any] = field(default_factory=dict)
     last_used: float = field(default_factory=time.monotonic)
     element_states: dict[str, ElementState] = field(default_factory=dict)
+    # Forms a `clear_on_submit` submit reset, whose fields a browser would show
+    # and next submit at their defaults. See `build_widget_states`.
+    cleared_forms: set[str] = field(default_factory=set)
     # Guards against a second interaction arriving while one is still running.
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     # An interaction that outlasted the run timeout and whose result nobody has
@@ -412,9 +422,7 @@ def _idle_since(session: AgentSession) -> float | None:
     Activity is the client's last request or the last run finishing, whichever
     is later. A run that outlasted `run_timed_out` is therefore kept while the
     client keeps coming back for it, and gets a full TTL after it finishes to
-    be collected. One nobody comes back for -- including a run that never
-    finishes, such as a `while True` dashboard -- is stopped a TTL after the
-    last request, rather than holding the session forever.
+    be collected.
     """
     if session.lock.locked():
         return None
@@ -535,6 +543,16 @@ async def _run_interaction(
             rerun.query_string = _query_string_for_page_change(
                 app_session.session_state.query_params, rerun.query_string
             )
+            # A browser sends every widget's current value with a page change,
+            # and the runtime keeps the state and query-parameter binding of
+            # only the widgets it lists. Without them, a widget the new page
+            # shares, such as one in the sidebar, would lose its parameter.
+            try:
+                rerun.widget_states.widgets.extend(
+                    app_session.session_state.get_widget_states()
+                )
+            except Exception:
+                _LOGGER.debug("Could not list widget states.", exc_info=True)
         rerun.page_script_hash = page_hash
         rerun.page_name = page_name
     if query_params is not None:
@@ -546,8 +564,12 @@ async def _run_interaction(
             widget_state=widget_state,
             trigger=trigger,
             element_states=session.element_states,
+            cleared_forms=session.cleared_forms,
         )
         rerun.widget_states.CopyFrom(widget_states)
+        rerun.query_string = _query_string_with_edits(
+            app_session.session_state, widget_states, rerun.query_string
+        )
         # Acting on something inside a fragment reruns only that fragment, as
         # it does in the browser. Navigation deliberately never scopes: it is a
         # whole-app transition, and it is already refused above in combination
@@ -612,6 +634,7 @@ async def _settle(
         messages=session.client.messages,
         session_state=app_session.session_state,
         query_params=_decode_query_params(session.query_string),
+        cleared_forms=session.cleared_forms,
     )
     session.element_states = result.element_states
     session.last_used = time.monotonic()
@@ -750,15 +773,75 @@ def _encode_query_params(query_params: Any) -> str:
 
     pairs: list[tuple[str, str]] = []
     for name, values in query_params.items():
-        items = values if isinstance(values, list) else [values]
-        for value in items:
-            if not isinstance(value, (str, int, float, bool)):
-                raise AgentRequestError(
-                    "invalid_request",
-                    f"Query parameter {name!r} must be a string or list of strings.",
-                )
-            pairs.append((str(name), str(value)))
+        if not isinstance(values, list) or not all(
+            isinstance(value, str) for value in values
+        ):
+            raise AgentRequestError(
+                "invalid_request",
+                f"Query parameter {name!r} must be a list of strings, such as "
+                '["2001"].',
+            )
+        pairs.extend((name, value) for value in values)
     return urlencode(pairs)
+
+
+def _query_string_with_edits(
+    session_state: SessionState, widget_states: WidgetStates, query_string: str
+) -> str:
+    """Write edited bound widgets into the query string, as a browser does.
+
+    The browser rewrites a `bind="query-params"` parameter in its address bar
+    whenever the widget changes, and the runtime reads the address back: as
+    `st.query_params` on the next run, and to seed the widgets of the next
+    page. A copy left as it was would put the old value back on both.
+    """
+    bindings = session_state.query_params
+    params = parse_qs(query_string, keep_blank_values=True)
+    for state in widget_states.widgets:
+        binding = bindings.get_binding_for_widget(state.id)
+        metadata = session_state._new_widget_state.widget_metadata.get(state.id)
+        if binding is None or metadata is None:
+            continue
+        try:
+            url_value = _url_value(state, metadata)
+        except Exception:
+            # The widget's own serializer, on its default. A failure costs the
+            # parameter's update, not the interaction.
+            _LOGGER.debug(
+                "Could not write %s back to the URL.", state.id, exc_info=True
+            )
+            continue
+        if url_value is None:
+            params.pop(binding.param_key, None)
+        else:
+            params[binding.param_key] = url_value
+    return urlencode(params, doseq=True)
+
+
+def _url_value(state: WidgetState, metadata: WidgetMetadata[Any]) -> list[str] | None:
+    """A bound widget's new value as its query parameter, or None to drop it.
+
+    In the form the runtime itself writes when it restores a bound value. As in
+    the browser, a value equal to the default is dropped, and an empty one is
+    kept as `name=` only for a widget that can be empty.
+    """
+    field_name = state.WhichOneof("value")
+    if field_name is None:
+        # An unset value resolves to the default.
+        return None
+    wire = getattr(state, field_name)
+    if is_array_value_field_name(field_name):
+        wire = list(wire.data)
+
+    default = metadata.serializer(metadata.deserializer(None))
+    value = _coerce_value_for_query_url(wire, metadata.value_type)
+    if default is not None and value == _coerce_value_for_query_url(
+        default, metadata.value_type
+    ):
+        return None
+    if value in ("", []):
+        return [""] if metadata.clearable else None
+    return value if isinstance(value, list) else [value]
 
 
 def _query_string_for_page_change(bindings: QueryParams, query_string: str) -> str:

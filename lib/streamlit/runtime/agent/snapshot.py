@@ -43,6 +43,8 @@ from streamlit.runtime.agent import json_encoding
 from streamlit.runtime.state.common import user_key_from_element_id
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     from google.protobuf.message import Message
 
     from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -226,6 +228,8 @@ class ElementState(NamedTuple):
     # to the dialog's fragment keeps it open, so a request that cannot be
     # scoped that way would discard what it sent to the dialog.
     in_dialog: bool
+    # For an `st.form`, whether a submit resets its fields.
+    clears_on_submit: bool = False
 
 
 @dataclass
@@ -237,8 +241,16 @@ class Snapshot:
 
 
 class _SnapshotBuilder:
-    def __init__(self, session_state: SessionState | None) -> None:
+    def __init__(
+        self,
+        session_state: SessionState | None,
+        cleared_forms: Collection[str] = (),
+    ) -> None:
         self._session_state = session_state
+        # Forms a `clear_on_submit` submit reset. The browser shows their fields
+        # at their defaults, and sends those on the next submit, while session
+        # state keeps the submitted values until then.
+        self._cleared_forms = cleared_forms
         self.actions: list[dict[str, str]] = []
         self.element_states: dict[str, ElementState] = {}
         self.undescribed_types: set[str] = set()
@@ -376,10 +388,13 @@ class _SnapshotBuilder:
         result = self._base(description, inherited_support)
         self._note_fragment(node, result)
         element_id = description.get("key")
+        form_id = getattr(payload, "form_id", "") if payload is not None else ""
 
         action = description.get("action")
         if element_id and action and not _is_write_only(description):
-            value = self._widget_value(element_id)
+            value = self._widget_value(
+                element_id, at_default=form_id in self._cleared_forms
+            )
             if action == "value" or value:
                 # A trigger's value only means anything while it is set, and it
                 # resets right after the run that observed it.
@@ -406,7 +421,6 @@ class _SnapshotBuilder:
         if data:
             result["data"] = data
 
-        form_id = getattr(payload, "form_id", "") if payload is not None else ""
         if form_id and element_id:
             result["form_id"] = form_id
 
@@ -466,6 +480,8 @@ class _SnapshotBuilder:
             value=result.get("value"),
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
+            clears_on_submit=description.get("type") == "form"
+            and bool(props.get("clear_on_submit")),
         )
         if actionable:
             self.actions.append(
@@ -496,8 +512,11 @@ class _SnapshotBuilder:
             result["support"] = support
         return result
 
-    def _widget_value(self, element_id: str) -> Any:
+    def _widget_value(self, element_id: str, *, at_default: bool = False) -> Any:
         """Read a widget's live value, in the form a request may send back.
+
+        ``at_default`` reads the widget's default instead, for a field of a
+        form that a submit cleared.
 
         For a widget with a fixed option set, ``st.session_state`` holds the
         author's Python option while the accepted wire value is the
@@ -508,22 +527,30 @@ class _SnapshotBuilder:
 
         The widget's own serializer is the mapping the runtime will apply in
         reverse, so it is what keeps read and write in the same space. It is
-        used for every widget with an option list and every widget whose wire
-        value is text. Others -- numbers, booleans, temporal sliders -- are
-        reported as their Python value in JSON, which is also what a request
-        sends for them.
+        used for every widget with an option list, and for a widget whose wire
+        value is text when what it holds is not plain JSON already -- a date
+        becomes its ISO string. Others -- numbers, booleans, temporal sliders,
+        `st.feedback`'s integer -- are reported as their Python value in JSON,
+        which a request may also send.
         """
         if self._session_state is None:
             return None
+        metadata = self._session_state._new_widget_state.widget_metadata.get(element_id)
         try:
-            value = self._session_state[element_id]
+            value = (
+                metadata.deserializer(None)
+                if at_default and metadata is not None
+                else self._session_state[element_id]
+            )
         except Exception:
             return None
 
-        metadata = self._session_state._new_widget_state.widget_metadata.get(element_id)
         if metadata is not None and (
             metadata.formatted_options is not None
-            or metadata.value_type in _STRING_WIRE_TYPES
+            or (
+                metadata.value_type in _STRING_WIRE_TYPES
+                and not (value is None or isinstance(value, (str, int, float)))
+            )
         ):
             try:
                 serialized = metadata.serializer(value)
@@ -618,17 +645,23 @@ def compact_delta(msg: ForwardMsg) -> ForwardMsg:
     if not bulk_fields or not msg.metadata.HasField("agent_props"):
         return msg
     description = agent_spec.decode(msg.metadata.agent_props)
-    if not description or _DATA_SUMMARY_KEY in description:
+    if not description:
         return msg
 
-    description[_DATA_SUMMARY_KEY] = _element_data(
-        proto_field, getattr(element, proto_field)
-    )
+    payload = getattr(element, proto_field)
+    if _DATA_SUMMARY_KEY in description:
+        # Compacted already, or from a command that summarized its own table
+        # because its payload does not carry one (`st.map`). Either way, only
+        # the bulk is left to drop, if it is still there.
+        if not any(field.name in bulk_fields for field, _ in payload.ListFields()):
+            return msg
+    else:
+        description[_DATA_SUMMARY_KEY] = _element_data(proto_field, payload)
     compacted = ForwardMsg()
     compacted.CopyFrom(msg)
-    payload = getattr(compacted.delta.new_element, proto_field)
+    compacted_payload = getattr(compacted.delta.new_element, proto_field)
     for name in bulk_fields:
-        payload.ClearField(name)
+        compacted_payload.ClearField(name)
     compacted.metadata.agent_props = json.dumps(description)
     return compacted
 
@@ -648,7 +681,7 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
 
     if proto_field == "dataframe":
         if payload.HasField("lazy_data"):
-            data = _arrow_data(payload.lazy_data.initial_chunk.data)
+            data = summarize_arrow(payload.lazy_data.initial_chunk.data)
             if data is not None:
                 # The emitted chunk is the preview; the authoritative row count
                 # comes from the source rather than the chunk.
@@ -657,18 +690,26 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
                     data["row_count"] = payload.lazy_data.row_count
                 data["preview"]["truncated"] = True
             return data
-        return _arrow_data(payload.arrow_data.data)
+        return summarize_arrow(payload.arrow_data.data)
 
     if proto_field == "table":
-        return _arrow_data(payload.arrow_data.data)
+        return summarize_arrow(payload.arrow_data.data)
 
     if proto_field == "vega_lite_chart":
         buffers = agent_spec.vega_arrow_buffers(payload)
         if len(buffers) > 1:
             data = {"complete": False, "unavailable": "multiple_datasets"}
         else:
-            data = (_arrow_data(buffers[0]) if buffers else None) or {}
+            data = (summarize_arrow(buffers[0]) if buffers else None) or {}
         spec = _parse_json(payload.spec)
+        if isinstance(spec, dict):
+            # The built-in charts write 0 for a size the author left unset,
+            # which means "fill the container", not a size.
+            spec = {
+                name: value
+                for name, value in spec.items()
+                if not (name in {"width", "height"} and value == 0)
+            }
         if spec is not None:
             data["spec"] = spec
         return data or None
@@ -722,9 +763,49 @@ def _figure_data(spec: Any) -> dict[str, Any] | None:
         }
         data["spec_omitted"] = ["layout.template"]
 
-    data["spec"] = spec
+    data["spec"] = _expand_typed_arrays(spec)
     data["complete"] = True
     return data
+
+
+def _expand_typed_arrays(value: Any) -> Any:
+    """Expand Plotly's base64 typed arrays into lists of numbers, at any depth.
+
+    Plotly writes a NumPy array as `{"dtype": "f8", "bdata": "<base64>"}`,
+    which a browser decodes and a language model cannot read. Those arrays are
+    the values that make a figure `complete`, so they are reported as numbers,
+    at the cost of a longer specification.
+    """
+    if isinstance(value, list):
+        return [_expand_typed_arrays(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    if (
+        isinstance(value.get("bdata"), str)
+        and isinstance(value.get("dtype"), str)
+        and set(value) <= {"bdata", "dtype", "shape"}
+    ):
+        try:
+            return _decode_typed_array(value)
+        except Exception:
+            _LOGGER.debug("Could not decode a Plotly typed array.", exc_info=True)
+            return value
+    return {name: _expand_typed_arrays(item) for name, item in value.items()}
+
+
+def _decode_typed_array(value: dict[str, Any]) -> Any:
+    import base64
+
+    import numpy as np
+
+    # Plotly.js reads these buffers as little-endian.
+    dtype = np.dtype(value["dtype"]).newbyteorder("<")
+    array = np.frombuffer(base64.b64decode(value["bdata"]), dtype=dtype)
+    if shape := value.get("shape"):
+        dims = shape if isinstance(shape, list) else str(shape).split(",")
+        array = array.reshape([int(dim) for dim in dims])
+    # Through the JSON encoding, so a NaN in a float array becomes null.
+    return json_encoding.to_json_value(array.tolist())
 
 
 def _deck_gl_row_count(spec: Any) -> int | None:
@@ -763,7 +844,7 @@ def _parse_json(value: str) -> Any:
         return None
 
 
-def _arrow_data(arrow_bytes: bytes) -> dict[str, Any] | None:
+def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
     """Describe an Arrow buffer: schema, size, and a bounded row preview."""
     if not arrow_bytes:
         return None
@@ -860,10 +941,11 @@ def build_snapshot(
     messages: list[ForwardMsg],
     session_state: SessionState | None,
     query_params: dict[str, list[str]],
+    cleared_forms: Collection[str] = (),
 ) -> Snapshot:
     """Build the complete snapshot document for the run that just settled."""
     tree = merge_deltas(messages)
-    builder = _SnapshotBuilder(session_state)
+    builder = _SnapshotBuilder(session_state, cleared_forms)
     children = builder.serialize_children(tree)
 
     new_session = _last_message(messages, "new_session")

@@ -238,7 +238,7 @@ Later calls reference keys from the snapshot they just read:
 | `widget_state` | Optional patch of element keys → JSON values, the same shape as `st.session_state`. Unmentioned widgets keep their current values. This is _not_ arbitrary session state — only currently addressable elements.         |
 | `trigger`      | Optional, at most one `{"key": ...}`. Payload-bearing triggers such as `st.chat_input` also carry `"value"`.                                                                                                            |
 | `page`         | Optional `url_path` of a page listed in the snapshot's `pages`, resolved by normal navigation. Defaults to the app's default page on creation, the current page otherwise. Never a Python path or internal script hash. |
-| `query_params` | Optional replacement mapping of name → list of strings. `{}` clears; omission preserves.                                                                                                                                |
+| `query_params` | Optional replacement mapping of name → list of strings; omission preserves. A parameter bound to a widget mirrors that widget, so `{}` clears only the unbound ones; see [The snapshot](#the-snapshot).               |
 | `context`      | Optional `timezone` and `locale`, read by the app as `st.context`. What a browser reports about itself without authentication, so accepting it grants nothing. Held for the session; omission preserves, and a new one replaces it. |
 
 The request blocks until the run chain settles, then returns the snapshot. An accepted
@@ -535,15 +535,19 @@ Rules:
   reliable identity of where a client is.
 - **`query_params` is URL state, and it has to be reported as the app has it.** The
   interface holds the query string the way a browser holds its address bar: sent with each
-  rerun, and replaced when the server announces a change. Replaying whatever the last
-  request carried instead would report a filter the app has already discarded and let a
-  stale parameter overwrite a widget value on the way back. A page change follows the
-  browser's rule too: unless the request sends its own `query_params`, only embed
-  parameters and widget-bound ones carry over, and a bound one is then dropped unless its
-  widget is on the new page. So a parameter one page was opened with, or one the app set
-  itself through `st.query_params`, does not follow the client to the next. Even reported
-  correctly, these are URL parameters rather than a description of what produced a number;
-  widget `value`s are that.
+  rerun, replaced when the server announces a change, and rewritten when a client sets a
+  widget bound with `bind="query-params"`, as the browser rewrites it. A stale copy is not
+  harmless: the runtime reads the address back on every rerun and seeds the next page's
+  widgets from it, so it would put an old value back over the client's own edit. A page
+  change follows the browser's rule too: unless the request sends its own `query_params`,
+  only embed parameters and widget-bound ones carry over, and a bound one is then dropped
+  unless its widget is on the new page. So a parameter one page was opened with, or one
+  the app set itself through `st.query_params`, does not follow the client to the next. A
+  bound widget keeps its value for the session, so a replacement that leaves its
+  parameter out does not reset it — the app writes it back, as it would for a browser —
+  and `{}` clears only the unbound parameters. Even reported correctly, these are URL
+  parameters rather than a description of what produced a number; widget `value`s are
+  that.
 - **A label is not an identifier.** Nothing stops an app from giving two elements the
   same `label` — two `st.metric`s can share one, with one holding a count and the other a
   duration — so a client keying by label silently drops one. Position in the tree, or an
@@ -687,7 +691,7 @@ validations by how much apps rely on them.
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | One widget change                | Set the value, run normal callbacks, rerun.                                                                                                                                                                                                                                                                                                                                                                                   |
 | Several widget changes           | One batch, one rerun. A request is one **client-state transition**, not a replay of several human gestures: the patch is validated atomically, merged into the session's current widget state, and handed to the same runtime path the browser uses, which decides what changed and which callbacks run. This skips intermediate observations, so a widget that only appears after its parent changes needs a second request. |
-| Form                             | Send that form's fields plus exactly one of its submit triggers. Omitted fields keep current values. Reject fields without a submit, fields from two forms, and unrelated controls in the same call. `clear_on_submit` is not applied; see below.                                                                                                        |
+| Form                             | Send that form's fields plus exactly one of its submit triggers. Omitted fields keep current values. Reject fields without a submit, fields from two forms, and unrelated controls in the same call. After a `clear_on_submit` submit, fields report their defaults, and the form's next submit sends those for any field it omits; see below.             |
 | Trigger                          | At most one per request. Triggers reset and never persist as `true`.                                                                                                                                                                                                                                                                                                                                                          |
 | Navigation                       | `page` and `query_params` are a navigation transition and cannot be combined with widget changes.                                                                                                                                                                                                                                                                                                                             |
 | Widget inside a fragment         | Interactive, and the rerun is **scoped to that fragment**, as in the browser. A batch spanning regions reruns the whole app, except that an open dialog's widgets are sent on their own. See below.                                                                                                                                                                                                                                                                                                                             |
@@ -742,13 +746,20 @@ client, which is the Streamlit knowledge this interface exists to absorb, and it
 `actions`, since a client needs the whole page's action set to choose its next move.
 
 **A headless client inherits the frontend's responsibilities.** Any behavior Streamlit
-implements in React rather than in Python is absent for every non-browser client, and two
-sit on that line today: `clear_on_submit`, whose reset each widget performs in the
-browser, and `bind="query-params"`, whose new value the browser writes into its own
-address bar — so setting such a widget here changes its value without changing
-`query_params`. Both are declared rather than emulated, because moving either server-side
-changes behavior for browser sessions too and belongs in its own change. This is unlikely
-to be the last pair.
+implements in React rather than in Python is absent for a non-browser client unless the
+interface performs it in the browser's place. Two that change what the app sees are
+performed in the agent session, the layer that stands in for the browser, so browser
+sessions are untouched:
+
+- `bind="query-params"`, whose new value the browser writes into its address bar. Left
+  undone, the stale address puts the old value back at the next page change.
+- `clear_on_submit`, whose reset each widget performs in the browser. A submit resets the
+  form's fields, which then report their defaults and are sent at their defaults on the
+  form's next submit unless the request sets them. Session state keeps the submitted
+  values until then, as it does for a browser; AppTest emulates the reset the same way.
+
+`required` and `validate` stay on the other side of that line: reported, not enforced, as
+below.
 
 Actions do not carry a JSON Schema in v1. The element's `type` plus its constraint
 properties (`options`, `min_value`, `max_value`, `max_chars`, `required`, `validate`)
@@ -809,7 +820,7 @@ with a 50,000-row table holds 38 KB per session instead of 1.7 MB.
 
 Truncation is always explicit. **A preview must never look like the complete answer to
 an aggregate question.** Should a response budget be added
-([open question 7](#open-questions)), a document over it fails the request rather than
+([open question 6](#open-questions)), a document over it fails the request rather than
 being truncated silently.
 
 **`data.complete` is the field a client branches on, and it resolves three ways, never
@@ -829,16 +840,19 @@ Two consequences of that framing are easy to get wrong:
   weight: about nine tenths of a small Plotly figure is `layout.template`, the theme, and
   a dashboard page of them reaches hundreds of kilobytes while answering nothing. Report
   the figure with the theme dropped and name what was dropped, so a trimmed figure is
-  distinguishable from one the app never configured.
+  distinguishable from one the app never configured. Plotly writes NumPy arrays as base64
+  typed arrays (`bdata`), which a model cannot read, so those are expanded into lists of
+  numbers: they are exactly the values that make the figure `complete`.
 
   **Nothing that holds data is dropped, at any size.** The traces are the only part worth
   reading, and a figure is large precisely because it plots a lot of points — the same
   bytes the app already sends its own client. Whether large figures need a budget is
-  [open question 7](#open-questions), and the answer would be serving the specification
+  [open question 6](#open-questions), and the answer would be serving the specification
   behind `data.url`, not truncating it.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
-  a Deck.gl layer, and an agent should not be mining coordinates out of layer JSON, so the
-  plotted table is externalized like any other dataframe's.
+  a Deck.gl layer, and an agent should not be mining coordinates out of layer JSON, so a
+  map's `data` is the table the author passed, described like a dataframe's — columns,
+  preview, `complete`, and `url` — and the generated specification is left out.
 
 The preview cap is a row count rather than a byte budget, set high enough — 100 rows —
 that most filtered tables come back complete and need no second request.
@@ -860,8 +874,6 @@ back to a browser rather than mistake it for missing content:
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
 | Charts that combine several dataframes                                     | A layered or concatenated Altair chart over different dataframes reports its `spec` with `data.unavailable: multiple_datasets` and serves none of them, rather than serve the first and claim `complete`. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
-| `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal.                  |
-| `bind="query-params"` write-back                                           | Setting a bound widget changes its value but not `query_params`; the browser is what writes the address bar. See [Actions in v1](#actions-in-v1).                             |
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
 | Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun.                                                                                               |
@@ -884,8 +896,8 @@ operators and tests rather than for tuning per app.
 | Request body                           | 25 MB, the same bound as a WebSocket message          | `server.maxWidgetStateSize`                                                   |
 | Preview rows per table                 | 100                                                   | `server.agentPreviewRows` (hidden)                                            |
 | Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
-| Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 7](#open-questions))                                    |
-| Response size                          | No cap                                                | [Open question 7](#open-questions)                                            |
+| Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 6](#open-questions))                                    |
+| Response size                          | No cap                                                | [Open question 6](#open-questions)                                            |
 | Wait for a follow-up run to start      | 50 ms after a run finishes                            | Fixed ([potential follow-ups](potential-follow-ups.md))                       |
 | `data.url` lifetime                    | While the element that produced it is still rendered  | Fixed; a fetch-now handle, never persisted                                    |
 | Who may call                           | The WebSocket's Host allow-list; no web page unless its origin is listed | `server.allowedHosts`, `server.corsAllowedOrigins`              |
@@ -1326,16 +1338,11 @@ new command or significant parameter should ship with all of the following, or a
    for many MCP clients — rather than grow to fit the slowest app. Follow-up #4's
    operation handle would make even the retries unnecessary. The session cap and idle
    TTL need defaults chosen against real memory use. The response size is
-   [open question 7](#open-questions).
-5. **Should `clear_on_submit` move server-side?** It is implemented in React today, so no
-   headless client can honor it, and the browser is already inconsistent with itself
-   immediately after a submit. Fixing it properly is a change to core form semantics and
-   affects browser sessions too, so it needs its own decision rather than riding along
-   here.
-6. Which exact JSON encodings should be standardized for dates, datetimes, decimals,
+   [open question 6](#open-questions).
+5. Which exact JSON encodings should be standardized for dates, datetimes, decimals,
    large integers, non-finite numbers, ranges, and object-valued options? These must be
    settled before v1 ships, with or without per-action schemas.
-7. **Does the response need a budget, and how should it be met?** The response document
+6. **Does the response need a budget, and how should it be met?** The response document
    is unbounded, and two things dominate a large one: a selectbox over a few thousand
    values puts all of them in every snapshot of its page, and a figure carries its traces,
    so a 20,000-point scatter or a page of a dozen Plotly figures is half a megabyte.
@@ -1344,7 +1351,7 @@ new command or significant parameter should ship with all of the following, or a
    previews are the one case where truncation is safe, because a `url` serves the rest.
    The candidate answer is to extend that pattern — serve oversized option lists and
    figure specifications behind `data.url` — rather than to cap and discard.
-8. **What stability does the snapshot promise, and where does a public contract live?**
+7. **What stability does the snapshot promise, and where does a public contract live?**
    The document is a compatibility surface from its first release: clients will key on
    element types, `props` names, and error codes, and every command's description becomes
    part of it. That needs a written policy before v1 ships — what `schema_version`

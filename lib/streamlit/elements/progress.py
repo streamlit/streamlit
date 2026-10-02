@@ -171,7 +171,12 @@ class ProgressMixin:
             progress_proto,
             layout_config=layout_config,
             agent_props=agent_spec.element(
-                "progress", value=progress_proto.value, text=text
+                "progress",
+                # Always a fraction: an int is a percent and a float a fraction,
+                # which JSON cannot tell apart, and the proto's whole percent
+                # would drop the rest of a float.
+                value=value / 100 if isinstance(value, int) else value,
+                text=text,
             ),
         )
 
