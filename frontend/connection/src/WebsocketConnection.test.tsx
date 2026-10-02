@@ -2077,15 +2077,19 @@ describe("WebsocketConnection unexpected frames", () => {
   let lastSocket: MockWebSocket | undefined
   let pingServerSpy: MockInstance
 
+  function createMockWebSocket(
+    url: string,
+    protocols?: string | string[]
+  ): MockWebSocket {
+    const socket = new MockWebSocket(url, protocols)
+    lastSocket = socket
+    return socket
+  }
+
   beforeEach(() => {
     originalWebSocket = globalThis.WebSocket
     lastSocket = undefined
-    globalThis.WebSocket = class extends MockWebSocket {
-      constructor(url: string, protocols?: string | string[]) {
-        super(url, protocols)
-        lastSocket = this
-      }
-    } as unknown as typeof WebSocket
+    globalThis.WebSocket = createMockWebSocket as unknown as typeof WebSocket
 
     pingServerSpy = vi
       .spyOn(
@@ -2120,10 +2124,18 @@ describe("WebsocketConnection unexpected frames", () => {
     return { ws, socket: lastSocket, args }
   }
 
+  function spyHandleMessage(ws: WebsocketConnection): MockInstance {
+    return vi.spyOn(
+      ws as unknown as {
+        handleMessage: (data: ArrayBuffer) => Promise<void>
+      },
+      "handleMessage"
+    )
+  }
+
   it("treats a non-ArrayBuffer frame as a fatal protocol mismatch", async () => {
     const { ws, socket, args } = await connectClient()
-    // @ts-expect-error - private handleMessage for test
-    const handleMessage = vi.spyOn(ws, "handleMessage")
+    const handleMessage = spyHandleMessage(ws)
 
     socket.dispatchMessage("proxy-keepalive")
 
@@ -2144,10 +2156,7 @@ describe("WebsocketConnection unexpected frames", () => {
 
   it("forwards ArrayBuffer frames to handleMessage", async () => {
     const { ws, socket, args } = await connectClient()
-    const handleMessage = vi
-      // @ts-expect-error - private handleMessage for test
-      .spyOn(ws, "handleMessage")
-      .mockResolvedValue(undefined)
+    const handleMessage = spyHandleMessage(ws).mockResolvedValue(undefined)
     const payload = new ArrayBuffer(8)
 
     socket.dispatchMessage(payload)
