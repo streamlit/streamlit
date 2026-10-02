@@ -15,17 +15,18 @@ file records what *using* it as an agent is like, including two downstream
 tasks the spec names as consumers of the same snapshot: a personalized email
 report and a static HTML export.
 
-Eight trials, same protocol, growing app set. The first found holes where the
+Nine trials, same protocol, growing app set. The first found holes where the
 snapshot was dishonest. Later trials re-ran after patches. The fifth added an
 element gallery to sweep many `st.*` commands at once. The sixth is the first
 that can drive `@st.fragment` regions and `st.dialog` bodies the way a browser
 would. The seventh left the kitchen-sink apps and drove a real Community Cloud
 host: [issues.streamlit.app](https://issues.streamlit.app/), Streamlit’s
 internal `streamlit/streamlit` dashboard, using only the iframe-prefixed agent
-API. The eighth stayed on that host with harder cross-page questions (feature
-reaction rollups, interrupt vs dedicated KPIs, coverage windows, load-test
-isolation, MCP `tools/call`, spec/wiki reads). Callers were not allowed to
-read GitHub or the app source.
+API. The eighth stayed on that host with harder cross-page questions. The
+ninth asked a different set (enhancement rollup, P2 identity, AI-workflow
+isolation, pytest / lighthouse / wheel / GitHub stats, query-param retention,
+MCP structured content). Callers were not allowed to read GitHub or the app
+source.
 
 Challenge apps and raw notes live under `work-tmp/agent-challenges/` (gitignored).
 The apps are not the product; they exist to exercise the API.
@@ -89,7 +90,10 @@ Five challenges, each a separate agent pointed at
     P2/P3 intersections, interrupt vs dedicated-page KPI check, coverage
     slider windows, load-test scenario isolation, Playwright tab/test
     switch, 2025 reaction closers, spec renderer, MCP `tools/call`,
-    company hop from a P2 URL. No GitHub API.
+    company hop from a P2 URL. Ninth trial: enhancement rollup, which P2
+    bugs those are, AI Issue Triage isolated vs the mosaic tiles, pytest /
+    lighthouse / wheel / GitHub stats, whether `label` survives navigation,
+    MCP `structuredContent`. No GitHub API.
 
 Answers matched independent aggregates of the Vega catalogs in every trial.
 
@@ -772,6 +776,149 @@ human-facing citation and the snapshot’s widgets can disagree.
 | Interrupt vs dedicated | Headlines match; **deltas do not**. |
 | Email / HTML | **True** for KPI + inlined Arrow, same iframe caveat. Prefer one-shot creates and fetch Arrow immediately. |
 
+## Ninth trial (different questions, same host)
+
+Same iframe base, still Streamlit **1.64.0**. OpenAPI + HTTP only. No GitHub,
+no app source.
+
+Artifacts: `work-tmp/agent-challenges/reports-r9/` (`probes.json`). The host
+refused connections for about a minute after the first heavy create (867-row
+enhancement catalog); naked `/_stcore/health` stayed refused while the iframe
+health check recovered. Later calls retried. `flaky_tests` (60 s),
+`issue_reactions` (100 s), and `community_prs` (90 s) returned no status.
+`github_stats`, unobserved in round 8, returned in **51 s**.
+
+### What changed on the wire since round 8
+
+| Probe | Result |
+| --- | --- |
+| Version / `servers` / `Link` | Still **1.64.0**, `servers: [{url: "/"}]`, **no** `Link` |
+| MCP in OpenAPI `paths` | Still **absent** (interact + openapi only) |
+| `run_timed_out` | **Named in the OpenAPI text.** No call returned **202**. Slow creates either finished 200 or the client gave up. |
+| `query_params` description | Now says a page that binds none of them drops them, and that URL state is not the filters. |
+| Selectbox `props.index` | **Absent.** Spec selectbox props are `accept_new_options`, `disabled`, `filter_mode`, `label`, `label_visibility`, `on_change`, `options`. |
+| `chart_data` | On AI metrics it is under **`data`**, not `props`. |
+| Top-level `fragments` | **Absent** on every 200 (`schema_version` 1). |
+| MCP `initialize` `2025-06-18` | **200**, negotiated that version. |
+| MCP `tools/call` `{page: spec_renderer}` | **200** with `structuredContent` (`app_title` Spec renderer) **and** a JSON text block (5.3 KB). |
+| `page` + `widget_state` on an existing session | **400** `invalid_request`: navigation is a separate transition. |
+| Same fields on a **creating** call | **400** `invalid_request`: keys do not exist yet. Empty `trigger: {}` on create is the same code, not a rerun. |
+
+`label` does **not** follow the new drop sentence. After `type:bug` +
+`priority:P2` on Open issues, `page: spec_renderer` still reported
+`query_params.label`. Spec’s own widgets are refresh / View / spec selectbox;
+there is no label widget on that page. A wiki `file` param **was** dropped on
+the same navigation (`query: {}`). Page-local binds clear. `label` stays.
+
+### Challenges (answers from this snapshot / Arrow only)
+
+**Open enhancements.** One-shot `label: ["type:enhancement"]`: caption and
+`row_count` **867** issues, **11,969** reactions, **193,178** views. Arrow
+867 rows. Only **one** issue carries a priority label (`priority:P4`).
+Summing `total_reactions` on `feature:*`: `st.dataframe` 1,002,
+`st.data_editor` 977, `st.file_uploader` 608, `st.column_config` 488.
+Highest `importance`: standalone HTML export (#611, 351 reactions, 3,456
+views), `file_uploader` returning a path (#904, 290 / 1,797), required form
+fields (#7165, 153 / 1,054). `reproducible_example` is true on **46** rows.
+
+**Open bugs, and which P2s.** `type:bug`: **115** issues, **967** reactions,
+**24,523** views (115 and ~962 / ~24,467 yesterday; the count held, the
+engagement moved). P2 ∩ bug is now **2** issues, **7** reactions, **39**
+views — not yesterday’s single Safari pills bug. Arrow, fetched before the
+hash expired: Custom Components v2 trigger lost when another widget updates
+(#17215, 4 reactions); selectbox clears on rerun when `format_func` returns
+a new value (#17175, 3). The previous bug-catalog hash **404**’d once the
+P2 filter replaced it.
+
+**Bug explorer, low-engagement preset.** Defaults: priority P3, max **4**
+reactions, max **3** comments, min **90** days since update, max **100**
+views, segmented control “Move Priority Down”. Setting priority to P2+P3
+and min days to **14**, leaving the caps, finds **13**. First titles:
+multiselect Enter no longer inserts the filtered option; nested `run_every`
+fragment stays visible with stale content; custom component cannot own `r`
+or `c`; `st.user` empty when an external auth token shares the XSRF
+subprotocol slot; deleting a `session_state` key leaves the frontend stale.
+Min days **−5** is 400 `invalid_value` (minimum 0). The “low-engagement”
+caption stayed, and it was still true: the reaction/comment/view caps were
+unchanged.
+
+**AI Issue Triage vs the mosaic.** All workflows: **3,061** runs, **95%**
+success, **147** failed, average **9m 20s**, median **7m 31s**. The
+“AI Issue Triage” tile is **326** runs / **98%** / **3m 46s**. Setting the
+pills to only that workflow (0.9 s) reproduces those numbers exactly, plus
+**7** failed and median **2m 48s**. The same label is still both the run
+count and the duration. A creating-call
+`query_params.ai_usage_workflows=["AI QA Testing"]` is stored and does
+**not** change the pills (still all three). After the pill patch,
+`query_params` is `{}`.
+
+**Pytest performance.** 14 s. `query_params.tab: ["Runs"]` matches the
+segmented control (this one is bound). Seven Plotly figures, `spec_omitted:
+["layout.template"]`, ~11 k characters each; snapshot **89 KB**. Dataframes
+of **50** and **7** rows, both `complete: true`. Caption: click a datapoint
+for the commit SHA. `actions` are the tab plus two buttons, not the charts.
+
+**Lighthouse.** 4.6 s. Same bound `tab: ["Runs"]`. No metrics. Altair chart
+and dataframe share **one** `/media/…` URL, **112** rows, `complete: false`.
+Snapshot **29.8 KB**. Same click-a-datapoint caption.
+
+**Wheel size.** Average **9.6 MiB**, minimum **9.6**, maximum **9.8**.
+Arrow `size_human` is display text: newest **9.7 MiB**, oldest **9.6 MiB**,
+100 rows. Not a number a client can average again.
+
+**Frontend coverage.** Lines **95.84%** (−0.01), functions **95.84%**
+(+0.04), branches **89.05%** (+0.06). The Arrow is **50 commits**
+(`lines_pct`, `functions_pct`, `branches_pct`), not files. Caption says
+select a row; that dataframe is not in `actions`. A file uploader sits on
+the page (“Manual upload of Vitest coverage JSON”). Snapshot **101 KB**,
+one Plotly spec **69 k** characters.
+
+**GitHub stats.** **51 s**, snapshot **194 KB**. Merged PRs **4,716**,
+median time to merge **29.1 h**, median time to first review **1.7 h**,
+LOC changed **2,011,258**, issues created **3,820**, closed **3,399**,
+median time to close **17.9 days**. Caption: merged into `develop` since
+2022-04-01, excluding PRs open more than 60 days.
+
+**Spec view.** Segmented control `Approved` / `In review`, no `index`.
+Switching to “In review” is 200 in 2 s.
+
+### Previously open, now different
+
+- **Selectbox `props.index`.** Not on this host. Trust `value`; there is no contradicting index to ignore.
+- **AC, partly.** `structuredContent` arrives when the client speaks MCP `2025-06-18`. OpenAPI `paths` still do not list MCP, so a client that only reads `paths` will not find it.
+- **AD, partly.** `github_stats` is reachable (51 s this run, >180 s in round 8). The host still drops connections and still does not answer some creates inside 60–100 s, and it does not use the documented 202 while that happens.
+- **X, partly.** Wiki `file` is cleared on navigation. Open-issues `label` is not.
+
+### New issues this round
+
+**AH. The drop rule in the OpenAPI text is not what `label` does.** The
+document says navigating to a page that binds none of the current parameters
+drops them. Spec renderer binds none of `label` and still returned
+`label: ["type:bug", "priority:P2"]`. Wiki `file` on that same transition
+became `{}`. Citing `query_params` is still wrong; citing “the server drops
+whatever the new page does not bind” is wrong for `label`.
+
+**AI. `run_timed_out` is documented and not what a slow call looks like here.**
+Three creates sat until the client timeout (60 s, 90 s, 100 s) with no 202
+and no snapshot. Separately, the process refused TCP for a stretch, including
+after a single large Open-issues create. A retry against iframe `/_stcore/health`
+recovered; the naked origin’s health check did not, in that window.
+
+### Scorecard deltas
+
+| Item | Ninth trial |
+| --- | --- |
+| One-shot bound `query_params` | **Works** (`label`, wiki `file`, pytest/lighthouse `tab`). Unbound AI pills still do not seed. |
+| Arrow | **Works** when fetched immediately. P2 titles came from that fetch. The previous hash **404**’d. |
+| `props.index` | **Gone** on the widgets this round inspected. |
+| `query_params` after `page` | Wiki `file` **dropped**. Open-issues `label` **kept**. |
+| MCP `structuredContent` | **Present** at protocol 2025-06-18. Path still not in OpenAPI. |
+| `page` + `widget_state` | **400** on an existing session. |
+| `github_stats` | **200** in 51 s. |
+| `run_timed_out` 202 | **Not observed.** |
+| Click / row-select captions | Still not in `actions` (pytest, lighthouse, frontend coverage). |
+| Email / HTML | **True** for these KPIs and for the 2-row P2 Arrow, if `/media/` is fetched before the next filter. |
+
 ## Remaining issues (prioritized)
 
 ### 1. `clear_on_submit`
@@ -781,20 +928,24 @@ Lazy expanders of the same shape as lazy tabs are now addressable.
 
 ### 2. `props` that contradict `value`
 
-Selectbox `props.index` stays at the authored default. Trust `value`.
+Selectbox `props.index` stayed at the authored default in the kitchen-sink
+trials. On the live host in round 9 the spec selectbox no longer sends
+`index` at all. Trust `value`.
 Pills/`format_func` now round-trip: snapshot `value` is the formatted label.
 
 ### 3. Query params and citation of filters
 
 Unchanged from earlier trials: string query params coerced; no structured
-`applied_filters`. **New from the live app:** `query_params` is session-global.
-A bound `label=type:bug` on Open issues was still sitting on Interrupt
-rotation and AI workflow usage after `page` navigation. Round 8: after
-P3 ∩ bug, Python coverage still showed
-`label: ["type:bug", "priority:P3"]`. A creating-call
+`applied_filters`. **New from the live app:** `query_params` is session-global
+for some names. Round 8: after P3 ∩ bug, Python coverage still showed
+`label: ["type:bug", "priority:P3"]`. Round 9: the OpenAPI text now says a
+page that binds none of them drops them. Wiki `file` did drop when navigating
+to Spec renderer. Open-issues `label` did not — Spec renderer has no label
+widget and still returned `label: ["type:bug", "priority:P2"]`. A creating-call
 `query_params.ai_usage_workflows` was stored but did **not** seed the pills
-(those keys are not bound). Bound ones (`label`, wiki `file`) do seed on
-create. Do not cite `query_params` as “the filters that produced this page.”
+(those keys are not bound). Bound ones (`label`, wiki `file`, pytest `tab`)
+do seed on create. Do not cite `query_params` as “the filters that produced
+this page.”
 
 ### 4. Surfaces without a full data contract
 
@@ -814,8 +965,10 @@ Displayed `st.exception` still flips interact `status` to `error`.
 - **MCP** works on the prefix (`tools/list` + `tools/call`) but is not an OpenAPI `paths` entry. GET is 405. Tool output is a JSON string in text content.
 - **`clear_on_submit`** is advertised and not applied (see #1).
 - **Tabs** with `on_change="rerun"` are now addressable. Eager tabs still dump every child.
-- **Metric values** are still display strings when the author formats them (`98.88%`, `9m 5s`). Duplicate labels collide (AI usage, load-testing scenarios). `chart_data` is under `data`.
-- **Empty interact is a rerun**, not a read.
+- **Metric values** are still display strings when the author formats them (`98.88%`, `9m 5s`). Duplicate labels collide (AI usage, load-testing scenarios). On this host `chart_data` is under `data`.
+- **Empty interact is a rerun**, not a read. Empty `trigger: {}` on a creating call is **400** `invalid_request`.
+- **`page` + `widget_state`** on an existing session is **400** `invalid_request`.
+- **`run_timed_out`** is described as **202**. This host’s slow creates did not return it.
 - **Catalog preview order** is not “top by the page’s sort.”
 - **Plotly / echarts** inline a spec with `complete: true` and no Arrow (`spec_omitted` drops the theme only).
 - **Dataframe and chart selection** are not in `actions`; captions may still say “click.”
@@ -879,6 +1032,14 @@ stats delta. Load-testing scenario filters are not safe to cite from
 duplicate metric labels. MCP `tools/call` is an equivalent observe path
 for the landing snapshot, with the snapshot nested as text.
 
+**Round 9:** still true. MCP `2025-06-18` also returns `structuredContent`,
+so a client that negotiates that version does not have to parse the text
+block. The 2-row P2 Arrow was inlined only because it was fetched in the
+same breath as the snapshot; the previous hash was already 404. GitHub
+stats (194 KB) and the enhancement catalog (867 rows) are the same shape
+of briefing: metrics and captions from the snapshot, tables from Arrow,
+figures left as `spec_omitted` charts.
+
 ## First trial (baseline)
 
 Same apps and challenges, before the patches. All five completed without a browser.
@@ -908,4 +1069,6 @@ beside HTTP. Some pages never return inside 180 s; a reused session can
 vanish. Email and HTML still work if the exporter one-shots the page,
 fetches iframe-prefixed Arrow immediately, and inlines it — that is how
 the 115-row `type:bug` catalog, the 2025 closer table, and the interrupt
-metrics were cited, without GitHub.
+metrics were cited, without GitHub. Round 9 added the enhancement catalog,
+the two current P2 bugs, and the GitHub-stats KPIs the same way. `label`
+in `query_params` is still not a citation of the page you are on.

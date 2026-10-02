@@ -739,8 +739,13 @@ def schemas() -> dict[str, Any]:
                     },
                     "description": (
                         "The session's current URL parameters, as the app has "
-                        "them: navigating to a page that binds none of them "
-                        "drops them, as it does in a browser's address bar.\n\n"
+                        "them. A page change keeps what a browser keeps: only "
+                        'parameters bound to a widget (`bind="query-params"`) '
+                        "and embed parameters carry over, and a bound one is "
+                        "then dropped unless its widget is on the new page. "
+                        "Parameters the app set itself through "
+                        "`st.query_params` do not carry over. A request that "
+                        "sends its own `query_params` replaces all of this.\n\n"
                         "URL state, not a description of the filters that "
                         "produced this page. Cite widget `value`s for what "
                         "produced a number."

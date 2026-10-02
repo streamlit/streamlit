@@ -535,8 +535,9 @@ Rules:
   report a filter the app has already discarded, on a page where nothing reads it, and
   what lets a stale parameter overwrite a widget value on the way back. Switching pages
   also clears what a browser clears: only embed and widget-bound parameters carry over,
-  unless the request sends its own `query_params`, so a parameter one page was opened with
-  does not follow the client to the next. Even reported
+  unless the request sends its own `query_params`, so a parameter one page was opened with,
+  or one the app set itself through `st.query_params`, does not follow the client to the
+  next. Even reported
   correctly, these are URL parameters rather than a description of what produced a number;
   widget `value`s are that.
 - **A label is not an identifier.** Nothing stops an app from giving two elements the

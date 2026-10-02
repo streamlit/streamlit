@@ -1013,6 +1013,51 @@ prop. This round added:
 - **A displayed `st.exception` leaves `status` as it is**, checked locally; an `error`
   status on the live app means the page itself raised.
 
+## 7g. Ninth trial: the drop rule is not uniform
+
+Round 9 hit the same host, still Streamlit 1.64.0, with a different question
+set. Two claims that read as settled on the branch did not match this
+deployment.
+
+The OpenAPI text now says that navigating to a page which binds none of the
+current parameters drops them. A wiki `file` value did drop on the way to
+Spec renderer. An Open-issues `label` did not: Spec renderer renders no label
+widget and the snapshot still carried `label: ["type:bug", "priority:P2"]`.
+The drop is real for a bind that lives on the page you leave. It is not real
+for `label`. That is the round-8 leak, reproduced the next day on a fresh
+session. If `label` is bound from code every page runs, the snapshot should
+show that widget on Spec renderer; it does not.
+
+`run_timed_out` is in that same document as a 202. Nothing in this trial
+returned one. Creates that finished did so as 200 in 5–60 s (`github_stats`
+51 s, where round 8 had seen only client timeouts). Creates that did not
+finish sat until the client gave up, and for about a minute the process
+refused TCP entirely. A 202 would have been visible inside those windows.
+MCP is still not an OpenAPI `paths` entry on this host. `tools/call` with
+protocol `2025-06-18` does return `structuredContent` plus the text block.
+
+Also on this deployment: selectbox `props.index` is gone, `chart_data` on
+metric nodes is still under `data`, and the AI Issue Triage tile (326 runs,
+98%, 3m 46s) matches the page with only that pill selected. The P2 ∩ bug
+set changed under a stable count of 115 open bugs, and the two titles were
+readable only from Arrow fetched before the next filter.
+
+**What changed in response.** This deployment is the same build as round 8's, so it
+predates everything the branch has done since: relative `servers`, MCP in OpenAPI `paths`,
+`run_timed_out` as a 202, `chart_data` in `props`, and the browser's page-change rule
+for query parameters. The two new findings both fit that:
+
+- **`label` most likely stayed because the app sets it itself** through `st.query_params`
+  rather than binding it, so the old build carried it like any other parameter. A browser
+  drops such a parameter on a page change, and the branch now does too: an app-managed
+  `label` and a bound `file` both clear on the way to another page. The OpenAPI
+  description now states that rule instead of "a page that binds none of them drops them".
+- **No 202 was possible here:** this build still answers `run_timed_out` with a 504 at
+  60 s. Creates that sat for 90 and 100 s without any answer are the same symptom round 8
+  attributed to the gateway retrying 504s, so the redeploy is the test of that. The minute
+  of refused connections after a heavy create is not explained by anything on the wire;
+  the app's platform logs would show whether the process restarted.
+
 ## 8. Open questions the prototype surfaced
 
 1. **How is "the run chain settled" defined?** The prototype's grace period is a
