@@ -442,3 +442,88 @@ export function getSafeLocale(locale: string): string {
     return "en-US"
   }
 }
+
+/** True when `required` treats the pending/committed ISO array as empty. */
+export function isRequiredEmptyDateValue(
+  isoValues: string[],
+  isRange: boolean
+): boolean {
+  return isRange ? isoValues.length !== 2 : isoValues.length === 0
+}
+
+/**
+ * Builds a `CalendarDate` from year/month/day segment nodes.
+ *
+ * Strict mode (default) aborts on the first non-numeric or short-year
+ * segment. Lenient mode skips those nodes so a complete painted date can
+ * still parse when extra wrappers or incomplete sibling nodes are present
+ * (range close/Escape fallback over all six spinbuttons).
+ */
+export function calendarDateFromSegments(
+  segments: Iterable<Element>,
+  { lenient = false }: { lenient?: boolean } = {}
+): CalendarDate | null {
+  let year: number | undefined
+  let month: number | undefined
+  let day: number | undefined
+  for (const segment of segments) {
+    const type = segment.getAttribute("data-type")
+    if (type !== "year" && type !== "month" && type !== "day") {
+      continue
+    }
+    const text = segment.textContent?.trim() ?? ""
+    if (!/^\d+$/.test(text)) {
+      if (lenient) {
+        continue
+      }
+      return null
+    }
+    const value = Number(text)
+    if (type === "year") {
+      if (text.length !== 4) {
+        if (lenient) {
+          continue
+        }
+        return null
+      }
+      year = value
+    } else if (type === "month") {
+      month = value
+    } else {
+      day = value
+    }
+  }
+  if (year === undefined || month === undefined || day === undefined) {
+    return null
+  }
+  try {
+    return new CalendarDate(year, month, day)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Reads a complete `CalendarDate` from a DateField's spinbutton segments.
+ * Uses numeric text even when `data-placeholder` is still set, because React
+ * Aria can leave that attribute on while typed digits are already visible
+ * (Escape-to-commit after fast Playwright typing).
+ */
+export function readCalendarDateFromField(
+  field: Element | null
+): CalendarDate | null {
+  if (!field) {
+    return null
+  }
+  // Prefer spinbuttons: extra `[data-type]` nodes (literals, hidden copies)
+  // must not fail the parse. Unit tests pass synthetic `[data-type]` spans.
+  const spinbuttons = field.querySelectorAll('[role="spinbutton"]')
+  const segments =
+    spinbuttons.length > 0
+      ? spinbuttons
+      : field.querySelectorAll(SEGMENT_SELECTOR)
+  if (segments.length === 0) {
+    return null
+  }
+  return calendarDateFromSegments(segments)
+}

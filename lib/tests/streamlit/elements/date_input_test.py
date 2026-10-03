@@ -56,6 +56,7 @@ class DateInputTest(DeltaGeneratorTestCase):
             datetime.strptime(c.default[0], "%Y-%m-%d").date() <= datetime.now().date()
         )
         assert not c.disabled
+        assert not c.required
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -73,6 +74,58 @@ class DateInputTest(DeltaGeneratorTestCase):
         # If a proto property is null is not determined by this value,
         # but by the check via the HasField method:
         assert c.default == []
+
+    @parameterized.expand([(True,), (False,)])
+    def test_required_sets_proto_field(self, required: bool) -> None:
+        """Test that required is marshalled to the proto field."""
+        st.date_input("the label", required=required)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.required is required
+
+    def test_required_is_in_unkeyed_widget_id(self) -> None:
+        """Test that toggling required without a key changes the widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.date_input("the label", required=False)
+            id1 = self.get_delta_from_queue().new_element.date_input.id
+            st.date_input("the label", required=True)
+            id2 = self.get_delta_from_queue().new_element.date_input.id
+            assert id1 != id2
+
+    def test_required_not_in_keyed_widget_id(self) -> None:
+        """Test that toggling required with a key keeps the widget ID.
+
+        Unlike format, required cannot make a stored date illegal, so it is
+        not on the keyed-identity allowlist.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.date_input("the label", key="date_input_key", required=False)
+            id1 = self.get_delta_from_queue().new_element.date_input.id
+            st.date_input("the label", key="date_input_key", required=True)
+            id2 = self.get_delta_from_queue().new_element.date_input.id
+            assert id1 == id2
+
+    def test_required_does_not_change_today_default(self) -> None:
+        """required=True does not replace the today default with an empty value."""
+        st.date_input("the label", required=True)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert len(c.default) == 1
+        assert c.required
+
+    def test_required_with_none_value_stays_empty(self) -> None:
+        """Empty required fields still need an explicit empty value."""
+        st.date_input("the label", value=None, required=True)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.default == []
+        assert c.required
 
     @parameterized.expand(
         [
@@ -447,6 +500,8 @@ class DateInputTest(DeltaGeneratorTestCase):
                 max_value=date(2025, 1, 1),
                 # Whitelisted kwargs:
                 format="YYYY/MM/DD",
+                # Not on the format allowlist; must not change keyed identity.
+                required=True,
             )
             c2 = self.get_delta_from_queue().new_element.date_input
             id2 = c2.id

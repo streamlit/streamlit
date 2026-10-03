@@ -16,7 +16,7 @@
 import re
 from datetime import date, datetime, timedelta
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 30
+NUM_DATE_INPUTS = 35
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -1183,3 +1183,127 @@ def test_date_input_on_change_ignore(app: Page):
     expect(spinbuttons.nth(0)).to_have_text("2025")
     expect(spinbuttons.nth(1)).to_have_text("03")
     expect(spinbuttons.nth(2)).to_have_text("05")
+
+
+def _clear_date_segments(field: Locator, page: Page) -> None:
+    """Backspace every date segment so the field is empty, then close the popover."""
+    spinbuttons = field.get_by_role("spinbutton")
+    count = spinbuttons.count()
+    for i in range(count):
+        spinbuttons.nth(i).click()
+        # Four presses cover the year segment; extra presses are harmless
+        # after a segment is empty.
+        for _ in range(4):
+            page.keyboard.press("Backspace")
+    page.keyboard.press("Escape")
+
+
+def test_date_input_required_blocks_empty_commits_and_form_submits(app: Page):
+    """Verify required date inputs block empty form submissions and commits
+    while preserving hidden-label accessibility.
+    """
+    date_widget = get_element_by_key(app, "required_date")
+    range_widget = get_element_by_key(app, "required_range")
+    date_field = date_widget.get_by_test_id("stDateInputField")
+
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(date_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
+    expect(date_field).to_have_attribute("aria-required", "true")
+    expect(date_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+
+    submit_button = app.get_by_role(
+        "button", name="Submit required date input form", exact=True
+    )
+    submit_button.click()
+    expect(date_widget.get_by_test_id("stDateInputError")).to_be_visible()
+    expect(range_widget.get_by_test_id("stDateInputError")).to_be_visible()
+    expect(date_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(range_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    type_date(date_field, "2020", "01", "02")
+    submit_button.click()
+    expect(date_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
+    expect(range_widget.get_by_test_id("stDateInputError")).to_be_visible()
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    range_field = range_widget.get_by_test_id("stDateInputField")
+    type_date(range_field, "2020", "01", "01", "2020", "01", "07")
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "required form submitted: True")
+    expect_markdown(app, "required date: 2020-01-02")
+    expect_markdown(
+        app, "required range: (datetime.date(2020, 1, 1), datetime.date(2020, 1, 7))"
+    )
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(date_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
+    expect(range_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
+
+    standalone_widget = get_element_by_key(app, "required_standalone")
+    standalone_field = standalone_widget.get_by_test_id("stDateInputField")
+    type_date(standalone_field, "2020", "02", "06")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone: 2020-02-06")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(standalone_widget.get_by_test_id("stDateInputClearButton")).to_have_count(0)
+
+    _clear_date_segments(standalone_field, app)
+    expect(standalone_widget.get_by_test_id("stDateInputError")).to_be_visible()
+    expect(standalone_widget.get_by_role("alert")).to_have_text(
+        "This field is required."
+    )
+    expect_markdown(app, "required standalone: 2020-02-06")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+
+    type_date(standalone_field, "2020", "03", "01")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone: 2020-03-01")
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    expect(standalone_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
+
+    range_standalone_widget = get_element_by_key(app, "required_standalone_range")
+    range_standalone_widget.scroll_into_view_if_needed()
+    range_standalone_field = range_standalone_widget.get_by_test_id("stDateInputField")
+    type_date(range_standalone_field, "2020", "01", "01", "2020", "01", "10")
+    # Escape-only still races React Aria in Linux Playwright; blur is the
+    # dedicated fallback that commits the painted complete range.
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "required standalone range: (datetime.date(2020, 1, 1), datetime.date(2020, 1, 10))",
+    )
+    expect(app.get_by_text("Runs: 5", exact=True)).to_be_visible()
+    expect(
+        range_standalone_widget.get_by_test_id("stDateInputError")
+    ).not_to_be_visible()
+
+    hidden_widget = get_element_by_key(app, "required_hidden")
+    expect(hidden_widget.get_by_test_id("stDateInputField")).to_have_attribute(
+        "aria-required", "true"
+    )
+    expect(hidden_widget.get_by_test_id("stWidgetLabelRequired")).to_have_count(0)
+
+
+def test_date_input_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the required marker and the required error state."""
+    widget = get_element_by_key(themed_app, "required_standalone")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_date_input-required_marker")
+
+    field = widget.get_by_test_id("stDateInputField")
+    type_date(field, "2020", "02", "06")
+    wait_for_app_run(themed_app)
+    _clear_date_segments(field, themed_app)
+    expect(widget.get_by_test_id("stDateInputError")).to_be_visible()
+    assert_snapshot(widget, name="st_date_input-required_error")

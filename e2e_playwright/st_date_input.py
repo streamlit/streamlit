@@ -264,3 +264,48 @@ st.write("Ignore date value:", ignore_date)
 # can blur-commit the dirty field and rerun in one action.
 if st.sidebar.button("Apply ignore date", key="apply_ignore_date"):
     st.write("Applied ignore date value:", ignore_date)
+
+st.markdown("Required date inputs:")
+
+with st.form("required_date_input_form", clear_on_submit=True):
+    st.date_input(
+        "Required date",
+        value=None,
+        key="required_date",
+        required=True,
+    )
+    st.date_input(
+        "Required range",
+        value=[],
+        key="required_range",
+        required=True,
+    )
+    required_form_submitted = st.form_submit_button("Submit required date input form")
+
+st.write("required form submitted:", required_form_submitted)
+st.write("required date:", st.session_state.get("required_date"))
+st.write("required range:", st.session_state.get("required_range"))
+
+required_standalone = st.date_input(
+    "Required standalone",
+    value=None,
+    key="required_standalone",
+    required=True,
+)
+st.write("required standalone:", required_standalone)
+
+required_standalone_range = st.date_input(
+    "Required standalone range",
+    value=[],
+    key="required_standalone_range",
+    required=True,
+)
+st.write("required standalone range:", required_standalone_range)
+
+st.date_input(
+    "Required hidden",
+    value=None,
+    key="required_hidden",
+    required=True,
+    label_visibility="hidden",
+)

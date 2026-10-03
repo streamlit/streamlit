@@ -19,7 +19,6 @@ import {
   getInvalidTextInputMessage,
   isRequiredEmptyText,
   passesTextInputValidation,
-  REQUIRED_FIELD_MESSAGE,
 } from "./validation"
 
 describe("compileTextInputValidationRegex", () => {
@@ -102,12 +101,6 @@ describe("isRequiredEmptyText", () => {
 
   it.each(["a", " a ", "0"])("treats %j as not required-empty", value => {
     expect(isRequiredEmptyText(value)).toBe(false)
-  })
-})
-
-describe("REQUIRED_FIELD_MESSAGE", () => {
-  it("is the user-facing required copy", () => {
-    expect(REQUIRED_FIELD_MESSAGE).toBe("This field is required.")
   })
 })
 
