@@ -47,17 +47,17 @@ Use **Library blocks** only when an author cannot meet the criterion with any pu
 - **1.1.1 / 1.3.1 Dataframe non-text cells and canvas relationships are incomplete.** The Glide data grid paints a limited `grid` / `columnheader` / `gridcell` accessibility tree. Image / chart / progress cells and deeper structure remain a library limit; opening an image cell uses an `<img>` with no author `alt` hook.
 - **2.1.1 Dataframe ⋮ column menu is mouse-only.** `st.dataframe` / `st.data_editor`. [#13332](https://github.com/streamlit/streamlit/issues/13332).
 - **2.1.1 PDF scrollport is not keyboard-focusable.** `st.pdf` (`streamlit-pdf`). Zoom buttons exist, but the overflow scroll host has no `tabIndex`.
-- **4.1.2 Plotly modebar Fullscreen stays generic.** Plotly's modebar button has `name`/`title` set to `"Fullscreen"` / `"Close fullscreen"`, but `alt` never reaches the modebar — so multiple `st.plotly_chart`s still get indistinguishable Fullscreen controls. A composition hook that threads `alt` into the modebar button name is the fix.
 
 ### Level AA
 
-- **2.5.7 Dataframe column resize / reorder are drag-only.** No keyboard or pointer-click equivalent for arbitrary resize/reorder. (Fill handle has a keyboard path via Ctrl/Cmd+D, `downFill`.)
+- **2.5.7 Dataframe column resize / reorder are drag-only.** No single-pointer (non-drag) or keyboard equivalent for arbitrary resize/reorder. Fill-down has Ctrl/Cmd+D (`downFill`) for keyboard under 2.1.1, but that does not clear 2.5.7 — a non-dragging single-pointer alternative for the fill handle is still required.
 - **4.1.3 Dataframe status messages.** No `aria-live` for sort, search, edit, or lazy-load feedback.
 
 ### Author convenience (not Library blocks)
 
 - **`st.audio` has no `transcript` parameter.** Authors can still meet 1.2.1 by placing a transcript next to the player (`st.markdown` / `st.write`). A dedicated parameter would be a usability improvement, not a conformance unblock.
 - **`st.video` hardcodes `<track kind="captions">`.** Authors can meet 1.2.5 with a video whose soundtrack already includes description. A `descriptions` track path would be convenience; browser support for `kind="descriptions"` is weak. YouTube audio description is the embed platform — **Not this surface**.
+- **Plotly modebar Fullscreen names are not chart-specific.** The modebar button already has `name`/`title` (`"Fullscreen"` / `"Close fullscreen"`), which supplies a name and state for 4.1.2. WCAG does not require globally unique control names. Threading `alt` into the modebar label would improve distinguishability when multiple charts appear on one page — a usability follow-up, not a proven 4.1.2 library block.
 
 ## Shared chrome
 
@@ -94,7 +94,7 @@ Scored: 1.1.1, 1.2.1–1.2.3, 1.2.5, 1.4.2, 4.1.2 (see [criteria scored per kind
 
 ## Charts, maps, and diagrams
 
-Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2. Streamlit Toolbar naming: see [Shared chrome](#shared-chrome). Plotly modebar Fullscreen remains a [known library gap](#known-library-gaps).
+Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2. Streamlit Toolbar naming: see [Shared chrome](#shared-chrome). Plotly modebar Fullscreen naming is an [author convenience](#author-convenience-not-library-blocks) follow-up, not a proven 4.1.2 block.
 
 ### st.altair_chart / st.vega_lite_chart
 
@@ -106,19 +106,19 @@ Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2. Streamlit Toolbar naming: see [Share
 | 1.4.1 Use of Color | A | Author must | Author owns Vega-Lite encodings; Streamlit only themes ranges. |
 | 2.1.1 Keyboard | A | Not this surface | Vega-embed actions disabled; Streamlit Toolbar replaces them. Interval/point selection is Vega’s surface when used. |
 | 4.1.2 Name, Role, Value | A | Author must | Applies when `on_select` makes the chart interactive (widget role). Static chart name is under 1.1.1. Toolbar via Shared chrome. |
-| 1.4.11 Non-text Contrast | AA | Not this surface | Plot marks are author/lib defaults. |
+| 1.4.11 Non-text Contrast | AA | Author must | Plot marks needed to understand the chart are author encodings (subject to 1.4.11 exceptions). |
 
 ### st.line_chart / st.bar_chart / st.area_chart / st.scatter_chart
 
-[#17069](https://github.com/streamlit/streamlit/pull/17069). Same Vega sink as altair/vega_lite. These commands build the Altair spec themselves.
+[#17069](https://github.com/streamlit/streamlit/pull/17069). Same Vega sink as altair/vega_lite. These commands build the Altair spec themselves. They do **not** accept `on_select` (unlike `st.altair_chart` / `st.vega_lite_chart`).
 
 | Criterion | Level | Bucket | Note |
 | --------- | ----- | ------ | ---- |
 | 1.1.1 Non-text Content | A | Author must | `alt` is the chart-level name hook. |
 | 1.4.1 Use of Color | A | Author must | Defaults encode series with color + legend/tooltip (`built_in_chart_utils.py`). Authors can rebuild with `st.altair_chart` non-color encodings. |
-| 2.1.1 Keyboard | A | Not this surface | Same as Altair path. |
-| 4.1.2 Name, Role, Value | A | Author must | Same as Altair path (applies when `on_select` makes the chart interactive). Toolbar via Shared chrome. |
-| 1.4.11 Non-text Contrast | AA | Not this surface | Same as other Vega charts. |
+| 2.1.1 Keyboard | A | Not this surface | Same Vega-embed / Toolbar split as Altair path (no selection widget API on these commands). |
+| 4.1.2 Name, Role, Value | A | Author must | No `on_select` on these commands. Chart-level name is under 1.1.1. Toolbar via Shared chrome. |
+| 1.4.11 Non-text Contrast | AA | Author must | Plot marks needed to understand the chart are author encodings (subject to 1.4.11 exceptions). |
 
 ### st.echarts_chart
 
@@ -129,7 +129,7 @@ Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2. Streamlit Toolbar naming: see [Share
 | 1.1.1 Non-text Content | A | Author must | `alt` overrides the generated / author description. A vague `alt` can be a regression vs the generated label. |
 | 1.4.1 Use of Color | A | Author must | Author owns option encodings. |
 | 2.1.1 Keyboard | A | Not this surface | Canvas / ECharts chrome; Streamlit Toolbar is separate. |
-| 1.4.11 Non-text Contrast | AA | Not this surface | Plot / toolbox chrome is ECharts (+ optional Streamlit theme). |
+| 1.4.11 Non-text Contrast | AA | Author must | Plot marks needed to understand the chart are author encodings. Toolbox chrome contrast is ECharts (+ optional Streamlit theme) — **Not this surface**. |
 
 ### st.plotly_chart
 
@@ -140,8 +140,8 @@ Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2. Streamlit Toolbar naming: see [Share
 | 1.1.1 Non-text Content | A | Author must | `alt` is the chart-level name hook. Dense charts may still need a longer text alternative. |
 | 1.4.1 Use of Color | A | Author must | Author owns figure encodings. |
 | 2.1.1 Keyboard | A | Not this surface | Modebar and selection (`dragmode`) are Plotly’s surface. Streamlit wires `on_select` but does not add keyboard selection paths. |
-| 4.1.2 Name, Role, Value | A | Author must | Name from `alt`; role is `figure` when named. Plotly modebar Fullscreen still generic (known library gap). Toolbar via Shared chrome. |
-| 1.4.11 Non-text Contrast | AA | Not this surface | Modebar / marks are Plotly chrome and author content. |
+| 4.1.2 Name, Role, Value | A | Author must | Name from `alt`; role is `figure` when named. Modebar Fullscreen already has `name`/`title`; chart-specific labeling is [author convenience](#author-convenience-not-library-blocks). Toolbar via Shared chrome. |
+| 1.4.11 Non-text Contrast | AA | Author must | Plot marks needed to understand the chart are author encodings. Modebar chrome is Plotly — **Not this surface**. |
 
 ### st.graphviz_chart
 
@@ -153,7 +153,7 @@ Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2. Streamlit Toolbar naming: see [Share
 | 1.4.1 Use of Color | A | Author must | Author owns DOT / styling. |
 | 2.1.1 Keyboard | A | Not this surface | SVG link focus is GraphViz/browser; Streamlit keeps links in the tree. |
 | 4.1.2 Name, Role, Value | A | Author must | Name from `alt`; role is `figure` when named. Toolbar via Shared chrome. |
-| 1.4.11 Non-text Contrast | AA | Not this surface | Graph marks are author/GraphViz defaults. |
+| 1.4.11 Non-text Contrast | AA | Author must | Graph marks needed to understand the diagram are author DOT / styling (subject to 1.4.11 exceptions). |
 
 ### st.map / st.pydeck_chart
 
@@ -165,7 +165,7 @@ Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2. Streamlit Toolbar naming: see [Share
 | 1.4.1 Use of Color | A | Author must | Point/layer color is author data or pydeck layers. |
 | 2.1.1 Keyboard | A | Not this surface | Pan/zoom are deck.gl / Mapbox. Streamlit mounts themed zoom buttons; no keyboard-pan shim. |
 | 4.1.2 Name, Role, Value | A | Author must | Name from `alt`; role is `figure` when named. Toolbar via Shared chrome. |
-| 1.4.11 Non-text Contrast | AA | Not this surface | Mapbox `NavigationControl` restyled with theme tokens; marks are author/lib defaults. |
+| 1.4.11 Non-text Contrast | AA | Author must | Point/layer marks needed to understand the map are author data. Mapbox `NavigationControl` is restyled with theme tokens but remains upstream chrome — assess that control separately. |
 
 ### st.mermaid_chart
 
@@ -176,7 +176,7 @@ Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2. Streamlit Toolbar naming: see [Share
 | 1.1.1 Non-text Content | A | Author must | `alt` (or author `accTitle`/`accDescr`) names the diagram image. |
 | 1.4.1 Use of Color | A | Author must | Author owns diagram styling. |
 | 2.1.1 Keyboard | A | Library meets | The frontend flattens Mermaid to a static `<img>`, so there is no keyboard operation on this command. |
-| 1.4.11 Non-text Contrast | AA | Not this surface | Diagram pixels are author/Mermaid defaults. |
+| 1.4.11 Non-text Contrast | AA | Author must | Diagram pixels needed to understand the content are author styling (subject to 1.4.11 exceptions). |
 
 ## Data
 
@@ -208,7 +208,7 @@ Scored: 1.1.1 (dataframe non-text cells), 1.3.1, 2.1.1, 2.1.2, 2.4.7, 2.5.7, 3.3
 | 3.3.2 Labels or Instructions | A | Author must | For `st.data_editor`, `alt` is the grid-level name hook when one is needed beyond visible headers. |
 | 4.1.2 Name, Role, Value | A | Author must | Grid-level name from `alt`; Glide keeps `role="grid"` on the canvas. Toolbar via Shared chrome. |
 | 2.4.7 Focus Visible | AA | Library meets | Glide `drawFocusRing` defaults true (Streamlit does not disable); menus use `:focus-visible` + theme focus ring. |
-| 2.5.7 Dragging Movements | AA | Library blocks | Column resize/reorder are drag-only; no keyboard or pointer-click equivalent. (Fill handle has a keyboard path: Ctrl/Cmd+D via `downFill`.) |
+| 2.5.7 Dragging Movements | AA | Library blocks | Column resize/reorder are drag-only; no single-pointer non-drag equivalent. Fill-down has Ctrl/Cmd+D (`downFill`) for keyboard under 2.1.1; a non-dragging pointer alternative for the fill handle is still required for 2.5.7. |
 | 4.1.3 Status Messages | AA | Library blocks | No `aria-live` for sort/search/edit/lazy-load feedback. |
 
 ## Embeds
@@ -221,10 +221,10 @@ Scored: 2.1.1, 2.4.3, 4.1.2 (plus 1.1.1 for `st.pdf` viewer vs page content).
 
 | Criterion | Level | Bucket | Note |
 | --------- | ----- | ------ | ---- |
-| 2.1.1 Keyboard | A | Not this surface | Streamlit adds no controls of its own; keyboard operation inside the frame belongs to the embedded document. |
-| 2.4.3 Focus Order | A | Author must | Optional `tab_index` controls whether/when the frame is in the tab order (`iframe.py` / `IFrame.tsx`). Default keeps document order. Inner focus order is **Not this surface**. |
+| 2.1.1 Keyboard | A | Author must | Streamlit adds no frame chrome. For `srcdoc` / authored HTML, keyboard operation inside the document is the author's. Third-party page chrome is **Not this surface**. |
+| 2.4.3 Focus Order | A | Author must | Optional `tab_index` controls whether/when the frame is in the tab order (`iframe.py` / `IFrame.tsx`). Default keeps document order. Inner focus order: **Author must** for authored documents; third-party pages **Not this surface**. |
 | 4.1.2 Name, Role, Value | A | Author must | The frame can be named. Fallback `"st.iframe"` fails an audit only when the author omits `alt`. |
-| Inner document | — | Not this surface | srcdoc and cross-origin pages are the author's document. |
+| Inner document | — | Author must | `srcdoc` and authored pages are author content. Third-party / cross-origin document internals are **Not this surface** for a Streamlit product-spec fix, but still count toward the hosting app's accessibility. |
 
 ### st.pdf
 
@@ -251,4 +251,4 @@ Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2 (interactive / linked only).
 | 1.4.1 Use of Color | A | Author must | Meaning-via-color is author pixels / matplotlib output. |
 | 2.1.1 Keyboard | A | Library meets | Static images have no keyboard-only functionality. Linked images use a native `<a>` (keyboard-operable). Toolbar actions are under Shared chrome. |
 | 4.1.2 Name, Role, Value | A | Author must | Applies when interactive: `st.image(link=...)` names the anchor (caption / alt / URL). Static images: not applicable (covered by 1.1.1). |
-| 1.4.11 Non-text Contrast | AA | Not this surface | Graphic contrast is author content (upstream Matplotlib / PIL pixels). |
+| 1.4.11 Non-text Contrast | AA | Author must | Graphic contrast of content needed to understand the image is author pixels / matplotlib output (subject to 1.4.11 exceptions). |
