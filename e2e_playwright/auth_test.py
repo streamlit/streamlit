@@ -88,18 +88,21 @@ def fake_oidc_server(
 ) -> Generator[AsyncSubprocess, None, None]:
     """Fixture that starts and stops the OIDC app server."""
 
-    is_success = getattr(request, "param", "success")
+    scenario = getattr(request, "param", "success")
+    is_large_token_scenario = scenario == "success_large_tokens"
+    is_successful_scenario = scenario != "failure"
 
-    oidc_server_proc = AsyncSubprocess(
-        [
-            "python",
-            "shared/oidc_mock_server.py",
-            "--port",
-            str(oidc_server_port),
-            "--success" if is_success == "success" else "--failure",
-        ],
-        cwd=".",
-    )
+    cmd = [
+        "python",
+        "shared/oidc_mock_server.py",
+        "--port",
+        str(oidc_server_port),
+        "--success" if is_successful_scenario else "--failure",
+    ]
+    if is_large_token_scenario:
+        cmd.append("--large-tokens")
+
+    oidc_server_proc = AsyncSubprocess(cmd, cwd=".")
 
     oidc_server_proc.start()
     if not wait_for_oidc_server_to_start(oidc_server_port):
@@ -163,6 +166,23 @@ def test_login_successful(app: Page, app_base_url: str):
     expect_markdown(app, "TOKENS AVAILABLE")
     expect_markdown(app, "HAS ID TOKEN")
     expect_markdown(app, "HAS ACCESS TOKEN")
+
+
+@pytest.mark.parametrize("fake_oidc_server", ["success_large_tokens"], indirect=True)
+@pytest.mark.usefixtures("fake_oidc_server", "prepare_secrets_file")
+def test_login_successful_with_large_oidc_tokens(app: Page, app_base_url: str):
+    """Login still completes when the IdP returns large, compressible OIDC tokens."""
+    _click_and_wait_for_oauth_redirect(app, "TEST LOGIN", app_base_url)
+
+    expect_markdown(app, "authtest@example.com")
+    expect_markdown(app, "John Doe")
+    expect_markdown(app, "TOKENS AVAILABLE")
+    expect_markdown(app, "HAS ID TOKEN")
+    expect_markdown(app, "HAS ACCESS TOKEN")
+    not_logged_in = app.get_by_test_id("stMarkdownContainer").filter(
+        has_text="NOT LOGGED IN"
+    )
+    expect(not_logged_in).not_to_be_attached()
 
 
 @pytest.mark.parametrize("fake_oidc_server", ["failure"], indirect=True)
