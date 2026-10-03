@@ -132,7 +132,8 @@ def test_take_photo_button_styling(app: Page):
     # Check that the button is styled correctly when hovered over
     take_photo_button.hover()
     expect(take_photo_button).to_have_css("color", "rgba(49, 51, 63, 0.4)")
-    expect(take_photo_button).to_have_css("border-color", "rgba(49, 51, 63, 0.2)")
+    # Disabled border uses the default light borderColor (#DCD8D4).
+    expect(take_photo_button).to_have_css("border-color", "rgb(220, 216, 212)")
     expect(take_photo_button).to_have_css("background-color", "rgb(255, 255, 255)")
 
 

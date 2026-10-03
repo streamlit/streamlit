@@ -29,8 +29,8 @@ type ToggleTrackVisualState = {
  * Return the `st.toggle` track fill. Off and disabled tracks are a fill, not a
  * stroke, so they do not follow the configurable `theme.borderColor`.
  *
- * - Off rest / disabled: `fadedText10` (same default look as `borderColor`,
- *   but not the configurable border token)
+ * - Off rest / disabled: `fadedText10` (fill only — does not follow
+ *   configurable `borderColor`, which is now an opaque stock hex)
  * - Off hover: `darkenedBgMix15` (same as unchecked radio/checkbox hover)
  * - On: `primary` (hover does not change this)
  */

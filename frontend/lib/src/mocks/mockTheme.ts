@@ -18,6 +18,7 @@
 
 import { transparentize } from "color2k"
 
+import baseThemeColors from "~lib/theme/emotionBaseTheme/themeColors"
 import { createEmotionColors } from "~lib/theme/getColors"
 import { createShadows } from "~lib/theme/getShadows"
 import { breakpoints } from "~lib/theme/primitives/breakpoints"
@@ -71,6 +72,9 @@ const requiredThemeColors = {
   greenTextColor: colors.green90,
   violetTextColor: colors.purple90,
   grayTextColor: transparentize(colors.gray85, 0.4),
+
+  // Keep in sync with emotionBaseTheme stock border.
+  borderColor: baseThemeColors.borderColor,
 }
 
 interface OptionalThemeColors {
@@ -91,7 +95,7 @@ const shadows = createShadows(emotionColors)
 
 const emotionMockTheme = {
   inSidebar: false,
-  showSidebarBorder: false,
+  showSidebarBorder: true,
   linkUnderline: true,
   breakpoints,
   colors: emotionColors,
