@@ -36,7 +36,7 @@ st.video("https://youtu.be/<id>", alt="Conference keynote recording")
 st.video("clip.mp4", subtitles="captions.vtt", alt="Onboarding demo with captions")
 ```
 
-Accepts a path, URL, or bytes. Supports `start_time` / `end_time`, `autoplay`, `muted`, `loop`, and subtitles.
+Accepts a path, URL, or bytes. Supports `start_time` / `end_time`, `autoplay`, `muted`, `loop`, subtitles, and `alt` for a description read by assistive technologies.
 
 ## Audio: st.audio
 
@@ -45,7 +45,7 @@ st.audio("track.mp3", alt="Q2 earnings call recording")
 st.audio(samples, sample_rate=44100, alt="Synthesized tone sample")
 ```
 
-Accepts a path, URL, bytes, or a NumPy sample array (with `sample_rate`). Supports `start_time`, `autoplay`, and `loop`.
+Accepts a path, URL, bytes, or a NumPy sample array (with `sample_rate`). Supports `start_time`, `autoplay`, `loop`, and `alt` for a description read by assistive technologies.
 
 ## PDFs: st.pdf
 
