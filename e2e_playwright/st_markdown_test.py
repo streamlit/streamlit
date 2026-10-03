@@ -86,15 +86,15 @@ def test_displays_individual_markdowns(app: Page):
     rainbow_background = markdown_elements.nth(9).locator("span").first
     green_background = markdown_elements.nth(10).locator("span").first
 
-    expect(blue_background).to_have_css("background-color", "rgba(28, 131, 255, 0.1)")
-    expect(red_background).to_have_css("background-color", "rgba(255, 43, 43, 0.1)")
+    expect(blue_background).to_have_css("background-color", "rgb(237, 245, 255)")
+    expect(red_background).to_have_css("background-color", "rgb(255, 241, 242)")
     expect(rainbow_background).to_have_css(
         "background-image",
-        "linear-gradient(to right, rgba(255, 43, 43, 0.1), rgba(255, 164, 33, 0.1), "
-        "rgba(255, 255, 18, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 255, 0.1), "
-        "rgba(154, 93, 255, 0.1), rgba(88, 63, 132, 0.1))",
+        "linear-gradient(to right, rgb(255, 241, 242), rgb(255, 246, 237), "
+        "rgb(255, 250, 229), rgb(241, 251, 246), rgb(237, 245, 255), "
+        "rgb(248, 242, 255), rgba(88, 63, 132, 0.1))",
     )
-    expect(green_background).to_have_css("background-color", "rgba(33, 195, 84, 0.1)")
+    expect(green_background).to_have_css("background-color", "rgb(241, 251, 246)")
 
     # Additional checks for specific elements like links
     expect(markdown_elements.nth(3).locator("a")).to_have_count(0)
