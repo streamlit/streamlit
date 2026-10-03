@@ -283,6 +283,8 @@ describe("BidiComponent/utils/theme", () => {
       "fontSources",
       "showWidgetBorder",
       "showSidebarBorder",
+      // Consumed when building spacing/sizes; not exposed as its own theme key.
+      "spacingScale",
       "sidebar",
       "light",
       "dark",
@@ -305,6 +307,7 @@ describe("BidiComponent/utils/theme", () => {
       buttonRadius: null,
       baseFontSize: null,
       baseFontWeight: null,
+      spacingScale: null,
       codeFontWeight: null,
       codeFontSize: null,
       headingFontSizes: null,
