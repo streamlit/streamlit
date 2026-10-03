@@ -18,6 +18,7 @@ import type {
   AxiosProgressEvent,
   AxiosRequestConfig,
   AxiosResponse,
+  RawAxiosRequestHeaders,
 } from "axios"
 import { getLogger } from "loglevel"
 
@@ -390,7 +391,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       if (notNullOrUndefined(xsrfCookie)) {
         params.headers = {
           "X-Xsrftoken": xsrfCookie,
-          ...params.headers,
+          ...toPlainRequestHeaders(params.headers),
         }
         params.withCredentials = true
       }
@@ -400,4 +401,20 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
     const { default: axios } = await import("axios")
     return axios.request<T>(params)
   }
+}
+
+/**
+ * Copy axios request headers into a plain object so object-spread does not
+ * copy an AxiosHeaders class instance. Use `Object.entries` rather than
+ * `toJSON()`, which omits `false`/`null` sentinels axios uses to skip later
+ * defaults such as `Content-Type`.
+ */
+function toPlainRequestHeaders(
+  headers: AxiosRequestConfig["headers"]
+): RawAxiosRequestHeaders {
+  if (!headers) {
+    return {}
+  }
+
+  return Object.fromEntries(Object.entries(headers))
 }

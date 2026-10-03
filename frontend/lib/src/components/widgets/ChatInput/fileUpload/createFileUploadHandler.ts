@@ -65,10 +65,7 @@ export const createUploadFileHandler =
 
     uploadClient
       .uploadFile(
-        {
-          formId: "", // TODO[kajarnec] fix this probably with uploadFile refactoring
-          ...element,
-        },
+        { id: element.id, formId: element.formId ?? "" },
         fileURLs.uploadUrl as string,
         file,
         e => onUploadProgress(e, uploadingFileInfo.id),
