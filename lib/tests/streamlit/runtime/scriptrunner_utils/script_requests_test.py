@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -671,3 +672,152 @@ def test_on_scriptrunner_yield_returns_none_when_state_changes_under_lock() -> N
 
     assert result is None
     assert reqs._state == ScriptRequestType.RERUN
+
+
+_ACTIVE_TRIGGER_SETTERS = {
+    "trigger_value": lambda w: setattr(w, "trigger_value", True),
+    "chat_input_value": lambda w: w.chat_input_value.CopyFrom(
+        ChatInputValue(data="hi")
+    ),
+    "string_trigger_value": lambda w: w.string_trigger_value.CopyFrom(
+        StringTriggerValue(data="option")
+    ),
+    "json_trigger_value": lambda w: setattr(
+        w, "json_trigger_value", '[{"event": "fired", "value": 1}]'
+    ),
+}
+
+
+def _coalesce(old_states: WidgetStates, new_states: WidgetStates) -> WidgetStates:
+    """Queue two reruns and return the coalesced fresh widget states."""
+    reqs = ScriptRequests()
+    reqs.request_rerun(RerunData(widget_states=old_states))
+    reqs.request_rerun(RerunData(widget_states=new_states))
+    return reqs._rerun_data.widget_states
+
+
+@pytest.mark.parametrize("trigger_field", list(_ACTIVE_TRIGGER_SETTERS))
+def test_older_trigger_survives_newer_widget_update(trigger_field: str) -> None:
+    """A queued trigger of any type survives a newer update to another widget.
+
+    The frontend clears a trigger as soon as it is sent, so the newer request
+    doesn't carry it. Regression test for gh-17215.
+    """
+    old_states = WidgetStates()
+    _ACTIVE_TRIGGER_SETTERS[trigger_field](_create_widget("trigger", old_states))
+    _create_widget("text", old_states).string_value = "a"
+
+    new_states = WidgetStates()
+    _create_widget("text", new_states).string_value = "b"
+
+    result = _coalesce(old_states, new_states)
+
+    assert _get_widget("text", result).string_value == "b"
+    trigger = _get_widget("trigger", result)
+    assert trigger is not None
+    assert trigger.WhichOneof("value") == trigger_field
+
+
+@pytest.mark.parametrize("trigger_field", list(_ACTIVE_TRIGGER_SETTERS))
+def test_older_trigger_survives_newer_inactive_trigger(trigger_field: str) -> None:
+    """An active older trigger replaces an inactive newer one of the same type."""
+    old_states = WidgetStates()
+    _ACTIVE_TRIGGER_SETTERS[trigger_field](_create_widget("trigger", old_states))
+
+    new_states = WidgetStates()
+    new_widget = _create_widget("trigger", new_states)
+    if trigger_field == "trigger_value":
+        new_widget.trigger_value = False
+    elif trigger_field == "json_trigger_value":
+        new_widget.json_trigger_value = ""
+    else:
+        getattr(new_widget, trigger_field).SetInParent()
+
+    result = _coalesce(old_states, new_states)
+
+    assert _get_widget("trigger", result) == old_states.widgets[0]
+
+
+def test_newer_string_trigger_wins_over_older_one() -> None:
+    """When both requests carry a string trigger, the newer selection wins."""
+    old_states = WidgetStates()
+    _create_widget("menu", old_states).string_trigger_value.CopyFrom(
+        StringTriggerValue(data="old")
+    )
+    new_states = WidgetStates()
+    _create_widget("menu", new_states).string_trigger_value.CopyFrom(
+        StringTriggerValue(data="new")
+    )
+
+    result = _coalesce(old_states, new_states)
+
+    assert _get_widget("menu", result).string_trigger_value.data == "new"
+
+
+@pytest.mark.parametrize(
+    ("old_payload", "new_payload", "expected"),
+    [
+        pytest.param(
+            '[{"event": "a", "value": 1}]',
+            '[{"event": "b", "value": 2}]',
+            [{"event": "a", "value": 1}, {"event": "b", "value": 2}],
+            id="lists",
+        ),
+        pytest.param(
+            '{"event": "a", "value": 1}',
+            '[{"event": "b", "value": 2}]',
+            [{"event": "a", "value": 1}, {"event": "b", "value": 2}],
+            id="single_old_payload",
+        ),
+    ],
+)
+def test_ccv2_trigger_events_are_concatenated(
+    old_payload: str, new_payload: str, expected: list[dict[str, object]]
+) -> None:
+    """CCv2 events from both requests are delivered, older events first."""
+    old_states = WidgetStates()
+    _create_widget("component", old_states).json_trigger_value = old_payload
+    new_states = WidgetStates()
+    _create_widget("component", new_states).json_trigger_value = new_payload
+
+    result = _coalesce(old_states, new_states)
+
+    assert json.loads(_get_widget("component", result).json_trigger_value) == expected
+
+
+def test_ccv2_trigger_concatenation_falls_back_to_newer_on_invalid_json() -> None:
+    """If a CCv2 payload isn't valid JSON, the newer payload wins unchanged."""
+    old_states = WidgetStates()
+    _create_widget("component", old_states).json_trigger_value = "not json"
+    new_states = WidgetStates()
+    _create_widget("component", new_states).json_trigger_value = '[{"event": "b"}]'
+
+    result = _coalesce(old_states, new_states)
+
+    assert _get_widget("component", result).json_trigger_value == '[{"event": "b"}]'
+
+
+def test_older_trigger_does_not_override_changed_value_type() -> None:
+    """A widget whose newer value isn't a trigger keeps the newer value."""
+    old_states = WidgetStates()
+    _create_widget("widget", old_states).json_trigger_value = '[{"event": "a"}]'
+    new_states = WidgetStates()
+    _create_widget("widget", new_states).int_value = 5
+
+    result = _coalesce(old_states, new_states)
+
+    assert _get_widget("widget", result).int_value == 5
+
+
+def test_inactive_older_triggers_are_not_carried_forward() -> None:
+    """Inactive triggers in the older request don't reappear after coalescing."""
+    old_states = WidgetStates()
+    _create_widget("button", old_states).trigger_value = False
+    _create_widget("component", old_states).json_trigger_value = ""
+    _create_widget("menu", old_states).string_trigger_value.SetInParent()
+    new_states = WidgetStates()
+    _create_widget("text", new_states).string_value = "b"
+
+    result = _coalesce(old_states, new_states)
+
+    assert [w.id for w in result.widgets] == ["text"]
