@@ -21,7 +21,6 @@ such as lazy dataframe chunk loading, server-side validation, and autocompletion
 from __future__ import annotations
 
 import asyncio
-from ipaddress import ip_address
 from typing import TYPE_CHECKING, Final, Protocol
 
 import click
@@ -141,24 +140,14 @@ def connection_locality(session_id: str) -> str:
     developer might reach the app) never triggers an unintended filesystem write.
     """
     from streamlit.runtime import exists, get_instance
+    from streamlit.web.server.request_locality import classify_remote_ip
 
     if not exists():
         return "unknown"
     client = get_instance().get_client(session_id)
     if client is None or client.client_context is None:
         return "unknown"
-    remote_ip = client.client_context.remote_ip
-    if remote_ip is None:
-        return "unknown"
-    try:
-        ip = ip_address(remote_ip)
-    except ValueError:
-        return "unknown"
-    if ip.is_loopback:
-        return "loopback"
-    if ip.is_private:
-        return "private"
-    return "other"
+    return classify_remote_ip(client.client_context.remote_ip)
 
 
 class BackendOperationHandler(Protocol):

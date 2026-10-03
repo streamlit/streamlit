@@ -1052,6 +1052,29 @@ _create_option(
 )
 
 _create_option(
+    "server.enableAgentApi",
+    visibility="hidden",
+    description="""
+        Enable the loopback-only agent JSON endpoint at
+        ``/_stcore/agent/v1/interact``. Off by default. When enabled, only
+        direct loopback peers may call the route.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "server.agentRunTimeout",
+    visibility="hidden",
+    description="""
+        Maximum seconds ``POST /_stcore/agent/v1/interact`` waits for the
+        script run chain to settle before returning ``run_timed_out``.
+    """,
+    default_val=60.0,
+    type_=float,
+)
+
+_create_option(
     "server.baseUrlPath",
     description="""
         The base path for the URL where Streamlit should be served from.
