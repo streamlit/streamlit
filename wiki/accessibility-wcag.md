@@ -4,7 +4,7 @@ Last updated: 2026-10-02. Re-audit a command when its accessible name, keyboard 
 
 How Streamlit enables or blocks authors from meeting **WCAG 2.2 Level A and AA** in their apps. Conformance applies to the **app**, not the library — this page is not a claim that Streamlit itself is conformant.
 
-Government and healthcare audits (US Section 508, EN 301 549, and similar) fail the page the user ships. Use this inventory to see, per command, whether public Streamlit **blocks** a criterion, **meets** it already, leaves it to the **author**, or treats it as **not this surface**.
+Accessibility audits (US Section 508, EN 301 549, and similar) evaluate the app an author ships, not Streamlit itself. Use this inventory to see, per command, whether public Streamlit **blocks** a criterion, **meets** it already, leaves it to the **author**, or treats it as **not this surface**.
 
 **Current documented coverage:** media, charts, maps, data, embeds, and images audited during the `alt` rollout, plus shared chrome those commands use. Other widgets and app shell are out of scope until separately audited.
 
@@ -12,9 +12,7 @@ Government and healthcare audits (US Section 508, EN 301 549, and similar) fail 
 
 Score **WCAG 2.2 Level A and AA**. Section 508 still points at WCAG 2.0 A+AA, and EN 301 549 at 2.1 A+AA. Conforming to 2.2 AA also covers those earlier A+AA sets: 2.2 removed 4.1.1 Parsing and treats it as always met. Do not score AAA.
 
-**These tables are not a full WCAG audit of each command.** They list only the success criteria we scored for that surface during the `alt` work and the follow-up code review — a fixed cheat sheet per kind (below), not every A/AA criterion that could apply to audio, video, charts, or grids. Criteria outside that set were not evaluated here.
-
-Meeting a criterion still depends on author content where the bucket is **Author must** (for example, supplying a useful `alt`, captions, a transcript elsewhere on the page, or non-color encodings).
+These tables are not a full WCAG audit. Each command lists only the criteria in its kind's fixed set (below); other A/AA criteria were not evaluated. Where the bucket is **Author must**, conformance still depends on author content such as a useful `alt`, captions, a transcript, or non-color encodings.
 
 In each command table, rows are ordered **Level A** (by success-criterion number), then **Level AA** (by success-criterion number).
 
@@ -23,7 +21,7 @@ In each command table, rows are ordered **Level A** (by success-criterion number
 | **Library blocks** | An author cannot meet the criterion with public Streamlit, no matter what they write (including other commands on the same page). Candidate for a later product spec. |
 | **Author must** | The author can meet the criterion with public Streamlit (a command hook such as `alt` / `subtitles`, or other page content they control). The app still fails if they omit or write a bad alternative. |
 | **Library meets** | Streamlit already provides the mechanism; the author does not need a new API for this criterion on this surface. |
-| **Not this surface** | Streamlit is not who would fix or fail this for that control — an upstream library (Plotly, Mapbox, YouTube) or third-party package owns the control. Author-controlled content (chart encodings, image pixels, iframe document) falls under **Author must** instead. Do not open a Streamlit product spec for this row. |
+| **Not this surface** | Streamlit does not own the fix or the failure for that control — an upstream library (Plotly, Mapbox, YouTube) or a third-party package owns it. Author-controlled content (chart encodings, image pixels, iframe document) falls under **Author must** instead. Do not open a Streamlit product spec for this row. |
 
 ### Criteria scored per kind
 
@@ -44,13 +42,13 @@ Use **Library blocks** only when an author cannot meet the criterion with any pu
 
 ### Level A
 
-- **1.1.1 / 1.3.1 Dataframe non-text cells and canvas relationships are incomplete.** The Glide data grid paints a limited `grid` / `columnheader` / `gridcell` accessibility tree. Image / chart / progress cells and deeper structure remain a library limit; opening an image cell uses an `<img>` with no author `alt` hook.
-- **2.1.1 Dataframe ⋮ column menu is mouse-only.** `st.dataframe` / `st.data_editor`. [#13332](https://github.com/streamlit/streamlit/issues/13332).
-- **2.1.1 PDF scrollport is not keyboard-focusable.** `st.pdf` (`streamlit-pdf`). Zoom buttons exist, but the overflow scroll host has no `tabIndex`.
+- **1.1.1 / 1.3.1 Dataframe non-text cells and canvas relationships are incomplete.** The Glide Data Grid library that renders `st.dataframe` paints a limited `grid` / `columnheader` / `gridcell` accessibility tree. Image / chart / progress cells are canvas-painted, and opening an image cell uses `ImageCellEditor` (`<img>` with no author `alt`). Nearby page text cannot associate a name with that cell.
+- **2.1.1 Dataframe ⋮ column menu is mouse-only.** `st.dataframe` / `st.data_editor`. [#13332](https://github.com/streamlit/streamlit/issues/13332). Cell navigation is keyboard-operable; header sort and the column menu are not until the menu can be opened from the keyboard.
+- **2.1.1 PDF scrollport and in-document links are not keyboard-operable.** `st.pdf` (`streamlit-pdf`). Zoom buttons exist, but the overflow scroll host has no `tabIndex`. The package also sets `renderAnnotationLayer={false}`, so links inside the PDF cannot be reached.
 
 ### Level AA
 
-- **2.5.7 Dataframe column resize / reorder are drag-only.** No single-pointer (non-drag) or keyboard equivalent for arbitrary resize/reorder. Fill-down has Ctrl/Cmd+D (`downFill`) for keyboard under 2.1.1, but that does not clear 2.5.7 — a non-dragging single-pointer alternative for the fill handle is still required.
+- **2.5.7 Dataframe column resize / reorder, fill handle, and height handle are drag-only.** The column menu offers single-pointer Autosize and Pin. Arbitrary resize/reorder, fill-down, and the container height drag (`Resizable`) have no non-dragging single-pointer equivalent. Fill-down has Ctrl/Cmd+D (`downFill`) for keyboard under 2.1.1; that does not clear 2.5.7.
 - **4.1.3 Dataframe status messages.** No `aria-live` for sort, search, edit, or lazy-load feedback.
 
 ### Author convenience (not Library blocks)
@@ -117,7 +115,6 @@ Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2. Streamlit Toolbar naming: see [Share
 | 1.1.1 Non-text Content | A | Author must | `alt` is the chart-level name hook. |
 | 1.4.1 Use of Color | A | Author must | Defaults encode series with color + legend/tooltip (`built_in_chart_utils.py`). Authors can rebuild with `st.altair_chart` non-color encodings. |
 | 2.1.1 Keyboard | A | Not this surface | Same Vega-embed / Toolbar split as Altair path (no selection widget API on these commands). |
-| 4.1.2 Name, Role, Value | A | Author must | No `on_select` on these commands. Chart-level name is under 1.1.1. Toolbar via Shared chrome. |
 | 1.4.11 Non-text Contrast | AA | Author must | Plot marks needed to understand the chart are author encodings (subject to 1.4.11 exceptions). |
 
 ### st.echarts_chart
@@ -140,7 +137,7 @@ Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2. Streamlit Toolbar naming: see [Share
 | 1.1.1 Non-text Content | A | Author must | `alt` is the chart-level name hook. Dense charts may still need a longer text alternative. |
 | 1.4.1 Use of Color | A | Author must | Author owns figure encodings. |
 | 2.1.1 Keyboard | A | Not this surface | Modebar and selection (`dragmode`) are Plotly’s surface. Streamlit wires `on_select` but does not add keyboard selection paths. |
-| 4.1.2 Name, Role, Value | A | Author must | Name from `alt`; role is `figure` when named. Modebar Fullscreen already has `name`/`title`; chart-specific labeling is [author convenience](#author-convenience-not-library-blocks). Toolbar via Shared chrome. |
+| 4.1.2 Name, Role, Value | A | Author must | Name from `alt`; role is `figure` when named. Modebar Fullscreen already has `name`/`title`; chart-specific labeling is [author convenience](#author-convenience-not-library-blocks). Plotly does not render Streamlit `Toolbar`. |
 | 1.4.11 Non-text Contrast | AA | Author must | Plot marks needed to understand the chart are author encodings. Modebar chrome is Plotly — **Not this surface**. |
 
 ### st.graphviz_chart
@@ -175,7 +172,7 @@ Scored: 1.1.1, 1.4.1, 1.4.11, 2.1.1, 4.1.2. Streamlit Toolbar naming: see [Share
 | --------- | ----- | ------ | ---- |
 | 1.1.1 Non-text Content | A | Author must | `alt` (or author `accTitle`/`accDescr`) names the diagram image. |
 | 1.4.1 Use of Color | A | Author must | Author owns diagram styling. |
-| 2.1.1 Keyboard | A | Library meets | The frontend flattens Mermaid to a static `<img>`, so there is no keyboard operation on this command. |
+| 2.1.1 Keyboard | A | Library meets | The diagram is a static `<img>` with no keyboard interaction; toolbar actions (Fullscreen, Download, Copy) are covered under Shared chrome. |
 | 1.4.11 Non-text Contrast | AA | Author must | Diagram pixels needed to understand the content are author styling (subject to 1.4.11 exceptions). |
 
 ## Data
@@ -184,16 +181,14 @@ Scored: 1.1.1 (dataframe non-text cells), 1.3.1, 2.1.1, 2.1.2, 2.4.7, 2.5.7, 3.3
 
 ### st.table
 
-[#17095](https://github.com/streamlit/streamlit/pull/17095). Non-blank `alt` sets `aria-label` on the native `<table>`. Scroll wrappers keep `aria-label="Scrollable table"`. No 1.1.1 row (a table of text is text). No 3.3.2 or 4.1.2 rows — static tables do not require user input, and the [approved alt-text spec](../specs/2026-09-14-element-alt-text/) treats static `st.table` as outside 4.1.2 (`alt` remains a findability aid, not a required name for that criterion).
+[#17095](https://github.com/streamlit/streamlit/pull/17095). Non-blank `alt` sets `aria-label` on the native `<table>`. Scroll wrappers keep `aria-label="Scrollable table"`. No 1.1.1 row (a table of text is text). No 3.3.2, 4.1.2, 2.5.7, or 4.1.3 rows — static tables do not require user input, have no drag-only gestures, and emit no status messages. The [approved alt-text spec](../specs/2026-09-14-element-alt-text/product-spec.md) treats static `st.table` as outside 4.1.2 (`alt` remains a findability aid, not a required name for that criterion).
 
 | Criterion | Level | Bucket | Note |
 | --------- | ----- | ------ | ---- |
-| 1.3.1 Info and Relationships | A | Author must | Native `<th scope="col">` / `scope="row"` for typical DataFrames (`Table.tsx`). Author owns header content. Residual quirks: MultiIndex / Styler caption-as-div — author content / known HTML limits, not missing hooks. |
+| 1.3.1 Info and Relationships | A | Author must | Native `<th scope="col">` / `scope="row"` for typical DataFrames (`Table.tsx`). Author owns header content. Known limits: MultiIndex headers are not fully expressed in table semantics. Styler captions render as a sibling `<div>`, not `<caption>` — a library HTML limit. |
 | 2.1.1 Keyboard | A | Library meets | Scrollable tables get `tabIndex={0}` + `role="region"`; otherwise static text with no library-owned controls. |
 | 2.1.2 No Keyboard Trap | A | Library meets | No interactive trap on a static/scrollable table. |
 | 2.4.7 Focus Visible | AA | Library meets | Focusable scroll region uses normal focus styling; no known library gap for this command. |
-| 2.5.7 Dragging Movements | AA | Not this surface | No drag-only table interactions. |
-| 4.1.3 Status Messages | AA | Not this surface | Static table has no status updates. |
 
 ### st.dataframe / st.data_editor
 
@@ -201,14 +196,14 @@ Scored: 1.1.1 (dataframe non-text cells), 1.3.1, 2.1.1, 2.1.2, 2.4.7, 2.5.7, 3.3
 
 | Criterion | Level | Bucket | Note |
 | --------- | ----- | ------ | ---- |
-| 1.1.1 Non-text Content | A | Library blocks | Text cells are text. Non-text cell types (e.g. `ImageColumn`) render an `<img>` with no author `alt` hook — authors cannot name those cells. Same canvas limit as 1.3.1. |
-| 1.3.1 Info and Relationships | A | Library blocks | The Glide data grid paints a limited accessibility tree; non-text cells and deeper relationships remain incomplete. Authors cannot fix the canvas tree. |
-| 2.1.1 Keyboard | A | Library blocks | Cell navigation / header sort exist, but the ⋮ column menu is mouse-only ([#13332](https://github.com/streamlit/streamlit/issues/13332)). |
+| 1.1.1 Non-text Content | A | Library blocks | Text cells are text. Non-text cells (e.g. `ImageColumn`) are canvas-painted (`GridCellKind.Image`); opening a cell uses `ImageCellEditor`, an `<img>` with no `alt`. Nearby markdown cannot associate a name with that cell, unlike `st.audio` / `st.pdf` page-level alternatives. Same canvas limit as 1.3.1. |
+| 1.3.1 Info and Relationships | A | Library blocks | The Glide Data Grid library that renders `st.dataframe` paints a limited accessibility tree; non-text cells and deeper relationships remain incomplete. Authors cannot fix the canvas tree. |
+| 2.1.1 Keyboard | A | Library blocks | Cell navigation is keyboard-operable. Header sort runs from header click and from Sort in the column menu; the menu opens only from pointer (`onHeaderMenuClick`), so sort, pin, and the rest of the menu stay pointer-only ([#13332](https://github.com/streamlit/streamlit/issues/13332)). |
 | 2.1.2 No Keyboard Trap | A | Library meets | Streamlit leaves Glide's focus trap off, so Tab can leave the grid. Overlay focus has no end-to-end coverage. |
 | 3.3.2 Labels or Instructions | A | Author must | For `st.data_editor`, `alt` is the grid-level name hook when one is needed beyond visible headers. |
 | 4.1.2 Name, Role, Value | A | Author must | Grid-level name from `alt`; Glide keeps `role="grid"` on the canvas. Toolbar via Shared chrome. |
 | 2.4.7 Focus Visible | AA | Library meets | Glide `drawFocusRing` defaults true (Streamlit does not disable); menus use `:focus-visible` + theme focus ring. |
-| 2.5.7 Dragging Movements | AA | Library blocks | Column resize/reorder are drag-only; no single-pointer non-drag equivalent. Fill-down has Ctrl/Cmd+D (`downFill`) for keyboard under 2.1.1; a non-dragging pointer alternative for the fill handle is still required for 2.5.7. |
+| 2.5.7 Dragging Movements | AA | Library blocks | Arbitrary column resize/reorder stay drag-only. The column menu offers single-pointer Autosize and Pin. Fill-down has Ctrl/Cmd+D (`downFill`) for keyboard under 2.1.1; a non-dragging pointer alternative is still required for 2.5.7. The container height handle (`Resizable`, on unless the grid is in a horizontal layout or content-width outside the root) is also drag-only. |
 | 4.1.3 Status Messages | AA | Library blocks | No `aria-live` for sort/search/edit/lazy-load feedback. |
 
 ## Embeds
