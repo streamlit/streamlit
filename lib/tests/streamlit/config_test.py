@@ -800,6 +800,7 @@ class ConfigTest(unittest.TestCase):
                 "server.allowedHosts",
                 "server.allowRunOnSave",
                 "server.baseUrlPath",
+                "server.connectionDefaultTTL",
                 "server.cookieSecret",
                 "server.corsAllowedOrigins",
                 "server.customComponentBaseUrlPath",
@@ -1082,6 +1083,57 @@ class ConfigTest(unittest.TestCase):
         assert option.type is float
         assert option.visibility == "visible"
         assert config.get_option("runner.cacheBackgroundRefreshTTLMultiplier") == 2.0
+
+    def test_connection_default_ttl_option_attrs(self) -> None:
+        """The connection TTL defaults to unset and is a float option."""
+        ttl_option = config._config_options_template["server.connectionDefaultTTL"]
+        assert ttl_option.default_val is None
+        assert ttl_option.type is float
+        assert ttl_option.sensitive is False
+        assert ttl_option.env_var == "STREAMLIT_SERVER_CONNECTION_DEFAULT_TTL"
+
+    def test_connection_default_ttl_env_overrides_toml(self) -> None:
+        """The env var overrides config.toml, and a flag overrides the env var."""
+        config._update_config_with_toml(
+            """
+            [server]
+            connectionDefaultTTL = 10
+            """,
+            "test-toml",
+        )
+        assert config.get_option("server.connectionDefaultTTL") == 10
+
+        os.environ["STREAMLIT_SERVER_CONNECTION_DEFAULT_TTL"] = "25"
+        config._update_connection_default_ttl_from_env(config._config_options)
+        assert config.get_option("server.connectionDefaultTTL") == 25.0
+        assert (
+            config.get_where_defined("server.connectionDefaultTTL")
+            == config._DEFINED_BY_ENV_VAR
+        )
+
+        config.get_config_options(
+            force_reparse=True,
+            options_from_flags={"server.connectionDefaultTTL": 7},
+        )
+        assert config.get_option("server.connectionDefaultTTL") == 7
+        assert (
+            config.get_where_defined("server.connectionDefaultTTL")
+            == config._DEFINED_BY_FLAG
+        )
+
+    def test_connection_default_ttl_blank_env_does_not_override_toml(self) -> None:
+        """Blank env vars leave the config.toml values in place."""
+        config._update_config_with_toml(
+            """
+            [server]
+            connectionDefaultTTL = 10
+            """,
+            "test-toml",
+        )
+        os.environ["STREAMLIT_SERVER_CONNECTION_DEFAULT_TTL"] = "  "
+        config._update_connection_default_ttl_from_env(config._config_options)
+        assert config.get_option("server.connectionDefaultTTL") == 10
+        assert config.get_where_defined("server.connectionDefaultTTL") == "test-toml"
 
     def test_unsafe_metrics_user_attributes_parses_from_toml(self):
         toml_content = """
