@@ -23,19 +23,17 @@ describe("getToggleTrackColor", () => {
   it.each([
     ["light", lightTheme.emotion],
     ["dark", darkTheme.emotion],
-  ] as const)(
-    "uses fadedText10 for off rest, matching default borderColor (%s theme)",
-    (_name, theme) => {
-      expect(
-        getToggleTrackColor(theme, {
-          isSelected: false,
-          isHovered: false,
-          isDisabled: false,
-        })
-      ).toBe(theme.colors.fadedText10)
-      expect(theme.colors.fadedText10).toBe(theme.colors.borderColor)
-    }
-  )
+  ] as const)("uses fadedText10 for off rest (%s theme)", (_name, theme) => {
+    expect(
+      getToggleTrackColor(theme, {
+        isSelected: false,
+        isHovered: false,
+        isDisabled: false,
+      })
+    ).toBe(theme.colors.fadedText10)
+    // Track fill intentionally does not follow configurable borderColor.
+    expect(theme.colors.fadedText10).not.toBe(theme.colors.borderColor)
+  })
 
   it("uses darkenedBgMix15 for off hover, matching radio/checkbox", () => {
     const theme = lightTheme.emotion
