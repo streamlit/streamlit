@@ -110,6 +110,31 @@ describe("ProgressColumn", () => {
     expect(isErrorCell(mockCell3)).toEqual(true)
   })
 
+  it("returns the unclipped value from getCellValue (used by the CSV export)", () => {
+    const mockColumn = getProgressColumn({
+      min_value: 0,
+      max_value: 10,
+      format: "%d",
+    })
+
+    // Values outside the configured range are clipped for the progress bar
+    // visualization, but getCellValue must still report the underlying data:
+    const aboveMaxCell = mockColumn.getCell(11)
+    expect((aboveMaxCell as RangeCellType).data?.value).toEqual(10)
+    expect((aboveMaxCell as RangeCellType).data?.label).toEqual("11")
+    expect(mockColumn.getCellValue(aboveMaxCell)).toEqual(11)
+
+    const belowMinCell = mockColumn.getCell(-2)
+    expect((belowMinCell as RangeCellType).data?.value).toEqual(0)
+    expect((belowMinCell as RangeCellType).data?.label).toEqual("-2")
+    expect(mockColumn.getCellValue(belowMinCell)).toEqual(-2)
+
+    // In-range values are unaffected:
+    const inRangeCell = mockColumn.getCell(7)
+    expect((inRangeCell as RangeCellType).data?.value).toEqual(7)
+    expect(mockColumn.getCellValue(inRangeCell)).toEqual(7)
+  })
+
   it.each([
     // Supports almost the same as toSafeNumber
     [null, null],
