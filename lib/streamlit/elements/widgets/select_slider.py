@@ -630,8 +630,18 @@ class SelectSliderMixin:
             # deserialize() always returns a default value, never None.
             current_value = cast("T", validated_single)
 
-        if value_needs_reset or widget_state.value_changed:
-            serialized_value = serde.serialize(current_value)
+        # Resend set_value when the selected option's formatted label changed
+        # between reruns (e.g. format_func embeds a count or timestamp). The
+        # frontend tracks the selection by label and resends it verbatim, so
+        # without this a later rerun can't map the stale label back to an
+        # option and resets the widget (gh-17175).
+        serialized_value = serde.serialize(current_value)
+        labels_changed = (
+            widget_state.incoming_serialized_values is not None
+            and widget_state.incoming_serialized_values != serialized_value
+        )
+
+        if value_needs_reset or widget_state.value_changed or labels_changed:
             slider_proto.raw_value[:] = serialized_value
             slider_proto.set_value = True
 
@@ -642,7 +652,9 @@ class SelectSliderMixin:
             "slider",
             slider_proto,
             layout_config=layout_config,
-            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            has_one_shot_effect=value_needs_reset
+            or widget_state.value_changed
+            or labels_changed,
         )
         return current_value
 
