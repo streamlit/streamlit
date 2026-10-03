@@ -2605,8 +2605,15 @@ def test_fragment_duplicate_key_different_definitions_raises() -> None:
 
     with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx):
         fragment_alpha()
-        with pytest.raises(StreamlitDuplicateElementKey):
+        with pytest.raises(StreamlitDuplicateElementKey) as ctx:
             fragment_beta()
+
+    message = str(ctx.value)
+    assert "key='shared_key'" in message
+    assert "fragment definitions" in message
+    assert "Fragment keys" in message
+    assert "separate namespace" in message
+    assert "give each fragment definition" in message
 
 
 def test_fragment_same_definition_multiple_call_sites_no_collision() -> None:

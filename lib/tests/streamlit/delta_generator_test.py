@@ -217,6 +217,25 @@ class DeltaGeneratorTest(DeltaGeneratorTestCase):
                 # user specified key raises an exception.
                 create_widget(label="LABEL_B", key=user_key)
 
+    def test_duplicate_key_is_not_scoped_by_element_type(self) -> None:
+        """A button key collides with a text_input key in the same run."""
+        st.button("Click", key="shared")
+        with pytest.raises(StreamlitDuplicateElementKey):
+            st.text_input("Name", key="shared")
+
+    def test_duplicate_key_is_not_scoped_by_container(self) -> None:
+        """The same key collides across columns."""
+        col1, col2 = st.columns(2)
+        col1.button("Left", key="shared")
+        with pytest.raises(StreamlitDuplicateElementKey):
+            col2.button("Right", key="shared")
+
+    def test_duplicate_key_collides_between_container_and_widget(self) -> None:
+        """A keyed container collides with a widget that uses the same key."""
+        st.container(key="layout")
+        with pytest.raises(StreamlitDuplicateElementKey):
+            st.button("Outside", key="layout")
+
 
 class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
     """Test DeltaGenerator Class."""
