@@ -27,6 +27,7 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements import deck_gl_json_chart
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
@@ -40,6 +41,7 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import StreamlitAPIException
+from streamlit.logger import get_logger
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -50,6 +52,8 @@ if TYPE_CHECKING:
 
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
+
+_LOGGER: Final = get_logger(__name__)
 
 # Map used as the basis for st.map.
 _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
@@ -299,13 +303,59 @@ class MapMixin:
             map_proto.alt = normalized_alt
 
         return self.dg._enqueue(
-            "deck_gl_json_chart", map_proto, layout_config=layout_config
+            "deck_gl_json_chart",
+            map_proto,
+            layout_config=layout_config,
+            agent_props=_agent_description(
+                data,
+                self.dg._get_delta_path_str(),
+                latitude=latitude,
+                longitude=longitude,
+                size=size if isinstance(size, str) else None,
+                color=color if isinstance(color, str) else None,
+                zoom=zoom,
+                alt=agent_spec.proto_alt(map_proto),
+            ),
         )
 
     @property
     def dg(self) -> DeltaGenerator:
         """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _agent_description(data: Data, coordinates: str, **props: Any) -> str | None:
+    """Describe a map for the agent API, with the plotted table as its data.
+
+    st.map and st.pydeck_chart share a proto, and a map's points are only in
+    the Deck.gl spec generated from the author's columns -- which is not a data
+    contract. So the table the author passed is summarized and served the way
+    a dataframe's is, and the snapshot reports that instead of the spec.
+    """
+    if not agent_spec.is_recording():
+        return None
+
+    arrow_bytes = None
+    if data is not None:
+        try:
+            arrow_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
+        except Exception:
+            # A map accepts shapes the Arrow conversion may reject. The snapshot
+            # then falls back to the Deck.gl spec.
+            _LOGGER.debug("Could not describe map data as Arrow.", exc_info=True)
+
+    from streamlit.runtime.agent.snapshot import summarize_arrow
+
+    return agent_spec.element(
+        "map",
+        data_url=data_offload.serve_arrow_over_http(
+            arrow_bytes, coordinates=coordinates
+        )
+        if arrow_bytes
+        else None,
+        data_summary=summarize_arrow(arrow_bytes) if arrow_bytes else None,
+        **props,
+    )
 
 
 def to_deckgl_json(

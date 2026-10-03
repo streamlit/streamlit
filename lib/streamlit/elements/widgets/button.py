@@ -30,8 +30,10 @@ from typing import (
     cast,
     overload,
 )
+from urllib.parse import parse_qs
 
 from streamlit import runtime
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.policies import check_widget_policies
@@ -128,6 +130,28 @@ class ButtonSerde:
 
     def deserialize(self, ui_value: bool | None) -> bool:
         return ui_value or False
+
+
+def _page_link_agent_props(proto: PageLinkProto) -> str | None:
+    """Describe a page link for the agent API.
+
+    Built from the proto because st.page_link resolves `page` through several
+    branches (an st.Page, a script path, an external URL) and only the proto
+    holds the outcome. `page` is reported as the public ``url_path`` a client
+    can navigate to; the internal script hash stays internal. `query_params`
+    has the shape a navigation request takes, so a client can follow the link
+    by sending both.
+    """
+    return agent_spec.element(
+        "page_link",
+        label=proto.label or None,
+        page=proto.page or None,
+        query_params=parse_qs(proto.query_string, keep_blank_values=True) or None,
+        help=proto.help or None,
+        icon=proto.icon or None,
+        external=proto.external,
+        disabled=proto.disabled,
+    )
 
 
 class ButtonMixin:
@@ -1472,8 +1496,30 @@ class ButtonMixin:
             save_for_app_testing(ctx, element_id, button_state.value)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
+        # An eager download is fully usable: its file is at `url`, and a click's
+        # effect on the server -- a rerun or the `on_click` callback -- is an
+        # ordinary trigger. A deferred one only generates its file when clicked,
+        # and that file has no URL this interface could report.
+        is_deferred = download_button_proto.HasField("deferred_file_id")
         self.dg._enqueue(
-            "download_button", download_button_proto, layout_config=layout_config
+            "download_button",
+            download_button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "download_button",
+                key=element_id,
+                action=None if is_deferred or on_click == "ignore" else "trigger",
+                support="read_only_in_v1" if is_deferred else None,
+                label=label,
+                help=help,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+                url=download_button_proto.url or None,
+                file_name=file_name,
+                mime=mime,
+                on_click="ignore" if on_click == "ignore" else "rerun",
+            ),
         )
         return button_state.value
 
@@ -1575,7 +1621,18 @@ class ButtonMixin:
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
         link_button_dg = self.dg._enqueue(
-            "link_button", link_button_proto, layout_config=layout_config
+            "link_button",
+            link_button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "link_button",
+                label=label,
+                url=url,
+                help=help,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+            ),
         )
 
         if button_state is not None:
@@ -1606,7 +1663,10 @@ class ButtonMixin:
         ctx = get_script_run_ctx()
         if not ctx:
             return self.dg._enqueue(
-                "page_link", page_link_proto, layout_config=layout_config
+                "page_link",
+                page_link_proto,
+                layout_config=layout_config,
+                agent_props=_page_link_agent_props(page_link_proto),
             )
 
         page_link_proto.disabled = disabled
@@ -1632,7 +1692,10 @@ class ButtonMixin:
                 page_link_proto.page = page.external_url or ""
                 page_link_proto.external = True
                 return self.dg._enqueue(
-                    "page_link", page_link_proto, layout_config=layout_config
+                    "page_link",
+                    page_link_proto,
+                    layout_config=layout_config,
+                    agent_props=_page_link_agent_props(page_link_proto),
                 )
 
             _validate_registered_page(page)
@@ -1653,7 +1716,10 @@ class ButtonMixin:
                 page_link_proto.page = page
                 page_link_proto.external = True
                 return self.dg._enqueue(
-                    "page_link", page_link_proto, layout_config=layout_config
+                    "page_link",
+                    page_link_proto,
+                    layout_config=layout_config,
+                    agent_props=_page_link_agent_props(page_link_proto),
                 )
 
             ctx_main_script = ""
@@ -1690,7 +1756,10 @@ class ButtonMixin:
                 )
 
         return self.dg._enqueue(
-            "page_link", page_link_proto, layout_config=layout_config
+            "page_link",
+            page_link_proto,
+            layout_config=layout_config,
+            agent_props=_page_link_agent_props(page_link_proto),
         )
 
     def _button(
@@ -1806,7 +1875,22 @@ class ButtonMixin:
             save_for_app_testing(ctx, element_id, button_state.value)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
-        self.dg._enqueue("button", button_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "button",
+            button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                # st.button and st.form_submit_button share this proto.
+                "form_submit_button" if is_form_submitter else "button",
+                key=element_id,
+                action="trigger",
+                label=label,
+                help=help,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+            ),
+        )
 
         return button_state.value
 

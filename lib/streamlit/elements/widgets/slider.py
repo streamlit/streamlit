@@ -30,6 +30,7 @@ from typing import (
     overload,
 )
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.layout_utils import create_layout_config
@@ -1116,6 +1117,11 @@ class SliderMixin:
             # Empty list, so let's just use the outer bounds
             prepared_value = [min_value, max_value]
 
+        # The effective bounds and step in their own types, for the agent API:
+        # below, dates and times become microseconds, which is the wire format
+        # rather than anything a client could compare a date against.
+        described_bounds = (min_value, max_value, step)
+
         # Bounds checks. JSNumber produces human-readable exceptions that
         # we re-raise as StreamlitJSNumberBoundsError.
         # (We check `min_value` and `max_value` here; `value` and `step` are
@@ -1291,6 +1297,20 @@ class SliderMixin:
             slider_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "slider",
+                key=element_id,
+                action="value",
+                label=label,
+                min_value=described_bounds[0],
+                max_value=described_bounds[1],
+                step=described_bounds[2],
+                format=format,
+                help=help,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return cast("SliderReturn", widget_state.value)
 

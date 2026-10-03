@@ -59,6 +59,11 @@ class ElementMsgData:
     returned_dgs_id: str
     media_data: list[MediaMsgData] | None = None
     layout_config: LayoutConfig | None = None
+    # The command's agent-API description. Recorded so a replayed element is
+    # described the same way as one emitted by a live call. It is captured from
+    # the run that populated the cache, so a cache entry filled before the
+    # agent API was enabled replays without one.
+    agent_props: str | None = None
 
 
 @dataclass(frozen=True)
@@ -66,6 +71,8 @@ class BlockMsgData:
     message: Block
     id_of_dg_called_on: str
     returned_dgs_id: str
+    # The container command's agent-API description. See ElementMsgData.
+    agent_props: str | None = None
 
 
 MsgData: TypeAlias = ElementMsgData | BlockMsgData
@@ -199,6 +206,7 @@ class CachedMessageReplayContext:
         used_dg_id: str,
         returned_dg_id: str,
         layout_config: LayoutConfig | None = None,
+        agent_props: str | None = None,
     ) -> None:
         """Record the element protobuf as having been produced during any currently
         executing cached functions, so they can be replayed any time the function's
@@ -224,6 +232,7 @@ class CachedMessageReplayContext:
                 returned_dg_id,
                 media_data,
                 layout_config,
+                agent_props,
             )
             for capture in message_stack:
                 capture.messages.append(element_msg_data)
@@ -241,6 +250,7 @@ class CachedMessageReplayContext:
         invoked_dg_id: str,
         used_dg_id: str,
         returned_dg_id: str,
+        agent_props: str | None = None,
     ) -> None:
         if not in_cached_function.get():
             return
@@ -254,7 +264,7 @@ class CachedMessageReplayContext:
         id_to_save = self.select_dg_to_save(invoked_dg_id, used_dg_id, captures)
         for capture in captures:
             capture.messages.append(
-                BlockMsgData(block_proto, id_to_save, returned_dg_id)
+                BlockMsgData(block_proto, id_to_save, returned_dg_id, agent_props)
             )
             capture.seen_dgs.add(returned_dg_id)
 
@@ -289,6 +299,20 @@ class CachedMessageReplayContext:
 
 
 P = ParamSpec("P")
+
+
+def _agent_props_for_this_session(agent_props: str | None) -> str | None:
+    """Drop a recorded agent description when replaying into a session that
+    would not have produced one.
+
+    A cache entry is filled by whichever session ran the function first. If an
+    agent session populated it, the recorded description must not leak into a
+    browser session replaying the same entry, and vice versa: a cache filled by
+    a browser session has no description for an agent session to read.
+    """
+    from streamlit.elements.lib import agent_spec
+
+    return agent_props if agent_spec.is_recording() else None
 
 
 def replay_cached_messages(
@@ -327,13 +351,19 @@ def replay_cached_messages(
                         )
                 dg = returned_dgs[msg.id_of_dg_called_on]
                 maybe_dg = dg._enqueue(
-                    msg.delta_type, msg.message, layout_config=msg.layout_config
+                    msg.delta_type,
+                    msg.message,
+                    layout_config=msg.layout_config,
+                    agent_props=_agent_props_for_this_session(msg.agent_props),
                 )
                 if isinstance(maybe_dg, DeltaGenerator):
                     returned_dgs[msg.returned_dgs_id] = maybe_dg
             elif isinstance(msg, BlockMsgData):
                 dg = returned_dgs[msg.id_of_dg_called_on]
-                new_dg = dg._block(msg.message)
+                new_dg = dg._block(
+                    msg.message,
+                    agent_props=_agent_props_for_this_session(msg.agent_props),
+                )
                 returned_dgs[msg.returned_dgs_id] = new_dg
     except KeyError as ex:
         raise CacheReplayClosureError(cache_type, cached_func) from ex

@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Final, Generic, Literal, TypeVar, cast
 
 from streamlit import runtime
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.options_selector_utils import create_mappings
@@ -447,7 +448,24 @@ class MenuButtonMixin:
                 },
             )
 
-        self.dg._enqueue("menu_button", menu_button_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "menu_button",
+            menu_button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "menu_button",
+                key=element_id,
+                # A payload-bearing trigger: the fired option is the trigger's
+                # value.
+                action="trigger",
+                label=label,
+                options=list(menu_button_proto.options),
+                help=help,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+            ),
+        )
         return widget_state.value
 
     @property

@@ -25,6 +25,7 @@ import types
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import streamlit
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Help_pb2 import Help as HelpProto
 from streamlit.proto.Help_pb2 import Member as MemberProto
@@ -132,7 +133,17 @@ class HelpMixin:
         layout_config = create_layout_config(width=width)
         _marshall(help_proto, obj)
 
-        return self.dg._enqueue("help_info", help_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "help_info",
+            help_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "help",
+                name=help_proto.name or None,
+                type=help_proto.type or None,
+                doc_string=help_proto.doc_string or None,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

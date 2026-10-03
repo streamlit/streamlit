@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Code_pb2 import Code as CodeProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -143,7 +144,18 @@ class CodeMixin:
             allow_content_height=True,
         )
 
-        return self.dg._enqueue("code", code_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "code",
+            code_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "code",
+                body=code_proto.code_text,
+                language=code_proto.language,
+                line_numbers=line_numbers,
+                wrap_lines=wrap_lines,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

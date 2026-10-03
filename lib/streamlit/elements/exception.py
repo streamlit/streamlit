@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, NamedTuple, cast
 
 from streamlit import config
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import validate_width
 from streamlit.errors import (
     Error,
@@ -122,7 +123,24 @@ def _exception(
         width,
         apply_show_error_details=apply_show_error_details,
     )
-    return dg._enqueue("exception", exception_proto)
+    # The proto is filled by `marshall`, which already applied the
+    # `client.showErrorDetails` redaction, so the description reads from it
+    # rather than from the exception object.
+    return dg._enqueue(
+        "exception",
+        exception_proto,
+        agent_props=agent_spec.element(
+            "exception",
+            type=exception_proto.type or None,
+            message=exception_proto.message or None,
+            stack_trace=list(exception_proto.stack_trace) or None,
+            is_warning=exception_proto.is_warning,
+            # Only the runtime's own error display passes this, so it is what
+            # separates a run that failed from an app deliberately showing an
+            # exception it caught. The agent API reports the two differently.
+            uncaught=apply_show_error_details,
+        ),
+    )
 
 
 def marshall(
