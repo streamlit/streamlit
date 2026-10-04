@@ -1307,7 +1307,9 @@ class ArrowMixin:
                 column_order=list(column_order) if column_order else None,
                 hide_index=hide_index,
                 selection_mode=sorted(selection_mode_set) or None,
-                row_height=row_height,
+                # The text shown for missing values, which the preview reports
+                # as null.
+                placeholder=placeholder,
                 alt=normalized_alt,
             )
 

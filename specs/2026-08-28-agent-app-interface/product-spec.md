@@ -347,7 +347,7 @@ right now. Naming follows the public API, for the reason above:
   read the document, and "absent" should never be ambiguous between false, unsupported,
   and overlooked.
 - **Omit presentation.** Width, height, gaps, alignment, stretch ratios, padding, border
-  or surface styling, a heading's `divider`, a dialog's width and position, a column's
+  or surface styling, a heading's `divider`, a dialog's width, a column's
   share of its row, and a table column's width, pinning, and alignment carry no meaning
   for a non-visual client. Read this strictly, because the effective-value rule
   above pulls the other way and would otherwise put styling on most nodes of a page. The
@@ -433,6 +433,7 @@ right now. Naming follows the public API, for the reason above:
               "value": "€1.2M",
               "delta": "+8%",
               "delta_color": "normal",
+              "delta_arrow": "auto",
               "label_visibility": "visible"
             }
           },
@@ -464,7 +465,8 @@ right now. Naming follows the public API, for the reason above:
             "props": {
               "label": "How net revenue is calculated",
               "expanded": false,
-              "icon": ":material/info:"
+              "icon": ":material/info:",
+              "type": "default"
             },
             "children": [
               {

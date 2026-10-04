@@ -1544,6 +1544,9 @@ class DataEditorMixin:
                 hide_index=hide_index,
                 num_rows=num_rows,
                 disabled=disabled is True,
+                # The text shown for missing values, which the preview reports
+                # as null.
+                placeholder=placeholder,
                 alt=normalized_alt,
             )
             if agent_spec.is_recording()

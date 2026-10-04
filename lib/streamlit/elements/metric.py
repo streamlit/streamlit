@@ -489,8 +489,9 @@ class MetricMixin:
             # number for a caller that has to compute with it. The rendered
             # strings come along only when they differ, which is when the
             # author passed a number and Streamlit formatted it.
-            # `delta_color` is likewise as authored rather than the `direction`
-            # and `color` pair it becomes on the wire.
+            # `delta_color` and `delta_arrow` are likewise as authored rather than
+            # the `direction` and `color` pair they become on the wire, and only
+            # reported with a delta they apply to.
             agent_props=agent_spec.element(
                 "metric",
                 label=label,
@@ -498,7 +499,8 @@ class MetricMixin:
                 display_value=_display_of(value, metric_proto.body),
                 delta=delta,
                 display_delta=_display_of(delta, metric_proto.delta),
-                delta_color=delta_color,
+                delta_color=delta_color if delta is not None else None,
+                delta_arrow=delta_arrow if delta is not None else None,
                 delta_description=delta_description,
                 help=help,
                 icon=icon,

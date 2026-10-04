@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from typing_extensions import Self
 
@@ -73,11 +73,12 @@ def _agent_description(block_proto: BlockProto, is_open: bool) -> dict[str, Any]
     it and get `unknown_key`.
     """
     dialog = block_proto.dialog
-    # `width` and `position` are left out: geometry means nothing to a
-    # non-visual client.
+    # `width` is left out: geometry means nothing to a non-visual client. A
+    # `position` drawer is a side panel beside the page rather than a modal.
     description: dict[str, Any] = {
         "title": dialog.title,
         "icon": dialog.icon or None,
+        "position": _POSITION_NAMES.get(dialog.position, "center"),
         "dismissible": dialog.dismissible,
         "is_open": is_open,
     }
@@ -87,6 +88,13 @@ def _agent_description(block_proto: BlockProto, is_open: bool) -> dict[str, Any]
         # by causing some unrelated full rerun.
         description["action"] = "trigger"
     return description
+
+
+_POSITION_NAMES: Final = {
+    BlockProto.Dialog.DialogPosition.CENTER: "center",
+    BlockProto.Dialog.DialogPosition.LEFT: "left",
+    BlockProto.Dialog.DialogPosition.RIGHT: "right",
+}
 
 
 def _process_dialog_position_input(

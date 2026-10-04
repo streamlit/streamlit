@@ -98,7 +98,7 @@ class StatusContainer(DeltaGenerator):
                 # st.status and st.expander share the Expandable proto, so the
                 # command name has to be passed explicitly.
                 agent_props=agent_spec.block(
-                    "status", label=label, expanded=expanded, state=state
+                    "status", label=label, expanded=expanded, state=state, type=type
                 ),
             ),
         )
@@ -109,6 +109,7 @@ class StatusContainer(DeltaGenerator):
         status_container._current_proto = block_proto
         status_container._current_state = state
         status_container._current_expanded = expanded
+        status_container._type = type
 
         # We need to sleep here for a very short time to prevent issues when
         # the status is updated too quickly. If an .update() directly follows the
@@ -133,6 +134,7 @@ class StatusContainer(DeltaGenerator):
         # `update()` clears `expanded` on the re-sent proto to leave it as the
         # user set it, so the proto cannot report it.
         self._current_expanded: bool | None = None
+        self._type: ExpandableType = "default"
         self._delta_path: list[int] | None = None
 
     def update(
@@ -201,6 +203,7 @@ class StatusContainer(DeltaGenerator):
             label=msg.delta.add_block.expandable.label,
             expanded=self._current_expanded,
             state=self._current_state,
+            type=self._type,
         )
         if agent_props is not None:
             msg.metadata.agent_props = agent_props

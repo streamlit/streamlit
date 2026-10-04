@@ -1646,6 +1646,9 @@ class LayoutsMixin:
                     label=label,
                     expanded=current_expanded,
                     icon=icon,
+                    # "compact" and "step" say what the contents are, such as
+                    # reasoning or the stages of a timeline.
+                    type=type,
                     on_change=("ignore" if on_change == "ignore" else "rerun")
                     if is_stateful
                     else None,
