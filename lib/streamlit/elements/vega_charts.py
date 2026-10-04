@@ -785,32 +785,21 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     return vega_spec
 
 
-def _builtin_chart_encoding(
-    *,
-    x: Any,
-    y: Any,
-    x_label: str | None,
-    y_label: str | None,
-    color: Any,
-    size: Any = None,
-) -> dict[str, Any]:
-    """The encoding arguments a built-in chart was given, for the agent API.
+def _builtin_chart_encoding(**arguments: Any) -> dict[str, Any]:
+    """The arguments a built-in chart was given that say what it plots.
 
     All six Vega commands emit the same proto with no field saying which one
     ran, and these arguments are compiled into the generated Vega-Lite spec
-    rather than sent as parameters. So the columns the author chose are only
-    knowable at the command.
+    rather than sent as parameters. So the columns the author chose, and how
+    the chart combines them, are only knowable at the command, which passes
+    exactly the parameters it has.
 
     `color` and `size` are reported only when they name a column; a literal
     color or pixel size carries no meaning for a non-visual client.
     """
     return {
-        "x": x,
-        "y": y,
-        "x_label": x_label,
-        "y_label": y_label,
-        "color": color if isinstance(color, str) else None,
-        "size": size if isinstance(size, str) else None,
+        name: value if name not in {"color", "size"} or isinstance(value, str) else None
+        for name, value in arguments.items()
     }
 
 
@@ -1396,6 +1385,7 @@ class VegaChartsMixin:
                     x_label=x_label,
                     y_label=y_label,
                     color=color,
+                    stack=stack,
                 ),
                 alt=alt,
             ),
@@ -1752,6 +1742,9 @@ class VegaChartsMixin:
                     x_label=x_label,
                     y_label=y_label,
                     color=color,
+                    horizontal=horizontal,
+                    sort=sort,
+                    stack=stack,
                 ),
                 alt=alt,
             ),
@@ -2821,6 +2814,13 @@ class VegaChartsMixin:
         if not agent_spec.is_recording():
             return None
         buffers = agent_spec.vega_arrow_buffers(proto)
+        # A built-in chart has neither a `theme` nor a selection parameter, so
+        # it reports its own arguments only.
+        own_arguments = (
+            encoding
+            if encoding is not None
+            else {"theme": theme, "selection_mode": selection_mode or None}
+        )
         return agent_spec.element(
             command,
             # A chart without selections has no element ID, only the author's key.
@@ -2833,10 +2833,8 @@ class VegaChartsMixin:
             )
             if len(buffers) == 1
             else None,
-            theme=theme,
-            selection_mode=selection_mode or None,
             alt=agent_spec.proto_alt(proto),
-            **(encoding or {}),
+            **own_arguments,
         )
 
     @property

@@ -907,6 +907,7 @@ class MultiSelectMixin:
                 placeholder=placeholder,
                 max_selections=max_selections,
                 accept_new_options=accept_new_options,
+                filter_mode=filter_mode,
                 disabled=disabled,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

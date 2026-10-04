@@ -22,9 +22,12 @@ rendered number, and which name wins when one public command calls another
 (`st.write` should report `dataframe`; `st.mermaid_chart` should report itself).
 Generation would hide those decisions behind a rule.
 
-**A cheap middle ground:** a unit test that checks every description's `props` keys
-against the parameters of its command's signature. That keeps descriptions explicit
-while making the naming rule — a release gate in the spec — mechanically enforced.
+**The middle ground, in place:** `agent_spec_coverage_test.py` runs every element mock
+with recording on and checks each description against its command's signature in both
+directions. Every reported name must be a parameter or a listed derived fact, and every
+parameter must be reported or listed as omitted with a reason. So the naming rule — a
+release gate in the spec — is mechanically enforced, and a new parameter fails the test
+until someone decides whether an agent needs it. Descriptions stay explicit.
 
 **Revisit if** coverage sweeps keep finding commands nobody described, or names drift
 from signatures despite the test.

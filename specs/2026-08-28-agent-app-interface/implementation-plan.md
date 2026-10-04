@@ -60,10 +60,11 @@ public parameter names as `props`, unset parameters dropped, and effective value
 parameters that change what the element means. Reviewers of each element only need to
 check their own command's call.
 
-**Tests:** `agent_spec` unit tests; one parametrized test that runs each command with
-recording forced on and checks `type` and every `props` key against the command's
-signature (the spec's coverage criterion); a test that a normal session never sets
-`agent_props`; cache replay in both directions.
+**Tests:** `agent_spec` unit tests; `agent_spec_coverage_test.py`, already in the
+prototype, which runs every element mock with recording forced on and checks each
+description against its command's signature in both directions (the spec's coverage
+criterion); a test that a normal session never sets `agent_props`; cache replay in both
+directions.
 
 ### PR 2: Snapshot builder
 

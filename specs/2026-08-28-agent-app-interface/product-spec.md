@@ -1220,7 +1220,10 @@ agent access alone.
   `undescribed_types` across a kitchen-sink app that exercises the whole display and
   widget surface.
 - Every serialized element `type` and `props` key either matches a public command or
-  parameter name, or appears on a documented list of derived additions.
+  parameter name, or appears on a documented list of derived additions, and every
+  parameter is either reported or on a documented list of omissions with its reason. A
+  unit test over every element mock checks both, so a new parameter fails CI until
+  someone decides whether an agent needs it.
 - JSON encodings are pinned for dates, datetimes, decimals, large integers, non-finite
   numbers, ranges, and object-valued options.
 - Every advertised interaction matches an equivalent browser session on callback order,
