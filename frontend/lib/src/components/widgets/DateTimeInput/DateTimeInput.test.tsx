@@ -24,7 +24,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { type FormsData, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import DateTimeInput, { type Props } from "./DateTimeInput"
 
@@ -1844,10 +1844,16 @@ describe("DateTimeInput widget", () => {
       await user.click(segments[0])
       await screen.findByTestId("stDateTimeInputCalendar")
 
-      // Select a date — popover stays open
+      // The popover stays open after a date click. Wait until the calendar
+      // cell is focused before editing the time, or the next key changes the
+      // highlighted day instead of the hour.
       const day15 = screen.getByRole("button", { name: /15/ })
       await user.click(day15)
-      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+      const calendar = screen.getByTestId("stDateTimeInputCalendar")
+      expect(calendar).toBeVisible()
+      await waitFor(() => {
+        expect(calendar.contains(document.activeElement)).toBe(true)
+      })
 
       // Edit time in popover
       const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
@@ -2806,5 +2812,256 @@ describe("DateTimeInput widget", () => {
         expect.anything()
       )
     })
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  function renderWithRerunSpy(
+    elementProps: Partial<DateTimeInputProto> = {},
+    formsDataChanged?: (formsData: FormsData) => void
+  ): {
+    user: ReturnType<typeof userEvent.setup>
+    props: Props
+    setStringArrayValueSpy: ReturnType<typeof vi.spyOn>
+    sendRerunBackMsg: ReturnType<typeof vi.fn>
+  } {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: formsData => {
+        formsDataChanged?.(formsData)
+      },
+    })
+    const props = getProps(elementProps)
+    props.widgetMgr = widgetMgr
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateTimeInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    return { user, props, setStringArrayValueSpy, sendRerunBackMsg }
+  }
+
+  const hourSegment = (): HTMLElement => {
+    const segment = screen
+      .getAllByRole("spinbutton")
+      .find(s => s.getAttribute("data-type") === "hour")
+    if (!segment) {
+      throw new Error("hour segment not found")
+    }
+    return segment
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+      renderWithRerunSpy({ ignoreRerun: true })
+
+    await user.click(hourSegment())
+    await user.keyboard("{ArrowUp}")
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        ["2025-11-19T17:45"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+      renderWithRerunSpy({ ignoreRerun: false })
+
+    await user.click(hourSegment())
+    await user.keyboard("{ArrowUp}")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        ["2025-11-19T17:45"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    let pendingFormIds = new Set<string>()
+    const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+      renderWithRerunSpy(
+        {
+          ignoreRerun: true,
+          formId: "testForm",
+        },
+        newData => {
+          pendingFormIds = newData.formsWithPendingChanges
+        }
+      )
+
+    await user.click(hourSegment())
+    await user.keyboard("{ArrowUp}")
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        ["2025-11-19T17:45"],
+        {
+          formId: "testForm",
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
+    const { user, setStringArrayValueSpy } = renderWithRerunSpy({
+      ignoreRerun: true,
+    })
+
+    await user.click(hourSegment())
+    await user.keyboard("17")
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a calendar date is selected and the popover closes", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({
+      ignoreRerun: true,
+      default: ["2025-11-19T16:45"],
+      min: "2025-11-01T00:00",
+      max: "2025-11-30T23:59",
+    })
+    props.widgetMgr = widgetMgr
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(
+      <div>
+        <DateTimeInput {...props} />
+        <button type="button" data-testid="outside">
+          outside
+        </button>
+      </div>
+    )
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getAllByRole("spinbutton")[0])
+    expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+    await user.click(screen.getByRole("button", { name: /15/ }))
+    expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+
+    await user.click(screen.getByTestId("outside"))
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-15T16:45"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when clear is clicked", async () => {
+    const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+      renderWithRerunSpy({
+        ignoreRerun: true,
+        default: [],
+        value: ["2025-06-15T10:00"],
+        setValue: true,
+      })
+
+    const clearButton = screen.getByTestId("stDateTimeInputClearButton")
+    await user.click(clearButton)
+
+    expect(setStringArrayValueSpy).toHaveBeenCalledWith(props.element.id, [], {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a datetime is pasted", async () => {
+    const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+      renderWithRerunSpy({ ignoreRerun: true })
+
+    await user.click(screen.getAllByRole("spinbutton")[0])
+    await user.paste("2025-06-15T09:30")
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-06-15T09:30"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })
