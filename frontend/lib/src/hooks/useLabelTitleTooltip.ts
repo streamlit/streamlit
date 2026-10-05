@@ -25,6 +25,14 @@ import { plainTextWithBlockGaps } from "~lib/util/plainText"
 const ELLIPSIS_OVERFLOW_TOLERANCE_PX = 1
 
 /**
+ * Ellipsis boxes that are not the title host. Button, checkbox, and markdown
+ * labels ellipsize the markdown/caption container (or a badge inside it);
+ * headings and st.text ellipsize the host itself.
+ */
+const ELLIPSIS_TARGET_SELECTOR =
+  '[data-testid="stMarkdownContainer"], [data-testid="stCaptionContainer"], .stMarkdownBadge'
+
+/**
  * True when `el` is painting a CSS ellipsis. The ellipsis is not part of the
  * DOM text, so a trailing "..." check cannot detect it.
  */
@@ -45,7 +53,7 @@ function isLabelTextOverflowing(root: HTMLElement): boolean {
   if (hasEllipsisOverflow(root)) {
     return true
   }
-  for (const el of root.querySelectorAll("*")) {
+  for (const el of root.querySelectorAll(ELLIPSIS_TARGET_SELECTOR)) {
     if (hasEllipsisOverflow(el)) {
       return true
     }
@@ -108,8 +116,10 @@ interface LabelTitleTooltipRefs<
  *   fits does not get a title.
  * - A MutationObserver re-syncs the title after async Markdown plugins (e.g.
  *   emoji) replace a loading skeleton with the real label. A ResizeObserver
- *   and `document.fonts.ready` re-check after the width or font metrics
- *   change. When `addTitleTooltip` is false, no observer is attached.
+ *   rechecks when the host's box changes, and captured image `load`/`error`
+ *   events recheck when a resource changes the text width without resizing
+ *   the host. `document.fonts.ready` covers late font metrics. When
+ *   `addTitleTooltip` is false, no observer is attached.
  *
  * @param addTitleTooltip Whether to attach the native title tooltip.
  * @param identityKey Value whose change forces a title re-sync. Usually the
@@ -171,6 +181,15 @@ export function useLabelTitleTooltip<
     const resizeObserver = new ResizeObserver(syncTitle)
     resizeObserver.observe(node)
 
+    // Image loads do not resize the host or mutate the DOM, but they can
+    // push a nowrap label into the ellipsis. `load`/`error` do not bubble;
+    // the capture phase still reaches this host.
+    const onResourceLoad = (): void => {
+      syncTitle()
+    }
+    node.addEventListener("load", onResourceLoad, true)
+    node.addEventListener("error", onResourceLoad, true)
+
     const cancelFontRecheck = scheduleFontLoadRecheck(syncTitle)
 
     return () => {
@@ -178,6 +197,8 @@ export function useLabelTitleTooltip<
       cancelFontRecheck()
       mutationObserver.disconnect()
       resizeObserver.disconnect()
+      node.removeEventListener("load", onResourceLoad, true)
+      node.removeEventListener("error", onResourceLoad, true)
     }
   }, [addTitleTooltip, effectIdentityKey])
 

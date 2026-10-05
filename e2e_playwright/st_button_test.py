@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-TOTAL_BUTTONS = 40
+TOTAL_BUTTONS = 42
 
 WRAP_LABEL = "Regenerate the complete quarterly report now"
 

@@ -162,9 +162,11 @@ def test_wrap_false_collapses_text_newlines(app: Page):
     wraps = wrap_container.get_by_test_id("stText")
     single_line = get_element_by_key(app, "wrap_false_text").get_by_test_id("stText")
 
-    expect(
-        no_wrap_container.get_by_title(WRAP_NEWLINE_TEXT, exact=True)
-    ).to_be_visible()
+    # The joined line fits in this container, so neither variant has a title.
+    # A truncated joined line is covered by test_wrap_false_ellipsizes_text_and_sets_title.
+    expect(no_wrap_container.get_by_title(WRAP_NEWLINE_TEXT, exact=True)).to_have_count(
+        0
+    )
     expect(wrap_container.get_by_title(WRAP_NEWLINE_TEXT, exact=True)).to_have_count(0)
 
     false_box = no_wrap.bounding_box()

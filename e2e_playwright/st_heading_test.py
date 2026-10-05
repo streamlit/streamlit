@@ -523,7 +523,8 @@ def test_wrap_false_ellipsizes_headings_and_sets_title(
 
     extra_lines = get_element_by_key(app, "wrap_false_heading_extra_lines")
     expect(extra_lines.get_by_text("Second line that must not appear")).to_have_count(0)
-    expect(extra_lines.get_by_title("First line", exact=True)).to_be_visible()
+    # The kept first line fits in the container, so it has no title.
+    expect(extra_lines.get_by_title("First line", exact=True)).to_have_count(0)
     expect(
         extra_lines.get_by_title("First line\nSecond line that must not appear")
     ).to_have_count(0)

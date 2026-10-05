@@ -50,12 +50,12 @@ function LabelTitleHarness({
   )
 
   return (
-    <div ref={titleRef} data-testid="title-host">
-      <span
-        ref={labelTextRef}
-        data-testid="label-text"
-        style={ellipsis ? ELLIPSIS_STYLE : undefined}
-      >
+    <div
+      ref={titleRef}
+      data-testid="title-host"
+      style={ellipsis ? ELLIPSIS_STYLE : undefined}
+    >
+      <span ref={labelTextRef} data-testid="label-text">
         {labelContent ?? label}
       </span>
     </div>
@@ -94,12 +94,8 @@ describe("useLabelTitleTooltip", () => {
     function BlockGapHarness(): ReactElement {
       const { titleRef, labelTextRef } = useLabelTitleTooltip(true, "one two")
       return (
-        <div ref={titleRef} data-testid="title-host">
-          <span
-            ref={labelTextRef}
-            data-testid="label-text"
-            style={ELLIPSIS_STYLE}
-          >
+        <div ref={titleRef} data-testid="title-host" style={ELLIPSIS_STYLE}>
+          <span ref={labelTextRef} data-testid="label-text">
             <p>one</p>
             <p>two</p>
             <br />
@@ -226,7 +222,9 @@ describe("useLabelTitleTooltip", () => {
       return (
         <div ref={titleRef} data-testid="title-host">
           <span ref={labelTextRef} style={{ display: "contents" }}>
-            <span style={ELLIPSIS_STYLE}>Clipped</span>
+            <span data-testid="stMarkdownContainer" style={ELLIPSIS_STYLE}>
+              Clipped
+            </span>
           </span>
         </div>
       )
@@ -235,6 +233,33 @@ describe("useLabelTitleTooltip", () => {
     render(<ContentsHarness />)
 
     expect(screen.getByTitle("Clipped")).toBeVisible()
+  })
+
+  it("rechecks overflow when a descendant image loads", () => {
+    function ImageHarness(): ReactElement {
+      const { titleRef, labelTextRef } = useLabelTitleTooltip(
+        true,
+        "Plain label"
+      )
+      return (
+        <div ref={titleRef} data-testid="title-host" style={ELLIPSIS_STYLE}>
+          <span ref={labelTextRef}>
+            Plain label
+            <img alt="" data-testid="label-image" />
+          </span>
+        </div>
+      )
+    }
+
+    layout.setWidths(100, 100)
+    render(<ImageHarness />)
+    expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+
+    layout.setWidths(200, 100)
+    expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+
+    screen.getByTestId("label-image").dispatchEvent(new Event("load"))
+    expect(screen.getByTitle("Plain label")).toBeVisible()
   })
 
   it("removes the title when a resize makes the label fit", () => {
