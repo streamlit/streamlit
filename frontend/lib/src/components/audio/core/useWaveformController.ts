@@ -191,9 +191,21 @@ export function useWaveformController({
 
     const generation = initGenerationRef.current
     const initPromise = (async (): Promise<void> => {
+      // destroy() drops this promise and starts a replacement when theme or
+      // sampleRate changes. start() and playback.load may still be awaiting
+      // this attempt, so follow the replacement instead of resolving with no
+      // backend (that throw is swallowed by AudioInput).
+      const waitForReplacementInit = async (): Promise<void> => {
+        const replacement = initPromiseRef.current
+        if (replacement && replacement !== initPromise) {
+          await replacement
+        }
+      }
+
       try {
         const { WaveSurfer, RecordPluginClass } = await loadWaveSurferModules()
         if (initGenerationRef.current !== generation) {
+          await waitForReplacementInit()
           return
         }
 
@@ -215,6 +227,7 @@ export function useWaveformController({
 
         if (initGenerationRef.current !== generation) {
           ws.destroy()
+          await waitForReplacementInit()
           return
         }
 
@@ -249,6 +262,7 @@ export function useWaveformController({
         isInitializedRef.current = true
       } catch (error) {
         if (initGenerationRef.current !== generation) {
+          await waitForReplacementInit()
           return
         }
         initPromiseRef.current = null

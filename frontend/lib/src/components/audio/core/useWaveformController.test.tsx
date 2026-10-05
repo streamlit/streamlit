@@ -727,6 +727,70 @@ describe("useWaveformController", () => {
       expect(mockEvents.onError).not.toHaveBeenCalled()
     })
 
+    it("keeps start() waiting when sampleRate changes during import", async () => {
+      const releaseImport: Array<() => void> = []
+      loadWaveSurferModulesTest.setDelayedLoad(async () => {
+        await new Promise<void>(resolve => {
+          releaseImport.push(resolve)
+        })
+        const [WaveSurferModule, RecordPluginModule] = await Promise.all([
+          import("wavesurfer.js"),
+          import("wavesurfer.js/dist/plugins/record.js"),
+        ])
+        return {
+          WaveSurfer: WaveSurferModule.default,
+          RecordPluginClass: RecordPluginModule.default,
+        }
+      })
+
+      const WaveSurferModule = await import("wavesurfer.js")
+      const createMock = WaveSurferModule.default.create as ReturnType<
+        typeof vi.fn
+      >
+      createMock.mockClear()
+      createMock.mockReturnValue(mockWaveSurfer)
+
+      const { result, rerender } = renderHook(
+        ({ sampleRate }: { sampleRate: number }) =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+            sampleRate,
+          }),
+        { wrapper, initialProps: { sampleRate: 16000 } }
+      )
+
+      expect(releaseImport).toHaveLength(1)
+
+      let startResult: Promise<void> = Promise.resolve()
+      act(() => {
+        startResult = result.current.start()
+      })
+
+      rerender({ sampleRate: 8000 })
+      expect(releaseImport).toHaveLength(2)
+
+      await act(async () => {
+        releaseImport[0]()
+        await Promise.resolve()
+      })
+
+      expect(createMock).not.toHaveBeenCalled()
+      expect(mockRecordPlugin.startRecording).not.toHaveBeenCalled()
+
+      await act(async () => {
+        releaseImport[1]()
+        await startResult
+      })
+
+      expect(createMock).toHaveBeenCalledTimes(1)
+      expect(mockRecordPlugin.startRecording).toHaveBeenCalledWith({
+        sampleRate: { ideal: 8000 },
+      })
+      expect(result.current.state).toBe("recording")
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+    })
+
     it("abandons WaveSurfer.create when sampleRate changes during import", async () => {
       vi.useFakeTimers()
       loadWaveSurferModulesTest.setDelayedLoad(async () => {
