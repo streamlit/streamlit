@@ -15,8 +15,9 @@
 """JSON encodings for values that leave the app through the agent API.
 
 Widget values and dataframe cells are arbitrary Python objects, so the wire
-form has to be pinned. These are the prototype's choices; the spec lists
-settling them as a prerequisite for shipping v1.
+form has to be pinned, and it is pinned here. An object without an encoding
+becomes ``str(value)``, so one odd cell does not fail the snapshot. The spec
+lists settling these encodings as a prerequisite for shipping v1.
 """
 
 from __future__ import annotations

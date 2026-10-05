@@ -269,8 +269,8 @@ class AgentSession:
     user_info: dict[str, Any] = field(default_factory=dict)
     last_used: float = field(default_factory=time.monotonic)
     element_states: dict[str, ElementState] = field(default_factory=dict)
-    # Guards against a second interaction arriving while one is still running.
-    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    # Set while an interaction is in flight; a second one is refused, not queued.
+    busy: bool = False
     # An interaction that outlasted the run timeout and whose result nobody has
     # collected yet. Its run keeps going, and a retry waits for it.
     timed_out: _Interaction | None = None
@@ -363,7 +363,7 @@ def _idle_since(session: AgentSession) -> float | None:
     client keeps coming back for it, and gets a full TTL after it finishes to
     be collected.
     """
-    if session.lock.locked():
+    if session.busy:
         return None
     return max(session.last_used, session.client.finished_at)
 
@@ -402,17 +402,20 @@ async def interact(
             raise AgentRequestError("invalid_request", "`session_id` must be a string.")
         session = registry.get(handle, user_info)
 
-    if session.lock.locked():
+    # Checked and claimed with no await in between, so a second request on the
+    # event loop always sees the claim. A lock would wait instead of refusing,
+    # and could start the second interaction after its client had given up.
+    if session.busy:
         raise AgentRequestError(
             "session_busy",
             "This session already has an interaction in flight.",
         )
+    session.busy = True
 
     try:
-        async with session.lock:
-            return await _run_interaction(
-                runtime, session, request, is_new_session=is_new_session
-            )
+        return await _run_interaction(
+            runtime, session, request, is_new_session=is_new_session
+        )
     except AgentRequestError as exc:
         # A creating call that fails after the session exists has still run the
         # app, so the session is real and usable. Hand its id back rather than
@@ -420,6 +423,8 @@ async def interact(
         if is_new_session and exc.session_id is None:
             exc.session_id = session.handle
         raise
+    finally:
+        session.busy = False
 
 
 async def _run_interaction(
@@ -494,12 +499,9 @@ async def _run_interaction(
             # and the runtime keeps the state and query-parameter binding of
             # only the widgets it lists. Without them, a widget the new page
             # shares, such as one in the sidebar, would lose its parameter.
-            try:
-                rerun.widget_states.widgets.extend(
-                    app_session.session_state.get_widget_states()
-                )
-            except Exception:
-                _LOGGER.debug("Could not list widget states.", exc_info=True)
+            rerun.widget_states.widgets.extend(
+                app_session.session_state.get_widget_states()
+            )
         rerun.page_script_hash = page_hash
         rerun.page_name = page_name
     if query_params is not None:

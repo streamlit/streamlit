@@ -170,9 +170,9 @@ def element(
         Why the element is not fully usable, when it is not.
     data_url
         Where the element's complete data can be fetched, from
-        ``data_offload.serve_arrow_over_http``.         Reported under ``data`` rather
-        than ``props``, because it is a fact about the data rather than
-        something the author wrote.
+        ``data_offload.serve_arrow_over_http``. Reported under ``data`` rather
+        than ``props``, because it describes the data rather than an argument
+        the author passed.
     data_summary
         The element's ``data``, for a command whose payload does not carry its
         table, so the snapshot cannot derive it: ``st.map`` emits a generated

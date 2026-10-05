@@ -21,8 +21,9 @@ until its own PR. Sizes are estimates measured from the prototype.
 - **The OpenAPI document grows with the code.** Each PR adds the request fields, error
   codes, and schema it implements, so the document never describes something that is not
   there yet.
-- **The spec goes first.** `product-spec.md`, `potential-follow-ups.md`, and
-  `mcp-support.md` land before or alongside PR 1. `prototype-feedback.md` and
+- **The spec goes first, on its own.** `product-spec.md` and `potential-follow-ups.md`
+  land on `develop` in a spec-only PR before PR 1, as the specs process requires.
+  `mcp-support.md` waits for the MCP PR. `prototype-feedback.md` and
   `prototype-learnings.md` move to the agent wiki instead of the repository.
 
 ## The stack
@@ -106,8 +107,14 @@ and run a parameterized report in one call.
 and the runtime integration: `handle_backmsg`, the session manager, settling a run chain.
 
 **Tests:** registry unit tests (cap, TTL, identity mismatch); route tests with
-Starlette's test client for every security rule and error code; e2e for create, read,
-navigate, and a slow app that times out and is collected.
+Starlette's test client for every security rule and error code; concurrent requests on
+one session, exactly one of which runs; a real-protobuf `st.context` test that an
+explicitly sent `0` or `False` is kept and an unset field reads as `None`; e2e for
+create, read, navigate, and a slow app that times out and is collected. Mark the
+routing and identity e2e tests `@pytest.mark.external_test`: a path-stripping proxy,
+`server.baseUrlPath`, a refused `Origin`, spoofed identity headers, the `st.login`
+cookie not authenticating a call, and the app shell still loading with the new
+`index.html` link under a host CSP.
 
 ### PR 4: Acting: widgets, triggers, forms
 
@@ -149,8 +156,9 @@ that fetches a table's URL and compares the row count with the snapshot.
   cross-fragment and cross-dialog rules, dialog descriptions (`is_open`, the dismiss
   trigger), and `fragments` in the snapshot.
 - Launch: `<link rel="service-desc">` and the `<noscript>` hint in `index.html` (the
-  hint's wording needs product sign-off), the flag made visible, and the user-facing
-  docs.
+  hint's wording needs product sign-off, and it is served whether or not the API is on),
+  the flag made visible, and the user-facing docs. Deployment docs say that enabling the
+  API means applying the identity-header policy to `/_stcore/agent/` as well.
 
 **Tests:** e2e that a widget inside a fragment does not rerun the page, that a dialog
 stays open through its own confirm, and that dismissing it works.
@@ -202,8 +210,9 @@ a bound parameter rather than dropping it.
 
 - Build each PR as a fresh branch off the previous one, bringing files over from the
   prototype branch, which already has every cut applied except the MCP endpoint. Leave
-  `mcp.py`, its route, and its OpenAPI path behind. Keep the prototype branch as the
-  reference until PR 6 merges.
+  `mcp.py`, its route, its OpenAPI path, and the MCP sentence in `index.html`'s
+  `<noscript>` text behind. Keep the prototype branch as the reference until PR 6
+  merges.
 - Each PR description links the spec section it implements and lists the verification
   checks it ported.
 - `make check` on each PR, and each PR adds the e2e tests for the behavior it introduces.

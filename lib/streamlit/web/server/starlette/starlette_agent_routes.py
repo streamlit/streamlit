@@ -348,9 +348,9 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         body = await _read_body(request, max_request_bytes)
         if body is None:
             return _error(
-                "invalid_request",
+                "request_too_large",
                 f"Request body exceeds {max_request_bytes} bytes.",
-                status=413,
+                status=error_status("request_too_large"),
             )
 
         try:

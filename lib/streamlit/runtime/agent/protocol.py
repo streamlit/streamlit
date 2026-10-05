@@ -53,6 +53,13 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
             "changes."
         ),
     ),
+    "request_too_large": (
+        413,
+        (
+            "The body is larger than `server.maxWidgetStateSize`, the bound the "
+            "app's WebSocket applies to a browser's messages too."
+        ),
+    ),
     "invalid_value": (
         400,
         (

@@ -514,21 +514,24 @@ def _fallback_description(proto_field: str, payload: Message | None) -> dict[str
     """Describe an element whose command has no agent-API description yet.
 
     Named after the proto field rather than a command, so a client can tell a
-    coverage gap from a real command name, and carrying only scalar fields so
-    the element is not silently empty.
+    coverage gap from a real command name, and carrying its scalar proto fields
+    as props so the element is not silently empty -- except a widget's value
+    and default. Those may be a password, which must never appear in a
+    snapshot, and a described widget reports its value through `value` anyway.
     """
+    element_id = getattr(payload, "id", "") if payload is not None else ""
+    skipped = {"id", "form_id", "set_value"}
+    if element_id:
+        # A widget: its value and default are state, not construction.
+        skipped |= {"value", "default"}
+
     props: dict[str, Any] = {}
     if payload is not None:
         for descriptor, value in payload.ListFields():
-            if descriptor.message_type is None and descriptor.name not in {
-                "id",
-                "form_id",
-                "set_value",
-            }:
+            if descriptor.message_type is None and descriptor.name not in skipped:
                 props[descriptor.name] = json_encoding.to_json_value(value)
 
     description: dict[str, Any] = {"type": proto_field, "props": props}
-    element_id = getattr(payload, "id", "") if payload is not None else ""
     if element_id:
         description["key"] = element_id
     return description
