@@ -112,6 +112,9 @@ Trigger-based widgets (`st.button`, `st.chat_input`, `st.form_submit_button`, `s
 are excluded because their values only exist during the rerun. Without a rerun, the trigger value
 is never received by Python code.
 
+`st.tabs`, `st.expander`, and `st.popover` already default to `on_change="ignore"`, where that
+mode means the container does not track state. They are out of scope for this change.
+
 ### Behavior
 
 When `on_change="ignore"`:
@@ -214,6 +217,9 @@ When `on_change="ignore"`:
 
 - The **frontend UI** updates immediately (user sees the new slider position, selected option, etc.)
 - **Python code** still sees the **previous value** until a rerun is triggered by another means
+- Downstream UI that depends on the return value (charts, paged content, and so on) also stays on
+  the previous value until the next rerun. For `st.pagination`, the page buttons update immediately
+  while the listed page's content does not.
 - If `bind="query-params"` is set, the **URL** updates immediately, the same as widgets
   inside a form. The URL can therefore show a value Python has not received yet.
 - On the next rerun, the updated value becomes available via:
