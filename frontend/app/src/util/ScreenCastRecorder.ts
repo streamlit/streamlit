@@ -43,8 +43,8 @@ class ScreenCastRecorder {
       const mediaDevices = navigator.mediaDevices
       return (
         notNullOrUndefined(mediaDevices) &&
-        typeof Reflect.get(mediaDevices, "getUserMedia") === "function" &&
-        typeof Reflect.get(mediaDevices, "getDisplayMedia") === "function" &&
+        typeof mediaDevices.getUserMedia === "function" &&
+        typeof mediaDevices.getDisplayMedia === "function" &&
         MediaRecorder.isTypeSupported(BLOB_TYPE)
       )
     } catch {

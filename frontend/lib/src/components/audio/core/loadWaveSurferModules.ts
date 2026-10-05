@@ -18,8 +18,8 @@ import type * as WaveSurferNS from "wavesurfer.js"
 import type * as RecordPluginNS from "wavesurfer.js/dist/plugins/record.js"
 
 /**
- * Dynamic import of WaveSurfer and its Record plugin. Isolated so tests can
- * hold the import while remounting the controller.
+ * Loads WaveSurfer and its Record plugin.
+ * Split out so tests can delay this import and exercise init races.
  */
 export async function loadWaveSurferModules(): Promise<{
   WaveSurfer: typeof WaveSurferNS.default

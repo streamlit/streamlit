@@ -225,12 +225,6 @@ export function useWaveformController({
           interact: true,
         })
 
-        if (initGenerationRef.current !== generation) {
-          ws.destroy()
-          await waitForReplacementInit()
-          return
-        }
-
         wavesurferRef.current = ws
         isPlaybackModeRef.current = false
 

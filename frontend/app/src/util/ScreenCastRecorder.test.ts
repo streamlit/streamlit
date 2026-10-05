@@ -199,7 +199,7 @@ describe("ScreenCastRecorder.isSupportedBrowser", () => {
       configurable: true,
       value: {
         getDisplayMedia: getDisplayMediaMock,
-        getUserMedia: undefined,
+        getUserMedia: {},
       },
     })
     expect(ScreenCastRecorder.isSupportedBrowser()).toBe(false)
