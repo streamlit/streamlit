@@ -243,10 +243,9 @@ Later calls reference keys from the snapshot they just read:
 The request blocks until the run chain settles, then returns the snapshot. An accepted
 interaction may cause more than one script run through callbacks, `st.rerun()`, or a page
 redirect; "one interaction" means one client submission, not one execution. What comes
-back is the end state, so output a
-browser shows only while a run is in progress — a spinner, `st.write_stream` arriving
-chunk by chunk — never appears, while a toast the run raised does, even though a browser
-hides it after a few seconds.
+back is the end state, so output a browser shows only while a run is in progress — a
+spinner, `st.write_stream` arriving chunk by chunk — never appears, while a toast the run
+raised does, even though a browser hides it after a few seconds.
 
 **A run that outlasts `server.agentRunTimeout` keeps going, and a retry collects it.** The
 request returns `202 Accepted` with `run_timed_out`, and nothing is lost: the same request
@@ -311,15 +310,14 @@ Neither `widget_state` nor `trigger` is accepted on a creating call, because ele
 only resolve once the app has run. Accepting values that might silently not apply is worse
 than requiring a second call.
 
-**A `page` on a creating call is resolved by the runtime, not looked up first.** Mapping a
-`url_path` to the internal page hash is a post-run fact: an `st.navigation` app has no
-page list until it has run once, so looking the page up first would reject a page that
-plainly exists — including the parameterization example above. The browser has the same
+**A `page` on a creating call is resolved by the runtime, not looked up first.** An
+`st.navigation` app has no page list until it has run once, so a lookup would reject a
+page that plainly exists, including in the example above. The browser has the same
 problem on a cold load and sends the page *name* for the runtime to resolve, and so does
-this. The cost is that an unrecognized page is only detected after the run, so that error
-carries the `session_id` of the session it created rather than leaking it. On later calls
-the page list is known, so an unknown page is refused before anything runs, and a page
-that exists is never an error, even when the app then redirects with `st.switch_page`.
+this. The cost is that an unknown page is only detected after the run, so that error
+carries the new session's `session_id`. On later calls the page list is known, so an
+unknown page is refused before anything runs; a page that exists is never an error, even
+when the app then redirects with `st.switch_page`.
 
 ### The snapshot
 
@@ -578,8 +576,7 @@ Rules:
   description falls back to a node named after its proto field and is listed in a
   response-level `undescribed_types`, so a coverage gap is visible to the caller as a gap
   rather than passing as a command name. See
-  [Success criteria](#success-criteria) for why this is a runtime property rather than a
-  static check.
+  [Success criteria](#success-criteria) for how coverage is checked.
 - **It is an observation, not a Python dump.** Callbacks, arbitrary objects, secrets,
   source, caches, and `st.session_state` are absent by construction. A password input's
   value is write-only: it can be set and never comes back, since responses get logged and
@@ -672,28 +669,28 @@ also does not record which `st.form` an element belongs to. The document the cli
 given has both facts, which is the deeper point: **the snapshot is the contract, so the
 snapshot is what a write is judged against.** The server keeps, per
 session, what each addressable element advertised — actionable, disabled, `support`, form,
-and current value — and checks the next request against that, so rejections name the
-actual problem: `disabled_widget` for a disabled control, `unsupported_element` for one
+options, fragment, and whether it is in a dialog — and checks the next request against
+that, so rejections name the actual problem: `disabled_widget` for a disabled control, `unsupported_element` for one
 this interface cannot drive, and `not_on_page` only when the key really is absent.
 
 **Widget constraints are a separate layer, and they belong to the widgets.** Whether a
 value is one of a selectbox's `options`, inside a slider's bounds, or a well-formed
-`validate` match is not a question about this interface. Today the runtime handles some of
-them by quietly resetting the value — an out-of-range number or an unknown option falls
-back to the widget's default — and only the frontend enforces the rest;
+`validate` match is not a question about this interface. Today the runtime quietly resets
+some violations to the widget's default — an out-of-range number, an unknown option — and
+only the frontend checks the rest;
 [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them all server-side.
-The agent path should call those validators rather than keep its own, with one
-requirement on their shape: a silently reset value reads as success to an agent, so a
-validator should report the violation and let the caller decide — the browser path
-coerces, the agent path rejects with `invalid_value`. Until #16203 lands, v1 makes one
-check of its own, against the snapshot: a value must be one of the widget's `options`.
-That is the most common mistake, and its error can list the legal values. Everything else
-waits for #16203, and each case shows in the next snapshot's `value`: an out-of-range
-number is reset to the default, a fraction sent to an integer input is truncated, and
-text past `max_chars` is cut. A date range is the one shape the runtime does not fix: it
-is stored as sent, reversed or with a third date, so a client sends at most two dates,
-earliest first. [Potential follow-ups](potential-follow-ups.md) ranks the
-validations by how much apps rely on them.
+The agent path should call those validators rather than keep its own, provided each
+reports the violation and lets the caller decide: the browser path coerces, and the agent
+path rejects with `invalid_value`, because a silently reset value reads as success.
+
+Until then, v1 makes one check of its own, against the snapshot: a value must be one of
+the widget's `options`, the most common mistake, whose error can list the legal values.
+Everything else shows in the next snapshot's `value`: an out-of-range number is reset to
+the default, a fraction sent to an integer input is truncated, and text past `max_chars`
+is cut. A date range is the exception: the runtime stores it as sent, reversed or with a
+third date, so a client sends at most two dates, earliest first.
+[Potential follow-ups](potential-follow-ups.md) ranks the validations by how much apps
+rely on them.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -762,9 +759,7 @@ Doing the rest of either is [follow-up #8](#follow-ups).
 
 Actions do not carry a JSON Schema in v1. The element's `type` plus its constraint
 properties (`options`, `min_value`, `max_value`, `max_chars`, `required`, `validate`)
-already tell a model what to send. Of those, only `options` is checked here; bounds and
-`max_chars` are applied by the runtime as described above, and `required` and `validate`
-only by the browser.
+already tell a model what to send.
 
 **Every action must be treated as consequential.** A selectbox can trigger a database
 write just as a button can, so Streamlit does not label any action read-only, idempotent,
@@ -898,7 +893,7 @@ operators and tests rather than for tuning per app.
 | Idle time before a session is reclaimed | 15 min                                                | `server.agentSessionTTL`                                                      |
 | Agent sessions held at once            | 100, then `too_many_sessions`                         | `server.agentMaxSessions`                                                     |
 | Interactions in flight per session     | 1, then `session_busy`                                | Fixed                                                                         |
-| Request body                           | 25 MB, the same bound as a WebSocket message          | `server.maxWidgetStateSize`                                                   |
+| Request body                           | 25 MB, then `request_too_large`; the same bound as a WebSocket message | `server.maxWidgetStateSize`                                  |
 | Preview rows per table                 | 100                                                   | `server.agentPreviewRows` (hidden)                                            |
 | Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
 | Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 6](#open-questions))                                    |
@@ -917,20 +912,19 @@ This is a new programmatic execution surface and needs an explicit review.
 - **Off by default in v1, on by default as the goal.** Upgrading Streamlit should not open
   a new route until the concerns in [Enablement](#enablement) are settled; after that, the
   default flips. Either way the route applies the WebSocket's Host allow-list and
-  identity mapping, and is never stricter than the app.
+  identity mapping, and serves any program that can reach the app; only a web page from
+  an origin the operator did not list is refused.
 - **Validate semantically, then serialize.** Never accept a raw `BackMsg`, element ID,
   delta path, fragment ID, or `WidgetState` protobuf. Reject stale, disabled, removed,
   wrong-type, cross-form, cross-dialog, and oversized requests atomically, before any
   callback runs — against the last snapshot rather than live widget state, for the
   reasons in [Actions in v1](#actions-in-v1). Widget constraints are enforced mostly in
-  the browser today ([#16203](https://github.com/streamlit/streamlit/issues/16203)): the
-  runtime resets an out-of-range number or an unknown option, but nothing server-side
-  checks `required` or `validate`. That gap is pre-existing and reachable by anyone
-  scripting the WebSocket, so this interface neither creates nor widens it, and its
-  options check only narrows it. The fix belongs in the widgets, where both paths share
-  it, not in a second implementation here. Meanwhile the guidance for authors is unchanged: a
-  widget's range or option list is a UI affordance, not an access control, so anything
-  that actually matters belongs in app code.
+  the browser today ([#16203](https://github.com/streamlit/streamlit/issues/16203)). That
+  gap predates this interface and is reachable by anyone scripting the WebSocket, so this
+  interface neither creates nor widens it, and the fix belongs in the widgets, where both
+  paths share it. Meanwhile the guidance for authors is unchanged: a widget's range or
+  option list is a UI affordance, not an access control, so anything that actually
+  matters belongs in app code.
 - **Preserve the existing output boundary.** Expose only content already emitted to this
   session's client, with the same error redaction. No secrets, session state, Python
   values, local paths, or source.
@@ -1104,15 +1098,17 @@ reading the proto reports it as `st.markdown`.
 
 Building the description in the element function costs one JSON object per element, built
 only for sessions the agent API created, so a browser session builds and sends nothing.
+With no agent session connected, deciding that is one empty-set check per element; once
+one exists, it is one script-context lookup per element on every session.
 It rides to the serializer on the emitted message's metadata, so an element replayed from
 an `st.cache_data` result carries the description recorded when the entry was filled —
 which also means an entry a browser session filled has none to replay.
 
 The cost is honest: the description lives next to each command instead of in one file, so
-adding a command means adding a line there, and nothing stops an author from forgetting.
-That is what the coverage property in [Success criteria](#success-criteria) is for. In
-exchange, the description reads like the command's own signature and stays next to the
-code that would change it.
+adding a command or a parameter means adding a line there. The coverage test in
+[Success criteria](#success-criteria) fails when that line is missing. In exchange, the
+description reads like the command's own signature and stays next to the code that would
+change it.
 
 ## Follow-ups
 
@@ -1218,14 +1214,11 @@ agent access alone.
 
 **v1 ships when:**
 
-- Every command that emits an element or container describes itself, with an empty
-  `undescribed_types` across a kitchen-sink app that exercises the whole display and
-  widget surface.
-- Every serialized element `type` and `props` key either matches a public command or
-  parameter name, or appears on a documented list of derived additions, and every
-  parameter is either reported or on a documented list of omissions with its reason. A
-  unit test over every element mock checks both, so a new parameter fails CI until
-  someone decides whether an agent needs it.
+- Every command that emits an element or container describes itself under its public
+  name. Every `props` key it reports is one of its parameters or on a documented list of
+  derived additions, and every parameter is reported or on a documented list of
+  omissions, with its reason. A unit test checks all three for every command, so a new
+  command or parameter fails CI until someone decides what an agent sees.
 - JSON encodings are pinned for dates, datetimes, decimals, large integers, non-finite
   numbers, ranges, and object-valued options.
 - Every advertised interaction matches an equivalent browser session on callback order,
@@ -1238,16 +1231,17 @@ agent access alone.
 - With `enableAgentApi` unset, no agent route executes anything, and the schema route
   only reports that the API is disabled.
 
-**Coverage is a runtime property, not a static check.** A CI assertion that every
-`Element` and `Block` variant has a declaration cannot work when descriptions are built
-at fill time: a proto variant does not map to one command, and a command's description
-exists only along the code path that emits it. Nothing static can
+**Coverage is checked by running every command, not by inspecting protos.** A CI
+assertion that every `Element` and `Block` variant has a declaration cannot work when
+descriptions are built at fill time: a proto variant does not map to one command, and a
+command's description exists only along the code path that emits it. Nothing static can
 see that `st.badge` and `st.caption` both produce markdown, or that a command wrote the
-wrong name. What replaces it is the pair above — `undescribed_types` in every response,
-plus a test that sweeps a kitchen-sink app and asserts the list is empty — and the
-difference is worth naming honestly: it proves the commands the sweep exercised, not every
-variant. A command added without a description and without a sweep entry will be missed by
-CI and reported to clients at runtime.
+wrong name. So the test runs each command's existing element mock with recording on and
+reads the names it passed. Streamlit already requires a mock for every public command,
+which is what makes a new command covered by default. The limit is worth naming
+honestly: the test proves the code paths the mocks exercise, not every branch. A
+description built only in a branch no mock reaches is missed by CI, and
+`undescribed_types` reports such a gap to clients at runtime.
 
 **One definition, not three — at the command, not in a registry.** The canonical element
 type, its meaningful properties, its value encoding, its interaction capability, and its
@@ -1297,7 +1291,8 @@ new command or significant parameter should ship with all of the following, or a
   _meaning_ rather than only its syntax.
 - Updated bundled skills and templates.
 - `AppTest` capability registration.
-- An agent-API description at its emit site, and an entry in the coverage sweep.
+- An agent-API description at its emit site, which the coverage test holds to the
+  command's signature.
 - Browser E2E coverage where browser behavior matters, and defined accessibility behavior.
 - Content-free telemetry.
 - Migration guidance for the CSS or component workaround it replaces.
@@ -1326,10 +1321,10 @@ new command or significant parameter should ship with all of the following, or a
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until a credential flow maps them. Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
-| No breaking API changes    | ✅ Additive: `server.enableAgentApi`, off in v1, its budget options, new routes under `/_stcore/agent/`, and the discovery hint in `index.html`. No `st.*` signature changes. One behavior is sharper: an `st.context` field the client never sent reads as `None` rather than an empty default, which browser apps never see, because the frontend always sends them. Flipping the default later is itself a reviewed change, not a silent one. |
+| No breaking API changes    | ✅ Additive: `server.enableAgentApi`, off in v1, its budget options, new routes under `/_stcore/agent/`, and the discovery hint in `index.html`. No `st.*` signature changes. One behavior is sharper: an `st.context` field the client never sent reads as `None` rather than an empty default. Browser apps never see it, because the frontend always sends every field, and an explicitly sent `0` or `False` is kept, since the fields track presence. Flipping the default later is itself a reviewed change, not a silent one. |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either; see [mcp-support.md](mcp-support.md).                                                                                                                                                                                                                                                                                                                                                                                          |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
-| Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: off by default in v1 with on-by-default as the goal, no stricter than the app once on, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, and identity mapping — the gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
+| Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: off by default in v1 with on-by-default as the goal, open to any program that can reach the app once on but refusing unlisted web origins, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, and identity mapping — the gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
 | Any docs changes needed?   | Protocol reference and coverage matrix, an authoring guide ("write `key=`, explain the app in the app"), verification guidance next to `AppTest` and Playwright, and a security/deployment page.                                                                                                                                                                                                                                                                                                              |
 | Any other risks?           | The snapshot is a long-lived compatibility surface and needs a version field and a written stability policy from the first release. Adoption risk: if it stays experimental too long, the ecosystem standardizes on browser automation instead.                                                                                                                                                                                                                                                               |
 
