@@ -176,19 +176,26 @@ below.
 ## Follow-up: data for chat clients
 
 Coding agents fetch `data.url` and parse Arrow with code. Chat clients such as ChatGPT
-and Claude.ai are narrower in two ways: their fetch tools reach only public URLs, and they
-handle text far better than a binary Arrow stream. The gap only matters for tables
-larger than the 100-row preview, so it is worth closing once usage shows chat clients
-hitting it. Two ways to close it, simplest first:
+and Claude.ai are narrower in three ways: the model often does not know the URL it is
+connected to, so a relative `data.url` cannot be resolved; their fetch tools reach only
+public URLs; and they handle text far better than a binary Arrow stream. The gap only
+matters for tables larger than the 100-row preview, so it is worth closing once usage
+shows chat clients hitting it. The first feedback from a chat client doing data-heavy
+analysis named it the biggest limitation. Two ways to close it, simplest first:
 
 1. **Serve the same data as text.** A CSV or JSON rendering of a `data.url`, paged, would
    work for any client whose fetch tool handles text, and for HTTP API clients too,
-   without a new tool.
-2. **A paging `read_data` tool** that returns rows in `columns` order, the shape of
-   `data.preview`, with the next offset. It reaches clients that cannot fetch at all,
-   such as an app reachable only through the MCP connection. MCP resources are the
-   protocol's native way to expose data, but many clients do not show them to the model
-   on their own, so a tool is the more dependable form.
+   without a new tool. It still leaves the model to resolve the URL.
+2. **A paging `read_data` tool** that takes a table's `data.url` as an opaque handle, with
+   `offset` and `limit`, and returns rows in `columns` order, the shape of
+   `data.preview`, with the next offset. The server resolves the handle, so the model
+   never has to, and absolute URLs, which would be wrong behind a prefix-stripping
+   proxy, are not needed. Serving only URLs from the session's latest snapshot keeps
+   the fetch-now rule. It reaches clients that cannot fetch at all, such as an app
+   reachable only through the MCP connection, and is about 120 lines. MCP resources are
+   the protocol's native way to expose data, but many clients do not show them to the
+   model on their own, and raw Arrow bytes are unreadable to a model without code
+   execution, so a tool returning rows is the more dependable form.
 
 ## Open questions
 

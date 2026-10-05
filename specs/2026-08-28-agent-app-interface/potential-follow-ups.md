@@ -173,3 +173,99 @@ timed-out interaction left going — can change the state being read.
 Capturing those values on the script thread, at the end of the run that produced them,
 would leave the event loop only serializing finished data. The natural place is the same
 hook that already decides when a run's stale deltas are dropped.
+
+## Page full tables for MCP chat clients
+
+**Today:** a chat client sees a table's 100-row preview and a relative `data.url` it can
+neither resolve nor parse. A paging `read_data` tool, taking the `data.url` as a handle
+the server resolves, would close that. The design is in
+[mcp-support.md](mcp-support.md#follow-up-data-for-chat-clients).
+
+**Why not now:** v1 keeps MCP to the one operation the HTTP API has, and the coding
+agents it targets first fetch the Arrow themselves.
+
+**What would make it worth doing:** chat clients analyzing tables larger than the
+preview. The first chat-client feedback named this as its biggest limitation, so it is
+the first candidate.
+
+## Side-load ECharts datasets as Arrow
+
+**Today:** `st.echarts_chart` converts a dataframe in `dataset.source` to JSON records
+inside the option, so an agent gets the data inline in `spec`, with no preview, no
+`url`, and no way to page it.
+
+**The fuller version**, in two steps:
+
+- **For agents only.** The element serves a dataframe `dataset.source` as Arrow under
+  `data`, the way `st.map` serves its table, and the reported spec leaves the source out
+  and names it in `spec_omitted`. Literal list sources and options with several
+  dataframe datasets stay inline, so nothing is lost. About 40 lines, with no protobuf or
+  frontend change.
+- **On the wire.** The protobuf carries datasets as Arrow, as the Vega charts do, and the
+  frontend decodes them for ECharts. That helps browsers too, with smaller and typed
+  payloads, but it changes a released element and risks visual regressions, so it should
+  stand on its browser merits.
+
+**Why not now:** the inline spec is complete and correct, and few apps use ECharts yet.
+
+**What would make it worth doing:** recommending ECharts as a chart whose data agents can
+read, as in the next item, or large ECharts datasets in practice.
+
+## Recommend dataframe-backed charts for apps agents read
+
+**Today:** built-in charts, Altair and Vega-Lite, and `st.map` report their data as a
+table under `data`, with a slim spec. A Plotly figure carries its data in its traces,
+because Streamlit only receives the figure and never the dataframe behind it, so a large
+one is verbose. Repeated `customdata` across traces can make it larger than the
+underlying table. The embedded skill already prefers Vega-based charts over Plotly, for
+other reasons.
+
+**The fuller version:** say in the skill and the agent API docs that charts built from a
+dataframe, such as the built-in charts, Altair, or ECharts with a dataframe
+`dataset.source`, give agents the table itself. Plotly keeps working and stays inline;
+how to bound a large figure remains the product spec's open question 6. Deduplicating
+arrays across traces or adding a request option for the level of chart detail were
+considered and rejected: both add machinery every client would have to understand.
+
+**Why not now:** the skill ships with the library, so its guidance should follow the
+agent API's release, and the ECharts part depends on the previous item.
+
+**What would make it worth doing:** the agent API's release, or agents struggling with
+large Plotly figures in practice.
+
+## Return `run_timed_out` before the client gives up
+
+**Today:** `server.agentRunTimeout` defaults to 60 s, the same as the MCP TypeScript
+SDK's default request timeout, which SDK-based clients use unless they change it. On a
+slow page, such a client can give up before the `202 run_timed_out` arrives, and sees a
+transport failure instead of the structured "call again with `session_id`".
+
+**The fuller version:** a lower default, around 30 s, so `run_timed_out` arrives first.
+The other distinctions a client might want already exist or stay out: a timeout in the
+app's own query or API call is the app's exception, reported as `status: "error"`, and
+partial page state for a timed-out run stays out, as the product spec decides.
+
+**Why not now:** the right value depends on the timeouts real clients use, which have
+not been measured; the option's description already says to keep it below them.
+
+**What would make it worth doing:** MCP clients failing on slow pages, which the first
+chat-client feedback reported as intermittent trouble on a data-heavy page.
+
+## Read the last snapshot without running
+
+**Today:** every `interact` runs the script, and one with no changes is an explicit
+rerun. Yet nothing changes in an agent session between calls: `run_every` timers belong
+to the browser, and no other client shares the session. So the last snapshot stays
+current until the agent acts, which the tool description could say outright.
+
+**The fuller version:** keep each session's last document and return it from a read
+that does not execute, as an MCP tool or the `GET /_stcore/agent/v1/sessions/{id}` of
+the product spec's follow-up #4. About 20 lines, plus one document of memory per
+session.
+
+**Why not now:** a rerun is what every browser interaction does, so apps are already
+built to tolerate one, and the main client that needs a read is one that lost the last
+snapshot from its context.
+
+**What would make it worth doing:** clients rerunning only to re-read, against apps
+whose runs are expensive or have side effects, or the polling work in follow-up #4.
