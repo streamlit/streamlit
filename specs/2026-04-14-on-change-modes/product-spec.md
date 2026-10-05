@@ -94,15 +94,16 @@ All stateful widgets with `on_change`:
 
 - `st.slider`, `st.select_slider`
 - `st.selectbox`, `st.multiselect`, `st.radio`
+- `st.pills`, `st.segmented_control` (`st.feedback` shares this path)
 - `st.checkbox`, `st.toggle`
 - `st.text_input`, `st.text_area`
 - `st.number_input`
-- `st.date_input`, `st.time_input`
+- `st.date_input`, `st.time_input`, `st.datetime_input`
 - `st.file_uploader`
 - `st.color_picker`
 - `st.camera_input`, `st.audio_input`
 - `st.data_editor`
-- `st.feedback`
+- `st.pagination`
 
 ### Not Affected: Trigger Widgets
 
