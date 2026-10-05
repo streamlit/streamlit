@@ -341,9 +341,9 @@ without changing the app. The rules:
 - **Native `title` tooltip.** The full label is attached as the element's native HTML
   `title` attribute, which the browser shows on hover. The title is set only when the
   label is actually ellipsized (`scrollWidth` exceeds `clientWidth` on an element whose
-  `text-overflow` is `ellipsis`). A resize observer and the existing mutation observer
-  re-check that after resize, font load, and async markdown updates. Streamlit's styled
-  tooltip is not used.
+  `text-overflow` is `ellipsis`) at render time. The existing mutation observer
+  re-checks that after async markdown updates. A later resize can leave the title
+  stale until the next render. Streamlit's styled tooltip is not used.
 - **Only when clipped.** A short label that fits does not get a `title`, including when
   `wrap=False` is explicit or resolved from the auto default inside a horizontal
   container or a direct column child.
@@ -731,8 +731,9 @@ contract in a follow-up if demand warrants.
 
 The full-label tooltip uses the native HTML `title` and appears only when the label is
 clipped (see "Tooltip for the full label"). A follow-up could replace that native title
-with Streamlit's styled tooltip so it matches the `help` tooltip styling. Measurement
-and resize handling already exist; this follow-up is only the visual treatment.
+with Streamlit's styled tooltip so it matches the `help` tooltip styling. Measuring
+whether the label is clipped already exists; this follow-up is only the visual
+treatment.
 
 ## Documentation and testing
 

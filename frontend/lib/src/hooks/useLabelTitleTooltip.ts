@@ -66,30 +66,6 @@ function isLabelTextOverflowing(root: HTMLElement): boolean {
   return false
 }
 
-interface FontFaceSetLike {
-  addEventListener: (type: string, listener: () => void) => void
-  removeEventListener: (type: string, listener: () => void) => void
-}
-
-/**
- * Web fonts can widen text without changing the host's border box, including
- * a face requested after this effect runs. `loadingdone` covers those loads.
- * jsdom has no FontFaceSet.
- */
-function subscribeToFontLoads(recheck: () => void): () => void {
-  const fonts = (document as { fonts?: FontFaceSetLike }).fonts
-  if (fonts === undefined) {
-    return () => undefined
-  }
-  const onLoadingDone = (): void => {
-    recheck()
-  }
-  fonts.addEventListener("loadingdone", onLoadingDone)
-  return () => {
-    fonts.removeEventListener("loadingdone", onLoadingDone)
-  }
-}
-
 function clearTitle(node: HTMLElement): void {
   if (node.hasAttribute("title")) {
     node.removeAttribute("title")
@@ -116,13 +92,11 @@ interface LabelTitleTooltipRefs<
  *   renders).
  * - The native `title` is set only when an ellipsis box inside the host is
  *   actually clipped (`scrollWidth` wider than `clientWidth`). A label that
- *   fits does not get a title.
+ *   fits does not get a title. Overflow is measured when the label renders.
+ *   A later resize can leave the title stale until the next render.
  * - A MutationObserver re-syncs the title after async Markdown plugins (e.g.
- *   emoji) replace a loading skeleton with the real label. A ResizeObserver
- *   rechecks when the host's box changes, and captured image `load`/`error`
- *   events recheck when a resource changes the text width without resizing
- *   the host. `document.fonts` `loadingdone` covers font loads that finish
- *   later. When `addTitleTooltip` is false, no observer is attached.
+ *   emoji) replace a loading skeleton with the real label. When
+ *   `addTitleTooltip` is false, no observer is attached.
  *
  * @param addTitleTooltip Whether to attach the native title tooltip.
  * @param identityKey Value whose change forces a title re-sync. Usually the
@@ -153,12 +127,7 @@ export function useLabelTitleTooltip<
       return
     }
 
-    let cancelled = false
-
     const syncTitle = (): void => {
-      if (cancelled) {
-        return
-      }
       const labelNode = labelTextRef.current
       if (!labelNode || !isLabelTextOverflowing(node)) {
         clearTitle(node)
@@ -183,27 +152,8 @@ export function useLabelTitleTooltip<
       characterData: true,
     })
 
-    const resizeObserver = new ResizeObserver(syncTitle)
-    resizeObserver.observe(node)
-
-    // Image loads do not resize the host or mutate the DOM, but they can
-    // push a nowrap label into the ellipsis. `load`/`error` do not bubble;
-    // the capture phase still reaches this host.
-    const onResourceLoad = (): void => {
-      syncTitle()
-    }
-    node.addEventListener("load", onResourceLoad, true)
-    node.addEventListener("error", onResourceLoad, true)
-
-    const cancelFontRecheck = subscribeToFontLoads(syncTitle)
-
     return () => {
-      cancelled = true
-      cancelFontRecheck()
       mutationObserver.disconnect()
-      resizeObserver.disconnect()
-      node.removeEventListener("load", onResourceLoad, true)
-      node.removeEventListener("error", onResourceLoad, true)
     }
   }, [addTitleTooltip, effectIdentityKey])
 
