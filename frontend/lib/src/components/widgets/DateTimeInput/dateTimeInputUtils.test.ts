@@ -243,6 +243,32 @@ describe("updateWidgetMgrState", () => {
     expect(widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
+  it("passes triggerRerun: false when ignoreRerun is set", () => {
+    const widgetMgr = makeWidgetMgr()
+    const vws: ValueWithSource<string | null> = {
+      value: "2024-06-01T12:00",
+      fromUser: true,
+    }
+
+    updateWidgetMgrState(
+      { ...element, ignoreRerun: true } as DateTimeInputProto,
+      widgetMgr,
+      vws,
+      "fragment"
+    )
+
+    expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      element.id,
+      ["2024-06-01T12:00"],
+      {
+        formId: element.formId,
+        fragmentId: "fragment",
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+  })
+
   it("allows null values", () => {
     const widgetMgr = makeWidgetMgr()
     const vws: ValueWithSource<string | null> = {
