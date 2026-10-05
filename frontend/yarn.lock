@@ -3077,15 +3077,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@playwright/cli@npm:^0.1.21":
-  version: 0.1.21
-  resolution: "@playwright/cli@npm:0.1.21"
+"@playwright/cli@npm:^0.1.22":
+  version: 0.1.22
+  resolution: "@playwright/cli@npm:0.1.22"
   dependencies:
-    playwright: "npm:1.64.0-alpha-1789764292000"
-    playwright-core: "npm:1.64.0-alpha-1789764292000"
+    playwright: "npm:1.64.0-alpha-1790635538000"
+    playwright-core: "npm:1.64.0-alpha-1790635538000"
   bin:
     playwright-cli: playwright-cli.js
-  checksum: 10c0/1f11d7e1c7b71c511e485a63df38f123dbcb21c5566153fdff24da14dabd9b1a39d6ba79f428d1135a31db277e14195fb9f882bd5d4457495c2f91964870868e
+  checksum: 10c0/7df3fd71d7fa483ffaaeb3300caef32f22b4f6891254f172780b7c07fd71a3e962e63a9931a13b9b5b04d603d9cd55d734ebe070e0225f0a08cb703e31bbad85
   languageName: node
   linkType: hard
 
@@ -3488,7 +3488,7 @@ __metadata:
     "@types/react-dom": "npm:^18.2.0"
     "@types/react-transition-group": "npm:^4.4.12"
     "@vitejs/plugin-react-swc": "npm:^4.3.3"
-    chrome-launcher: "npm:^1.2.1"
+    chrome-launcher: "npm:^1.2.2"
     color2k: "npm:^2.0.2"
     hoist-non-react-statics: "npm:^3.3.2"
     iframe-resizer: "npm:4.3.11"
@@ -6093,9 +6093,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"chrome-launcher@npm:^1.2.1":
-  version: 1.2.1
-  resolution: "chrome-launcher@npm:1.2.1"
+"chrome-launcher@npm:^1.2.1, chrome-launcher@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "chrome-launcher@npm:1.2.2"
   dependencies:
     "@types/node": "npm:*"
     escape-string-regexp: "npm:^4.0.0"
@@ -6103,7 +6103,7 @@ __metadata:
     lighthouse-logger: "npm:^2.0.1"
   bin:
     print-chrome-path: bin/print-chrome-path.cjs
-  checksum: 10c0/4262abf41dc77f05718632bdde07d628e87ebb5221e59d2cc927ba066aa472ea08f8e5be76e4908c718c8480a50330e7c35f25c1e0b41dbf5e25a4eb5ee89b05
+  checksum: 10c0/82a49db9223fa36826d408762b32174ac3b41fa3dc7cdde6b7526fe23ae7c86dd7a40e25cf124b65e513bb5f45fe3afb85a4c049219cb8d9e789dc2a54ef46e7
   languageName: node
   linkType: hard
 
@@ -12396,23 +12396,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"playwright-core@npm:1.64.0-alpha-1789764292000":
-  version: 1.64.0-alpha-1789764292000
-  resolution: "playwright-core@npm:1.64.0-alpha-1789764292000"
+"playwright-core@npm:1.64.0-alpha-1790635538000":
+  version: 1.64.0-alpha-1790635538000
+  resolution: "playwright-core@npm:1.64.0-alpha-1790635538000"
   bin:
     playwright-core: cli.js
-  checksum: 10c0/0a767fec6abbb12744d313187e84f2d6f1e947dfecdd1216b7522f7ac7bb63f69cd67923bb6a3fb7b4bda4b4ec9484c1289838b91a6206f83d7779a31d32fda2
+  checksum: 10c0/aa88cd7d507bb20eb42440e736a13206cf155521ced2f34a84344998eacbae1ad2bd69a2097f74b778b330b23b1af296727270eb9b6d6d6d64d8246b2e7547dc
   languageName: node
   linkType: hard
 
-"playwright@npm:1.64.0-alpha-1789764292000":
-  version: 1.64.0-alpha-1789764292000
-  resolution: "playwright@npm:1.64.0-alpha-1789764292000"
+"playwright@npm:1.64.0-alpha-1790635538000":
+  version: 1.64.0-alpha-1790635538000
+  resolution: "playwright@npm:1.64.0-alpha-1790635538000"
   dependencies:
-    playwright-core: "npm:1.64.0-alpha-1789764292000"
+    playwright-core: "npm:1.64.0-alpha-1790635538000"
   bin:
     playwright: cli.js
-  checksum: 10c0/d49e67dc7d2f66abe0d6373646c4fda60eed1b3229b49f6338f858861ddae127fec986725553ebd84ad4c3208ad72abeab4d942155e8106eeb8a9ff6978cec80
+  checksum: 10c0/1ccbc03284b7fe6855c5d8354484e0a20657df5405b0b30419662a4e4736c653bbac1f631d3b7e2b574467b5a7e18fba1cf88aa05289317cac8e089b9691cf77
   languageName: node
   linkType: hard
 
@@ -14068,7 +14068,7 @@ __metadata:
     "@eslint-react/eslint-plugin": "npm:^5.23.1"
     "@eslint/compat": "npm:^2.1.1"
     "@eslint/js": "npm:^10.0.1"
-    "@playwright/cli": "npm:^0.1.21"
+    "@playwright/cli": "npm:^0.1.22"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
