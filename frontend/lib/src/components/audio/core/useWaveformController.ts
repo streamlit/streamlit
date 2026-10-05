@@ -80,7 +80,7 @@ export function useWaveformController({
   const playerRef = useRef<WaveSurferPlayer | null>(null)
   const eventsRef = useRef<WaveformControllerEvents>(events)
   const isInitializedRef = useRef(false)
-  const isInitializingRef = useRef(false)
+  const initPromiseRef = useRef<Promise<void> | null>(null)
   const readyResolversRef = useRef<Set<ReadyResolver>>(new Set())
   const isPlaybackModeRef = useRef(false)
 
@@ -109,6 +109,7 @@ export function useWaveformController({
     }
 
     isInitializedRef.current = false
+    initPromiseRef.current = null
     isPlaybackModeRef.current = false
     setCurrentState("idle")
     setCurrentBlob(null)
@@ -173,77 +174,82 @@ export function useWaveformController({
     }
   }, [events, configurePlayerEvents])
 
-  const initializeWaveSurfer = useCallback(async (): Promise<void> => {
-    if (
-      isInitializedRef.current ||
-      isInitializingRef.current ||
-      !containerRef.current
-    ) {
-      return
+  const initializeWaveSurfer = useCallback((): Promise<void> => {
+    if (isInitializedRef.current) {
+      return Promise.resolve()
+    }
+    if (initPromiseRef.current) {
+      return initPromiseRef.current
+    }
+    const container = containerRef.current
+    if (!container) {
+      return Promise.resolve()
     }
 
-    isInitializingRef.current = true
+    const initPromise = (async (): Promise<void> => {
+      try {
+        const [WaveSurferModule, RecordPluginModule] = await Promise.all([
+          import("wavesurfer.js"),
+          // v8 package exports require the .js suffix for dist/plugins imports.
+          import("wavesurfer.js/dist/plugins/record.js"),
+        ])
+        const WaveSurfer = WaveSurferModule.default
+        const RecordPluginClass = RecordPluginModule.default
 
-    try {
-      const [WaveSurferModule, RecordPluginModule] = await Promise.all([
-        import("wavesurfer.js"),
-        // v8 package exports require the .js suffix for dist/plugins imports.
-        import("wavesurfer.js/dist/plugins/record.js"),
-      ])
-      const WaveSurfer = WaveSurferModule.default
-      const RecordPluginClass = RecordPluginModule.default
+        const ws = WaveSurfer.create({
+          container,
+          waveColor: theme.colors.primary,
+          progressColor: theme.colors.bodyText,
+          height:
+            waveformPadding > 0
+              ? convertRemToPx(theme.sizes.largestElementHeight) -
+                2 * waveformPadding
+              : "auto",
+          barWidth: BAR_WIDTH,
+          barGap: BAR_GAP,
+          barRadius: BAR_RADIUS,
+          cursorWidth: CURSOR_WIDTH,
+          interact: true,
+        })
 
-      const ws = WaveSurfer.create({
-        container: containerRef.current,
-        waveColor: theme.colors.primary,
-        progressColor: theme.colors.bodyText,
-        height:
-          waveformPadding > 0
-            ? convertRemToPx(theme.sizes.largestElementHeight) -
-              2 * waveformPadding
-            : "auto",
-        barWidth: BAR_WIDTH,
-        barGap: BAR_GAP,
-        barRadius: BAR_RADIUS,
-        cursorWidth: CURSOR_WIDTH,
-        interact: true,
-      })
+        wavesurferRef.current = ws
+        isPlaybackModeRef.current = false
 
-      wavesurferRef.current = ws
-      isPlaybackModeRef.current = false
+        const recordBackend = new WaveSurferRecordBackend({
+          sampleRate: effectiveSampleRate,
+        })
+        recordBackend.initialize(ws, RecordPluginClass)
+        recordBackend.setEventHandlers({
+          onRecordProgress: (ms: number) => {
+            void eventsRef.current.onProgressMs?.(ms)
+          },
+          onPermissionDenied: () => {
+            eventsRef.current.onPermissionDenied()
+            setCurrentState("idle")
+          },
+          onError: (error: Error) => {
+            eventsRef.current.onError(error)
+            setCurrentState("idle")
+          },
+        })
+        recordBackendRef.current = recordBackend
 
-      const recordBackend = new WaveSurferRecordBackend({
-        sampleRate: effectiveSampleRate,
-      })
-      recordBackend.initialize(ws, RecordPluginClass)
-      recordBackend.setEventHandlers({
-        onRecordProgress: (ms: number) => {
-          void eventsRef.current.onProgressMs?.(ms)
-        },
-        onPermissionDenied: () => {
-          eventsRef.current.onPermissionDenied()
-          setCurrentState("idle")
-        },
-        onError: (error: Error) => {
-          eventsRef.current.onError(error)
-          setCurrentState("idle")
-        },
-      })
-      recordBackendRef.current = recordBackend
+        const player = new WaveSurferPlayer()
+        player.initialize(ws)
+        playerRef.current = player
 
-      const player = new WaveSurferPlayer()
-      player.initialize(ws)
-      playerRef.current = player
+        configurePlayerEvents(player)
 
-      configurePlayerEvents(player)
+        isInitializedRef.current = true
+      } catch (error) {
+        initPromiseRef.current = null
+        const err = error instanceof Error ? error : new Error(String(error))
+        void eventsRef.current.onError?.(err)
+      }
+    })()
 
-      isInitializedRef.current = true
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error))
-      void eventsRef.current.onError?.(err)
-    } finally {
-      isInitializingRef.current = false
-    }
+    initPromiseRef.current = initPromise
+    return initPromise
   }, [
     containerRef,
     theme,

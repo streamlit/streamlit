@@ -680,6 +680,24 @@ describe("useWaveformController", () => {
       expect(mockWaveSurfer.seekTo).toHaveBeenCalledWith(0)
     })
 
+    it("waits for in-flight WaveSurfer init before playback.load", async () => {
+      const { result } = renderHook(
+        () =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+          }),
+        { wrapper }
+      )
+
+      await act(async () => {
+        await result.current.playback.load(new Blob(["audio"]))
+      })
+
+      expect(mockWaveSurfer.load).toHaveBeenCalledWith("blob:mock-url")
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+    })
+
     it("cancels an in-progress recording and resets the player", async () => {
       const { result } = await renderInitialized()
 
