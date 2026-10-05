@@ -94,7 +94,8 @@ All stateful widgets with `on_change`:
 
 - `st.slider`, `st.select_slider`
 - `st.selectbox`, `st.multiselect`, `st.radio`
-- `st.pills`, `st.segmented_control` (`st.feedback` shares this path)
+- `st.pills`, `st.segmented_control`
+- `st.feedback`
 - `st.checkbox`, `st.toggle`
 - `st.text_input`, `st.text_area`
 - `st.number_input`
