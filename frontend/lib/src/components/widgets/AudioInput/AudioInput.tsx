@@ -276,24 +276,11 @@ const AudioInput: React.FC<Props> = ({
     },
   })
 
-  // Update the ref after controller is initialized
+  // Handlers read this ref so they call the latest controller. The hook returns
+  // a new object every render.
   controllerRef.current = controller
 
-  const {
-    state,
-    isPlaybackPlaying,
-    start: startController,
-    stop: stopController,
-    approve: approveController,
-    cancel: cancelController,
-    playback: {
-      play: playbackPlayFn,
-      pause: playbackPauseFn,
-      load: playbackLoadFn,
-      getCurrentTimeMs: playbackGetCurrentTimeMsFn,
-      getDurationMs: playbackGetDurationMsFn,
-    },
-  } = controller
+  const { state, isPlaybackPlaying, playback } = controller
 
   const handleClear = useCallback(
     async ({
@@ -320,7 +307,7 @@ const AudioInput: React.FC<Props> = ({
       setProgressTime(STARTING_TIME_STRING)
       setRecordingTime(STARTING_TIME_STRING)
 
-      cancelController()
+      controllerRef.current?.cancel()
 
       if (updateWidgetManager) {
         widgetMgr.setFileUploaderStateValue(
@@ -350,7 +337,6 @@ const AudioInput: React.FC<Props> = ({
       deleteFileUrl,
       recordingUrl,
       uploadClient,
-      cancelController,
       element,
       widgetMgr,
       fragmentId,
@@ -363,7 +349,7 @@ const AudioInput: React.FC<Props> = ({
   useEffect(() => {
     const updatePlaybackTime = (): void => {
       if (isPlaybackPlaying) {
-        setProgressTime(formatTime(playbackGetCurrentTimeMsFn()))
+        setProgressTime(formatTime(playback.getCurrentTimeMs()))
         playbackTimerRef.current = requestAnimationFrame(updatePlaybackTime)
       }
     }
@@ -381,7 +367,7 @@ const AudioInput: React.FC<Props> = ({
         playbackTimerRef.current = null
       }
     }
-  }, [isPlaybackPlaying, playbackGetCurrentTimeMsFn])
+  }, [isPlaybackPlaying, playback])
 
   useEffect(() => {
     if (!recordingUrl) {
@@ -393,12 +379,12 @@ const AudioInput: React.FC<Props> = ({
 
     const loadRecording = async (): Promise<void> => {
       try {
-        await playbackLoadFn(recordingUrl)
+        await playback.load(recordingUrl)
         if (cancelled) {
           return
         }
 
-        const durationMs = playbackGetDurationMsFn()
+        const durationMs = playback.getDurationMs()
         if (durationMs > 0) {
           setProgressTime(formatTime(durationMs))
         }
@@ -415,7 +401,7 @@ const AudioInput: React.FC<Props> = ({
     return () => {
       cancelled = true
     }
-  }, [recordingUrl, recordingTime, playbackLoadFn, playbackGetDurationMsFn])
+  }, [recordingUrl, recordingTime, playback])
 
   useEffect(() => {
     if (isNullOrUndefined(widgetFormId)) return
@@ -448,29 +434,22 @@ const AudioInput: React.FC<Props> = ({
   const onClickPlayPause = useCallback(async () => {
     try {
       if (isPlaybackPlaying) {
-        const currentTime = playbackGetCurrentTimeMsFn()
-        playbackPauseFn()
+        const currentTime = playback.getCurrentTimeMs()
+        playback.pause()
         setProgressTime(formatTime(currentTime))
       } else if (state === "idle" && recordingUrl) {
         // WaveSurfer can report a tiny non-zero offset (~<100ms) at start of playback.
         // Snap the UI timer back to the canonical start value so the display stays deterministic.
-        if (playbackGetCurrentTimeMsFn() <= 100) {
+        if (playback.getCurrentTimeMs() <= 100) {
           setProgressTime(STARTING_TIME_STRING)
         }
-        await playbackPlayFn()
+        await playback.play()
       }
     } catch {
       // Playback control error - set error state for user feedback
       setIsError(true)
     }
-  }, [
-    isPlaybackPlaying,
-    playbackGetCurrentTimeMsFn,
-    playbackPauseFn,
-    playbackPlayFn,
-    recordingUrl,
-    state,
-  ])
+  }, [isPlaybackPlaying, recordingUrl, state, playback])
 
   const startRecording = useCallback(async () => {
     if (recordingUrl) {
@@ -479,21 +458,25 @@ const AudioInput: React.FC<Props> = ({
 
     try {
       setProgressTime(STARTING_TIME_STRING)
-      await startController()
+      await controllerRef.current?.start()
     } catch {
       // Error handling is done via event listeners
     }
-  }, [handleClear, recordingUrl, startController])
+  }, [handleClear, recordingUrl])
 
   const stopRecording = useCallback(async () => {
     try {
-      const { blob } = await stopController()
-      await approveController(blob)
+      const current = controllerRef.current
+      if (!current) {
+        return
+      }
+      const { blob } = await current.stop()
+      await current.approve(blob)
     } catch {
       // Stop recording or approval error - set error state for user feedback
       setIsError(true)
     }
-  }, [approveController, stopController])
+  }, [])
 
   const downloadRecording = useDownloadUrl(recordingUrl, "recording.wav")
 

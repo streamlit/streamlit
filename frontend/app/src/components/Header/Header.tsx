@@ -36,7 +36,7 @@ import {
 export interface HeaderProps {
   hasSidebar: boolean
   isSidebarOpen: boolean
-  onToggleSidebar(): void
+  onToggleSidebar: () => void
   navigation?: ReactNode
   rightContent?: ReactNode
   logoComponent?: ReactNode

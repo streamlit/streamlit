@@ -113,7 +113,7 @@ function ColumnMenu({
 
   const { isCopied, copyToClipboard } = useCopyToClipboard()
 
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open: true,
     placement: "bottom-end",
     offsetPx: COLUMN_MENU_OFFSET,
@@ -142,7 +142,7 @@ function ColumnMenu({
   const { setFloatingRef } = useOverlayDismissal({
     isOpen: true,
     onClose: onCloseMenu,
-    floatingSetFn: refs.setFloating,
+    floatingSetFn: setFloating,
     // The statistics and formatting sub-menus render in a portal outside this
     // panel, so pointer events inside them must not count as outside clicks.
     excludeSelectors: [
@@ -180,7 +180,7 @@ function ColumnMenu({
        * appears. A real DOM ref lets autoUpdate work without VirtualElement.
        */}
       <div
-        ref={refs.setReference}
+        ref={setReference}
         data-testid="stDataFrameColumnMenuTarget"
         style={{
           position: "fixed",

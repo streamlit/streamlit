@@ -107,7 +107,8 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   useExecuteWhenChanged(() => setValue(propValue), [propValue])
 
   const {
-    refs: { setFloating, setReference },
+    setFloating,
+    setReference,
     floatingStyles,
     context: floatingContext,
   } = useFloatingOverlay({
