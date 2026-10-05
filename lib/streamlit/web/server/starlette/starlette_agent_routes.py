@@ -391,6 +391,20 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 mcp.error_response(None, mcp.SERVER_ERROR, origin_message),
                 status_code=403,
             )
+        version = request.headers.get("mcp-protocol-version")
+        if version is not None and version not in mcp.SUPPORTED_PROTOCOL_VERSIONS:
+            # The MCP transport requires a 400 here rather than a guess at
+            # what an unknown version means.
+            return JSONResponse(
+                mcp.error_response(
+                    None,
+                    mcp.INVALID_REQUEST,
+                    "Unsupported `MCP-Protocol-Version`. This server supports "
+                    + ", ".join(mcp.SUPPORTED_PROTOCOL_VERSIONS)
+                    + ".",
+                ),
+                status_code=400,
+            )
 
         max_request_bytes = get_max_widget_state_size_bytes()
         body = await _read_body(request, max_request_bytes)

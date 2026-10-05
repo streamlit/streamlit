@@ -358,7 +358,9 @@ right now. Naming follows the public API, for the reason above:
   …` per column, and was 17% of one real snapshot. Such a parameter is reported from the
   mapping Streamlit resolved rather than the author's argument, so defaults are applied
   and the one null that *means* something — a `column_config` entry of `None`, which
-  hides that column — has already become `{"hidden": true}`.
+  hides that column — has already become `{"hidden": true}`. Content is not a parameter
+  object and is kept exactly as authored: a null in `st.json`'s body or a custom
+  component's arguments is data.
 - **An element that would serialize to nothing is left out.** An unfilled `st.empty()`
   placeholder and an `st.space()` say only "there is nothing here", which is what their
   absence says too; on a real page they were a fifth of all nodes. A container whose
@@ -626,7 +628,7 @@ stays usable, so an agent can correct its input and interact again.
 
 | Outcome                                                                              | Response                                                                                                                                 |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Invalid request — unknown key, disabled widget, unsupported element, a value of the wrong type or outside the widget's `options`, missing form submit, cross-form or cross-dialog batch | Error before any execution, naming which of those it was. Nothing ran and the app is unchanged. |
+| Invalid request — unknown key, disabled widget, unsupported element, a value of the wrong JSON type, outside the widget's `options`, or unreadable by the widget, missing form submit, cross-form or cross-dialog batch | Error before any execution, naming which of those it was. Nothing ran and the app is unchanged. |
 | Unrecognized `page`                                                                  | On a creating call, an error after the run, carrying the `session_id` of the session it created, which stays usable; on a later call, refused before anything runs. Both list the available `pages` as data. |
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
 | Script failed to compile                                                             | `status: "error"` with the compile error and no usable action list.                                                                      |
@@ -683,12 +685,15 @@ The agent path should call those validators rather than keep its own, provided e
 reports the violation and lets the caller decide: the browser path coerces, and the agent
 path rejects with `invalid_value`, because a silently reset value reads as success.
 
-Until then, v1 makes one check of its own, against the snapshot: a value must be one of
-the widget's `options`, the most common mistake, whose error can list the legal values.
-Everything else shows in the next snapshot's `value`: an out-of-range number is reset to
-the default, a fraction sent to an integer input is truncated, and text past `max_chars`
-is cut. A date range is the exception: the runtime stores it as sent, reversed or with a
-third date, so a client sends at most two dates, earliest first.
+Until then, v1 makes two checks of its own. A value must be one of the widget's
+`options`, the most common mistake, and the error lists the legal values. It must also be
+something the widget's own deserializer can read, because a value it cannot read raises
+in the app's run, and keeps raising on every later run. Everything else shows in the next
+snapshot's `value`: an out-of-range number, a malformed date, time, or color string, or a
+slider range with the wrong number of values is reset to the default, a fraction sent to
+an integer input is truncated, and text past `max_chars` is cut. Ranges are the
+exception: the runtime stores a reversed slider range, or a date range of any length, as
+sent, so a client sends two values, lowest first.
 [Potential follow-ups](potential-follow-ups.md) ranks the validations by how much apps
 rely on them.
 
@@ -773,12 +778,12 @@ without introducing a new authorization surface.
 | Output                         | v1 representation                                                                                                                                                                                                                                          |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order rather than objects, since repeating the column names per row is most of a long preview's size. |
-| Lazy dataframe                 | The same shape, with the chunk already emitted as the preview and `complete: false`. `data.url` serves that chunk; fetching further ranges is a follow-up.                                                                                                 |
+| Lazy dataframe                 | The same shape, with the chunk already emitted as the preview, `complete: false`, and `unavailable: "lazy_loading"` in place of a `url`: serving the chunk would pass part of the table off as all of it. Fetching row ranges is a follow-up.                |
 | Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped and its base64 typed arrays expanded into numbers, and chart data under `data` exactly as a dataframe's.                                     |
 | Map                            | `st.map`'s plotted table under `data`, exactly as a dataframe's, without the Deck.gl specification generated from it. `st.pydeck_chart` reports its specification like any chart.                                                                          |
-| Image, audio, video, PDF       | Caption, `alt`, MIME type, and the media URL the app already exposed to its own client. `st.image` reports them as the author passed the images: single values for one image, parallel lists for several. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way. |
+| Image, audio, video, PDF       | Caption, `alt`, the `format` audio and video take, and the media URL the app already exposed to its own client. `st.image` reports them as the author passed the images: single values for one image, parallel lists for several. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way. |
 | HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML and a URL iframe are fully readable. |
-| Download                       | Label, `file_name`, MIME type, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, and its click — a rerun or the `on_click` callback — is an ordinary trigger, unless `on_click="ignore"` makes it a no-op. Only deferred generation, which carries a file ID instead of a URL, is unsupported. |
+| Download                       | Label, `file_name`, `mime` when the author set it, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, and its click — a rerun or the `on_click` callback — is an ordinary trigger, unless `on_click="ignore"` makes it a no-op. Only deferred generation, which carries a file ID instead of a URL, is unsupported. |
 
 Arrow bytes are registered in the existing media-file storage and served from the
 existing `/media/...` endpoint, which is the agent-session half of
@@ -868,7 +873,7 @@ back to a browser rather than mistake it for missing content:
 | `st.chat_input` attachments                                                | Text only. `accept_file` and `accept_audio` are reported, but a request cannot attach files or audio.                                                                         |
 | `st.data_editor` edits, dataframe and chart selections                     | Read-only, with `support: read_only_in_v1` on the element when the app enabled them.                                                                                          |
 | Deferred downloads                                                         | `support: read_only_in_v1`: the file is only generated on click and has no URL to report. An eager download is fully supported.                                         |
-| Lazy dataframe continuation                                                | `complete: false`, and `data.url` serves only the chunk already loaded.                                                                                                       |
+| Lazy dataframe continuation                                                | `complete: false` with `unavailable: "lazy_loading"`; the loaded chunk is the preview.                                                                                        |
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
 | Charts that combine several dataframes                                     | A layered or concatenated Altair chart over different dataframes reports its `spec` with `data.unavailable: multiple_datasets` and serves none of them, rather than serve the first and claim `complete`. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |

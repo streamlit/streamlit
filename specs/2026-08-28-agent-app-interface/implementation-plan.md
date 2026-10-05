@@ -124,7 +124,8 @@ cookie not authenticating a call, and the app shell still loading with the new
   `disabled_widget`, `unsupported_element`, `not_a_value`, `not_a_trigger`.
 - Encoding each value type, including temporal values; triggers with payloads
   (`st.chat_input`, `st.menu_button`); form rules (`missing_form_submit`,
-  `cross_form_batch`); the options check.
+  `cross_form_batch`); the options check, and running the widget's deserializer on the
+  encoded value so one it cannot read is refused instead of failing every later run.
 - Dropping an edited bound widget's query parameter, so a stale address cannot put the old
   value back.
 - The `context` request field (timezone and locale).
@@ -179,7 +180,7 @@ product spec describes v1 without them.
 | --------- | ----- | ------------------ | --------------------- |
 | The MCP endpoint (`mcp.py`, its route, its OpenAPI path) | ~400 lines, plus tracking a fast-moving external protocol | Low. The same `interact` is available over HTTP, and the spec already lists MCP as follow-up #6. | A PR after the stack, with `mcp-support.md` as its design |
 | Compacting the message buffer | ~90 lines, and a second code path for every table's and chart's `data`, run inside the runtime's message loop | Memory only: a 50,000-row table holds 1.7 MB per session instead of 38 KB, within `server.maxMessageSize`, the session cap, and the TTL | [Potential follow-up](potential-follow-ups.md#keep-only-summaries-in-the-session-buffer) if profiling asks for it. Keep the small path that lets `st.map` supply its own summary. |
-| Input checks beyond options (bounds, whole numbers, `max_chars`, date-range arity) | ~170 lines | Low. The runtime already resets an out-of-range or unknown value to the widget's default, so the request succeeds and `value` shows the reset; a fraction sent to an integer input is truncated and over-long text is cut. A date range is stored as sent, reversed or with a third date, which the OpenAPI text warns about. | [#16203](https://github.com/streamlit/streamlit/issues/16203), in the runtime for every client |
+| Input checks beyond options and the widget's own deserializer (bounds, whole numbers, `max_chars`, string formats, range shape and order) | ~170 lines | Low. The runtime already resets an out-of-range, malformed, or wrong-shape value to the widget's default, so the request succeeds and `value` shows the reset; a fraction sent to an integer input is truncated and over-long text is cut. A reversed slider range and a date range of any length are stored as sent, which the OpenAPI text warns about. | [#16203](https://github.com/streamlit/streamlit/issues/16203), in the runtime for every client |
 | A new action replacing a run still going after `run_timed_out` | ~25 lines, the `_awaiting_run` gate, and the race where a replaced run's result answers the wrong request — the most stateful code in `interaction.py` | Low. The same request or an empty one still collects the run; anything else gets `session_busy` until it finishes. | Follow-up #4 |
 | The idle-reclaim timer | ~30 lines | Low. A session idle past its TTL is reclaimed on the next request instead of on a timer, so an idle server holds it a little longer. | Add back if idle memory matters |
 

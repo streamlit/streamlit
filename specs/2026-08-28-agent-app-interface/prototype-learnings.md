@@ -1101,6 +1101,37 @@ rather than inside `with rules:` is a sibling in the browser too (AL); a metric 
 author formatted stays a display string; and `st.echarts_chart` stays a `complete`
 specification with no Arrow.
 
+## 7i. QA after the cuts: what cutting checks must not cut
+
+A QA pass after the v1 cuts found that dropping input checks is safe only where the
+runtime has a fallback. Where it has none, a bad value is worse than a refused request.
+
+- **A value the widget cannot read breaks the session.** `st.feedback` names its option
+  set (`"stars"`) instead of listing it, so the options check saw nothing, and `"abc"`
+  reached the widget's deserializer inside the run. Session state keeps the value, so
+  every later run raised too, and nothing on the page was addressable to correct it. The
+  agent path now runs the widget's own deserializer on the encoded value before the
+  rerun, which is the general guard (a few lines, no per-widget rules), and derives
+  `st.feedback`'s legal indexes so an out-of-range one is refused.
+- **Two signals for `status` were cut by accident.** Only the uncaught-exception element
+  was read, so an `st.App(on_script_error=...)` handler that suppresses the display
+  reported `ready`, and a compile error reported `error` with an empty tree. The run's
+  error flag is read again, and the compile error from the session event is added to the
+  tree.
+- **Lazy tables served their first chunk as if it were the whole table.** A `url` on
+  data marked incomplete reads as "the rest is here". A lazy table now reports
+  `unavailable: "lazy_loading"` and no `url`.
+- **Content is not a parameter object.** Dropping unset nulls at any depth also dropped
+  the nulls an `st.json` body is made of. Content props are now marked and kept whole.
+- **A single-page app's page list came from the request.** The runtime names its only
+  page after whatever `page_name` the client sent, so a typo on create looked like a
+  real page. A single-page app now always reports one page at `url_path: ""`.
+
+What stays cut, now stated precisely in the spec: bounds, whole numbers, `max_chars`,
+malformed date, time, and color strings, and wrong-shape slider ranges all fall back to
+the widget's default or are trimmed by the runtime; a reversed slider range and a date
+range of any length are stored as sent.
+
 ## 8. Open questions the prototype surfaced
 
 1. **How is "the run chain settled" defined?** The prototype's grace period is a

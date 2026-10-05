@@ -66,7 +66,7 @@ holds now), and ``data`` (what Streamlit derived).
 from __future__ import annotations
 
 import json
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, NamedTuple
 
 # What a client may do with an element on the next interaction. ``value`` means
 # it holds a value that can be set; ``trigger`` means it can be fired once and
@@ -213,15 +213,28 @@ def _describe_props(props: dict[str, Any]) -> dict[str, Any]:
 
     A caller that wants to say something with `None` has to say it another way,
     which Streamlit already does: `column_config={"Notes": None}` means hidden,
-    and is reported as `{"hidden": true}`.
+    and is reported as `{"hidden": true}`. A prop that is the element's content
+    rather than a parameter object is wrapped in `Content` and kept whole.
     """
     from streamlit.runtime.agent import json_encoding
 
     return {
-        name: _drop_unset(json_encoding.to_json_value(value))
+        name: json_encoding.to_json_value(value.value)
+        if isinstance(value, Content)
+        else _drop_unset(json_encoding.to_json_value(value))
         for name, value in props.items()
         if value is not None
     }
+
+
+class Content(NamedTuple):
+    """A prop that is the element's content, reported exactly as given.
+
+    A null inside `st.json`'s body or a custom component's arguments is part of
+    what the author wrote, not an unset parameter, so it is not pruned.
+    """
+
+    value: Any
 
 
 def proto_alt(proto: Any) -> str | None:

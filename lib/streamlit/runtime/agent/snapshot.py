@@ -30,7 +30,7 @@ from __future__ import annotations
 import datetime
 import json
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
 
 from streamlit import config
 from streamlit.elements.lib import agent_spec
@@ -39,6 +39,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.agent import json_encoding
 from streamlit.runtime.state.common import user_key_from_element_id
+from streamlit.runtime.state.session_state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
@@ -298,9 +299,14 @@ class _SnapshotBuilder:
             return children
 
         props = description.get("props") or {}
-        if description["type"] == "container" and not props and len(children) == 1:
+        if (
+            description["type"] == "container"
+            and not props
+            and not description.get("key")
+            and len(children) == 1
+        ):
             # A layout wrapper with one child and nothing configured carries no
-            # meaning of its own.
+            # meaning of its own. An authored key is a name the author gave it.
             return children
 
         result = self._base(description, inherited_support)
@@ -414,6 +420,13 @@ class _SnapshotBuilder:
         # `st.menu_button`'s, and the options of a widget that registers none
         # of its own. Not a limit for a widget that accepts new options.
         options = None if props.get("accept_new_options") else props.get("options")
+        if description["type"] == "feedback" and isinstance(options, str):
+            # `st.feedback` names its option set, and its value is an index
+            # into it.
+            from streamlit.elements.widgets.feedback import _get_num_options
+
+            count = _get_num_options(cast("Any", options))
+            options = [str(index) for index in range(count)]
         actionable = bool(action) and not support and not disabled
 
         self.element_states[element_id] = ElementState(
@@ -565,8 +578,10 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
             data = summarize_arrow(payload.lazy_data.initial_chunk.data)
             if data is not None:
                 # The emitted chunk is the preview; the authoritative row count
-                # comes from the source rather than the chunk.
+                # comes from the source rather than the chunk. The rest is
+                # only fetched by a browser as it scrolls, so nothing serves it.
                 data["complete"] = False
+                data["unavailable"] = "lazy_loading"
                 if payload.lazy_data.HasField("row_count"):
                     data["row_count"] = payload.lazy_data.row_count
                 data["preview"]["truncated"] = True
@@ -834,17 +849,20 @@ def build_snapshot(
         and msg.script_finished == ForwardMsg.FINISHED_WITH_COMPILE_ERROR
         for msg in messages
     )
+    if compile_error:
+        _add_compile_error(children, messages)
 
     pages, current_page = _pages(messages, new_session)
 
     document: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "session_id": session_id,
-        # Two signals, not one: an app can suppress its error display, and an
-        # exception raised inside a fragment is rendered while the run still
+        # Two signals, not one: an app's `on_script_error` handler can suppress
+        # the error display, which only the run's own flag still reports, and
+        # an exception raised inside a fragment is rendered while the run still
         # reports success.
         "status": "error"
-        if compile_error or builder.saw_uncaught_exception
+        if compile_error or _run_failed(session_state) or builder.saw_uncaught_exception
         else "ready",
         "observed_at": datetime.datetime.now(datetime.timezone.utc)
         .isoformat(timespec="seconds")
@@ -864,6 +882,50 @@ def build_snapshot(
         document["undescribed_types"] = sorted(builder.undescribed_types)
 
     return Snapshot(document=document, element_states=builder.element_states)
+
+
+def _run_failed(session_state: SessionState | None) -> bool:
+    """Whether the runtime recorded the last run as raising."""
+    if session_state is None:
+        return False
+    try:
+        return session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] is False
+    except KeyError:
+        return False
+
+
+def _add_compile_error(
+    children: list[dict[str, Any]], messages: list[ForwardMsg]
+) -> None:
+    """Report a compile error where an uncaught exception would be.
+
+    A browser shows it as an overlay from a session event rather than as an
+    element, so it never reaches the tree. Without it, a client that edited a
+    script into a syntax error would see an empty app and no reason why.
+    """
+    event = _last_message(messages, "session_event")
+    if event is None or not event.session_event.HasField(
+        "script_compilation_exception"
+    ):
+        return
+    exception = event.session_event.script_compilation_exception
+    main = next((child for child in children if child.get("type") == "main"), None)
+    if main is None:
+        return
+    props: dict[str, Any] = {
+        "type": exception.type or None,
+        "message": exception.message or None,
+        "stack_trace": list(exception.stack_trace) or None,
+        "uncaught": True,
+    }
+    main.setdefault("children", []).append(
+        {
+            "type": "exception",
+            "props": {
+                name: value for name, value in props.items() if value is not None
+            },
+        }
+    )
 
 
 def _last_message(messages: list[ForwardMsg], msg_type: str) -> ForwardMsg | None:
@@ -910,12 +972,16 @@ def _pages(
         # when the author sets none.
         default_title = new_session.new_session.name
 
+    # An app that declares no pages lists only its main script, under whatever
+    # page name the request asked for. Its one real page is the default one.
+    single_page = navigation is None and len(app_pages) == 1
+
     pages: list[dict[str, Any]] = []
     current_page: dict[str, Any] = {}
     for page in app_pages:
         entry: dict[str, Any] = {
-            "url_path": page.url_pathname,
-            "title": page.page_name or default_title,
+            "url_path": "" if single_page else page.url_pathname,
+            "title": default_title if single_page else page.page_name or default_title,
         }
         if page.icon:
             entry["icon"] = page.icon

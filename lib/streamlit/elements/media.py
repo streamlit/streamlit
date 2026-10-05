@@ -474,7 +474,7 @@ class MediaMixin:
                 "video",
                 url=video_proto.url or None,
                 alt=agent_spec.proto_alt(video_proto),
-                format=video_proto.type or None,
+                format=format,
                 start_time=start_time,
                 end_time=end_time,
                 loop=loop,

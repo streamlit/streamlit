@@ -239,13 +239,18 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
                 key=element.component_instance.id or None,
                 support="browser_required",
                 component_name=self.name,
-                args={
-                    name: value
-                    for name, value in json_args.items()
-                    if name not in {"key", "default"}
-                }
-                or None,
-                default=json_args.get("default"),
+                args=agent_spec.Content(arguments)
+                if (
+                    arguments := {
+                        name: value
+                        for name, value in json_args.items()
+                        if name not in {"key", "default"}
+                    }
+                )
+                else None,
+                default=agent_spec.Content(default)
+                if (default := json_args.get("default")) is not None
+                else None,
             ),
         )
         return return_value

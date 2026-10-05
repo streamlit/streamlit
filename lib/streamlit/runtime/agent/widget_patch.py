@@ -66,18 +66,28 @@ _UNSETTABLE_VALUE_TYPES: Final[frozenset[str]] = frozenset(
     {"bytes_value", "arrow_value", "file_uploader_state_value"}
 )
 
+# How many legal options an `invalid_value` error spells out.
+_LISTED_OPTIONS: Final = 20
 
-def resolve_element_id(session_state: SessionState, key: str) -> str:
+
+def resolve_element_id(
+    session_state: SessionState,
+    key: str,
+    element_states: Mapping[str, ElementState],
+) -> str:
     """Map a snapshot key to the element ID the runtime uses.
 
     A key is either the author's ``key=`` or, for a keyless element, the
     generated element ID the snapshot reported. This is the same addressing rule
-    ``st.session_state`` uses.
+    ``st.session_state`` uses. A keyed display element registers no widget, so
+    its authored key is how the snapshot recorded it.
     """
     if key.startswith(GENERATED_ELEMENT_ID_PREFIX):
         return key
 
     element_id = session_state._key_id_mapper.get_id_from_key(key)
+    if element_id is None and key in element_states:
+        return key
     if element_id is None:
         raise AgentRequestError(
             "unknown_key",
@@ -107,14 +117,13 @@ def _metadata(
     the page for a disabled slider sends the caller looking in the wrong place.
     """
     metadata = session_state._new_widget_state.widget_metadata.get(element_id)
-    if metadata is None:
+    state = element_states.get(element_id)
+    if metadata is None and state is None:
         raise AgentRequestError(
             "unknown_key",
             f"No element with key {key!r} is registered in this session. "
             "Read the keys from the latest snapshot.",
         )
-
-    state = element_states.get(element_id)
     if state is None:
         raise AgentRequestError(
             "not_on_page",
@@ -137,7 +146,7 @@ def _metadata(
             f"The element with key {key!r} is on the page but disabled. "
             "Something else on the page controls that.",
         )
-    if not state.actionable:
+    if not state.actionable or metadata is None:
         raise AgentRequestError(
             "not_on_page",
             f"The element with key {key!r} is on the page but is not something "
@@ -167,7 +176,7 @@ def build_widget_states(
     touched_forms: set[str] = set()
 
     for key, value in (widget_state or {}).items():
-        element_id = resolve_element_id(session_state, key)
+        element_id = resolve_element_id(session_state, key, element_states)
         metadata = _metadata(session_state, element_id, key, element_states)
 
         if metadata.value_type in _TRIGGER_VALUE_TYPES:
@@ -186,14 +195,14 @@ def build_widget_states(
         _validate_options(
             key, metadata, value, advertised=element_states[element_id].options
         )
-        states.widgets.append(
-            _encode(
-                element_id,
-                metadata.value_type,
-                _temporal_to_wire(key, metadata, value),
-                key,
-            )
+        encoded = _encode(
+            element_id,
+            metadata.value_type,
+            _temporal_to_wire(key, metadata, value),
+            key,
         )
+        _check_readable(key, metadata, encoded, value)
+        states.widgets.append(encoded)
         touched_forms.add(_form_of(element_states, element_id))
 
     submitted_form: str | None = None
@@ -206,7 +215,7 @@ def build_widget_states(
                 "changing anything, send no `trigger` at all.",
             )
 
-        element_id = resolve_element_id(session_state, trigger_key)
+        element_id = resolve_element_id(session_state, trigger_key, element_states)
         metadata = _metadata(session_state, element_id, trigger_key, element_states)
         if metadata.value_type not in _TRIGGER_VALUE_TYPES:
             raise AgentRequestError(
@@ -284,7 +293,9 @@ def resolve_fragment(
     fragments = set()
     touches_dialog = False
     for key in targets:
-        state = element_states.get(resolve_element_id(session_state, key))
+        state = element_states.get(
+            resolve_element_id(session_state, key, element_states)
+        )
         fragments.add(state.fragment_id if state is not None else None)
         touches_dialog |= state is not None and state.in_dialog
 
@@ -346,9 +357,12 @@ def _validate_options(
         if candidate is None:
             continue
         if str(candidate) not in options:
+            listed = ", ".join(repr(option) for option in options[:_LISTED_OPTIONS])
+            more = len(options) - _LISTED_OPTIONS
             raise AgentRequestError(
                 "invalid_value",
-                f"{candidate!r} is not one of the options for {key!r}.",
+                f"{candidate!r} is not one of the options for {key!r}: {listed}"
+                + (f", and {more} more." if more > 0 else "."),
             )
 
     if (
@@ -360,6 +374,32 @@ def _validate_options(
             "invalid_value",
             f"{key!r} accepts at most {metadata.max_array_length} selections.",
         )
+
+
+def _check_readable(
+    key: str, metadata: WidgetMetadata[Any], state: WidgetState, value: Any
+) -> None:
+    """Reject a value the widget's own deserializer cannot read.
+
+    The deserializer runs when the app reads the widget, so a value it cannot
+    read raises inside the run instead of here. It also stays in session state,
+    so every later run raises again and the session is stuck. The value is
+    unpacked exactly as session state unpacks it.
+    """
+    field = state.WhichOneof("value")
+    if field is None:
+        return
+    wire = getattr(state, field)
+    if is_array_value_field_name(field):
+        wire = wire.data
+    elif field == "json_value":
+        wire = json.loads(wire)
+    try:
+        metadata.deserializer(wire)
+    except Exception as exc:
+        raise AgentRequestError(
+            "invalid_value", f"{value!r} is not a value {key!r} accepts."
+        ) from exc
 
 
 def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> Any:

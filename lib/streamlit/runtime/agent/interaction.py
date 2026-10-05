@@ -233,6 +233,9 @@ class AgentSessionClient(SessionClient):
 # same values ask for the same thing.
 _ACTION_FIELDS: Final = ("widget_state", "trigger", "page", "query_params", "context")
 
+# Generous for a BCP 47 tag with extensions, which is what a browser reports.
+_MAX_LOCALE_LENGTH: Final = 64
+
 
 @dataclass
 class _Interaction:
@@ -269,6 +272,8 @@ class AgentSession:
     user_info: dict[str, Any] = field(default_factory=dict)
     last_used: float = field(default_factory=time.monotonic)
     element_states: dict[str, ElementState] = field(default_factory=dict)
+    # The last snapshot's `pages`, which an `unknown_page` error lists.
+    pages: list[dict[str, Any]] = field(default_factory=list)
     # Set while an interaction is in flight; a second one is refused, not queued.
     busy: bool = False
     # An interaction that outlasted the run timeout and whose result nobody has
@@ -294,7 +299,7 @@ class AgentSessionRegistry:
         if session is None or session.user_info != user_info:
             raise AgentRequestError(
                 "unknown_session",
-                f"Session {handle!r} does not exist or has expired. Omit "
+                "This session does not exist or has expired. Omit "
                 "`session_id` to start a new one.",
             )
         session.last_used = time.monotonic()
@@ -487,7 +492,7 @@ async def _run_interaction(
     unverified_page: str | None = None
     if page is not None:
         page_hash, page_name = _resolve_page(
-            app_session, page, can_defer=is_new_session
+            app_session, page, can_defer=is_new_session, listed=session.pages
         )
         if not page_hash:
             unverified_page = page_name
@@ -584,6 +589,7 @@ async def _settle(
         query_params=_decode_query_params(session.query_string),
     )
     session.element_states = result.element_states
+    session.pages = result.document.get("pages", [])
     session.last_used = time.monotonic()
 
     if interaction.unverified_page is not None:
@@ -664,7 +670,13 @@ def _validate_request_shape(request: dict[str, Any]) -> None:
         _parse_context(request["context"])
 
 
-def _resolve_page(app_session: Any, page: Any, *, can_defer: bool) -> tuple[str, str]:
+def _resolve_page(
+    app_session: Any,
+    page: Any,
+    *,
+    can_defer: bool,
+    listed: list[dict[str, Any]],
+) -> tuple[str, str]:
     """Map a public ``url_path`` to a rerun target.
 
     Returns the internal page script hash when it is already known, and
@@ -675,7 +687,8 @@ def _resolve_page(app_session: Any, page: Any, *, can_defer: bool) -> tuple[str,
     sending ``page_name`` and letting the runtime resolve it.
 
     Only a creating call defers. Once the app has run, its page list is known,
-    so an unknown path is refused before anything runs.
+    so an unknown path is refused before anything runs. The refusal lists the
+    pages as the last snapshot did, `listed`, when there is one.
     """
     if not isinstance(page, str):
         raise AgentRequestError("invalid_request", "`page` must be a string.")
@@ -699,7 +712,8 @@ def _resolve_page(app_session: Any, page: Any, *, can_defer: bool) -> tuple[str,
         # As data, in the shape of the snapshot's `pages`, like the check a
         # creating call gets after its run.
         details={
-            "pages": [
+            "pages": listed
+            or [
                 {
                     "url_path": info.get("url_pathname", ""),
                     **({"title": info["page_name"]} if info.get("page_name") else {}),
@@ -817,7 +831,11 @@ def _parse_context(context: Any) -> ContextInfo:
 
     locale = context.get("locale")
     if locale is not None:
-        if not isinstance(locale, str) or not locale:
+        if (
+            not isinstance(locale, str)
+            or not locale
+            or len(locale) > _MAX_LOCALE_LENGTH
+        ):
             raise AgentRequestError(
                 "invalid_request",
                 "`context.locale` must be a language tag such as 'de-DE'.",

@@ -408,6 +408,7 @@ class ColorPickerMixin:
                 help=help,
                 disabled=disabled,
                 label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
             ),
         )
         return widget_state.value

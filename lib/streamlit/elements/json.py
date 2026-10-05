@@ -190,7 +190,9 @@ class JsonMixin:
             # Guarded before the call, because reading the body off the proto
             # copies it.
             agent_props=agent_spec.element(
-                "json", body=_described_body(json_proto.body), expanded=expanded
+                "json",
+                body=agent_spec.Content(_described_body(json_proto.body)),
+                expanded=expanded,
             )
             if agent_spec.is_recording()
             else None,

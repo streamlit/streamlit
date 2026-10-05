@@ -538,7 +538,7 @@ class BidiComponentMixin:
                 key=bidi_component_proto.id or None,
                 support="browser_required",
                 component_name=bidi_component_proto.component_name or None,
-                data=json.loads(bidi_component_proto.json)
+                data=agent_spec.Content(json.loads(bidi_component_proto.json))
                 if bidi_component_proto.json
                 else None,
             )

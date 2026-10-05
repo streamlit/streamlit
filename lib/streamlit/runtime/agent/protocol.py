@@ -543,7 +543,9 @@ behind `st.login` shows its signed-out state.
 """
 
 _ERROR_RESPONSE_DESCRIPTION: Final = """\
-A request-level failure. Nothing ran and the app is unchanged.
+A request-level failure. Nothing ran and the app is unchanged, except for \
+`run_timed_out` and a creating call that named an unrecognized `page` (see \
+`Error`).
 
 An app that raised during the run is *not* an error response: it is a 200 \
 whose `status` is `error`, carrying a real but truncated snapshot, because the \
@@ -575,16 +577,19 @@ def schemas() -> dict[str, Any]:
                         "current values. Only elements listed in the last "
                         "snapshot's `actions` may be set; this is not arbitrary "
                         "session state.\n\n"
-                        "A value outside an element's `options`, or of the "
-                        "wrong type, is rejected. Other constraints are applied "
-                        "the way the app applies them to any client: a number "
-                        "outside `min_value`/`max_value` resets the widget to "
-                        "its default, a fraction sent to a whole-number input "
-                        "is truncated, and text past `max_chars` is cut. A date "
-                        "range is stored as sent, so send at most two dates, "
-                        "earliest first. Send values within what the element "
-                        "advertises, and read `value` in the response to see "
-                        "what was applied.\n\n"
+                        "A value outside an element's `options`, of the wrong "
+                        "JSON type, or one the widget cannot read is rejected. "
+                        "Other constraints are applied the way the app applies "
+                        "them to any client: a number outside "
+                        "`min_value`/`max_value`, a malformed date, time, or "
+                        "color string, or a slider range with the wrong number "
+                        "of values resets the widget to its default, a fraction "
+                        "sent to a whole-number input is truncated, and text "
+                        "past `max_chars` is cut. A reversed slider range and a "
+                        "date range of any length are stored as sent, so send "
+                        "two values, lowest first. Send values within what the "
+                        "element advertises, and read `value` in the response "
+                        "to see what was applied.\n\n"
                         "Fields belonging to an `st.form` must be sent together "
                         "with one of that form's submit triggers, because a "
                         "form defers its values until submitted.\n\n"
@@ -641,6 +646,8 @@ def schemas() -> dict[str, Any]:
                         },
                         "locale": {
                             "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
                             "description": "A language tag, such as `de-DE`.",
                         },
                     },
@@ -1010,7 +1017,7 @@ def schemas() -> dict[str, Any]:
                 },
                 "unavailable": {
                     "type": "string",
-                    "enum": ["too_large_to_serve", "multiple_datasets"],
+                    "enum": ["too_large_to_serve", "multiple_datasets", "lazy_loading"],
                     "description": (
                         "Why incomplete data has no `url`. Present only when "
                         "`complete` is false and `url` is absent.\n\n"
@@ -1020,7 +1027,12 @@ def schemas() -> dict[str, Any]:
                         "get under it.\n"
                         "- `multiple_datasets`: the chart combines several "
                         "dataframes, such as a layered Altair chart, and none "
-                        "of them is served. `spec` still describes the chart."
+                        "of them is served. `spec` still describes the chart.\n"
+                        "- `lazy_loading`: the table loads its rows on demand, "
+                        "as Streamlit does for large in-memory tables, and only "
+                        "the preview is available here. `row_count` is the "
+                        "full table's. Narrow the app's filters to get under "
+                        "the lazy-loading threshold."
                     ),
                 },
                 "spec": {

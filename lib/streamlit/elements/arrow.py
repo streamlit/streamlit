@@ -1294,7 +1294,9 @@ class ArrowMixin:
                 # A display dataframe has no element ID, only the author's key.
                 key=proto.id or key,
                 data_url=data_offload.serve_arrow_over_http(
-                    proto.arrow_data.data or proto.lazy_data.initial_chunk.data,
+                    # Not a lazy table's first chunk: served alone, it would
+                    # pass for the whole table.
+                    proto.arrow_data.data,
                     coordinates=self.dg._get_delta_path_str(),
                 ),
                 # Selections and button columns cannot be driven through this
