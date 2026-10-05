@@ -27,8 +27,7 @@ if TYPE_CHECKING:
     # st.get_option return type tests
     # =====================================================================
 
-    # key is required and positional-or-keyword. Config values vary by option,
-    # so the annotated return type is Any.
+    # Returns Any because each config option has its own value type.
     assert_type(get_option("theme.primaryColor"), Any)
     assert_type(get_option("server.port"), Any)
     assert_type(get_option("client.showErrorDetails"), Any)
@@ -38,10 +37,10 @@ if TYPE_CHECKING:
     # Invalid usages - should NOT type check
     # =====================================================================
 
-    # key is required
+    # Missing required key
     get_option()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
 
-    # key must be str
+    # Non-str key
     get_option(123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     get_option(None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     get_option(["theme.primaryColor"])  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
