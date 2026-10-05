@@ -74,6 +74,7 @@ jobs:
     uses: ./.github/workflows/python-tests.yml
     with:
       ref: ${{needs.create-nightly-tag.outputs.tag}}
+      run_arm64_tests: true
     secrets:
       SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}

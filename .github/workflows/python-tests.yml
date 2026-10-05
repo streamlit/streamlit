@@ -13,6 +13,11 @@ on:
       ref:
         required: true
         type: string
+      run_arm64_tests:
+        description: "Also run Python unit tests on an arm64 runner (informational, non-blocking)"
+        required: false
+        type: boolean
+        default: false
     secrets:
       SNOWFLAKE_ACCOUNT:
         description: "Snowflake account passed from caller workflows for snowflake integration tests"
@@ -108,6 +113,50 @@ jobs:
           path: ${{ env.COVERAGE_FILE }}
           include-hidden-files: true
           if-no-files-found: ignore
+
+  # Informational, non-blocking arm64 signal: only runs the Python unit tests (no
+  # lint/types/CLI-smoke, no coverage reporting) to catch arch-sensitive native
+  # dependency issues (numpy, pandas, pyarrow, Pillow, grpcio, protobuf). Gated behind
+  # `run_arm64_tests` so it only runs when explicitly opted into (currently: nightly).
+  # `continue-on-error` keeps a failure here from failing this workflow's overall result,
+  # so callers like nightly.yml aren't blocked by it.
+  py-unit-tests-arm64:
+    needs:
+      - build_info
+
+    if: ${{ inputs.run_arm64_tests == true }}
+
+    runs-on: ubuntu-24.04-arm
+    continue-on-error: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python_version: "${{ fromJson(needs.build_info.outputs.PYTHON_VERSIONS) }}"
+
+    env:
+      PYTHON_VERSION: >-
+        ${{
+          (
+            matrix.python_version == 'min' && needs.build_info.outputs.PYTHON_MIN_VERSION ||
+            (matrix.python_version == 'max' && needs.build_info.outputs.PYTHON_MAX_VERSION || matrix.python_version)
+          )
+        }}
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          submodules: "recursive"
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_VERSION }}
+      - name: Run Python Tests
+        run: make python-tests
 
   py-integration-tests:
     needs:

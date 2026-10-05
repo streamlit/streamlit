@@ -85,7 +85,7 @@ runner's system Python.
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `python-tests.yml` | Push/PR to `develop` | Python unit tests, linting, type checking across all supported Python versions |
+| `python-tests.yml` | Push/PR to `develop` | Python unit tests, linting, type checking across all supported Python versions. Optional `run_arm64_tests` input (set by `nightly.yml`) adds an informational, non-blocking arm64 unit-test job (`continue-on-error`) |
 | `js-tests.yml` | Push/PR to `develop` | Frontend TypeScript linting, type checking, Knip unused-export and unused-dependency analysis (PR-blocking), and Vitest unit tests with coverage |
 | `js-unit-tests.yml` | `workflow_call` | Reusable JS unit test workflow (called by other workflows) |
 | `playwright.yml` | Push/PR to `develop` | Full E2E test suite across webkit, chromium, and firefox |
@@ -119,7 +119,7 @@ runner's system Python.
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `nightly.yml` | Daily schedule (4:30 UTC) | Creates nightly tag, runs full test suite, publishes to PyPI |
+| `nightly.yml` | Daily schedule (4:30 UTC) | Creates nightly tag, runs full test suite (including an informational arm64 Python unit-test job), publishes to PyPI |
 | `release.yml` | Manual (on tag) | Builds and publishes official releases to PyPI and GitHub |
 | `release-branch-creation.yml` | Manual | Creates release branch from a nightly tag |
 | `release-tag-and-pr-creation.yml` | Manual | Creates release tag and PR to merge back to develop |
