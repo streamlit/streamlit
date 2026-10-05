@@ -771,16 +771,17 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
     # includes an unnamed, non-range index, which pandas stores as
     # `__index_level_N__` and `st.dataframe` displays.
     columns = list(zip(table.schema.names, table.schema.types, strict=True))
+    # `complete` is whether `preview.rows` is the whole dataset. It sits at
+    # the top of `data` because that is the first question a client asks.
+    # `truncated` is the inverse, for readers that look inside `preview`.
+    complete = table.num_rows <= limit
     return {
         "columns": [{"name": name, "type": str(dtype)} for name, dtype in columns],
         "row_count": table.num_rows,
         "column_count": len(columns),
-        # Whether `preview.rows` is the whole dataset. Stated at the top level
-        # of `data` because "did I get everything?" is the first question a
-        # client asks, and a flag nested inside `preview` is easy to miss.
-        "complete": table.num_rows <= limit,
+        "complete": complete,
         "preview": {
-            "truncated": table.num_rows > limit,
+            "truncated": not complete,
             # Rows are values in `columns` order rather than objects, because
             # repeating the column names on every row is most of a preview's
             # size once it gets long. Types and nested cells survive, which a

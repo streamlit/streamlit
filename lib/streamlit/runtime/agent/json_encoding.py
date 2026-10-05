@@ -58,11 +58,7 @@ def to_json_value(value: Any) -> Any:
         return str(value)
 
     # ISO 8601, which is also what the public API accepts back.
-    if isinstance(value, datetime.datetime):
-        return value.isoformat()
-    if isinstance(value, datetime.date):
-        return value.isoformat()
-    if isinstance(value, datetime.time):
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
         return value.isoformat()
     if isinstance(value, datetime.timedelta):
         return value.total_seconds()

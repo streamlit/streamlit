@@ -48,6 +48,8 @@ from streamlit.runtime.session_manager import SessionClient
 from streamlit.runtime.state.query_params import EMBED_QUERY_PARAMS_KEYS
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.runtime.agent.snapshot import ElementState
     from streamlit.runtime.runtime import Runtime
@@ -746,6 +748,21 @@ def _encode_query_params(query_params: Any) -> str:
     return urlencode(pairs)
 
 
+def _filtered_query_string(query_string: str, keep: Callable[[str], bool]) -> str:
+    """Rebuild ``query_string`` from the pairs whose names pass ``keep``.
+
+    Blank values stay. Dropping them would erase an empty parameter, which is
+    a real value.
+    """
+    return urlencode(
+        [
+            (name, value)
+            for name, value in parse_qsl(query_string, keep_blank_values=True)
+            if keep(name)
+        ]
+    )
+
+
 def _query_string_after_edits(
     bindings: QueryParams, widget_states: WidgetStates, query_string: str
 ) -> str:
@@ -763,13 +780,7 @@ def _query_string_after_edits(
         for state in widget_states.widgets
         if (binding := bindings.get_binding_for_widget(state.id)) is not None
     }
-    return urlencode(
-        [
-            (name, value)
-            for name, value in parse_qsl(query_string, keep_blank_values=True)
-            if name not in edited
-        ]
-    )
+    return _filtered_query_string(query_string, lambda name: name not in edited)
 
 
 def _query_string_for_page_change(bindings: QueryParams, query_string: str) -> str:
@@ -780,12 +791,9 @@ def _query_string_for_page_change(bindings: QueryParams, query_string: str) -> s
     the caller to the next. The run then drops bound parameters that belong to
     another page, and reports the result like any other change.
     """
-    return urlencode(
-        [
-            (name, value)
-            for name, value in parse_qsl(query_string, keep_blank_values=True)
-            if name.lower() in EMBED_QUERY_PARAMS_KEYS or bindings.is_bound(name)
-        ]
+    return _filtered_query_string(
+        query_string,
+        lambda name: name.lower() in EMBED_QUERY_PARAMS_KEYS or bindings.is_bound(name),
     )
 
 

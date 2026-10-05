@@ -819,6 +819,10 @@ class PlotlyMixin:
             )
 
             layout_config = LayoutConfig(width=final_width, height=final_height)
+            if isinstance(selection_mode, str):
+                reported_selection_mode = [selection_mode]
+            else:
+                reported_selection_mode = sorted(set(selection_mode))
             self.dg._enqueue(
                 "plotly_chart",
                 plotly_chart_proto,
@@ -828,11 +832,7 @@ class PlotlyMixin:
                     key=plotly_chart_proto.id,
                     support="read_only_in_v1",
                     theme=theme,
-                    selection_mode=sorted(
-                        {selection_mode}
-                        if isinstance(selection_mode, str)
-                        else set(selection_mode)
-                    ),
+                    selection_mode=reported_selection_mode,
                     alt=agent_spec.proto_alt(plotly_chart_proto),
                 ),
             )

@@ -114,6 +114,21 @@ class _TabsSerde:
         return ui_value if ui_value is not None else self.default_label
 
 
+def _reported_on_change(
+    on_change: Literal["ignore", "rerun"] | WidgetCallback, *, stateful: bool
+) -> Literal["ignore", "rerun"] | None:
+    """The ``on_change`` mode to report, or None when the container is not a widget.
+
+    A callback reruns the script, which is all a client can observe, so it is
+    reported as ``rerun``.
+    """
+    if not stateful:
+        return None
+    if on_change == "ignore":
+        return "ignore"
+    return "rerun"
+
+
 class LayoutsMixin:
     @gather_metrics("container")
     def container(
@@ -1214,9 +1229,7 @@ class LayoutsMixin:
                 key=element_id or key,
                 action="value" if is_stateful else None,
                 tabs=list(tabs),
-                on_change=("ignore" if on_change == "ignore" else "rerun")
-                if is_stateful
-                else None,
+                on_change=_reported_on_change(on_change, stateful=is_stateful),
             ),
         )
 
@@ -1649,9 +1662,7 @@ class LayoutsMixin:
                     # "compact" and "step" say what the contents are, such as
                     # reasoning or the stages of a timeline.
                     type=type,
-                    on_change=("ignore" if on_change == "ignore" else "rerun")
-                    if is_stateful
-                    else None,
+                    on_change=_reported_on_change(on_change, stateful=is_stateful),
                 ),
             ),
         )

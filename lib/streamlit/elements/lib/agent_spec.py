@@ -138,6 +138,32 @@ def is_recording() -> bool:
     return ctx is not None and ctx.session_id in session_ids
 
 
+def _json_description(
+    command: str,
+    props: dict[str, Any],
+    *,
+    key: str | None,
+    action: ActionKind | None,
+    support: SupportReason | None,
+    extra: dict[str, Any] | None = None,
+) -> str | None:
+    """Encode a command description, or return ``None`` when this session is not recording."""
+    if not is_recording():
+        return None
+
+    description: dict[str, Any] = {_TYPE_KEY: command}
+    if key is not None:
+        description[_KEY_KEY] = key
+    if action is not None:
+        description[_ACTION_KEY] = action
+    if support is not None:
+        description[_SUPPORT_KEY] = support
+    if extra:
+        description.update(extra)
+    description[_PROPS_KEY] = _describe_props(props)
+    return json.dumps(description)
+
+
 def element(
     command: str,
     /,
@@ -183,22 +209,14 @@ def element(
         Pass an effective value (``disabled=False``) for any parameter whose
         value changes what the element means, so "absent" is never ambiguous.
     """
-    if not is_recording():
-        return None
-
-    description: dict[str, Any] = {_TYPE_KEY: command}
-    if key is not None:
-        description[_KEY_KEY] = key
-    if action is not None:
-        description[_ACTION_KEY] = action
-    if support is not None:
-        description[_SUPPORT_KEY] = support
+    extra: dict[str, Any] = {}
     if data_url is not None:
-        description[_DATA_URL_KEY] = data_url
+        extra[_DATA_URL_KEY] = data_url
     if data_summary is not None:
-        description[_DATA_SUMMARY_KEY] = data_summary
-    description[_PROPS_KEY] = _describe_props(props)
-    return json.dumps(description)
+        extra[_DATA_SUMMARY_KEY] = data_summary
+    return _json_description(
+        command, props, key=key, action=action, support=support, extra=extra
+    )
 
 
 def _describe_props(props: dict[str, Any]) -> dict[str, Any]:
@@ -216,15 +234,22 @@ def _describe_props(props: dict[str, Any]) -> dict[str, Any]:
     and is reported as `{"hidden": true}`. A prop that is the element's content
     rather than a parameter object is wrapped in `Content` and kept whole.
     """
+    return {
+        name: _prop_value(value) for name, value in props.items() if value is not None
+    }
+
+
+def _prop_value(value: Any) -> Any:
+    """JSON for one prop.
+
+    ``Content`` is the element's body, so a null inside it stays. Every other
+    value drops nulls at any depth, because those are unset parameters.
+    """
     from streamlit.runtime.agent import json_encoding
 
-    return {
-        name: json_encoding.to_json_value(value.value)
-        if isinstance(value, Content)
-        else _drop_unset(json_encoding.to_json_value(value))
-        for name, value in props.items()
-        if value is not None
-    }
+    if isinstance(value, Content):
+        return json_encoding.to_json_value(value.value)
+    return _drop_unset(json_encoding.to_json_value(value))
 
 
 class Content(NamedTuple):
@@ -327,20 +352,10 @@ def block(
     ``action`` is for a container that is a widget in its own right, such as
     ``st.tabs(on_change="rerun")``, whose value is the open tab.
     """
-    if not is_recording():
-        return None
-
-    description: dict[str, Any] = {_TYPE_KEY: command}
-    if key is not None:
-        description[_KEY_KEY] = key
-    if action is not None:
-        description[_ACTION_KEY] = action
-    if support is not None:
-        description[_SUPPORT_KEY] = support
-    if transparent:
-        description[_TRANSPARENT_KEY] = True
-    description[_PROPS_KEY] = _describe_props(props)
-    return json.dumps(description)
+    extra = {_TRANSPARENT_KEY: True} if transparent else None
+    return _json_description(
+        command, props, key=key, action=action, support=support, extra=extra
+    )
 
 
 def decode(agent_props: str) -> dict[str, Any]:
