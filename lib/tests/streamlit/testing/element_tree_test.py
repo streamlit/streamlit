@@ -33,6 +33,7 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
     AppTestError,
+    BlockList,
     Space,
     UnknownElement,
     _form_clear_flags,
@@ -2249,6 +2250,105 @@ def test_form_key_and_get_by_key() -> None:
     form = at.get_by_key("form-key")
     assert form.type == "form"
     assert form.key == "form-key"
+
+
+def test_layout_collections_are_callable_by_key() -> None:
+    """Layout collections are BlockLists.
+
+    A keyed expander can be selected with ``at.expander("details")``. Index
+    access is unchanged. A missing key raises ``KeyError``. A block does not
+    appear in its own collection.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.container(key="wrap"):
+            with st.expander("Details", key="details"):
+                st.text("hidden")
+                with st.expander("More", key="more"):
+                    st.text("nested")
+            with st.status("working", state="complete"):
+                st.text("done")
+            with st.chat_message("user"):
+                st.write("hi")
+            left, right = st.columns(2)
+            left.text("L")
+            right.text("R")
+            tab_one, tab_two = st.tabs(["One", "Two"])
+            tab_one.text("t1")
+            tab_two.text("t2")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    assert isinstance(at.expander, BlockList)
+    assert isinstance(at.tabs, BlockList)
+    assert isinstance(at.columns, BlockList)
+    assert isinstance(at.status, BlockList)
+    assert isinstance(at.chat_message, BlockList)
+
+    assert len(at.expander) == 2
+    assert len(at.status) == 1
+    assert at.expander("details").label == "Details"
+    assert at.expander("details").text[0].value == "hidden"
+    assert at.container("wrap").expander("details").key == "details"
+    assert at.expander("more").label == "More"
+    assert len(at.expander("details").expander) == 1
+    assert at.expander("details").expander[0].key == "more"
+    assert at.expander("details").get("expander")[0].key == "more"
+    assert list(at.get("expander")) == list(at.expander)
+    with pytest.raises(KeyError):
+        at.expander("missing")
+
+    assert len(at.columns) == 2
+    assert at.columns[0].text[0].value == "L"
+    assert list(at.get("columns")) == list(at.columns)
+    assert list(at.get("column")) == list(at.columns)
+    with pytest.raises(KeyError):
+        at.columns("missing")
+
+    assert at.tabs[0].label == "One"
+    assert at.tabs[1].text[0].value == "t2"
+    assert list(at.get("tabs")) == list(at.tabs)
+    assert list(at.get("tab")) == list(at.tabs)
+    with pytest.raises(KeyError):
+        at.tabs("missing")
+
+    assert at.status[0].label == "working"
+    assert list(at.get("status")) == list(at.status)
+    with pytest.raises(KeyError):
+        at.status("missing")
+
+    assert at.chat_message[0].name == "user"
+    assert at.chat_message[0].markdown[0].value == "hi"
+    assert list(at.get("chat_message")) == list(at.chat_message)
+    with pytest.raises(KeyError):
+        at.chat_message("missing")
+
+
+def test_tabs_key_lives_on_tab_container() -> None:
+    """``st.tabs(..., key=)`` is on the tab container, not individual panels.
+
+    ``at.tabs`` is the tab panels (like ``at.columns`` vs the columns row),
+    so ``at.tabs("sections")`` cannot find that key. ``get_by_key`` does.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        one, two = st.tabs(["One", "Two"], key="sections")
+        one.text("t1")
+        two.text("t2")
+
+    at = AppTest.from_function(script).run()
+    container = at.get_by_key("sections")
+    assert container.type == "tab_container"
+    assert container.key == "sections"
+    assert list(container.tabs) == list(at.tabs)
+    assert container.tabs[0].label == "One"
+    assert container.tabs[1].text[0].value == "t2"
+    with pytest.raises(KeyError):
+        at.tabs("sections")
 
 
 def test_form_collection_lookup() -> None:

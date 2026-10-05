@@ -98,6 +98,7 @@ Widgets, keyed display elements, and keyed containers are addressable by index (
 at.selectbox(key="status").select("Active").run()
 at.button(key="submit").click().run()
 at.container(key="filters").text_input[0].set_value("q").run()
+at.expander(key="details")  # keyed lookup, like container
 at.get_by_key("filters")  # unique key, any type
 ```
 
