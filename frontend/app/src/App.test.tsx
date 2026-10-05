@@ -4703,6 +4703,12 @@ describe("App", () => {
         vi.advanceTimersByTime(600)
         sendForwardMessage("newSession", { ...NEW_SESSION_JSON })
         sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
+        // NewSession marks the script running. Finish that run before the
+        // restarted interval elapses so the countdown can fire on its own.
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: false,
+        })
         vi.advanceTimersByTime(600)
       })
 
@@ -4719,6 +4725,54 @@ describe("App", () => {
         // @ts-expect-error - sendMessage is a vi.fn mock in tests
         connectionManager.sendMessage.mock.calls.length - callsBefore
       ).toBe(1)
+    })
+
+    it("holds a page tick until the current script run finishes", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
+        vi.advanceTimersByTime(1000)
+      })
+
+      // The tick must not preempt the run that is still in progress.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(0)
+
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(1)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls.at(-1)[0].toJSON()
+      ).toMatchObject({
+        rerunScript: {
+          isAutoRerun: true,
+        },
+      })
     })
 
     it("does not fire a long page interval on a wrapped timer delay", () => {

@@ -535,7 +535,10 @@ def _get_command_telemetry(
     for kwarg, kwarg_value in kwargs.items():
         argument = Argument(k=kwarg, t=_get_type_name(kwarg_value))
 
-        if kwarg == "run_every":
+        if kwarg == "run_every" and _command_name == "set_page_config":
+            # Page intervals are tracked as resolved seconds. Other
+            # ``run_every`` commands, including ``st.fragment``, keep the
+            # generic metadata.
             arg_metadata = _run_every_arg_metadata(kwarg_value)
         else:
             arg_metadata = _get_arg_metadata(kwarg_value)

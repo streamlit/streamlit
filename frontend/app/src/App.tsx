@@ -393,6 +393,12 @@ export class App extends PureComponent<Props, State> {
   // only by a full page reload (a new App instance).
   private skillsNudgeShown: boolean = false
 
+  // A page tick that arrived while a script run was still active. Full-app
+  // reruns preempt the current script, so firing immediately can interrupt a
+  // slow page before it renders and then do it again. The tick is sent once
+  // when that run finishes instead.
+  private pageAutoRerunDeferred = false
+
   // Whether a suppression reason has been reported this page load. Tracked
   // separately from `skillsNudgeShown` so recording a suppression does NOT
   // prevent the nudge from appearing later in the same page load: eligibility is
@@ -871,6 +877,7 @@ export class App extends PureComponent<Props, State> {
         } catch {
           // It's okay if this fails, the `measure` call is for debugging/profiling
         }
+        this.flushDeferredPageAutoRerun()
       }
 
       this.hostCommunicationMgr.sendMessageToHost({
@@ -1389,10 +1396,17 @@ export class App extends PureComponent<Props, State> {
     }
 
     this.startAutoRerunTimer(timerId, interval, () => {
-      // Page ticks are full reruns, so skip them while an st.dialog is open.
-      // Fragment ticks are scoped and keep running.
-      if (!fragmentId && isElementDialogOpen()) {
-        return
+      // Page ticks are full reruns. Skip them while an st.dialog is open, and
+      // hold one tick while a script run is active so it cannot preempt that
+      // run before the page finishes rendering.
+      if (!fragmentId) {
+        if (isElementDialogOpen()) {
+          return
+        }
+        if (this.isScriptRunActive()) {
+          this.pageAutoRerunDeferred = true
+          return
+        }
       }
       this.widgetMgr.sendUpdateWidgetsMessage(fragmentId || undefined, true)
     })
@@ -2359,6 +2373,35 @@ export class App extends PureComponent<Props, State> {
       this.clearStoredAutoRerunTimer(existing)
       this.autoRerunIntervals.delete(fragmentId)
     }
+    if (fragmentId === App.PAGE_AUTO_RERUN_ID) {
+      this.pageAutoRerunDeferred = false
+    }
+  }
+
+  private isScriptRunActive(): boolean {
+    return (
+      this.state.scriptRunState === ScriptRunState.RUNNING ||
+      this.state.scriptRunState === ScriptRunState.RERUN_REQUESTED
+    )
+  }
+
+  /**
+   * Send a page tick that was held while a script run was active.
+   * A full rerun clears the page timer first, which drops a held tick so a
+   * user interaction still restarts the countdown.
+   */
+  private flushDeferredPageAutoRerun(): void {
+    if (!this.pageAutoRerunDeferred) {
+      return
+    }
+    this.pageAutoRerunDeferred = false
+    if (
+      isElementDialogOpen() ||
+      !this.autoRerunIntervals.has(App.PAGE_AUTO_RERUN_ID)
+    ) {
+      return
+    }
+    this.widgetMgr.sendUpdateWidgetsMessage(undefined, true)
   }
 
   private clearStoredAutoRerunTimer(entry: {

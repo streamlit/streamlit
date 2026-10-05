@@ -325,6 +325,19 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             == 'k: "run_every"\nt: "NoneType"\nm: "disabled"'
         )
 
+    def test_fragment_run_every_keeps_generic_metadata(self) -> None:
+        """Fragment intervals stay on the generic metadata path."""
+
+        @st.fragment(run_every="5s")
+        def _live() -> None:
+            pass
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        command = ctx.shared.tracked_commands[0]
+        assert command.name == "fragment"
+        assert str(command.args[0]).strip() == 'k: "run_every"\nt: "str"\nm: "len:2"'
+
     def test_set_page_config_omitted_run_every_is_not_tracked(self) -> None:
         """Omitting ``run_every`` does not record an interval."""
         st.set_page_config(page_title="Hello")
