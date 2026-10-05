@@ -1844,9 +1844,8 @@ describe("DateTimeInput widget", () => {
       await user.click(segments[0])
       await screen.findByTestId("stDateTimeInputCalendar")
 
-      // Select a date — popover stays open. The calendar focuses its grid
-      // cell on the next frame; wait for that before editing the time, or
-      // the focus move lands on the cell and the following key changes the
+      // The popover stays open after a date click. Wait until the calendar
+      // cell is focused before editing the time, or the next key changes the
       // highlighted day instead of the hour.
       const day15 = screen.getByRole("button", { name: /15/ })
       await user.click(day15)
