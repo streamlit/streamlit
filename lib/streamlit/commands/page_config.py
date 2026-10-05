@@ -14,8 +14,10 @@
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Mapping
+from datetime import timedelta
 from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
@@ -23,6 +25,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidURLError,
     StreamlitValueError,
 )
@@ -31,10 +34,16 @@ from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.string_util import is_emoji, validate_material_icon
+from streamlit.time_util import time_to_seconds
 from streamlit.url_util import is_url
 
 if TYPE_CHECKING:
     from typing import TypeGuard
+
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        ScriptRunContext,
+    )
+
 
 GET_HELP_KEY: Final = "get help"
 REPORT_A_BUG_KEY: Final = "report a bug"
@@ -115,6 +124,81 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
         raise
 
 
+class _RunEveryNotSet:
+    """Sentinel for an omitted ``run_every``.
+
+    ``repr`` is ``None`` so ``help()`` and generated signatures show the public
+    default. Identity distinguishes "not passed" from an explicit ``None``,
+    which disables auto-rerun.
+    """
+
+    def __repr__(self) -> str:
+        return "None"
+
+
+_RUN_EVERY_NOT_SET: Final = _RunEveryNotSet()
+_RUN_EVERY_NOT_SET_DEFAULT: Final[int | float | timedelta | str | None] = cast(
+    "int | float | timedelta | str | None", _RUN_EVERY_NOT_SET
+)
+_PAGE_RUN_EVERY_MIN_SECONDS: Final = 1.0
+
+
+def _resolve_page_run_every(
+    run_every: int | float | timedelta | str | None,
+) -> float | None:
+    """Return the page interval in seconds, or ``None`` to disable it."""
+    if run_every is None:
+        return None
+
+    if isinstance(run_every, bool) or not isinstance(
+        run_every, (int, float, str, timedelta)
+    ):
+        raise StreamlitInvalidParameterTypeError(
+            "run_every",
+            type(run_every).__name__,
+            ["int", "float", "timedelta", "str", "None"],
+        )
+
+    seconds = time_to_seconds(run_every, coerce_none_to_inf=False)
+    if (
+        not isinstance(seconds, (int, float))
+        or isinstance(seconds, bool)
+        or not math.isfinite(seconds)
+        or seconds < _PAGE_RUN_EVERY_MIN_SECONDS
+    ):
+        if isinstance(seconds, (int, float)) and not isinstance(seconds, bool):
+            detail = f"Got {run_every!r} ({seconds:g} seconds)."
+        else:
+            detail = f"Got {run_every!r}."
+        raise StreamlitValueError(
+            "run_every",
+            ["a duration of at least 1 second", "None"],
+            detail=detail,
+        )
+    return float(seconds)
+
+
+def _enqueue_page_auto_rerun(ctx: ScriptRunContext, seconds: float | None) -> None:
+    """Arm or clear the page-level auto-rerun timer for this full run.
+
+    An empty ``fragment_id`` is the app-scoped timer. Full reruns already drop
+    every timer when the frontend handles ``NewSession``; this message re-arms
+    the page timer. Fragment-only reruns do not send it, so a fragment tick
+    does not restart the page countdown. ``None`` clears a timer armed by an
+    earlier ``set_page_config`` call in the same run.
+    """
+    if ctx.fragment_ids_this_run:
+        return
+
+    msg = ForwardProto()
+    if seconds is None:
+        msg.stop_auto_rerun.fragment_ids.append("")
+    else:
+        msg.auto_rerun.interval = seconds
+        msg.auto_rerun.fragment_id = ""
+    ctx.enqueue(msg)
+
+
 @gather_metrics("set_page_config")
 def set_page_config(
     page_title: str | None = None,
@@ -122,13 +206,16 @@ def set_page_config(
     layout: Layout | None = None,
     initial_sidebar_state: InitialSideBarState | None = None,
     menu_items: MenuItems | None = None,
+    *,
+    run_every: int | float | timedelta | str | None = _RUN_EVERY_NOT_SET_DEFAULT,
 ) -> None:
     """
     Configure the default settings of the page.
 
     This command can be called multiple times in a script run to dynamically
     change the page configuration. The calls are additive, with each successive
-    call overriding only the parameters that are specified.
+    call overriding only the parameters that are specified. ``run_every``
+    reruns the whole page on an interval.
 
     Parameters
     ----------
@@ -224,6 +311,45 @@ def set_page_config(
         item that was specified in a previous call to ``st.set_page_config``,
         set its value to ``None`` in the dictionary.
 
+    run_every : int, float, timedelta, str, or None
+        The time interval between automatic full-page reruns. Omit this
+        argument to leave the interval from an earlier call in the same run
+        unchanged. If no call in the run passes ``run_every``, the page does
+        not auto-rerun. Pass ``None`` to turn auto-rerun off.
+
+        Accepted values:
+
+        - ``None`` to disable auto-rerun.
+        - An ``int`` or ``float`` specifying the interval in seconds.
+        - A string specifying the time in a format supported by `Pandas'
+          Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
+          e.g. ``"5s"``, ``"1m"``, or ``"1h23s"``.
+        - A ``timedelta`` object from `Python's built-in datetime library
+          <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
+          e.g. ``timedelta(seconds=30)``.
+
+        The interval must be at least 1 second. ``0``, negative values, and
+        any interval shorter than 1 second raise an exception.
+
+        Each tick re-executes the whole script and redraws the whole page.
+        Prefer |st.fragment|_ with its own ``run_every`` when only one section
+        needs to refresh. The two intervals can be used together: a slower
+        page interval refreshes the rest of the app, and a faster fragment
+        interval refreshes the live section.
+
+        .. note::
+            Auto-rerun pauses while an ``st.dialog`` is open and resumes after
+            it closes. An unsubmitted ``st.form`` does not pause auto-rerun.
+            Its in-progress values stay on screen across ticks, the same as
+            any other full rerun, and are sent when the form is submitted.
+            The rest of the page still reruns, so prefer a fragment, or pass
+            ``run_every=None``, when a form sits next to live content.
+            Browsers may also fire the timer less often while the tab is in
+            the background.
+
+        .. |st.fragment| replace:: ``st.fragment``
+        .. _st.fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
+
     Examples
     --------
     >>> import streamlit as st
@@ -239,7 +365,26 @@ def set_page_config(
     ...         'About': "# This is a header. This is an *extremely* cool app!"
     ...     }
     ... )
+
+    Rerun the whole page every 5 seconds. Prefer ``@st.fragment(run_every=...)``
+    when only one section needs to refresh.
+
+    >>> import streamlit as st
+    >>>
+    >>> st.set_page_config(page_title="Ops Dashboard", run_every="5s")
+    >>>
+    >>> if "ticks" not in st.session_state:
+    ...     st.session_state.ticks = 0
+    >>> st.session_state.ticks += 1
+    >>> st.metric("Refreshes", st.session_state.ticks)
     """
+
+    resolved_run_every: float | None = None
+    # The public annotation is the user-facing type. The default is a sentinel
+    # so an omitted argument is distinct from an explicit ``None``.
+    run_every_was_set = cast("object", run_every) is not _RUN_EVERY_NOT_SET
+    if run_every_was_set:
+        resolved_run_every = _resolve_page_run_every(run_every)
 
     msg = ForwardProto()
 
@@ -307,6 +452,8 @@ def set_page_config(
     if ctx is None:
         return
     ctx.enqueue(msg)
+    if run_every_was_set:
+        _enqueue_page_auto_rerun(ctx, resolved_run_every)
 
 
 def get_random_emoji() -> str:

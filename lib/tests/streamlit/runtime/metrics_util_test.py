@@ -302,6 +302,38 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         assert ctx is not None
         assert ctx.shared.tracked_commands == ()
 
+    def test_set_page_config_run_every_records_interval(self) -> None:
+        """``run_every`` telemetry stores the resolved seconds, not the string length."""
+        st.set_page_config(run_every="5s")
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        assert len(ctx.shared.tracked_commands) == 1
+        command = ctx.shared.tracked_commands[0]
+        assert command.name == "set_page_config"
+        assert str(command.args[0]).strip() == 'k: "run_every"\nt: "str"\nm: "secs:5"'
+
+    def test_set_page_config_run_every_none_records_disabled(self) -> None:
+        """Explicit ``None`` is distinguishable from an omitted interval."""
+        st.set_page_config(run_every=None)
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        command = ctx.shared.tracked_commands[0]
+        assert (
+            str(command.args[0]).strip()
+            == 'k: "run_every"\nt: "NoneType"\nm: "disabled"'
+        )
+
+    def test_set_page_config_omitted_run_every_is_not_tracked(self) -> None:
+        """Omitting ``run_every`` does not record an interval."""
+        st.set_page_config(page_title="Hello")
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        command = ctx.shared.tracked_commands[0]
+        assert all(arg.k != "run_every" for arg in command.args)
+
     def test_decorated_method_positional_metadata_is_unchanged(self) -> None:
         """The Page-specific position offset does not affect other methods."""
 

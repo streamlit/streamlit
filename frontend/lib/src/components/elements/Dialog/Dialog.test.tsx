@@ -24,6 +24,10 @@ import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Dialog, { type Props as DialogProps } from "./Dialog"
+import {
+  isElementDialogOpen,
+  resetElementDialogOpenForTests,
+} from "./elementDialogOpen"
 
 const getProps = (
   elementProps: Partial<BlockProto.Dialog> = {},
@@ -44,6 +48,10 @@ const getProps = (
 })
 
 describe("Dialog container", () => {
+  beforeEach(() => {
+    resetElementDialogOpenForTests()
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(
@@ -66,6 +74,33 @@ describe("Dialog container", () => {
     )
 
     expect(screen.getByText("test")).toBeVisible()
+  })
+
+  it("tracks whether an element dialog is open", () => {
+    expect(isElementDialogOpen()).toBe(false)
+
+    const { rerender, unmount } = render(
+      <Dialog {...getProps({ isOpen: true })}>
+        <div>test</div>
+      </Dialog>
+    )
+    expect(isElementDialogOpen()).toBe(true)
+
+    rerender(
+      <Dialog {...getProps({ isOpen: false })}>
+        <div>test</div>
+      </Dialog>
+    )
+    expect(isElementDialogOpen()).toBe(false)
+
+    rerender(
+      <Dialog {...getProps({ isOpen: true })}>
+        <div>test</div>
+      </Dialog>
+    )
+    expect(isElementDialogOpen()).toBe(true)
+    unmount()
+    expect(isElementDialogOpen()).toBe(false)
   })
 
   it("should not render the text when closed", () => {

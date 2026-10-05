@@ -103,6 +103,7 @@ import {
   HostCommunicationManager,
   type IMenuItem,
   INITIAL_SCRIPT_RUN_ID,
+  isElementDialogOpen,
   isEmbed,
   isInChildFrame,
   isKeyboardEventFromEditableTarget,
@@ -359,13 +360,18 @@ export class App extends PureComponent<Props, State> {
   private rerunEpoch: number = 0
   private historyNavigationEpoch: number | null = null
 
-  // Active `run_every` auto-rerun timers, keyed by fragment id. These are
+  // Active `run_every` auto-rerun timers. Fragment timers are keyed by fragment
+  // id. The page timer from `st.set_page_config(run_every=...)` uses an empty
+  // id, matching an `AutoRerun` message with no fragment id. These are
   // imperative resources (setInterval handles), so they live outside of React
-  // state. Keying by fragment id lets us keep a single timer per fragment: we
-  // reuse the running timer when a fragment re-registers with the same interval
-  // (so frequent ancestor reruns don't reset its countdown), and only restart
-  // it when the interval changes. The stored `interval` (in seconds) is what we
-  // compare against on re-registration.
+  // state. A fragment reuses its timer when it re-registers with the same
+  // interval (so frequent ancestor reruns don't reset its countdown). The page
+  // timer always restarts, because every full rerun should begin a new
+  // countdown. The stored `interval` (in seconds) is what fragment
+  // re-registration compares against.
+  // Empty string is the page-level timer. Protobuf leaves fragment_id unset
+  // as "", and that value is not a valid fragment id.
+  private static readonly PAGE_AUTO_RERUN_ID = ""
   private readonly autoRerunIntervals: Map<
     string,
     { timer: ReturnType<typeof setInterval>; interval: number }
@@ -1361,18 +1367,15 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
-    const { fragmentId } = autoRerun
+    const { fragmentId, interval } = autoRerun
 
-    // Auto-reruns are always scoped to a fragment, so we expect a non-empty
-    // fragment id. Guard against an empty id (which protobuf produces when the
-    // field is unset): using it as a map key would collide, so a second empty-id
-    // registration would silently cancel the first. Skip it instead.
+    // An empty fragment id is the page-level timer from set_page_config.
+    // Always restart it so each full rerun begins a new countdown. Fragment
+    // timers keep their countdown when the interval is unchanged.
     if (!fragmentId) {
-      LOG.warn("Ignoring auto-rerun message without a fragment id.")
+      this.armPageAutoRerun(interval)
       return
     }
-
-    const { interval } = autoRerun
 
     // A `run_every` fragment re-registers its auto-rerun every time an ancestor
     // re-renders it (a fragment-only rerun doesn't reset timers). If a timer for
@@ -1392,6 +1395,24 @@ export class App extends PureComponent<Props, State> {
     }, interval * 1000)
 
     this.autoRerunIntervals.set(fragmentId, { timer, interval })
+  }
+
+  /**
+   * Start the page-level auto-rerun timer, replacing any page timer already
+   * running. Ticks request a full rerun and are skipped while an `st.dialog`
+   * is open.
+   */
+  private armPageAutoRerun(interval: number): void {
+    this.clearAutoRerunInterval(App.PAGE_AUTO_RERUN_ID)
+
+    const timer = setInterval(() => {
+      if (isElementDialogOpen()) {
+        return
+      }
+      this.widgetMgr.sendUpdateWidgetsMessage(undefined, true)
+    }, interval * 1000)
+
+    this.autoRerunIntervals.set(App.PAGE_AUTO_RERUN_ID, { timer, interval })
   }
 
   /**

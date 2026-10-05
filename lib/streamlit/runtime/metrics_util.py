@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import contextlib
 import inspect
+import math
 import os
 import re
 import sys
@@ -23,6 +24,7 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Sequence, Sized
+from datetime import timedelta
 from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
@@ -33,6 +35,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.time_util import time_to_seconds
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -410,6 +413,35 @@ def _get_top_level_module(func: Callable[..., Any]) -> str:
     return module.__name__.split(".")[0]
 
 
+def _run_every_arg_metadata(value: object) -> str | None:
+    """Return interval metadata for a ``run_every`` argument.
+
+    Records the resolved seconds so adoption metrics show the interval
+    distribution, not only the argument type. Explicit ``None`` is
+    ``disabled``. Invalid values are ``invalid`` and never raise.
+    """
+    if value is None:
+        return "disabled"
+    if isinstance(value, bool) or not isinstance(value, (int, float, str, timedelta)):
+        return None
+
+    try:
+        seconds = time_to_seconds(value, coerce_none_to_inf=False)
+    except Exception:
+        return "invalid"
+
+    if (
+        not isinstance(seconds, (int, float))
+        or isinstance(seconds, bool)
+        or not math.isfinite(seconds)
+    ):
+        return "invalid"
+    if float(seconds).is_integer():
+        return f"secs:{int(seconds)}"
+    rendered = f"{seconds:.3f}".rstrip("0").rstrip(".")
+    return f"secs:{rendered}"
+
+
 def _get_arg_metadata(arg: object) -> str | None:
     """Get metadata information related to the value of the given object."""
     with contextlib.suppress(Exception):
@@ -503,7 +535,10 @@ def _get_command_telemetry(
     for kwarg, kwarg_value in kwargs.items():
         argument = Argument(k=kwarg, t=_get_type_name(kwarg_value))
 
-        arg_metadata = _get_arg_metadata(kwarg_value)
+        if kwarg == "run_every":
+            arg_metadata = _run_every_arg_metadata(kwarg_value)
+        else:
+            arg_metadata = _get_arg_metadata(kwarg_value)
         if arg_metadata:
             argument.m = arg_metadata
         arguments.append(argument)

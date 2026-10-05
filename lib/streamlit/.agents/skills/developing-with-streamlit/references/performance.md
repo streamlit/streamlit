@@ -187,6 +187,21 @@ def auto_refresh_metrics():
 auto_refresh_metrics()
 ```
 
+Use `st.set_page_config(run_every=...)` only when the whole page should refresh. Each tick reruns the entire script. The interval must be at least 1 second. Pass `run_every=None` to turn it off; omitting the argument leaves the current interval unchanged. Page auto-rerun pauses while an `st.dialog` is open. An unsubmitted `st.form` does not pause it, and in-progress form values stay on screen. A fragment interval and a page interval can run together:
+
+```python
+st.set_page_config(run_every="30s")
+
+
+@st.fragment(run_every="2s")
+def ticker():
+    st.metric("Price", get_price())
+
+
+ticker()
+st.dataframe(get_daily_summary())
+```
+
 Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
 
 
