@@ -31,6 +31,7 @@ import {
 } from "~lib/components/audio/backends/WaveSurferPlayer"
 import { WaveSurferRecordBackend } from "~lib/components/audio/backends/WaveSurferRecordBackend"
 import { encodeToWav } from "~lib/components/audio/core/encodeToWav"
+import { loadWaveSurferModules } from "~lib/components/audio/core/loadWaveSurferModules"
 import type {
   AudioMeta,
   RecordingState,
@@ -81,6 +82,7 @@ export function useWaveformController({
   const eventsRef = useRef<WaveformControllerEvents>(events)
   const isInitializedRef = useRef(false)
   const initPromiseRef = useRef<Promise<void> | null>(null)
+  const initGenerationRef = useRef(0)
   const readyResolversRef = useRef<Set<ReadyResolver>>(new Set())
   const isPlaybackModeRef = useRef(false)
 
@@ -110,6 +112,7 @@ export function useWaveformController({
 
     isInitializedRef.current = false
     initPromiseRef.current = null
+    initGenerationRef.current += 1
     isPlaybackModeRef.current = false
     setCurrentState("idle")
     setCurrentBlob(null)
@@ -186,15 +189,13 @@ export function useWaveformController({
       return Promise.resolve()
     }
 
+    const generation = initGenerationRef.current
     const initPromise = (async (): Promise<void> => {
       try {
-        const [WaveSurferModule, RecordPluginModule] = await Promise.all([
-          import("wavesurfer.js"),
-          // v8 package exports require the .js suffix for dist/plugins imports.
-          import("wavesurfer.js/dist/plugins/record.js"),
-        ])
-        const WaveSurfer = WaveSurferModule.default
-        const RecordPluginClass = RecordPluginModule.default
+        const { WaveSurfer, RecordPluginClass } = await loadWaveSurferModules()
+        if (initGenerationRef.current !== generation) {
+          return
+        }
 
         const ws = WaveSurfer.create({
           container,
@@ -211,6 +212,11 @@ export function useWaveformController({
           cursorWidth: CURSOR_WIDTH,
           interact: true,
         })
+
+        if (initGenerationRef.current !== generation) {
+          ws.destroy()
+          return
+        }
 
         wavesurferRef.current = ws
         isPlaybackModeRef.current = false
@@ -242,6 +248,9 @@ export function useWaveformController({
 
         isInitializedRef.current = true
       } catch (error) {
+        if (initGenerationRef.current !== generation) {
+          return
+        }
         initPromiseRef.current = null
         const err = error instanceof Error ? error : new Error(String(error))
         void eventsRef.current.onError?.(err)

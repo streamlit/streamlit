@@ -66,9 +66,9 @@ type UseFloatingOverlayReturn = UseFloatingReturn & {
  * Selectbox, MenuButton). Provides scroll-tracking via autoUpdate and
  * viewport-aware repositioning via flip/shift middleware.
  *
- * `setFloating` / `setReference` are bound callbacks. Prefer them over
- * `refs.setFloating` / `refs.setReference`, which `@typescript-eslint/unbound-method`
- * flags because Floating UI types those as methods.
+ * Pass the returned `setFloating` and `setReference` callbacks as refs.
+ * They call Floating UI's setters so the receiver stays intact. Passing
+ * `refs.setFloating` or `refs.setReference` trips `@typescript-eslint/unbound-method`.
  */
 export function useFloatingOverlay(
   options: UseFloatingOverlayOptions

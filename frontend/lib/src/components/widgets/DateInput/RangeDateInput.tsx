@@ -147,6 +147,8 @@ function AnchorDateWatcher({
   onAnchorSelect: (date: CalendarDate) => void
 }): null {
   const state = useContext(RangeCalendarStateContext)
+  // Latest calendar state for the effect. `state` is a new object every render,
+  // so the effect reads it here instead of listing `state` as a dependency.
   const stateRef = useRef(state)
   stateRef.current = state
   const anchorDate = state?.anchorDate ?? null

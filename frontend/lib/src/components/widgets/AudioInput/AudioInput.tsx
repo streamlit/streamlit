@@ -276,7 +276,8 @@ const AudioInput: React.FC<Props> = ({
     },
   })
 
-  // Update the ref after controller is initialized
+  // Handlers read this ref so they call the latest controller. The hook returns
+  // a new object every render.
   controllerRef.current = controller
 
   const { state, isPlaybackPlaying, playback } = controller
@@ -348,9 +349,7 @@ const AudioInput: React.FC<Props> = ({
   useEffect(() => {
     const updatePlaybackTime = (): void => {
       if (isPlaybackPlaying) {
-        setProgressTime(
-          formatTime(controllerRef.current?.playback.getCurrentTimeMs() ?? 0)
-        )
+        setProgressTime(formatTime(playback.getCurrentTimeMs()))
         playbackTimerRef.current = requestAnimationFrame(updatePlaybackTime)
       }
     }
@@ -368,7 +367,7 @@ const AudioInput: React.FC<Props> = ({
         playbackTimerRef.current = null
       }
     }
-  }, [isPlaybackPlaying])
+  }, [isPlaybackPlaying, playback])
 
   useEffect(() => {
     if (!recordingUrl) {
@@ -435,23 +434,22 @@ const AudioInput: React.FC<Props> = ({
   const onClickPlayPause = useCallback(async () => {
     try {
       if (isPlaybackPlaying) {
-        const currentTime =
-          controllerRef.current?.playback.getCurrentTimeMs() ?? 0
-        controllerRef.current?.playback.pause()
+        const currentTime = playback.getCurrentTimeMs()
+        playback.pause()
         setProgressTime(formatTime(currentTime))
       } else if (state === "idle" && recordingUrl) {
         // WaveSurfer can report a tiny non-zero offset (~<100ms) at start of playback.
         // Snap the UI timer back to the canonical start value so the display stays deterministic.
-        if ((controllerRef.current?.playback.getCurrentTimeMs() ?? 0) <= 100) {
+        if (playback.getCurrentTimeMs() <= 100) {
           setProgressTime(STARTING_TIME_STRING)
         }
-        await controllerRef.current?.playback.play()
+        await playback.play()
       }
     } catch {
       // Playback control error - set error state for user feedback
       setIsError(true)
     }
-  }, [isPlaybackPlaying, recordingUrl, state])
+  }, [isPlaybackPlaying, recordingUrl, state, playback])
 
   const startRecording = useCallback(async () => {
     if (recordingUrl) {

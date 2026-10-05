@@ -307,9 +307,10 @@ export default defineConfig([
       // New rules in @eslint-react v4/v5 — disable until existing violations are addressed
       "@eslint-react/exhaustive-deps": "off",
       // TypeScript rules with type-checking
-      // Production src enables no-unsafe-call / return / argument and
-      // no-misused-spread (see the production overlay below). Remaining
-      // no-unsafe-* and unbound-method stay off globally so tests stay exempt.
+      // Production src enables no-unsafe-call / return / argument, no-misused-spread,
+      // and unbound-method (see the overlay below). This block leaves those rules
+      // off so tests, which that overlay ignores, stay exempt. Other no-unsafe-*
+      // rules stay off.
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
