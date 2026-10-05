@@ -84,15 +84,19 @@ runs:
         curl -fOL --retry 5 --retry-all-errors --retry-delay 3 "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"
 
         # Reject a replaced archive before it is extracted.
+        # A hash mismatch is also where an HTTP 200 HTML soft-error page fails,
+        # so log the computed digest, size, and a short preview.
         if ! echo "${PROTOC_SHA256}  ${PROTOC_ZIP}" | sha256sum -c -; then
           echo "::error::protoc archive SHA-256 does not match the pinned digest for v${PROTOC_VERSION}"
+          echo "Got: $(sha256sum "${PROTOC_ZIP}" | cut -d' ' -f1) ($(stat -c %s "${PROTOC_ZIP}") bytes)"
+          head -c 512 "${PROTOC_ZIP}" | head -n 20
           exit 1
         fi
 
-        # Validate the downloaded file is a zip archive.
-        # If the download was a 200 OK HTML page (e.g. soft error), unzip -tq will fail.
+        # The digest matches the official asset. Confirm unzip can read it
+        # before the privileged extract.
         if ! unzip -tq "${PROTOC_ZIP}"; then
-          echo "::error::Downloaded file is not a valid zip. Content preview:"
+          echo "::error::Pinned protoc archive is not a valid zip. Content preview:"
           head -n 20 "${PROTOC_ZIP}"
           exit 1
         fi
