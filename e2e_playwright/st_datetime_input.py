@@ -202,7 +202,8 @@ ignore_datetime = st.datetime_input(
 )
 st.write("Ignore datetime value:", ignore_datetime)
 
-# Sidebar keeps Apply out from under the calendar overlay so a type-then-click
-# can blur-commit the dirty field and rerun in one action.
+# The Apply button lives in the sidebar so the open calendar popover can't cover
+# it. Clicking it right after typing closes the popover, which commits the typed
+# value, and then reruns the app in a single click.
 if st.sidebar.button("Apply ignore datetime", key="apply_ignore_datetime"):
     st.write("Applied ignore datetime value:", ignore_datetime)
