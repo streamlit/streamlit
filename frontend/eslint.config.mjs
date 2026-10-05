@@ -307,9 +307,9 @@ export default defineConfig([
       // New rules in @eslint-react v4/v5 — disable until existing violations are addressed
       "@eslint-react/exhaustive-deps": "off",
       // TypeScript rules with type-checking
-      // Production src enables no-unsafe-call / no-unsafe-return (see the
-      // production overlay below). Remaining no-unsafe-* and unbound-method
-      // stay off globally so tests stay exempt.
+      // Production src enables no-unsafe-call / return / argument and
+      // no-misused-spread (see the production overlay below). Remaining
+      // no-unsafe-* and unbound-method stay off globally so tests stay exempt.
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
@@ -513,11 +513,15 @@ export default defineConfig([
       // Require type on raw <button> JSX (not styled.button); omitted type submits the enclosing form.
       // Tests still use <button> fixtures without type, so this stays production-only.
       "@eslint-react/dom-no-missing-button-type": "error",
-      // Calling or returning `any` infects typed APIs. Tests and the remaining
-      // no-unsafe-* rules (assignment/member-access/argument) stay off for now;
-      // see the frontend linting plan in the wiki for the remaining queue.
+      // Calling, returning, or passing `any` infects typed APIs. Spreading a
+      // class instance (protobuf, AxiosHeaders) copies enumerable own fields
+      // and drops methods. Tests and the remaining no-unsafe-* rules
+      // (assignment/member-access) stay off for now; see the frontend linting
+      // plan in the wiki for the remaining queue.
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-return": "error",
+      "@typescript-eslint/no-unsafe-argument": "error",
+      "@typescript-eslint/no-misused-spread": "error",
     },
   },
   // Test files specific configuration

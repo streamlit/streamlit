@@ -1046,6 +1046,38 @@ class AppTest:
         return self._tree.file_uploader
 
     @property
+    def form(self) -> BlockList:
+        """Sequence of all ``st.form`` blocks.
+
+        Returns
+        -------
+        BlockList
+            Individual forms can be accessed by index or by the form's
+            ``key`` (the form ID). For example, ``at.form[0]`` or
+            ``at.form(key="name-form")``.
+        """
+        return self._tree.form
+
+    @property
+    def form_submit_button(self) -> WidgetList[Button]:
+        """Sequence of all ``st.form_submit_button`` widgets.
+
+        These are also included in ``at.button``. Form widget values are only
+        sent to the script when the form's submit button is clicked, for
+        example ``at.form_submit_button[0].click().run()``.
+
+        Returns
+        -------
+        WidgetList of Button
+            Sequence of all ``st.form_submit_button`` widgets. Individual
+            widgets can be accessed from a WidgetList by index (order on the
+            page) or key. For example, ``at.form_submit_button[0]`` for the
+            first widget or ``at.form_submit_button(key="save")`` for a
+            widget with a given key.
+        """
+        return self._tree.form_submit_button
+
+    @property
     def expander(self) -> Sequence[Expander]:
         """Sequence of all ``st.expander`` elements.
 
@@ -1478,9 +1510,10 @@ class AppTest:
         ----------
         element_type: str
             An ``AppTest`` collection name such as ``"button"``,
-            ``"datetime_input"``, ``"pills"``, or ``"tabs"``. Internal node
-            type names such as ``"date_time_input"`` also work. ``"help"``
-            selects ``st.help`` elements (node type ``help_info``).
+            ``"datetime_input"``, ``"pills"``, ``"form"``, or ``"tabs"``.
+            Internal node type names such as ``"date_time_input"`` also work.
+            ``"help"`` selects ``st.help`` elements (node type ``help_info``).
+            ``"form_submit_button"`` selects submit buttons inside forms.
 
         Returns
         -------

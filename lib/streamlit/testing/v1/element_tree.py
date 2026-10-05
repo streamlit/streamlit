@@ -2342,6 +2342,24 @@ class Block:
         return WidgetList(self.get("file_uploader"))  # type: ignore
 
     @property
+    def form(self) -> BlockList:
+        """``st.form`` blocks. The form ID is ``Block.key``."""
+        return BlockList(
+            [
+                e
+                for e in self
+                # Skip this node so a form does not match itself when querying
+                # descendants (same contract as ``container``).
+                if isinstance(e, Block) and e is not self and e.type == "form"
+            ]
+        )
+
+    @property
+    def form_submit_button(self) -> WidgetList[Button]:
+        """``st.form_submit_button`` widgets (buttons with a nonempty form ID)."""
+        return WidgetList([button for button in self.button if _widget_form_id(button)])
+
+    @property
     def expander(self) -> Sequence[Expander]:
         return self.get("expander")  # type: ignore
 
@@ -2463,8 +2481,9 @@ class Block:
         Public names that differ from ``Node.type`` (for example
         ``datetime_input`` vs ``date_time_input``) are accepted. Node type
         names (usually the proto field name) keep working. ``pills`` /
-        ``segmented_control`` / ``container`` use the same filtering as the
-        matching attributes.
+        ``segmented_control`` / ``container`` / ``form`` /
+        ``form_submit_button`` use the same filtering as the matching
+        attributes.
         """
         if element_type == "pills":
             return list(self.pills)
@@ -2472,6 +2491,10 @@ class Block:
             return list(self.segmented_control)
         if element_type == "container":
             return list(self.container)
+        if element_type == "form":
+            return list(self.form)
+        if element_type == "form_submit_button":
+            return list(self.form_submit_button)
         resolved = _GET_TYPE_ALIASES.get(element_type, element_type)
         return [e for e in self if e.type == resolved]
 
