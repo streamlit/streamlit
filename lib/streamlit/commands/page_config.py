@@ -337,13 +337,8 @@ def set_page_config(
 
         .. note::
             Auto-rerun pauses while an ``st.dialog`` is open and resumes after
-            it closes. An unsubmitted ``st.form`` does not pause auto-rerun.
-            Its in-progress values stay on screen across ticks, the same as
-            any other full rerun, and are sent when the form is submitted.
-            The rest of the page still reruns, so prefer a fragment, or pass
-            ``run_every=None``, when a form sits next to live content.
-            Browsers may also fire the timer less often while the tab is in
-            the background.
+            it closes. Browsers may also fire the timer less often while the
+            tab is in the background.
 
         .. |st.fragment| replace:: ``st.fragment``
         .. _st.fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
