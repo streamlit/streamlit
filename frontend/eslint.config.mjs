@@ -515,13 +515,15 @@ export default defineConfig([
       "@eslint-react/dom-no-missing-button-type": "error",
       // Calling, returning, or passing `any` infects typed APIs. Spreading a
       // class instance (protobuf, AxiosHeaders) copies enumerable own fields
-      // and drops methods. Tests and the remaining no-unsafe-* rules
+      // and drops methods. Extracting a class method without binding drops
+      // `this`. Tests and the remaining no-unsafe-* rules
       // (assignment/member-access) stay off for now; see the frontend linting
       // plan in the wiki for the remaining queue.
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-return": "error",
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-misused-spread": "error",
+      "@typescript-eslint/unbound-method": "error",
     },
   },
   // Test files specific configuration

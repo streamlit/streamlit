@@ -42,8 +42,8 @@ class ScreenCastRecorder {
     try {
       return (
         notNullOrUndefined(navigator.mediaDevices) &&
-        notNullOrUndefined(navigator.mediaDevices.getUserMedia) &&
-        notNullOrUndefined(navigator.mediaDevices.getDisplayMedia) &&
+        "getUserMedia" in navigator.mediaDevices &&
+        "getDisplayMedia" in navigator.mediaDevices &&
         MediaRecorder.isTypeSupported(BLOB_TYPE)
       )
     } catch {

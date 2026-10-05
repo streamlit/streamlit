@@ -148,7 +148,6 @@ function AnchorDateWatcher({
 }): null {
   const state = useContext(RangeCalendarStateContext)
   const anchorDate = state?.anchorDate ?? null
-  const setAnchorDate = state?.setAnchorDate
   const prevAnchorRef = useRef<CalendarDate | null>(null)
   const prevSeedRef = useRef<CalendarDate | null>(null)
 
@@ -159,20 +158,20 @@ function AnchorDateWatcher({
     if (seedAnchor && !datesEqual(seedAnchor, prevSeedRef.current)) {
       prevSeedRef.current = seedAnchor
       prevAnchorRef.current = seedAnchor
-      setAnchorDate?.(seedAnchor)
+      state?.setAnchorDate(seedAnchor)
       return
     }
     if (!seedAnchor) {
       prevSeedRef.current = null
       if (prevAnchorRef.current) {
-        setAnchorDate?.(null)
+        state?.setAnchorDate(null)
       }
     }
     if (anchorDate && !prevAnchorRef.current) {
       onAnchorSelect(anchorDate)
     }
     prevAnchorRef.current = anchorDate
-  }, [anchorDate, setAnchorDate, onAnchorSelect, seedAnchor])
+  }, [anchorDate, state, onAnchorSelect, seedAnchor])
 
   return null
 }
@@ -425,7 +424,8 @@ function RangeDateInput({
     }
   }, [isOpen, theme.spacing.twoXS, isInSidebar])
 
-  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
+  const { floatingStyles, setFloating, setReference } =
+    useFloatingOverlay(overlayOptions)
 
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
@@ -466,8 +466,8 @@ function RangeDateInput({
           }
         }
       },
-      floatingSetFn: refs.setFloating,
-      referenceSetFn: refs.setReference,
+      floatingSetFn: setFloating,
+      referenceSetFn: setReference,
       restoreFocusFn: restoreFocusToField,
       // Exclude the month/year and quick-select popovers so clicks and Escape
       // inside them do not dismiss the calendar.

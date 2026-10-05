@@ -21,9 +21,9 @@ interface UseOverlayDismissalOptions {
   isOpen: boolean
   /** Called when a dismissal gesture is detected (outside click, Escape, or Tab). */
   onClose: () => void
-  /** floating-ui's refs.setFloating — the hook creates and merges its own panelRef. */
+  /** Bound floating-ui setter (`useFloatingOverlay`'s `setFloating`). */
   floatingSetFn: (node: HTMLElement | null) => void
-  /** floating-ui's refs.setReference — optional; the hook creates and merges its own referenceRef. */
+  /** Bound floating-ui setter (`useFloatingOverlay`'s `setReference`). Optional. */
   referenceSetFn?: (node: HTMLElement | null) => void
   /**
    * CSS selectors whose containing elements are excluded from outside-click

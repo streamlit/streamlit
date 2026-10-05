@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { useCallback } from "react"
+
 import {
   autoUpdate,
   flip,
@@ -51,14 +53,31 @@ interface UseFloatingOverlayOptions {
 export const SHIFT_VIEWPORT_PADDING = 8
 const EMPTY_MIDDLEWARE: Middleware[] = []
 
+type UseFloatingReturn = ReturnType<typeof useFloating>
+type FloatingRefs = UseFloatingReturn["refs"]
+
+type BoundFloatingSetter<T extends (...args: never[]) => unknown> = (
+  this: void,
+  ...args: Parameters<T>
+) => ReturnType<T>
+
+type UseFloatingOverlayReturn = UseFloatingReturn & {
+  setFloating: BoundFloatingSetter<FloatingRefs["setFloating"]>
+  setReference: BoundFloatingSetter<FloatingRefs["setReference"]>
+}
+
 /**
  * Shared Floating UI positioning hook for overlay components (Popover,
  * Selectbox, MenuButton). Provides scroll-tracking via autoUpdate and
  * viewport-aware repositioning via flip/shift middleware.
+ *
+ * `setFloating` / `setReference` are bound callbacks. Prefer them over
+ * `refs.setFloating` / `refs.setReference`, which `@typescript-eslint/unbound-method`
+ * flags because Floating UI types those as methods.
  */
 export function useFloatingOverlay(
   options: UseFloatingOverlayOptions
-): ReturnType<typeof useFloating> {
+): UseFloatingOverlayReturn {
   const {
     open,
     onOpenChange,
@@ -91,7 +110,7 @@ export function useFloatingOverlay(
     ...extraMiddleware,
   ]
 
-  return useFloating({
+  const floating = useFloating({
     open,
     onOpenChange,
     placement,
@@ -99,4 +118,23 @@ export function useFloatingOverlay(
     whileElementsMounted: autoUpdate,
     middleware: middleware.filter(Boolean),
   })
+
+  const setFloating = useCallback(
+    (...args: Parameters<FloatingRefs["setFloating"]>) => {
+      floating.refs.setFloating(...args)
+    },
+    [floating.refs]
+  )
+  const setReference = useCallback(
+    (...args: Parameters<FloatingRefs["setReference"]>) => {
+      floating.refs.setReference(...args)
+    },
+    [floating.refs]
+  )
+
+  return {
+    ...floating,
+    setFloating,
+    setReference,
+  }
 }

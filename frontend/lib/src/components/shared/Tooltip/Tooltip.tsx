@@ -260,12 +260,13 @@ function Tooltip({
   // kept for its portal, role="tooltip", and aria-hidden management. Its
   // imperative positioning is overridden via CSS !important (see
   // styled-components.tsx) and Floating UI's floatingStyles applied via style prop.
-  const { refs, floatingStyles, middlewareData } = useFloatingOverlay({
-    open: state.isOpen,
-    placement: FLOATING_UI_PLACEMENT[placement],
-    offsetPx: 10,
-    extraMiddleware: HIDE_MIDDLEWARE,
-  })
+  const { refs, floatingStyles, middlewareData, setFloating } =
+    useFloatingOverlay({
+      open: state.isOpen,
+      placement: FLOATING_UI_PLACEMENT[placement],
+      offsetPx: 10,
+      extraMiddleware: HIDE_MIDDLEWARE,
+    })
 
   // Close tooltip when trigger scrolls out of view (hide middleware detects this).
   // Guard against zero-size rects (e.g. JSDOM) where referenceHidden is always
@@ -353,7 +354,7 @@ function Tooltip({
             </TriggerArea>
             {!isDisabled ? (
               <StyledTooltip
-                ref={refs.setFloating}
+                ref={setFloating}
                 id={tooltipId}
                 placement={raPlacement}
                 style={floatingStyles}
