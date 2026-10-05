@@ -189,9 +189,10 @@ st.dataframe(get_daily_summary())     # refreshed by the page-level interval
 > `run_every` when the whole page genuinely needs to refresh, and prefer wrapping the
 > live section in a fragment otherwise. The docstring will link to `@st.fragment` and
 > show the composition pattern above. It should also note that auto-rerun ticks pause while
-> an `st.dialog` is open (so a modal isn't dismissed mid-interaction) but that, because each
-> tick is otherwise a full rerun, a tick still resets an unsubmitted `st.form` — a reason to
-> prefer a fragment (or to pause auto-refresh) for multi-step form flows.
+> an `st.dialog` is open (so a modal isn't dismissed mid-interaction) but that an unsubmitted
+> `st.form` does not pause ticks. In-progress form values stay on screen, the same as any
+> other full rerun. The rest of the page still reruns, so prefer a fragment (or pause
+> auto-refresh) for multi-step form flows.
 
 ### Behavior
 
@@ -235,14 +236,15 @@ st.dataframe(get_daily_summary())     # refreshed by the page-level interval
   are app-shell state, not part of the script's element tree, so reruns don't disrupt them.
   Fragment `run_every` reruns are scoped and aren't affected.
 - **Unsubmitted forms.** Unlike an open `st.dialog` (which pauses ticks, see above), a
-  top-level `st.form` does not pause auto-rerun: a tick is a full rerun, so — exactly like
-  pressing "Rerun" — it re-executes the script and resets an unsubmitted `st.form`. (A form
-  rendered *inside* an open `st.dialog` is protected, since ticks pause while the dialog is
-  open; this bullet is about a top-level form outside any dialog.) The natural debounce
-  above softens this for active users (each interaction restarts the interval), but a tick
-  can still interrupt a form a user is slowly filling out. For multi-step form flows, prefer
-  pausing auto-refresh (pass `run_every=None`) or scoping the live updates to a
-  `@st.fragment(run_every=...)` rather than refreshing the whole page.
+  top-level `st.form` does not pause auto-rerun. A tick is a full rerun, so — exactly like
+  pressing "Rerun" — in-progress values stay on screen and are sent when the form is
+  submitted. (A form rendered *inside* an open `st.dialog` is protected, since ticks pause
+  while the dialog is open; this bullet is about a top-level form outside any dialog.) The
+  natural debounce above softens this for active users (each interaction restarts the
+  interval), but a tick still reruns the rest of the page while someone is filling out a
+  form. For multi-step form flows, prefer pausing auto-refresh (pass `run_every=None`) or
+  scoping the live updates to a `@st.fragment(run_every=...)` rather than refreshing the
+  whole page.
 - **Resolution / disabling (multiple `set_page_config` calls in one run).** The timer is
   re-derived on every rerun from the value of the *last* call that **passed** `run_every`.
   Like the visual parameters, a call that **omits** `run_every` leaves the current setting
