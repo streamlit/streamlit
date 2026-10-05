@@ -14,25 +14,35 @@
  * limitations under the License.
  */
 
-import type { ReactElement } from "react"
+import type { CSSProperties, ReactElement } from "react"
 
 import { screen, waitFor } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 
 import { useLabelTitleTooltip } from "./useLabelTitleTooltip"
+
+const ELLIPSIS_STYLE: CSSProperties = {
+  display: "block",
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+}
 
 interface HarnessProps {
   addTitleTooltip: boolean
   label: string
   /** Optional rendered label content (simulates Markdown plain text). */
   labelContent?: string
+  /** When false, the label box overflows without painting an ellipsis. */
+  ellipsis?: boolean
 }
 
 function LabelTitleHarness({
   addTitleTooltip,
   label,
   labelContent,
+  ellipsis = true,
 }: HarnessProps): ReactElement {
   const { titleRef, labelTextRef } = useLabelTitleTooltip(
     addTitleTooltip,
@@ -41,7 +51,11 @@ function LabelTitleHarness({
 
   return (
     <div ref={titleRef} data-testid="title-host">
-      <span ref={labelTextRef} data-testid="label-text">
+      <span
+        ref={labelTextRef}
+        data-testid="label-text"
+        style={ellipsis ? ELLIPSIS_STYLE : undefined}
+      >
         {labelContent ?? label}
       </span>
     </div>
@@ -54,6 +68,8 @@ function MissingLabelHarness(): ReactElement {
 }
 
 describe("useLabelTitleTooltip", () => {
+  const layout = mockEllipsizedLabels()
+
   it("sets a native title from the rendered label text when enabled", () => {
     render(
       <LabelTitleHarness
@@ -79,7 +95,11 @@ describe("useLabelTitleTooltip", () => {
       const { titleRef, labelTextRef } = useLabelTitleTooltip(true, "one two")
       return (
         <div ref={titleRef} data-testid="title-host">
-          <span ref={labelTextRef} data-testid="label-text">
+          <span
+            ref={labelTextRef}
+            data-testid="label-text"
+            style={ELLIPSIS_STYLE}
+          >
             <p>one</p>
             <p>two</p>
             <br />
@@ -166,5 +186,82 @@ describe("useLabelTitleTooltip", () => {
     render(<MissingLabelHarness />)
 
     expect(screen.getByTestId("title-host")).not.toHaveAttribute("title")
+  })
+
+  it("does not set a title when the label is fully visible", () => {
+    layout.setWidths(100, 100)
+    render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+
+    expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+  })
+
+  it("ignores a 1px overflow and treats a larger overflow as clipped", () => {
+    layout.setWidths(101, 100)
+    const { unmount } = render(
+      <LabelTitleHarness addTitleTooltip={true} label="Plain label" />
+    )
+    expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+
+    unmount()
+    layout.setWidths(102, 100)
+    render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+    expect(screen.getByTitle("Plain label")).toBeVisible()
+  })
+
+  it("does not set a title when the box overflows without an ellipsis", () => {
+    render(
+      <LabelTitleHarness
+        addTitleTooltip={true}
+        label="Plain label"
+        ellipsis={false}
+      />
+    )
+
+    expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+  })
+
+  it("reads ellipsis from a descendant when the text wrapper has no box", () => {
+    function ContentsHarness(): ReactElement {
+      const { titleRef, labelTextRef } = useLabelTitleTooltip(true, "Clipped")
+      return (
+        <div ref={titleRef} data-testid="title-host">
+          <span ref={labelTextRef} style={{ display: "contents" }}>
+            <span style={ELLIPSIS_STYLE}>Clipped</span>
+          </span>
+        </div>
+      )
+    }
+
+    render(<ContentsHarness />)
+
+    expect(screen.getByTitle("Clipped")).toBeVisible()
+  })
+
+  it("removes the title when a resize makes the label fit", () => {
+    let resizeCallback: ResizeObserverCallback | undefined
+    class ResizeObserverSpy {
+      public observe = vi.fn()
+      public unobserve = vi.fn()
+      public disconnect = vi.fn()
+
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback
+      }
+    }
+
+    const OriginalResizeObserver = globalThis.ResizeObserver
+    globalThis.ResizeObserver = ResizeObserverSpy
+
+    try {
+      render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+      expect(screen.getByTitle("Plain label")).toBeVisible()
+
+      layout.setWidths(100, 100)
+      resizeCallback?.([], {} as ResizeObserver)
+
+      expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+    } finally {
+      globalThis.ResizeObserver = OriginalResizeObserver
+    }
   })
 })

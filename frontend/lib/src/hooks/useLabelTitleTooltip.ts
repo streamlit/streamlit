@@ -18,6 +18,73 @@ import { type RefObject, useEffect, useRef } from "react"
 
 import { plainTextWithBlockGaps } from "~lib/util/plainText"
 
+/**
+ * Pixel slack so subpixel scrollWidth/clientWidth rounding does not count a
+ * fully visible label as clipped. Matches the horizontal-scroll tolerance.
+ */
+const ELLIPSIS_OVERFLOW_TOLERANCE_PX = 1
+
+/**
+ * True when `el` is painting a CSS ellipsis. The ellipsis is not part of the
+ * DOM text, so a trailing "..." check cannot detect it.
+ */
+function hasEllipsisOverflow(el: Element): boolean {
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required to detect a clipped label
+  if (el.scrollWidth <= el.clientWidth + ELLIPSIS_OVERFLOW_TOLERANCE_PX) {
+    return false
+  }
+  return getComputedStyle(el).textOverflow === "ellipsis"
+}
+
+/**
+ * The title host is not always the ellipsis box. Button and checkbox labels
+ * put `display: contents` around the text and ellipsize a descendant; headings
+ * and `st.text` ellipsize the host itself.
+ */
+function isLabelTextOverflowing(root: HTMLElement): boolean {
+  if (hasEllipsisOverflow(root)) {
+    return true
+  }
+  for (const el of root.querySelectorAll("*")) {
+    if (hasEllipsisOverflow(el)) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
+ * Web fonts can widen text without changing the element's border box, so a
+ * ResizeObserver on the host would miss the new overflow.
+ */
+function scheduleFontLoadRecheck(recheck: () => void): () => void {
+  // FontFaceSet is missing in jsdom. The DOM type always declares it, so read
+  // the property through a narrower shape and ignore a missing implementation.
+  let fonts: { ready: Promise<unknown> } | undefined
+  try {
+    fonts = (document as { fonts?: { ready: Promise<unknown> } }).fonts
+  } catch {
+    return () => undefined
+  }
+  if (fonts === undefined) {
+    return () => undefined
+  }
+
+  let cancelled = false
+  void fonts.ready.then(
+    () => {
+      if (!cancelled) {
+        recheck()
+      }
+      return undefined
+    },
+    () => undefined
+  )
+  return () => {
+    cancelled = true
+  }
+}
+
 interface LabelTitleTooltipRefs<
   ContainerElement extends HTMLElement,
   LabelElement extends HTMLElement,
@@ -36,11 +103,13 @@ interface LabelTitleTooltipRefs<
  * - The hook reads rendered plain text from the DOM so a Markdown label is
  *   shown without its raw syntax (Markdown only yields plain text after it
  *   renders).
- * - The native `title` is always set when enabled; the browser shows it on hover
- *   without measuring whether the label is actually clipped.
+ * - The native `title` is set only when an ellipsis box inside the host is
+ *   actually clipped (`scrollWidth` wider than `clientWidth`). A label that
+ *   fits does not get a title.
  * - A MutationObserver re-syncs the title after async Markdown plugins (e.g.
- *   emoji) replace a loading skeleton with the real label. When
- *   `addTitleTooltip` is false, no observer is attached.
+ *   emoji) replace a loading skeleton with the real label. A ResizeObserver
+ *   and `document.fonts.ready` re-check after the width or font metrics
+ *   change. When `addTitleTooltip` is false, no observer is attached.
  *
  * @param addTitleTooltip Whether to attach the native title tooltip.
  * @param identityKey Value whose change forces a title re-sync. Usually the
@@ -71,29 +140,45 @@ export function useLabelTitleTooltip<
       return
     }
 
+    let cancelled = false
+
     const syncTitle = (): void => {
+      if (cancelled) {
+        return
+      }
       const labelNode = labelTextRef.current
       if (!labelNode) {
         node.removeAttribute("title")
         return
       }
       const labelText = plainTextWithBlockGaps(labelNode)
-      if (labelText) {
-        node.title = labelText
-      } else {
+      if (!labelText || !isLabelTextOverflowing(node)) {
         node.removeAttribute("title")
+        return
       }
+      node.title = labelText
     }
 
     syncTitle()
 
-    const observer = new MutationObserver(syncTitle)
-    observer.observe(node, {
+    const mutationObserver = new MutationObserver(syncTitle)
+    mutationObserver.observe(node, {
       childList: true,
       subtree: true,
       characterData: true,
     })
-    return () => observer.disconnect()
+
+    const resizeObserver = new ResizeObserver(syncTitle)
+    resizeObserver.observe(node)
+
+    const cancelFontRecheck = scheduleFontLoadRecheck(syncTitle)
+
+    return () => {
+      cancelled = true
+      cancelFontRecheck()
+      mutationObserver.disconnect()
+      resizeObserver.disconnect()
+    }
   }, [addTitleTooltip, effectIdentityKey])
 
   return { titleRef, labelTextRef }

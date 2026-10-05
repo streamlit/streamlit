@@ -314,8 +314,8 @@ When `wrap=False` on a single-label control:
   switches, and help icons remain visible.
 - Only the text portion of the label shrinks and renders an ellipsis.
 - The full label remains the control's accessible name.
-- When `help` is not set, hovering the control reveals the full label in a tooltip (see
-  "Tooltip for the full label").
+- When `help` is not set, hovering a truncated label reveals the full label in a tooltip
+  (see "Tooltip for the full label").
 
 When `wrap=False` on a text command:
 
@@ -329,8 +329,8 @@ When `wrap=False` on a text command:
   line. Extra body lines after the first newline are not shown. Anchor and help icons
   remain visible.
 - Help icons remain visible and are not clipped by the ellipsis.
-- Hovering the element reveals the full plain-text content in a tooltip, including when
-  `help` is set (see "Tooltip for the full label").
+- Hovering truncated text reveals the full plain-text content in a tooltip, including
+  when `help` is set (see "Tooltip for the full label").
 
 ### Tooltip for the full label
 
@@ -339,13 +339,14 @@ control exposes the full label in a tooltip on hover to keep the wording recover
 without changing the app. The rules:
 
 - **Native `title` tooltip.** The full label is attached as the element's native HTML
-  `title` attribute, which the browser shows on hover. This is a deliberate simplification
-  over measuring the label to decide when it is clipped: no width measurement, resize
-  observation, or Streamlit tooltip component is involved.
-- **Whenever `wrap=False`.** Because a native `title` cannot be conditioned on actual
-  clipping without measurement, the tooltip is present for every `wrap=False` control, not
-  only when the label is truncated. A short label that fits therefore also shows a tooltip
-  with its own text on hover. This is an accepted trade-off for the simpler implementation.
+  `title` attribute, which the browser shows on hover. The title is set only when the
+  label is actually ellipsized (`scrollWidth` exceeds `clientWidth` on an element whose
+  `text-overflow` is `ellipsis`). A resize observer and the existing mutation observer
+  re-check that after resize, font load, and async markdown updates. Streamlit's styled
+  tooltip is not used.
+- **Only when clipped.** A short label that fits does not get a `title`, including when
+  `wrap=False` is explicit or resolved from the auto default inside a horizontal
+  container or a direct column child.
 - **When `help` is set.** Button-like controls skip the native `title` so `help` takes
   precedence. Checkbox, toggle, and text commands keep the native `title` when
   `wrap=False` even if `help` is set: the help icon is a sibling of the truncated text,
@@ -362,10 +363,9 @@ is set, and also applies to `st.checkbox`, `st.toggle`, and the text commands
 (`st.markdown`, `st.title`, `st.header`, `st.subheader`, `st.caption`,
 `st.text`), which keep `title` alongside `help`.
 
-The native `title` is used instead of Streamlit's styled tooltip because it removes the
-frontend truncation-measurement machinery entirely. The visible trade-offs are that the
-tooltip uses the browser's default styling (not the `help` tooltip style) and appears even
-on labels that are not clipped.
+The native `title` is used instead of Streamlit's styled tooltip. The visible trade-off
+is that the tooltip uses the browser's default styling (not the `help` tooltip style).
+It does not appear when the label is fully visible.
 
 ### Deterministic height
 
@@ -727,14 +727,12 @@ initial API. `st.radio(horizontal=True)` could technically accept `wrap` for con
 but it is left out to keep the initial surface minimal; it can adopt the same one-row
 contract in a follow-up if demand warrants.
 
-### Styled, only-when-clipped label tooltip
+### Styled label tooltip
 
-The full-label tooltip uses the native HTML `title` for simplicity (see "Tooltip for the
-full label"), which means it uses the browser's default styling and shows even when the
-label is not actually clipped. A follow-up could replace it with Streamlit's styled
-tooltip gated on real truncation detection (measuring the label width and re-checking on
-resize) so it matches the `help` tooltip styling and appears only when the label is
-clipped. This was intentionally deferred to avoid the frontend measurement machinery.
+The full-label tooltip uses the native HTML `title` and appears only when the label is
+clipped (see "Tooltip for the full label"). A follow-up could replace that native title
+with Streamlit's styled tooltip so it matches the `help` tooltip styling. Measurement
+and resize handling already exist; this follow-up is only the visual treatment.
 
 ## Documentation and testing
 
@@ -746,9 +744,9 @@ clipped. This was intentionally deferred to avoid the frontend measurement machi
   multiselect controls.
 - Add button tests for ellipsis, icons, shortcuts, Markdown, accessible names, and
   popover/menu expansion icons.
-- Add tests that the full-label `title` tooltip is set when `wrap=False` and no `help` is
-  set, is omitted when `help` is present (so `help` takes precedence), and uses plain text
-  for Markdown labels.
+- Add tests that the full-label `title` tooltip is set when `wrap=False`, the label is
+  actually ellipsized, and no `help` is set; is omitted when the label fits or when
+  `help` is present (so `help` takes precedence); and uses plain text for Markdown labels.
 - Add tests that the auto default (`wrap=None`) resolves to no-wrap inside a horizontal
   container and for direct column children, while resolving to wrapping in other layouts.
   Include transparent-block preservation, nested real-container reset, explicit-value

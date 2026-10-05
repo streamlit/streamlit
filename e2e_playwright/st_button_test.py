@@ -397,6 +397,19 @@ def test_wrap_auto_no_wrap_for_direct_column_children(app: Page):
     expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
 
 
+def test_short_label_has_no_native_title(app: Page):
+    """A label that fits does not get a native title, including when no-wrap is
+    the resolved default inside a horizontal container.
+    """
+    short_horizontal = get_element_by_key(app, "wrap_auto_short_button")
+    short_explicit = get_element_by_key(app, "wrap_false_short_button")
+
+    expect(short_horizontal.get_by_role("button", name="Short label")).to_be_visible()
+    expect(short_horizontal.get_by_title("Short label", exact=True)).to_have_count(0)
+    expect(short_explicit.get_by_role("button", name="Short label")).to_be_visible()
+    expect(short_explicit.get_by_title("Short label", exact=True)).to_have_count(0)
+
+
 def test_wrap_false_help_takes_precedence_over_title(app: Page):
     """When help is set, no native title is added (the help tooltip takes over)."""
     container = get_element_by_key(app, "wrap_help_button")

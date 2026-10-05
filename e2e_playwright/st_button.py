@@ -178,6 +178,13 @@ with st.container(key="wrap_buttons"):
 with st.container(horizontal=True, width=200, key="wrap_auto_horizontal"):
     st.button(_WRAP_LABEL, key="wrap_auto_button")
 
+# A short label in a horizontal container resolves to no-wrap but is fully
+# visible, so it must not get a native title. The same applies to an explicit
+# wrap=False label that fits.
+with st.container(horizontal=True, key="wrap_auto_short_horizontal"):
+    st.button("Short label", key="wrap_auto_short_button")
+st.button("Short label", wrap=False, key="wrap_false_short_button")
+
 # Direct column children use the same compact auto default. Nesting the control
 # in another layout container (here a vertical st.container) resets that direct
 # placement, while an explicit wrap value always wins.

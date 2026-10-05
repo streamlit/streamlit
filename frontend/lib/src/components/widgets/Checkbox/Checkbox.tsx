@@ -90,8 +90,8 @@ function Checkbox({
     element.labelVisibility?.value
   )
 
-  // When wrap resolves to no-wrap, a native title on the label reveals the full
-  // label on hover. Unlike a button (whose help tooltip covers the whole control),
+  // When wrap resolves to no-wrap, a native title on a clipped label reveals
+  // the full label on hover. Unlike a button (whose help tooltip covers the whole control),
   // help here lives on a separate icon, so the title and help never compete and
   // both stay enabled.
   const wrap = useResolvedWrap(element.wrap)
