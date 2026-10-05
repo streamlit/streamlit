@@ -279,7 +279,7 @@ const AudioInput: React.FC<Props> = ({
   // Update the ref after controller is initialized
   controllerRef.current = controller
 
-  const { state, isPlaybackPlaying } = controller
+  const { state, isPlaybackPlaying, playback } = controller
 
   const handleClear = useCallback(
     async ({
@@ -380,12 +380,12 @@ const AudioInput: React.FC<Props> = ({
 
     const loadRecording = async (): Promise<void> => {
       try {
-        await controllerRef.current?.playback.load(recordingUrl)
+        await playback.load(recordingUrl)
         if (cancelled) {
           return
         }
 
-        const durationMs = controllerRef.current?.playback.getDurationMs() ?? 0
+        const durationMs = playback.getDurationMs()
         if (durationMs > 0) {
           setProgressTime(formatTime(durationMs))
         }
@@ -402,7 +402,7 @@ const AudioInput: React.FC<Props> = ({
     return () => {
       cancelled = true
     }
-  }, [recordingUrl, recordingTime])
+  }, [recordingUrl, recordingTime, playback])
 
   useEffect(() => {
     if (isNullOrUndefined(widgetFormId)) return

@@ -24,6 +24,7 @@ import {
   offset,
   type OpenChangeReason,
   type Placement,
+  type ReferenceType,
   shift,
   type ShiftOptions,
   size,
@@ -54,16 +55,10 @@ export const SHIFT_VIEWPORT_PADDING = 8
 const EMPTY_MIDDLEWARE: Middleware[] = []
 
 type UseFloatingReturn = ReturnType<typeof useFloating>
-type FloatingRefs = UseFloatingReturn["refs"]
-
-type BoundFloatingSetter<T extends (...args: never[]) => unknown> = (
-  this: void,
-  ...args: Parameters<T>
-) => ReturnType<T>
 
 type UseFloatingOverlayReturn = UseFloatingReturn & {
-  setFloating: BoundFloatingSetter<FloatingRefs["setFloating"]>
-  setReference: BoundFloatingSetter<FloatingRefs["setReference"]>
+  setFloating: (node: HTMLElement | null) => void
+  setReference: (node: ReferenceType | null) => void
 }
 
 /**
@@ -120,14 +115,14 @@ export function useFloatingOverlay(
   })
 
   const setFloating = useCallback(
-    (...args: Parameters<FloatingRefs["setFloating"]>) => {
-      floating.refs.setFloating(...args)
+    (node: HTMLElement | null) => {
+      floating.refs.setFloating(node)
     },
     [floating.refs]
   )
   const setReference = useCallback(
-    (...args: Parameters<FloatingRefs["setReference"]>) => {
-      floating.refs.setReference(...args)
+    (node: ReferenceType | null) => {
+      floating.refs.setReference(node)
     },
     [floating.refs]
   )

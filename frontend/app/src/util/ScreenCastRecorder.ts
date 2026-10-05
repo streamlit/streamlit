@@ -40,10 +40,11 @@ class ScreenCastRecorder {
   /** True if the current browser likely supports screencasts. */
   public static isSupportedBrowser(): boolean {
     try {
+      const mediaDevices = navigator.mediaDevices
       return (
-        notNullOrUndefined(navigator.mediaDevices) &&
-        "getUserMedia" in navigator.mediaDevices &&
-        "getDisplayMedia" in navigator.mediaDevices &&
+        notNullOrUndefined(mediaDevices) &&
+        typeof Reflect.get(mediaDevices, "getUserMedia") === "function" &&
+        typeof Reflect.get(mediaDevices, "getDisplayMedia") === "function" &&
         MediaRecorder.isTypeSupported(BLOB_TYPE)
       )
     } catch {

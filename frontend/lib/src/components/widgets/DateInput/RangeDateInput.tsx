@@ -147,31 +147,34 @@ function AnchorDateWatcher({
   onAnchorSelect: (date: CalendarDate) => void
 }): null {
   const state = useContext(RangeCalendarStateContext)
+  const stateRef = useRef(state)
+  stateRef.current = state
   const anchorDate = state?.anchorDate ?? null
   const prevAnchorRef = useRef<CalendarDate | null>(null)
   const prevSeedRef = useRef<CalendarDate | null>(null)
 
   useEffect(() => {
+    const calendarState = stateRef.current
     // (Re-)seed when seedAnchor changes to a new non-null value (handles
     // both initial mount and user editing the start field while the calendar
     // is open with displayEnd === null).
     if (seedAnchor && !datesEqual(seedAnchor, prevSeedRef.current)) {
       prevSeedRef.current = seedAnchor
       prevAnchorRef.current = seedAnchor
-      state?.setAnchorDate(seedAnchor)
+      calendarState?.setAnchorDate(seedAnchor)
       return
     }
     if (!seedAnchor) {
       prevSeedRef.current = null
       if (prevAnchorRef.current) {
-        state?.setAnchorDate(null)
+        calendarState?.setAnchorDate(null)
       }
     }
     if (anchorDate && !prevAnchorRef.current) {
       onAnchorSelect(anchorDate)
     }
     prevAnchorRef.current = anchorDate
-  }, [anchorDate, state, onAnchorSelect, seedAnchor])
+  }, [anchorDate, onAnchorSelect, seedAnchor])
 
   return null
 }
