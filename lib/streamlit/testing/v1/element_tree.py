@@ -105,9 +105,7 @@ T = TypeVar("T")
 # Public ``get()`` names that are not the node ``type`` string.
 _GET_TYPE_ALIASES: dict[str, str] = {
     "datetime_input": "date_time_input",
-    "columns": "column",
     "help": "help_info",
-    "tabs": "tab",
 }
 
 
@@ -2271,6 +2269,8 @@ class Block:
 
     @property
     def chat_message(self) -> BlockList[ChatMessage]:
+        # Skip this node so a chat message does not match itself when querying
+        # descendants (same contract as container).
         return BlockList(
             [e for e in self if isinstance(e, ChatMessage) and e is not self]
         )
@@ -2289,6 +2289,8 @@ class Block:
 
     @property
     def columns(self) -> BlockList[Column]:
+        # Skip this node so a column does not match itself when querying
+        # descendants (same contract as container).
         return BlockList([e for e in self if isinstance(e, Column) and e is not self])
 
     @property
@@ -2366,6 +2368,8 @@ class Block:
 
     @property
     def expander(self) -> BlockList[Expander]:
+        # Skip this node so an expander does not match itself when querying
+        # descendants (same contract as container).
         return BlockList([e for e in self if isinstance(e, Expander) and e is not self])
 
     @property
@@ -2430,6 +2434,8 @@ class Block:
 
     @property
     def status(self) -> BlockList[Status]:
+        # Skip this node so a status block does not match itself when querying
+        # descendants (same contract as container).
         return BlockList([e for e in self if isinstance(e, Status) and e is not self])
 
     @property
@@ -2446,6 +2452,8 @@ class Block:
 
     @property
     def tabs(self) -> BlockList[Tab]:
+        # Skip this node so a tab does not match itself when querying
+        # descendants (same contract as container).
         return BlockList([e for e in self if isinstance(e, Tab) and e is not self])
 
     @property

@@ -33,6 +33,7 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
     AppTestError,
+    BlockList,
     Space,
     UnknownElement,
     _form_clear_flags,
@@ -2252,10 +2253,11 @@ def test_form_key_and_get_by_key() -> None:
 
 
 def test_layout_collections_are_callable_by_key() -> None:
-    """expander, tabs, columns, status, and chat_message are BlockLists.
+    """Layout collections are BlockLists.
 
-    ``at.expander("details")`` used to raise ``TypeError`` because those
-    collections were plain lists. Lookup is by user key, matching container.
+    A keyed expander can be selected with ``at.expander("details")``. Index
+    access is unchanged. A missing key raises ``KeyError``. A block does not
+    appear in its own collection.
     """
 
     def script() -> None:
@@ -2264,6 +2266,8 @@ def test_layout_collections_are_callable_by_key() -> None:
         with st.container(key="wrap"):
             with st.expander("Details", key="details"):
                 st.text("hidden")
+                with st.expander("More", key="more"):
+                    st.text("nested")
             with st.status("working", state="complete"):
                 st.text("done")
             with st.chat_message("user"):
@@ -2277,18 +2281,21 @@ def test_layout_collections_are_callable_by_key() -> None:
 
     at = AppTest.from_function(script).run()
     assert not at.exception
-    block_list_type = type(at.container)
-    assert isinstance(at.expander, block_list_type)
-    assert isinstance(at.tabs, block_list_type)
-    assert isinstance(at.columns, block_list_type)
-    assert isinstance(at.status, block_list_type)
-    assert isinstance(at.chat_message, block_list_type)
+    assert isinstance(at.expander, BlockList)
+    assert isinstance(at.tabs, BlockList)
+    assert isinstance(at.columns, BlockList)
+    assert isinstance(at.status, BlockList)
+    assert isinstance(at.chat_message, BlockList)
 
+    assert len(at.expander) == 2
+    assert len(at.status) == 1
     assert at.expander("details").label == "Details"
     assert at.expander("details").text[0].value == "hidden"
     assert at.container("wrap").expander("details").key == "details"
-    assert len(at.expander("details").expander) == 0
-    assert at.expander("details").get("expander") == []
+    assert at.expander("more").label == "More"
+    assert len(at.expander("details").expander) == 1
+    assert at.expander("details").expander[0].key == "more"
+    assert at.expander("details").get("expander")[0].key == "more"
     assert list(at.get("expander")) == list(at.expander)
     with pytest.raises(KeyError):
         at.expander("missing")
