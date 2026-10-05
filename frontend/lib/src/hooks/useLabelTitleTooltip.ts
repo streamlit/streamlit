@@ -25,12 +25,17 @@ import { plainTextWithBlockGaps } from "~lib/util/plainText"
 const ELLIPSIS_OVERFLOW_TOLERANCE_PX = 1
 
 /**
- * Ellipsis boxes that are not the title host. Button, checkbox, and markdown
- * labels ellipsize the markdown/caption container (or a badge inside it);
- * headings and st.text ellipsize the host itself.
+ * Class on a markdown root whose `truncate` styles paint the ellipsis.
+ * Production code must not query `data-testid` for this.
  */
-const ELLIPSIS_TARGET_SELECTOR =
-  '[data-testid="stMarkdownContainer"], [data-testid="stCaptionContainer"], .stMarkdownBadge'
+export const MARKDOWN_ELLIPSIS_CLASS = "stMarkdownEllipsis"
+
+/**
+ * Ellipsis boxes that are not the title host. Button, checkbox, and markdown
+ * labels ellipsize the markdown root (or a badge inside it); headings and
+ * st.text ellipsize the host itself.
+ */
+const ELLIPSIS_TARGET_SELECTOR = `.${MARKDOWN_ELLIPSIS_CLASS}, .stMarkdownBadge`
 
 /**
  * True when `el` is painting a CSS ellipsis. The ellipsis is not part of the
@@ -61,35 +66,33 @@ function isLabelTextOverflowing(root: HTMLElement): boolean {
   return false
 }
 
+interface FontFaceSetLike {
+  addEventListener: (type: string, listener: () => void) => void
+  removeEventListener: (type: string, listener: () => void) => void
+}
+
 /**
- * Web fonts can widen text without changing the element's border box, so a
- * ResizeObserver on the host would miss the new overflow.
+ * Web fonts can widen text without changing the host's border box, including
+ * a face requested after this effect runs. `loadingdone` covers those loads.
+ * jsdom has no FontFaceSet.
  */
-function scheduleFontLoadRecheck(recheck: () => void): () => void {
-  // FontFaceSet is missing in jsdom. The DOM type always declares it, so read
-  // the property through a narrower shape and ignore a missing implementation.
-  let fonts: { ready: Promise<unknown> } | undefined
-  try {
-    fonts = (document as { fonts?: { ready: Promise<unknown> } }).fonts
-  } catch {
-    return () => undefined
-  }
+function subscribeToFontLoads(recheck: () => void): () => void {
+  const fonts = (document as { fonts?: FontFaceSetLike }).fonts
   if (fonts === undefined) {
     return () => undefined
   }
-
-  let cancelled = false
-  void fonts.ready.then(
-    () => {
-      if (!cancelled) {
-        recheck()
-      }
-      return undefined
-    },
-    () => undefined
-  )
+  const onLoadingDone = (): void => {
+    recheck()
+  }
+  fonts.addEventListener("loadingdone", onLoadingDone)
   return () => {
-    cancelled = true
+    fonts.removeEventListener("loadingdone", onLoadingDone)
+  }
+}
+
+function clearTitle(node: HTMLElement): void {
+  if (node.hasAttribute("title")) {
+    node.removeAttribute("title")
   }
 }
 
@@ -118,8 +121,8 @@ interface LabelTitleTooltipRefs<
  *   emoji) replace a loading skeleton with the real label. A ResizeObserver
  *   rechecks when the host's box changes, and captured image `load`/`error`
  *   events recheck when a resource changes the text width without resizing
- *   the host. `document.fonts.ready` covers late font metrics. When
- *   `addTitleTooltip` is false, no observer is attached.
+ *   the host. `document.fonts` `loadingdone` covers font loads that finish
+ *   later. When `addTitleTooltip` is false, no observer is attached.
  *
  * @param addTitleTooltip Whether to attach the native title tooltip.
  * @param identityKey Value whose change forces a title re-sync. Usually the
@@ -157,16 +160,18 @@ export function useLabelTitleTooltip<
         return
       }
       const labelNode = labelTextRef.current
-      if (!labelNode) {
-        node.removeAttribute("title")
+      if (!labelNode || !isLabelTextOverflowing(node)) {
+        clearTitle(node)
         return
       }
       const labelText = plainTextWithBlockGaps(labelNode)
-      if (!labelText || !isLabelTextOverflowing(node)) {
-        node.removeAttribute("title")
+      if (!labelText) {
+        clearTitle(node)
         return
       }
-      node.title = labelText
+      if (node.getAttribute("title") !== labelText) {
+        node.title = labelText
+      }
     }
 
     syncTitle()
@@ -190,7 +195,7 @@ export function useLabelTitleTooltip<
     node.addEventListener("load", onResourceLoad, true)
     node.addEventListener("error", onResourceLoad, true)
 
-    const cancelFontRecheck = scheduleFontLoadRecheck(syncTitle)
+    const cancelFontRecheck = subscribeToFontLoads(syncTitle)
 
     return () => {
       cancelled = true

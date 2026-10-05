@@ -20,7 +20,10 @@ import { screen, waitFor } from "@testing-library/react"
 
 import { mockEllipsizedLabels, render } from "~lib/test_util"
 
-import { useLabelTitleTooltip } from "./useLabelTitleTooltip"
+import {
+  MARKDOWN_ELLIPSIS_CLASS,
+  useLabelTitleTooltip,
+} from "./useLabelTitleTooltip"
 
 const ELLIPSIS_STYLE: CSSProperties = {
   display: "block",
@@ -222,7 +225,7 @@ describe("useLabelTitleTooltip", () => {
       return (
         <div ref={titleRef} data-testid="title-host">
           <span ref={labelTextRef} style={{ display: "contents" }}>
-            <span data-testid="stMarkdownContainer" style={ELLIPSIS_STYLE}>
+            <span className={MARKDOWN_ELLIPSIS_CLASS} style={ELLIPSIS_STYLE}>
               Clipped
             </span>
           </span>
@@ -260,6 +263,48 @@ describe("useLabelTitleTooltip", () => {
 
     screen.getByTestId("label-image").dispatchEvent(new Event("load"))
     expect(screen.getByTitle("Plain label")).toBeVisible()
+  })
+
+  it("rechecks overflow when a font finishes loading", () => {
+    const listeners = new Map<string, () => void>()
+    const fonts = {
+      addEventListener: (type: string, listener: () => void): void => {
+        listeners.set(type, listener)
+      },
+      removeEventListener: (type: string, listener: () => void): void => {
+        if (listeners.get(type) === listener) {
+          listeners.delete(type)
+        }
+      },
+    }
+    const originalFonts = Object.getOwnPropertyDescriptor(document, "fonts")
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: fonts,
+    })
+
+    try {
+      layout.setWidths(100, 100)
+      const { unmount } = render(
+        <LabelTitleHarness addTitleTooltip={true} label="Plain label" />
+      )
+      expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+
+      layout.setWidths(200, 100)
+      expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+
+      listeners.get("loadingdone")?.()
+      expect(screen.getByTitle("Plain label")).toBeVisible()
+
+      unmount()
+      expect(listeners.has("loadingdone")).toBe(false)
+    } finally {
+      if (originalFonts) {
+        Object.defineProperty(document, "fonts", originalFonts)
+      } else {
+        Reflect.deleteProperty(document, "fonts")
+      }
+    }
   })
 
   it("removes the title when a resize makes the label fit", () => {

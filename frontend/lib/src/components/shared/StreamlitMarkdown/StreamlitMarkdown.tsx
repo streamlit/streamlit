@@ -62,7 +62,10 @@ import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
+import {
+  MARKDOWN_ELLIPSIS_CLASS,
+  useLabelTitleTooltip,
+} from "~lib/hooks/useLabelTitleTooltip"
 import {
   getMarkdownTextColors,
   getThemeBackgroundColors,
@@ -1479,6 +1482,7 @@ const StreamlitMarkdown: FC<Props> = ({
       isToast={isToast}
       truncate={truncate}
       style={style}
+      className={truncate ? MARKDOWN_ELLIPSIS_CLASS : undefined}
       data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
     >
       <RenderedMarkdown
