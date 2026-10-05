@@ -390,11 +390,14 @@ class WidgetList(ElementList[W_co], Generic[W_co]):
     """ElementList narrowed to widgets for typing."""
 
 
-class BlockList:
+B_co = TypeVar("B_co", bound="Block", covariant=True)
+
+
+class BlockList(Generic[B_co]):
     """Sequence of layout blocks with optional lookup by user key."""
 
-    def __init__(self, els: Sequence[Block]) -> None:
-        self._list = list(els)
+    def __init__(self, els: Sequence[B_co]) -> None:
+        self._list: list[B_co] = list(els)
 
     def __len__(self) -> int:
         return len(self._list)
@@ -404,23 +407,23 @@ class BlockList:
         return len(self)
 
     @overload
-    def __getitem__(self, idx: int) -> Block: ...
+    def __getitem__(self, idx: int) -> B_co: ...
 
     @overload
-    def __getitem__(self, idx: slice) -> BlockList: ...
+    def __getitem__(self, idx: slice) -> BlockList[B_co]: ...
 
-    def __getitem__(self, idx: int | slice) -> Block | BlockList:
+    def __getitem__(self, idx: int | slice) -> B_co | BlockList[B_co]:
         if isinstance(idx, slice):
             return BlockList(self._list[idx])
         return self._list[idx]
 
-    def __iter__(self) -> Iterator[Block]:
+    def __iter__(self) -> Iterator[B_co]:
         return iter(self._list)
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def __eq__(self, other: BlockList | object) -> bool:
+    def __eq__(self, other: BlockList[Any] | object) -> bool:
         if isinstance(other, BlockList):
             return self._list == other._list
         return self._list == other
@@ -428,7 +431,7 @@ class BlockList:
     def __hash__(self) -> int:
         return hash(tuple(self._list))
 
-    def __call__(self, key: str) -> Block:
+    def __call__(self, key: str) -> B_co:
         """Return the first block in this collection with the given user key.
 
         The same key can appear on different block types, so this returns the
@@ -2267,8 +2270,10 @@ class Block:
         return WidgetList(self.get("chat_input"))  # type: ignore
 
     @property
-    def chat_message(self) -> Sequence[ChatMessage]:
-        return self.get("chat_message")  # type: ignore
+    def chat_message(self) -> BlockList[ChatMessage]:
+        return BlockList(
+            [e for e in self if isinstance(e, ChatMessage) and e is not self]
+        )
 
     @property
     def checkbox(self) -> WidgetList[Checkbox]:
@@ -2283,11 +2288,11 @@ class Block:
         return WidgetList(self.get("color_picker"))  # type: ignore
 
     @property
-    def columns(self) -> Sequence[Column]:
-        return self.get("column")  # type: ignore
+    def columns(self) -> BlockList[Column]:
+        return BlockList([e for e in self if isinstance(e, Column) and e is not self])
 
     @property
-    def container(self) -> BlockList:
+    def container(self) -> BlockList[Block]:
         """``st.container`` blocks, including horizontal/flex containers.
 
         The implicit row wrapper created by ``st.columns`` is excluded.
@@ -2342,7 +2347,7 @@ class Block:
         return WidgetList(self.get("file_uploader"))  # type: ignore
 
     @property
-    def form(self) -> BlockList:
+    def form(self) -> BlockList[Block]:
         """``st.form`` blocks. The form ID is ``Block.key``."""
         return BlockList(
             [
@@ -2360,8 +2365,8 @@ class Block:
         return WidgetList([button for button in self.button if _widget_form_id(button)])
 
     @property
-    def expander(self) -> Sequence[Expander]:
-        return self.get("expander")  # type: ignore
+    def expander(self) -> BlockList[Expander]:
+        return BlockList([e for e in self if isinstance(e, Expander) and e is not self])
 
     @property
     def header(self) -> ElementList[Header]:
@@ -2424,8 +2429,8 @@ class Block:
         return ElementList(self.get("space"))  # type: ignore
 
     @property
-    def status(self) -> Sequence[Status]:
-        return self.get("status")  # type: ignore
+    def status(self) -> BlockList[Status]:
+        return BlockList([e for e in self if isinstance(e, Status) and e is not self])
 
     @property
     def subheader(self) -> ElementList[Subheader]:
@@ -2440,8 +2445,8 @@ class Block:
         return ElementList(self.get("table"))  # type: ignore
 
     @property
-    def tabs(self) -> Sequence[Tab]:
-        return self.get("tab")  # type: ignore
+    def tabs(self) -> BlockList[Tab]:
+        return BlockList([e for e in self if isinstance(e, Tab) and e is not self])
 
     @property
     def text(self) -> ElementList[Text]:
@@ -2482,7 +2487,8 @@ class Block:
         ``datetime_input`` vs ``date_time_input``) are accepted. Node type
         names (usually the proto field name) keep working. ``pills`` /
         ``segmented_control`` / ``container`` / ``form`` /
-        ``form_submit_button`` use the same filtering as the matching
+        ``form_submit_button`` / ``expander`` / ``tabs`` / ``columns`` /
+        ``status`` / ``chat_message`` use the same filtering as the matching
         attributes.
         """
         if element_type == "pills":
@@ -2495,6 +2501,16 @@ class Block:
             return list(self.form)
         if element_type == "form_submit_button":
             return list(self.form_submit_button)
+        if element_type == "chat_message":
+            return list(self.chat_message)
+        if element_type in {"columns", "column"}:
+            return list(self.columns)
+        if element_type == "expander":
+            return list(self.expander)
+        if element_type == "status":
+            return list(self.status)
+        if element_type in {"tabs", "tab"}:
+            return list(self.tabs)
         resolved = _GET_TYPE_ALIASES.get(element_type, element_type)
         return [e for e in self if e.type == resolved]
 
