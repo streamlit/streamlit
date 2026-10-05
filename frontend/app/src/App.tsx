@@ -395,9 +395,16 @@ export class App extends PureComponent<Props, State> {
 
   // A page tick that arrived while a script run was still active. It is sent
   // once that run finishes on its own, so a slow page is not preempted and
-  // does not wait another full interval. Stop, a non-auto full rerun, and an
-  // interrupted run (FINISHED_EARLY_FOR_RERUN) clear it instead.
+  // does not wait another full interval. Stop and a non-auto full rerun clear
+  // it. An interrupted run does not send it in the idle gap before the
+  // replacement: a full NewSession drops it, and a fragment replacement keeps
+  // it until that fragment run finishes.
   private pageAutoRerunDeferred = false
+
+  // The active run was interrupted. The next committed RUNNING → NOT_RUNNING
+  // transition is the gap before the replacement run and must not flush a
+  // held page tick.
+  private pageAutoRerunSkipIdleFlush = false
 
   // Whether a suppression reason has been reported this page load. Tracked
   // separately from `skillsNudgeShown` so recording a suppression does NOT
@@ -878,7 +885,13 @@ export class App extends PureComponent<Props, State> {
           // It's okay if this fails, the `measure` call is for debugging/profiling
         }
         if (prevState.scriptRunState === ScriptRunState.RUNNING) {
-          this.flushDeferredPageAutoRerun()
+          if (this.pageAutoRerunSkipIdleFlush) {
+            // The server has already accepted a replacement run. Sending the
+            // held tick here would supersede it.
+            this.pageAutoRerunSkipIdleFlush = false
+          } else {
+            this.flushDeferredPageAutoRerun()
+          }
         }
       }
 
@@ -1400,7 +1413,8 @@ export class App extends PureComponent<Props, State> {
     this.startAutoRerunTimer(timerId, interval, () => {
       // Page ticks are full reruns. Skip one while an st.dialog is open.
       // A tick during an active run is held until that run finishes on its
-      // own. Stop, a user rerun, and an interrupted run clear it first.
+      // own. Stop and a user rerun clear it. An interrupted run delays it
+      // until the replacement is known.
       if (!fragmentId) {
         if (
           isElementDialogOpen() ||
@@ -1412,6 +1426,8 @@ export class App extends PureComponent<Props, State> {
           this.pageAutoRerunDeferred = true
           return
         }
+        // This tick is sent now, so a later finish must not send it again.
+        this.clearHeldPageAutoRerun()
       }
       this.widgetMgr.sendUpdateWidgetsMessage(fragmentId || undefined, true)
     })
@@ -1435,7 +1451,7 @@ export class App extends PureComponent<Props, State> {
     // the same long interval must not, because that tick is still waiting for
     // the current run to finish.
     if (id === App.PAGE_AUTO_RERUN_ID && !preserveDeferredPageTick) {
-      this.pageAutoRerunDeferred = false
+      this.clearHeldPageAutoRerun()
     }
 
     const intervalMs = intervalSeconds * 1000
@@ -1485,7 +1501,7 @@ export class App extends PureComponent<Props, State> {
     stopAutoRerun.fragmentIds.forEach(fragmentId => {
       this.clearAutoRerunInterval(fragmentId)
       if (!fragmentId) {
-        this.pageAutoRerunDeferred = false
+        this.clearHeldPageAutoRerun()
       }
     })
   }
@@ -1495,6 +1511,15 @@ export class App extends PureComponent<Props, State> {
    * @param statusChangeProto a SessionStatus protobuf
    */
   handleSessionStatusChanged = (statusChangeProto: SessionStatus): void => {
+    if (
+      statusChangeProto.scriptIsRunning &&
+      this.state.scriptRunState !== ScriptRunState.STOP_REQUESTED
+    ) {
+      // The script is running again, so the interrupt gap is over. A later
+      // finish of this run may replay a tick that a fragment interrupt kept.
+      this.pageAutoRerunSkipIdleFlush = false
+    }
+
     this.setState((prevState: State) => {
       // Determine our new ScriptRunState
       let { scriptRunState } = prevState
@@ -1693,6 +1718,8 @@ export class App extends PureComponent<Props, State> {
         this.onPageIconChanged(`${import.meta.env.BASE_URL}favicon.png`)
       }
     } else {
+      // Fragment reruns keep the page timer. A page tick held across the
+      // interrupt is sent when this fragment run finishes.
       this.setState({
         fragmentIdsThisRun,
         latestRunTime: performance.now(),
@@ -2122,12 +2149,12 @@ export class App extends PureComponent<Props, State> {
    * @param status the ScriptFinishedStatus that the script finished with
    */
   handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
-    // An interrupted run (st.rerun(), or a full rerun that preempts) is
-    // replaced by another execution. The server reports that stop before the
-    // next NewSession, and that RUNNING → NOT_RUNNING gap would otherwise
-    // send a held page tick and supersede the rerun already requested.
+    // An interrupted run is replaced by another execution. The server reports
+    // that stop before the next NewSession. Skip the idle gap so a held page
+    // tick is not sent there. A full NewSession drops the tick; a fragment
+    // replacement keeps it until that run finishes.
     if (status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN) {
-      this.pageAutoRerunDeferred = false
+      this.pageAutoRerunSkipIdleFlush = true
     }
 
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
@@ -2385,7 +2412,7 @@ export class App extends PureComponent<Props, State> {
       this.clearStoredAutoRerunTimer(entry)
     })
     this.autoRerunIntervals.clear()
-    this.pageAutoRerunDeferred = false
+    this.clearHeldPageAutoRerun()
   }
 
   /**
@@ -2407,9 +2434,18 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
+   * Drop a held page tick and forget an interrupt gap.
+   * The page timer itself stays armed.
+   */
+  private clearHeldPageAutoRerun(): void {
+    this.pageAutoRerunDeferred = false
+    this.pageAutoRerunSkipIdleFlush = false
+  }
+
+  /**
    * Send one page tick that was skipped while a script run was active.
-   * Stop, a non-auto full rerun, an interrupted run, and clearing the page
-   * timer drop it instead.
+   * Stop, a non-auto full rerun, and clearing the page timer drop it.
+   * The idle gap after an interrupted run does not call this.
    */
   private flushDeferredPageAutoRerun(): void {
     if (!this.pageAutoRerunDeferred) {
@@ -2630,7 +2666,7 @@ export class App extends PureComponent<Props, State> {
     // A user or st.rerun() full rerun replaces this countdown. Drop a tick
     // held during the previous run so it is not sent when that run stops.
     if (!fragmentId && !isAutoRerun) {
-      this.pageAutoRerunDeferred = false
+      this.clearHeldPageAutoRerun()
     }
 
     this.sendBackMsg(
@@ -2672,7 +2708,7 @@ export class App extends PureComponent<Props, State> {
     backMsg.type = "stopScript"
     this.sendBackMsg(backMsg)
     // Drop a tick held during this run. The timer stays armed for the next interval.
-    this.pageAutoRerunDeferred = false
+    this.clearHeldPageAutoRerun()
     this.setState({ scriptRunState: ScriptRunState.STOP_REQUESTED })
   }
 
