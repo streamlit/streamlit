@@ -273,6 +273,12 @@ interface State {
 
 export const LOG = getLogger("App")
 
+/**
+ * Largest delay `setTimeout` / `setInterval` accept. The Web IDL `long` type
+ * is a signed 32-bit integer, so a bigger delay wraps and can fire immediately.
+ */
+const MAX_TIMER_DELAY_MS = 2_147_483_647
+
 declare global {
   interface Window {
     streamlitDebug: {
@@ -363,18 +369,21 @@ export class App extends PureComponent<Props, State> {
   // Active `run_every` auto-rerun timers. Fragment timers are keyed by fragment
   // id. The page timer from `st.set_page_config(run_every=...)` uses an empty
   // id, matching an `AutoRerun` message with no fragment id. These are
-  // imperative resources (setInterval handles), so they live outside of React
-  // state. A fragment reuses its timer when it re-registers with the same
-  // interval (so frequent ancestor reruns don't reset its countdown). The page
-  // timer always restarts, because every full rerun should begin a new
-  // countdown. The stored `interval` (in seconds) is what fragment
-  // re-registration compares against.
+  // imperative timer handles, so they live outside of React state. Re-registering
+  // the same interval leaves the countdown alone. Full reruns still restart the
+  // page countdown because `handleNewSession` clears these timers first. The
+  // stored `interval` (in seconds) is what re-registration compares against.
   // Empty string is the page-level timer. Protobuf leaves fragment_id unset
   // as "", and that value is not a valid fragment id.
   private static readonly PAGE_AUTO_RERUN_ID = ""
   private readonly autoRerunIntervals: Map<
     string,
-    { timer: ReturnType<typeof setInterval>; interval: number }
+    {
+      timer: ReturnType<typeof setInterval>
+      interval: number
+      /** False when `timer` is a chained `setTimeout` for a delay above the 32-bit limit. */
+      repeating: boolean
+    }
   > = new Map()
 
   // Whether the skills-install nudge has been shown this page load.
@@ -1368,51 +1377,77 @@ export class App extends PureComponent<Props, State> {
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
     const { fragmentId, interval } = autoRerun
+    const timerId = fragmentId || App.PAGE_AUTO_RERUN_ID
 
-    // An empty fragment id is the page-level timer from set_page_config.
-    // Always restart it so each full rerun begins a new countdown. Fragment
-    // timers keep their countdown when the interval is unchanged.
-    if (!fragmentId) {
-      this.armPageAutoRerun(interval)
+    // Re-registering the same interval must not restart the countdown.
+    // Ancestor reruns would otherwise starve a fragment timer, and a fragment
+    // tick that repeats the current page interval would reset that countdown.
+    // Full reruns still restart the page timer: handleNewSession clears it
+    // before this message arrives. A changed interval replaces the timer.
+    if (this.autoRerunIntervals.get(timerId)?.interval === interval) {
       return
     }
 
-    // A `run_every` fragment re-registers its auto-rerun every time an ancestor
-    // re-renders it (a fragment-only rerun doesn't reset timers). If a timer for
-    // this fragment is already running with the same interval, leave it alone:
-    // restarting it would reset the countdown, so ancestor reruns firing more
-    // often than `run_every` could delay or starve the fragment's auto-rerun.
-    // We only (re)start the timer when there isn't one yet or the interval
-    // changed, which also avoids stacking duplicate intervals.
-    if (this.autoRerunIntervals.get(fragmentId)?.interval === interval) {
-      return
-    }
-
-    this.clearAutoRerunInterval(fragmentId)
-
-    const timer = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(fragmentId, true)
-    }, interval * 1000)
-
-    this.autoRerunIntervals.set(fragmentId, { timer, interval })
+    this.startAutoRerunTimer(timerId, interval, () => {
+      // Page ticks are full reruns, so skip them while an st.dialog is open.
+      // Fragment ticks are scoped and keep running.
+      if (!fragmentId && isElementDialogOpen()) {
+        return
+      }
+      this.widgetMgr.sendUpdateWidgetsMessage(fragmentId || undefined, true)
+    })
   }
 
   /**
-   * Start the page-level auto-rerun timer, replacing any page timer already
-   * running. Ticks request a full rerun and are skipped while an `st.dialog`
-   * is open.
+   * Arm an auto-rerun timer, replacing any timer already stored for `id`.
+   *
+   * Intervals that fit in a signed 32-bit millisecond delay use `setInterval`.
+   * Longer intervals are chained `setTimeout`s. Passing the raw delay to the
+   * browser wraps it and can fire on every turn.
    */
-  private armPageAutoRerun(interval: number): void {
-    this.clearAutoRerunInterval(App.PAGE_AUTO_RERUN_ID)
+  private startAutoRerunTimer(
+    id: string,
+    intervalSeconds: number,
+    onTick: () => void
+  ): void {
+    this.clearAutoRerunInterval(id)
 
-    const timer = setInterval(() => {
-      if (isElementDialogOpen()) {
+    const intervalMs = intervalSeconds * 1000
+    if (!Number.isFinite(intervalMs)) {
+      return
+    }
+
+    if (intervalMs <= MAX_TIMER_DELAY_MS) {
+      const timer = setInterval(onTick, intervalMs)
+      this.autoRerunIntervals.set(id, {
+        timer,
+        interval: intervalSeconds,
+        repeating: true,
+      })
+      return
+    }
+
+    const cycleStartedAt = Date.now()
+    const scheduleChunk = (): void => {
+      const remaining = intervalMs - (Date.now() - cycleStartedAt)
+      if (remaining <= 0) {
+        onTick()
+        this.startAutoRerunTimer(id, intervalSeconds, onTick)
         return
       }
-      this.widgetMgr.sendUpdateWidgetsMessage(undefined, true)
-    }, interval * 1000)
 
-    this.autoRerunIntervals.set(App.PAGE_AUTO_RERUN_ID, { timer, interval })
+      // eslint-disable-next-line no-restricted-globals -- Class-owned auto-rerun timers cannot use the useTimeout hook.
+      const timer = setTimeout(
+        scheduleChunk,
+        Math.min(remaining, MAX_TIMER_DELAY_MS)
+      )
+      this.autoRerunIntervals.set(id, {
+        timer,
+        interval: intervalSeconds,
+        repeating: false,
+      })
+    }
+    scheduleChunk()
   }
 
   /**
@@ -2309,8 +2344,8 @@ export class App extends PureComponent<Props, State> {
    * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
    */
   cleanupAutoReruns = (): void => {
-    this.autoRerunIntervals.forEach(({ timer }) => {
-      clearInterval(timer)
+    this.autoRerunIntervals.forEach(entry => {
+      this.clearStoredAutoRerunTimer(entry)
     })
     this.autoRerunIntervals.clear()
   }
@@ -2321,9 +2356,20 @@ export class App extends PureComponent<Props, State> {
   private clearAutoRerunInterval(fragmentId: string): void {
     const existing = this.autoRerunIntervals.get(fragmentId)
     if (existing !== undefined) {
-      clearInterval(existing.timer)
+      this.clearStoredAutoRerunTimer(existing)
       this.autoRerunIntervals.delete(fragmentId)
     }
+  }
+
+  private clearStoredAutoRerunTimer(entry: {
+    timer: ReturnType<typeof setInterval>
+    repeating: boolean
+  }): void {
+    if (entry.repeating) {
+      clearInterval(entry.timer)
+      return
+    }
+    clearTimeout(entry.timer)
   }
 
   /**

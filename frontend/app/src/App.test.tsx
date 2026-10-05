@@ -4655,7 +4655,7 @@ describe("App", () => {
       ).toBeFalsy()
     })
 
-    it("restarts the page auto-rerun countdown when the interval is re-registered", () => {
+    it("does not reset the page countdown when the same interval is re-registered", () => {
       vi.mocked(isEmbed).mockReturnValue(false)
       renderApp(getProps())
 
@@ -4671,18 +4671,87 @@ describe("App", () => {
       act(() => {
         sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
         vi.advanceTimersByTime(600)
+        // A fragment rerun can re-send the current page interval. That must
+        // not restart the countdown.
         sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
-        vi.advanceTimersByTime(500)
+        vi.advanceTimersByTime(400)
       })
 
-      // Re-registration reset the countdown, so 500ms is not enough to fire.
+      // 600ms + 400ms reaches the original interval. A reset at the second
+      // registration would still be 400ms short of firing.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(1)
+    })
+
+    it("restarts the page countdown after a full rerun clears timers", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
+        vi.advanceTimersByTime(600)
+        sendForwardMessage("newSession", { ...NEW_SESSION_JSON })
+        sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
+        vi.advanceTimersByTime(600)
+      })
+
+      // NewSession cleared the timer, so the re-armed countdown has 400ms left.
       expect(
         // @ts-expect-error - sendMessage is a vi.fn mock in tests
         connectionManager.sendMessage.mock.calls.length - callsBefore
       ).toBe(0)
 
       act(() => {
-        vi.advanceTimersByTime(500)
+        vi.advanceTimersByTime(400)
+      })
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(1)
+    })
+
+    it("does not fire a long page interval on a wrapped timer delay", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      const thirtyDaysSeconds = 30 * 24 * 60 * 60
+      const thirtyDaysMs = thirtyDaysSeconds * 1000
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", {
+          interval: thirtyDaysSeconds,
+          fragmentId: "",
+        })
+        // One millisecond short of 30 days, past the 32-bit delay limit.
+        vi.advanceTimersByTime(thirtyDaysMs - 1)
+      })
+
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(0)
+
+      act(() => {
+        vi.advanceTimersByTime(1)
       })
       expect(
         // @ts-expect-error - sendMessage is a vi.fn mock in tests

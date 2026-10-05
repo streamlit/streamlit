@@ -179,17 +179,15 @@ def _resolve_page_run_every(
 
 
 def _enqueue_page_auto_rerun(ctx: ScriptRunContext, seconds: float | None) -> None:
-    """Arm or clear the page-level auto-rerun timer for this full run.
+    """Arm or clear the page-level auto-rerun timer.
 
-    An empty ``fragment_id`` is the app-scoped timer. Full reruns already drop
-    every timer when the frontend handles ``NewSession``; this message re-arms
-    the page timer. Fragment-only reruns do not send it, so a fragment tick
-    does not restart the page countdown. ``None`` clears a timer armed by an
-    earlier ``set_page_config`` call in the same run.
+    An empty ``fragment_id`` is the app-scoped timer. Full reruns drop every
+    timer when the frontend handles ``NewSession``; this message re-arms the
+    page timer. Fragment-only reruns send it too, so an explicit interval
+    change or ``None`` still applies. The frontend keeps the existing page
+    countdown when the interval is unchanged, so a fragment tick does not
+    restart it. ``None`` clears a timer armed by an earlier call.
     """
-    if ctx.fragment_ids_this_run:
-        return
-
     msg = ForwardProto()
     if seconds is None:
         msg.stop_auto_rerun.fragment_ids.append("")

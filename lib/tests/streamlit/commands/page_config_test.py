@@ -307,17 +307,38 @@ class PageConfigTest(DeltaGeneratorTestCase):
             10,
         ]
 
-    def test_set_page_config_run_every_skipped_on_fragment_rerun(self) -> None:
-        """A fragment-only rerun does not restart the page timer."""
+    def test_set_page_config_run_every_sent_on_fragment_rerun(self) -> None:
+        """A fragment-only rerun still publishes an explicit page interval.
+
+        The frontend keeps the countdown when that interval is unchanged, and
+        applies a different interval. Dropping the message here would ignore
+        ``run_every`` until the next full rerun.
+        """
         ctx = get_script_run_ctx()
         assert ctx is not None
         ctx.fragment_ids_this_run = ["frag"]
 
         st.set_page_config(page_title="Hello", run_every=5)
 
-        assert self.get_message_from_queue().HasField("page_config_changed")
-        assert self._auto_rerun_messages() == []
+        assert self.get_message_from_queue(0).HasField("page_config_changed")
+        msgs = self._auto_rerun_messages()
+        assert len(msgs) == 1
+        assert msgs[0].auto_rerun.interval == 5
+        assert msgs[0].auto_rerun.fragment_id == ""
         assert self._stop_auto_rerun_messages() == []
+
+    def test_set_page_config_run_every_none_sent_on_fragment_rerun(self) -> None:
+        """An explicit ``None`` during a fragment rerun still clears the timer."""
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        ctx.fragment_ids_this_run = ["frag"]
+
+        st.set_page_config(run_every=None)
+
+        assert self._auto_rerun_messages() == []
+        stops = self._stop_auto_rerun_messages()
+        assert len(stops) == 1
+        assert list(stops[0].stop_auto_rerun.fragment_ids) == [""]
 
     def test_set_page_config_run_every_still_validates_without_ctx(self) -> None:
         """A too-short interval raises even when nothing can be enqueued."""
