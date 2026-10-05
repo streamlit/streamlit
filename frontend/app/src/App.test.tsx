@@ -4770,7 +4770,12 @@ describe("App", () => {
       ).toBe(0)
 
       // A run that finishes on its own sends the skipped tick immediately,
-      // so a slow page does not wait another full interval.
+      // so a slow page does not wait another full interval. The server sends
+      // scriptFinished before the idle status; that success must keep the tick.
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
       sendForwardMessage("sessionStatusChanged", {
         runOnSave: false,
         scriptIsRunning: false,
@@ -4787,6 +4792,47 @@ describe("App", () => {
           isAutoRerun: true,
         },
       })
+    })
+
+    it("drops a held page tick when the run is interrupted for a rerun", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
+        vi.advanceTimersByTime(1000)
+      })
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+
+      // st.rerun() stops the current run before the replacement NewSession.
+      // That gap must not replay the held tick and supersede the rerun.
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
     })
 
     it("drops a held page tick when the run is stopped", () => {

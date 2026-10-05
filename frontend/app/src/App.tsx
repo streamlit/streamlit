@@ -394,8 +394,9 @@ export class App extends PureComponent<Props, State> {
   private skillsNudgeShown: boolean = false
 
   // A page tick that arrived while a script run was still active. It is sent
-  // once that run finishes, so a slow page is not preempted and does not wait
-  // another full interval. Stop and a non-auto full rerun clear it instead.
+  // once that run finishes on its own, so a slow page is not preempted and
+  // does not wait another full interval. Stop, a non-auto full rerun, and an
+  // interrupted run (FINISHED_EARLY_FOR_RERUN) clear it instead.
   private pageAutoRerunDeferred = false
 
   // Whether a suppression reason has been reported this page load. Tracked
@@ -1398,8 +1399,8 @@ export class App extends PureComponent<Props, State> {
 
     this.startAutoRerunTimer(timerId, interval, () => {
       // Page ticks are full reruns. Skip one while an st.dialog is open.
-      // A tick during an active run is held until that run finishes, unless
-      // Stop or a user rerun clears it first.
+      // A tick during an active run is held until that run finishes on its
+      // own. Stop, a user rerun, and an interrupted run clear it first.
       if (!fragmentId) {
         if (
           isElementDialogOpen() ||
@@ -2121,6 +2122,14 @@ export class App extends PureComponent<Props, State> {
    * @param status the ScriptFinishedStatus that the script finished with
    */
   handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+    // An interrupted run (st.rerun(), or a full rerun that preempts) is
+    // replaced by another execution. The server reports that stop before the
+    // next NewSession, and that RUNNING → NOT_RUNNING gap would otherwise
+    // send a held page tick and supersede the rerun already requested.
+    if (status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN) {
+      this.pageAutoRerunDeferred = false
+    }
+
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
     // just finished, so widgets (e.g. ChatInput) can react to the completion of
     // the specific full-script or fragment run they triggered. This runs before
@@ -2399,7 +2408,8 @@ export class App extends PureComponent<Props, State> {
 
   /**
    * Send one page tick that was skipped while a script run was active.
-   * Stop, a non-auto full rerun, and clearing the page timer drop it instead.
+   * Stop, a non-auto full rerun, an interrupted run, and clearing the page
+   * timer drop it instead.
    */
   private flushDeferredPageAutoRerun(): void {
     if (!this.pageAutoRerunDeferred) {
