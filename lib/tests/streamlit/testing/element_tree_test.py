@@ -2319,6 +2319,31 @@ def test_layout_collections_are_callable_by_key() -> None:
         at.chat_message("missing")
 
 
+def test_tabs_key_lives_on_tab_container() -> None:
+    """``st.tabs(..., key=)`` is on the tab container, not individual panels.
+
+    ``at.tabs`` is the tab panels (like ``at.columns`` vs the columns row),
+    so ``at.tabs("sections")`` cannot find that key. ``get_by_key`` does.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        one, two = st.tabs(["One", "Two"], key="sections")
+        one.text("t1")
+        two.text("t2")
+
+    at = AppTest.from_function(script).run()
+    container = at.get_by_key("sections")
+    assert container.type == "tab_container"
+    assert container.key == "sections"
+    assert list(container.tabs) == list(at.tabs)
+    assert container.tabs[0].label == "One"
+    assert container.tabs[1].text[0].value == "t2"
+    with pytest.raises(KeyError):
+        at.tabs("sections")
+
+
 def test_form_collection_lookup() -> None:
     """``at.form`` is a BlockList of ``st.form`` blocks, keyed by form ID."""
 

@@ -839,9 +839,9 @@ class AppTest:
         Returns
         -------
         BlockList of ChatMessage
-            Individual messages can be accessed by index or key. For example,
-            ``at.chat_message[0]``. ChatMessage is an extension of the Block
-            class.
+            Individual messages can be accessed by index. For example,
+            ``at.chat_message[0]``. ``st.chat_message`` has no key.
+            ChatMessage is an extension of the Block class.
         """
         return self._tree.chat_message
 
@@ -897,8 +897,9 @@ class AppTest:
         Returns
         -------
         BlockList of Column
-            Individual columns can be accessed by index or key. For example,
-            ``at.columns[0]``. Column is an extension of the Block class.
+            Individual columns can be accessed by index. For example,
+            ``at.columns[0]``. ``st.columns`` has no key. Column is an
+            extension of the Block class.
         """
         return self._tree.columns
 
@@ -1332,9 +1333,9 @@ class AppTest:
         Returns
         -------
         BlockList of Status
-            Individual status containers can be accessed by index or key. For
-            example, ``at.status[0]``. Status is an extension of the Block
-            class.
+            Individual status containers can be accessed by index. For
+            example, ``at.status[0]``. ``st.status`` has no key. Status is
+            an extension of the Block class.
         """
         return self._tree.status
 
@@ -1365,8 +1366,10 @@ class AppTest:
         Returns
         -------
         BlockList of Tab
-            Individual tabs can be accessed by index or key. For example,
-            ``at.tabs[0]``. Tab is an extension of the Block class.
+            Individual tab panels can be accessed by index. For example,
+            ``at.tabs[0]``. A ``key`` on ``st.tabs`` belongs to the tab
+            container, not each panel; look it up with ``get_by_key``. Tab
+            is an extension of the Block class.
         """
         return self._tree.tabs
 
