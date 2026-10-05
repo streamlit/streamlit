@@ -140,10 +140,11 @@ st.line_chart(get_traffic_last_hour())
 ```python
 # Before — external component
 from streamlit_autorefresh import st_autorefresh
-st_autorefresh(interval=2000, key="counter")   # milliseconds
+
+st_autorefresh(interval=2000, key="counter")  # milliseconds
 
 # After — native, no dependency
-st.set_page_config(run_every=2)                 # seconds
+st.set_page_config(run_every=2)  # seconds
 ```
 
 **Dynamic control (enable/disable and change interval at runtime).** `st.set_page_config`
@@ -171,14 +172,16 @@ coexist. Use the page interval for the overall refresh and a faster fragment int
 a hot section:
 
 ```python
-st.set_page_config(run_every="60s")   # refresh the whole page every minute
+st.set_page_config(run_every="60s")  # refresh the whole page every minute
 
-@st.fragment(run_every="2s")          # this section refreshes faster
+
+@st.fragment(run_every="2s")  # this section refreshes faster
 def live_ticker():
     st.metric("Price", get_price())
 
+
 live_ticker()
-st.dataframe(get_daily_summary())     # refreshed by the page-level interval
+st.dataframe(get_daily_summary())  # refreshed by the page-level interval
 ```
 
 > [!NOTE]
