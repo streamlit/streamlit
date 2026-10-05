@@ -19,6 +19,7 @@ import {
   type ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useState,
 } from "react"
 
@@ -171,7 +172,8 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
 
   // Page-level run_every skips ticks while any st.dialog is open. Chrome
   // dialogs do not call this, so About/Settings/Deploy do not pause refresh.
-  useEffect(() => {
+  // Layout effect so the counter is set before App flushes a deferred tick.
+  useLayoutEffect(() => {
     if (!isOpen) {
       return undefined
     }

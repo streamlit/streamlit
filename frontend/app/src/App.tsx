@@ -885,11 +885,10 @@ export class App extends PureComponent<Props, State> {
           // It's okay if this fails, the `measure` call is for debugging/profiling
         }
         if (prevState.scriptRunState === ScriptRunState.RUNNING) {
-          if (this.pageAutoRerunSkipIdleFlush) {
-            // The server has already accepted a replacement run. Sending the
-            // held tick here would supersede it.
-            this.pageAutoRerunSkipIdleFlush = false
-          } else {
+          // An interrupted run keeps this set until the replacement run
+          // starts or NewSession clears it. A fresh tick in that idle gap
+          // must not send.
+          if (!this.pageAutoRerunSkipIdleFlush) {
             this.flushDeferredPageAutoRerun()
           }
         }
@@ -1418,7 +1417,11 @@ export class App extends PureComponent<Props, State> {
       if (!fragmentId) {
         if (
           isElementDialogOpen() ||
-          this.state.scriptRunState === ScriptRunState.STOP_REQUESTED
+          this.state.scriptRunState === ScriptRunState.STOP_REQUESTED ||
+          // A full rerun was sent or the previous run was interrupted. Stay
+          // quiet until the replacement run is active. Sending now can drop
+          // widget triggers that were already flushed.
+          this.pageAutoRerunSkipIdleFlush
         ) {
           return
         }
@@ -1427,7 +1430,7 @@ export class App extends PureComponent<Props, State> {
           return
         }
         // This tick is sent now, so a later finish must not send it again.
-        this.clearHeldPageAutoRerun()
+        this.pageAutoRerunDeferred = false
       }
       this.widgetMgr.sendUpdateWidgetsMessage(fragmentId || undefined, true)
     })
@@ -1455,7 +1458,7 @@ export class App extends PureComponent<Props, State> {
     }
 
     const intervalMs = intervalSeconds * 1000
-    if (!Number.isFinite(intervalMs)) {
+    if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
       return
     }
 
@@ -2663,10 +2666,14 @@ export class App extends PureComponent<Props, State> {
       this.historyNavigationEpoch = this.rerunEpoch
     }
 
-    // A user or st.rerun() full rerun replaces this countdown. Drop a tick
-    // held during the previous run so it is not sent when that run stops.
+    // A user or st.rerun() full rerun replaces this countdown. Suspend the
+    // page timer until the next run re-arms it. scriptRunState stays idle
+    // until the server reports the new run, so leaving the timer armed would
+    // let a tick preempt the request and drop widget triggers.
     if (!fragmentId && !isAutoRerun) {
+      this.clearAutoRerunInterval(App.PAGE_AUTO_RERUN_ID)
       this.clearHeldPageAutoRerun()
+      this.pageAutoRerunSkipIdleFlush = true
     }
 
     this.sendBackMsg(

@@ -253,6 +253,26 @@ class PageConfigTest(DeltaGeneratorTestCase):
 
         assert self.forward_msg_queue._queue == []
 
+    @parameterized.expand([10**1000, 1e100])
+    def test_set_page_config_run_every_rejects_unrepresentable_interval(
+        self, run_every: int | float
+    ) -> None:
+        """Intervals that cannot be a protobuf float raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match="at least 1 second"):
+            st.set_page_config(run_every=run_every)
+
+        assert self.forward_msg_queue._queue == []
+
+    def test_set_page_config_run_every_accepts_numpy_int(self) -> None:
+        """NumPy integers use the same interval path as Python ints."""
+        import numpy as np
+
+        st.set_page_config(run_every=np.int64(5))
+
+        msgs = self._auto_rerun_messages()
+        assert len(msgs) == 1
+        assert msgs[0].auto_rerun.interval == 5
+
     def test_set_page_config_run_every_bad_string(self) -> None:
         """An unparseable interval string uses the shared time-string error."""
         with pytest.raises(StreamlitBadTimeStringError):

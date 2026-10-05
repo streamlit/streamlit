@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { Component, type ReactElement } from "react"
+
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
@@ -50,6 +52,31 @@ const getProps = (
 describe("Dialog container", () => {
   beforeEach(() => {
     resetElementDialogOpenForTests()
+  })
+
+  it("marks an open dialog before the parent update", () => {
+    const seen: boolean[] = []
+
+    class Parent extends Component<{ open: boolean }> {
+      override componentDidUpdate(): void {
+        seen.push(isElementDialogOpen())
+      }
+
+      override render(): ReactElement | null {
+        if (!this.props.open) {
+          return null
+        }
+        return (
+          <Dialog {...getProps({ isOpen: true })}>
+            <div>test</div>
+          </Dialog>
+        )
+      }
+    }
+
+    const { rerender } = render(<Parent open={false} />)
+    rerender(<Parent open={true} />)
+    expect(seen.at(-1)).toBe(true)
   })
 
   it("renders without crashing", () => {

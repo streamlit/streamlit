@@ -410,6 +410,9 @@ def test_page_run_every_pauses_while_a_dialog_is_open(run_every_app: Page) -> No
     run_every_app.get_by_role("button", name="Close").click()
     expect(run_every_app.get_by_role("dialog")).to_have_count(0)
     expect(tick).not_to_have_text(frozen)
+    # Closing can itself rerun. A later interval must still change the counter.
+    resumed = _tick_text(run_every_app, "tick_count")
+    expect(tick).not_to_have_text(resumed)
     expect(run_every_app.get_by_test_id("stException")).to_have_count(0)
 
 

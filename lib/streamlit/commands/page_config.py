@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import math
+import numbers
 import random
 from collections.abc import Mapping
 from datetime import timedelta
@@ -141,6 +142,8 @@ _RUN_EVERY_NOT_SET_DEFAULT: Final[int | float | timedelta | str | None] = cast(
     "int | float | timedelta | str | None", _RUN_EVERY_NOT_SET
 )
 _PAGE_RUN_EVERY_MIN_SECONDS: Final = 1.0
+# Protobuf `float` is single precision. Larger values become non-finite on the wire.
+_MAX_PAGE_RUN_EVERY_SECONDS: Final = 3.4028234663852886e38
 
 
 def _resolve_page_run_every(
@@ -151,7 +154,7 @@ def _resolve_page_run_every(
         return None
 
     if isinstance(run_every, bool) or not isinstance(
-        run_every, (int, float, str, timedelta)
+        run_every, (str, timedelta, numbers.Real)
     ):
         raise StreamlitInvalidParameterTypeError(
             "run_every",
@@ -160,22 +163,23 @@ def _resolve_page_run_every(
         )
 
     seconds = time_to_seconds(run_every, coerce_none_to_inf=False)
+    try:
+        # Huge ints overflow when converted to float. Reject them as values,
+        # not as a leaked OverflowError.
+        seconds_float = float(seconds) if seconds is not None else math.inf
+    except OverflowError:
+        seconds_float = math.inf
     if (
-        seconds is None
-        or not math.isfinite(seconds)
-        or seconds < _PAGE_RUN_EVERY_MIN_SECONDS
+        not math.isfinite(seconds_float)
+        or seconds_float < _PAGE_RUN_EVERY_MIN_SECONDS
+        or seconds_float > _MAX_PAGE_RUN_EVERY_SECONDS
     ):
-        detail = (
-            f"Got {run_every!r}."
-            if seconds is None
-            else f"Got {run_every!r} ({seconds:g} seconds)."
-        )
         raise StreamlitValueError(
             "run_every",
             ["a duration of at least 1 second", "None"],
-            detail=detail,
+            detail=f"Got {run_every!r}.",
         )
-    return float(seconds)
+    return seconds_float
 
 
 def _enqueue_page_auto_rerun(ctx: ScriptRunContext, seconds: float | None) -> None:

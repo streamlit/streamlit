@@ -60,9 +60,7 @@ import {
   isToolbarDisplayed,
   lightTheme,
   LocalStore,
-  markElementDialogOpen,
   mockSessionInfoProps,
-  resetElementDialogOpenForTests,
   RootStyleProvider,
   ScriptRunState,
   SessionInfo,
@@ -121,6 +119,7 @@ vi.mock("@streamlit/lib", async () => {
   const actualLib = await vi.importActual("@streamlit/lib")
   return {
     ...actualLib,
+    isElementDialogOpen: vi.fn(() => false),
     isEmbed: vi.fn(),
     isToolbarDisplayed: vi.fn(),
   }
@@ -4829,10 +4828,12 @@ describe("App", () => {
       })
       expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
 
+      // The timer stays armed, but another interval in this idle gap must
+      // not send. The replacement run has not started yet.
       act(() => {
         vi.advanceTimersByTime(1000)
       })
-      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
     })
 
     it("drops a held page tick when a full rerun replaces the interrupted run", () => {
@@ -4888,6 +4889,30 @@ describe("App", () => {
         vi.advanceTimersByTime(1000)
       })
       expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
+    })
+
+    it("does not auto-rerun in the gap after a widget rerun from idle", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
+        getStoredValue<WidgetStateManager>(
+          WidgetStateManager
+        ).sendUpdateWidgetsMessage(undefined)
+        vi.advanceTimersByTime(1000)
+      })
+
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
     })
 
     it("replays a held page tick after an interrupting fragment run finishes", () => {
@@ -5134,7 +5159,7 @@ describe("App", () => {
 
     it("skips page auto-rerun ticks while an element dialog is open", () => {
       vi.mocked(isEmbed).mockReturnValue(false)
-      resetElementDialogOpenForTests()
+      vi.mocked(isElementDialogOpen).mockReturnValue(false)
       renderApp(getProps())
 
       const connectionManager = getMockConnectionManager()
@@ -5144,20 +5169,19 @@ describe("App", () => {
         )
       })
 
-      const releaseDialog = markElementDialogOpen()
       // @ts-expect-error - sendMessage is a vi.fn mock in tests
       const callsBefore = connectionManager.sendMessage.mock.calls.length
       act(() => {
         sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
+        vi.mocked(isElementDialogOpen).mockReturnValue(true)
         vi.advanceTimersByTime(1000)
       })
       expect(
         // @ts-expect-error - sendMessage is a vi.fn mock in tests
         connectionManager.sendMessage.mock.calls.length - callsBefore
       ).toBe(0)
-      expect(isElementDialogOpen()).toBe(true)
 
-      releaseDialog()
+      vi.mocked(isElementDialogOpen).mockReturnValue(false)
       act(() => {
         vi.advanceTimersByTime(1000)
       })
@@ -5165,7 +5189,6 @@ describe("App", () => {
         // @ts-expect-error - sendMessage is a vi.fn mock in tests
         connectionManager.sendMessage.mock.calls.length - callsBefore
       ).toBe(1)
-      resetElementDialogOpenForTests()
     })
 
     it("cancels the page timer without cancelling a fragment timer", () => {
