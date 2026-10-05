@@ -4513,6 +4513,19 @@ describe("App", () => {
       vi.spyOn(global, "clearInterval")
     })
 
+    function autoRerunCountSince(
+      connectionManager: ConnectionManager,
+      fromIndex: number
+    ): number {
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const calls = connectionManager.sendMessage.mock.calls as Array<
+        [{ rerunScript?: { isAutoRerun?: boolean } }]
+      >
+      return calls
+        .slice(fromIndex)
+        .filter(call => call[0].rerunScript?.isAutoRerun).length
+    }
+
     it("sets interval to call sendUpdateWidgetsMessage", () => {
       renderApp(getProps())
       sendForwardMessage("autoRerun", {
@@ -4727,7 +4740,7 @@ describe("App", () => {
       ).toBe(1)
     })
 
-    it("holds a page tick until the current script run finishes", () => {
+    it("skips a page tick during a script run and does not replay it when the run ends", () => {
       vi.mocked(isEmbed).mockReturnValue(false)
       renderApp(getProps())
 
@@ -4756,11 +4769,20 @@ describe("App", () => {
         connectionManager.sendMessage.mock.calls.length - callsBefore
       ).toBe(0)
 
+      // Stop, or a full rerun that reports not-running before NewSession,
+      // must not replay the skipped tick.
       sendForwardMessage("sessionStatusChanged", {
         runOnSave: false,
         scriptIsRunning: false,
       })
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(0)
 
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
       expect(
         // @ts-expect-error - sendMessage is a vi.fn mock in tests
         connectionManager.sendMessage.mock.calls.length - callsBefore
@@ -4773,6 +4795,141 @@ describe("App", () => {
           isAutoRerun: true,
         },
       })
+    })
+
+    it("drops a held page tick when the run is stopped", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+      getMockConnectionManager(true)
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
+        vi.advanceTimersByTime(1000)
+      })
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      act(() => {
+        hostCommunicationMgr.receiveHostMessage({
+          isTrusted: true,
+          source: window.parent,
+          origin: "https://devel.streamlit.test",
+          data: {
+            stCommVersion: HOST_COMM_VERSION,
+            type: "STOP_SCRIPT",
+          },
+        } as unknown as MessageEvent)
+      })
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+
+      // Stop drops the held tick instead of restarting the page immediately.
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
+    })
+
+    it("drops a held page tick when a full rerun supersedes it", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
+        vi.advanceTimersByTime(1000)
+      })
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+
+      act(() => {
+        getStoredValue<WidgetStateManager>(
+          WidgetStateManager
+        ).sendUpdateWidgetsMessage(undefined)
+      })
+      sendForwardMessage("newSession", { ...NEW_SESSION_JSON })
+      sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
+    })
+
+    it("does not replay a long-interval page tick when the run ends", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+
+      const thirtyDaysSeconds = 30 * 24 * 60 * 60
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", {
+          interval: thirtyDaysSeconds,
+          fragmentId: "",
+        })
+        vi.advanceTimersByTime(thirtyDaysSeconds * 1000)
+      })
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+      // The skipped tick is not replayed. The next cycle is another full interval.
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+
+      act(() => {
+        vi.advanceTimersByTime(thirtyDaysSeconds * 1000)
+      })
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
     })
 
     it("does not fire a long page interval on a wrapped timer delay", () => {

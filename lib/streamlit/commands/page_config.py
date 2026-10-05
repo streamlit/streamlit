@@ -161,15 +161,15 @@ def _resolve_page_run_every(
 
     seconds = time_to_seconds(run_every, coerce_none_to_inf=False)
     if (
-        not isinstance(seconds, (int, float))
-        or isinstance(seconds, bool)
+        seconds is None
         or not math.isfinite(seconds)
         or seconds < _PAGE_RUN_EVERY_MIN_SECONDS
     ):
-        if isinstance(seconds, (int, float)) and not isinstance(seconds, bool):
-            detail = f"Got {run_every!r} ({seconds:g} seconds)."
-        else:
-            detail = f"Got {run_every!r}."
+        detail = (
+            f"Got {run_every!r}."
+            if seconds is None
+            else f"Got {run_every!r} ({seconds:g} seconds)."
+        )
         raise StreamlitValueError(
             "run_every",
             ["a duration of at least 1 second", "None"],

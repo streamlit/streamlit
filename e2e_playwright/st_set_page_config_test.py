@@ -416,15 +416,11 @@ def test_page_run_every_pauses_while_a_dialog_is_open(run_every_app: Page) -> No
 def test_page_run_every_stops_when_disabled_or_the_page_changes(
     run_every_app: Page,
 ) -> None:
-    """Explicit None and a page that omits run_every both stop the timer."""
+    """A live timer stops on a page that omits run_every, and None stops it too."""
     tick = get_element_by_key(run_every_app, "tick_count").get_by_test_id("stMarkdown")
     expect(tick).not_to_have_text(_tick_text(run_every_app, "tick_count"))
 
-    click_toggle(run_every_app, "Auto-refresh")
-    frozen = _tick_text(run_every_app, "tick_count")
-    run_every_app.wait_for_timeout(2200)
-    expect(tick).to_have_text(frozen)
-
+    # Leave auto-refresh on so this navigation is what clears the timer.
     run_every_app.get_by_role("link", name="Quiet").click()
     wait_for_app_run(run_every_app)
     expect(run_every_app.get_by_text("quiet-page")).to_be_visible()
@@ -434,4 +430,14 @@ def test_page_run_every_stops_when_disabled_or_the_page_changes(
     quiet_text = _tick_text(run_every_app, "quiet_ticks")
     run_every_app.wait_for_timeout(2200)
     expect(quiet).to_have_text(quiet_text)
+
+    run_every_app.get_by_role("link", name="Live").click()
+    wait_for_app_run(run_every_app)
+    tick = get_element_by_key(run_every_app, "tick_count").get_by_test_id("stMarkdown")
+    expect(tick).not_to_have_text(_tick_text(run_every_app, "tick_count"))
+
+    click_toggle(run_every_app, "Auto-refresh")
+    frozen = _tick_text(run_every_app, "tick_count")
+    run_every_app.wait_for_timeout(2200)
+    expect(tick).to_have_text(frozen)
     expect(run_every_app.get_by_test_id("stException")).to_have_count(0)
