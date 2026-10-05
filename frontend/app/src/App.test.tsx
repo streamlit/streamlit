@@ -4740,7 +4740,7 @@ describe("App", () => {
       ).toBe(1)
     })
 
-    it("skips a page tick during a script run and does not replay it when the run ends", () => {
+    it("replays a skipped page tick when the script run finishes", () => {
       vi.mocked(isEmbed).mockReturnValue(false)
       renderApp(getProps())
 
@@ -4769,19 +4769,11 @@ describe("App", () => {
         connectionManager.sendMessage.mock.calls.length - callsBefore
       ).toBe(0)
 
-      // Stop, or a full rerun that reports not-running before NewSession,
-      // must not replay the skipped tick.
+      // A run that finishes on its own sends the skipped tick immediately,
+      // so a slow page does not wait another full interval.
       sendForwardMessage("sessionStatusChanged", {
         runOnSave: false,
         scriptIsRunning: false,
-      })
-      expect(
-        // @ts-expect-error - sendMessage is a vi.fn mock in tests
-        connectionManager.sendMessage.mock.calls.length - callsBefore
-      ).toBe(0)
-
-      act(() => {
-        vi.advanceTimersByTime(1000)
       })
       expect(
         // @ts-expect-error - sendMessage is a vi.fn mock in tests
@@ -4800,9 +4792,8 @@ describe("App", () => {
     it("drops a held page tick when the run is stopped", () => {
       vi.mocked(isEmbed).mockReturnValue(false)
       renderApp(getProps())
-      getMockConnectionManager(true)
 
-      const connectionManager = getMockConnectionManager()
+      const connectionManager = getMockConnectionManager(true)
       act(() => {
         getMockConnectionManagerProp("connectionStateChanged")(
           ConnectionState.CONNECTED
@@ -4824,6 +4815,17 @@ describe("App", () => {
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
         HostCommunicationManager
       )
+      act(() => {
+        getMockConnectionManagerProp("onHostConfigResp")({
+          allowedOrigins: ["https://devel.streamlit.test"],
+          useExternalAuthToken: false,
+          disableFullscreenMode: false,
+          enableCustomParentMessages: false,
+          mapboxToken: "",
+          metricsUrl: "test.streamlit.io",
+          blockErrorDialogs: false,
+        })
+      })
       act(() => {
         hostCommunicationMgr.receiveHostMessage({
           isTrusted: true,
@@ -4892,7 +4894,7 @@ describe("App", () => {
       expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
     })
 
-    it("does not replay a long-interval page tick when the run ends", () => {
+    it("replays a long-interval page tick when the run finishes", () => {
       vi.mocked(isEmbed).mockReturnValue(false)
       renderApp(getProps())
 
@@ -4923,11 +4925,11 @@ describe("App", () => {
         runOnSave: false,
         scriptIsRunning: false,
       })
-      // The skipped tick is not replayed. The next cycle is another full interval.
-      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+      // Chaining the next long cycle must not drop the tick held for this run.
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
 
       act(() => {
-        vi.advanceTimersByTime(thirtyDaysSeconds * 1000)
+        vi.advanceTimersByTime(1)
       })
       expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
     })

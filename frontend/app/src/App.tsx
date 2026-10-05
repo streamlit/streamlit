@@ -393,6 +393,11 @@ export class App extends PureComponent<Props, State> {
   // only by a full page reload (a new App instance).
   private skillsNudgeShown: boolean = false
 
+  // A page tick that arrived while a script run was still active. It is sent
+  // once that run finishes, so a slow page is not preempted and does not wait
+  // another full interval. Stop and a non-auto full rerun clear it instead.
+  private pageAutoRerunDeferred = false
+
   // Whether a suppression reason has been reported this page load. Tracked
   // separately from `skillsNudgeShown` so recording a suppression does NOT
   // prevent the nudge from appearing later in the same page load: eligibility is
@@ -870,6 +875,9 @@ export class App extends PureComponent<Props, State> {
           )
         } catch {
           // It's okay if this fails, the `measure` call is for debugging/profiling
+        }
+        if (prevState.scriptRunState === ScriptRunState.RUNNING) {
+          this.flushDeferredPageAutoRerun()
         }
       }
 
@@ -1389,12 +1397,20 @@ export class App extends PureComponent<Props, State> {
     }
 
     this.startAutoRerunTimer(timerId, interval, () => {
-      // Page ticks are full reruns. Skip one that lands while an st.dialog is
-      // open or a script run is active. Replaying it when the run stops would
-      // undo Stop or a user rerun that has not received NewSession yet.
-      // The interval stays armed, so the next tick runs once the app is idle.
-      if (!fragmentId && (isElementDialogOpen() || this.isScriptRunActive())) {
-        return
+      // Page ticks are full reruns. Skip one while an st.dialog is open.
+      // A tick during an active run is held until that run finishes, unless
+      // Stop or a user rerun clears it first.
+      if (!fragmentId) {
+        if (
+          isElementDialogOpen() ||
+          this.state.scriptRunState === ScriptRunState.STOP_REQUESTED
+        ) {
+          return
+        }
+        if (this.isScriptRunActive()) {
+          this.pageAutoRerunDeferred = true
+          return
+        }
       }
       this.widgetMgr.sendUpdateWidgetsMessage(fragmentId || undefined, true)
     })
@@ -1410,9 +1426,16 @@ export class App extends PureComponent<Props, State> {
   private startAutoRerunTimer(
     id: string,
     intervalSeconds: number,
-    onTick: () => void
+    onTick: () => void,
+    preserveDeferredPageTick = false
   ): void {
     this.clearAutoRerunInterval(id)
+    // Replacing the page timer drops a held tick. Chaining the next cycle of
+    // the same long interval must not, because that tick is still waiting for
+    // the current run to finish.
+    if (id === App.PAGE_AUTO_RERUN_ID && !preserveDeferredPageTick) {
+      this.pageAutoRerunDeferred = false
+    }
 
     const intervalMs = intervalSeconds * 1000
     if (!Number.isFinite(intervalMs)) {
@@ -1434,7 +1457,7 @@ export class App extends PureComponent<Props, State> {
       const remaining = intervalMs - (Date.now() - cycleStartedAt)
       if (remaining <= 0) {
         onTick()
-        this.startAutoRerunTimer(id, intervalSeconds, onTick)
+        this.startAutoRerunTimer(id, intervalSeconds, onTick, true)
         return
       }
 
@@ -1460,6 +1483,9 @@ export class App extends PureComponent<Props, State> {
   handleStopAutoRerun = (stopAutoRerun: StopAutoRerun): void => {
     stopAutoRerun.fragmentIds.forEach(fragmentId => {
       this.clearAutoRerunInterval(fragmentId)
+      if (!fragmentId) {
+        this.pageAutoRerunDeferred = false
+      }
     })
   }
 
@@ -2350,6 +2376,7 @@ export class App extends PureComponent<Props, State> {
       this.clearStoredAutoRerunTimer(entry)
     })
     this.autoRerunIntervals.clear()
+    this.pageAutoRerunDeferred = false
   }
 
   /**
@@ -2366,9 +2393,26 @@ export class App extends PureComponent<Props, State> {
   private isScriptRunActive(): boolean {
     return (
       this.state.scriptRunState === ScriptRunState.RUNNING ||
-      this.state.scriptRunState === ScriptRunState.RERUN_REQUESTED ||
-      this.state.scriptRunState === ScriptRunState.STOP_REQUESTED
+      this.state.scriptRunState === ScriptRunState.RERUN_REQUESTED
     )
+  }
+
+  /**
+   * Send one page tick that was skipped while a script run was active.
+   * Stop, a non-auto full rerun, and clearing the page timer drop it instead.
+   */
+  private flushDeferredPageAutoRerun(): void {
+    if (!this.pageAutoRerunDeferred) {
+      return
+    }
+    this.pageAutoRerunDeferred = false
+    if (
+      isElementDialogOpen() ||
+      !this.autoRerunIntervals.has(App.PAGE_AUTO_RERUN_ID)
+    ) {
+      return
+    }
+    this.widgetMgr.sendUpdateWidgetsMessage(undefined, true)
   }
 
   private clearStoredAutoRerunTimer(entry: {
@@ -2573,6 +2617,12 @@ export class App extends PureComponent<Props, State> {
       this.historyNavigationEpoch = this.rerunEpoch
     }
 
+    // A user or st.rerun() full rerun replaces this countdown. Drop a tick
+    // held during the previous run so it is not sent when that run stops.
+    if (!fragmentId && !isAutoRerun) {
+      this.pageAutoRerunDeferred = false
+    }
+
     this.sendBackMsg(
       new BackMsg({
         rerunScript: {
@@ -2611,6 +2661,8 @@ export class App extends PureComponent<Props, State> {
     const backMsg = new BackMsg({ stopScript: true })
     backMsg.type = "stopScript"
     this.sendBackMsg(backMsg)
+    // Drop a tick held during this run. The timer stays armed for the next interval.
+    this.pageAutoRerunDeferred = false
     this.setState({ scriptRunState: ScriptRunState.STOP_REQUESTED })
   }
 
