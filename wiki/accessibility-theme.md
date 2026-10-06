@@ -93,11 +93,24 @@ Live scorecard for today’s default light and dark themes. Floors above are the
 | Secondary / muted UI text (`fadedText60`, `grayTextColor`, dataframe header) | Fail (~3.5–3.7) | Pass (~6.1–7.0) | Library blocks | Light only; includes default `dataframeHeaderTextColor` |
 | White label on primary fill | Fail (~3.30) | Fail (~3.30) | Library blocks | `StyledPrimaryButton` and similar |
 | `primary` as **text** | Fail page ~3.30; fail secondary ~2.95 | Pass page ~5.7; fail secondary ~4.49 | Library blocks | File-uploader drag overlay is primary on `secondaryBg`. Not primary-on-`primarybg` |
-| Status text on status fill — **page** | Orange ~3.19, gray ~3.44, green ~4.50, primary ~2.92 fail; red/yellow/blue/violet pass | Primary ~3.85 fail; red/orange/yellow/blue/green/violet/gray pass | Library blocks | Translucent fills on page bg; badges, metrics, `AlertContainer`. Green light is 4.497:1 (below 4.5:1). |
-| Status text on status fill — **default sidebar** | Orange ~2.87, gray ~3.30, green ~4.04, primary ~2.62, red ~4.10, yellow ~4.27 fail; blue/violet pass | Primary ~3.04, red ~3.96, blue ~3.75, violet ~4.07 fail; orange/yellow/green/gray pass | Library blocks | Same fills composited onto sidebar `secondaryBackgroundColor` |
+| Status text on status fill — **page** | Fail (see per-color table) | Fail (see per-color table) | Library blocks | Translucent fills on page bg; badges, metrics, `AlertContainer` |
+| Status text on status fill — **default sidebar** | Fail (see per-color table) | Fail (see per-color table) | Library blocks | Same fills composited onto sidebar `secondaryBackgroundColor` |
 | Body text on page / secondary | Pass (~12.5 / 11.2) | Pass (~18.1 / 14.2) | Library meets | |
 | Link text | Pass (~6.7–7.5) | Pass (~5.2–6.6) | Library meets | Markdown / in-app links |
 | Code text on code fill | Pass (~4.7) | Pass (~10.5) | Library meets | |
+
+Per-color status text on status fill (painted pairs only: markdown badges, metric deltas, `AlertContainer`). Floor is 4.5:1. Light-page green is **4.497:1** (below 4.5:1). Markdown has no `:purple[` / `:purple-background[`; those tokens are rainbow-gradient stops only and are not scored here.
+
+| Color | Light page | Light sidebar | Dark page | Dark sidebar |
+| ----- | ---------- | ------------- | --------- | ------------ |
+| Red | Pass ~4.58 | Fail ~4.10 | Pass ~5.16 | Fail ~3.96 |
+| Orange | Fail ~3.19 | Fail ~2.87 | Pass ~8.24 | Pass ~6.36 |
+| Yellow | Pass ~4.74 | Fail ~4.27 | Pass ~10.31 | Pass ~7.85 |
+| Blue | Pass ~6.68 | Pass ~6.00 | Pass ~4.90 | Fail ~3.75 |
+| Green | Fail ~4.50 | Fail ~4.04 | Pass ~7.91 | Pass ~6.01 |
+| Violet | Pass ~7.59 | Pass ~6.80 | Pass ~5.26 | Fail ~4.07 |
+| Gray | Fail ~3.44 | Fail ~3.30 | Pass ~6.06 | Pass ~5.04 |
+| Primary | Fail ~2.92 | Fail ~2.62 | Fail ~3.85 | Fail ~3.04 |
 
 #### Disabled styling
 
