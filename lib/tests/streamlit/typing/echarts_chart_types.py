@@ -201,8 +201,8 @@ if TYPE_CHECKING:
     # Invalid renderer value (only "canvas" or "svg")
     echarts_chart(spec, renderer="webgl")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
-    # Removed parameter: selection is configured in the chart spec, not via a
-    # `selection_mode` argument (reserved for future use).
+    # Unsupported parameter: selection is configured in the spec;
+    # selection_mode is not accepted.
     echarts_chart(  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
         spec, on_select="rerun", selection_mode="points"
     )

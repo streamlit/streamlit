@@ -210,17 +210,24 @@ export function useEChartsSelections(
     [chartId, formId]
   )
 
+  // True after a write that did not request a rerun (`fromUser: false`).
+  // A later user commit of that same JSON still has to call `setStringValue`
+  // so the gesture reruns. Identical user writes stay skipped.
+  const pendingUserRerunRef = useRef(false)
+
   const writeSelection = useCallback(
     (selection: EChartsSelectionState, fromUser = true): void => {
       const json = JSON.stringify({ selection })
-      // Skip no-op updates to avoid needless reruns.
+      // Skip no-op updates to avoid needless reruns. A user commit still
+      // goes out when the matching JSON was stored without a rerun.
       const currentValue = widgetMgr.getStringValue(widgetInfo)
-      if (
+      const sameValue =
         currentValue === json ||
         (currentValue === undefined && json === EMPTY_SELECTION_JSON)
-      ) {
+      if (sameValue && !(fromUser && pendingUserRerunRef.current)) {
         return
       }
+      pendingUserRerunRef.current = !fromUser
       widgetMgr.setStringValue(widgetInfo.id, json, {
         formId: widgetInfo.formId,
         fragmentId,
@@ -253,8 +260,9 @@ export function useEChartsSelections(
       // identity). Restoring against that ID would re-apply leftover widget
       // state after ``on_select`` is turned off, with no handlers bound to
       // clear the highlight. Gate on the proto flag, not ``isSelectionActivated``:
-      // a disabled selection widget (script running / websocket drop) still
-      // needs its overlay put back after ``setOption`` clears native select/brush.
+      // a disabled selection widget (host-disabled inputs or a dropped
+      // connection) still needs its overlay put back after ``setOption``
+      // clears native select/brush.
       if (!chartId || !element.selectionActivated) {
         return
       }
@@ -347,10 +355,10 @@ export function useEChartsSelections(
 
   const prunePixelOnlyBrushAfterResize = useCallback(
     (chart: EChartsSelectionInstance): void => {
-      // Gate on the proto flag, not ``isSelectionActivated``. Script-run
-      // disable still records ``lastPositiveSizeRef``, so skipping prune
-      // here would consume the size change and leave pixel-only overlays
-      // (and mixed-brush hit indices) stale after the run.
+      // Gate on the proto flag, not ``isSelectionActivated``. A host-disabled
+      // or disconnected widget still records ``lastPositiveSizeRef``, so
+      // skipping prune here would consume the size change and leave
+      // pixel-only overlays (and mixed-brush hit indices) stale.
       if (!chartId || !element.selectionActivated) {
         return
       }

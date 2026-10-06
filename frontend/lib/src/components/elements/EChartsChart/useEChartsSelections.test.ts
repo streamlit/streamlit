@@ -1779,6 +1779,93 @@ describe("useEChartsSelections", () => {
     )
   })
 
+  it("reruns a user brushEnd that matches a programmatic prune write", () => {
+    const mixed = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [
+        {
+          brushType: "rect",
+          range: [
+            [10, 20],
+            [30, 40],
+          ],
+        },
+        { brushType: "lineX", coordRange: [1, 3] },
+      ],
+      selected: selectedWithMainHits([9, 1]),
+    })
+    const remaining = createBrushSelection({
+      brushId: "brush-0",
+      brushIndex: 0,
+      areas: [{ brushType: "lineX", coordRange: [1, 3] }],
+      selected: selectedWithMainHits([1]),
+    })
+    widgetMgr.setStringValue.mockImplementation(
+      (_id: string, value: string | null) => {
+        widgetMgr.getStringValue.mockReturnValue(value ?? undefined)
+      }
+    )
+    widgetMgr.getElementState.mockImplementation(
+      (_id: string, key: string) => {
+        if (key === "brushSelection") {
+          return [mixed]
+        }
+        if (key === "selectedPoints") {
+          return []
+        }
+        return undefined
+      }
+    )
+    const { result } = renderHook(() =>
+      useEChartsSelections(createElement(), widgetMgr)
+    )
+    const chart = createFakeChart()
+
+    act(() => {
+      result.current.bindSelections(chart)
+      result.current.prunePixelOnlyBrushAfterResize(chart)
+    })
+    act(() => {
+      chart.trigger("brushSelected", { batch: [remaining] })
+    })
+    ;(widgetMgr.setStringValue as Mock).mockClear()
+
+    act(() => {
+      chart.trigger("brushEnd", {
+        brushId: remaining.brushId,
+        areas: remaining.areas,
+      })
+    })
+    flush()
+
+    expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+      "chart-id",
+      JSON.stringify({
+        selection: {
+          selected: [
+            {
+              series_index: 0,
+              series_id: null,
+              series_name: null,
+              data_type: "main",
+              data_indices: [1],
+            },
+          ],
+          areas: [
+            {
+              brush_index: 0,
+              brush_type: "lineX",
+              coord_range: [1, 3],
+            },
+          ],
+        },
+      }),
+      { formId: "", fragmentId: undefined, fromUser: true }
+    )
+  })
+
   it("routes a form prune write through the pending form dict", () => {
     const mixed = createBrushSelection({
       brushId: "brush-0",

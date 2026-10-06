@@ -56,10 +56,10 @@ export const StyledEChartsChartContainer = styled.div<{
 }>(({ isDisabled }) => ({
   width: "100%",
   height: "100%",
-  // Block native/brush edits on selection widgets while the script is
-  // running or the websocket is down so they cannot leak into the first
-  // snapshot after re-enable. Display-only charts keep pointer events so
-  // tooltips, dataZoom, and toolbox still work.
+  // Block in-chart edits on a disabled selection widget (host-disabled
+  // inputs or a dropped connection) so they cannot leak into the first
+  // snapshot after re-enable. Display-only charts keep pointer events for
+  // tooltips, dataZoom, and toolbox.
   ...(isDisabled ? { pointerEvents: "none" as const } : {}),
 }))
 

@@ -333,6 +333,17 @@ class EChartsChartTest(DeltaGeneratorTestCase):
             "a callback function."
         )
 
+    def test_unhashable_on_select_raises_streamlit_value_error(self):
+        """Array-like on_select values raise StreamlitValueError, not TypeError."""
+        with pytest.raises(StreamlitValueError) as exc:
+            st.echarts_chart(_BASIC_SPEC, on_select=["rerun"])
+
+        assert (
+            str(exc.value)
+            == "Invalid `on_select` value. Supported values: 'rerun', 'ignore', "
+            "a callback function."
+        )
+
     @parameterized.expand(
         [
             ("rerun", True),

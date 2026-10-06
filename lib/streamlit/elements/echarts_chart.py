@@ -54,7 +54,11 @@ from streamlit.logger import get_logger
 from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+    validate_on_change_mode,
+)
 from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
@@ -317,9 +321,7 @@ class EChartsState(ReadOnlyAttributeDictionary):
 
 @dataclass
 class EChartsChartSelectionSerde:
-    """EChartsChartSelectionSerde is used to serialize and deserialize the
-    ECharts chart selection state.
-    """
+    """Serialize and deserialize the ECharts chart selection state."""
 
     def deserialize(self, ui_value: str | None) -> EChartsState:
         empty_selection_state: dict[str, Any] = {
@@ -1211,23 +1213,23 @@ class EChartsMixin:
         if renderer not in {"canvas", "svg"}:
             raise StreamlitValueError("renderer", ["'canvas'", "'svg'"])
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitValueError(
-                "on_select", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
 
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -1300,13 +1302,14 @@ class EChartsMixin:
             echarts_chart_proto.id = compute_and_register_element_id(
                 "echarts_chart",
                 user_key=key,
-                # A key is the identity except for selection activation: a keyed
-                # chart that switches between widget and display-only must not
-                # reuse the same ID, or the frontend keeps stale widget/selection
-                # state. Display-only keyed charts stay key-only (same as
-                # charts without ``on_select``) so they don't remount when this
-                # flag is added. Spec, theme, renderer, and alt stay out of the
-                # keyed identity so data-only reruns keep the instance.
+                # Identity rules:
+                # - Keyed display-only: key only, so data/theme/renderer
+                #   changes keep the instance.
+                # - Keyed widget: key + is_selection_activated, so toggling
+                #   on_select gets a fresh ID and drops stale frontend
+                #   selection state.
+                # - Unkeyed widget: all params, so any spec/theme/renderer/size
+                #   change resets the selection.
                 key_as_main_identity=(
                     {"is_selection_activated"} if is_selection_activated else True
                 ),
@@ -1330,7 +1333,7 @@ class EChartsMixin:
         serde = EChartsChartSelectionSerde()
         widget_state = register_widget(
             echarts_chart_proto.id,
-            on_change_handler=on_select if callable(on_select) else None,
+            on_change_handler=on_select_callback,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
