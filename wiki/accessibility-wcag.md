@@ -1,12 +1,14 @@
-# Streamlit WCAG capability inventory
+# Streamlit WCAG command inventory
 
 Last updated: 2026-10-02. Re-audit a command when its accessible name, keyboard behavior, or role changes.
+
+This page is the **command** inventory (`st.*`). For default theme tokens and library shell chrome (1.4.3, 1.4.11, 2.5.8), see the [theme & shell chrome inventory](accessibility-theme.md).
 
 How Streamlit enables or blocks authors from meeting **WCAG 2.2 Level A and AA** in their apps. Conformance applies to the **app**, not the library — this page is not a claim that Streamlit itself is conformant.
 
 Accessibility audits (US Section 508, EN 301 549, and similar) evaluate the app an author ships, not Streamlit itself. Use this inventory to see, per command, whether public Streamlit **blocks** a criterion, **meets** it already, leaves it to the **author**, or treats it as **not this surface**.
 
-**Current documented coverage:** media, charts, maps, data, embeds, and images audited during the `alt` rollout, plus shared chrome those commands use. Other widgets and app shell are out of scope until separately audited.
+**Current documented coverage:** media, charts, maps, data, embeds, and images audited during the `alt` rollout, plus shared chrome those commands use (naming / 4.1.2). Other widgets remain out of scope until separately audited.
 
 ## What we are scoring
 
