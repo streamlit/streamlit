@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Type tests for st.get_option."""
+"""Type tests for st.get_option and st.set_option.
+
+``st.set_option`` is ``streamlit.config.set_user_option``. The internal
+``streamlit.config.set_option`` takes an extra ``where_defined`` argument and
+is not the public command.
+"""
 
 from __future__ import annotations
 
@@ -22,6 +27,7 @@ from typing_extensions import assert_type
 
 if TYPE_CHECKING:
     from streamlit.config import get_option
+    from streamlit.config import set_user_option as set_option
 
     # =====================================================================
     # st.get_option return type tests
@@ -52,3 +58,65 @@ if TYPE_CHECKING:
     # Unknown argument
     get_option("theme.primaryColor", help="Get the color")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
     get_option("theme.primaryColor", width="stretch")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+
+    # =====================================================================
+    # st.set_option return type tests
+    # =====================================================================
+
+    # Returns None. value is Any: the scriptable options take bool or str,
+    # and client.showErrorDetails also accepts the legacy bool form.
+    assert_type(set_option("client.showErrorDetails", True), None)
+    assert_type(set_option("client.showErrorDetails", "full"), None)
+    assert_type(set_option("client.toolbarMode", "auto"), None)
+    assert_type(set_option("client.disableDataExport", False), None)
+    assert_type(set_option("client.showSidebarNavigation", True), None)
+
+    # A non-literal key is still accepted; unknown keys fail at runtime.
+    option_key: str = "client.toolbarMode"
+    assert_type(set_option(option_key, "viewer"), None)
+
+    # value is Any, including None and a non-literal value.
+    option_value: Any = True
+    assert_type(set_option("client.showErrorDetails", option_value), None)
+    assert_type(set_option("client.disableDataExport", None), None)
+
+    # Both parameters as keywords
+    assert_type(
+        set_option(key="client.showErrorDetails", value="none"),
+        None,
+    )
+
+    # =====================================================================
+    # Invalid st.set_option usages - should NOT type check
+    # =====================================================================
+
+    # Missing required arguments
+    set_option()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
+    set_option("client.showErrorDetails")  # type: ignore[call-arg]  # ty: ignore[missing-argument]
+    set_option(value=True)  # type: ignore[call-arg]  # ty: ignore[missing-argument]
+
+    # Non-str key
+    set_option(123, True)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    set_option(None, True)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    set_option(["client.showErrorDetails"], True)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    set_option(key=123, value=True)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Too many positional arguments. where_defined exists only on the internal
+    # config.set_option, not on the public command.
+    set_option(
+        "client.showErrorDetails",
+        True,
+        "<user defined>",  # ty: ignore[too-many-positional-arguments]
+    )  # type: ignore[call-arg]
+
+    # Unknown arguments
+    set_option(
+        "client.showErrorDetails",
+        True,
+        where_defined="<user defined>",  # ty: ignore[unknown-argument]
+    )  # type: ignore[call-arg]
+    set_option(
+        "client.showErrorDetails",
+        True,
+        help="Set the option",  # ty: ignore[unknown-argument]
+    )  # type: ignore[call-arg]
