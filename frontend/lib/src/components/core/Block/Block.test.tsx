@@ -32,7 +32,7 @@ import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { text } from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { renderWithContexts } from "~lib/test_util"
+import { mockEllipsizedLabels, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
@@ -699,6 +699,7 @@ describe("BlockNodeRenderer transparent blocks", () => {
 })
 
 describe("BlockNodeRenderer direct column wrapping context", () => {
+  mockEllipsizedLabels()
   const label = "Regenerate the complete quarterly report now"
 
   async function renderColumnChildren(children: AppNode[]): Promise<void> {
