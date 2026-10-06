@@ -238,6 +238,39 @@ describe("useLabelTitleTooltip", () => {
     expect(screen.getByTitle("Clipped")).toBeVisible()
   })
 
+  it("measures a hidden label once it is laid out, then stops watching size", () => {
+    const observers: Array<{
+      callback: ResizeObserverCallback
+      disconnect: ReturnType<typeof vi.fn>
+    }> = []
+    class ResizeObserverSpy {
+      public observe = vi.fn()
+      public unobserve = vi.fn()
+      public disconnect = vi.fn()
+
+      constructor(callback: ResizeObserverCallback) {
+        observers.push({ callback, disconnect: this.disconnect })
+      }
+    }
+
+    const OriginalResizeObserver = globalThis.ResizeObserver
+    globalThis.ResizeObserver = ResizeObserverSpy
+
+    try {
+      layout.setWidths(0, 0)
+      render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+      expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+      expect(observers).toHaveLength(1)
+
+      layout.setWidths(200, 100)
+      observers[0].callback([], {} as ResizeObserver)
+      expect(screen.getByTitle("Plain label")).toBeVisible()
+      expect(observers[0].disconnect).toHaveBeenCalled()
+    } finally {
+      globalThis.ResizeObserver = OriginalResizeObserver
+    }
+  })
+
   it("remeasures overflow once document fonts finish loading", async () => {
     let resolveReady: () => void = () => undefined
     const ready = new Promise<void>(resolve => {

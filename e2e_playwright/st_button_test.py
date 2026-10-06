@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-TOTAL_BUTTONS = 42
+TOTAL_BUTTONS = 43
 
 WRAP_LABEL = "Regenerate the complete quarterly report now"
 
@@ -395,6 +395,16 @@ def test_wrap_auto_no_wrap_for_direct_column_children(app: Page):
     wait_until(app, columns_are_stacked)
     expect_label_truncated(auto_direct)
     expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+
+def test_hidden_tab_label_gets_title_when_shown(app: Page):
+    """A clipped no-wrap button in an unselected tab gets a title once shown."""
+    tabs = get_element_by_key(app, "wrap_false_hidden_tab")
+    button = get_element_by_key(app, "wrap_false_hidden_tab_button")
+
+    expect(button.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    tabs.get_by_role("tab", name="Hidden label").click()
+    expect(button.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
 
 
 def test_short_label_has_no_native_title(app: Page):

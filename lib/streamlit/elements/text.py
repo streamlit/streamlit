@@ -97,7 +97,7 @@ class TextMixin:
               with an ellipsis. Newlines in the body are not shown as extra
               lines. Truncation only appears when the element is
               narrower than its text. Hovering truncated text reveals
-              the full text.
+              the full text, including when ``help`` is set.
 
         Examples
         --------

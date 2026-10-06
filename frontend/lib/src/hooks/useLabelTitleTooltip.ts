@@ -37,16 +37,24 @@ export const MARKDOWN_ELLIPSIS_CLASS = "stMarkdownEllipsis"
  */
 const ELLIPSIS_TARGET_SELECTOR = `.${MARKDOWN_ELLIPSIS_CLASS}, .stMarkdownBadge`
 
+type OverflowMeasure = "overflow" | "fits" | "unmeasured"
+
 /**
- * True when `el` is painting a CSS ellipsis. The ellipsis is not part of the
- * DOM text, so a trailing "..." check cannot detect it.
+ * A 0×0 box has not been laid out yet (a hidden tab or collapsed expander).
+ * That is distinct from a label that fits.
  */
-function hasEllipsisOverflow(el: Element): boolean {
+function measureEllipsis(el: Element): OverflowMeasure {
   // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required to detect a clipped label
-  if (el.scrollWidth <= el.clientWidth + ELLIPSIS_OVERFLOW_TOLERANCE_PX) {
-    return false
+  const scrollWidth = el.scrollWidth
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required to detect a clipped label
+  const clientWidth = el.clientWidth
+  if (scrollWidth === 0 && clientWidth === 0) {
+    return "unmeasured"
   }
-  return getComputedStyle(el).textOverflow === "ellipsis"
+  if (scrollWidth <= clientWidth + ELLIPSIS_OVERFLOW_TOLERANCE_PX) {
+    return "fits"
+  }
+  return getComputedStyle(el).textOverflow === "ellipsis" ? "overflow" : "fits"
 }
 
 /**
@@ -54,16 +62,23 @@ function hasEllipsisOverflow(el: Element): boolean {
  * put `display: contents` around the text and ellipsize a descendant; headings
  * and `st.text` ellipsize the host itself.
  */
-function isLabelTextOverflowing(root: HTMLElement): boolean {
-  if (hasEllipsisOverflow(root)) {
-    return true
+function labelOverflowState(root: HTMLElement): OverflowMeasure {
+  let sawBox = false
+  const consider = (state: OverflowMeasure): boolean => {
+    if (state === "fits") {
+      sawBox = true
+    }
+    return state === "overflow"
+  }
+  if (consider(measureEllipsis(root))) {
+    return "overflow"
   }
   for (const el of root.querySelectorAll(ELLIPSIS_TARGET_SELECTOR)) {
-    if (hasEllipsisOverflow(el)) {
-      return true
+    if (consider(measureEllipsis(el))) {
+      return "overflow"
     }
   }
-  return false
+  return sawBox ? "fits" : "unmeasured"
 }
 
 function clearTitle(node: HTMLElement): void {
@@ -121,11 +136,13 @@ interface LabelTitleTooltipRefs<
  * - The hook reads rendered plain text from the DOM so a Markdown label is
  *   shown without its raw syntax (Markdown only yields plain text after it
  *   renders).
- * - The native `title` is set only when an ellipsis box inside the host is
- *   actually clipped (`scrollWidth` wider than `clientWidth`). A label that
- *   fits does not get a title. Overflow is measured when the label renders,
- *   and once more when `document.fonts.ready` settles. A later resize or
- *   font swap can leave the title stale until the next render.
+ * - The native `title` is set only when the host, or an ellipsis box inside
+ *   it, is actually clipped (`scrollWidth` wider than `clientWidth`). A label
+ *   that fits does not get a title. Overflow is measured when the label
+ *   renders, once more when `document.fonts.ready` settles, and again if the
+ *   label had no box at mount once it is first laid out. A later resize or
+ *   font swap keeps that result until the label text or its rendered content
+ *   changes.
  * - A MutationObserver re-syncs the title after async Markdown plugins (e.g.
  *   emoji) replace a loading skeleton with the real label. When
  *   `addTitleTooltip` is false, no observer is attached.
@@ -159,23 +176,32 @@ export function useLabelTitleTooltip<
       return
     }
 
-    const syncTitle = (): void => {
+    // Returns false when the label has no box yet, so the caller can retry.
+    const syncTitle = (): boolean => {
       const labelNode = labelTextRef.current
-      if (!labelNode || !isLabelTextOverflowing(node)) {
+      if (!labelNode) {
         clearTitle(node)
-        return
+        return true
+      }
+      const overflow = labelOverflowState(node)
+      if (overflow === "unmeasured") {
+        return false
+      }
+      if (overflow === "fits") {
+        clearTitle(node)
+        return true
       }
       const labelText = plainTextWithBlockGaps(labelNode)
       if (!labelText) {
         clearTitle(node)
-        return
+        return true
       }
       if (node.getAttribute("title") !== labelText) {
         node.title = labelText
       }
+      return true
     }
 
-    syncTitle()
     const cancelFontRecheck = remeasureWhenFontsReady(syncTitle)
 
     const mutationObserver = new MutationObserver(syncTitle)
@@ -185,9 +211,22 @@ export function useLabelTitleTooltip<
       characterData: true,
     })
 
+    // Hidden tabs and collapsed expanders mount at 0×0. Watch only until the
+    // first real box, then disconnect so later resizes do not force layout.
+    let resizeObserver: ResizeObserver | undefined
+    if (!syncTitle()) {
+      resizeObserver = new ResizeObserver(() => {
+        if (syncTitle()) {
+          resizeObserver?.disconnect()
+        }
+      })
+      resizeObserver.observe(node)
+    }
+
     return () => {
       cancelFontRecheck()
       mutationObserver.disconnect()
+      resizeObserver?.disconnect()
     }
   }, [addTitleTooltip, effectIdentityKey])
 

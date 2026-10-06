@@ -341,10 +341,11 @@ without changing the app. The rules:
 - **Native `title` tooltip.** The full label is attached as the element's native HTML
   `title` attribute, which the browser shows on hover. The title is set only when the
   label is actually ellipsized (`scrollWidth` exceeds `clientWidth` on an element whose
-  `text-overflow` is `ellipsis`) at render time, and once more when the document
-  fonts finish loading. The existing mutation observer re-checks that after async
-  markdown updates. A later resize or font swap can leave the title stale until
-  the next render. Streamlit's styled tooltip is not used.
+  `text-overflow` is `ellipsis`) when the label renders, once more when the
+  document fonts finish loading, and again when a label that was hidden at mount
+  is first shown. Async markdown updates re-check it. A later resize or font swap
+  can leave the title stale until the label text changes. Streamlit's styled
+  tooltip is not used.
 - **Only when clipped.** A short label that fits does not get a `title`, including when
   `wrap=False` is explicit or resolved from the auto default inside a horizontal
   container or a direct column child.
