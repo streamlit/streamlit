@@ -2476,7 +2476,7 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendarButton).toHaveAttribute("aria-label", "Choose date")
     expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
     expect(calendarButton).toHaveAttribute("aria-expanded", "false")
-    expect(calendarButton).toHaveAttribute("aria-controls")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
   })
 
   it("calendar button opens active calendar and toggles aria-expanded", async () => {
@@ -2489,6 +2489,7 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     const calendar = await screen.findByTestId("stDateInputCalendar")
     expect(calendar).toHaveAttribute("role", "dialog")
     expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+    expect(calendarButton).toHaveAttribute("aria-controls")
 
     await user.click(calendarButton)
     await waitFor(() => {
@@ -2497,6 +2498,24 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
       ).not.toBeInTheDocument()
     })
     expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+  })
+
+  it("passive preview does not set aria-expanded on the calendar button", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const { year } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+    expect(screen.getByTestId("stDateInputCalendar")).not.toHaveAttribute(
+      "role",
+      "dialog"
+    )
   })
 })
 
@@ -2519,7 +2538,7 @@ describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendarButton).toHaveAttribute("aria-label", "Choose date range")
     expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
     expect(calendarButton).toHaveAttribute("aria-expanded", "false")
-    expect(calendarButton).toHaveAttribute("aria-controls")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
   })
 
   it("calendar button opens active calendar and toggles aria-expanded", async () => {
@@ -2539,6 +2558,7 @@ describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
     const calendar = await screen.findByTestId("stDateInputCalendar")
     expect(calendar).toHaveAttribute("role", "dialog")
     expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+    expect(calendarButton).toHaveAttribute("aria-controls")
 
     await user.click(calendarButton)
     await waitFor(() => {
@@ -2547,6 +2567,7 @@ describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
       ).not.toBeInTheDocument()
     })
     expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
   })
 
   it("Alt+ArrowDown from start field segment enters active calendar", async () => {

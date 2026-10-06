@@ -530,14 +530,15 @@ function SingleDateTimeInput({
     [onValidate, resolveGivenTime]
   )
 
-  // Calendar/clear buttons are focusable children of the wrapper; focusing them
-  // must not reopen a passive popover (Tab lands on the calendar toggle last).
+  // Do not reopen a passive popover when focus moves to the calendar or clear
+  // button. Tab lands on the calendar toggle after the last segment, and that
+  // focus event bubbles here.
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
-      lastTimeSourceRef.current = "inline"
       if (isRestoringFocusRef.current) return
       if (clearButtonRef.current?.contains(e.target)) return
       if (calendarButtonRef.current?.contains(e.target)) return
+      lastTimeSourceRef.current = "inline"
       if (!disabled) setIsOpen(true)
     },
     [disabled]
@@ -547,8 +548,8 @@ function SingleDateTimeInput({
     lastTimeSourceRef.current = "popover"
   }, [])
 
-  // Capture-phase fires before trailing buttons' own handlers; without this
-  // gate, clear / calendar clicks would immediately reopen a passive popover.
+  // Ignore clear and calendar clicks so they do not reopen a passive popover.
+  // This capture handler runs before those buttons' own click handlers.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
       if (clearButtonRef.current?.contains(e.target as Node)) return
@@ -574,6 +575,9 @@ function SingleDateTimeInput({
       e.stopPropagation()
       if (disabled) return
       if (isOpen && isCalendarActive) {
+        // Commit while the popover is still mounted — same as Tab-away and
+        // outside-click. Unmounting first drops a time that exists only there.
+        commitOrRevert()
         setIsOpen(false)
         setIsCalendarActive(false)
         restoreFocusToField()
@@ -591,7 +595,7 @@ function SingleDateTimeInput({
       if (!isOpen) setIsOpen(true)
       setIsCalendarActive(true)
     },
-    [disabled, isOpen, isCalendarActive, restoreFocusToField]
+    [disabled, isOpen, isCalendarActive, commitOrRevert, restoreFocusToField]
   )
 
   // Custom paste handler: ISO datetime or display-format datetime.
@@ -906,8 +910,8 @@ function SingleDateTimeInput({
             onClick={handleCalendarButtonClick}
             aria-label="Choose date and time"
             aria-haspopup="dialog"
-            aria-expanded={isOpen || isCalendarActive}
-            aria-controls={popoverId}
+            aria-expanded={isCalendarActive}
+            aria-controls={isCalendarActive ? popoverId : undefined}
             data-testid="stDateTimeInputCalendarButton"
             disabled={disabled}
             onMouseDown={e => e.preventDefault()}

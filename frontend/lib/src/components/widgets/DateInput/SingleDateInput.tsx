@@ -415,8 +415,9 @@ function SingleDateInput({
 
   // Wired to onFocus and onClickCapture: clicking an already-focused segment
   // doesn't re-fire onFocus. Capture phase needed because RAC stops propagation.
-  // Calendar/clear buttons are focusable children of the wrapper; focusing them
-  // must not reopen a passive popover (Tab lands on the calendar toggle last).
+  // Do not reopen a passive popover when focus moves to the calendar or clear
+  // button. Tab lands on the calendar toggle after the last segment, and that
+  // focus event bubbles here.
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (isRestoringFocusRef.current) return
@@ -427,8 +428,8 @@ function SingleDateInput({
     [disabled]
   )
 
-  // Capture-phase fires before trailing buttons' own handlers; without this
-  // gate, clear / calendar clicks would immediately reopen a passive popover.
+  // Ignore clear and calendar clicks so they do not reopen a passive popover.
+  // This capture handler runs before those buttons' own click handlers.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
       if (clearButtonRef.current?.contains(e.target as Node)) return
@@ -689,8 +690,8 @@ function SingleDateInput({
             onClick={handleCalendarButtonClick}
             aria-label="Choose date"
             aria-haspopup="dialog"
-            aria-expanded={isOpen || isCalendarActive}
-            aria-controls={popoverId}
+            aria-expanded={isCalendarActive}
+            aria-controls={isCalendarActive ? popoverId : undefined}
             data-testid="stDateInputCalendarButton"
             disabled={disabled}
             onMouseDown={e => e.preventDefault()}

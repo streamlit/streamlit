@@ -293,7 +293,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       }}
       as={StyledSidebar}
       onResizeStop={onResizeStop}
-      // Props part of StyledSidebar / section, but not Resizable's public type
+      // Forwarded to StyledSidebar via Resizable's extra-props spread; not in
+      // Resizable's public prop type.
       // @ts-expect-error
       id={SIDEBAR_ELEMENT_ID}
       isCollapsed={isCollapsed}

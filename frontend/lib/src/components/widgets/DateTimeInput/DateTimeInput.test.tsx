@@ -1692,7 +1692,7 @@ describe("DateTimeInput widget", () => {
       )
       expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
       expect(calendarButton).toHaveAttribute("aria-expanded", "false")
-      expect(calendarButton).toHaveAttribute("aria-controls")
+      expect(calendarButton).not.toHaveAttribute("aria-controls")
     })
 
     it("calendar button opens active calendar and toggles aria-expanded", async () => {
@@ -1709,6 +1709,7 @@ describe("DateTimeInput widget", () => {
       const calendar = await screen.findByTestId("stDateTimeInputCalendar")
       expect(calendar).toHaveAttribute("role", "dialog")
       expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+      expect(calendarButton).toHaveAttribute("aria-controls")
 
       await user.click(calendarButton)
       await waitFor(() => {
@@ -1717,6 +1718,7 @@ describe("DateTimeInput widget", () => {
         ).not.toBeInTheDocument()
       })
       expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+      expect(calendarButton).not.toHaveAttribute("aria-controls")
     })
   })
 
@@ -2606,6 +2608,79 @@ describe("DateTimeInput widget", () => {
         expect.anything()
       )
       expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    it("commits a popover time when the calendar button closes an active dialog", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      await user.click(calendarButton)
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+          "role",
+          "dialog"
+        )
+      })
+
+      const popoverHour = screen
+        .getByTestId("stDateTimeInputPopoverTime")
+        .querySelector('[data-type="hour"]') as HTMLElement
+      await user.click(popoverHour)
+      await user.keyboard("{ArrowUp}")
+
+      // Dismiss with the calendar button — commit while popover time is mounted.
+      await user.click(calendarButton)
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T17:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
+    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
+    it("commits an inline date plus popover-only time when the calendar button closes", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await user.keyboard("20251119")
+
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+
+      // Passive preview → calendar button enters active dialog; second click
+      // closes and must commit the merged value.
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      await user.click(calendarButton)
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+          "role",
+          "dialog"
+        )
+      })
+      await user.click(calendarButton)
+
+      await expectCommitted(spy, props, "2025-11-19T09:45")
     })
 
     it("commits the same value again after a form clear", async () => {

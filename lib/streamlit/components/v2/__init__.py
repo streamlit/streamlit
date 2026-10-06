@@ -502,7 +502,7 @@ def component(
             const sidebar = document.querySelector('section.stSidebar');
             const initialState = sidebar.getAttribute('data-collapsed') === 'false';
 
-            // Create observer to watch for data-collapsed attribute changes
+            // Observe data-collapsed so the component reports sidebar visibility changes.
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
                     if (mutation.type === 'attributes' && mutation.attributeName === 'data-collapsed') {
