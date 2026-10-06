@@ -189,7 +189,7 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
 
-Use `st.set_page_config(run_every=...)` only when the whole page should refresh. Each tick reruns the entire script. The interval must be at least 1 second. Pass `run_every=None` to turn it off. Omitting the argument in the same script run leaves an earlier interval unchanged. A later full rerun that never passes `run_every` does not keep the timer. Page auto-rerun pauses while an `st.dialog` is open. A fragment interval and a page interval can run together:
+Use `st.set_page_config(run_every=...)` only when the whole page must refresh; each tick reruns the full script (minimum 1 second, `None` disables it, and it pauses while an `st.dialog` is open). Page and fragment intervals can be combined:
 
 ```python
 st.set_page_config(run_every="30s")

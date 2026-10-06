@@ -28,6 +28,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import Dialog, { type Props as DialogProps } from "./Dialog"
 import {
   isElementDialogOpen,
+  markElementDialogOpen,
   resetElementDialogOpenForTests,
 } from "./elementDialogOpen"
 
@@ -127,6 +128,18 @@ describe("Dialog container", () => {
     )
     expect(isElementDialogOpen()).toBe(true)
     unmount()
+    expect(isElementDialogOpen()).toBe(false)
+  })
+
+  it("does not let a second cleanup make a later dialog look closed", () => {
+    const close = markElementDialogOpen()
+    close()
+    close()
+    expect(isElementDialogOpen()).toBe(false)
+
+    const reopen = markElementDialogOpen()
+    expect(isElementDialogOpen()).toBe(true)
+    reopen()
     expect(isElementDialogOpen()).toBe(false)
   })
 

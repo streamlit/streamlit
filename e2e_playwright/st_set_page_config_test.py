@@ -371,9 +371,9 @@ def run_every_app(page: Page, app_base_url: str) -> Page:
 
 
 def _tick_text(app: Page, key: str) -> str:
-    text = get_element_by_key(app, key).get_by_test_id("stMarkdown").inner_text()
-    assert text
-    return text
+    markdown = get_element_by_key(app, key).get_by_test_id("stMarkdown")
+    expect(markdown).not_to_have_text("")
+    return markdown.inner_text()
 
 
 def test_page_run_every_reruns_without_clearing_an_unsubmitted_form(
@@ -397,7 +397,8 @@ def test_page_run_every_reruns_without_clearing_an_unsubmitted_form(
 def test_page_run_every_pauses_while_a_dialog_is_open(run_every_app: Page) -> None:
     """Ticks wait while an st.dialog is open and resume after it closes."""
     tick = get_element_by_key(run_every_app, "tick_count").get_by_test_id("stMarkdown")
-    expect(tick).not_to_have_text(_tick_text(run_every_app, "tick_count"))
+    initial = _tick_text(run_every_app, "tick_count")
+    expect(tick).not_to_have_text(initial)
 
     click_button(run_every_app, "Open dialog")
     expect(run_every_app.get_by_role("dialog")).to_be_visible()
@@ -421,7 +422,8 @@ def test_page_run_every_stops_when_disabled_or_the_page_changes(
 ) -> None:
     """A live timer stops on a page that omits run_every, and None stops it too."""
     tick = get_element_by_key(run_every_app, "tick_count").get_by_test_id("stMarkdown")
-    expect(tick).not_to_have_text(_tick_text(run_every_app, "tick_count"))
+    initial = _tick_text(run_every_app, "tick_count")
+    expect(tick).not_to_have_text(initial)
 
     # Leave auto-refresh on so this navigation is what clears the timer.
     run_every_app.get_by_role("link", name="Quiet").click()
@@ -437,7 +439,8 @@ def test_page_run_every_stops_when_disabled_or_the_page_changes(
     run_every_app.get_by_role("link", name="Live").click()
     wait_for_app_run(run_every_app)
     tick = get_element_by_key(run_every_app, "tick_count").get_by_test_id("stMarkdown")
-    expect(tick).not_to_have_text(_tick_text(run_every_app, "tick_count"))
+    resumed = _tick_text(run_every_app, "tick_count")
+    expect(tick).not_to_have_text(resumed)
 
     click_toggle(run_every_app, "Auto-refresh")
     frozen = _tick_text(run_every_app, "tick_count")

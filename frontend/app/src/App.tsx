@@ -367,14 +367,12 @@ export class App extends PureComponent<Props, State> {
   private historyNavigationEpoch: number | null = null
 
   // Active `run_every` auto-rerun timers. Fragment timers are keyed by fragment
-  // id. The page timer from `st.set_page_config(run_every=...)` uses an empty
-  // id, matching an `AutoRerun` message with no fragment id. These are
-  // imperative timer handles, so they live outside of React state. Re-registering
-  // the same interval leaves the countdown alone. Full reruns still restart the
-  // page countdown because `handleNewSession` clears these timers first. The
-  // stored `interval` (in seconds) is what re-registration compares against.
-  // Empty string is the page-level timer. Protobuf leaves fragment_id unset
-  // as "", and that value is not a valid fragment id.
+  // id. These are imperative timer handles, so they live outside of React
+  // state. Re-registering the same interval leaves the countdown alone. Full
+  // reruns still restart the page countdown because `handleNewSession` clears
+  // these timers first. The stored `interval` (in seconds) is what
+  // re-registration compares against.
+  /** Timer id for `st.set_page_config(run_every=...)`. Protobuf sends an unset `fragment_id` as "", which no real fragment uses. */
   private static readonly PAGE_AUTO_RERUN_ID = ""
   private readonly autoRerunIntervals: Map<
     string,
@@ -383,6 +381,8 @@ export class App extends PureComponent<Props, State> {
       interval: number
       /** False when `timer` is a chained `setTimeout` for a delay above the 32-bit limit. */
       repeating: boolean
+      /** Identifies this registration. A queued callback must not fire after a clear or replace. */
+      generation: object
     }
   > = new Map()
 
@@ -401,10 +401,12 @@ export class App extends PureComponent<Props, State> {
   // it until that fragment run finishes.
   private pageAutoRerunDeferred = false
 
-  // The active run was interrupted. The next committed RUNNING → NOT_RUNNING
-  // transition is the gap before the replacement run and must not flush a
-  // held page tick.
-  private pageAutoRerunSkipIdleFlush = false
+  // Set while a replacement run is expected and the server has not reported
+  // it yet: after an interrupt, a user or fragment rerun, or a page auto-rerun
+  // that was just sent. Page ticks are dropped until `scriptIsRunning`. A
+  // fragment rerun leaves the page timer and any held tick in place. A user
+  // full rerun, and a deferred page-tick replay, also clear the page timer.
+  private pageAutoRerunAwaitingNextRun = false
 
   // Whether a suppression reason has been reported this page load. Tracked
   // separately from `skillsNudgeShown` so recording a suppression does NOT
@@ -885,10 +887,9 @@ export class App extends PureComponent<Props, State> {
           // It's okay if this fails, the `measure` call is for debugging/profiling
         }
         if (prevState.scriptRunState === ScriptRunState.RUNNING) {
-          // An interrupted run keeps this set until the replacement run
-          // starts or NewSession clears it. A fresh tick in that idle gap
-          // must not send.
-          if (!this.pageAutoRerunSkipIdleFlush) {
+          // Send a page tick held during the run that just finished, unless that run
+          // was interrupted and a replacement run is still pending.
+          if (!this.pageAutoRerunAwaitingNextRun) {
             this.flushDeferredPageAutoRerun()
           }
         }
@@ -1415,13 +1416,18 @@ export class App extends PureComponent<Props, State> {
       // own. Stop and a user rerun clear it. An interrupted run delays it
       // until the replacement is known.
       if (!fragmentId) {
+        // A callback queued before the page timer was cleared must not send
+        // after NewSession resets the awaiting-run flag.
+        if (!this.autoRerunIntervals.has(App.PAGE_AUTO_RERUN_ID)) {
+          return
+        }
         if (
           isElementDialogOpen() ||
           this.state.scriptRunState === ScriptRunState.STOP_REQUESTED ||
-          // A full rerun was sent or the previous run was interrupted. Stay
-          // quiet until the replacement run is active. Sending now can drop
-          // widget triggers that were already flushed.
-          this.pageAutoRerunSkipIdleFlush
+          // A run was requested and the server has not reported it yet.
+          // Sending another full rerun now can drop widget triggers that
+          // were already flushed, or preempt the request still in flight.
+          this.pageAutoRerunAwaitingNextRun
         ) {
           return
         }
@@ -1462,12 +1468,24 @@ export class App extends PureComponent<Props, State> {
       return
     }
 
+    // A callback queued before clearInterval/clearTimeout can still run.
+    // NewSession may re-arm a new timer and reset the awaiting-run flag
+    // before that happens, so identity — not map membership alone — decides.
+    const generation = {}
+    const guardedOnTick = (): void => {
+      if (this.autoRerunIntervals.get(id)?.generation !== generation) {
+        return
+      }
+      onTick()
+    }
+
     if (intervalMs <= MAX_TIMER_DELAY_MS) {
-      const timer = setInterval(onTick, intervalMs)
+      const timer = setInterval(guardedOnTick, intervalMs)
       this.autoRerunIntervals.set(id, {
         timer,
         interval: intervalSeconds,
         repeating: true,
+        generation,
       })
       return
     }
@@ -1476,20 +1494,28 @@ export class App extends PureComponent<Props, State> {
     const scheduleChunk = (): void => {
       const remaining = intervalMs - (Date.now() - cycleStartedAt)
       if (remaining <= 0) {
-        onTick()
+        guardedOnTick()
         this.startAutoRerunTimer(id, intervalSeconds, onTick, true)
         return
       }
 
       // eslint-disable-next-line no-restricted-globals -- Class-owned auto-rerun timers cannot use the useTimeout hook.
       const timer = setTimeout(
-        scheduleChunk,
+        () => {
+          // The initial call below runs before this entry exists. Later chunks
+          // must not reschedule after the timer was cleared or replaced.
+          if (this.autoRerunIntervals.get(id)?.generation !== generation) {
+            return
+          }
+          scheduleChunk()
+        },
         Math.min(remaining, MAX_TIMER_DELAY_MS)
       )
       this.autoRerunIntervals.set(id, {
         timer,
         interval: intervalSeconds,
         repeating: false,
+        generation,
       })
     }
     scheduleChunk()
@@ -1518,9 +1544,9 @@ export class App extends PureComponent<Props, State> {
       statusChangeProto.scriptIsRunning &&
       this.state.scriptRunState !== ScriptRunState.STOP_REQUESTED
     ) {
-      // The script is running again, so the interrupt gap is over. A later
-      // finish of this run may replay a tick that a fragment interrupt kept.
-      this.pageAutoRerunSkipIdleFlush = false
+      // The server has reported the run, so page ticks may be held or sent
+      // again. A later finish may replay a tick that a fragment interrupt kept.
+      this.pageAutoRerunAwaitingNextRun = false
     }
 
     this.setState((prevState: State) => {
@@ -2157,7 +2183,7 @@ export class App extends PureComponent<Props, State> {
     // tick is not sent there. A full NewSession drops the tick; a fragment
     // replacement keeps it until that run finishes.
     if (status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN) {
-      this.pageAutoRerunSkipIdleFlush = true
+      this.pageAutoRerunAwaitingNextRun = true
     }
 
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
@@ -2437,12 +2463,12 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Drop a held page tick and forget an interrupt gap.
+   * Drop a held page tick and forget that a run is awaiting acknowledgement.
    * The page timer itself stays armed.
    */
   private clearHeldPageAutoRerun(): void {
     this.pageAutoRerunDeferred = false
-    this.pageAutoRerunSkipIdleFlush = false
+    this.pageAutoRerunAwaitingNextRun = false
   }
 
   /**
@@ -2461,6 +2487,12 @@ export class App extends PureComponent<Props, State> {
     ) {
       return
     }
+    // The interval is often about to fire, and scriptRunState stays idle
+    // until the server reports this replay. Suspend the page timer the same
+    // way a user rerun does, but keep the awaiting flag set so a callback
+    // queued before the clear cannot send. The next full run re-arms it.
+    this.clearAutoRerunInterval(App.PAGE_AUTO_RERUN_ID)
+    this.pageAutoRerunAwaitingNextRun = true
     this.widgetMgr.sendUpdateWidgetsMessage(undefined, true)
   }
 
@@ -2666,14 +2698,18 @@ export class App extends PureComponent<Props, State> {
       this.historyNavigationEpoch = this.rerunEpoch
     }
 
-    // A user or st.rerun() full rerun replaces this countdown. Suspend the
-    // page timer until the next run re-arms it. scriptRunState stays idle
-    // until the server reports the new run, so leaving the timer armed would
-    // let a tick preempt the request and drop widget triggers.
-    if (!fragmentId && !isAutoRerun) {
+    // scriptRunState stays idle until the server reports the new run. Record
+    // that a run is pending so a page tick in that gap cannot preempt this
+    // request. A user full rerun also suspends the page timer until the next
+    // run re-arms it. A fragment rerun keeps the countdown and any held tick,
+    // because set_page_config outside the fragment does not run again. A page
+    // auto-rerun leaves the timer armed; a deferred replay clears it first.
+    if (fragmentId || isAutoRerun) {
+      this.pageAutoRerunAwaitingNextRun = true
+    } else {
       this.clearAutoRerunInterval(App.PAGE_AUTO_RERUN_ID)
       this.clearHeldPageAutoRerun()
-      this.pageAutoRerunSkipIdleFlush = true
+      this.pageAutoRerunAwaitingNextRun = true
     }
 
     this.sendBackMsg(

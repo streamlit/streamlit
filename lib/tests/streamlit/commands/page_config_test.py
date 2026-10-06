@@ -243,7 +243,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
         assert msgs[0].auto_rerun.fragment_id == ""
         assert self._stop_auto_rerun_messages() == []
 
-    @parameterized.expand([0, -1, 0.5, "500ms", float("inf")])
+    @parameterized.expand([0, -1, 0.5, "500ms"])
     def test_set_page_config_run_every_below_minimum(
         self, run_every: int | float | str
     ) -> None:
@@ -253,12 +253,22 @@ class PageConfigTest(DeltaGeneratorTestCase):
 
         assert self.forward_msg_queue._queue == []
 
+    @parameterized.expand([float("inf"), float("-inf"), float("nan")])
+    def test_set_page_config_run_every_rejects_non_finite_interval(
+        self, run_every: float
+    ) -> None:
+        """Non-finite intervals raise and enqueue nothing."""
+        with pytest.raises(StreamlitValueError, match="protobuf float"):
+            st.set_page_config(run_every=run_every)
+
+        assert self.forward_msg_queue._queue == []
+
     @parameterized.expand([10**1000, 1e100])
     def test_set_page_config_run_every_rejects_unrepresentable_interval(
         self, run_every: int | float
     ) -> None:
         """Intervals that cannot be a protobuf float raise StreamlitValueError."""
-        with pytest.raises(StreamlitValueError, match="at least 1 second"):
+        with pytest.raises(StreamlitValueError, match="protobuf float"):
             st.set_page_config(run_every=run_every)
 
         assert self.forward_msg_queue._queue == []

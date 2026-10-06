@@ -137,9 +137,8 @@ class _RunEveryNotSet:
         return "None"
 
 
-_RUN_EVERY_NOT_SET: Final = _RunEveryNotSet()
-_RUN_EVERY_NOT_SET_DEFAULT: Final[int | float | timedelta | str | None] = cast(
-    "int | float | timedelta | str | None", _RUN_EVERY_NOT_SET
+_RUN_EVERY_NOT_SET: Final[int | float | timedelta | str | None] = cast(
+    "int | float | timedelta | str | None", _RunEveryNotSet()
 )
 _PAGE_RUN_EVERY_MIN_SECONDS: Final = 1.0
 # Protobuf `float` is single precision. Larger values become non-finite on the wire.
@@ -169,11 +168,13 @@ def _resolve_page_run_every(
         seconds_float = float(seconds) if seconds is not None else math.inf
     except OverflowError:
         seconds_float = math.inf
-    if (
-        not math.isfinite(seconds_float)
-        or seconds_float < _PAGE_RUN_EVERY_MIN_SECONDS
-        or seconds_float > _MAX_PAGE_RUN_EVERY_SECONDS
-    ):
+    if not math.isfinite(seconds_float) or seconds_float > _MAX_PAGE_RUN_EVERY_SECONDS:
+        raise StreamlitValueError(
+            "run_every",
+            ["a finite duration representable as a protobuf float", "None"],
+            detail=f"Got {run_every!r}.",
+        )
+    if seconds_float < _PAGE_RUN_EVERY_MIN_SECONDS:
         raise StreamlitValueError(
             "run_every",
             ["a duration of at least 1 second", "None"],
@@ -209,7 +210,7 @@ def set_page_config(
     initial_sidebar_state: InitialSideBarState | None = None,
     menu_items: MenuItems | None = None,
     *,
-    run_every: int | float | timedelta | str | None = _RUN_EVERY_NOT_SET_DEFAULT,
+    run_every: int | float | timedelta | str | None = _RUN_EVERY_NOT_SET,
 ) -> None:
     """
     Configure the default settings of the page.
@@ -331,7 +332,9 @@ def set_page_config(
           e.g. ``timedelta(seconds=30)``.
 
         The interval must be at least 1 second. ``0``, negative values, and
-        any interval shorter than 1 second raise an exception.
+        any interval shorter than 1 second raise an exception. Non-finite
+        values and intervals that do not fit in a protobuf float raise as
+        well.
 
         Each tick re-executes the whole script and redraws the whole page.
         Prefer |st.fragment|_ with its own ``run_every`` when only one section
@@ -341,8 +344,12 @@ def set_page_config(
 
         .. note::
             Auto-rerun pauses while an ``st.dialog`` is open and resumes after
-            it closes. Browsers may also fire the timer less often while the
-            tab is in the background.
+            it closes. An unsubmitted ``st.form`` does not pause it: in-progress
+            values stay on screen, but the rest of the page reruns. For
+            multi-step form flows, prefer a fragment or pass ``run_every=None``.
+            Stopping the script drops a tick that was waiting for that run; the
+            next interval starts the page again. Browsers may also fire the
+            timer less often while the tab is in the background.
 
         .. |st.fragment| replace:: ``st.fragment``
         .. _st.fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
@@ -374,12 +381,24 @@ def set_page_config(
     ...     st.session_state.ticks = 0
     >>> st.session_state.ticks += 1
     >>> st.metric("Refreshes", st.session_state.ticks)
+
+    A slower page interval and a faster fragment interval can run together.
+
+    >>> import streamlit as st
+    >>>
+    >>> st.set_page_config(run_every="60s")
+    >>>
+    >>> @st.fragment(run_every="2s")
+    ... def ticker():
+    ...     st.metric("Price", get_price())
+    >>>
+    >>> ticker()
     """
 
     resolved_run_every: float | None = None
     # The public annotation is the user-facing type. The default is a sentinel
     # so an omitted argument is distinct from an explicit ``None``.
-    run_every_was_set = cast("object", run_every) is not _RUN_EVERY_NOT_SET
+    run_every_was_set = run_every is not _RUN_EVERY_NOT_SET
     if run_every_was_set:
         resolved_run_every = _resolve_page_run_every(run_every)
 

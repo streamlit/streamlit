@@ -27,7 +27,7 @@ let openElementDialogCount = 0
 export function markElementDialogOpen(): () => void {
   openElementDialogCount += 1
   return () => {
-    openElementDialogCount -= 1
+    openElementDialogCount = Math.max(0, openElementDialogCount - 1)
   }
 }
 
