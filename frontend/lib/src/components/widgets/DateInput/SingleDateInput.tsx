@@ -415,10 +415,17 @@ function SingleDateInput({
 
   // Wired to onFocus and onClickCapture: clicking an already-focused segment
   // doesn't re-fire onFocus. Capture phase needed because RAC stops propagation.
-  const handleFocus = useCallback((): void => {
-    if (isRestoringFocusRef.current) return
-    if (!disabled) setIsOpen(true)
-  }, [disabled])
+  // Calendar/clear buttons are focusable children of the wrapper; focusing them
+  // must not reopen a passive popover (Tab lands on the calendar toggle last).
+  const handleFocus = useCallback(
+    (e: FocusEvent<HTMLDivElement>): void => {
+      if (isRestoringFocusRef.current) return
+      if (clearButtonRef.current?.contains(e.target as Node)) return
+      if (calendarButtonRef.current?.contains(e.target as Node)) return
+      if (!disabled) setIsOpen(true)
+    },
+    [disabled]
+  )
 
   // Capture-phase fires before trailing buttons' own handlers; without this
   // gate, clear / calendar clicks would immediately reopen a passive popover.
@@ -429,9 +436,9 @@ function SingleDateInput({
       // Pointer-only: active mode enters via rAF, so handleFocus can't reset
       // it without breaking Tab cycling inside the calendar.
       setIsCalendarActive(false)
-      handleFocus()
+      if (!isRestoringFocusRef.current && !disabled) setIsOpen(true)
     },
-    [handleFocus]
+    [disabled]
   )
 
   const handleClear = useCallback((): void => {
@@ -502,8 +509,8 @@ function SingleDateInput({
     [disabled, format, onChange, displayValue, minDate]
   )
 
-  // Alt+ArrowDown enters active calendar mode; Tab from edge segments
-  // closes the passive popover and lets focus leave the widget naturally.
+  // Alt+ArrowDown enters active calendar mode. Tab order: segments → calendar
+  // button → leave (close). Shift+Tab from the first segment also closes.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.altKey && e.key === "ArrowDown") {
@@ -515,17 +522,28 @@ function SingleDateInput({
       }
 
       if (e.key !== "Tab" || !isOpen) return
+
+      // Forward Tab from the calendar toggle leaves the widget.
+      if (
+        !e.shiftKey &&
+        calendarButtonRef.current?.contains(e.target as Node)
+      ) {
+        setIsOpen(false)
+        setIsCalendarActive(false)
+        return
+      }
+
       const wrapper = triggerRef.current
       if (!wrapper) return
       const segments = wrapper.querySelectorAll<HTMLElement>(
         '[role="spinbutton"]'
       )
       const segmentList = Array.from(segments)
-      const isLeavingField =
-        (!e.shiftKey && e.target === segmentList.at(-1)) ||
-        (e.shiftKey && e.target === segmentList[0])
-      if (isLeavingField) {
+      // Tab from the last segment moves to the calendar button (stay open).
+      // Shift+Tab from the first segment leaves the widget.
+      if (e.shiftKey && e.target === segmentList[0]) {
         setIsOpen(false)
+        setIsCalendarActive(false)
       }
     },
     [isOpen]
@@ -675,7 +693,6 @@ function SingleDateInput({
             aria-controls={popoverId}
             data-testid="stDateInputCalendarButton"
             disabled={disabled}
-            tabIndex={-1}
             onMouseDown={e => e.preventDefault()}
           >
             <Icon content={CalendarToday} size="base" />

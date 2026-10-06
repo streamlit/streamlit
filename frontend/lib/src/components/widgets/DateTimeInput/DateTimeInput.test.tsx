@@ -888,7 +888,8 @@ describe("DateTimeInput widget", () => {
         await clearSegment(user, segment)
       }
 
-      // Tab from last segment to leave the field (closes popover + blur)
+      // Tab past the calendar button to leave the field (closes popover + blur)
+      await user.tab()
       await user.tab()
 
       // Close-commit reverts display locally; no setStringArrayValue fires
@@ -1197,7 +1198,8 @@ describe("DateTimeInput widget", () => {
       // Popover should be open
       expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
 
-      // Tab away from the last segment — this closes popover + triggers blur
+      // Tab past the calendar button — this closes popover + triggers blur
+      await user.tab()
       await user.tab()
 
       await waitFor(() => {
@@ -1417,7 +1419,8 @@ describe("DateTimeInput widget", () => {
       // After Escape, focus is restored to the last segment (minute).
       // Edit again via ArrowUp (step-snap 17:45 → 18:00) without reopening.
       await user.keyboard("{ArrowUp}")
-      // Tab away from last segment — must still commit the new value.
+      // Tab past the calendar button — must still commit the new value.
+      await user.tab()
       await user.tab()
 
       await waitFor(() => {
@@ -1779,8 +1782,8 @@ describe("DateTimeInput widget", () => {
       await user.click(segments[0])
       await screen.findByTestId("stDateTimeInputCalendar")
 
-      // Close by tabbing through all segments and out
-      for (let i = 0; i < segments.length; i++) {
+      // Close by tabbing through all segments, the calendar button, and out
+      for (let i = 0; i < segments.length + 1; i++) {
         await user.tab()
       }
       await waitFor(() => {
@@ -2560,14 +2563,15 @@ describe("DateTimeInput widget", () => {
       await user.click(inline[0])
       await user.keyboard("20251119")
 
-      // Tab off the last segment closes the popover, so the merge has to happen
-      // while it is still mounted — otherwise its half is unreadable and both
-      // halves are discarded.
+      // Tab past the calendar button closes the popover, so the merge has to
+      // happen while it is still mounted — otherwise its half is unreadable
+      // and both halves are discarded.
       const lastInline = inline.at(-1)
       if (!lastInline) {
         throw new Error("Expected a date-time segment")
       }
       await user.click(lastInline)
+      await user.tab()
       await user.tab()
 
       await expectCommitted(spy, props, "2025-11-19T09:45")

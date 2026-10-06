@@ -530,11 +530,18 @@ function SingleDateTimeInput({
     [onValidate, resolveGivenTime]
   )
 
-  const handleFocus = useCallback((): void => {
-    lastTimeSourceRef.current = "inline"
-    if (isRestoringFocusRef.current) return
-    if (!disabled) setIsOpen(true)
-  }, [disabled])
+  // Calendar/clear buttons are focusable children of the wrapper; focusing them
+  // must not reopen a passive popover (Tab lands on the calendar toggle last).
+  const handleFocus = useCallback(
+    (e: FocusEvent<HTMLDivElement>): void => {
+      lastTimeSourceRef.current = "inline"
+      if (isRestoringFocusRef.current) return
+      if (clearButtonRef.current?.contains(e.target as Node)) return
+      if (calendarButtonRef.current?.contains(e.target as Node)) return
+      if (!disabled) setIsOpen(true)
+    },
+    [disabled]
+  )
 
   const handlePopoverTimeFocus = useCallback((): void => {
     lastTimeSourceRef.current = "popover"
@@ -547,9 +554,10 @@ function SingleDateTimeInput({
       if (clearButtonRef.current?.contains(e.target as Node)) return
       if (calendarButtonRef.current?.contains(e.target as Node)) return
       setIsCalendarActive(false)
-      handleFocus()
+      lastTimeSourceRef.current = "inline"
+      if (!isRestoringFocusRef.current && !disabled) setIsOpen(true)
     },
-    [handleFocus]
+    [disabled]
   )
 
   const handleClear = useCallback((): void => {
@@ -663,19 +671,31 @@ function SingleDateTimeInput({
       }
 
       if (e.key !== "Tab" || !isOpen) return
-      const wrapper = triggerRef.current
-      if (!wrapper) return
-      const segments = wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
-      const segmentList = Array.from(segments)
-      const isLeavingField =
-        (!e.shiftKey && e.target === segmentList.at(-1)) ||
-        (e.shiftKey && e.target === segmentList[0])
-      if (isLeavingField) {
+
+      // Forward Tab from the calendar toggle leaves the widget.
+      if (
+        !e.shiftKey &&
+        calendarButtonRef.current?.contains(e.target as Node)
+      ) {
         // Commit before closing, as the popover's own Tab handler does. Leaving
         // it to the blur that follows would run the commit after the popover has
         // unmounted, and a time given only there would be unreadable by then.
         commitOrRevert()
         setIsOpen(false)
+        setIsCalendarActive(false)
+        return
+      }
+
+      const wrapper = triggerRef.current
+      if (!wrapper) return
+      const segments = wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
+      const segmentList = Array.from(segments)
+      // Tab from the last segment moves to the calendar button (stay open).
+      // Shift+Tab from the first segment leaves the widget.
+      if (e.shiftKey && e.target === segmentList[0]) {
+        commitOrRevert()
+        setIsOpen(false)
+        setIsCalendarActive(false)
       }
     },
     [isOpen, displayValue, error, formSubmit, commitOrRevert, applyStepSnap]
@@ -890,7 +910,6 @@ function SingleDateTimeInput({
             aria-controls={popoverId}
             data-testid="stDateTimeInputCalendarButton"
             disabled={disabled}
-            tabIndex={-1}
             onMouseDown={e => e.preventDefault()}
           >
             <Icon content={CalendarToday} size="base" />

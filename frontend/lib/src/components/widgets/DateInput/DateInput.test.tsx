@@ -317,7 +317,8 @@ describe("DateInput", () => {
       // Before blur: no widget write yet.
       expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
 
-      // Blur commits the buffered value even outside a form.
+      // Tab past the calendar button to leave the field and commit.
+      await user.tab()
       await user.tab()
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element.id,
@@ -738,8 +739,8 @@ describe("DateInput", () => {
       // Before blur: segment edits are buffered locally — no widget write yet.
       expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
 
-      // Blur (simulates clicking a form Submit button) writes the pending
-      // value synchronously so form submit reads the correct state.
+      // Tab past the calendar button to leave the field and commit.
+      await user.tab()
       await user.tab()
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element.id,
@@ -798,8 +799,9 @@ describe("DateInput", () => {
       await clearSegment(user, month)
       await clearSegment(user, day)
 
-      // Blur should commit the cleared state — fully cleared is a valid
-      // user intent, distinct from partially typed (mid-edit).
+      // Tab past the calendar button to leave and commit the cleared state —
+      // fully cleared is a valid user intent, distinct from partially typed.
+      await user.tab()
       await user.tab()
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element.id,
@@ -828,6 +830,8 @@ describe("DateInput", () => {
       await clearSegment(user, month)
       await clearSegment(user, day)
 
+      // Tab past the calendar button to leave the field.
+      await user.tab()
       await user.tab()
       // Close-commit reverts the display locally; no setStringArrayValue
       // should fire (avoids a spurious backend rerun with an unchanged value).
@@ -1831,19 +1835,25 @@ describe("DateInput single-mode keyboard navigation", () => {
     return { calendar, gridCell, segments }
   }
 
-  it("Tab from last segment closes calendar (does not enter it)", async () => {
+  it("Tab from last segment focuses calendar button, then leaves and closes", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)
 
     const region = screen.getByTestId("stDateInput")
     const { day } = getSingleDateSegments(region)
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
 
     // Focus the last segment (day)
     await user.click(day)
     // Calendar should be open
     await screen.findByTestId("stDateInputCalendar")
 
-    // Tab from day segment should close the calendar
+    // Tab from day segment moves to the calendar toggle (popover stays open)
+    await user.tab()
+    expect(calendarButton).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+
+    // Tab from the calendar button leaves the widget and closes the popover
     await user.tab()
     await waitFor(() => {
       expect(
@@ -2233,9 +2243,10 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     // Focus and close the popover via Tab
     await user.click(year)
     await screen.findByTestId("stDateInputCalendar")
-    // Close by tabbing through all segments and out
+    // Close by tabbing through all segments, the calendar button, and out
     await user.tab() // to month
     await user.tab() // to day
+    await user.tab() // to calendar button
     await user.tab() // leaves widget, closes popover
     await waitFor(() => {
       expect(
@@ -2342,12 +2353,13 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(month).toHaveFocus()
   })
 
-  it("passive mode still closes on Tab from last segment (no regression)", async () => {
+  it("passive mode Tab goes to calendar button then closes (no regression)", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)
 
     const region = screen.getByTestId("stDateInput")
     const { day } = getSingleDateSegments(region)
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
 
     await user.click(day)
     await screen.findByTestId("stDateInputCalendar")
@@ -2357,7 +2369,15 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendar).not.toHaveAttribute("role", "dialog")
     expect(calendar).not.toHaveAttribute("aria-modal")
 
-    // Tab from day should close (passive behavior unchanged)
+    // Tab from day focuses the calendar toggle without entering active mode
+    await user.tab()
+    expect(calendarButton).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).not.toHaveAttribute(
+      "role",
+      "dialog"
+    )
+
+    // Tab from the calendar button leaves and closes
     await user.tab()
     await waitFor(() => {
       expect(
@@ -2412,7 +2432,9 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
       "dialog"
     )
 
-    // Close by tabbing out, then re-open by click: must stay passive.
+    // Close by tabbing past the calendar button, then re-open by click: must
+    // stay passive.
+    await user.tab()
     await user.tab()
     await waitFor(() => {
       expect(
@@ -2947,7 +2969,7 @@ describe("DateInput range-mode paste handling", () => {
 })
 
 describe("DateInput range-mode keyboard navigation", () => {
-  it("Tab from last end-date segment closes calendar", async () => {
+  it("Tab from last end-date segment focuses calendar button, then closes", async () => {
     const user = userEvent.setup()
     render(
       <DateInput
@@ -2960,9 +2982,14 @@ describe("DateInput range-mode keyboard navigation", () => {
 
     const region = screen.getByTestId("stDateInput")
     const { day } = getRangeDateSegments(region, "end")
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
 
     await user.click(day)
     await screen.findByTestId("stDateInputCalendar")
+
+    await user.tab()
+    expect(calendarButton).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
 
     await user.tab()
     await waitFor(() => {
