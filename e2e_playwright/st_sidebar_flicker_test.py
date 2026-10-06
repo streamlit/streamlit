@@ -41,8 +41,8 @@ def verify_sidebar_state(page: Page, expected_state: str) -> None:
     sidebar = page.get_by_test_id("stSidebar")
     expect(sidebar).to_be_attached()
 
-    expected_collapsed = "false" if expected_state == "expanded" else "true"
-    expect(sidebar).to_have_attribute("data-collapsed", expected_collapsed)
+    expected_expanded = "true" if expected_state == "expanded" else "false"
+    expect(sidebar).to_have_attribute("aria-expanded", expected_expanded)
 
 
 def create_sidebar_monitor_script() -> str:
@@ -50,7 +50,7 @@ def create_sidebar_monitor_script() -> str:
 
     Exposes to the test:
 
-    - ``window.__sidebarStates``: the log of observed ``data-collapsed`` changes.
+    - ``window.__sidebarStates``: the log of observed ``aria-expanded`` changes.
     - ``window.__lastSidebarState``: the last observed value, tracked outside
       the log.
     - ``window.__resetSidebarStates()``: empties the log and restarts the
@@ -71,16 +71,16 @@ def create_sidebar_monitor_script() -> str:
         window.__monitorStarted = Date.now();
     };
 
-    // Skip unchanged data-collapsed values so unrelated DOM mutations are not
+    // Skip unchanged aria-expanded values so unrelated DOM mutations are not
     // logged as sidebar state changes.
-    const recordState = (dataCollapsed, method) => {
-        if (window.__lastSidebarState === dataCollapsed) {
+    const recordState = (ariaExpanded, method) => {
+        if (window.__lastSidebarState === ariaExpanded) {
             return;
         }
-        window.__lastSidebarState = dataCollapsed;
+        window.__lastSidebarState = ariaExpanded;
         window.__sidebarStates.push({
             timestamp: Date.now() - window.__monitorStarted,
-            dataCollapsed: dataCollapsed,
+            ariaExpanded: ariaExpanded,
             method: method
         });
     };
@@ -90,7 +90,7 @@ def create_sidebar_monitor_script() -> str:
     // into a single callback and therefore miss.
     const originalSetAttribute = Element.prototype.setAttribute;
     Element.prototype.setAttribute = function(name, value) {
-        if (this.dataset && this.dataset.testid === 'stSidebar' && name === 'data-collapsed') {
+        if (this.dataset && this.dataset.testid === 'stSidebar' && name === 'aria-expanded') {
             recordState(value, 'setAttribute');
         }
         return originalSetAttribute.call(this, name, value);
@@ -102,7 +102,7 @@ def create_sidebar_monitor_script() -> str:
     const observer = new MutationObserver(() => {
         const sidebar = document.querySelector('[data-testid="stSidebar"]');
         if (sidebar) {
-            recordState(sidebar.getAttribute('data-collapsed'), 'mutation');
+            recordState(sidebar.getAttribute('aria-expanded'), 'mutation');
         }
     });
 
@@ -110,7 +110,7 @@ def create_sidebar_monitor_script() -> str:
         childList: true,
         subtree: true,
         attributes: true,
-        attributeFilter: ['data-collapsed']
+        attributeFilter: ['aria-expanded']
     });
     """
 
@@ -125,32 +125,32 @@ def check_for_sidebar_flicker(page: Page, initial_state: str) -> None:
     # Check for flicker in collapsed state (most common issue)
     if initial_state == "collapsed":
         for state in states:
-            if state["dataCollapsed"] == "false":
+            if state["ariaExpanded"] == "true":
                 # Found flicker - sidebar was expanded when it should stay collapsed
                 states_str = "\n".join(
                     [
-                        f"  {s['timestamp']}ms: data-collapsed={s['dataCollapsed']} (via {s['method']})"
+                        f"  {s['timestamp']}ms: aria-expanded={s['ariaExpanded']} (via {s['method']})"
                         for s in states
                     ]
                 )
                 # Use pytest.fail for custom error message
                 pytest.fail(
-                    f"Sidebar flickered! It expanded while it should stay collapsed.\nState changes:\n{states_str}"
+                    f"Sidebar flickered! Started expanded then collapsed.\nState changes:\n{states_str}"
                 )
 
     # Check for flicker in expanded state
     elif initial_state == "expanded":
         for state in states:
-            if state["dataCollapsed"] == "true":
+            if state["ariaExpanded"] == "false":
                 # Found flicker - sidebar was collapsed when it should stay expanded
                 states_str = "\n".join(
                     [
-                        f"  {s['timestamp']}ms: data-collapsed={s['dataCollapsed']} (via {s['method']})"
+                        f"  {s['timestamp']}ms: aria-expanded={s['ariaExpanded']} (via {s['method']})"
                         for s in states
                     ]
                 )
                 pytest.fail(
-                    f"Sidebar flickered! It collapsed while it should stay expanded.\nState changes:\n{states_str}"
+                    f"Sidebar flickered! Started collapsed then expanded.\nState changes:\n{states_str}"
                 )
 
 
@@ -177,11 +177,11 @@ def wait_for_sidebar_stable(
 ) -> None:
     """Wait for sidebar to reach stable state without flickering."""
     sidebar = page.get_by_test_id("stSidebar")
-    expected_collapsed = "false" if expected_state == "expanded" else "true"
+    expected_expanded = "true" if expected_state == "expanded" else "false"
 
     def check_stable_state() -> bool:
-        current_state = sidebar.get_attribute("data-collapsed")
-        return current_state == expected_collapsed
+        current_state = sidebar.get_attribute("aria-expanded")
+        return current_state == expected_expanded
 
     wait_until(page, check_stable_state, timeout=timeout)
 
@@ -303,10 +303,10 @@ def test_sidebar_no_flicker_without_page_config(page: Page, app_base_url: str):
     if states:
         # Check for any unexpected state changes
         for state in states:
-            if state["dataCollapsed"] == "true":
+            if state["ariaExpanded"] == "false":
                 states_str = "\n".join(
                     [
-                        f"  {s['timestamp']}ms: data-collapsed={s['dataCollapsed']} (via {s['method']})"
+                        f"  {s['timestamp']}ms: aria-expanded={s['ariaExpanded']} (via {s['method']})"
                         for s in states
                     ]
                 )
@@ -355,7 +355,7 @@ def test_sidebar_stability_after_initial_load(page: Page, app_base_url: str):
     if states:
         states_str = "\n".join(
             [
-                f"  {s['timestamp']}ms: data-collapsed={s['dataCollapsed']} (via {s['method']})"
+                f"  {s['timestamp']}ms: aria-expanded={s['ariaExpanded']} (via {s['method']})"
                 for s in states
             ]
         )
@@ -366,7 +366,7 @@ def test_sidebar_stability_after_initial_load(page: Page, app_base_url: str):
     # Verify sidebar is still attached and stable
     sidebar = page.get_by_test_id("stSidebar")
     expect(sidebar).to_be_attached()
-    expect(sidebar).to_have_attribute("data-collapsed", "true")
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
 
     # Last: prove the monitor is not blind after a reset. A monitor that logged
     # nothing would satisfy every assertion above, so assert that a real change
@@ -374,10 +374,10 @@ def test_sidebar_stability_after_initial_load(page: Page, app_base_url: str):
     # above have already run.
     page.evaluate(
         "document.querySelector('[data-testid=\"stSidebar\"]')"
-        ".setAttribute('data-collapsed', 'false')"
+        ".setAttribute('aria-expanded', 'true')"
     )
     recorded = page.evaluate("window.__sidebarStates")
     assert recorded, "a real sidebar state change was not recorded at all"
-    assert recorded[-1]["dataCollapsed"] == "false", (
+    assert recorded[-1]["ariaExpanded"] == "true", (
         f"a real sidebar state change was not recorded: {recorded}"
     )

@@ -19,9 +19,6 @@ import { convertRemToPx, type EmotionTheme } from "@streamlit/lib"
 import { PageConfig } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
 
-/** Stable id for the sidebar region; used by collapse/expand aria-controls. */
-export const SIDEBAR_ELEMENT_ID = "stSidebar"
-
 export interface SidebarWidthLimits {
   minWidthPx: number
   maxWidthPx: number

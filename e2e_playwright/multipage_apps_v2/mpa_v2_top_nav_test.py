@@ -62,14 +62,14 @@ def test_mobile_fallback_to_sidebar(app: Page):
 
     # On mobile with AUTO state, sidebar should be collapsed by default
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("data-collapsed", "true")
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
 
     # Expand the sidebar to access navigation
     expand_button = app.get_by_test_id("stExpandSidebarButton")
     expand_button.click()
 
     # Wait for sidebar to expand and nav links to be visible
-    expect(sidebar).to_have_attribute("data-collapsed", "false")
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
     nav_links = app.get_by_test_id("stSidebarNavLink")
     expect(nav_links.first).to_be_visible()
 
@@ -553,7 +553,7 @@ def test_mobile_sidebar_overlay_visual(
 
     # On mobile with AUTO state, sidebar should be collapsed by default
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("data-collapsed", "true")
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
 
     # Take screenshot of initial collapsed state
     assert_snapshot(app, name="st_navigation-mobile_sidebar_overlay_collapsed")
@@ -563,7 +563,7 @@ def test_mobile_sidebar_overlay_visual(
     expand_button.click()
 
     # Wait for sidebar to expand and verify navigation is visible
-    expect(sidebar).to_have_attribute("data-collapsed", "false")
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
     nav_links = app.get_by_test_id("stSidebarNavLink")
     expect(nav_links).to_have_count(3)
     expect(nav_links.first).to_be_visible()
@@ -578,8 +578,8 @@ def test_mobile_sidebar_overlay_visual(
     close_button.click()
 
     # Wait for sidebar to collapse
-    # The sidebar data-collapsed attribute should be true
-    expect(sidebar).to_have_attribute("data-collapsed", "true")
+    # The sidebar aria-expanded attribute should be false
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
 
     # Test navigation interaction
     # Expand sidebar again using the expand button in the header
@@ -587,7 +587,7 @@ def test_mobile_sidebar_overlay_visual(
     expand_button.click()
 
     # Wait for sidebar to expand
-    expect(sidebar).to_have_attribute("data-collapsed", "false")
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
     expect(nav_links.first).to_be_visible()
 
     # Navigate to a different page
@@ -604,7 +604,7 @@ def test_mobile_sidebar_overlay_visual(
     # First collapse sidebar to access the checkbox
     close_button = app.get_by_test_id("stSidebarCollapseButton")
     close_button.click()
-    expect(sidebar).to_have_attribute("data-collapsed", "true")
+    expect(sidebar).to_have_attribute("aria-expanded", "false")
 
     # Now click the Test Sections checkbox
     click_checkbox(app, "Test Sections")
@@ -613,7 +613,7 @@ def test_mobile_sidebar_overlay_visual(
     # Expand sidebar to see sections
     expand_button = app.get_by_test_id("stExpandSidebarButton")
     expand_button.click()
-    expect(sidebar).to_have_attribute("data-collapsed", "false")
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
 
     # Verify sections are rendered in sidebar on mobile
     section_a = app.get_by_text("Section A").first

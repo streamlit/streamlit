@@ -103,7 +103,6 @@ const BaseButton = forwardRef(function BaseButton(
       aria-label={props["aria-label"] || undefined}
       aria-haspopup={props["aria-haspopup"]}
       aria-expanded={props["aria-expanded"]}
-      aria-controls={props["aria-controls"]}
     >
       {children}
     </ComponentType>

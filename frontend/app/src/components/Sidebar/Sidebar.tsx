@@ -63,7 +63,6 @@ import {
   calculateMaxBreakpoint,
   clampSidebarWidth,
   getSidebarWidthLimits,
-  SIDEBAR_ELEMENT_ID,
 } from "./utils"
 
 export interface SidebarProps {
@@ -265,8 +264,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     <Resizable
       className="stSidebar"
       data-testid="stSidebar"
-      aria-label="Sidebar"
-      data-collapsed={isCollapsed ? "true" : "false"}
+      aria-expanded={!isCollapsed}
       enable={{
         top: false,
         right: true,
@@ -293,10 +291,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       }}
       as={StyledSidebar}
       onResizeStop={onResizeStop}
-      // Resizable's types omit id, but its extra-props spread forwards it to
-      // StyledSidebar so collapse and expand buttons can point aria-controls here.
+      // Props part of StyledSidebar, but not Resizable component
       // @ts-expect-error
-      id={SIDEBAR_ELEMENT_ID}
       isCollapsed={isCollapsed}
       sidebarWidth={sidebarWidth}
       windowInnerWidth={innerWidth}
@@ -319,8 +315,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 kind={BaseButtonKind.HEADER_NO_PADDING}
                 onClick={toggleCollapse}
                 aria-label="Collapse sidebar"
-                aria-expanded={!isCollapsed}
-                aria-controls={SIDEBAR_ELEMENT_ID}
               >
                 <DynamicIcon
                   size="xl"

@@ -140,47 +140,27 @@ describe("Sidebar Component", () => {
       {
         state: PageConfig.SidebarState.EXPANDED,
         isCollapsed: false,
-        expectedCollapsed: "false",
+        expectedAria: "true",
       },
       {
         state: PageConfig.SidebarState.COLLAPSED,
         isCollapsed: true,
-        expectedCollapsed: "true",
+        expectedAria: "false",
       },
     ])(
       "should render $state correctly",
-      ({ state, isCollapsed, expectedCollapsed }) => {
+      ({ state, isCollapsed, expectedAria }) => {
         renderSidebar(
           { isCollapsed },
           { sidebarConfigContext: { initialSidebarState: state } }
         )
 
-        const sidebar = screen.getByTestId("stSidebar")
-        expect(sidebar).toHaveAttribute("id", "stSidebar")
-        expect(sidebar).toHaveAttribute("aria-label", "Sidebar")
-        expect(sidebar).toHaveAttribute("data-collapsed", expectedCollapsed)
-        expect(sidebar).not.toHaveAttribute("aria-expanded")
+        expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+          "aria-expanded",
+          expectedAria
+        )
       }
     )
-
-    it("collapse button exposes expanded state and controls the sidebar", () => {
-      renderSidebar(
-        { isCollapsed: false },
-        {
-          sidebarConfigContext: {
-            initialSidebarState: PageConfig.SidebarState.EXPANDED,
-          },
-        }
-      )
-
-      // Collapse control is visibility:hidden until header hover.
-      const collapseButton = within(
-        screen.getByTestId("stSidebarCollapseButton")
-      ).getByRole("button", { hidden: true })
-      expect(collapseButton).toHaveAttribute("aria-label", "Collapse sidebar")
-      expect(collapseButton).toHaveAttribute("aria-expanded", "true")
-      expect(collapseButton).toHaveAttribute("aria-controls", "stSidebar")
-    })
 
     it.each([
       {
