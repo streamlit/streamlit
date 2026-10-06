@@ -342,10 +342,11 @@ class MediaFileManager:
             return file_id
 
     def remove_deferred(self, coordinates: str) -> None:
-        """Drop deferred callables for the active session at ``coordinates``.
+        """Revoke this session's deferred callables at ``coordinates``.
 
-        Removes every matching entry, including ones whose coordinate mapping
-        ``clear_session_refs`` already cleared. No-op when nothing is registered.
+        Also deletes entries that ``clear_session_refs`` already unmapped, so a
+        disabled button drops the previous run's file id immediately. Does
+        nothing when no entry matches.
 
         Safe to call from any thread.
         """
@@ -430,8 +431,9 @@ class MediaFileManager:
             metadata = MediaFileMetadata(kind=MediaFileKind.DOWNLOADABLE)
             self._file_metadata[actual_file_id] = metadata
 
-            # Keep the deferred callable so users can download multiple times
-            # It will be cleaned up when clear_session_refs() is called on rerun
+            # Keep the callable so the user can download more than once.
+            # remove_orphaned_files() drops it once no session references it.
+            # remove_deferred() drops it when the button renders disabled.
 
             # We leave actual_file_id unmapped so repeat clicks rerun the callable.
             # Cleanup prunes the stored file once no session references it.

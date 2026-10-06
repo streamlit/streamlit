@@ -875,7 +875,7 @@ class MediaFileManagerDeferredTest(TestCase):
         """remove_deferred revokes the callable and its session coordinate."""
         invoked = 0
 
-        def generate_data():
+        def generate_data() -> bytes:
             nonlocal invoked
             invoked += 1
             return b"secret"
@@ -910,7 +910,7 @@ class MediaFileManagerDeferredTest(TestCase):
         MagicMock(return_value="mock_session"),
     )
     def test_remove_deferred_after_clear_session_refs(self) -> None:
-        """A cleared coordinate map does not keep the previous callable executable."""
+        """remove_deferred deletes every prior id at these coordinates after clear_session_refs."""
         coord = random_coordinates()
         file_id = self.media_file_manager.add_deferred(
             lambda: b"secret", "text/plain", coord
