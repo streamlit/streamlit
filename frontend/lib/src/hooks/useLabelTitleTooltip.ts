@@ -72,13 +72,19 @@ function clearTitle(node: HTMLElement): void {
   }
 }
 
+interface FontFaceSetLike {
+  ready: Promise<unknown>
+  status?: string
+}
+
 /**
  * The first measure can run against a fallback font. Remeasure once when the
- * document's current fonts finish loading. Later font swaps are ignored.
+ * document's current fonts finish loading. Skip that when they are already
+ * loaded, and ignore later font swaps.
  */
 function remeasureWhenFontsReady(recheck: () => void): () => void {
-  const fonts = (document as { fonts?: { ready: Promise<unknown> } }).fonts
-  if (fonts === undefined) {
+  const fonts = (document as { fonts?: FontFaceSetLike }).fonts
+  if (fonts === undefined || fonts.status === "loaded") {
     return () => undefined
   }
 
