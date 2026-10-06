@@ -112,19 +112,16 @@ _GET_TYPE_ALIASES: dict[str, str] = {
     "help_info": "help",
 }
 
-# ``st.help`` stores ``module.qualname(signature)`` in proto ``value`` for these
-# object types. That string can be thousands of characters, so ``Help.value``
-# uses ``name`` instead.
-_HELP_SIGNATURE_OBJECT_TYPES: Final = frozenset(
-    {
-        "builtin_function_or_method",
-        "class",
-        "classmethod",
-        "function",
-        "method",
-        "staticmethod",
-    }
-)
+
+def _is_help_signature(value: str) -> bool:
+    """Return whether ``value`` is an unquoted ``module.name(...)`` signature.
+
+    ``st.help`` stores that form for callables, classes, and instances whose
+    repr is not human-readable. Quoted reprs such as ``'foo(bar)'`` are values.
+    """
+    return (
+        bool(value) and value[0] not in "'\"" and "(" in value and value.endswith(")")
+    )
 
 
 def _unknown_element_content(proto: Any) -> Any:
@@ -919,17 +916,17 @@ class Help(Element):
     def value(self) -> str:
         """Short summary of the documented object.
 
-        Callables and classes store a signature in the proto value, which can
-        be thousands of characters. ``.value`` is ``name`` for those objects.
-        Other objects keep the proto value (for example ``"'Hello'"``).
+        This is the name ``st.help`` captured, when one exists. Otherwise it is
+        the proto value, except an unquoted ``module.name(...)`` signature,
+        which can be thousands of characters. The docstring is ``doc_string``
+        and is not used as ``.value``.
         """
-        if self.name and self.proto.type in _HELP_SIGNATURE_OBJECT_TYPES:
+        if self.name:
             return self.name
-        if self.proto.value:
-            return self.proto.value
-        if self.doc_string:
-            return self.doc_string
-        return self.name
+        raw = self.proto.value
+        if _is_help_signature(raw):
+            return ""
+        return raw
 
 
 @dataclass(repr=False)

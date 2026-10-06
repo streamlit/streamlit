@@ -288,6 +288,8 @@ def test_progress_html_and_help() -> None:
     """
 
     def script() -> None:
+        import re
+
         import streamlit as st
 
         def add(a, b, c, d, e, f, g, h):
@@ -296,6 +298,14 @@ def test_progress_html_and_help() -> None:
 
         class Dog:
             """A typical dog."""
+
+        class Box:
+            """A box."""
+
+            def __init__(self, a, b, c, d, e, f, g, h, i, j):
+                self.a = a
+
+        item = Box(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 
         st.progress(40, text="halfway")
         st.progress(0.25)
@@ -308,6 +318,9 @@ def test_progress_html_and_help() -> None:
         st.help(Dog)
         st.help(len)
         st.help(st)
+        st.help(re)
+        st.help(item)
+        st.help("foo(bar)")
 
     at = AppTest.from_function(script).run()
     assert not at.exception
@@ -330,13 +343,13 @@ def test_progress_html_and_help() -> None:
     assert at.container("box").html[0].unsafe_allow_javascript is True
     assert list(at.get("html")) == list(at.html)
 
-    assert at.help.len == 5
+    assert at.help.len == 8
     assert isinstance(at.help[0], Help)
     assert list(at.get("help")) == list(at.help)
     assert list(at.get("help_info")) == list(at.help)
     assert {node.type for node in at.help} == {"help"}
 
-    hello, add, dog, builtin_len, module = at.help
+    hello, add, dog, builtin_len, module, regex_mod, item, quoted = at.help
     assert hello.value == "'Hello'"
     assert hello.name == ""
     assert hello.doc_string.startswith("str(")
@@ -350,8 +363,18 @@ def test_progress_html_and_help() -> None:
     assert builtin_len.value == "len"
     assert len(builtin_len.proto.value) > len(builtin_len.value)
     assert module.name == "st"
-    assert module.value == "streamlit"
+    assert module.value == "st"
     assert module.doc_string.startswith("Streamlit.")
+    assert len(module.doc_string) > len(module.value)
+    assert regex_mod.name == "re"
+    assert regex_mod.value == "re"
+    assert regex_mod.proto.value == ""
+    assert len(regex_mod.doc_string) > len(regex_mod.value)
+    assert item.name == "item"
+    assert item.value == "item"
+    assert "(" in item.proto.value
+    assert len(item.proto.value) > len(item.value)
+    assert quoted.value == "'foo(bar)'"
 
     for node in (at.progress[0], at.html[0], at.help[0]):
         with pytest.raises(AppTestError, match="set_value"):
