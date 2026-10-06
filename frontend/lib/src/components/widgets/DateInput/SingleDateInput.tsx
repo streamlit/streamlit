@@ -649,12 +649,11 @@ function SingleDateInput({
             excludeSelectors: popoverExcludeSelectors,
           })
         ) {
-          // Blur commits below; skip the close-commit effect so Tab/body leave
-          // does not write twice (keydown close + blur in the same turn).
-          skipCloseCommitRef.current = true
           setIsOpen(false)
           setIsCalendarActive(false)
-          // Fall through to commit buffered edits.
+          // Fall through to commit or early-return; set skipCloseCommitRef only
+          // when blur handles the write. Partial / non-clearable clears leave
+          // the flag unset so the close-commit effect can still revert.
         } else {
           // Still open and focus is ambiguous (null) or inside the popover /
           // nested pickers — Tab rAF and overlay dismissal own those leaves.
@@ -676,6 +675,8 @@ function SingleDateInput({
       }
       const pending = displayValueRef.current
       if (datesEqual(pending, value)) return
+      // Blur owns this write; skip the close-commit effect's duplicate.
+      skipCloseCommitRef.current = true
       onChangeRef.current(pending)
       formCommit?.(pending)
     },

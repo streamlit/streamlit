@@ -761,7 +761,14 @@ describe("DateInput", () => {
       props.widgetMgr.setFormSubmitBehaviors("form", true)
       vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
-      render(<DateInput {...props} />)
+      render(
+        <div>
+          <DateInput {...props} />
+          <button type="button" data-testid="outside">
+            Outside
+          </button>
+        </div>
+      )
       vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
 
       const region = screen.getByTestId("stDateInput")
@@ -770,11 +777,25 @@ describe("DateInput", () => {
       // Partially clear the year segment (leaves placeholders in year,
       // but month and day remain filled — a mid-edit state)
       await clearSegment(user, year)
+      expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
 
-      // Blur should NOT commit the partially typed state — form submit
-      // should read the original committed value, not an incomplete date.
-      await user.tab()
+      // Concrete outside leave while the preview is open: must not commit, and
+      // close-commit must still revert the incomplete display.
+      fireEvent.blur(screen.getByTestId("stDateInputField"), {
+        relatedTarget: screen.getByTestId("outside"),
+      })
       expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateInputCalendar")
+        ).not.toBeInTheDocument()
+        const refreshed = getSingleDateSegments(
+          screen.getByTestId("stDateInput")
+        )
+        expect(refreshed.year).toHaveTextContent("1970")
+        expect(refreshed.month).toHaveTextContent("01")
+        expect(refreshed.day).toHaveTextContent("20")
+      })
     })
 
     it("commits cleared value on blur when all segments are cleared in a form widget", async () => {

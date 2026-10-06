@@ -971,11 +971,10 @@ function RangeDateInput({
             excludeSelectors: popoverExcludeSelectors,
           })
         ) {
-          // Blur commits below; skip the close-commit effect so Tab/body leave
-          // does not write twice (keydown close + blur in the same turn).
-          skipCloseCommitRef.current = true
           setIsOpenState(false)
           setIsCalendarActive(false)
+          // Fall through; set skipCloseCommitRef only when blur writes. Partial
+          // fields leave the flag unset so the close-commit effect can revert.
         } else {
           return
         }
@@ -984,6 +983,8 @@ function RangeDateInput({
       const pending = compact([displayStartRef.current, displayEndRef.current])
       const committed = compact([startValue, endValue])
       if (rangeEqual(pending, committed)) return
+      // Blur owns this write; skip the close-commit effect's duplicate.
+      skipCloseCommitRef.current = true
       onChangeRef.current(pending)
       formCommit?.(pending)
     },
