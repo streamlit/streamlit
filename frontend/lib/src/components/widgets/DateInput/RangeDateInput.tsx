@@ -786,7 +786,11 @@ function RangeDateInput({
         triggerRef.current?.contains(document.activeElement)
           ? document.activeElement
           : undefined
-      activeOriginRef.current = focusedInField ?? segments?.[0] ?? null
+      // Pointer mousedown preventDefault keeps focus off the button, so restore
+      // to the toggle rather than the first segment when nothing in the field
+      // is focused.
+      activeOriginRef.current =
+        focusedInField ?? calendarButtonRef.current ?? segments?.[0] ?? null
       if (!isOpen) setIsOpenState(true)
       setIsCalendarActive(true)
     },

@@ -530,13 +530,14 @@ function SingleDateTimeInput({
     [onValidate, resolveGivenTime]
   )
 
-  // Do not reopen a passive popover when focus moves to the calendar or clear
-  // button. Tab lands on the calendar toggle after the last segment, and that
-  // focus event bubbles here.
+  // Opens the passive preview when focus enters a date/time segment. Focus on
+  // the clear or calendar button is ignored, so tabbing onto the calendar
+  // toggle does not reopen the popover.
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
-      // Restore after dialog close should reset to inline; focusing the calendar
-      // or clear button must not, or a popover time can lose on the next commit.
+      // A focus restore means the dialog closed, so the inline field owns the time.
+      // Focusing the calendar or clear button must leave that source unchanged, or
+      // the next commit drops a time that exists only in the popover.
       if (isRestoringFocusRef.current) {
         lastTimeSourceRef.current = "inline"
         return
@@ -596,7 +597,11 @@ function SingleDateTimeInput({
         triggerRef.current?.contains(document.activeElement)
           ? document.activeElement
           : undefined
-      activeOriginRef.current = focusedInField ?? segments?.[0] ?? null
+      // Pointer mousedown preventDefault keeps focus off the button, so restore
+      // to the toggle rather than the first segment when nothing in the field
+      // is focused.
+      activeOriginRef.current =
+        focusedInField ?? calendarButtonRef.current ?? segments?.[0] ?? null
       if (!isOpen) setIsOpen(true)
       setIsCalendarActive(true)
     },

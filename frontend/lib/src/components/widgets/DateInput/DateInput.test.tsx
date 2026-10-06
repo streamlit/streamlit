@@ -2501,6 +2501,23 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendarButton).not.toHaveAttribute("aria-controls")
   })
 
+  it("Escape after a pointer-opened calendar restores focus to the calendar button", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveFocus()
+  })
+
   it("passive preview does not set aria-expanded on the calendar button", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)

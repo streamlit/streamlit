@@ -413,11 +413,9 @@ function SingleDateInput({
     [onChange, restoreFocusToField]
   )
 
-  // Wired to onFocus and onClickCapture: clicking an already-focused segment
-  // doesn't re-fire onFocus. Capture phase needed because RAC stops propagation.
-  // Do not reopen a passive popover when focus moves to the calendar or clear
-  // button. Tab lands on the calendar toggle after the last segment, and that
-  // focus event bubbles here.
+  // Opens the passive preview when focus enters a date segment. Focus on the
+  // clear or calendar button is ignored, so tabbing onto the calendar toggle
+  // does not reopen the popover.
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (isRestoringFocusRef.current) return
@@ -468,7 +466,11 @@ function SingleDateInput({
         triggerRef.current?.contains(document.activeElement)
           ? document.activeElement
           : undefined
-      activeOriginRef.current = focusedInField ?? segments?.[0] ?? null
+      // Pointer mousedown preventDefault keeps focus off the button, so restore
+      // to the toggle rather than the first segment when nothing in the field
+      // is focused.
+      activeOriginRef.current =
+        focusedInField ?? calendarButtonRef.current ?? segments?.[0] ?? null
       if (!isOpen) setIsOpen(true)
       setIsCalendarActive(true)
     },

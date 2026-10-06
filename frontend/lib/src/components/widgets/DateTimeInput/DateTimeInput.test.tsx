@@ -1730,7 +1730,7 @@ describe("DateTimeInput widget", () => {
       const calendarButton = screen.getByTestId(
         "stDateTimeInputCalendarButton"
       )
-      await act(async () => {
+      act(() => {
         calendarButton.focus()
       })
       await user.keyboard("{Enter}")
@@ -1744,7 +1744,7 @@ describe("DateTimeInput widget", () => {
       expect(calendarButton).toHaveAttribute("aria-expanded", "true")
 
       // Active mode moves focus into the grid; return to the button to close.
-      await act(async () => {
+      act(() => {
         calendarButton.focus()
       })
       await user.keyboard("{Enter}")
@@ -1769,7 +1769,7 @@ describe("DateTimeInput widget", () => {
       const calendarButton = screen.getByTestId(
         "stDateTimeInputCalendarButton"
       )
-      await act(async () => {
+      act(() => {
         calendarButton.focus()
       })
       await user.keyboard("{Enter}")
