@@ -215,6 +215,17 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   },
 }))
 
+/**
+ * Calendar toggle using the clear button's icon-button styles.
+ * Wrapped in `styled()` so this stays a separate export from `StyledClearButton`.
+ */
+export const StyledCalendarButton = styled(StyledClearButton)(({ theme }) => ({
+  "&:disabled": {
+    cursor: "not-allowed",
+    color: theme.colors.fadedText40,
+  },
+}))
+
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
 const visuallyHiddenStyle = {
   position: "absolute" as const,
