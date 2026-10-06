@@ -39,7 +39,7 @@ Measurements used opaque composites of transparentized tokens onto the stated ba
 
 ## Known library gaps
 
-Sorted by success-criterion number. Each item is a candidate product-spec section or raise-default fix. Prefer raising defaults over new color APIs ([#14712](https://github.com/streamlit/streamlit/pull/14712) closed). Cite a GitHub issue only when it is the tracked seed for that gap (same pattern as the command inventory).
+Sorted by success-criterion number. Each item is a candidate product-spec section or raise-default fix. Prefer raising defaults over new color APIs ([#14712](https://github.com/streamlit/streamlit/pull/14712) closed).
 
 ### Level AA
 
