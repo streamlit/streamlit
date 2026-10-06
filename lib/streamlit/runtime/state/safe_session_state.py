@@ -19,7 +19,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Mapping
+    from collections.abc import Callable, Generator, Mapping
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -159,7 +159,7 @@ class SafeSessionState:
         return f"{{{s}}}"
 
     @contextmanager
-    def query_params(self) -> Iterator[QueryParams]:
+    def query_params(self) -> Generator[QueryParams, None, None]:
         self._yield_callback()
         with self._lock:
             yield self._state.query_params

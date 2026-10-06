@@ -29,7 +29,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator
 
     from google.protobuf.message import Message
 
@@ -166,7 +166,10 @@ class CachedMessageReplayContext:
         return util.repr_(self)
 
     @contextlib.contextmanager
-    def calling_cached_function(self, func: Callable[..., Any]) -> Iterator[None]:  # noqa: ARG002
+    def calling_cached_function(
+        self,
+        func: Callable[..., Any],  # noqa: ARG002
+    ) -> Generator[None, None, None]:
         """Context manager that should wrap the invocation of a cached function.
         It allows us to track any `st.foo` messages that are generated from inside the
         function for playback during cache retrieval.
