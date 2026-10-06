@@ -3652,7 +3652,7 @@ __metadata:
     remark-emoji: "npm:^5.0.2"
     remark-gfm: "npm:^4.0.1"
     remark-math: "npm:^6.0.0"
-    remend: "npm:^1.3.1"
+    remend: "npm:^1.4.0"
     timezone-mock: "npm:^1.4.3"
     typed-signals: "npm:^3.0.0"
     typesync: "npm:^0.14.3"
@@ -8735,10 +8735,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"globals@npm:^17.12.0":
-  version: 17.12.0
-  resolution: "globals@npm:17.12.0"
-  checksum: 10c0/8325cf8818c848871d17c32974c2c74e9c5f09c1b0e04421886f64f21e77c3e95f3ba25586743895a73acd860ada151132481d87d44a1f12993ae7758a694d03
+"globals@npm:^17.13.0":
+  version: 17.13.0
+  resolution: "globals@npm:17.13.0"
+  checksum: 10c0/8371d9e4e5581640141b5cce70a098edd765d2e3ab063b14998e590698071e0afb4a4a6739ccfbdcbdeb2565c5553697ba07d95703c51039912cf341a7dba7a7
   languageName: node
   linkType: hard
 
@@ -9984,9 +9984,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.38.0":
-  version: 6.38.0
-  resolution: "knip@npm:6.38.0"
+"knip@npm:^6.39.0":
+  version: 6.39.0
+  resolution: "knip@npm:6.39.0"
   dependencies:
     fdir: "npm:^6.5.0"
     formatly: "npm:^0.7.0"
@@ -10004,7 +10004,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/c5f95d1baebfc746133bdcc4a9f244d071f683b40916db1f30cb4f566c5b5b6d730008f8d778a350ddc9507e1016bf7fc01c2b1b580898a221afb5216b4f7d45
+  checksum: 10c0/66a6c0b6bc339da8d521359b76e34d27dc3f535e98c93eaac21fcd9704813a2b159f5b173c4587cfc10a57bec91ff83c84c6b915726acd92adb1b9896799477e
   languageName: node
   linkType: hard
 
@@ -13495,10 +13495,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"remend@npm:^1.3.1":
-  version: 1.3.1
-  resolution: "remend@npm:1.3.1"
-  checksum: 10c0/f1898b80c90cd07d31b25acc1bccd6c3592c5dad74bc4712f7e1bf09964205cdd314f089ed13802eb65c4f59a82102767189e3c3d10a99ad36f20174c9299418
+"remend@npm:^1.4.0":
+  version: 1.4.0
+  resolution: "remend@npm:1.4.0"
+  checksum: 10c0/17929a75d009e4c5f6823e73e9e8b5c8105fcb16ec387eeb3c97f27f36cf55ba85c37259414710cd94d2c1687d2f3f023f556a42d5431daae081370df6b7432b
   languageName: node
   linkType: hard
 
@@ -14083,9 +14083,9 @@ __metadata:
     eslint-plugin-react-hooks: "npm:^7.1.0"
     eslint-plugin-streamlit-custom: "workspace:^"
     eslint-plugin-testing-library: "npm:^7.16.2"
-    globals: "npm:^17.12.0"
+    globals: "npm:^17.13.0"
     jiti: "npm:^2.7.0"
-    knip: "npm:^6.38.0"
+    knip: "npm:^6.39.0"
     oxfmt: "npm:^0.71.0"
     oxlint: "npm:^1.86.0"
     react: "npm:^18.2.0"
