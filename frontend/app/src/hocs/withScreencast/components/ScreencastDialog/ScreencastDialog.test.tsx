@@ -19,7 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import { render } from "@streamlit/lib/testing"
 
-import ScreencastDialog, { Props } from "./ScreencastDialog"
+import ScreencastDialog, { type Props } from "./ScreencastDialog"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   onClose: vi.fn(),

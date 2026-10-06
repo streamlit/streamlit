@@ -307,8 +307,10 @@ export default defineConfig([
       // New rules in @eslint-react v4/v5 — disable until existing violations are addressed
       "@eslint-react/exhaustive-deps": "off",
       // TypeScript rules with type-checking
-      // We want to use these, but we have far too many instances of these rules
-      // for it to be realistic right now. Over time, we should fix these.
+      // Production src enables no-unsafe-call / return / argument, no-misused-spread,
+      // and unbound-method (see the overlay below). This block leaves those rules
+      // off so tests, which that overlay ignores, stay exempt. Other no-unsafe-*
+      // rules stay off.
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
@@ -371,6 +373,8 @@ export default defineConfig([
       "@typescript-eslint/return-await": ["error", "in-try-catch"],
       // Treat @deprecated API usage as errors
       "@typescript-eslint/no-deprecated": "error",
+      // Require Promise .catch/.then rejection params to be unknown so callers must narrow before use
+      "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
       // Mixed string/numeric members compare and reverse-map inconsistently;
       // keep hand-written enums single-typed like generated protobuf ones.
       "@typescript-eslint/no-mixed-enums": "error",
@@ -510,6 +514,17 @@ export default defineConfig([
       // Require type on raw <button> JSX (not styled.button); omitted type submits the enclosing form.
       // Tests still use <button> fixtures without type, so this stays production-only.
       "@eslint-react/dom-no-missing-button-type": "error",
+      // Calling, returning, or passing `any` infects typed APIs. Spreading a
+      // class instance (protobuf, AxiosHeaders) copies enumerable own fields
+      // and drops methods. Extracting a class method without binding drops
+      // `this`. Tests and the remaining no-unsafe-* rules
+      // (assignment/member-access) stay off for now; see the frontend linting
+      // plan in the wiki for the remaining queue.
+      "@typescript-eslint/no-unsafe-call": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
+      "@typescript-eslint/no-unsafe-argument": "error",
+      "@typescript-eslint/no-misused-spread": "error",
+      "@typescript-eslint/unbound-method": "error",
     },
   },
   // Test files specific configuration

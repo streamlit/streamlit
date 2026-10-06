@@ -377,6 +377,8 @@ describe("LogoComponent", () => {
       // Should render a div container (StyledIconLogo) instead of img (StyledLogo)
       const logo = screen.getByTestId("stLogo")
       expect(logo.tagName).toBe("DIV")
+      // Unlinked icon logos have no <img alt>; name them for parity with image logos.
+      expect(screen.getByRole("img", { name: "App Logo" })).toBe(logo)
     })
 
     it("renders DynamicIcon when imageType is EMOJI", () => {
@@ -398,6 +400,28 @@ describe("LogoComponent", () => {
       // Should render a div container (StyledIconLogo) instead of img (StyledLogo)
       const logo = screen.getByTestId("stLogo")
       expect(logo.tagName).toBe("DIV")
+      expect(screen.getByRole("img", { name: "App Logo" })).toBe(logo)
+    })
+
+    it("names a linked icon logo on the anchor, not the glyph wrapper", () => {
+      const iconLogo = LogoProto.create({
+        image: ":material/home:",
+        imageType: LogoProto.ImageType.ICON,
+        link: "https://example.com",
+        size: "medium",
+      })
+
+      render(
+        <LogoComponent
+          {...getProps({
+            appLogo: iconLogo,
+            dataTestId: "stLogo",
+          })}
+        />
+      )
+
+      expect(screen.getByRole("link", { name: "App Logo" })).toBeVisible()
+      expect(screen.getByTestId("stLogo")).not.toHaveAttribute("aria-label")
     })
 
     it("renders img when imageType is IMAGE (default)", () => {

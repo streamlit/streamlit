@@ -24,7 +24,7 @@ import {
   darkTheme,
   lightTheme,
   mockSessionInfo,
-  ThemeConfig,
+  type ThemeConfig,
 } from "@streamlit/lib"
 
 import { buildThemeSection, findThemeForSelection } from "./themeSection"

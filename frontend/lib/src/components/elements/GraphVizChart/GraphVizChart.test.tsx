@@ -179,6 +179,11 @@ describe("GraphVizChart Element", () => {
           name: "Directed graph of Hello to World",
         })
       ).toBeVisible()
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Directed graph of Hello to World$/,
+        })
+      ).toBeInTheDocument()
     })
 
     it("omits role and aria-label when alt is not provided", () => {

@@ -28,7 +28,7 @@ import {
   mockEndpoints,
   mockSessionInfo,
   mockTheme,
-  NavigationContextProps,
+  type NavigationContextProps,
   toastQueue,
   TransientNode,
   WidgetStateManager,
@@ -36,7 +36,7 @@ import {
 import {
   render,
   renderWithContexts,
-  RenderWithContextsOptions,
+  type RenderWithContextsOptions,
 } from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
@@ -47,7 +47,7 @@ import {
   PageConfig,
 } from "@streamlit/protobuf"
 
-import AppView, { AppViewProps } from "./AppView"
+import AppView, { type AppViewProps } from "./AppView"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
@@ -661,7 +661,7 @@ describe("AppView element", () => {
       })
 
       describe("without show_padding or show_toolbar options", () => {
-        it("uses 2.25rem top padding when no header content", () => {
+        it("uses overlay-toolbar clearance padding when no header content", () => {
           render(
             <AppView
               {...getProps({
@@ -673,9 +673,13 @@ describe("AppView element", () => {
             />
           )
 
-          const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("2.25rem")
-          expect(style.paddingBottom).toEqual("1rem")
+          const mainBlock = screen.getByTestId("stMainBlockContainer")
+          // calc(...) keeps clearance at baseFontSize < 16; equals 2.35rem at 16px.
+          // Use toHaveStyle (not getComputedStyle): jsdom does not resolve max() in calc.
+          expect(mainBlock).toHaveStyle(
+            "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
+          )
+          expect(getMainBlockContainerStyle().paddingBottom).toEqual("1rem")
         })
 
         it("uses 4.5rem top padding when header content exists (logo)", () => {

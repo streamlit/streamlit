@@ -626,7 +626,7 @@ def test_mobile_sidebar_overlay_visual(
 # ===== TOP PADDING VISUAL REGRESSION TESTS =====
 # These tests validate the top padding logic in frontend/app/src/components/AppView/styled-components.ts
 # which sets different top padding values based on embedded mode, toolbar visibility, and navigation presence:
-# - 2.25rem: embedded minimal (no header, no toolbar)
+# - bare-embed clearance (calc from overlay toolbar size; 2.35rem at 16px root)
 # - 4.5rem: embedded with header but no toolbar
 # - 6rem: non-embedded default OR embedded with show_toolbar
 # - 8rem: non-embedded with top navigation present
@@ -638,7 +638,7 @@ def test_top_padding_visual_regression_embedded_modes(
     """Visual regression test for top padding in different embedded modes.
 
     Tests the top padding logic from styled-components.ts:
-    - 2.25rem: embedded minimal (no header, no toolbar)
+    - bare-embed clearance for overlay toolbars (no header, no toolbar)
     - 4.5rem: embedded with header but no toolbar
     - 6rem: embedded with show_toolbar
     """
@@ -649,17 +649,17 @@ def test_top_padding_visual_regression_embedded_modes(
     current_url = app.url
     base_url = current_url.split("?")[0]
 
-    # Test 1: Embedded minimal mode (2.25rem) - enable hidden nav first to remove headers
+    # Test 1: Embedded minimal mode - enable hidden nav first to remove headers
     click_checkbox(app, "Test Hidden Navigation")
     wait_for_app_run(app)
 
     goto_app(app, f"{base_url}?embed=true")
     wait_for_app_run(app)
 
-    # Should have minimal UI - this triggers the 2.25rem padding case
+    # Should have minimal UI - this triggers the bare-embed clearance padding
     main_content = app.get_by_test_id("stMain")
     expect(main_content).to_be_visible()
-    assert_snapshot(main_content, name="st_app_top_padding-embedded_minimal_2_25rem")
+    assert_snapshot(main_content, name="st_app_top_padding-embedded_minimal")
 
     # Test 2: Embedded with toolbar (6rem)
     goto_app(app, f"{base_url}?embed=true&show_toolbar=true")

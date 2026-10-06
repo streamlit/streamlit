@@ -302,7 +302,8 @@ function SingleDateInput({
     }
   }, [isOpen, theme.spacing.twoXS, isInSidebar])
 
-  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
+  const { floatingStyles, setFloating, setReference } =
+    useFloatingOverlay(overlayOptions)
 
   // Restores focus to the date field after the calendar closes.
   // In active mode: returns to the segment that was focused before
@@ -361,8 +362,8 @@ function SingleDateInput({
           }
         }
       },
-      floatingSetFn: refs.setFloating,
-      referenceSetFn: refs.setReference,
+      floatingSetFn: setFloating,
+      referenceSetFn: setReference,
       restoreFocusFn: restoreFocusToField,
       // Exclude the month/year picker so clicks and Escape inside it do not
       // dismiss the calendar.

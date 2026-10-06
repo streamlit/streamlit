@@ -149,32 +149,36 @@ function AnchorDateWatcher({
   onAnchorSelect: (date: CalendarDate) => void
 }): null {
   const state = useContext(RangeCalendarStateContext)
+  // Latest calendar state for the effect. `state` is a new object every render,
+  // so the effect reads it here instead of listing `state` as a dependency.
+  const stateRef = useRef(state)
+  stateRef.current = state
   const anchorDate = state?.anchorDate ?? null
-  const setAnchorDate = state?.setAnchorDate
   const prevAnchorRef = useRef<CalendarDate | null>(null)
   const prevSeedRef = useRef<CalendarDate | null>(null)
 
   useEffect(() => {
+    const calendarState = stateRef.current
     // (Re-)seed when seedAnchor changes to a new non-null value (handles
     // both initial mount and user editing the start field while the calendar
     // is open with displayEnd === null).
     if (seedAnchor && !datesEqual(seedAnchor, prevSeedRef.current)) {
       prevSeedRef.current = seedAnchor
       prevAnchorRef.current = seedAnchor
-      setAnchorDate?.(seedAnchor)
+      calendarState?.setAnchorDate(seedAnchor)
       return
     }
     if (!seedAnchor) {
       prevSeedRef.current = null
       if (prevAnchorRef.current) {
-        setAnchorDate?.(null)
+        calendarState?.setAnchorDate(null)
       }
     }
     if (anchorDate && !prevAnchorRef.current) {
       onAnchorSelect(anchorDate)
     }
     prevAnchorRef.current = anchorDate
-  }, [anchorDate, setAnchorDate, onAnchorSelect, seedAnchor])
+  }, [anchorDate, onAnchorSelect, seedAnchor])
 
   return null
 }
@@ -428,7 +432,8 @@ function RangeDateInput({
     }
   }, [isOpen, theme.spacing.twoXS, isInSidebar])
 
-  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
+  const { floatingStyles, setFloating, setReference } =
+    useFloatingOverlay(overlayOptions)
 
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
@@ -469,8 +474,8 @@ function RangeDateInput({
           }
         }
       },
-      floatingSetFn: refs.setFloating,
-      referenceSetFn: refs.setReference,
+      floatingSetFn: setFloating,
+      referenceSetFn: setReference,
       restoreFocusFn: restoreFocusToField,
       // Exclude the month/year and quick-select popovers so clicks and Escape
       // inside them do not dismiss the calendar.
@@ -1074,7 +1079,10 @@ function RangeDateInput({
                 >
                   {activePresetLabel}
                   <StyledCalendarHeaderSelectChevron>
-                    <KeyboardArrowDown size={theme.iconSizes.base} />
+                    <KeyboardArrowDown
+                      size={theme.iconSizes.base}
+                      aria-hidden="true"
+                    />
                   </StyledCalendarHeaderSelectChevron>
                 </StyledQuickSelectTrigger>
                 <StyledDropdownPopover

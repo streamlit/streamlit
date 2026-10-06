@@ -439,8 +439,8 @@ function DataFrame({
   const getOriginalIndexRef = useRef(getOriginalIndex)
   getOriginalIndexRef.current = getOriginalIndex
 
-  // Ref to track the last processed selectionState to avoid proto mutation.
-  // Used to detect when a new programmatic selection arrives from the backend.
+  // Last applied programmatic selectionState JSON. Reset when the one-shot
+  // field is absent so a later identical payload can apply.
   const processedSelectionStateRef = useRef<string | null>(null)
 
   // Create the sync selection state callback using the sorted columns and getOriginalIndex.
@@ -663,21 +663,22 @@ function DataFrame({
 
   /**
    * Apply programmatic selection changes set via st.session_state.
-   * selectionState is a one-shot signal from the backend (only present on
-   * the rerun where the value changed). We track processed values via ref
-   * to avoid mutating the proto object.
+   * The backend sends selectionState only on the rerun where the value
+   * changed. This effect skips identical payloads across React re-renders
+   * of that message, and clears processedSelectionStateRef when
+   * selectionState is absent so a later identical value can apply.
    */
   useEffect(() => {
-    // Skip if no selectionState or we've already processed this exact value
-    if (
-      !element.selectionState ||
-      element.selectionState === processedSelectionStateRef.current
-    ) {
+    if (!element.selectionState) {
+      processedSelectionStateRef.current = null
+      return
+    }
+
+    if (element.selectionState === processedSelectionStateRef.current) {
       return
     }
 
     const selectionState = element.selectionState
-    // Mark as processed (using ref instead of proto mutation)
     processedSelectionStateRef.current = selectionState
 
     const programmaticSelection = getProgrammaticSelectionState({
@@ -1014,6 +1015,7 @@ function DataFrame({
         onExpand={expand}
         onCollapse={collapse}
         target={StyledResizableContainer}
+        labelContext={accessibleName}
       >
         {customToolbarActions?.map(action => action)}
         {((isRowSelectionActivated &&
@@ -1033,6 +1035,7 @@ function DataFrame({
               clearSelection()
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
         {canDeleteRows && isRowSelected && (
@@ -1045,6 +1048,7 @@ function DataFrame({
                 clearTooltip()
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {canAddRows && !isRowSelected && (
@@ -1061,6 +1065,7 @@ function DataFrame({
                 dataEditorRef.current?.scrollTo(0, numRows, "vertical")
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {!isEmptyTable && allColumns.length > 0 && (
@@ -1077,6 +1082,7 @@ function DataFrame({
               label="Show/hide columns"
               icon={Visibility}
               onClick={handleToggleColumnVisibilityMenu}
+              labelContext={accessibleName}
             />
           </ColumnVisibilityMenu>
         )}
@@ -1085,6 +1091,7 @@ function DataFrame({
             label="Download as CSV"
             icon={FileDownload}
             onClick={exportToCsv}
+            labelContext={accessibleName}
           />
         )}
         {canSearch && (
@@ -1100,6 +1107,7 @@ function DataFrame({
               }
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
       </Toolbar>

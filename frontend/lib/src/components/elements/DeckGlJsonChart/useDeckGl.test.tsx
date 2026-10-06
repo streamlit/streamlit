@@ -157,6 +157,11 @@ describe("useDeckGl", () => {
         props: { tooltip: "" },
         info: { object: { elevationValue: 10 } } as PickingInfo,
       },
+      {
+        description: "tooltip has neither html nor text",
+        props: { tooltip: JSON.stringify({ style: { color: "red" } }) },
+        info: { object: { elevationValue: 10 } } as PickingInfo,
+      },
     ])("should return null when $description", ({ props, info }) => {
       const {
         result: { current },
@@ -181,6 +186,15 @@ describe("useDeckGl", () => {
       {
         description: "unexpected schema (no interpolation)",
         object: { unexpectedSchema: { elevationValue: 10 } },
+        expected: "<b>Elevation Value:</b> {elevationValue}",
+      },
+      {
+        description: "inherited properties getter (no interpolation)",
+        object: Object.create({
+          get properties() {
+            throw new Error("inherited properties should not be read")
+          },
+        }),
         expected: "<b>Elevation Value:</b> {elevationValue}",
       },
     ])(

@@ -253,7 +253,7 @@ const Multiselect: FC<Props> = props => {
     ? { boundary: document.documentElement }
     : undefined
 
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open: true,
     placement: "bottom-start",
     offsetPx: convertRemToPx(theme.spacing.twoXS),
@@ -820,7 +820,7 @@ const Multiselect: FC<Props> = props => {
             focusedKeyRef={focusedKeyRef}
           />
           <StyledTrigger
-            ref={refs.setReference}
+            ref={setReference}
             $maxHeight={maxHeight}
             onClick={handleContainerClick}
           >
@@ -902,7 +902,7 @@ const Multiselect: FC<Props> = props => {
             </StyledOpenButton>
           </StyledTrigger>
           <StyledPopover
-            ref={refs.setFloating}
+            ref={setFloating}
             data-testid="stMultiSelectDropdown"
             placement="bottom left"
             isNonModal
