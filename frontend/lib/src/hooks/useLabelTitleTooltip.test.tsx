@@ -237,4 +237,36 @@ describe("useLabelTitleTooltip", () => {
 
     expect(screen.getByTitle("Clipped")).toBeVisible()
   })
+
+  it("remeasures overflow once document fonts finish loading", async () => {
+    let resolveReady: () => void = () => undefined
+    const ready = new Promise<void>(resolve => {
+      resolveReady = resolve
+    })
+    const originalFonts = Object.getOwnPropertyDescriptor(document, "fonts")
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { ready },
+    })
+
+    try {
+      layout.setWidths(100, 100)
+      render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+      expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+
+      layout.setWidths(200, 100)
+      expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+
+      resolveReady()
+      await waitFor(() => {
+        expect(screen.getByTitle("Plain label")).toBeVisible()
+      })
+    } finally {
+      if (originalFonts) {
+        Object.defineProperty(document, "fonts", originalFonts)
+      } else {
+        Reflect.deleteProperty(document, "fonts")
+      }
+    }
+  })
 })

@@ -72,6 +72,31 @@ function clearTitle(node: HTMLElement): void {
   }
 }
 
+/**
+ * The first measure can run against a fallback font. Remeasure once when the
+ * document's current fonts finish loading. Later font swaps are ignored.
+ */
+function remeasureWhenFontsReady(recheck: () => void): () => void {
+  const fonts = (document as { fonts?: { ready: Promise<unknown> } }).fonts
+  if (fonts === undefined) {
+    return () => undefined
+  }
+
+  let cancelled = false
+  void fonts.ready.then(
+    () => {
+      if (!cancelled) {
+        recheck()
+      }
+      return undefined
+    },
+    () => undefined
+  )
+  return () => {
+    cancelled = true
+  }
+}
+
 interface LabelTitleTooltipRefs<
   ContainerElement extends HTMLElement,
   LabelElement extends HTMLElement,
@@ -92,8 +117,9 @@ interface LabelTitleTooltipRefs<
  *   renders).
  * - The native `title` is set only when an ellipsis box inside the host is
  *   actually clipped (`scrollWidth` wider than `clientWidth`). A label that
- *   fits does not get a title. Overflow is measured when the label renders.
- *   A later resize can leave the title stale until the next render.
+ *   fits does not get a title. Overflow is measured when the label renders,
+ *   and once more when `document.fonts.ready` settles. A later resize or
+ *   font swap can leave the title stale until the next render.
  * - A MutationObserver re-syncs the title after async Markdown plugins (e.g.
  *   emoji) replace a loading skeleton with the real label. When
  *   `addTitleTooltip` is false, no observer is attached.
@@ -144,6 +170,7 @@ export function useLabelTitleTooltip<
     }
 
     syncTitle()
+    const cancelFontRecheck = remeasureWhenFontsReady(syncTitle)
 
     const mutationObserver = new MutationObserver(syncTitle)
     mutationObserver.observe(node, {
@@ -153,6 +180,7 @@ export function useLabelTitleTooltip<
     })
 
     return () => {
+      cancelFontRecheck()
       mutationObserver.disconnect()
     }
   }, [addTitleTooltip, effectIdentityKey])
