@@ -788,9 +788,8 @@ class LayoutsMixin:
             following:
 
             - ``"auto"`` (default): Streamlit uses a theme-based width of
-              about 200 pixels. When ``border`` is ``True``, the cell
-              padding is added on top so the available content width
-              stays the same.
+              about 200 pixels. Cell border and padding sit inside that
+              width and do not increase it.
             - An integer specifying the minimum width in pixels: When
               ``wrap`` is ``True``, the grid drops a column before cells
               become narrower than this width. When ``wrap`` is

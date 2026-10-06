@@ -472,13 +472,10 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
 
   const minColumnWidthPx = resolveMinColumnWidthPx({
     minColumnWidthPx: rawMinColumnWidthPx,
-    showBorder: showCellBorder,
     autoMinColumnWidthPx: convertRemToPx(
       theme.sizes.gridMinColumnWidth,
       theme.fontSizes.baseFontSize
     ),
-    borderPaddingPx:
-      2 * convertRemToPx(theme.spacing.lg, theme.fontSizes.baseFontSize),
   })
   const columnGapPx = cssLengthToPx(
     translateGapWidth(columnGap, theme),

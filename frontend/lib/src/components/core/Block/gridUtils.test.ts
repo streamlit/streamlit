@@ -33,34 +33,24 @@ describe("cssLengthToPx", () => {
 })
 
 describe("resolveMinColumnWidthPx", () => {
-  it("uses an explicit pixel width without border padding", () => {
+  it("uses an explicit pixel width unchanged", () => {
     expect(
       resolveMinColumnWidthPx({
         minColumnWidthPx: 280,
-        showBorder: true,
         autoMinColumnWidthPx: 200,
-        borderPaddingPx: 32,
       })
     ).toBe(280)
   })
 
-  it("uses the auto token, plus border padding when bordered", () => {
+  it("keeps a bordered auto floor at 200px for a 16px root", () => {
+    const autoMinColumnWidthPx = cssLengthToPx("12.5rem", 16)
+    expect(autoMinColumnWidthPx).toBe(200)
     expect(
       resolveMinColumnWidthPx({
         minColumnWidthPx: 0,
-        showBorder: false,
-        autoMinColumnWidthPx: 200,
-        borderPaddingPx: 32,
+        autoMinColumnWidthPx,
       })
     ).toBe(200)
-    expect(
-      resolveMinColumnWidthPx({
-        minColumnWidthPx: 0,
-        showBorder: true,
-        autoMinColumnWidthPx: 200,
-        borderPaddingPx: 32,
-      })
-    ).toBe(232)
   })
 })
 
@@ -91,6 +81,23 @@ describe("resolveGridColumnCount", () => {
         availableWidthPx: 736,
         maxColumns: 4,
         wrap: true,
+      })
+    ).toBe(3)
+  })
+
+  it("resolves st.grid(4, border=True) to 3 columns at 704px", () => {
+    const minColumnWidthPx = resolveMinColumnWidthPx({
+      minColumnWidthPx: 0,
+      autoMinColumnWidthPx: cssLengthToPx("12.5rem", 16),
+    })
+    expect(
+      resolveGridColumnCount({
+        availableWidthPx: 704,
+        minColumnWidthPx,
+        columnGapPx: 16,
+        maxColumns: 4,
+        wrap: true,
+        fallbackWidthPx: 736,
       })
     ).toBe(3)
   })

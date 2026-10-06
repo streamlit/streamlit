@@ -35,29 +35,24 @@ export function cssLengthToPx(value: string, rootFontSizePx: number): number {
 }
 
 /**
- * Resolve the outer-cell floor used as a wrap threshold (or no-wrap shrink floor).
+ * Resolve the floor used as a wrap threshold (or no-wrap shrink floor).
  *
- * Proto `min_column_width_px === 0` means `"auto"`: a theme rem token, plus
- * `2 * spacing.lg` when cells are bordered so content width stays equivalent.
- * An explicit pixel int is the outer track width and is not padded for borders.
+ * Proto `min_column_width_px === 0` means `"auto"`: always
+ * `theme.sizes.gridMinColumnWidth`. Border and `padding: calc(spacing.lg -
+ * borderWidth)` sit inside the track, so they do not change this floor. An
+ * explicit pixel int is unchanged.
  */
 export function resolveMinColumnWidthPx({
   minColumnWidthPx,
-  showBorder,
   autoMinColumnWidthPx,
-  borderPaddingPx,
 }: {
   minColumnWidthPx: number
-  showBorder: boolean
   autoMinColumnWidthPx: number
-  borderPaddingPx: number
 }): number {
   if (minColumnWidthPx > 0) {
     return minColumnWidthPx
   }
-  return showBorder
-    ? autoMinColumnWidthPx + borderPaddingPx
-    : autoMinColumnWidthPx
+  return autoMinColumnWidthPx
 }
 
 /**
