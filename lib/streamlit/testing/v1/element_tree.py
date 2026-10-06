@@ -202,6 +202,21 @@ def _is_dotted_name(prefix: str) -> bool:
     return True
 
 
+def _closes_quote(text: str, index: int, quote: str) -> bool:
+    """Return whether ``text[index]`` closes ``quote``.
+
+    A quote is escaped only when an odd number of backslashes precedes it.
+    """
+    if text[index] != quote:
+        return False
+    slashes = 0
+    cursor = index - 1
+    while cursor >= 0 and text[cursor] == "\\":
+        slashes += 1
+        cursor -= 1
+    return slashes % 2 == 0
+
+
 def _matching_paren(value: str, open_at: int) -> int | None:
     """Return the index of the ``)`` that closes the ``(`` at ``open_at``."""
     depth = 0
@@ -209,7 +224,7 @@ def _matching_paren(value: str, open_at: int) -> int | None:
     for index in range(open_at, len(value)):
         char = value[index]
         if quote is not None:
-            if char == quote and value[index - 1] != "\\":
+            if _closes_quote(value, index, quote):
                 quote = None
             continue
         if char in "'\"":
@@ -231,7 +246,7 @@ def _split_top_level_commas(text: str) -> list[str]:
     quote: str | None = None
     for index, char in enumerate(text):
         if quote is not None:
-            if char == quote and text[index - 1] != "\\":
+            if _closes_quote(text, index, quote):
                 quote = None
             continue
         if char in "'\"":
@@ -255,7 +270,7 @@ def _param_name_and_sep(part: str) -> tuple[str, str]:
     quote: str | None = None
     for index, char in enumerate(part):
         if quote is not None:
-            if char == quote and part[index - 1] != "\\":
+            if _closes_quote(part, index, quote):
                 quote = None
             continue
         if char in "'\"":
@@ -273,12 +288,18 @@ def _is_signature_param(part: str) -> bool:
     """Return whether ``part`` is one ``inspect.signature`` parameter."""
     if part in {"*", "/", "..."}:
         return True
+    body = part
     if part.startswith("**"):
-        return part[2:].isidentifier()
+        body = part[2:]
+    elif part.startswith("*"):
+        body = part[1:]
+    name, separator = _param_name_and_sep(body)
+    if not name.isidentifier():
+        return False
     if part.startswith("*"):
-        return part[1:].isidentifier()
-    name, separator = _param_name_and_sep(part)
-    return bool(name) and name.isidentifier() and separator in {"", ":", "="}
+        # ``*args: int`` and ``**kwargs: str``; star parameters have no default.
+        return separator in {"", ":"}
+    return separator in {"", ":", "="}
 
 
 def _is_keyword_repr_field(part: str) -> bool:

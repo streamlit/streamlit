@@ -430,6 +430,14 @@ def test_help_value_keeps_readable_reprs() -> None:
             """Scale."""
             return x
 
+        def gather(*args: int, **kwargs: str) -> None:
+            """Gather."""
+            return
+
+        def slash(x: str = "\\") -> str:
+            """Keep a trailing backslash default."""
+            return x
+
         point = Point(1, 2)
         named = NamedPoint(1, 2)
         moment = datetime.datetime(2020, 1, 2, 3, 4)
@@ -448,10 +456,12 @@ def test_help_value_keeps_readable_reprs() -> None:
         st.help(arr)
         st.help(amount)
         st.help(scale)
+        st.help(gather)
+        st.help(slash)
 
     at = AppTest.from_function(script).run()
     assert not at.exception
-    point, named, moment, day, pair, span, arr, amount, scale = at.help
+    point, named, moment, day, pair, span, arr, amount, scale, gather, slash = at.help
     assert point.name == "point"
     assert point.value == "Point(1, 2)"
     assert named.name == "named"
@@ -466,6 +476,10 @@ def test_help_value_keeps_readable_reprs() -> None:
     assert scale.name == "scale"
     assert scale.value == "scale"
     assert "(x: int = 1, y: int = 2, z: int = 3)" in scale.proto.value
+    assert gather.value == "gather"
+    assert "*args: int" in gather.proto.value
+    assert slash.value == "slash"
+    assert "\\\\" in slash.proto.value
 
 
 @pytest.mark.parametrize("size", list(SIZE_TO_REM_MAPPING))
