@@ -1,6 +1,6 @@
 # Streamlit WCAG command inventory
 
-Last updated: 2026-10-02. Re-audit a command when its accessible name, keyboard behavior, or role changes.
+Last updated: 2026-10-06. Re-audit a command when its accessible name, keyboard behavior, or role changes.
 
 This page is the **command** inventory (`st.*`). For default theme tokens and library shell chrome (1.4.3, 1.4.11, 2.5.8), see the [theme & shell chrome inventory](accessibility-theme.md).
 
