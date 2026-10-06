@@ -182,40 +182,42 @@ describe("Sidebar Component", () => {
       expect(collapseButton).toHaveAttribute("aria-controls", "stSidebar")
     })
 
-    it.each([
-      {
-        initialCollapsed: false,
-        expectedToggleValue: true,
-        description: "collapse when expanded",
-      },
-      {
-        initialCollapsed: true,
-        expectedToggleValue: false,
-        description: "expand when collapsed",
-      },
-    ])(
-      "should $description on toggle",
-      async ({ initialCollapsed, expectedToggleValue }) => {
-        const mockOnToggleCollapse = vi.fn()
-        const user = userEvent.setup()
+    it("omits the collapse button when the sidebar is collapsed", () => {
+      renderSidebar(
+        { isCollapsed: true },
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+          },
+        }
+      )
 
-        renderSidebar({
-          isCollapsed: initialCollapsed,
-          onToggleCollapse: mockOnToggleCollapse,
-        })
+      // Avoid a focusable offscreen "Collapse sidebar" beside the header expand
+      // control (especially on small viewports where visibility stays visible).
+      expect(
+        screen.queryByTestId("stSidebarCollapseButton")
+      ).not.toBeInTheDocument()
+    })
 
-        // Hover to show collapse button
-        await user.hover(screen.getByTestId("stSidebarHeader"))
+    it("should collapse when expanded on toggle", async () => {
+      const mockOnToggleCollapse = vi.fn()
+      const user = userEvent.setup()
 
-        // Click the collapse button
-        const collapseButton = within(
-          screen.getByTestId("stSidebarCollapseButton")
-        ).getByRole("button", { name: "Collapse sidebar" })
-        await user.click(collapseButton)
+      renderSidebar({
+        isCollapsed: false,
+        onToggleCollapse: mockOnToggleCollapse,
+      })
 
-        expect(mockOnToggleCollapse).toHaveBeenCalledWith(expectedToggleValue)
-      }
-    )
+      // Hover to show collapse button
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+
+      const collapseButton = within(
+        screen.getByTestId("stSidebarCollapseButton")
+      ).getByRole("button", { name: "Collapse sidebar" })
+      await user.click(collapseButton)
+
+      expect(mockOnToggleCollapse).toHaveBeenCalledWith(true)
+    })
   })
 
   describe("Collapse Button Visibility", () => {

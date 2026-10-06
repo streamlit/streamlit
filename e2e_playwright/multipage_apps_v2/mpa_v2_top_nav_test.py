@@ -578,7 +578,6 @@ def test_mobile_sidebar_overlay_visual(
     close_button.click()
 
     # Wait for sidebar to collapse
-    # The sidebar data-collapsed attribute should be true
     expect(sidebar).to_have_attribute("data-collapsed", "true")
 
     # Test navigation interaction

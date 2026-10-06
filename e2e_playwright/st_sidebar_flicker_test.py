@@ -37,7 +37,7 @@ def get_expected_sidebar_state(initial_state: str, viewport: str) -> str:
 
 
 def verify_sidebar_state(page: Page, expected_state: str) -> None:
-    """Verify sidebar exists and has expected expanded state."""
+    """Verify that the sidebar is attached and has the expected collapsed or expanded state."""
     sidebar = page.get_by_test_id("stSidebar")
     expect(sidebar).to_be_attached()
 

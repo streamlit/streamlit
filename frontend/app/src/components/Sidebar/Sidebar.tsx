@@ -311,7 +311,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
           {renderLogoContent()}
-          {(!isSidebarLocked || isMobileViewport) && (
+          {/* Omit when collapsed: sidebar stays mounted offscreen, and on small
+              viewports this control stays visibility:visible — a focusable,
+              mislabeled duplicate of the header expand button. */}
+          {(!isSidebarLocked || isMobileViewport) && !isCollapsed && (
             <StyledCollapseSidebarButton
               showSidebarCollapse={showSidebarCollapse}
               data-testid="stSidebarCollapseButton"
