@@ -203,6 +203,41 @@ interface PandasInterval {
 }
 
 /**
+ * JSON stored on Arrow's `pandas.interval` extension metadata.
+ * See pandas `ArrowIntervalType.__arrow_ext_serialize__`.
+ */
+interface PandasIntervalExtensionMetadata {
+  subtype: string
+  closed: string
+}
+
+/**
+ * Parses pandas interval extension metadata.
+ * Invalid JSON throws so `format()` can log it and render the raw cell.
+ * Returns undefined when `subtype` or `closed` is missing or not a string.
+ */
+function parsePandasIntervalExtensionMetadata(
+  rawMetadata: string
+): PandasIntervalExtensionMetadata | undefined {
+  const parsed: unknown = JSON.parse(rawMetadata)
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("subtype" in parsed) ||
+    !("closed" in parsed)
+  ) {
+    return undefined
+  }
+
+  const { subtype, closed } = parsed
+  if (typeof subtype !== "string" || typeof closed !== "string") {
+    return undefined
+  }
+
+  return { subtype, closed }
+}
+
+/**
  * Adjusts a time value to seconds based on the unit information in the field.
  *
  * The unit numbers are specified here:
@@ -532,14 +567,24 @@ function formatFloat(num: number): string {
  * Formats an interval value from arrow to string.
  */
 function formatInterval(x: StructRow, field?: Field): string {
-  // Serialization for pandas.Interval is provided by Arrow extensions
-  // https://github.com/pandas-dev/pandas/blob/235d9009b571c21b353ab215e1e675b1924ae55c/
-  // pandas/core/arrays/arrow/extension_types.py#L17
+  // pandas.Interval Arrow extension. Metadata is JSON from
+  // ArrowIntervalType.__arrow_ext_serialize__:
+  // https://github.com/pandas-dev/pandas/blob/235d9009b571c21b353ab215e1e675b1924ae55c/pandas/core/arrays/arrow/extension_types.py#L73
   const extensionName = field?.metadata.get("ARROW:extension:name")
-  if (extensionName && extensionName === "pandas.interval") {
-    const extensionMetadata = JSON.parse(
-      field?.metadata.get("ARROW:extension:metadata") as string
-    )
+  if (extensionName === "pandas.interval") {
+    const rawMetadata = field?.metadata.get("ARROW:extension:metadata")
+    if (typeof rawMetadata !== "string") {
+      LOG.warn("Arrow interval extension metadata is missing")
+      return String(x)
+    }
+
+    const extensionMetadata = parsePandasIntervalExtensionMetadata(rawMetadata)
+    if (extensionMetadata === undefined) {
+      LOG.warn(
+        "Arrow interval extension metadata must include string subtype and closed"
+      )
+      return String(x)
+    }
     const { subtype, closed } = extensionMetadata
 
     const interval = x.toJSON() as PandasInterval

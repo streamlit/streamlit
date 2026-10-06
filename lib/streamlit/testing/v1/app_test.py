@@ -64,6 +64,8 @@ from streamlit.testing.v1.element_tree import (
     Feedback,
     FileUploader,
     Header,
+    Help,
+    Html,
     Image,
     Info,
     InitialValue,
@@ -75,6 +77,7 @@ from streamlit.testing.v1.element_tree import (
     Multiselect,
     Node,
     NumberInput,
+    Progress,
     Radio,
     Selectbox,
     SelectSlider,
@@ -1103,6 +1106,34 @@ class AppTest:
         return self._tree.header
 
     @property
+    def help(self) -> ElementList[Help]:
+        """Sequence of all ``st.help`` elements.
+
+        Returns
+        -------
+        ElementList of Help
+            Sequence of all ``st.help`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.help[0]`` for the first element. Help is an
+            extension of the Element class.
+        """
+        return self._tree.help
+
+    @property
+    def html(self) -> ElementList[Html]:
+        """Sequence of all ``st.html`` elements.
+
+        Returns
+        -------
+        ElementList of Html
+            Sequence of all ``st.html`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.html[0]`` for the first element. Html is an
+            extension of the Element class.
+        """
+        return self._tree.html
+
+    @property
     def image(self) -> ElementList[Image]:
         """Sequence of all ``st.image`` elements.
 
@@ -1227,6 +1258,20 @@ class AppTest:
             ``at.number_input(key="my_key")`` for a widget with a given key.
         """
         return self._tree.number_input
+
+    @property
+    def progress(self) -> ElementList[Progress]:
+        """Sequence of all ``st.progress`` elements.
+
+        Returns
+        -------
+        ElementList of Progress
+            Sequence of all ``st.progress`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.progress[0]`` for the first element. Progress is an
+            extension of the Element class.
+        """
+        return self._tree.progress
 
     @property
     def radio(self) -> WidgetList[Radio[Any]]:
@@ -1507,8 +1552,8 @@ class AppTest:
         element_type: str
             An ``AppTest`` collection name such as ``"button"``,
             ``"datetime_input"``, ``"pills"``, ``"form"``, or ``"tabs"``.
-            Internal node type names such as ``"date_time_input"`` also work.
-            ``"help"`` selects ``st.help`` elements (node type ``help_info``).
+            Internal node type names such as ``"date_time_input"`` and
+            ``"help_info"`` also work.
             ``"form_submit_button"`` selects submit buttons inside forms.
 
         Returns
