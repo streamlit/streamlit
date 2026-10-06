@@ -500,13 +500,13 @@ def component(
         export default function(component) {
             const { setStateValue, parentElement } = component;
             const sidebar = document.querySelector('section.stSidebar');
-            const initialState = sidebar.getAttribute('aria-expanded') === 'true';
+            const initialState = sidebar.getAttribute('data-collapsed') === 'false';
 
-            // Create observer to watch for aria-expanded attribute changes
+            // Observe `data-collapsed` and report sidebar expansion-state changes.
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'aria-expanded') {
-                        const newIsExpanded = sidebar.getAttribute('aria-expanded') === 'true';
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'data-collapsed') {
+                        const newIsExpanded = sidebar.getAttribute('data-collapsed') === 'false';
                         setStateValue('expanded', newIsExpanded);
                     }
                 });
@@ -515,7 +515,7 @@ def component(
             // Start observing
             observer.observe(sidebar, {
                 attributes: true,
-                attributeFilter: ['aria-expanded']
+                attributeFilter: ['data-collapsed']
             });
 
             // Set initial state
