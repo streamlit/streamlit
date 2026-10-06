@@ -551,7 +551,9 @@ replace a working install just to match CI.
   and install that GitHub release zip (it is an archive, not a `protoc`
   binary). Use the asset for your OS and architecture (`osx-aarch_64`,
   `osx-x86_64`, `linux-x86_64`, or `linux-aarch_64`), extract `bin/protoc`,
-  and put it first on `PATH`:
+  and put it first on `PATH`. When bumping the version in CI, also update
+  `PROTOC_SHA256` in `action.yml` to the `sha256sum` of the
+  `linux-x86_64` zip:
 
   ```bash
   PROTOC_VERSION=26.1  # copy from action.yml
