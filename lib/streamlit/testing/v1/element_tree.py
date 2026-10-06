@@ -139,9 +139,10 @@ def _is_help_signature(value: str, object_type: str) -> bool:
 
     ``st.help`` stores that form for callables, classes, and instances whose
     repr is not human-readable. Quoted strings and readable reprs such as
-    ``Point(1, 2)``, ``NamedPoint(x=1, y=2)``, and ``datetime.datetime(...)``
-    are values. ``name=value`` fields are a signature only for callable and
-    class proto types.
+    ``Point(1, 2)``, ``Coordinate(x, y)``, and ``NamedPoint(x=1, y=2)`` are
+    values. A positional parameter list is a signature when it is
+    module-qualified or the proto type is a callable or class. ``name=value``
+    fields are a signature only for callable and class proto types.
     """
     parsed = _help_signature_parts(value)
     if parsed is None:
@@ -156,7 +157,8 @@ def _is_help_signature(value: str, object_type: str) -> bool:
         return False
     if all(_is_keyword_repr_field(part) for part in parts):
         return object_type in _HELP_SIGNATURE_TYPES
-    return True
+    # ``Coordinate(x, y)`` is a repr. ``module.Box(a, b)`` is a signature.
+    return "." in prefix or object_type in _HELP_SIGNATURE_TYPES
 
 
 def _help_signature_parts(value: str) -> tuple[str, list[str]] | None:
@@ -1105,13 +1107,14 @@ class Help(Element):
 
     @property
     def value(self) -> str:
-        """Short summary of the documented object.
+        """Short summary of the object passed to ``st.help``.
 
-        AppTest keeps a short proto value, including readable reprs such as
-        ``"'Hello'"``, ``"streamlit"``, and ``"Point(1, 2)"``. When that value
-        is empty or a parameter-list signature, and a call-site expression was
-        captured, the summary is that expression (``.name``). The full docstring
-        stays on ``doc_string``.
+        Readable values stay (for example ``"'Hello'"``, ``"Point(1, 2)"``,
+        and ``"NamedPoint(x=1, y=2)"``). An empty value, or a positional or
+        annotated signature, uses the expression passed to ``st.help``
+        (``.name``) when one was captured. A ``name=value`` list uses that
+        expression only for functions, classes, and modules. The docstring is
+        ``doc_string``.
         """
         raw = self.proto.value
         if self.name and (not raw or _is_help_signature(raw, self.proto.type)):

@@ -419,6 +419,23 @@ def test_help_value_keeps_readable_reprs() -> None:
             def __repr__(self) -> str:
                 return f"Point({self.x}, {self.y})"
 
+        class Coordinate:
+            """A coordinate whose repr looks like a parameter list."""
+
+            def __init__(self, x: int, y: int) -> None:
+                self.x = x
+                self.y = y
+
+            def __repr__(self) -> str:
+                return "Coordinate(x, y)"
+
+        class RetryBox:
+            """Instance whose constructor has only unannotated defaults."""
+
+            def __init__(self, timeout=5, retries=3):
+                self.timeout = timeout
+                self.retries = retries
+
         @dataclass
         class NamedPoint:
             """A named point."""
@@ -439,6 +456,8 @@ def test_help_value_keeps_readable_reprs() -> None:
             return x
 
         point = Point(1, 2)
+        coord = Coordinate(1, 2)
+        retry = RetryBox()
         named = NamedPoint(1, 2)
         moment = datetime.datetime(2020, 1, 2, 3, 4)
         day = datetime.date(2024, 1, 1)
@@ -449,6 +468,8 @@ def test_help_value_keeps_readable_reprs() -> None:
         unbounded = slice(None)
 
         st.help(point)
+        st.help(coord)
+        st.help(retry)
         st.help(named)
         st.help(moment)
         st.help(day)
@@ -465,6 +486,8 @@ def test_help_value_keeps_readable_reprs() -> None:
     assert not at.exception
     (
         point,
+        coord,
+        retry,
         named,
         moment,
         day,
@@ -479,6 +502,10 @@ def test_help_value_keeps_readable_reprs() -> None:
     ) = at.help
     assert point.name == "point"
     assert point.value == "Point(1, 2)"
+    assert coord.value == "Coordinate(x, y)"
+    assert retry.name == "retry"
+    assert retry.value != "retry"
+    assert "(timeout=5, retries=3)" in retry.value
     assert named.name == "named"
     assert named.value == "script.<locals>.NamedPoint(x=1, y=2)"
     assert moment.value == "datetime.datetime(2020, 1, 2, 3, 4)"
