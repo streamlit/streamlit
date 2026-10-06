@@ -1859,6 +1859,28 @@ describe("DateTimeInput widget", () => {
         screen.getByTestId("stDateTimeInputCalendarButton")
       ).toHaveAttribute("aria-expanded", "false")
     })
+
+    it("does not commit on body-target blur while the passive preview stays open", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Partial edit so a premature commit would be observable.
+      await user.keyboard("{ArrowUp}")
+      spy.mockClear()
+
+      const field = screen.getByTestId("stDateTimeInputField")
+      fireEvent.blur(field, { relatedTarget: document.body })
+
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeInTheDocument()
+      expect(spy).not.toHaveBeenCalled()
+    })
   })
 
   describe("Active calendar (Alt+ArrowDown)", () => {

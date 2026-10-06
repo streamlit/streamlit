@@ -808,6 +808,7 @@ function SingleDateTimeInput({
       if (
         isOpen &&
         (!next ||
+          next === document.body ||
           popoverRef.current?.contains(next) ||
           (next instanceof Element &&
             next.closest(`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`)))
