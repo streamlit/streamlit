@@ -526,7 +526,9 @@ Rules:
   `st.pills(options=[1, 12], format_func=month_name)` reports `"December"`, not `12`, and
   a client that echoes a value back is always making a legal request. This holds for
   every widget that lists options, including `st.select_slider`, whose `format_func`
-  labels are what it reports and accepts. A display element is not sent back, so it
+  labels are what it reports and accepts. Text typed into a widget that accepts new
+  options is the exception: it is reported as typed, because formatting it would change
+  it on every round trip. A display element is not sent back, so it
   reports what the author passed: `st.metric` keeps its number and its `format`, which
   the frontend applies.
 - **Pages are identified by `url_path`.** There is no page ID in the public API, and
@@ -692,7 +694,8 @@ reports the violation and lets the caller decide: the browser path coerces, and 
 path rejects with `invalid_value`, because a silently reset value reads as success.
 
 Until then, v1 makes two checks of its own, after the JSON type: a number is not text
-except where it names an option, while a single value and a one-item list are
+except where it names an option, dates and times are ISO text even for a slider that
+carries them as microseconds, and a single value and a one-item list are
 interchangeable, because single-select button groups and single sliders carry one value
 in a list. A value must be one of the widget's `options`, the most common mistake, and
 the error lists the legal values. It must also be

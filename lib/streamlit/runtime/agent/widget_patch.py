@@ -204,8 +204,12 @@ def build_widget_states(
                 "interface cannot supply.",
             )
 
+        state = element_states[element_id]
         _validate_options(
-            key, metadata, value, advertised=element_states[element_id].options
+            key,
+            metadata,
+            value,
+            advertised=None if state.options_open else state.options,
         )
         encoded = _encode(
             element_id,
@@ -214,8 +218,7 @@ def build_widget_states(
             key,
             # An option's reported value can be a number, such as
             # `st.feedback`'s index; free text cannot.
-            numbers_as_text=metadata.formatted_options is not None
-            or element_states[element_id].options is not None,
+            option_labels=frozenset(metadata.formatted_options or state.options or ()),
         )
         _check_readable(key, metadata, encoded)
         states.widgets.append(encoded)
@@ -423,26 +426,40 @@ def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> An
 
     A date, time, or datetime slider is reported in ISO text but sends
     microseconds, and the widget's own serializer is what defines that mapping.
-    Anything else passes through unchanged.
+    It takes only ISO text: the microseconds are the wire's encoding, not a
+    value a client was shown. Anything else passes through unchanged.
     """
-    if metadata.value_type != "double_array_value":
+    if (
+        metadata.value_type != "double_array_value"
+        or value is None
+        or not _is_temporal(metadata)
+    ):
         return value
     items = value if isinstance(value, list) else [value]
-    if not any(isinstance(item, str) for item in items):
-        return value
     parsed = [_parse_iso(item) for item in items]
     if any(item is None for item in parsed):
         raise AgentRequestError(
             "invalid_value",
-            f"{value!r} is not a value {key!r} accepts; send ISO dates or times "
-            "like the snapshot reports.",
+            f"The value for {key!r} must be ISO dates or times, like the "
+            "snapshot reports.",
         )
     try:
         return metadata.serializer(parsed if isinstance(value, list) else parsed[0])
     except Exception as exc:
         raise AgentRequestError(
-            "invalid_value", f"{value!r} is not a value {key!r} accepts."
+            "invalid_value", f"The value sent for {key!r} is not one it accepts."
         ) from exc
+
+
+def _is_temporal(metadata: WidgetMetadata[Any]) -> bool:
+    """Whether a slider holds dates or times, judged by its default value."""
+    try:
+        default = metadata.deserializer(None)
+    except Exception:
+        return False
+    if isinstance(default, (list, tuple)):
+        default = default[0] if default else None
+    return isinstance(default, (datetime.date, datetime.time))
 
 
 def _encode(
@@ -451,7 +468,7 @@ def _encode(
     value: Any,
     key: str,
     *,
-    numbers_as_text: bool,
+    option_labels: frozenset[str],
 ) -> WidgetState:
     """Write a JSON value into the ``WidgetState`` arm the widget registered.
 
@@ -480,14 +497,14 @@ def _encode(
         elif value_type == "int_value":
             state.int_value = _as_integer(value)
         elif value_type == "string_value":
-            state.string_value = _as_string(value, numbers_as_text)
+            state.string_value = _as_string(value, option_labels)
         elif value_type == "json_value":
             state.json_value = json.dumps(value)
         elif is_array_value_field_name(value_type):
             items = value if isinstance(value, list) else [value]
             array = getattr(state, value_type)
             if value_type == "string_array_value":
-                array.data.extend(_as_string(item, numbers_as_text) for item in items)
+                array.data.extend(_as_string(item, option_labels) for item in items)
             elif value_type == "double_array_value":
                 array.data.extend(_as_number(item) for item in items)
             else:
@@ -593,7 +610,7 @@ def _as_integer(value: Any) -> int:
     return int(value)
 
 
-def _as_string(value: Any, numbers_as_text: bool) -> str:
+def _as_string(value: Any, option_labels: frozenset[str]) -> str:
     """Coerce a JSON value into the widget's wire string.
 
     Date and time widgets serialize as ISO 8601, which is also what their
@@ -608,6 +625,6 @@ def _as_string(value: Any, numbers_as_text: bool) -> str:
         # Guard against `True` silently becoming the string "True" for a
         # selection widget.
         raise TypeError(f"{value!r} is not a string")
-    if numbers_as_text and isinstance(value, (int, float)):
+    if isinstance(value, (int, float)) and str(value) in option_labels:
         return str(value)
     raise TypeError(f"{value!r} is not a string")

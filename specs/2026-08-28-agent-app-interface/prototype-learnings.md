@@ -1155,6 +1155,21 @@ Smaller fixes: a keyed display element is `unsupported_element`, not `not_on_pag
 `st.page_link` to the default page reports `page: ""`; and MCP refuses request IDs that
 are not strings or integers.
 
+## 7k. QA round 4: a serializer is not the inverse of what was typed
+
+Widening value serialization to every option widget exposed that the runtime's
+serializers apply `format_func` to anything, including text typed into a widget that
+accepts new options. Echoing that back formatted it again each time (`"5"`, `"#5"`,
+`"##5"`); `st.multiselect` had drifted the same way all along. A serialized value is now
+reported only when it is one of the options, and typed text as typed, which also lets a
+default option round-trip on those widgets.
+
+Two edge cases of the type rule: a number naming a listed option is accepted on a widget
+that also takes new options, so the snapshot keeps the list there as names rather than
+as a limit; and a slider is temporal only when its default is a date or time, judged by
+its own deserializer, so a string sent to a numeric slider gets the numeric error, and a
+temporal one takes ISO text only rather than raw microseconds.
+
 ## 8. Open questions the prototype surfaced
 
 1. **How is "the run chain settled" defined?** The prototype's grace period is a

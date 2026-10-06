@@ -196,6 +196,9 @@ class ElementState(NamedTuple):
     # for most selection widgets, but not for `st.select_slider` and not for a
     # trigger such as `st.menu_button`.
     options: list[Any] | None
+    # Whether a value may also be something not in `options`, as with
+    # `accept_new_options`. The options still say which numbers name one.
+    options_open: bool
     # The fragment this element lives in, if any. A request that targets it is
     # scoped to that fragment, the way the browser scopes a widget change.
     fragment_id: str | None
@@ -359,11 +362,9 @@ class _SnapshotBuilder:
 
         action = description.get("action")
         if element_id and action and not _is_write_only(description):
+            options = (description.get("props") or {}).get("options")
             value = self._widget_value(
-                element_id,
-                has_options=isinstance(
-                    (description.get("props") or {}).get("options"), list
-                ),
+                element_id, options=options if isinstance(options, list) else None
             )
             if action == "value" or value:
                 # A trigger's value only means anything while it is set, and it
@@ -424,7 +425,7 @@ class _SnapshotBuilder:
         # What a request may choose from: a trigger's choices, such as
         # `st.menu_button`'s, and the options of a widget that registers none
         # of its own. Not a limit for a widget that accepts new options.
-        options = None if props.get("accept_new_options") else props.get("options")
+        options = props.get("options")
         if description["type"] == "feedback" and isinstance(options, str):
             # `st.feedback` names its option set, and its value is an index
             # into it.
@@ -440,6 +441,7 @@ class _SnapshotBuilder:
             support=support,
             form_id=form_id,
             options=options if isinstance(options, list) else None,
+            options_open=bool(props.get("accept_new_options")),
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
         )
@@ -472,7 +474,9 @@ class _SnapshotBuilder:
             result["support"] = support
         return result
 
-    def _widget_value(self, element_id: str, *, has_options: bool = False) -> Any:
+    def _widget_value(
+        self, element_id: str, *, options: list[Any] | None = None
+    ) -> Any:
         """Read a widget's live value, in the form a request may send back.
 
         For a widget with a fixed option set, ``st.session_state`` holds the
@@ -485,12 +489,17 @@ class _SnapshotBuilder:
         The widget's own serializer is the mapping the runtime will apply in
         reverse, so it is what keeps read and write in the same space. It is
         used for every widget with an option list, whether the registry holds
-        the list or only the snapshot lists it (`has_options`), as for
+        the list or only the snapshot lists it (`options`), as for
         `st.select_slider`. It is also used for a widget whose wire value is
         text when what it holds is not plain JSON already -- a date becomes its
         ISO string. Others -- numbers, booleans, temporal sliders,
         `st.feedback`'s integer -- are reported as their Python value in JSON,
         which a request may also send.
+
+        A value typed into a widget that accepts new options is already its own
+        wire form. The serializer runs `format_func` on it anyway, so echoing
+        that back would format it again on every round trip; only a serialized
+        value that is one of the options is reported in that form.
         """
         if self._session_state is None:
             return None
@@ -500,9 +509,10 @@ class _SnapshotBuilder:
             return None
 
         metadata = self._session_state._new_widget_state.widget_metadata.get(element_id)
+        if options is None and metadata is not None:
+            options = metadata.formatted_options
         if metadata is not None and (
-            metadata.formatted_options is not None
-            or has_options
+            options is not None
             or (
                 metadata.value_type in _STRING_WIRE_TYPES
                 and not (value is None or isinstance(value, (str, int, float)))
@@ -517,7 +527,7 @@ class _SnapshotBuilder:
                     # Keep the stored value's own shape, so a single choice
                     # reads back as a single choice.
                     serialized = serialized[0] if serialized else None
-                value = serialized
+                value = _keep_typed(value, serialized, options)
             except Exception:
                 _LOGGER.debug(
                     "Could not serialize the value of %s; reporting it as stored.",
@@ -529,6 +539,24 @@ class _SnapshotBuilder:
             return json_encoding.to_json_value(value)
         except Exception:
             return None
+
+
+def _keep_typed(stored: Any, serialized: Any, options: list[Any] | None) -> Any:
+    """The serialized value, except where it formats text that is no option."""
+    if options is None:
+        return serialized
+    if (
+        isinstance(stored, (list, tuple))
+        and isinstance(serialized, list)
+        and len(stored) == len(serialized)
+    ):
+        return [
+            label if label in options or not isinstance(item, str) else item
+            for item, label in zip(stored, serialized, strict=True)
+        ]
+    if isinstance(stored, str) and serialized not in options:
+        return stored
+    return serialized
 
 
 def _fallback_description(proto_field: str, payload: Message | None) -> dict[str, Any]:
