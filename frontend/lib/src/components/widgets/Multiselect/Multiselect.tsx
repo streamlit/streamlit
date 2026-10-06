@@ -138,15 +138,22 @@ const updateWidgetMgrState = (
 }
 
 /**
- * Null-render component mounted inside <ComboBox> to expose RAC's internal
- * open/close methods and focusedKey via refs. Same pattern as the Selectbox widget.
+ * Null-render component mounted inside <ComboBox> to expose RAC's open/close
+ * methods and to keep selectionManager.focusedKey on the Enter target so the
+ * combobox exposes aria-activedescendant while typing (#16841).
+ *
+ * RAC clears focusedKey on every inputValue change. Sync runs here (with
+ * access to state.collection) because setFocusedKey no-ops when the key is
+ * not yet in the collection — a parent effect can race the ListBox.
  */
 const DropdownController = memo<{
   openRef: React.MutableRefObject<
     ((focusStrategy?: "first" | "last" | null) => void) | null
   >
   focusedKeyRef: React.MutableRefObject<Key | null>
-}>(({ openRef, focusedKeyRef }) => {
+  /** Default Enter target (hover or first visible row) when syncing focus. */
+  enterTargetKey: Key | null
+}>(({ openRef, focusedKeyRef, enterTargetKey }) => {
   const state = useContext(ComboBoxStateContext)
   useEffect(() => {
     if (state) {
@@ -157,6 +164,26 @@ const DropdownController = memo<{
       openRef.current = null
     }
   }, [state, openRef])
+
+  useEffect(() => {
+    if (!state?.isOpen) return
+
+    const applyEnterTargetFocus = (): void => {
+      // SelectionManager.setFocusedKey no-ops when the key is missing from the
+      // collection, so it is safe to call before Virtualizer registers items.
+      state.selectionManager.setFocusedKey(enterTargetKey)
+    }
+
+    // Child effects run before ComboBox's clear-on-inputValue effect, so the
+    // first apply can be wiped. rAF re-applies after that clear settles.
+    // Do not list `state` as a dep — focusedKey updates recreate state and
+    // would reset arrow-nav back to the Enter target.
+    applyEnterTargetFocus()
+    const rafId = requestAnimationFrame(applyEnterTargetFocus)
+    return () => cancelAnimationFrame(rafId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+  }, [state?.isOpen, state?.inputValue, enterTargetKey])
+
   // Read synchronously — an effect would leave a stale-read window for keydown handlers
   focusedKeyRef.current = state?.selectionManager.focusedKey ?? null
   return null
@@ -245,7 +272,10 @@ const Multiselect: FC<Props> = props => {
     ((focusStrategy?: "first" | "last" | null) => void) | null
   >(null)
   const focusedKeyRef = useRef<Key | null>(null)
+  // Hover is React state so enterTargetKey (and aria focusedKey sync) updates.
+  const [hoveredKey, setHoveredKey] = useState<Key | null>(null)
   const hoveredKeyRef = useRef<Key | null>(null)
+  hoveredKeyRef.current = hoveredKey
 
   // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
   // flip up when near the bottom, rather than overflowing (see #16181).
@@ -278,13 +308,26 @@ const Multiselect: FC<Props> = props => {
 
   const displayOptionsRef = useRef(displayOptions)
   displayOptionsRef.current = displayOptions
-  // onHoverEnd does not fire when filtering unmounts the hovered row.
-  if (
-    notNullOrUndefined(hoveredKeyRef.current) &&
-    !displayOptions.some(o => o.id === hoveredKeyRef.current)
-  ) {
-    hoveredKeyRef.current = null
-  }
+  // Enter / aria-activedescendant target: hover wins when still listed, else first row.
+  const enterTargetKey = useMemo((): string | null => {
+    if (
+      notNullOrUndefined(hoveredKey) &&
+      displayOptions.some(o => o.id === hoveredKey)
+    ) {
+      return String(hoveredKey)
+    }
+    return displayOptions[0]?.id ?? null
+  }, [hoveredKey, displayOptions])
+
+  useEffect(() => {
+    if (
+      notNullOrUndefined(hoveredKey) &&
+      !displayOptions.some(o => o.id === hoveredKey)
+    ) {
+      setHoveredKey(null)
+    }
+  }, [hoveredKey, displayOptions])
+
   const valueRef = useRef(value)
   valueRef.current = value
 
@@ -492,7 +535,7 @@ const Multiselect: FC<Props> = props => {
     isOpenRef.current = open
     if (!open) {
       setInputValue("")
-      hoveredKeyRef.current = null
+      setHoveredKey(null)
     }
   }, [])
 
@@ -506,12 +549,10 @@ const Multiselect: FC<Props> = props => {
         $isCreatable={option.isCreatable}
         $isBulkAction={option.isBulkAction}
         onHoverStart={() => {
-          hoveredKeyRef.current = option.id
+          setHoveredKey(option.id)
         }}
         onHoverEnd={() => {
-          if (hoveredKeyRef.current === option.id) {
-            hoveredKeyRef.current = null
-          }
+          setHoveredKey(prev => (prev === option.id ? null : prev))
         }}
       >
         <StyledItemHighlight data-item-hl="">
@@ -702,29 +743,30 @@ const Multiselect: FC<Props> = props => {
         }
       }
 
-      // Enter with no RAC focusedKey: commit the hovered row if any,
-      // otherwise the first visible row so users do not need ArrowDown first.
-      // Hover paints data-hovered without setting focusedKey, so we track
-      // it separately. The first row is "Select all" / "Select X matches"
-      // when that bulk action is shown, otherwise the first matching option.
-      // "Add: …" is last, so it is first only when the query matches no
-      // existing option.
-      // TODO: Set RAC focusedKey / aria-activedescendant to the Enter target
-      // (ComboBox focus-management follow-up; see StyledListBox).
+      // Enter while open: always commit through Streamlit so aria focusedKey
+      // sync cannot change selection semantics. Prefer RAC focusedKey (arrow
+      // nav or our Enter-target sync), then hover, then the first visible row
+      // ("Select all" / "Select X matches" when shown, else first match;
+      // "Add: …" is first only when nothing else matches).
       if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-        if (notNullOrUndefined(focusedKeyRef.current)) {
-          return
-        }
         if (!isOpenRef.current) return
-        const display = displayOptionsRef.current
-        const hovered = hoveredKeyRef.current
-        const hoveredStillShown =
-          notNullOrUndefined(hovered) && display.some(o => o.id === hovered)
-        // Swallow Enter when the menu is open with no rows (for example
+        // Swallow Enter when the menu is open (including empty lists, e.g.
         // max_selections reached) so RAC does not try to commit typed text.
         e.preventDefault()
         e.stopPropagation()
-        const targetId = hoveredStillShown ? hovered : display[0]?.id
+        const display = displayOptionsRef.current
+        const focused = focusedKeyRef.current
+        const focusedStillShown =
+          notNullOrUndefined(focused) &&
+          display.some(o => o.id === String(focused))
+        const hovered = hoveredKeyRef.current
+        const hoveredStillShown =
+          notNullOrUndefined(hovered) && display.some(o => o.id === hovered)
+        const targetId = focusedStillShown
+          ? String(focused)
+          : hoveredStillShown
+            ? hovered
+            : display[0]?.id
         if (notNullOrUndefined(targetId)) {
           handleChange([targetId])
         }
@@ -818,6 +860,7 @@ const Multiselect: FC<Props> = props => {
           <DropdownController
             openRef={openDropdownRef}
             focusedKeyRef={focusedKeyRef}
+            enterTargetKey={enterTargetKey}
           />
           <StyledTrigger
             ref={setReference}

@@ -301,17 +301,31 @@ describe("Multiselect widget", () => {
     )
   })
 
-  it("numbers options with aria-posinset so only the first gets the Enter highlight", async () => {
-    // StyledListBox highlights [aria-posinset='1'] as the unfocused Enter target.
+  it("sets aria-activedescendant on the Enter target while typing", async () => {
+    // RAC focusedKey stays synced so assistive tech knows what Enter will commit.
     const user = userEvent.setup()
-    const props = getProps({ default: [] })
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
     render(<Multiselect {...props} />)
 
-    await user.click(screen.getByRole("button", { name: "Open" }))
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.type(input, "ap")
 
-    const options = screen.getAllByRole("option")
-    expect(options[0]).toHaveAttribute("aria-posinset", "1")
-    expect(options[1]).toHaveAttribute("aria-posinset", "2")
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    const activeOption = document.getElementById(
+      input.getAttribute("aria-activedescendant") as string
+    )
+    expect(activeOption).toHaveAttribute("role", "option")
+    expect(activeOption).toHaveTextContent("apple")
   })
 
   it("filters based on label, not value", async () => {

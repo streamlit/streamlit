@@ -140,15 +140,14 @@ export const getInsertedText = (
 
 /**
  * Null-render component mounted inside <ComboBox> to expose RAC's internal
- * open/close methods via refs. Required because ComboBox v1.x has no controlled
- * isOpen prop; we use menuTrigger="manual" and open explicitly on pointer/key
- * events to prevent auto-open on Tab-focus (which caused spurious reopens after
- * Streamlit reruns).
+ * open/close methods and to keep focusedKey on the Enter target for
+ * aria-activedescendant while typing (#16841).
  */
 const DropdownController = memo<{
   openRef: React.MutableRefObject<(() => void) | null>
   closeRef: React.MutableRefObject<(() => void) | null>
-}>(({ openRef, closeRef }) => {
+  enterTargetKey: Key | null
+}>(({ openRef, closeRef, enterTargetKey }) => {
   const state = useContext(ComboBoxStateContext)
   useEffect(() => {
     if (state) {
@@ -160,6 +159,26 @@ const DropdownController = memo<{
       closeRef.current = null
     }
   }, [state, openRef, closeRef])
+
+  useEffect(() => {
+    if (!state?.isOpen) return
+
+    const applyEnterTargetFocus = (): void => {
+      // SelectionManager.setFocusedKey no-ops when the key is missing from the
+      // collection, so it is safe to call before Virtualizer registers items.
+      state.selectionManager.setFocusedKey(enterTargetKey)
+    }
+
+    // Child effects run before ComboBox's clear-on-inputValue effect, so the
+    // first apply can be wiped. rAF re-applies after that clear settles.
+    // Do not list `state` as a dep — focusedKey updates recreate state and
+    // would reset arrow-nav back to the Enter target.
+    applyEnterTargetFocus()
+    const rafId = requestAnimationFrame(applyEnterTargetFocus)
+    return () => cancelAnimationFrame(rafId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
+  }, [state?.isOpen, state?.inputValue, enterTargetKey])
+
   return null
 })
 DropdownController.displayName = "DropdownController"
@@ -345,6 +364,16 @@ const Selectbox: FC<Props> = ({
       creatableItem ? [...filteredOptions, creatableItem] : filteredOptions,
     [filteredOptions, creatableItem]
   )
+
+  const enterTargetId = useMemo((): string | null => {
+    if (creatableItem) return CREATABLE_ID
+    const exactMatch = displayOptions.find(
+      o => !o.isCreatable && o.value === inputValue
+    )
+    if (exactMatch) return exactMatch.id
+    const first = displayOptions.find(o => !o.isCreatable)
+    return first?.id ?? null
+  }, [creatableItem, displayOptions, inputValue])
 
   const virtualizerLayoutOptions = useMemo(
     () => ({
@@ -634,6 +663,7 @@ const Selectbox: FC<Props> = ({
           <DropdownController
             openRef={openDropdownRef}
             closeRef={closeDropdownRef}
+            enterTargetKey={enterTargetId}
           />
           <StyledGroup ref={setReference}>
             <StyledInput

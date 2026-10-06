@@ -258,6 +258,31 @@ describe("Selectbox widget", () => {
     expect(screen.getByDisplayValue("b")).toBeVisible()
   })
 
+  it("sets aria-activedescendant on the Enter target while typing", async () => {
+    const user = userEvent.setup()
+    props = getProps({
+      value: undefined,
+      options: ["apple", "apricot", "banana"],
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.type(input, "ap")
+
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    const activeOption = document.getElementById(
+      input.getAttribute("aria-activedescendant") as string
+    )
+    expect(activeOption).toHaveAttribute("role", "option")
+    expect(activeOption).toHaveTextContent("apple")
+  })
+
   it("doesn't filter options based on index", async () => {
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
@@ -506,9 +531,10 @@ describe("Selectbox widget", () => {
     expect(screen.queryAllByRole("option")).toHaveLength(3)
 
     // Arrow/Enter navigation works straight after the click with no manual
-    // focus() — this catches the click-then-keyboard focus regression. Landing
-    // on "no" (the second option) rules out an auto-select-first fallback.
-    await user.keyboard("{ArrowDown}{ArrowDown}{Enter}")
+    // focus() — this catches the click-then-keyboard focus regression. The
+    // first option is already the aria Enter target, so one ArrowDown moves
+    // to "no" (the second option).
+    await user.keyboard("{ArrowDown}{Enter}")
     expect(currProps.onChange).toHaveBeenCalledWith("no")
   })
 
