@@ -52,7 +52,7 @@ Names mix public config keys (`textColor`, `primaryColor`) and internal tokens (
 | Secondary / muted UI text | `fadedText60`, `grayTextColor`, placeholders, counters, hints; default `dataframeHeaderTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar, `bgMix`, dataframe header |
 | Link text | `linkColor` / `blueTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar |
 | Code text on code fill | `codeTextColor` on `codeBackgroundColor` | 1.4.3 | ≥ 4.5:1 | Code background |
-| Status text on status fill | Shipped `*TextColor` on `*BackgroundColor`; `primary` on `primarybg` | 1.4.3 | ≥ 4.5:1 | Alert fills, markdown badges, metric deltas |
+| Status text on status fill | Shipped `*TextColor` on `*BackgroundColor`; `primary` on `primarybg` | 1.4.3 | ≥ 4.5:1 | Alert / badge / metric fills on **page and default sidebar** (fills are translucent) |
 | Label on primary fill | `white` (or equivalent) on `primaryColor` | 1.4.3 | ≥ 4.5:1 | Primary buttons and other primary-filled controls |
 | Primary as **text** | `primaryColor` used for copy | 1.4.3 | ≥ 4.5:1 | Page (and any surface where primary is used as text) |
 | Primary as **control** | `primaryColor` fill / outline | 1.4.11 | ≥ 3:1 | Page **and** default sidebar (`secondaryBackgroundColor` when sidebar bg is unset) |
@@ -71,13 +71,13 @@ Sorted by criterion number. Each item is a candidate product-spec section or rai
 ### Level AA
 
 - **1.4.3 Light-theme secondary text is below 4.5:1.** `fadedText60` / `grayTextColor` / default dataframe header text measure ≈ 3.5–3.7:1 on default light page, secondary, and mixed backgrounds. Shared by placeholders, file-uploader hints, character counts, tabs, and similar (seeds [#8249](https://github.com/streamlit/streamlit/issues/8249), [#8276](https://github.com/streamlit/streamlit/issues/8276), [#8288](https://github.com/streamlit/streamlit/issues/8288), [#8289](https://github.com/streamlit/streamlit/issues/8289)). Dark-theme muted text **meets** 1.4.3.
-- **1.4.3 Orange, gray, green, and primary status text fail on status fill.** Orange ≈ 3.19:1 (light); gray text on its own fill ≈ 3.3–3.5:1 (light); green ≈ 4.496:1 (just under 4.5:1, light); primary on `primarybg` ≈ 2.92:1 (light) and ≈ 3.05–3.85:1 (dark page/sidebar) — fails **1.4.3** in both themes. Call sites: markdown badges (`:orange-badge` / `:gray-badge` / `:green-badge` / `:primary-badge` and siblings), metric deltas (`getMetricTextColor` / `getMetricBackgroundColor`, including gray for empty / `delta_color="off"` and `color="primary"`), and `AlertContainer` success (`st.success` → green). `AlertContainer` itself maps only error/warning/info/success → red/yellow/blue/green — not orange/gray/primary. Red / yellow / blue / violet light pairings meet 4.5:1; other measured dark non-primary status pairings meet 4.5:1.
+- **1.4.3 Status text on translucent status fills fails 1.4.3 on the page and/or default sidebar.** Status fills use `transparentize` (0.9 light / 0.8 dark, primarybg 0.9 / 0.7) and are painted on both surfaces. On the **light page**: orange ≈ 3.19, gray ≈ 3.44, green ≈ 4.50 (just under 4.5), primary ≈ 2.92 fail; red/yellow/blue/violet pass. On the **light sidebar**: those same fails deepen, and red ≈ 4.10 / yellow ≈ 4.27 also fail (blue/violet still pass). On the **dark page**: primary ≈ 3.85 fails; other measured pairs pass. On the **dark sidebar**: primary ≈ 3.05 fails, and red ≈ 3.96 / blue ≈ 3.77 / violet ≈ 4.07 also fail. Call sites: markdown badges (`:orange-badge` / `:gray-badge` / `:green-badge` / `:primary-badge` and siblings), metric deltas (`getMetricTextColor` / `getMetricBackgroundColor`, including gray for empty / `delta_color="off"` and `color="primary"`), and `AlertContainer` (error/warning/info/success → red/yellow/blue/green only).
 - **1.4.3 White label on primary fill fails in both themes** (`StyledPrimaryButton`: white on `#ff4b4b` ≈ 3.30:1 at normal text size).
 - **1.4.3 Light `primary` is below 4.5:1 when used as text** on the page background (≈ 3.30:1). Separate from primary-on-`primarybg` status fills above (dark page text still passes ≈ 5.7:1).
 - **1.4.11 Light primary chrome on the default sidebar fails 3:1.** Sidebar background defaults to `secondaryBackgroundColor` (`#f0f2f6`); `#ff4b4b` on that surface ≈ 2.95:1. Primary on the main page background still meets 1.4.11 (≈ 3.30:1). Dark sidebar passes (≈ 4.49:1).
 - **1.4.11 Control borders use `borderColor` (≈ `fadedText10`) below 3:1** on light and dark (≈ 1.4–1.9:1). Affects unchecked checkbox/radio indicator strokes and other chrome that always uses `borderColor`. With default `showWidgetBorder` off, many input outlines do not use that token (see [Theme config notes](#theme-config-notes)). Unset `dataframeBorderColor` is a separate, even fainter token (`fadedText05`) — raising `borderColor` alone does not clear default dataframe gridlines.
 - **1.4.11 Default soft focus rings fail 3:1.** Soft `focusRing` / `focusRingMuted` measure ≈ 1.5–2.2:1. Solid `focusRingOutline` (`primary`) meets 1.4.11 on the page (sidebar primary chrome is the 1.4.11 gap above). Full focus *behavior* (2.4.7 / 2.4.11) is not scored here.
-- **2.5.8 Heading link icon and default help tooltip triggers are ~16×16 CSS px** (`iconSizes.base`, no 24px minimum hit box). Scored by CSS box size; the 2.5.8 spacing and inline exceptions are **not** applied here (heading link + help sit `spacing.sm` / 8px apart, so 24px circles centered on each box meet). Main-menu trigger and sidebar expand/collapse meet at the default 16px root; element toolbar actions (`max(1.5rem, 24px)`, [#17211](https://github.com/streamlit/streamlit/pull/17211)) meet 2.5.8.
+- **2.5.8 Heading link icon and default help tooltip triggers are ~16×16 CSS px** (`iconSizes.base`, no 24px minimum hit box). This inventory scores the CSS box only and does not apply 2.5.8 exceptions. (Relative to each other, heading link + help with `spacing.sm` / 8px gap have 24px-apart centers — tangent circles — so the spacing exception would pass per WCAG Understanding SC 2.5.8; Library blocks here means undersized CSS box, not “fails every 2.5.8 path.”) Main-menu trigger and sidebar expand/collapse meet at the default 16px root; element toolbar actions (`max(1.5rem, 24px)`, [#17211](https://github.com/streamlit/streamlit/pull/17211)) meet 2.5.8.
 - **2.5.8 Collapsed checkbox label leaves a 16×16 indicator** (`sizes.checkbox` = 1rem). Default visible checkbox/radio labels meet the 24px floor (see scorecard).
 
 ## Current defaults
@@ -91,7 +91,8 @@ Live scorecard for today’s default light and dark themes. Floors above are the
 | Secondary / muted UI text (`fadedText60`, `grayTextColor`, dataframe header) | Fail (~3.5–3.7) | Pass (~6.1–7.0) | Library blocks | Light only; includes default `dataframeHeaderTextColor` |
 | White label on primary fill | Fail (~3.30) | Fail (~3.30) | Library blocks | `StyledPrimaryButton` and similar |
 | `primary` as **text** on page | Fail (~3.30) | Pass (~5.7) | Library blocks | Light only; not the same as primary-on-`primarybg` |
-| Status text on status fill (badges, metrics, alerts) | Orange/gray/green/primary fail; red/yellow/blue/violet pass | Primary fail (~3.05–3.85); others measured pass | Library blocks | `:primary-badge` / metric `color="primary"` → `primary` on `primarybg`; orange/gray → badges & metrics; green → `st.success` + positive metric (~4.496:1) |
+| Status text on status fill — **page** | Orange/gray/green/primary fail; red/yellow/blue/violet pass | Primary fail (~3.85); others pass | Library blocks | Translucent fills on page bg; badges, metrics, `AlertContainer` |
+| Status text on status fill — **default sidebar** | Orange/gray/green/primary/red/yellow fail; blue/violet pass | Primary/red/blue/violet fail; orange/yellow/green/gray pass | Library blocks | Same fills composited onto sidebar `secondaryBackgroundColor` |
 | Body text on page / secondary | Pass (~12.5 / 11.2) | Pass (~18.1 / 14.2) | Library meets | |
 | Link text | Pass (~6.7–7.5) | Pass (~5.2–6.6) | Library meets | Markdown / in-app links |
 | Code text on code fill | Pass (~4.7) | Pass (~10.5) | Library meets | |
@@ -115,18 +116,22 @@ Live scorecard for today’s default light and dark themes. Floors above are the
 
 Accessible names for icon-only controls were largely addressed in [#17170](https://github.com/streamlit/streamlit/pull/17170). This section is **hit target size** only (glyph contrast is under 1.4.11). Unless noted, sizes assume the default 16px root (`theme.baseFontSize` unset).
 
-Rows score the **CSS box** of the interactive control. This inventory does **not** apply the 2.5.8 spacing or inline exceptions (an undersized target can still pass those exceptions in WCAG; heading link + help are adjacent at 8px gap, so they would not clear the spacing exception anyway).
+**2.5.8 rows score the CSS box only** (Library blocks here means the box is under 24×24, not that every WCAG 2.5.8 exception fails). Spacing and inline exceptions are noted when relevant but are not used to flip the bucket.
 
-Label sizing note: `StreamlitMarkdown` `isLabel` sets the container to `fontSizes.sm` (14px), but `globalStyles` keeps `p { font-size: 1rem }`, so a default visible label paragraph stays 16px. Checkbox `StyledContent` uses line-height 1.5 → 24px line box; radio inherits body line-height 1.6 → ~25.6px.
+**Label sizing**
+
+- `StreamlitMarkdown` with `isLabel` sets its container to `fontSizes.sm` (14px), while `globalStyles` keeps a default paragraph at `1rem` (16px).
+- Checkbox `StyledContent` uses line-height 1.5, giving a visible default label a 24px line box.
+- Radio options inherit the body line-height 1.6, giving a visible default label a ~25.6px line box.
 
 | Control | Hit target | Bucket | Note |
 | ------- | ---------- | ------ | ---- |
-| Heading link icon | ~16×16 (`iconSizes.base`), no min box | Library blocks | Adjacent to heading help at `spacing.sm` |
-| Default help / tooltip trigger | ~16×16, no padding | Library blocks | Heading help and typical widget help |
+| Heading link icon | ~16×16 (`iconSizes.base`), no min box | Library blocks | CSS-box score; with heading help at `spacing.sm` (8px), 24px circles are tangent — spacing exception vs each other would pass |
+| Default help / tooltip trigger | ~16×16, no padding | Library blocks | CSS-box score; same spacing note when paired with heading link |
 | Checkbox with collapsed label | 16×16 indicator (`sizes.checkbox`) | Library blocks | `LabelVisibility.Collapsed` hides the label; only the indicator remains |
 | Checkbox with visible label | Line box 24px (`1rem` × line-height 1.5) | Library meets | Field `minHeight` is `smallElementHeight` (1.5rem); indicator border contrast is 1.4.11 |
 | Radio option with visible label | Line box ~25.6px (`1rem` × line-height 1.6) | Library meets | Group `minElementHeight` (~40px) is not the per-option target; indicator border contrast is 1.4.11 |
-| Main menu trigger | `headerItemHeight` 1.75rem (= 28px at 16px root) | Library meets | No `24px` CSS floor; smaller custom `theme.baseFontSize` (below 14) makes this Author must |
+| Main menu trigger | `headerItemHeight` 1.75rem (= 28px at 16px root) | Library meets | No `24px` CSS floor; below 24px when `theme.baseFontSize` is under ~13.7px (1.75rem). That custom root is Author must |
 | Sidebar expand / collapse | Same `headerItemHeight` sizing | Library meets | Same root-font caveat; not every app-header control |
 | Element toolbar actions | `max(1.5rem, 24px)` | Library meets | [#17211](https://github.com/streamlit/streamlit/pull/17211) |
 
