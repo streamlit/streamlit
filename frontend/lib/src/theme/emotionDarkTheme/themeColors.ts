@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
-
 import { colors } from "~lib/theme/primitives/colors"
 
 export default {
@@ -27,29 +25,31 @@ export default {
   secondaryBg: colors.gray90,
 
   // Default main theme colors (dark theme)
-  redColor: colors.red80,
-  orangeColor: colors.orange80,
-  yellowColor: colors.yellow70,
-  blueColor: colors.blue80,
-  greenColor: colors.green80,
-  violetColor: colors.purple70,
-  grayColor: colors.gray80,
+  // Hex from design handoff (Color 50 / Bg 100 / Text 50; gray off-ramp).
+  // See work-tmp/new_default_theme/ (filenames for light/dark md are swapped).
+  redColor: "#F2919A",
+  orangeColor: "#F2A56D",
+  yellowColor: "#FBD54F",
+  blueColor: "#85B8F8",
+  greenColor: "#7ED5B0",
+  violetColor: "#BF8EF7",
+  grayColor: "#A9A5A0",
 
   // Default background theme colors (dark theme)
-  redBackgroundColor: transparentize(colors.red60, 0.8),
-  orangeBackgroundColor: transparentize(colors.orange80, 0.8),
-  yellowBackgroundColor: transparentize(colors.yellow65, 0.8),
-  blueBackgroundColor: transparentize(colors.blue60, 0.8),
-  greenBackgroundColor: transparentize(colors.green60, 0.8),
-  violetBackgroundColor: transparentize(colors.purple60, 0.8),
-  grayBackgroundColor: transparentize(colors.gray70, 0.8),
+  redBackgroundColor: "#412023",
+  orangeBackgroundColor: "#342414",
+  yellowBackgroundColor: "#302917",
+  blueBackgroundColor: "#1E2A3D",
+  greenBackgroundColor: "#0E2F24",
+  violetBackgroundColor: "#332244",
+  grayBackgroundColor: "#2C2925",
 
   // Default text theme colors (dark theme)
-  redTextColor: colors.red60,
-  orangeTextColor: colors.orange60,
-  yellowTextColor: colors.yellow20,
-  blueTextColor: colors.blue60,
-  greenTextColor: colors.green50,
-  violetTextColor: colors.purple50,
-  grayTextColor: transparentize(colors.gray10, 0.4),
+  redTextColor: "#F2919A",
+  orangeTextColor: "#F2A56D",
+  yellowTextColor: "#FBD54F",
+  blueTextColor: "#85B8F8",
+  greenTextColor: "#7ED5B0",
+  violetTextColor: "#BF8EF7",
+  grayTextColor: "#B8B3A8",
 }
