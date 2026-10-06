@@ -243,8 +243,8 @@ st.dataframe(get_daily_summary())  # refreshed by the page-level interval
   pressing "Rerun" — in-progress values stay on screen and are sent when the form is
   submitted. (A form rendered *inside* an open `st.dialog` is protected, since ticks pause
   while the dialog is open; this bullet is about a top-level form outside any dialog.) The
-  natural debounce above softens this for active users (each interaction restarts the
-  interval), but a tick still reruns the rest of the page while someone is filling out a
+  natural debounce above softens this for active users (each rerun-triggering interaction
+  restarts the interval), but a tick still reruns the rest of the page while someone is filling out a
   form. For multi-step form flows, prefer pausing auto-refresh (pass `run_every=None`) or
   scoping the live updates to a `@st.fragment(run_every=...)` rather than refreshing the
   whole page.

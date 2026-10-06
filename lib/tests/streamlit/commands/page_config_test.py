@@ -258,7 +258,7 @@ class PageConfigTest(DeltaGeneratorTestCase):
         self, run_every: float
     ) -> None:
         """Non-finite intervals raise and enqueue nothing."""
-        with pytest.raises(StreamlitValueError, match="protobuf float"):
+        with pytest.raises(StreamlitValueError, match="finite duration"):
             st.set_page_config(run_every=run_every)
 
         assert self.forward_msg_queue._queue == []
@@ -267,8 +267,8 @@ class PageConfigTest(DeltaGeneratorTestCase):
     def test_set_page_config_run_every_rejects_unrepresentable_interval(
         self, run_every: int | float
     ) -> None:
-        """Intervals that cannot be a protobuf float raise StreamlitValueError."""
-        with pytest.raises(StreamlitValueError, match="protobuf float"):
+        """Intervals that are too large to represent raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match="finite duration"):
             st.set_page_config(run_every=run_every)
 
         assert self.forward_msg_queue._queue == []

@@ -26,8 +26,13 @@ let openElementDialogCount = 0
 /** Register an open `st.dialog`. Call the returned function when it closes. */
 export function markElementDialogOpen(): () => void {
   openElementDialogCount += 1
+  let released = false
   return () => {
-    openElementDialogCount = Math.max(0, openElementDialogCount - 1)
+    if (released) {
+      return
+    }
+    released = true
+    openElementDialogCount -= 1
   }
 }
 

@@ -162,16 +162,23 @@ def _resolve_page_run_every(
         )
 
     seconds = time_to_seconds(run_every, coerce_none_to_inf=False)
+    # `None` is only returned for a `None` input, which already returned above.
+    if seconds is None:
+        raise StreamlitValueError(
+            "run_every",
+            ["a finite duration", "None"],
+            detail=f"Got {run_every!r}.",
+        )
     try:
         # Huge ints overflow when converted to float. Reject them as values,
         # not as a leaked OverflowError.
-        seconds_float = float(seconds) if seconds is not None else math.inf
+        seconds_float = float(seconds)
     except OverflowError:
         seconds_float = math.inf
     if not math.isfinite(seconds_float) or seconds_float > _MAX_PAGE_RUN_EVERY_SECONDS:
         raise StreamlitValueError(
             "run_every",
-            ["a finite duration representable as a protobuf float", "None"],
+            ["a finite duration", "None"],
             detail=f"Got {run_every!r}.",
         )
     if seconds_float < _PAGE_RUN_EVERY_MIN_SECONDS:
@@ -333,8 +340,7 @@ def set_page_config(
 
         The interval must be at least 1 second. ``0``, negative values, and
         any interval shorter than 1 second raise an exception. Non-finite
-        values and intervals that do not fit in a protobuf float raise as
-        well.
+        values and intervals that are too large to represent raise as well.
 
         Each tick re-executes the whole script and redraws the whole page.
         Prefer |st.fragment|_ with its own ``run_every`` when only one section
@@ -347,9 +353,10 @@ def set_page_config(
             it closes. An unsubmitted ``st.form`` does not pause it: in-progress
             values stay on screen, but the rest of the page reruns. For
             multi-step form flows, prefer a fragment or pass ``run_every=None``.
-            Stopping the script drops a tick that was waiting for that run; the
-            next interval starts the page again. Browsers may also fire the
-            timer less often while the tab is in the background.
+            Stopping the script leaves auto-rerun armed. The next interval
+            starts the page again, the same way ``@st.fragment(run_every=...)``
+            does. Browsers may also fire the timer less often while the tab is
+            in the background.
 
         .. |st.fragment| replace:: ``st.fragment``
         .. _st.fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
@@ -388,11 +395,15 @@ def set_page_config(
     >>>
     >>> st.set_page_config(run_every="60s")
     >>>
+    >>> if "price" not in st.session_state:
+    ...     st.session_state.price = 100.0
+    >>>
     >>> @st.fragment(run_every="2s")
     ... def ticker():
-    ...     st.metric("Price", get_price())
+    ...     st.metric("Price", st.session_state.price)
     >>>
     >>> ticker()
+    >>> st.dataframe({"symbol": ["ACME"], "shares": [10]})
     """
 
     resolved_run_every: float | None = None

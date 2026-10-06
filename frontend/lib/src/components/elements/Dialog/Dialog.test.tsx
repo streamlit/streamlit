@@ -132,14 +132,15 @@ describe("Dialog container", () => {
   })
 
   it("does not let a second cleanup make a later dialog look closed", () => {
-    const close = markElementDialogOpen()
-    close()
-    close()
-    expect(isElementDialogOpen()).toBe(false)
-
-    const reopen = markElementDialogOpen()
+    const closeFirst = markElementDialogOpen()
+    const closeSecond = markElementDialogOpen()
     expect(isElementDialogOpen()).toBe(true)
-    reopen()
+
+    closeFirst()
+    closeFirst()
+    expect(isElementDialogOpen()).toBe(true)
+
+    closeSecond()
     expect(isElementDialogOpen()).toBe(false)
   })
 

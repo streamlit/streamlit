@@ -53,8 +53,11 @@ def _run_every_scenario() -> None:
             st.form_submit_button("Save")
 
     def quiet_page() -> None:
+        # This page does not opt into auto-rerun. The counter still changes on
+        # any rerun, so a stray tick is visible to the test.
+        st.session_state.quiet_ticks = st.session_state.get("quiet_ticks", 0) + 1
         with st.container(key="quiet_ticks"):
-            st.markdown(f"ticks-{st.session_state.get('ticks', 0)}")
+            st.markdown(f"ticks-{st.session_state.quiet_ticks}")
         st.markdown("quiet-page")
 
     st.navigation(

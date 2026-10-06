@@ -283,7 +283,7 @@ interface Props {
     fragmentId: string | undefined,
     pageScriptHash: string | undefined,
     isAutoRerun: boolean | undefined
-  ) => void
+  ) => boolean | void
 
   /**
    * Callback invoked whenever our FormsData changed. (Because FormsData
@@ -924,12 +924,16 @@ export class WidgetStateManager {
   public sendUpdateWidgetsMessage(
     fragmentId: string | undefined,
     isAutoRerun: boolean | undefined = undefined
-  ): void {
-    this.props.sendRerunBackMsg(
-      this.widgetStates.createWidgetStatesMsg(),
-      fragmentId,
-      undefined,
-      isAutoRerun
+  ): boolean {
+    // `void` means the caller does not report whether the message was queued.
+    // Treat that as sent so existing mocks keep working.
+    return (
+      this.props.sendRerunBackMsg(
+        this.widgetStates.createWidgetStatesMsg(),
+        fragmentId,
+        undefined,
+        isAutoRerun
+      ) !== false
     )
   }
 
