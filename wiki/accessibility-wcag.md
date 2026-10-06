@@ -8,7 +8,7 @@ How Streamlit enables or blocks authors from meeting **WCAG 2.2 Level A and AA**
 
 Accessibility audits (US Section 508, EN 301 549, and similar) evaluate the app an author ships, not Streamlit itself. Use this inventory to see, per command, whether public Streamlit **blocks** a criterion, **meets** it already, leaves it to the **author**, or treats it as **not this surface**.
 
-**Current documented coverage:** media, charts, maps, data, embeds, and images audited during the `alt` rollout, plus shared chrome those commands use (naming / 4.1.2, and element-toolbar hit targets / 2.5.8). Other widgets remain out of scope until separately audited.
+**Current documented coverage:** media, charts, maps, data, embeds, and images audited during the `alt` rollout, plus shared chrome those commands use (naming / 4.1.2, and element-toolbar hit targets / 2.5.8). Other widgets remain out of scope until separately audited. Shell criteria other than 1.4.3, 1.4.11, and 2.5.8 (for example 2.4.1 and 4.1.3) are still unscored; see the [theme inventory](accessibility-theme.md) exclusions.
 
 ## What we are scoring
 
