@@ -420,11 +420,16 @@ export class App extends PureComponent<Props, State> {
   // `scriptIsRunning` then belongs to that fragment request.
   private pageAutoRerunGuardAcked = false
 
-  // `Date.now()` when the guard was set, and the page interval then armed.
-  // An unacknowledged fragment request expires after one full interval so a
-  // rejected fragment rerun cannot stall the page.
-  private pageAutoRerunGuardSetAt = 0
+  // `Date.now()` when the script became idle with this guard set. Null while a
+  // run is still active: time spent inside that run does not age the guard, so
+  // a slow script cannot be replaced by a page tick. Once idle, one full page
+  // interval without acknowledgement expires a fragment request.
+  private pageAutoRerunGuardIdleSince: number | null = null
   private pageAutoRerunGuardIntervalMs = 0
+
+  // Kept after the page timer is cleared. A fragment click in that gap still
+  // needs an interval, or the guard would never expire.
+  private lastPageAutoRerunIntervalMs = 0
 
   // Whether a suppression reason has been reported this page load. Tracked
   // separately from `skillsNudgeShown` so recording a suppression does NOT
@@ -905,6 +910,15 @@ export class App extends PureComponent<Props, State> {
           // It's okay if this fails, the `measure` call is for debugging/profiling
         }
         if (prevState.scriptRunState === ScriptRunState.RUNNING) {
+          if (
+            this.pageAutoRerunGuardFragmentId &&
+            !this.pageAutoRerunGuardAcked &&
+            this.pageAutoRerunGuardIdleSince === null
+          ) {
+            // Idle time starts now. A fragment request queued behind this run
+            // is not stale just because the run itself was long.
+            this.pageAutoRerunGuardIdleSince = Date.now()
+          }
           // Send a page tick held during the run that just finished, unless that run
           // was interrupted and a replacement run is still pending.
           if (!this.pageAutoRerunAwaitingNextRun) {
@@ -1449,7 +1463,8 @@ export class App extends PureComponent<Props, State> {
         }
         if (this.pageAutoRerunAwaitingNextRun) {
           // A fragment request the server never starts must not stall the
-          // page. One full interval without acknowledgement expires it.
+          // page. One full interval of idle time expires it. Time inside an
+          // active run does not count: that request is still queued.
           if (!this.isFragmentAutoRerunGuardStale()) {
             return
           }
@@ -1492,6 +1507,22 @@ export class App extends PureComponent<Props, State> {
     const intervalMs = intervalSeconds * 1000
     if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
       return
+    }
+
+    if (id === App.PAGE_AUTO_RERUN_ID) {
+      this.lastPageAutoRerunIntervalMs = intervalMs
+      // The timer was already gone when the fragment request was sent, so the
+      // guard has no interval yet. The one being armed is the window.
+      if (
+        this.pageAutoRerunGuardFragmentId &&
+        !this.pageAutoRerunGuardAcked &&
+        this.pageAutoRerunGuardIntervalMs <= 0
+      ) {
+        this.pageAutoRerunGuardIntervalMs = intervalMs
+        if (!this.isScriptRunActive()) {
+          this.pageAutoRerunGuardIdleSince = Date.now()
+        }
+      }
     }
 
     // A callback queued before clearInterval/clearTimeout can still run.
@@ -1576,6 +1607,10 @@ export class App extends PureComponent<Props, State> {
       // here. A later finish may replay a tick that a fragment interrupt kept.
       if (!this.pageAutoRerunGuardFragmentId || this.pageAutoRerunGuardAcked) {
         this.clearPageAutoRerunGuard()
+      } else {
+        // This status belongs to an older run. Pause the idle clock so that
+        // run's duration cannot expire the fragment request.
+        this.pageAutoRerunGuardIdleSince = null
       }
     }
 
@@ -2529,9 +2564,13 @@ export class App extends PureComponent<Props, State> {
     this.pageAutoRerunGuardEpoch = this.rerunEpoch
     this.pageAutoRerunGuardFragmentId = fragmentId
     this.pageAutoRerunGuardAcked = false
-    this.pageAutoRerunGuardSetAt = Date.now()
     this.pageAutoRerunGuardIntervalMs =
-      intervalSeconds !== undefined ? intervalSeconds * 1000 : 0
+      intervalSeconds !== undefined
+        ? intervalSeconds * 1000
+        : this.lastPageAutoRerunIntervalMs
+    this.pageAutoRerunGuardIdleSince = this.isScriptRunActive()
+      ? null
+      : Date.now()
   }
 
   private clearPageAutoRerunGuard(): void {
@@ -2540,18 +2579,21 @@ export class App extends PureComponent<Props, State> {
     this.pageAutoRerunGuardFragmentId = undefined
     this.pageAutoRerunGuardAcked = false
     this.pageAutoRerunGuardIntervalMs = 0
+    this.pageAutoRerunGuardIdleSince = null
   }
 
   private isFragmentAutoRerunGuardStale(): boolean {
     if (
       !this.pageAutoRerunGuardFragmentId ||
       this.pageAutoRerunGuardAcked ||
-      this.pageAutoRerunGuardIntervalMs <= 0
+      this.pageAutoRerunGuardIntervalMs <= 0 ||
+      this.isScriptRunActive() ||
+      this.pageAutoRerunGuardIdleSince === null
     ) {
       return false
     }
     return (
-      Date.now() - this.pageAutoRerunGuardSetAt >=
+      Date.now() - this.pageAutoRerunGuardIdleSince >=
       this.pageAutoRerunGuardIntervalMs
     )
   }
