@@ -526,7 +526,9 @@ Drop the leading major version to convert: Python `protobuf` 6.33.6
 corresponds to `protoc` 33.6, and any `protoc` at or below that is fine.
 CI's 26.1 is an example of an older compiler that still works with the
 current lockfile. If generation already works, keep that compiler; do not
-replace a working install just to match CI.
+replace a working install just to match CI. When changing that CI version,
+update `PROTOC_SHA256` in `.github/actions/make_init/action.yml` to the
+`sha256sum` of the `linux-x86_64` zip.
 
 - Too old (`Error: protoc version X is < 3.20`): install a newer compiler from
   the [official installation instructions](https://protobuf.dev/installation/),
@@ -551,9 +553,7 @@ replace a working install just to match CI.
   and install that GitHub release zip (it is an archive, not a `protoc`
   binary). Use the asset for your OS and architecture (`osx-aarch_64`,
   `osx-x86_64`, `linux-x86_64`, or `linux-aarch_64`), extract `bin/protoc`,
-  and put it first on `PATH`. When bumping the version in CI, also update
-  `PROTOC_SHA256` in `action.yml` to the `sha256sum` of the
-  `linux-x86_64` zip:
+  and put it first on `PATH`:
 
   ```bash
   PROTOC_VERSION=26.1  # copy from action.yml
