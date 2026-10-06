@@ -31,6 +31,7 @@ import {
 } from "react"
 
 import {
+  DateRange,
   ErrorOutline,
   KeyboardArrowDown,
 } from "@emotion-icons/material-outlined"
@@ -75,6 +76,7 @@ import {
 } from "./dateInputUtils"
 import { ReorderedSegments } from "./ReorderedSegments"
 import {
+  StyledCalendarButton,
   StyledCalendarCell,
   StyledCalendarGrid,
   StyledCalendarHeaderCell,
@@ -245,6 +247,7 @@ function RangeDateInput({
   const quickSelectRef = useRef<HTMLDivElement>(null)
 
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
+  const calendarButtonRef = useRef<HTMLButtonElement | null>(null)
   const skipCloseCommitRef = useRef(false)
   // Guards against `handleFocus` reopening the popover during programmatic
   // focus restoration (see `restoreFocusToField` below).
@@ -432,19 +435,25 @@ function RangeDateInput({
   const { floatingStyles, setFloating, setReference } =
     useFloatingOverlay(overlayOptions)
 
+  // Returns focus to the control that opened the calendar after it closes:
+  // - Calendar button already focused (e.g. Escape after focusing it): leave it.
+  // - Active mode: the element recorded in `activeOriginRef`.
+  // - Passive mode: the last date segment.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
-    if (isCalendarActiveRef.current && activeOriginRef.current) {
-      activeOriginRef.current.focus()
-    } else {
-      const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
-        '[role="spinbutton"]'
-      )
-      const lastSegment = segments ? Array.from(segments).at(-1) : undefined
-      if (lastSegment) {
-        lastSegment.focus()
+    if (!calendarButtonRef.current?.contains(document.activeElement)) {
+      if (isCalendarActiveRef.current && activeOriginRef.current) {
+        activeOriginRef.current.focus()
       } else {
-        triggerRef.current?.focus()
+        const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
+          '[role="spinbutton"]'
+        )
+        const lastSegment = segments ? Array.from(segments).at(-1) : undefined
+        if (lastSegment) {
+          lastSegment.focus()
+        } else {
+          triggerRef.current?.focus()
+        }
       }
     }
     requestAnimationFrame(() => {
@@ -518,22 +527,30 @@ function RangeDateInput({
     [setQuickSelectReferenceRef]
   )
 
-  const handleFocus = useCallback((): void => {
-    if (isRestoringFocusRef.current) return
-    if (!disabled) setIsOpenState(true)
-  }, [disabled])
+  // Opens the passive preview when focus enters a date segment. Focus on the
+  // clear or calendar button is ignored so those controls do not reopen it.
+  const handleFocus = useCallback(
+    (e: FocusEvent<HTMLDivElement>): void => {
+      if (isRestoringFocusRef.current) return
+      if (clearButtonRef.current?.contains(e.target)) return
+      if (calendarButtonRef.current?.contains(e.target)) return
+      if (!disabled) setIsOpenState(true)
+    },
+    [disabled]
+  )
 
-  // Capture-phase fires before the clear button's own handler; without this
-  // gate, clearing a value would immediately reopen the popover.
+  // Ignore clear and calendar clicks so they do not reopen a passive popover.
+  // This capture handler runs before those buttons' own click handlers.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
       if (clearButtonRef.current?.contains(e.target as Node)) return
+      if (calendarButtonRef.current?.contains(e.target as Node)) return
       // Pointer-only: active mode enters via rAF, so handleFocus can't reset
       // it without breaking Tab cycling inside the calendar.
       setIsCalendarActive(false)
-      handleFocus()
+      if (!isRestoringFocusRef.current && !disabled) setIsOpenState(true)
     },
-    [handleFocus]
+    [disabled]
   )
 
   // Validates both range display values so editing one field doesn't
@@ -639,6 +656,8 @@ function RangeDateInput({
 
   // Alt+ArrowDown enters active calendar mode; Tab from edge segments
   // closes the passive popover and lets focus leave the widget naturally.
+  // The calendar button is out of tab order (tabIndex=-1), so last-segment
+  // Tab leaves the field.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.altKey && e.key === "ArrowDown") {
@@ -743,6 +762,33 @@ function RangeDateInput({
     setDisplayEnd(null)
     onChange([])
   }, [onChange])
+
+  const handleCalendarButtonClick = useCallback(
+    (e: MouseEvent<HTMLButtonElement>): void => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (disabled) return
+      if (isOpen && isCalendarActive) {
+        setIsOpenState(false)
+        setIsCalendarActive(false)
+        restoreFocusToField()
+        return
+      }
+      const focusedInField =
+        document.activeElement instanceof HTMLElement &&
+        triggerRef.current?.contains(document.activeElement)
+          ? document.activeElement
+          : undefined
+      // Focus returns here when the dialog closes: the focused field control, or
+      // the calendar button itself (a pointer click doesn't focus it, since
+      // mousedown is prevented).
+      activeOriginRef.current =
+        focusedInField ?? calendarButtonRef.current ?? null
+      if (!isOpen) setIsOpenState(true)
+      setIsCalendarActive(true)
+    },
+    [disabled, isOpen, isCalendarActive, restoreFocusToField]
+  )
 
   const handleQuickSelect = useCallback(
     (presetId: string): void => {
@@ -884,9 +930,6 @@ function RangeDateInput({
       <StyledDateInputWrapper
         ref={setTriggerRef}
         aria-keyshortcuts="Alt+ArrowDown"
-        aria-haspopup="dialog"
-        aria-expanded={isCalendarActive}
-        aria-controls={isCalendarActive ? popoverId : undefined}
         data-testid="stDateInputField"
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
@@ -965,6 +1008,21 @@ function RangeDateInput({
               <Icon content={Cancel} size="base" />
             </StyledClearButton>
           )}
+          <StyledCalendarButton
+            ref={calendarButtonRef}
+            type="button"
+            onClick={handleCalendarButtonClick}
+            aria-label="Choose date range"
+            aria-haspopup="dialog"
+            aria-expanded={isCalendarActive}
+            aria-controls={isCalendarActive ? popoverId : undefined}
+            data-testid="stDateInputCalendarButton"
+            disabled={disabled}
+            tabIndex={-1}
+            onMouseDown={e => e.preventDefault()}
+          >
+            <Icon content={DateRange} size="base" />
+          </StyledCalendarButton>
         </StyledTrailingIcons>
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">

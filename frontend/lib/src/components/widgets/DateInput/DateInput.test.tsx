@@ -259,6 +259,12 @@ describe("DateInput", () => {
         expect(segment).toHaveAttribute("aria-disabled", "true")
         expect(segment).toHaveAttribute("contenteditable", "false")
       }
+      expect(screen.getByTestId("stDateInputCalendarButton")).toBeDisabled()
+    })
+
+    it("disables the calendar button on a range widget", () => {
+      render(<DateInput {...getProps({ isRange: true })} disabled={true} />)
+      expect(screen.getByTestId("stDateInputCalendarButton")).toBeDisabled()
     })
   })
 
@@ -798,8 +804,8 @@ describe("DateInput", () => {
       await clearSegment(user, month)
       await clearSegment(user, day)
 
-      // Blur should commit the cleared state — fully cleared is a valid
-      // user intent, distinct from partially typed (mid-edit).
+      // Blur with all segments cleared commits empty — deliberate empty intent,
+      // distinct from partially typed.
       await user.tab()
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element.id,
@@ -828,6 +834,7 @@ describe("DateInput", () => {
       await clearSegment(user, month)
       await clearSegment(user, day)
 
+      // Leave the field to close the popover and revert.
       await user.tab()
       // Close-commit reverts the display locally; no setStringArrayValue
       // should fire (avoids a spurious backend rerun with an unchanged value).
@@ -1843,7 +1850,8 @@ describe("DateInput single-mode keyboard navigation", () => {
     // Calendar should be open
     await screen.findByTestId("stDateInputCalendar")
 
-    // Tab from day segment should close the calendar
+    // Tab from day segment should close the calendar (calendar button is
+    // out of tab order).
     await user.tab()
     await waitFor(() => {
       expect(
@@ -2357,7 +2365,8 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendar).not.toHaveAttribute("role", "dialog")
     expect(calendar).not.toHaveAttribute("aria-modal")
 
-    // Tab from day should close (passive behavior unchanged)
+    // Tab from day should close (passive behavior; calendar button is not
+    // in the tab order).
     await user.tab()
     await waitFor(() => {
       expect(
@@ -2412,7 +2421,8 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
       "dialog"
     )
 
-    // Close by tabbing out, then re-open by click: must stay passive.
+    // Close by Tab from the last segment, then re-open by click: must stay
+    // passive.
     await user.tab()
     await waitFor(() => {
       expect(
@@ -2442,9 +2452,259 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
       "Alt+ArrowDown"
     )
   })
+
+  it("puts popup ARIA on the calendar button, not the field wrapper", () => {
+    render(<DateInput {...getProps()} />)
+    const field = screen.getByTestId("stDateInputField")
+    expect(field).not.toHaveAttribute("aria-expanded")
+    expect(field).not.toHaveAttribute("aria-haspopup")
+    expect(field).not.toHaveAttribute("aria-controls")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    expect(calendarButton).toHaveAttribute("aria-label", "Choose date")
+    expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+    expect(calendarButton).toHaveAttribute("tabIndex", "-1")
+  })
+
+  it("calendar button opens active calendar and toggles aria-expanded", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    expect(calendar).toHaveAttribute("role", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+    expect(calendarButton).toHaveAttribute("aria-controls")
+
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+  })
+
+  it("commits typed segment edits when the calendar button closes the dialog", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    spy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(screen.getByTestId("stDateInputCalendar")).toHaveAttribute(
+        "role",
+        "dialog"
+      )
+    })
+    await user.click(calendarButton)
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(props.element.id, [newDateWire], {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
+    })
+  })
+
+  it("Escape after a pointer-opened calendar restores focus to the calendar button", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveFocus()
+  })
+
+  it("Escape on the focused calendar button keeps focus on the toggle", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const { year } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    act(() => {
+      calendarButton.focus()
+    })
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveFocus()
+  })
+
+  it("passive preview does not set aria-expanded on the calendar button", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const { year } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+    expect(screen.getByTestId("stDateInputCalendar")).not.toHaveAttribute(
+      "role",
+      "dialog"
+    )
+  })
 })
 
 describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
+  it("puts popup ARIA on the calendar button, not the field wrapper", () => {
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+    const field = screen.getByTestId("stDateInputField")
+    expect(field).not.toHaveAttribute("aria-expanded")
+    expect(field).not.toHaveAttribute("aria-haspopup")
+    expect(field).not.toHaveAttribute("aria-controls")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    expect(calendarButton).toHaveAttribute("aria-label", "Choose date range")
+    expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+    expect(calendarButton).toHaveAttribute("tabIndex", "-1")
+  })
+
+  it("calendar button opens active calendar and toggles aria-expanded", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    expect(calendar).toHaveAttribute("role", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+    expect(calendarButton).toHaveAttribute("aria-controls")
+
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+  })
+
+  it("commits typed segment edits when the calendar button closes the dialog", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+      min: "2019-01-01",
+    })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    spy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+    const end = getRangeDateSegments(region, "end")
+    await typeIntoSegment(user, start.year, "2021")
+    await typeIntoSegment(user, start.month, "02")
+    await typeIntoSegment(user, start.day, "07")
+    await typeIntoSegment(user, end.year, "2021")
+    await typeIntoSegment(user, end.month, "02")
+    await typeIntoSegment(user, end.day, "09")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(screen.getByTestId("stDateInputCalendar")).toHaveAttribute(
+        "role",
+        "dialog"
+      )
+    })
+    await user.click(calendarButton)
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2021-02-07", "2021-02-09"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+    })
+  })
+
+  it("Escape on the focused calendar button keeps focus on the toggle", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const { year } = getRangeDateSegments(
+      screen.getByTestId("stDateInput"),
+      "start"
+    )
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    act(() => {
+      calendarButton.focus()
+    })
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveFocus()
+  })
+
   it("Alt+ArrowDown from start field segment enters active calendar", async () => {
     const user = userEvent.setup()
     render(
