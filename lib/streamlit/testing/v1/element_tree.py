@@ -80,12 +80,15 @@ if TYPE_CHECKING:
     from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Heading_pb2 import Heading as HeadingProto
+    from streamlit.proto.Help_pb2 import Help as HelpProto
+    from streamlit.proto.Html_pb2 import Html as HtmlProto
     from streamlit.proto.Image_pb2 import ImageList as ImageListProto
     from streamlit.proto.Json_pb2 import Json as JsonProto
     from streamlit.proto.MenuButton_pb2 import MenuButton as MenuButtonProto
     from streamlit.proto.Metric_pb2 import Metric as MetricProto
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
+    from streamlit.proto.Progress_pb2 import Progress as ProgressProto
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
     from streamlit.proto.Space_pb2 import Space as SpaceProto
@@ -105,15 +108,30 @@ T = TypeVar("T")
 # Public ``get()`` names that are not the node ``type`` string.
 _GET_TYPE_ALIASES: dict[str, str] = {
     "datetime_input": "date_time_input",
-    "help": "help_info",
+    # Proto field name. The public node type is ``help``.
+    "help_info": "help",
 }
+
+# ``st.help`` stores ``module.qualname(signature)`` in proto ``value`` for these
+# object types. That string can be thousands of characters, so ``Help.value``
+# uses ``name`` instead.
+_HELP_SIGNATURE_OBJECT_TYPES: Final = frozenset(
+    {
+        "builtin_function_or_method",
+        "class",
+        "classmethod",
+        "function",
+        "method",
+        "staticmethod",
+    }
+)
 
 
 def _unknown_element_content(proto: Any) -> Any:
     """Best-effort payload for an unimplemented element's proto.
 
     Many display protos store content in ``body``, ``text``, or ``label``
-    rather than ``value`` (for example ``st.html``).
+    rather than ``value`` (for example ``st.page_link``).
     """
     fields = getattr(getattr(proto, "DESCRIPTOR", None), "fields_by_name", None)
     if fields:
@@ -876,6 +894,87 @@ class Image(Element):
     def captions(self) -> list[str]:
         """The image captions for this element."""
         return [img.caption for img in self.proto.imgs]
+
+
+@dataclass(repr=False)
+class Help(Element):
+    """A representation of ``st.help``."""
+
+    proto: HelpProto = field(repr=False)
+    key: None
+    name: str
+
+    def __init__(self, proto: HelpProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.key = None
+        self.type = "help"
+        self.name = proto.name
+
+    @property
+    def doc_string(self) -> str:
+        """Docstring ``st.help`` displays for the object."""
+        return self.proto.doc_string
+
+    @property
+    def value(self) -> str:
+        """Short summary of the documented object.
+
+        Callables and classes store a signature in the proto value, which can
+        be thousands of characters. ``.value`` is ``name`` for those objects.
+        Other objects keep the proto value (for example ``"'Hello'"``).
+        """
+        if self.name and self.proto.type in _HELP_SIGNATURE_OBJECT_TYPES:
+            return self.name
+        if self.proto.value:
+            return self.proto.value
+        if self.doc_string:
+            return self.doc_string
+        return self.name
+
+
+@dataclass(repr=False)
+class Html(Element):
+    """A representation of ``st.html``."""
+
+    proto: HtmlProto = field(repr=False)
+    key: None
+
+    def __init__(self, proto: HtmlProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.key = None
+        self.type = "html"
+
+    @property
+    def value(self) -> str:
+        """The HTML body passed to ``st.html``."""
+        return self.proto.body
+
+
+@dataclass(repr=False)
+class Progress(Element):
+    """A representation of ``st.progress``."""
+
+    proto: ProgressProto = field(repr=False)
+    key: None
+
+    def __init__(self, proto: ProgressProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.key = None
+        self.type = "progress"
+
+    @property
+    def value(self) -> int:
+        """Progress from 0 to 100.
+
+        Floats passed to ``st.progress`` in the 0.0-1.0 range are stored as
+        this integer (``0.25`` becomes ``25``).
+        """
+        return self.proto.value
+
+    @property
+    def text(self) -> str:
+        """Message shown with the bar. Empty when ``text`` was omitted."""
+        return self.proto.text
 
 
 @dataclass(repr=False)
@@ -2377,6 +2476,14 @@ class Block:
         return ElementList(self.get("header"))  # type: ignore
 
     @property
+    def help(self) -> ElementList[Help]:
+        return ElementList(self.get("help"))  # type: ignore
+
+    @property
+    def html(self) -> ElementList[Html]:
+        return ElementList(self.get("html"))  # type: ignore
+
+    @property
     def image(self) -> ElementList[Image]:
         return ElementList(self.get("image"))  # type: ignore
 
@@ -2411,6 +2518,10 @@ class Block:
     @property
     def number_input(self) -> WidgetList[NumberInput]:
         return WidgetList(self.get("number_input"))  # type: ignore
+
+    @property
+    def progress(self) -> ElementList[Progress]:
+        return ElementList(self.get("progress"))  # type: ignore
 
     @property
     def radio(self) -> WidgetList[Radio[Any]]:
@@ -3039,6 +3150,10 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     new_node = Subheader(elt.heading, root=root)
                 else:
                     new_node = UnknownElement(elt, root=root)
+            elif ty == "help_info":
+                new_node = Help(elt.help_info, root=root)
+            elif ty == "html":
+                new_node = Html(elt.html, root=root)
             elif ty == "imgs":
                 new_node = Image(elt.imgs, root=root)
             elif ty == "json":
@@ -3062,6 +3177,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Multiselect(elt.multiselect, root=root)
             elif ty == "number_input":
                 new_node = NumberInput(elt.number_input, root=root)
+            elif ty == "progress":
+                new_node = Progress(elt.progress, root=root)
             elif ty == "radio":
                 new_node = Radio(elt.radio, root=root)
             elif ty == "selectbox":

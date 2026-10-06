@@ -34,6 +34,9 @@ from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
     AppTestError,
     BlockList,
+    Help,
+    Html,
+    Progress,
     Space,
     UnknownElement,
     _form_clear_flags,
@@ -276,6 +279,85 @@ def test_space() -> None:
 
     with pytest.raises(AppTestError, match="set_value"):
         at.space[0].set_value("large")
+
+
+def test_progress_html_and_help() -> None:
+    """``st.progress``, ``st.html``, and ``st.help`` are inspectable and not interactive.
+
+    Help on a callable must not use the proto signature as ``.value``.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        def add(a, b, c, d, e, f, g, h):
+            """Add some numbers."""
+            return a
+
+        class Dog:
+            """A typical dog."""
+
+        st.progress(40, text="halfway")
+        st.progress(0.25)
+        st.sidebar.progress(10, text="side")
+        st.html("<b>hi</b>")
+        with st.container(key="box"):
+            st.html("<i>nested</i>", unsafe_allow_javascript=True)
+        st.help("Hello")
+        st.help(add)
+        st.help(Dog)
+        st.help(len)
+        st.help(st)
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+
+    assert at.progress.len == 3
+    assert isinstance(at.progress[0], Progress)
+    assert at.main.progress.len == 2
+    assert at.sidebar.progress.len == 1
+    assert [bar.value for bar in at.main.progress] == [40, 25]
+    assert at.main.progress[0].text == "halfway"
+    assert at.main.progress[1].text == ""
+    assert at.sidebar.progress[0].value == 10
+    assert at.sidebar.progress[0].text == "side"
+    assert list(at.get("progress")) == list(at.progress)
+
+    assert at.html.len == 2
+    assert isinstance(at.html[0], Html)
+    assert at.html[0].value == "<b>hi</b>"
+    assert at.container("box").html[0].value == "<i>nested</i>"
+    assert at.container("box").html[0].unsafe_allow_javascript is True
+    assert list(at.get("html")) == list(at.html)
+
+    assert at.help.len == 5
+    assert isinstance(at.help[0], Help)
+    assert list(at.get("help")) == list(at.help)
+    assert list(at.get("help_info")) == list(at.help)
+    assert {node.type for node in at.help} == {"help"}
+
+    hello, add, dog, builtin_len, module = at.help
+    assert hello.value == "'Hello'"
+    assert hello.name == ""
+    assert hello.doc_string.startswith("str(")
+    assert add.name == "add"
+    assert add.value == "add"
+    assert add.doc_string == "Add some numbers."
+    assert "(" in add.proto.value
+    assert dog.name == "Dog"
+    assert dog.value == "Dog"
+    assert dog.doc_string == "A typical dog."
+    assert builtin_len.value == "len"
+    assert len(builtin_len.proto.value) > len(builtin_len.value)
+    assert module.name == "st"
+    assert module.value == "streamlit"
+    assert module.doc_string.startswith("Streamlit.")
+
+    for node in (at.progress[0], at.html[0], at.help[0]):
+        with pytest.raises(AppTestError, match="set_value"):
+            node.set_value(1)
+        with pytest.raises(AppTestError, match="click"):
+            node.click()
 
 
 @pytest.mark.parametrize("size", list(SIZE_TO_REM_MAPPING))
@@ -2834,9 +2916,10 @@ def test_get_accepts_public_attribute_names() -> None:
     assert list(at.get("column")) == list(at.columns)
     assert len(at.get("columns")) == 2
 
-    assert list(at.get("help")) == list(at.get("help_info"))
+    assert list(at.get("help")) == list(at.help)
+    assert list(at.get("help_info")) == list(at.help)
     assert len(at.get("help")) == 1
-    assert at.get("help")[0].type == "help_info"
+    assert at.get("help")[0].type == "help"
 
     assert list(at.get("container")) == list(at.container)
     assert {node.key for node in at.get("container")} == {"filters", "toolbar"}
