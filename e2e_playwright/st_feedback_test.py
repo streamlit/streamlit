@@ -284,3 +284,37 @@ def test_feedback_on_change_ignore(app: Page):
     expect(
         app.get_by_text("Applied ignore feedback value: 1", exact=True)
     ).to_be_visible()
+
+
+def test_feedback_on_change_ignore_clearing_default(app: Page):
+    """Test that clearing a defaulted rating in ignore mode buffers None.
+
+    The empty-string wire value must survive until the next rerun and must not
+    fall back to the non-null default.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore default feedback value:", "1")
+
+    ignore_feedback = get_feedback(app, "ignore_feedback_default")
+    selected_button = get_feedback_icon_button(ignore_feedback, "thumb_up")
+    expect(selected_button).to_have_attribute("aria-checked", "true")
+    selected_button.click()
+
+    # Catch a delayed rerun that the click might still schedule.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(selected_button).to_have_attribute("aria-checked", "false")
+    expect_prefixed_markdown(app, "Ignore default feedback value:", "1")
+
+    app.get_by_role("button", name="Apply ignore default feedback", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Ignore default feedback value: None", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore default feedback value: None", exact=True)
+    ).to_be_visible()

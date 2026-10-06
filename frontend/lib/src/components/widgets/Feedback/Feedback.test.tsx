@@ -755,6 +755,32 @@ describe("on_change='ignore' mode", () => {
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 
+  it("sends an empty string without a rerun when a default selection is cleared", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true, default: 1 }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Feedback {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("radio", { name: "Thumbs up" }))
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
   it("does not pass triggerRerun when ignoreRerun is false", async () => {
     const user = userEvent.setup()
     const sendRerunBackMsg = vi.fn()
