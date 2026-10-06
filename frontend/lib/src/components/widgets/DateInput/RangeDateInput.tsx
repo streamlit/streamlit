@@ -74,6 +74,11 @@ import {
   SEGMENT_SELECTOR,
   validateDate,
 } from "./dateInputUtils"
+import {
+  isConcreteOutsideLeave,
+  isFocusInsideWidget,
+  usePopoverInteractionFlag,
+} from "./focusLeave"
 import { ReorderedSegments } from "./ReorderedSegments"
 import {
   StyledCalendarButton,
@@ -347,6 +352,18 @@ function RangeDateInput({
   onCloseRef.current = onClose
 
   const [isOpen, setIsOpenState] = useState(false)
+  const popoverExcludeSelectors = useMemo(
+    () => [
+      `.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`,
+      `.${DATE_INPUT_QUICK_SELECT_POPOVER_CLASS}`,
+    ],
+    []
+  )
+  const popoverInteractionRef = usePopoverInteractionFlag(
+    isOpen,
+    popoverRef,
+    popoverExcludeSelectors
+  )
 
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
@@ -697,11 +714,13 @@ function RangeDateInput({
       // (default Safari often skips buttons).
       if (!e.shiftKey && e.target === segmentList.at(-1)) {
         requestAnimationFrame(() => {
-          const active = document.activeElement
           if (
-            calendarButtonRef.current?.contains(active) ||
-            triggerRef.current?.contains(active) ||
-            popoverRef.current?.contains(active)
+            calendarButtonRef.current?.contains(document.activeElement) ||
+            isFocusInsideWidget(document.activeElement, {
+              field: triggerRef.current,
+              popover: popoverRef.current,
+              excludeSelectors: popoverExcludeSelectors,
+            })
           ) {
             return
           }
@@ -710,7 +729,7 @@ function RangeDateInput({
         })
       }
     },
-    [isOpen]
+    [isOpen, popoverExcludeSelectors]
   )
 
   // In active mode: Tab cycles focus within the popover (focus trap).
@@ -939,26 +958,27 @@ function RangeDateInput({
   // concurrent Submit click reads the correct value.
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
+      if (popoverInteractionRef.current) {
+        popoverInteractionRef.current = false
+        return
+      }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      // Passive preview: close when focus moves to a concrete target outside
-      // the field and popover. Do not treat relatedTarget === null (or body)
-      // as leave — Safari fires that on mousedown of unfocused calendar chrome
-      // before click; overlay dismissal covers true outside pointerdowns.
-      const next = e.relatedTarget
-      if (
-        isOpen &&
-        next instanceof Node &&
-        next !== document.body &&
-        !popoverRef.current?.contains(next) &&
-        !(
-          next instanceof Element &&
-          (next.closest(`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`) ||
-            next.closest(`.${DATE_INPUT_QUICK_SELECT_POPOVER_CLASS}`))
-        )
-      ) {
-        setIsOpenState(false)
-        setIsCalendarActive(false)
+      if (isOpen) {
+        if (
+          isConcreteOutsideLeave(e.relatedTarget, {
+            popover: popoverRef.current,
+            excludeSelectors: popoverExcludeSelectors,
+          })
+        ) {
+          // Blur commits below; skip the close-commit effect so Tab/body leave
+          // does not write twice (keydown close + blur in the same turn).
+          skipCloseCommitRef.current = true
+          setIsOpenState(false)
+          setIsCalendarActive(false)
+        } else {
+          return
+        }
       }
       if (hasPartiallyTypedField(triggerRef.current)) return
       const pending = compact([displayStartRef.current, displayEndRef.current])
@@ -967,7 +987,14 @@ function RangeDateInput({
       onChangeRef.current(pending)
       formCommit?.(pending)
     },
-    [formCommit, startValue, endValue, isOpen]
+    [
+      formCommit,
+      startValue,
+      endValue,
+      isOpen,
+      popoverExcludeSelectors,
+      popoverInteractionRef,
+    ]
   )
 
   const hasValue = displayStart !== null || displayEnd !== null

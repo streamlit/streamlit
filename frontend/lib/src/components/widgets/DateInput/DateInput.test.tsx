@@ -2422,7 +2422,7 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     })
   })
 
-  it("passive preview stays open when blur has no relatedTarget (Safari calendar click)", async () => {
+  it("passive preview stays open across Safari calendar pointerdown then null blur", async () => {
     const user = userEvent.setup()
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -2434,15 +2434,18 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
 
     await user.click(day)
     const calendar = await screen.findByTestId("stDateInputCalendar")
-
-    // Safari: mousedown on an unfocused calendar cell blurs the field with
-    // relatedTarget null before the click lands.
-    fireEvent.blur(field, { relatedTarget: null })
-    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
-
     const nextDay = within(calendar).getByRole("button", {
       name: /January 21, 1970/,
     })
+
+    // Safari: pointerdown on the cell, then blur with null relatedTarget,
+    // then click. The popover-interaction flag must keep the preview open.
+    /* eslint-disable testing-library/prefer-user-event */
+    fireEvent.pointerDown(nextDay)
+    fireEvent.blur(field, { relatedTarget: null })
+    /* eslint-enable testing-library/prefer-user-event */
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+
     await user.click(nextDay)
 
     await waitFor(() => {

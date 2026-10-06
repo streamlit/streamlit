@@ -1841,7 +1841,7 @@ describe("DateTimeInput widget", () => {
       })
     })
 
-    it("passive preview stays open when blur has no relatedTarget (Safari calendar click)", async () => {
+    it("passive preview stays open across Safari calendar pointerdown then null blur", async () => {
       const user = userEvent.setup()
       render(
         <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
@@ -1849,10 +1849,17 @@ describe("DateTimeInput widget", () => {
 
       const segments = screen.getAllByRole("spinbutton")
       await user.click(segments[0])
-      await screen.findByTestId("stDateTimeInputCalendar")
-
+      const calendar = await screen.findByTestId("stDateTimeInputCalendar")
+      const dayCell = within(calendar).getByRole("button", {
+        name: /November 20/,
+      })
       const field = screen.getByTestId("stDateTimeInputField")
+
+      // Safari order: pointerdown before blur; userEvent.click is one gesture.
+      /* eslint-disable testing-library/prefer-user-event */
+      fireEvent.pointerDown(dayCell)
       fireEvent.blur(field, { relatedTarget: null })
+      /* eslint-enable testing-library/prefer-user-event */
 
       expect(screen.getByTestId("stDateTimeInputCalendar")).toBeInTheDocument()
       expect(
@@ -1860,7 +1867,7 @@ describe("DateTimeInput widget", () => {
       ).toHaveAttribute("aria-expanded", "false")
     })
 
-    it("does not commit on body-target blur while the passive preview stays open", async () => {
+    it("commits on body-target blur when there was no popover pointerdown", async () => {
       const user = userEvent.setup()
       const props = getProps({ default: ["2025-11-19T16:45"] })
       const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
@@ -1871,12 +1878,44 @@ describe("DateTimeInput widget", () => {
       await user.click(segments[0])
       await screen.findByTestId("stDateTimeInputCalendar")
 
-      // Partial edit so a premature commit would be observable.
+      // Partial edit so a commit is observable.
       await user.keyboard("{ArrowUp}")
       spy.mockClear()
 
       const field = screen.getByTestId("stDateTimeInputField")
       fireEvent.blur(field, { relatedTarget: document.body })
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalled()
+      })
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it("does not commit on body blur after popover pointerdown (Safari)", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      const calendar = await screen.findByTestId("stDateTimeInputCalendar")
+      await user.keyboard("{ArrowUp}")
+      spy.mockClear()
+
+      const dayCell = within(calendar).getByRole("button", {
+        name: /November 20/,
+      })
+      const field = screen.getByTestId("stDateTimeInputField")
+      // Safari order: pointerdown before blur; userEvent.click is one gesture.
+      /* eslint-disable testing-library/prefer-user-event */
+      fireEvent.pointerDown(dayCell)
+      fireEvent.blur(field, { relatedTarget: document.body })
+      /* eslint-enable testing-library/prefer-user-event */
 
       expect(screen.getByTestId("stDateTimeInputCalendar")).toBeInTheDocument()
       expect(spy).not.toHaveBeenCalled()

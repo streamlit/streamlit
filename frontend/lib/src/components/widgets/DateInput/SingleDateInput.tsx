@@ -65,6 +65,11 @@ import {
   parseDateFieldPaste,
   SEGMENT_SELECTOR,
 } from "./dateInputUtils"
+import {
+  isConcreteOutsideLeave,
+  isFocusInsideWidget,
+  usePopoverInteractionFlag,
+} from "./focusLeave"
 import { ReorderedSegments } from "./ReorderedSegments"
 import {
   StyledCalendarButton,
@@ -214,6 +219,15 @@ function SingleDateInput({
   onChangeRef.current = onChange
 
   const [isOpen, setIsOpen] = useState(false)
+  const popoverExcludeSelectors = useMemo(
+    () => [`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`],
+    []
+  )
+  const popoverInteractionRef = usePopoverInteractionFlag(
+    isOpen,
+    popoverRef,
+    popoverExcludeSelectors
+  )
 
   const wasOpenRef = useRef(isOpen)
   // `value` is in deps so the effect re-evaluates when the committed value
@@ -554,11 +568,13 @@ function SingleDateInput({
       // (default Safari often skips buttons).
       if (!e.shiftKey && e.target === segmentList.at(-1)) {
         requestAnimationFrame(() => {
-          const active = document.activeElement
           if (
-            calendarButtonRef.current?.contains(active) ||
-            triggerRef.current?.contains(active) ||
-            popoverRef.current?.contains(active)
+            calendarButtonRef.current?.contains(document.activeElement) ||
+            isFocusInsideWidget(document.activeElement, {
+              field: triggerRef.current,
+              popover: popoverRef.current,
+              excludeSelectors: popoverExcludeSelectors,
+            })
           ) {
             return
           }
@@ -567,7 +583,7 @@ function SingleDateInput({
         })
       }
     },
-    [isOpen]
+    [isOpen, popoverExcludeSelectors]
   )
 
   // In active mode: Tab cycles focus within the calendar (focus trap).
@@ -618,25 +634,32 @@ function SingleDateInput({
   // concurrent Submit click reads the correct value.
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
+      // Safari: mousedown on unfocused calendar chrome blurs the field before
+      // click; pointerdown on the popover sets this flag first.
+      if (popoverInteractionRef.current) {
+        popoverInteractionRef.current = false
+        return
+      }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      // Passive preview: close when focus moves to a concrete target outside
-      // the field and popover. Do not treat relatedTarget === null (or body)
-      // as leave — Safari fires that on mousedown of unfocused calendar chrome
-      // before click; overlay dismissal covers true outside pointerdowns.
-      const next = e.relatedTarget
-      if (
-        isOpen &&
-        next instanceof Node &&
-        next !== document.body &&
-        !popoverRef.current?.contains(next) &&
-        !(
-          next instanceof Element &&
-          next.closest(`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`)
-        )
-      ) {
-        setIsOpen(false)
-        setIsCalendarActive(false)
+      if (isOpen) {
+        if (
+          isConcreteOutsideLeave(e.relatedTarget, {
+            popover: popoverRef.current,
+            excludeSelectors: popoverExcludeSelectors,
+          })
+        ) {
+          // Blur commits below; skip the close-commit effect so Tab/body leave
+          // does not write twice (keydown close + blur in the same turn).
+          skipCloseCommitRef.current = true
+          setIsOpen(false)
+          setIsCalendarActive(false)
+          // Fall through to commit buffered edits.
+        } else {
+          // Still open and focus is ambiguous (null) or inside the popover /
+          // nested pickers — Tab rAF and overlay dismissal own those leaves.
+          return
+        }
       }
       const segments = triggerRef.current?.querySelectorAll(
         '[role="spinbutton"]'
@@ -656,7 +679,14 @@ function SingleDateInput({
       onChangeRef.current(pending)
       formCommit?.(pending)
     },
-    [formCommit, value, clearable, isOpen]
+    [
+      formCommit,
+      value,
+      clearable,
+      isOpen,
+      popoverExcludeSelectors,
+      popoverInteractionRef,
+    ]
   )
 
   return (
