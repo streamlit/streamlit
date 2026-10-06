@@ -116,7 +116,7 @@ Run the AI review and fix loop up to 5 times. After each review, always run `fix
 ```
 for iteration 1 to 5:
     1. Trigger AI review by applying the "ai-review" label
-    2. Run the `fixing-pr` subagent in foreground to wait for CI, fix failures, and address review comments
+    2. Run the `fixing-pr` subagent in foreground to wait for CI, fix failures, and address review comments. Tell it to skip its step 8. This loop stays on `ai-review`
     3. Check the latest AI review verdict
     4. If it is "approved" → exit loop
 ```
@@ -164,7 +164,10 @@ gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml 
 gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status in_progress
 ```
 
-Run `/fixing-pr` once so it can wait for CI and address comments. Do this exactly once, whether step 11 was approved or ran out of iterations. Do not re-apply `ai-final-review` from this step. `fixing-pr` may add that label itself after it pushes commits that address a `CHANGES_REQUESTED` AI review. After `/fixing-pr`, commit and push remaining changes.
+Run `/fixing-pr` once after this step, whether step 11 approved the PR or ran out of iterations. Then commit and push anything still uncommitted.
+
+- Do not add `ai-final-review` again here.
+- `fixing-pr` may add that label after it pushes commits that address a `CHANGES_REQUESTED` final review. Step 11 tells it not to do that during the `ai-review` loop.
 
 ### 13. Post agent metrics
 
