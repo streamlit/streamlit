@@ -71,14 +71,21 @@ SNAPSHOT_PRS=$(gh pr list --base "$BRANCH" --state open --json number,headRefNam
 
 for SNAPSHOT_PR in $SNAPSHOT_PRS; do
   [ -z "$SNAPSHOT_PR" ] && continue
-  META=$(gh pr view "$SNAPSHOT_PR" --json author,isCrossRepository,files,mergeStateStatus)
+  META=$(gh pr view "$SNAPSHOT_PR" --json author,isCrossRepository,mergeStateStatus)
   AUTHOR=$(echo "$META" | jq -r '.author.login')
   CROSS=$(echo "$META" | jq -r '.isCrossRepository')
   STATE=$(echo "$META" | jq -r '.mergeStateStatus')
   if [ "$STATE" = "UNKNOWN" ]; then
+    sleep 5
     STATE=$(gh pr view "$SNAPSHOT_PR" --json mergeStateStatus -q .mergeStateStatus)
   fi
-  ONLY_SNAPSHOTS=$(echo "$META" | jq '[.files[].path | startswith("e2e_playwright/__snapshots__/")] | if length == 0 then false else all end')
+  # gh pr view --json files is capped at 100 paths. Page the files API instead.
+  PATHS=$(gh api --paginate "repos/{owner}/{repo}/pulls/${SNAPSHOT_PR}/files" --jq '.[].filename')
+  if [ -z "$PATHS" ] || echo "$PATHS" | grep -qv '^e2e_playwright/__snapshots__/'; then
+    ONLY_SNAPSHOTS=false
+  else
+    ONLY_SNAPSHOTS=true
+  fi
   if [ "$CROSS" != "false" ] || [ "$AUTHOR" != "app/github-actions" ] || [ "$ONLY_SNAPSHOTS" != "true" ]; then
     continue
   fi
@@ -93,9 +100,15 @@ for SNAPSHOT_PR in $SNAPSHOT_PRS; do
     # Pending checks do not block a squash merge onto a feature branch. Do not wait for them.
     gh pr merge "$SNAPSHOT_PR" --squash --delete-branch
   fi
-  FILE_COUNT=$(echo "$META" | jq '.files | length')
-  gh pr comment "$PR_NUM" --body "Merged snapshot PR #${SNAPSHOT_PR} (${FILE_COUNT} snapshot file(s))."
-  MERGED=1
+  # --delete-branch can make gh pr merge exit non-zero after a successful squash.
+  # Count the PR as merged only when GitHub reports state MERGED.
+  if [ "$(gh pr view "$SNAPSHOT_PR" --json state -q .state)" = "MERGED" ]; then
+    FILE_COUNT=$(gh pr view "$SNAPSHOT_PR" --json changedFiles -q .changedFiles)
+    gh pr comment "$PR_NUM" --body "Merged snapshot PR #${SNAPSHOT_PR} (${FILE_COUNT} snapshot file(s))."
+    MERGED=1
+  else
+    echo "merge failed for #$SNAPSHOT_PR" >&2
+  fi
 done
 
 if [ "$MERGED" -eq 1 ]; then
@@ -103,7 +116,9 @@ if [ "$MERGED" -eq 1 ]; then
 fi
 ```
 
-If any snapshot PR was merged, return to step 2. The merge pushes to this branch, so CI has to run again. Do not add `update-snapshots` again while a matching snapshot PR is still open. A snapshot PR closed above does not count as open.
+If any snapshot PR's state is `MERGED`, return to step 2. That return counts toward the 5-iteration limit. The merge pushes to this branch, so CI has to run again. Do not add `update-snapshots` again while a matching snapshot PR is still open. A snapshot PR closed above does not count as open.
+
+If a merge attempt does not leave the PR `MERGED`, do not comment that it merged and do not return to step 2 because of that attempt. Skip that PR for the rest of this run so a failing merge cannot tight-loop while CI is idle.
 
 Skip this step when no open snapshot PR targets the current branch. If `git pull` is not a fast-forward, stop and report that conflict on this branch.
 
@@ -147,20 +162,30 @@ If there are uncommitted changes, commit with a descriptive message and push.
 
 ### 8. Request a final AI review after a changes-requested AI review
 
-If this iteration pushed commits that address the latest `github-actions` AI review, and that review's verdict is `CHANGES_REQUESTED`, apply `ai-final-review` only after that push succeeds. Do this only when the label is not already present.
+Apply `ai-final-review` only after this iteration pushed commits that address the latest AI review, and only when that review's verdict is `CHANGES_REQUESTED` and the label is not already present.
 
 `do-not-merge` alone is not the signal. `ai-qa-testing.yml` adds it on QA FAIL and does not remove it on PASS, and people add it by hand. An `APPROVED` `ai-final-review` removes `do-not-merge` and can auto-approve the PR, which would clear a hold this loop did not create.
+
+Set `AI_REVIEW_VERDICT` from the `## Verdict` line of the latest review whose `user.login` is `github-actions[bot]` and whose body contains `<!-- streamlit-ai-review`. Read that line only. A mention of the same words elsewhere in the body does not count. Treat `**CHANGES REQUESTED**` and `**CHANGES_REQUESTED**` as `CHANGES_REQUESTED`. Set `PUSHED_REVIEW_FIXES` to `true` only when this iteration pushed commits that address that review. A CI-only push does not qualify.
 
 ```bash
 # The review has to include the commits that address the review comments.
 # Adding the label before the push reviews the commit that is already blocked.
+PR_NUM=$(gh pr view --json number -q .number)
+VERDICT_LINE=$(gh api --paginate "repos/streamlit/streamlit/pulls/${PR_NUM}/reviews" \
+  | jq -rs '[.[][] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | sort_by(.submitted_at) | last | .body' \
+  | awk 'found && NF { print; exit } /^## Verdict/ { found=1 }')
+case "$VERDICT_LINE" in
+  *'**CHANGES REQUESTED**'*|*'**CHANGES_REQUESTED**'*) AI_REVIEW_VERDICT=CHANGES_REQUESTED ;;
+  *'**APPROVED**'*) AI_REVIEW_VERDICT=APPROVED ;;
+  *) AI_REVIEW_VERDICT=OTHER ;;
+esac
+
 LABELS=$(gh pr view --json labels -q '.labels[].name')
-if [ "$AI_REVIEW_VERDICT" = "CHANGES_REQUESTED" ] && ! echo "$LABELS" | grep -qx 'ai-final-review'; then
+if [ "$PUSHED_REVIEW_FIXES" = "true" ] && [ "$AI_REVIEW_VERDICT" = "CHANGES_REQUESTED" ] && ! echo "$LABELS" | grep -qx 'ai-final-review'; then
   gh pr edit --add-label "ai-final-review"
 fi
 ```
-
-Set `AI_REVIEW_VERDICT` from the latest `github-actions` review whose body contains `<!-- streamlit-ai-review`. Treat `**CHANGES REQUESTED**` and `**CHANGES_REQUESTED**` as `CHANGES_REQUESTED`.
 
 Skip this step when:
 

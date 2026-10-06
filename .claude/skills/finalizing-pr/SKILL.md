@@ -149,7 +149,7 @@ gh api --paginate "repos/streamlit/streamlit/pulls/${PR_NUM}/reviews" \
 The verdict section contains a bold keyword indicating the result:
 
 - **`**APPROVED**`** → exit loop, PR is ready
-- **`**CHANGES_REQUESTED**`** → continue iterating, address the feedback
+- **`**CHANGES REQUESTED**`** or **`**CHANGES_REQUESTED**`** → continue iterating, address the feedback
 
 Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` pushed follow-up CI fixes. Those commits are covered by CI but not by the AI review.
 
