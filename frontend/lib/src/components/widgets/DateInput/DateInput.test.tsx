@@ -259,6 +259,12 @@ describe("DateInput", () => {
         expect(segment).toHaveAttribute("aria-disabled", "true")
         expect(segment).toHaveAttribute("contenteditable", "false")
       }
+      expect(screen.getByTestId("stDateInputCalendarButton")).toBeDisabled()
+    })
+
+    it("disables the calendar button on a range widget", () => {
+      render(<DateInput {...getProps({ isRange: true })} disabled={true} />)
+      expect(screen.getByTestId("stDateInputCalendarButton")).toBeDisabled()
     })
   })
 

@@ -135,7 +135,7 @@ def check_for_sidebar_flicker(page: Page, initial_state: str) -> None:
                 )
                 # Use pytest.fail for custom error message
                 pytest.fail(
-                    f"Sidebar flickered! Started expanded then collapsed.\nState changes:\n{states_str}"
+                    f"Sidebar flickered! It expanded while it should stay collapsed.\nState changes:\n{states_str}"
                 )
 
     # Check for flicker in expanded state
@@ -150,7 +150,7 @@ def check_for_sidebar_flicker(page: Page, initial_state: str) -> None:
                     ]
                 )
                 pytest.fail(
-                    f"Sidebar flickered! Started collapsed then expanded.\nState changes:\n{states_str}"
+                    f"Sidebar flickered! It collapsed while it should stay expanded.\nState changes:\n{states_str}"
                 )
 
 

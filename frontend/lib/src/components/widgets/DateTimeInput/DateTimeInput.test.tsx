@@ -140,6 +140,7 @@ describe("DateTimeInput widget", () => {
 
     const field = screen.getByTestId("stDateTimeInputField")
     expect(field).toHaveAttribute("data-disabled")
+    expect(screen.getByTestId("stDateTimeInputCalendarButton")).toBeDisabled()
   })
 
   it("opens calendar popover on focus", async () => {

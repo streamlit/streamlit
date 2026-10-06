@@ -466,9 +466,9 @@ function SingleDateInput({
         triggerRef.current?.contains(document.activeElement)
           ? document.activeElement
           : undefined
-      // Pointer mousedown preventDefault keeps focus off the button, so restore
-      // to the toggle rather than the first segment when nothing in the field
-      // is focused.
+      // Focus returns here when the dialog closes: the focused field control, or
+      // the calendar button itself (a pointer click doesn't focus it, since
+      // mousedown is prevented).
       activeOriginRef.current =
         focusedInField ?? calendarButtonRef.current ?? segments?.[0] ?? null
       if (!isOpen) setIsOpen(true)
@@ -512,8 +512,9 @@ function SingleDateInput({
     [disabled, format, onChange, displayValue, minDate]
   )
 
-  // Alt+ArrowDown enters active calendar mode. Tab order: segments → calendar
-  // button → leave (close). Shift+Tab from the first segment also closes.
+  // Alt+ArrowDown enters active calendar mode. While the passive preview is open:
+  // - Tab from the last segment moves to the calendar button (preview stays open).
+  // - Tab from the calendar button, or Shift+Tab from the first segment, closes it.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.altKey && e.key === "ArrowDown") {

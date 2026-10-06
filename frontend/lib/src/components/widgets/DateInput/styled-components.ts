@@ -211,7 +211,10 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   },
 }))
 
-/** Calendar toggle; shares the clear button's compact icon-button styling. */
+/**
+ * Calendar toggle using the clear button's icon-button styles.
+ * Wrapped in `styled()` so this stays a separate export from `StyledClearButton`.
+ */
 export const StyledCalendarButton = styled(StyledClearButton)({})
 
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
