@@ -435,6 +435,9 @@ function RangeDateInput({
   const { floatingStyles, setFloating, setReference } =
     useFloatingOverlay(overlayOptions)
 
+  // After the calendar closes, return focus to the control that opened it.
+  // Active mode uses activeOriginRef (the segment from Alt+ArrowDown, or the
+  // calendar button after a toggle). Passive mode uses the last segment.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
     if (isCalendarActiveRef.current && activeOriginRef.current) {
