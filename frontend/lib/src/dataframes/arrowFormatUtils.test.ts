@@ -573,6 +573,40 @@ describe("format", () => {
     warnSpy.mockRestore()
   })
 
+  it("falls back to string coercion when interval metadata closed is null", () => {
+    const LOG = getLogger("arrowFormatUtils")
+    const warnSpy = vi.spyOn(LOG, "warn").mockImplementation(() => {})
+
+    const meta = new Map<string, string>([
+      ["ARROW:extension:name", "pandas.interval"],
+      [
+        "ARROW:extension:metadata",
+        JSON.stringify({ subtype: "float64", closed: null }),
+      ],
+    ])
+    const intervalStruct = new Struct([
+      new Field("left", new Float64(), true),
+      new Field("right", new Float64(), true),
+    ])
+    const row = vectorFromArray([{ left: 0, right: 1 }], intervalStruct).get(0)
+    const result = format(row, {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("iv", intervalStruct, true, meta),
+      pandasType: {
+        field_name: "iv",
+        name: "iv",
+        pandas_type: "object",
+        numpy_type: "interval[float64, float64]",
+        metadata: null,
+      },
+    })
+    expect(result).toBe(String(row))
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Arrow interval extension metadata must include string subtype and closed"
+    )
+    warnSpy.mockRestore()
+  })
+
   it("falls back to string coercion when interval metadata has no subtype", () => {
     const LOG = getLogger("arrowFormatUtils")
     const warnSpy = vi.spyOn(LOG, "warn").mockImplementation(() => {})
@@ -599,7 +633,7 @@ describe("format", () => {
     })
     expect(result).toBe(String(row))
     expect(warnSpy).toHaveBeenCalledWith(
-      "Arrow interval extension metadata is missing subtype or closed"
+      "Arrow interval extension metadata must include string subtype and closed"
     )
     warnSpy.mockRestore()
   })

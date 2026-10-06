@@ -581,7 +581,7 @@ function formatInterval(x: StructRow, field?: Field): string {
     const extensionMetadata = parsePandasIntervalExtensionMetadata(rawMetadata)
     if (extensionMetadata === undefined) {
       LOG.warn(
-        "Arrow interval extension metadata is missing subtype or closed"
+        "Arrow interval extension metadata must include string subtype and closed"
       )
       return String(x)
     }
