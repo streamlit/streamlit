@@ -1455,12 +1455,20 @@ export class App extends PureComponent<Props, State> {
     onTick: () => void,
     preserveDeferredPageTick = false
   ): void {
+    // A changed interval replaces a live page timer. Keep the guard for a
+    // fragment rerun the server has not acknowledged yet. Arming a timer that
+    // was already cleared (a full rerun) ends that guard.
+    const replacingPageTimer =
+      id === App.PAGE_AUTO_RERUN_ID && this.autoRerunIntervals.has(id)
     this.clearAutoRerunInterval(id)
     // Replacing the page timer drops a held tick. Chaining the next cycle of
     // the same long interval must not, because that tick is still waiting for
     // the current run to finish.
     if (id === App.PAGE_AUTO_RERUN_ID && !preserveDeferredPageTick) {
-      this.clearHeldPageAutoRerun()
+      this.pageAutoRerunDeferred = false
+      if (!replacingPageTimer) {
+        this.pageAutoRerunAwaitingNextRun = false
+      }
     }
 
     const intervalMs = intervalSeconds * 1000
