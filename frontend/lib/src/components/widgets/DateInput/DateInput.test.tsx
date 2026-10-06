@@ -2411,7 +2411,7 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     await screen.findByTestId("stDateInputCalendar")
 
     // Simulates Safari Tab from the last segment skipping icon buttons.
-    await act(() => {
+    act(() => {
       outside.focus()
     })
 
@@ -2419,6 +2419,34 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
       expect(
         screen.queryByTestId("stDateInputCalendar")
       ).not.toBeInTheDocument()
+    })
+  })
+
+  it("passive preview stays open when blur has no relatedTarget (Safari calendar click)", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getSingleDateSegments(region)
+    const field = screen.getByTestId("stDateInputField")
+
+    await user.click(day)
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+
+    // Safari: mousedown on an unfocused calendar cell blurs the field with
+    // relatedTarget null before the click lands.
+    fireEvent.blur(field, { relatedTarget: null })
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+
+    const nextDay = within(calendar).getByRole("button", {
+      name: /January 21, 1970/,
+    })
+    await user.click(nextDay)
+
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalled()
     })
   })
 

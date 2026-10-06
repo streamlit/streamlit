@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { act, screen, waitFor, within } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import type { MockInstance } from "vitest"
 
@@ -1833,6 +1839,25 @@ describe("DateTimeInput widget", () => {
           screen.queryByTestId("stDateTimeInputCalendar")
         ).not.toBeInTheDocument()
       })
+    })
+
+    it("passive preview stays open when blur has no relatedTarget (Safari calendar click)", async () => {
+      const user = userEvent.setup()
+      render(
+        <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+      )
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      const field = screen.getByTestId("stDateTimeInputField")
+      fireEvent.blur(field, { relatedTarget: null })
+
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeInTheDocument()
+      expect(
+        screen.getByTestId("stDateTimeInputCalendarButton")
+      ).toHaveAttribute("aria-expanded", "false")
     })
   })
 

@@ -712,12 +712,30 @@ function SingleDateTimeInput({
       if (!wrapper) return
       const segments = wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
       const segmentList = Array.from(segments)
-      // Tab from the last segment moves to the calendar button (stay open).
       // Shift+Tab from the first segment leaves the widget.
       if (e.shiftKey && e.target === segmentList[0]) {
         commitOrRevert()
         setIsOpen(false)
         setIsCalendarActive(false)
+        return
+      }
+      // Forward Tab from the last segment: stay open when focus lands on the
+      // calendar button. Close after the Tab if focus left the widget instead
+      // (default Safari often skips buttons).
+      if (!e.shiftKey && e.target === segmentList.at(-1)) {
+        requestAnimationFrame(() => {
+          const active = document.activeElement
+          if (
+            calendarButtonRef.current?.contains(active) ||
+            triggerRef.current?.contains(active) ||
+            popoverRef.current?.contains(active)
+          ) {
+            return
+          }
+          commitOrRevert()
+          setIsOpen(false)
+          setIsCalendarActive(false)
+        })
       }
     },
     [isOpen, displayValue, error, formSubmit, commitOrRevert, applyStepSnap]
@@ -767,16 +785,33 @@ function SingleDateTimeInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
+      // Passive preview: close+commit when focus moves to a concrete target
+      // outside the field and popover. Do not treat relatedTarget === null (or
+      // body) as leave — Safari fires that on mousedown of unfocused calendar
+      // chrome before click; overlay dismissal covers true outside pointerdowns.
+      const next = e.relatedTarget
       if (
         isOpen &&
-        e.relatedTarget &&
-        popoverRef.current?.contains(e.relatedTarget)
-      )
-        return
-      if (isOpen && !isCalendarActiveRef.current) {
+        next instanceof Node &&
+        next !== document.body &&
+        !popoverRef.current?.contains(next) &&
+        !(
+          next instanceof Element &&
+          next.closest(`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`)
+        )
+      ) {
         commitOrRevert()
         setIsOpen(false)
         setIsCalendarActive(false)
+        return
+      }
+      if (
+        isOpen &&
+        (!next ||
+          popoverRef.current?.contains(next) ||
+          (next instanceof Element &&
+            next.closest(`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`)))
+      ) {
         return
       }
       commitOrRevert()
