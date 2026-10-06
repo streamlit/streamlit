@@ -517,14 +517,30 @@ export default defineConfig([
       // Calling, returning, or passing `any` infects typed APIs. Spreading a
       // class instance (protobuf, AxiosHeaders) copies enumerable own fields
       // and drops methods. Extracting a class method without binding drops
-      // `this`. Tests and the remaining no-unsafe-* rules
-      // (assignment/member-access) stay off for now; see the frontend linting
-      // plan in the wiki for the remaining queue.
+      // `this`. Tests stay exempt. Assignment and member access on `any` are
+      // enabled only for the Vega/Arrow slice below; Plotly, DeckGL, and
+      // dataframe editing still read untyped values.
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-return": "error",
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-misused-spread": "error",
       "@typescript-eslint/unbound-method": "error",
+    },
+  },
+  {
+    // Vega spec JSON and untyped Arrow Field/Vector values are `any` at the
+    // boundary. These files narrow that edge; Plotly, DeckGL, and dataframe
+    // editing stay off until their own cleanup.
+    files: [
+      "**/ArrowVegaLiteChart/useVegaElementPreprocessor.ts",
+      "**/dataframes/arrowFormatUtils.ts",
+      "**/dataframes/arrowParseUtils.ts",
+      "**/dataframes/arrowTypeUtils.ts",
+      "**/dataframes/Quiver.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
     },
   },
   // Test files specific configuration
