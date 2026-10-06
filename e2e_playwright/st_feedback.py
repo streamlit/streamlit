@@ -119,3 +119,15 @@ else:
         options="stars",
     )
     st.write("Initial feedback value:", dyn_val)
+
+# --- on_change="ignore" feedback ---
+# Reuse the run counter above so the ignore-mode test can detect an unexpected rerun.
+ignore_feedback = st.feedback(
+    "thumbs",
+    key="ignore_feedback",
+    on_change="ignore",
+)
+st.write("Ignore feedback value:", ignore_feedback)
+
+if st.button("Apply ignore feedback", key="apply_ignore_feedback"):
+    st.write("Applied ignore feedback value:", ignore_feedback)
