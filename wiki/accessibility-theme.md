@@ -29,7 +29,7 @@ In each scorecard table, rows are ordered **Library blocks** first, then **Libra
 | --------- | ----- | ------------------- |
 | **1.4.3 Contrast (Minimum)** | AA | Normal text ≥ 4.5:1 vs adjacent background |
 | **1.4.11 Non-text Contrast** | AA | UI components / graphical objects needed to identify controls ≥ 3:1 |
-| **2.5.8 Target Size (Minimum)** | AA | Pointer targets ≥ 24×24 CSS px (or a documented exception) |
+| **2.5.8 Target Size (Minimum)** | AA | CSS box ≥ 24×24 CSS px. Spacing and inline exceptions are noted in the 2.5.8 table and do not flip the bucket |
 
 | Bucket | Meaning |
 | ------ | ------- |
@@ -38,7 +38,7 @@ In each scorecard table, rows are ordered **Library blocks** first, then **Libra
 | **Library meets** | Default light and dark already meet the ratio or size for that row. |
 | **Not this surface** | Host chrome (Community Cloud toolbar), OS, or author plot pixels — do not open a Streamlit theme spec. |
 
-To measure a translucent token, first composite it onto the surface it is drawn on, then compare the opaque result with `color2k`'s `getContrast` (the same helper `getColors.ts` uses). Recompute these ratios from the tokens whenever the palette changes.
+To measure a translucent token, first composite it onto the surface it is drawn on (`color2k` `transparentize` / `mix`, the same helpers `getColors.ts` uses), then compare the opaque result with `color2k`'s `getContrast` (WCAG relative luminance). Recompute these ratios from the tokens whenever the palette changes.
 
 ## Default theme floors
 
