@@ -488,6 +488,52 @@ class TestWarnUvicornWebsocketsMismatch:
 
         mock_warning.assert_not_called()
 
+    def test_does_not_warn_when_version_string_is_invalid(self) -> None:
+        """Do not warn (or raise) if a package version is not PEP 440."""
+
+        def fake_version(name: str) -> str:
+            return {"websockets": "not-a-version", "uvicorn": "0.51.0"}[name]
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._package_version",
+                side_effect=fake_version,
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._LOGGER.warning"
+            ) as mock_warning,
+        ):
+            _maybe_warn_uvicorn_websockets_mismatch()
+
+        mock_warning.assert_not_called()
+
+    @patch_config_options(
+        {
+            "server.sslCertFile": None,
+            "server.sslKeyFile": None,
+            "server.websocketPingInterval": None,
+            "server.enableWebsocketCompression": True,
+        }
+    )
+    def test_uvicorn_config_kwargs_invokes_mismatch_warning(self) -> None:
+        """Warn from _get_uvicorn_config_kwargs when versions are incompatible."""
+
+        def fake_version(name: str) -> str:
+            return {"websockets": "17.0.0", "uvicorn": "0.51.0"}[name]
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._package_version",
+                side_effect=fake_version,
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._LOGGER.warning"
+            ) as mock_warning,
+        ):
+            _get_uvicorn_config_kwargs()
+
+        mock_warning.assert_called_once()
+
 
 class TestServerPortIsManuallySet:
     """Tests for _is_port_manually_set function."""

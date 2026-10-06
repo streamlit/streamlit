@@ -48,6 +48,8 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _package_version
 from typing import TYPE_CHECKING, Any, Final
 
+from packaging.version import InvalidVersion
+
 from streamlit import config
 from streamlit.config_option import ConfigOption
 from streamlit.logger import get_logger
@@ -232,12 +234,11 @@ def _maybe_warn_uvicorn_websockets_mismatch() -> None:
     try:
         websockets_version = _package_version("websockets")
         uvicorn_version = _package_version("uvicorn")
-    except PackageNotFoundError:
-        return
-
-    if not _websockets_uses_latin1_header_decode(
-        websockets_version
-    ) or not is_version_less_than(uvicorn_version, "0.52.0"):
+        if not _websockets_uses_latin1_header_decode(
+            websockets_version
+        ) or not is_version_less_than(uvicorn_version, "0.52.0"):
+            return
+    except (PackageNotFoundError, InvalidVersion):
         return
 
     _LOGGER.warning(
