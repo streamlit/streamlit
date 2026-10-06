@@ -32,7 +32,7 @@ In each scorecard table, rows are ordered **Library blocks** first, then **Libra
 | Bucket | Meaning |
 | ------ | ------- |
 | **Library blocks** | The shipped default fails this criterion. Public `theme.*` overrides can change it, but this page still counts a failing default as a library gap: a candidate for a token or chrome fix, or a later product spec. |
-| **Author must** | The author sets the value (`theme.primaryColor`, chart mark colors, `theme.baseFontSize`, and similar). A failing shipped default stays **Library blocks** until that default changes. Use this bucket for values this page does not treat as a library default. |
+| **Author must** | This page does not treat the value as a library default; the author sets it (custom `theme.*` overrides, chart mark colors, `theme.baseFontSize`). A failing shipped default stays **Library blocks** until that default changes. |
 | **Library meets** | Default light and dark already meet the ratio or size for that row. |
 | **Not this surface** | Host chrome (Community Cloud toolbar), OS, or author plot pixels — do not open a Streamlit theme spec. |
 
@@ -77,7 +77,7 @@ Sorted by criterion number. Each item is a candidate product-spec section or rai
 - **1.4.11 Light primary chrome on the default sidebar fails 3:1.** Sidebar background defaults to `secondaryBackgroundColor` (`#f0f2f6`); `#ff4b4b` on that surface ≈ 2.95:1. Primary on the main page background still meets 1.4.11 (≈ 3.30:1). Dark sidebar passes (≈ 4.49:1).
 - **1.4.11 Control borders use `borderColor` (≈ `fadedText10`) below 3:1** on light and dark (≈ 1.4–1.9:1). Affects unchecked checkbox/radio indicator strokes and other chrome that always uses `borderColor`. With default `showWidgetBorder` off, many input outlines do not use that token (see [Theme config notes](#theme-config-notes)). Unset `dataframeBorderColor` is a separate, even fainter token (`fadedText05`) — raising `borderColor` alone does not clear default dataframe gridlines.
 - **1.4.11 Default soft focus rings fail 3:1.** Soft `focusRing` / `focusRingMuted` measure ≈ 1.5–2.2:1. Solid `focusRingOutline` (`primary`) meets 1.4.11 on the page (sidebar primary chrome is the 1.4.11 gap above). Full focus *behavior* (2.4.7 / 2.4.11) is not scored here.
-- **2.5.8 Heading link icon and default help tooltip triggers are ~16×16 CSS px** (`iconSizes.base`, no 24px minimum hit box). This inventory scores the CSS box only; with the 8px (`spacing.sm`) gap between them, the WCAG spacing exception would likely pass. Main-menu trigger, sidebar expand/collapse, and element toolbar actions ([#17211](https://github.com/streamlit/streamlit/pull/17211)) meet 2.5.8 at the default 16px root.
+- **2.5.8 Heading link icon and default help tooltip triggers are ~16×16 CSS px** (`iconSizes.base`, no 24px minimum hit box). This inventory scores the CSS box only. Heading link and heading help are 16px targets with an 8px (`spacing.sm`) gap, so the 24px spacing circles are tangent. Main-menu trigger, sidebar expand/collapse, and element toolbar actions ([#17211](https://github.com/streamlit/streamlit/pull/17211)) meet 2.5.8 at the default 16px root.
 - **2.5.8 Visible checkbox, radio, and toggle labels, plus collapsed checkbox/toggle tracks, are under 24×24 CSS px.** Label paragraphs inherit `fontSizes.sm` (14px) from `isLabel`; see the [2.5.8 scorecard](#258-target-size-minimum).
 
 ## Current defaults
@@ -91,7 +91,7 @@ Live scorecard for today’s default light and dark themes. Floors above are the
 | Secondary / muted UI text (`fadedText60`, `grayTextColor`, dataframe header) | Fail (~3.5–3.7) | Pass (~6.1–7.0) | Library blocks | Light only; includes default `dataframeHeaderTextColor` |
 | White label on primary fill | Fail (~3.30) | Fail (~3.30) | Library blocks | `StyledPrimaryButton` and similar |
 | `primary` as **text** on page | Fail (~3.30) | Pass (~5.7) | Library blocks | Light only; not the same as primary-on-`primarybg` |
-| Status text on status fill — **page** | Orange/gray/green (~4.50, under 4.5:1)/primary fail; red/yellow/blue/violet pass | Primary fail (~3.85); others pass | Library blocks | Translucent fills on page bg; badges, metrics, `AlertContainer` |
+| Status text on status fill — **page** | Orange (~3.19), gray (~3.44), green (~4.50), primary (~2.92) fail; red/yellow/blue/violet pass | Primary fail (~3.85); others pass | Library blocks | Translucent fills on page bg; badges, metrics, `AlertContainer` |
 | Status text on status fill — **default sidebar** | Orange/gray/green/primary/red/yellow fail; blue/violet pass | Primary/red/blue/violet fail; orange/yellow/green/gray pass | Library blocks | Same fills composited onto sidebar `secondaryBackgroundColor` |
 | Body text on page / secondary | Pass (~12.5 / 11.2) | Pass (~18.1 / 14.2) | Library meets | |
 | Link text | Pass (~6.7–7.5) | Pass (~5.2–6.6) | Library meets | Markdown / in-app links |
@@ -107,7 +107,7 @@ Live scorecard for today’s default light and dark themes. Floors above are the
 | ---- | ----- | ---- | ------ | ---- |
 | Control border (`borderColor`) | Fail (~1.45) | Fail (~1.8) | Library blocks | Includes unchecked checkbox/radio indicator strokes; many inputs only when `showWidgetBorder` is on |
 | Soft focus ring (`focusRing`) | Fail (~1.9) | Fail (~2.2) | Library blocks | Sole focus indicator on many controls |
-| Soft muted focus ring (`focusRingMuted`) | Fail (~1.5) | Fail (~1.8) | Library blocks | Header icon buttons |
+| Soft muted focus ring (`focusRingMuted`) | Fail (~1.5) | Fail (~1.8) | Library blocks | Header icon buttons, main menu, sidebar nav, skills nudge. `focusRingSubtle` is defined in `getShadows.ts` and unused (unscored on purpose) |
 | Primary as control on default sidebar | Fail (~2.95) | Pass (~4.49) | Library blocks | Sidebar bg defaults to `secondaryBackgroundColor` |
 | Muted icon stroke (`fadedText60`) | Pass (~3.6–3.7) | Pass (~6.1–7.0) | Library meets | [#16149](https://github.com/streamlit/streamlit/issues/16149) is **not** a default 1.4.11 fail for this token |
 | Primary as control / solid focus outline on page | Pass (~3.30) | Pass (~5.7) | Library meets | Page background only |
@@ -126,7 +126,7 @@ Accessible names for icon-only controls were largely addressed in [#17170](https
 
 | Control | Hit target | Bucket | Note |
 | ------- | ---------- | ------ | ---- |
-| Heading link icon | ~16×16 (`iconSizes.base`), no min box | Library blocks | CSS-box score; with heading help at `spacing.sm` (8px), 24px circles are tangent — spacing exception vs each other would pass |
+| Heading link icon | ~16×16 (`iconSizes.base`), no min box | Library blocks | CSS-box score; with heading help at `spacing.sm` (8px), 24px spacing circles are tangent |
 | Default help / tooltip trigger | ~16×16, no padding | Library blocks | CSS-box score; same spacing note when paired with heading link |
 | Checkbox with collapsed label | 16×16 indicator (`sizes.checkbox`) | Library blocks | `LabelVisibility.Collapsed` hides the label; only the indicator remains |
 | Checkbox with visible label | Line box 21px (`0.875rem` × line-height 1.5) | Library blocks | `StyledCheckboxButton` is the hit target; field `minHeight` 1.5rem does not stretch the label |
@@ -148,6 +148,7 @@ When unset:
 - `dataframeHeaderTextColor` → faded `textColor` (`fadedText60`) — same light **1.4.3** muted-text Library blocks gap
 - `dataframeHeaderBackgroundColor` → `bgMix` (`mix(backgroundColor, secondaryBackgroundColor, 0.5)`)
 - `dataframeBorderColor` → `fadedText05` (body text at 10% opacity, ≈ 1.20:1 on the page) — **not** `borderColor` (`fadedText10`, ≈ 1.45:1). Dataframe/table borders use that fainter token by default. They switch to `transparentize(borderColor, 0.55)` only when the author sets `theme.borderColor` (`createEmotionTheme`). Raising the default `borderColor` alone does **not** clear default dataframe gridlines.
+- Off `st.toggle` track uses `fadedText10` via `getToggleTrackColor`, not `borderColor`. Same default look and 1.4.11 fail as the border token; a custom `theme.borderColor` does not restyle it. Selected tracks use `primary` (sidebar 1.4.11 row).
 
 Raising muted text (or shipping a stronger default header text color) clears the header text gap together with placeholders and related chrome.
 
