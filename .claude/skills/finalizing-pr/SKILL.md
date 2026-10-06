@@ -116,7 +116,7 @@ Run the AI review and fix loop up to 5 times. After each review, always run `fix
 ```
 for iteration 1 to 5:
     1. Trigger AI review by applying the "ai-review" label
-    2. Run the `fixing-pr` subagent in foreground to wait for CI, fix failures, and address review comments. Tell it to skip its step 8. This loop stays on `ai-review`
+    2. Run the `fixing-pr` subagent in foreground to wait for CI, fix failures, and address review comments. Tell it to skip "Request a final AI review after a changes-requested AI review". This loop stays on `ai-review`
     3. Check the latest AI review verdict
     4. If it is "approved" → exit loop
 ```

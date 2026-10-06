@@ -41,6 +41,8 @@ Use `gh pr view` to get PR details for the current branch. If no PR exists, stop
 
 ### 2. Wait for CI to complete
 
+Keep an iteration count for this run, starting at 0. Every return to this step increments it, including returns from a snapshot merge, a snapshot-mismatch label, and a newly added `ai-final-review`. Stop when the count reaches 5.
+
 Poll CI status every 3 minutes until all workflows finish:
 
 - Use `gh run list --branch <branch> --status in_progress` and `--status queued` to check
@@ -115,6 +117,10 @@ for SNAPSHOT_PR in $SNAPSHOT_PRS; do
   else
     echo "merge failed for #$SNAPSHOT_PR" >&2
     FAILED_SNAPSHOT_PRS="$FAILED_SNAPSHOT_PRS $SNAPSHOT_PR"
+    RETRY_STATE=$(gh pr view "$SNAPSHOT_PR" --json mergeStateStatus -q .mergeStateStatus)
+    if [ "$RETRY_STATE" = "DIRTY" ]; then
+      gh pr close "$SNAPSHOT_PR" --delete-branch --comment "Closing this conflicting snapshot PR so a later update-snapshots run can regenerate it."
+    fi
   fi
 done
 
@@ -122,20 +128,27 @@ if [ "$MERGED" -eq 1 ]; then
   git pull --ff-only origin "$BRANCH"
   HEAD_SHA=$(git rev-parse HEAD)
   # The new head's workflows are often not listed on the first poll.
-  for _ in 1 2 3 4 5 6; do
+  # Fail closed: an empty queue is not idle CI.
+  FOUND_RUN=0
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
     if gh run list --branch "$BRANCH" --commit "$HEAD_SHA" --limit 20 \
       --json status --jq 'map(select(.status == "queued" or .status == "in_progress")) | length' \
       | grep -Eq '^[1-9]'; then
+      FOUND_RUN=1
       break
     fi
     sleep 10
   done
+  if [ "$FOUND_RUN" != "1" ]; then
+    echo "No workflow run registered for $HEAD_SHA" >&2
+    exit 1
+  fi
 fi
 ```
 
-If any snapshot PR's state is `MERGED`, return to step 2 after a run for the new head is `queued` or `in_progress`. That return counts toward the 5-iteration limit. The merge pushes to this branch, so CI has to run again. Do not add `update-snapshots` again while a matching snapshot PR is still open. A snapshot PR closed above does not count as open.
+If any snapshot PR's state is `MERGED`, return to step 2 only after a run for the new head is `queued` or `in_progress`. If none appears within 2 minutes, stop and report that. Do not treat the empty queue as idle CI. That return counts toward the 5-iteration limit. The merge pushes to this branch, so CI has to run again. Do not add `update-snapshots` again while a matching snapshot PR is still open. A closed snapshot PR, and a PR number in `FAILED_SNAPSHOT_PRS`, do not count as open.
 
-If a merge attempt does not leave the PR `MERGED`, do not comment that it merged and do not return to step 2 because of that attempt. Append that PR number to `FAILED_SNAPSHOT_PRS` and skip it on later passes in this run.
+If a merge attempt does not leave the PR `MERGED`, do not comment that it merged and do not return to step 2 because of that attempt. Append that PR number to `FAILED_SNAPSHOT_PRS` and skip it on later passes in this run. If the follow-up `mergeStateStatus` is `DIRTY`, close it. A failed PR left open does not block a later `update-snapshots` label.
 
 Skip this step when no open snapshot PR targets the current branch. If `git pull` is not a fast-forward, stop and report that conflict on this branch.
 
@@ -148,7 +161,7 @@ Check for failures with `gh pr checks` and `gh run list --status failure`.
 **Fix strategy:**
 
 - **Code-fixable issues** (lint, types, tests): Apply fixes directly
-- **Snapshot mismatches**: Do not edit snapshot files. Add `update-snapshots`, then return to step 2 with no further push in this iteration. `snapshot-autofix.yml` removes that label in its first step and cancels the in-progress run when this branch is pushed, so a later push drops the snapshot PR before it opens:
+- **Snapshot mismatches**: Do not edit snapshot files. Add `update-snapshots`, then return to step 2 with no further push in this iteration. This return counts toward the 5-iteration limit. `snapshot-autofix.yml` removes that label in its first step and cancels the in-progress run when this branch is pushed, so a later push drops the snapshot PR before it opens:
   ```
   gh pr edit --add-label "update-snapshots"
   ```
@@ -181,7 +194,7 @@ If there are uncommitted changes, commit with a descriptive message and push.
 
 Apply `ai-final-review` only after this iteration pushed commits that address the latest AI review, and only when that review's verdict is `CHANGES_REQUESTED` and the label is not already present.
 
-Skip this step when the caller is `finalizing-pr` step 11, the `ai-review` loop. That loop re-applies `ai-review`. Step 12 of `finalizing-pr` applies `ai-final-review` once. Adding it here would start final-model reviews, and an approval can auto-approve the PR, before that single final review. When this workflow is run directly, or after that final review requested changes, apply the label as below.
+Skip this step when called from the `finalizing-pr` "AI review and fix loop". That loop re-applies `ai-review` each iteration, and `finalizing-pr` applies `ai-final-review` exactly once afterwards. Adding it here would start extra final-model reviews early, and any `APPROVED` one could auto-approve the PR. Apply the label when `fixing-pr` runs directly or after that single final review requests changes.
 
 `do-not-merge` alone is not the signal. `ai-qa-testing.yml` adds it on QA FAIL and does not remove it on PASS, and people add it by hand. An `APPROVED` `ai-final-review` removes `do-not-merge` and can auto-approve the PR, which would clear a hold this loop did not create.
 
@@ -192,7 +205,7 @@ Set `AI_REVIEW_VERDICT` from the `## Verdict` line of the latest review whose `u
 # PUSHED_REVIEW_FIXES is true only after step 7 pushed commits that address this review.
 PUSHED_REVIEW_FIXES="${PUSHED_REVIEW_FIXES:-false}"
 PR_NUM=$(gh pr view --json number -q .number)
-VERDICT_LINE=$(gh api --paginate "repos/streamlit/streamlit/pulls/${PR_NUM}/reviews" \
+VERDICT_LINE=$(gh api --paginate "repos/{owner}/{repo}/pulls/${PR_NUM}/reviews" \
   | jq -rs '[.[][] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | sort_by(.submitted_at) | last | .body' \
   | awk 'found && NF { print; exit } /^## Verdict/ { found=1 }')
 case "$VERDICT_LINE" in
@@ -209,12 +222,12 @@ fi
 
 Skip this step when:
 
-- the caller is `finalizing-pr` step 11
+- the caller is the `finalizing-pr` "AI review and fix loop"
 - the latest AI review verdict is not `CHANGES_REQUESTED`
 - the PR already has `ai-final-review`
 - this iteration did not push commits that address that review (`PUSHED_REVIEW_FIXES` is not `true`)
 
-After adding the label, poll until an `ai-pr-review.yml` run for this branch is `queued` or `in_progress`, then return to step 2. The first poll is often empty. Do not exit because `require-labels` is failing while `do-not-merge` is still present.
+After adding the label, poll until an `ai-pr-review.yml` run for this branch is `queued` or `in_progress`, then return to step 2. That return counts toward the 5-iteration limit. The first poll is often empty. If no run appears within 2 minutes, stop and report that. Do not exit because `require-labels` is failing while `do-not-merge` is still present.
 
 ### 9. Repeat until CI passes
 
@@ -225,7 +238,7 @@ Return to step 2 and wait for CI to complete again.
 - No fixable failures remain (only policy or label checks are failing). Do not use this exit while either of these is true:
   - an `ai-final-review` requested in this run has not finished
   - `do-not-merge` is still present only because that review has not removed it
-- Maximum 5 iterations reached
+- Maximum 5 returns to step 2. This includes snapshot-mismatch and final-review returns, not only passes that reach this step
 
 ## Rules
 
@@ -235,8 +248,8 @@ Return to step 2 and wait for CI to complete again.
 - **Verify locally**: Always run `make check` before pushing
 - **Snapshot mismatches**: Always use the `update-snapshots` label, never fix snapshot files manually. Return to step 2 before any further push, then merge the snapshot PR the workflow opens against this branch.
 - **Snapshot PR conflicts**: Do not merge a conflicting snapshot PR. Close it, delete its branch, and continue. That does not block a later `update-snapshots` label.
-- **Blocked PRs**: Apply `ai-final-review` only after pushing commits that address a `CHANGES_REQUESTED` AI review, and only if `ai-final-review` is not already on the PR. Do not add it because `do-not-merge` is present. Skip it when the caller is the `finalizing-pr` step 11 `ai-review` loop.
-- **Limit iterations**: Stop after 5 fix-push-wait cycles to avoid infinite loops
+- **Blocked PRs**: Apply `ai-final-review` only after pushing commits that address a `CHANGES_REQUESTED` AI review, and only if `ai-final-review` is not already on the PR. Do not add it because `do-not-merge` is present. Skip it when the caller is the `finalizing-pr` "AI review and fix loop".
+- **Limit iterations**: Stop after 5 returns to step 2, including snapshot and final-review returns
 
 ## Error handling
 
