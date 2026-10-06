@@ -535,7 +535,12 @@ function SingleDateTimeInput({
   // focus event bubbles here.
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
-      if (isRestoringFocusRef.current) return
+      // Restore after dialog close should reset to inline; focusing the calendar
+      // or clear button must not, or a popover time can lose on the next commit.
+      if (isRestoringFocusRef.current) {
+        lastTimeSourceRef.current = "inline"
+        return
+      }
       if (clearButtonRef.current?.contains(e.target)) return
       if (calendarButtonRef.current?.contains(e.target)) return
       lastTimeSourceRef.current = "inline"
@@ -660,6 +665,11 @@ function SingleDateTimeInput({
       }
 
       if (e.key === "Enter") {
+        // Let the calendar button's native activation toggle the dialog.
+        // Capturing Enter here would commit / form-submit instead.
+        if (calendarButtonRef.current?.contains(e.target as Node)) {
+          return
+        }
         e.preventDefault()
         // Enter commits without dismissing, so a popover time that is still on
         // screen has to survive the commit.

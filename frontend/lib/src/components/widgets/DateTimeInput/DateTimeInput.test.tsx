@@ -1720,6 +1720,68 @@ describe("DateTimeInput widget", () => {
       expect(calendarButton).toHaveAttribute("aria-expanded", "false")
       expect(calendarButton).not.toHaveAttribute("aria-controls")
     })
+
+    it("Enter on the calendar button toggles the active dialog", async () => {
+      const user = userEvent.setup()
+      render(
+        <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+      )
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      await act(async () => {
+        calendarButton.focus()
+      })
+      await user.keyboard("{Enter}")
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+          "role",
+          "dialog"
+        )
+      })
+      expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+
+      // Active mode moves focus into the grid; return to the button to close.
+      await act(async () => {
+        calendarButton.focus()
+      })
+      await user.keyboard("{Enter}")
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    })
+
+    it("Enter on the calendar button does not submit a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        formId: "form",
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm")
+      render(<DateTimeInput {...props} />)
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      await act(async () => {
+        calendarButton.focus()
+      })
+      await user.keyboard("{Enter}")
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+          "role",
+          "dialog"
+        )
+      })
+      expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+    })
   })
 
   describe("Active calendar (Alt+ArrowDown)", () => {
@@ -2650,7 +2712,6 @@ describe("DateTimeInput widget", () => {
       })
     })
 
-    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
     it("commits an inline date plus popover-only time when the calendar button closes", async () => {
       const { user, props, spy } = renderEmpty()
 

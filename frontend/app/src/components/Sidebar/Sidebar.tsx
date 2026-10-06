@@ -293,8 +293,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       }}
       as={StyledSidebar}
       onResizeStop={onResizeStop}
-      // Forwarded to StyledSidebar via Resizable's extra-props spread; not in
-      // Resizable's public prop type.
+      // Resizable's types omit id, but its extra-props spread forwards it to
+      // StyledSidebar so collapse and expand buttons can point aria-controls here.
       // @ts-expect-error
       id={SIDEBAR_ELEMENT_ID}
       isCollapsed={isCollapsed}
