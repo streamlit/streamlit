@@ -31,13 +31,14 @@ message EChartsChart {
   // Form ID, filled if selections are activated.
   string form_id = 4;
 
-  // Renderer passed to echarts.init.
-  Renderer renderer = 5;
-
   // True when ``on_select`` is not ``"ignore"``. Keyed display-only charts
   // also receive an element ID (CSS class + remount identity), so the
   // frontend cannot treat a non-empty ID as "this is a selection widget".
-  bool selection_activated = 6;
+  bool selection_activated = 5;
+
+  // Renderer passed to echarts.init. Field number is unchanged from 1.64/1.65
+  // so a mismatched frontend still reads renderer, not selection_activated.
+  Renderer renderer = 6;
 
   // Accessible name for the chart (author `alt`). Applied on the frontend as
   // ECharts `aria.label.description` (→ aria-label on role="img").
