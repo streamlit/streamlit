@@ -122,11 +122,11 @@ one use case.
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `columns` | `"auto"` or `int >= 1` | `"auto"` | Number of equal-width columns. `"auto"` fits as many as the container allows. With `wrap=True`, an integer is the maximum count and the grid wraps earlier when cells would fall below `min_column_width`. With `wrap=False`, the grid always keeps this count. Integer `columns` is `1`…`24`; above that raises. |
-| `min_column_width` | `"auto"` or `int >= 1` | `"auto"` | Preferred cell floor. `"auto"` is a frontend rem token (border-aware). An explicit int is the outer cell width. Wrap threshold when `wrap=True`; shrink-then-scroll floor when `wrap=False`. See [Auto minimum width](#auto-minimum-width). |
+| `min_column_width` | `"auto"` or `int >= 1` | `"auto"` | Preferred outer cell width. `"auto"` is a frontend rem token, the same with or without `border`. An explicit int is also the outer cell width. Wrap threshold when `wrap=True`; shrink-then-scroll floor when `wrap=False`. See [Auto minimum width](#auto-minimum-width). |
 | `wrap` | `bool` | `True` | Whether the column count may decrease. Same name and default as [`st.container` / `st.columns`](../2026-07-23-horizontal-wrap-control/product-spec.md). `False` keeps the declared count and scrolls locally. Invalid with `columns="auto"`. |
 | `gap` | gap size, `(row_gap, column_gap)`, or `None` | `"small"` | Space between cells. A scalar matches `st.columns`. A 2-tuple or 2-list is `(row_gap, column_gap)`. See [Asymmetric gaps](#asymmetric-gaps-tuple-versus-explicit-parameters). |
 | `vertical_alignment` | `"top"`, `"center"`, `"bottom"` | `"top"` | Placement of a child when its cell is taller. |
-| `border` | `bool` | `False` | Border and padding around each cell, matching `st.columns` / `st.container`. |
+| `border` | `bool` | `False` | Border and padding around each cell, matching `st.columns` / `st.container`. Inset inside the cell; does not change the wrap threshold. |
 | `row_height` | `"content"`, `"equal"`, or `int >= 1` | `"content"` | Height of each **row**. `"content"` sizes to the row's tallest cell. `"equal"` makes every row the same height. An integer is pixels. See [Height and space division](#height-and-space-division). |
 | `width` | `"stretch"` or `int` | `"stretch"` | Grid container width, matching `st.columns`. |
 | `height` | `"content"`, `"stretch"`, or `int` | `"content"` | Grid container height, matching `st.container`. `"content"` grows and the page scrolls. An integer bounds the grid. `"stretch"` fills a height-bounded ancestor; without one it behaves like `"content"` (see [Risks](#risks)). |
@@ -301,24 +301,32 @@ st.grid(3, gap=("medium", "small"))  # (row_gap, column_gap)
 #### Auto Minimum Width
 
 A Python default of `200` would be a magic pixel number: it would not scale with the root
-font, and `border=True` would silently steal ~2rem of content width (the same
-`theme.spacing.lg` padding bordered containers use). Layout sizes belong on the frontend
-in rem.
+font. Layout sizes belong on the frontend in rem.
 
 `"auto"` is preferred over `None` because `None` reads as "no minimum." `"auto"` matches
-`columns="auto"`: Streamlit picks a comfortable cell width. `st.grid()` then means "as many
-columns as fit at the theme's comfortable cell width."
+`columns="auto"`: Streamlit picks a comfortable outer cell width. `st.grid()` then means
+"as many columns as fit at the theme's comfortable cell width."
 
 **Resolution (frontend):**
 
-- Unbordered: a theme token (target ~`12.5rem`, the prototype's 200px at a 16px root).
-- Bordered: that token plus `2 * theme.spacing.lg`, so the *content* floor stays the same
-  after padding and the border. No hand-tuned "add 50px" in Python.
-- An explicit pixel int is the outer track width and does **not** get extra border padding.
-  Pass an int only to opt out of the theme default (compact chips, extra-wide charts).
+- `"auto"` is one theme token for the **outer** track (target ~`12.5rem`, the prototype's
+  200px at a 16px root). `border` does not change it.
+- The cell border and padding sit inside that track, matching `st.columns` and
+  `st.container`: `box-sizing: border-box`, with padding
+  `calc(theme.spacing.lg - theme.sizes.borderWidth)` on each side. Bordered content is
+  narrower by `2 * theme.spacing.lg`. The wrap threshold stays the outer token, so a
+  border does not drop a column.
+- An explicit pixel int is also the outer track width. Pass an int only to opt out of the
+  theme default (compact chips, extra-wide charts).
+
+Inflating `"auto"` by `2 * theme.spacing.lg` when `border=True` (so the content floor stays
+~200px) was rejected. At the default layout three tracks are only ~224px wide, and a 232px
+floor wraps them to two columns. A border must not change the column count. An app that
+wants a content floor can pass an explicit `min_column_width` that includes the inset
+(~232px at a 16px root).
 
 Most apps should omit `min_column_width`. `st.grid(4)` and `st.grid(4, border=True)` then
-wrap at equivalent *content* widths.
+wrap at the same outer width.
 
 #### Responsive Placement
 
@@ -330,23 +338,28 @@ than the auto minimum." With an explicit `min_column_width=200` at default font 
 - 440px: 2
 - 320px: 1
 
-At the default (non-`wide`) content width — `theme.sizes.contentMaxWidth` = `736px` —
-with `gap="small"` (1rem):
+At the default (non-`wide`) layout, `theme.sizes.contentMaxWidth` is `736px`. The block
+container's side padding (`theme.spacing.lg` on each side) sits inside that max width, so
+the grid measures **704px**. With `gap="small"` (1rem) and the ~`12.5rem` (200px) auto
+floor:
 
-- `st.grid(4)` → `(736 - 3*16) / 4 = 172px` per track, below the ~`12.5rem` (200px) auto
-  floor, so it wraps to **3 columns**.
-- `st.grid(4, border=True)`: the floor is `200 + 2 * theme.spacing.lg` (232px); 3 tracks
-  land at ~234px.
+- `st.grid(4)` → four tracks would be `(704 - 3*16) / 4 = 164px`, below the floor, so it
+  wraps to **3 columns** (`(704 - 2*16) / 3 = 224px` each).
+- `st.grid(4, border=True)` uses the same outer floor, so it also wraps to **3 columns**.
+  Content inside each cell is `224px - 2rem` (192px at a 16px root).
+
+The `736px` width used before the grid has been measured resolves `st.grid(4)` to 3
+columns as well, with or without `border`, so first paint matches.
 
 An integer `columns` is a **maximum**, not a guarantee. `st.grid(4)` yields 3 columns for
 most users on the default layout. That is the shipped rule; "I asked for 4 and got 3" is
-documented wrapping, not a bug. Lowering the auto floor so four tracks fit at 736px, or
-making an explicit integer count authoritative down to a smaller hard floor, would change
-this and is left as a product follow-up.
+documented wrapping, not a bug. Lowering the auto floor so four tracks fit in that 704px,
+or making an explicit integer count authoritative down to a smaller hard floor, would
+change this and is left as a product follow-up.
 
-Thresholds account for the **column** gap and, when `"auto"`, for root font size and
-`border`. The calculation uses actual container width — sidebar, nested container, or
-embed — not the `st.columns` 640px viewport breakpoint.
+Thresholds account for the **column** gap and, when `"auto"`, for root font size. `border`
+is not part of the threshold. The calculation uses actual container width — sidebar, nested
+container, or embed — not the `st.columns` 640px viewport breakpoint.
 
 That **resolved column count** `N` is shared by wrapping, last-row track reservation, and
 span clamping. CSS `auto-fit` / `minmax` can wrap without measuring, but it collapses
@@ -513,7 +526,7 @@ metrics = [
     ("Retention", "96%", "-0.4%", "Monthly"),
 ]
 
-grid = st.grid(4, border=True, row_height="equal")  # max 4; 3 at default 736px width
+grid = st.grid(4, border=True, row_height="equal")  # max 4; 3 at the default layout
 
 for label, value, delta, caption in metrics:
     with grid.cell():
