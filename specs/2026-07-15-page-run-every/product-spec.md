@@ -174,14 +174,17 @@ a hot section:
 ```python
 st.set_page_config(run_every="60s")  # refresh the whole page every minute
 
+if "price" not in st.session_state:
+    st.session_state.price = 100.0
+
 
 @st.fragment(run_every="2s")  # this section refreshes faster
 def live_ticker():
-    st.metric("Price", get_price())
+    st.metric("Price", st.session_state.price)
 
 
 live_ticker()
-st.dataframe(get_daily_summary())  # refreshed by the page-level interval
+st.dataframe({"symbol": ["ACME"], "shares": [10]})  # refreshed by the page interval
 ```
 
 > [!NOTE]
