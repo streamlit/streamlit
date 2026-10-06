@@ -595,9 +595,6 @@ function SingleDateTimeInput({
         restoreFocusToField()
         return
       }
-      const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
-        '[role="spinbutton"]'
-      )
       const focusedInField =
         document.activeElement instanceof HTMLElement &&
         triggerRef.current?.contains(document.activeElement)
@@ -607,7 +604,7 @@ function SingleDateTimeInput({
       // the calendar button itself (a pointer click doesn't focus it, since
       // mousedown is prevented).
       activeOriginRef.current =
-        focusedInField ?? calendarButtonRef.current ?? segments?.[0] ?? null
+        focusedInField ?? calendarButtonRef.current ?? null
       if (!isOpen) setIsOpen(true)
       setIsCalendarActive(true)
     },
@@ -772,9 +769,16 @@ function SingleDateTimeInput({
       if (isCalendarActiveRef.current) return
       if (
         isOpen &&
-        (!e.relatedTarget || popoverRef.current?.contains(e.relatedTarget))
+        e.relatedTarget &&
+        popoverRef.current?.contains(e.relatedTarget)
       )
         return
+      if (isOpen && !isCalendarActiveRef.current) {
+        commitOrRevert()
+        setIsOpen(false)
+        setIsCalendarActive(false)
+        return
+      }
       commitOrRevert()
     },
     [isOpen, commitOrRevert]

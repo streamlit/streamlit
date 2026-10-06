@@ -1808,6 +1808,32 @@ describe("DateTimeInput widget", () => {
       })
       expect(calendarButton).toHaveFocus()
     })
+
+    it("passive preview closes when focus leaves the widget without the calendar button", async () => {
+      const user = userEvent.setup()
+      render(
+        <div>
+          <button type="button" data-testid="outside">
+            Outside
+          </button>
+          <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+        </div>
+      )
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      act(() => {
+        screen.getByTestId("outside").focus()
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+    })
   })
 
   describe("Active calendar (Alt+ArrowDown)", () => {

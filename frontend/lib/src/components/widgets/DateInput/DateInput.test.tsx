@@ -2359,7 +2359,7 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(month).toHaveFocus()
   })
 
-  it("passive mode Tab goes to calendar button then closes (no regression)", async () => {
+  it("passive mode Tab goes to calendar button then closes on second Tab", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)
 
@@ -2385,6 +2385,36 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
 
     // Tab from the calendar button leaves and closes
     await user.tab()
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("passive preview closes when focus leaves the widget without the calendar button", async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <button type="button" data-testid="outside">
+          Outside
+        </button>
+        <DateInput {...getProps()} />
+      </>
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getSingleDateSegments(region)
+    const outside = screen.getByTestId("outside")
+
+    await user.click(day)
+    await screen.findByTestId("stDateInputCalendar")
+
+    // Simulates Safari Tab from the last segment skipping icon buttons.
+    await act(() => {
+      outside.focus()
+    })
+
     await waitFor(() => {
       expect(
         screen.queryByTestId("stDateInputCalendar")

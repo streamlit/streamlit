@@ -785,9 +785,6 @@ function RangeDateInput({
         restoreFocusToField()
         return
       }
-      const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
-        '[role="spinbutton"]'
-      )
       const focusedInField =
         document.activeElement instanceof HTMLElement &&
         triggerRef.current?.contains(document.activeElement)
@@ -797,7 +794,7 @@ function RangeDateInput({
       // the calendar button itself (a pointer click doesn't focus it, since
       // mousedown is prevented).
       activeOriginRef.current =
-        focusedInField ?? calendarButtonRef.current ?? segments?.[0] ?? null
+        focusedInField ?? calendarButtonRef.current ?? null
       if (!isOpen) setIsOpenState(true)
       setIsCalendarActive(true)
     },
@@ -927,6 +924,16 @@ function RangeDateInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
+      // Passive preview: close when focus leaves the field and popover (e.g.
+      // Safari Tab from the last segment can skip the calendar button).
+      if (
+        isOpen &&
+        (!e.relatedTarget ||
+          !popoverRef.current?.contains(e.relatedTarget as Node))
+      ) {
+        setIsOpenState(false)
+        setIsCalendarActive(false)
+      }
       if (hasPartiallyTypedField(triggerRef.current)) return
       const pending = compact([displayStartRef.current, displayEndRef.current])
       const committed = compact([startValue, endValue])
@@ -934,7 +941,7 @@ function RangeDateInput({
       onChangeRef.current(pending)
       formCommit?.(pending)
     },
-    [formCommit, startValue, endValue]
+    [formCommit, startValue, endValue, isOpen]
   )
 
   const hasValue = displayStart !== null || displayEnd !== null

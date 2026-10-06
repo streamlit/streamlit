@@ -94,8 +94,7 @@ const Header = ({
                     onClick={onToggleSidebar}
                     data-testid="stExpandSidebarButton"
                     aria-label="Expand sidebar"
-                    // Mounted only while the sidebar is collapsed.
-                    aria-expanded={false}
+                    aria-expanded={isSidebarOpen}
                     aria-controls={SIDEBAR_ELEMENT_ID}
                   >
                     <DynamicIcon

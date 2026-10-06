@@ -461,9 +461,6 @@ function SingleDateInput({
         restoreFocusToField()
         return
       }
-      const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
-        '[role="spinbutton"]'
-      )
       const focusedInField =
         document.activeElement instanceof HTMLElement &&
         triggerRef.current?.contains(document.activeElement)
@@ -473,7 +470,7 @@ function SingleDateInput({
       // the calendar button itself (a pointer click doesn't focus it, since
       // mousedown is prevented).
       activeOriginRef.current =
-        focusedInField ?? calendarButtonRef.current ?? segments?.[0] ?? null
+        focusedInField ?? calendarButtonRef.current ?? null
       if (!isOpen) setIsOpen(true)
       setIsCalendarActive(true)
     },
@@ -606,6 +603,16 @@ function SingleDateInput({
     (e: FocusEvent<HTMLDivElement>): void => {
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
+      // Passive preview: close when focus leaves the field and popover (e.g.
+      // Safari Tab from the last segment can skip the calendar button).
+      if (
+        isOpen &&
+        (!e.relatedTarget ||
+          !popoverRef.current?.contains(e.relatedTarget as Node))
+      ) {
+        setIsOpen(false)
+        setIsCalendarActive(false)
+      }
       const segments = triggerRef.current?.querySelectorAll(
         '[role="spinbutton"]'
       )
@@ -624,7 +631,7 @@ function SingleDateInput({
       onChangeRef.current(pending)
       formCommit?.(pending)
     },
-    [formCommit, value, clearable]
+    [formCommit, value, clearable, isOpen]
   )
 
   return (
