@@ -420,8 +420,8 @@ function SingleDateInput({
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (isRestoringFocusRef.current) return
-      if (clearButtonRef.current?.contains(e.target as Node)) return
-      if (calendarButtonRef.current?.contains(e.target as Node)) return
+      if (clearButtonRef.current?.contains(e.target)) return
+      if (calendarButtonRef.current?.contains(e.target)) return
       if (!disabled) setIsOpen(true)
     },
     [disabled]
