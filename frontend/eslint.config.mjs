@@ -309,8 +309,8 @@ export default defineConfig([
       // TypeScript rules with type-checking
       // Production src enables no-unsafe-call / return / argument, no-misused-spread,
       // and unbound-method (see the overlay below). This block leaves those rules
-      // off so tests, which that overlay ignores, stay exempt. Other no-unsafe-*
-      // rules stay off.
+      // off so tests, which that overlay ignores, stay exempt. Assignment and
+      // member access stay off here; a later overlay enables them for Vega/Arrow.
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
@@ -528,9 +528,11 @@ export default defineConfig([
     },
   },
   {
-    // Vega spec JSON and untyped Arrow Field/Vector values are `any` at the
-    // boundary. These files narrow that edge; Plotly, DeckGL, and dataframe
-    // editing stay off until their own cleanup.
+    // Vega spec JSON and untyped Arrow `Field`/`Vector` values arrive as `any`.
+    // These files already narrow them, so assignment and member access on `any`
+    // are errors here. The list is explicit: sibling modules such as pandas
+    // styler utils stay out until their own boundary is narrowed. Plotly,
+    // DeckGL, and dataframe editing still read `any`.
     files: [
       "**/ArrowVegaLiteChart/useVegaElementPreprocessor.ts",
       "**/dataframes/arrowFormatUtils.ts",

@@ -175,11 +175,14 @@ export function getPandasTypeName(type: ArrowType): string | undefined {
     : type.pandasType.pandas_type
 }
 
-/** Returns the timezone of the arrow type metadata. */
+/**
+ * Returns the column timezone.
+ * Uses the Arrow field timezone when it is a string. A null or missing
+ * Arrow timezone falls through to pandas metadata.
+ */
 export function getTimezone(type: ArrowType): string | undefined {
-  // Untyped Arrow tables type `Field.type` as `any`. Read timezone as
-  // `unknown` so a null or missing Arrow timezone still falls through to
-  // pandas metadata.
+  // `Field.type` is `any` on untyped tables. Read `timezone` as `unknown`
+  // before the nullish fallback below.
   const dataType = type.arrowField?.type as { timezone?: unknown } | undefined
   const arrowTimezone = dataType?.timezone
   const pandasTimezone = (

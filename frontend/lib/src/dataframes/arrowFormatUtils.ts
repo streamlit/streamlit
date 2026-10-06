@@ -212,9 +212,9 @@ interface PandasIntervalExtensionMetadata {
 }
 
 /**
- * Parse interval extension metadata. Invalid JSON is left to throw so
- * `format()` can log it; a parsed object with the wrong shape is not an
- * interval.
+ * Parses pandas interval extension metadata.
+ * Invalid JSON throws so `format()` can log it and render the raw cell.
+ * Returns undefined when `subtype` or `closed` is missing or not a string.
  */
 function parsePandasIntervalExtensionMetadata(
   rawMetadata: string
@@ -567,9 +567,9 @@ function formatFloat(num: number): string {
  * Formats an interval value from arrow to string.
  */
 function formatInterval(x: StructRow, field?: Field): string {
-  // Serialization for pandas.Interval is provided by Arrow extensions
-  // https://github.com/pandas-dev/pandas/blob/235d9009b571c21b353ab215e1e675b1924ae55c/
-  // pandas/core/arrays/arrow/extension_types.py#L17
+  // pandas.Interval Arrow extension. Metadata is JSON from
+  // ArrowIntervalType.__arrow_ext_serialize__:
+  // https://github.com/pandas-dev/pandas/blob/235d9009b571c21b353ab215e1e675b1924ae55c/pandas/core/arrays/arrow/extension_types.py#L73
   const extensionName = field?.metadata.get("ARROW:extension:name")
   if (extensionName === "pandas.interval") {
     const rawMetadata = field?.metadata.get("ARROW:extension:metadata")
