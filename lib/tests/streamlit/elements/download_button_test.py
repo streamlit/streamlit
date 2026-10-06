@@ -401,3 +401,35 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         with pytest.raises(MediaFileStorageError, match="not found"):
             mgr.execute_deferred(file_id)
         assert not invoked
+
+    def test_disabling_keyed_callable_at_new_path_revokes_old_file_id(self) -> None:
+        """A keyed button disabled at a new delta path revokes the previous file id."""
+
+        def generate_data() -> str:
+            return "secret"
+
+        enabled = DownloadButtonProto(id="download-1")
+        marshall_file(
+            "old-path",
+            generate_data,
+            enabled,
+            "text/plain",
+            element_id="download-1",
+        )
+        file_id = enabled.deferred_file_id
+        mgr = get_instance().media_file_mgr
+
+        disabled = DownloadButtonProto(id="download-1")
+        marshall_file(
+            "new-path",
+            generate_data,
+            disabled,
+            "text/plain",
+            disabled=True,
+            element_id="download-1",
+        )
+
+        assert not disabled.HasField("deferred_file_id")
+        assert file_id not in mgr._deferred_callables
+        with pytest.raises(MediaFileStorageError, match="not found"):
+            mgr.execute_deferred(file_id)

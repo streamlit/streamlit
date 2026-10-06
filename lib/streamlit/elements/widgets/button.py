@@ -1442,6 +1442,7 @@ class ButtonMixin:
             mime,
             file_name,
             disabled=disabled,
+            element_id=element_id,
         )
 
         if help is not None:
@@ -1856,12 +1857,15 @@ def marshall_file(
     file_name: str | None = None,
     *,
     disabled: bool = False,
+    element_id: str = "",
 ) -> None:
-    # The browser's disabled check is not an authorization boundary. Drop a
-    # callable registered while this button was enabled, including when this
-    # run passes non-callable data.
+    # Revoke any callable an earlier enabled run registered for this button.
+    # A client can request a file id even when the frontend shows the button
+    # as disabled. This also applies when this run passes static data.
     if disabled and runtime.exists():
-        runtime.get_instance().media_file_mgr.remove_deferred(coordinates)
+        runtime.get_instance().media_file_mgr.remove_deferred(
+            coordinates, element_id=element_id
+        )
 
     # Check if data is a callable (for deferred downloads)
     if callable(data):
@@ -1885,6 +1889,7 @@ def marshall_file(
             mimetype,
             coordinates,
             file_name=file_name,
+            element_id=element_id,
         )
         proto_download_button.deferred_file_id = file_id
         proto_download_button.url = ""  # No URL yet, will be generated on click

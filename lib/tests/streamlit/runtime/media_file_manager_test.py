@@ -983,6 +983,47 @@ class MediaFileManagerDeferredTest(TestCase):
         "streamlit.runtime.media_file_manager._get_session_id",
         MagicMock(return_value="mock_session"),
     )
+    def test_remove_deferred_by_element_id_after_coordinate_change(self) -> None:
+        """A keyed button disabled at a new path revokes the callable from the old path.
+
+        Fragment reruns keep session media references, so the old coordinate
+        stays mapped unless revocation finds the stable element id.
+        """
+        invoked = False
+
+        def generate_data() -> bytes:
+            nonlocal invoked
+            invoked = True
+            return b"secret"
+
+        old_coord = random_coordinates()
+        new_coord = random_coordinates()
+        file_id = self.media_file_manager.add_deferred(
+            generate_data, "text/plain", old_coord, element_id="download-1"
+        )
+        other_id = self.media_file_manager.add_deferred(
+            lambda: b"other",
+            "text/plain",
+            random_coordinates(),
+            element_id="download-2",
+        )
+
+        self.media_file_manager.remove_deferred(new_coord, element_id="download-1")
+
+        assert file_id not in self.media_file_manager._deferred_callables
+        assert (
+            old_coord
+            not in self.media_file_manager._files_by_session_and_coord["mock_session"]
+        )
+        assert other_id in self.media_file_manager._deferred_callables
+        with pytest.raises(MediaFileStorageError, match="not found"):
+            self.media_file_manager.execute_deferred(file_id)
+        assert not invoked
+
+    @mock.patch(
+        "streamlit.runtime.media_file_manager._get_session_id",
+        MagicMock(return_value="mock_session"),
+    )
     def test_remove_deferred_missing_coordinate_is_noop(self) -> None:
         """Removing a coordinate that was never registered does not raise."""
         self.media_file_manager.remove_deferred(random_coordinates())

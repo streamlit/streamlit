@@ -82,8 +82,8 @@ function DownloadButton(props: Props): ReactElement {
 
   useEffect(() => {
     const isDeferred = Boolean(deferredFileId?.length)
-    // A disabled callable has neither a deferred id nor a URL. buildDownloadUrl("")
-    // is "", and fetch("") re-requests the current page.
+    // Skip the source check when there is no URL. fetch("") re-requests the
+    // current page, including for a disabled callable or in raw mode.
     if (!isDeferred && url) {
       // Since we use a hidden link to download, we can't use the onerror event
       // to catch src url load errors. Catch with direct check instead.
