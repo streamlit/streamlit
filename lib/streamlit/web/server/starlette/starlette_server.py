@@ -213,21 +213,31 @@ def _get_websocket_protocol() -> str:
     return "websockets-sansio"
 
 
-def _maybe_warn_uvicorn_websockets_mismatch() -> None:
-    """Warn when websockets 17+ is paired with uvicorn older than 0.52.0.
+def _websockets_uses_latin1_header_decode(websockets_version: str) -> bool:
+    """Return True for websockets versions that decode headers as ISO-8859-1.
 
-    uvicorn < 0.52.0 can abort the /_stcore/stream handshake when a reverse
-    proxy forwards non-ASCII identity headers (#16030).
+    16.1 switched to latin-1, 16.1.1 reverted it, and 17+ re-landed the change.
+    Combined with uvicorn < 0.52.0, that decode can abort /_stcore/stream when
+    a reverse proxy forwards non-ASCII identity headers (#16030).
     """
+    if not is_version_less_than(websockets_version, "17"):
+        return True
+    return not is_version_less_than(
+        websockets_version, "16.1"
+    ) and is_version_less_than(websockets_version, "16.1.1")
+
+
+def _maybe_warn_uvicorn_websockets_mismatch() -> None:
+    """Warn when an affected websockets is paired with uvicorn older than 0.52.0."""
     try:
         websockets_version = _package_version("websockets")
         uvicorn_version = _package_version("uvicorn")
     except PackageNotFoundError:
         return
 
-    if is_version_less_than(websockets_version, "17") or not is_version_less_than(
-        uvicorn_version, "0.52.0"
-    ):
+    if not _websockets_uses_latin1_header_decode(
+        websockets_version
+    ) or not is_version_less_than(uvicorn_version, "0.52.0"):
         return
 
     _LOGGER.warning(
