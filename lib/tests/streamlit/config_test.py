@@ -1143,7 +1143,7 @@ class ConfigTest(unittest.TestCase):
         ``get_config_options`` itself rather than on a CLI flag.
         """
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".toml", delete=False
+            mode="w", suffix=".toml", delete=False, encoding="utf-8"
         ) as toml_file:
             toml_file.write("[runner]\nconnectionDefaultTTL = 10\n")
             toml_path = toml_file.name
