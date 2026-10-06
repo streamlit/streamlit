@@ -164,7 +164,7 @@ gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml 
 gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status in_progress
 ```
 
-Run `/fixing-pr` once so it can wait for CI and address comments. Do this exactly once, whether step 11 was approved or ran out of iterations. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push remaining changes.
+Run `/fixing-pr` once so it can wait for CI and address comments. Do this exactly once, whether step 11 was approved or ran out of iterations. Do not re-apply `ai-final-review` from this step. `fixing-pr` may add that label itself after it pushes commits that address a `CHANGES_REQUESTED` AI review. After `/fixing-pr`, commit and push remaining changes.
 
 ### 13. Post agent metrics
 
