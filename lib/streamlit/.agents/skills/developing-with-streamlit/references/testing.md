@@ -124,6 +124,17 @@ assert not at.success  # no st.success rendered
 assert at.warning[0].value == "Low balance"
 ```
 
+`st.progress`, `st.html`, and `st.help` are read-only lists. Assert on what the script produced; `.set_value()` and `.click()` raise `AppTestError`.
+
+```python
+assert at.progress[0].value == 25  # st.progress(0.25) is stored as an int from 0 to 100
+assert at.progress[0].text == "halfway"
+assert at.html[0].value == "<b>hi</b>"
+assert at.help[0].value == "'Hello'"
+```
+
+`at.help[i].value` keeps a readable repr (`"'Hello'"`, `Point(1, 2)`). When `st.help` stored a parameter-list signature, `.value` is the expression passed to `st.help` (`st.help(len)` is `"len"`, not `"builtins.len(obj, /)"`). The raw stored text is `.proto.value`, and the docstring is `.doc_string`. The node type is `help_info`; `at.help` and `get("help")` both find these elements.
+
 ### Assert the app didn't crash
 
 `at.exception` collects any uncaught exception surfaced by the script. Check it after every run:
@@ -204,12 +215,6 @@ def test_status_filter():
 ## What AppTest can't simulate
 
 `AppTest` covers widget interaction and the elements your script produces, but it does **not** reproduce every front-end interaction. In particular, **selections on `st.dataframe` and charts** (click-to-select rows, Altair/Plotly selection events) can't be triggered through `AppTest` — there's no setter for them, so you can't assert on what a user's on-chart selection would return. The same applies to anything that only exists in the rendered browser: custom-component JavaScript, CSS, and scroll/resize behavior. Cover those with Playwright e2e tests instead.
-
-`st.progress`, `st.html`, and `st.help` have read-only collections (`at.progress`, `at.html`, `at.help`). `.set_value()` and `.click()` raise `AppTestError`.
-
-- `at.progress[i].value` is the amount from 0 to 100 (`st.progress(0.25)` is `25`). `text` is the optional message.
-- `at.html[i].value` is the HTML body.
-- `at.help[i].value` is a short summary. Readable values stay (`"'Hello'"`, `Point(1, 2)`). A long signature uses the expression passed to `st.help` when one was captured. The raw text is `.proto.value`, and the docstring is `.doc_string`. The node type stays `help_info`; `at.help` and `get("help")` are the public names.
 
 Elements that AppTest does not fully model (`st.balloons`, `st.page_link`, and similar) do not break `.run()`. Inspect those nodes with `at.get("<type>")`; `.value` returns the element's main proto field where one exists or `None` otherwise. Calling `.set_value()` or `.click()` on those nodes raises `AppTestError` — those names can exist as proto fields, but they are not interaction methods. For a keyed widget AppTest doesn't model, assign through `at.session_state` or use Playwright.
 
