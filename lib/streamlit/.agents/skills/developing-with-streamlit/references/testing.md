@@ -205,7 +205,11 @@ def test_status_filter():
 
 `AppTest` covers widget interaction and the elements your script produces, but it does **not** reproduce every front-end interaction. In particular, **selections on `st.dataframe` and charts** (click-to-select rows, Altair/Plotly selection events) can't be triggered through `AppTest` — there's no setter for them, so you can't assert on what a user's on-chart selection would return. The same applies to anything that only exists in the rendered browser: custom-component JavaScript, CSS, and scroll/resize behavior. Cover those with Playwright e2e tests instead.
 
-`st.progress`, `st.html`, and `st.help` have read-only collections (`at.progress`, `at.html`, `at.help`). `.value` is the progress amount from 0 to 100, the HTML body, or a short help summary. For `st.help`, a short proto value is kept (`"'Hello'"`, `streamlit`, `Point(1, 2)`). An empty proto value or a parameter-list signature uses the captured name instead, so the summary is not a constructor signature or a module docstring. Readable reprs stay on `.value`. The docstring stays on `.doc_string`. These elements do not support `.set_value()` or `.click()`.
+`st.progress`, `st.html`, and `st.help` have read-only collections (`at.progress`, `at.html`, `at.help`). `.set_value()` and `.click()` raise `AppTestError`.
+
+- `at.progress[i].value` is the amount from 0 to 100 (`st.progress(0.25)` is `25`). `text` is the optional message.
+- `at.html[i].value` is the HTML body.
+- `at.help[i].value` is a short summary. A short proto value stays (`"'Hello'"`, `streamlit`, `Point(1, 2)`). An empty value or a parameter-list signature uses the captured call-site expression. The docstring is `.doc_string`.
 
 Elements that AppTest does not fully model (`st.balloons`, `st.page_link`, and similar) do not break `.run()`. Inspect those nodes with `at.get("<type>")`; `.value` returns the element's main proto field where one exists or `None` otherwise. Calling `.set_value()` or `.click()` on those nodes raises `AppTestError` — those names can exist as proto fields, but they are not interaction methods. For a keyed widget AppTest doesn't model, assign through `at.session_state` or use Playwright.
 

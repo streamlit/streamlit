@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import builtins
+import keyword
 import textwrap
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
@@ -113,8 +114,9 @@ _GET_TYPE_ALIASES: dict[str, str] = {
 }
 
 
-# Proto ``type`` strings whose ``name=value`` text is a signature, not a repr.
-# Instances use the class name (``Point``), so a dataclass repr stays a value.
+# Proto type strings for callables and classes. ``name=value`` text is a
+# signature for these types. Instances use the class name, so a dataclass
+# repr such as ``Point(x=1, y=2)`` stays a value.
 _HELP_SIGNATURE_TYPES = frozenset(
     {
         "BoundCachedFunc",
@@ -161,7 +163,11 @@ def _help_signature_parts(value: str) -> tuple[str, list[str]] | None:
     """Return ``(prefix, params)`` for ``prefix(params)``, or None.
 
     An empty parameter list means ``name()``. ``["..."]`` is the fallback
-    signature. A `` -> annotation`` suffix is the Python 3.14 signature form.
+    signature. A `` -> annotation`` suffix is the return annotation from
+    ``inspect.signature``.
+
+    ``st.help`` truncates long reprs to 300 characters plus ``...``. Those
+    truncated strings are not signatures.
     """
     if (
         not value
@@ -294,7 +300,8 @@ def _is_signature_param(part: str) -> bool:
     elif part.startswith("*"):
         body = part[1:]
     name, separator = _param_name_and_sep(body)
-    if not name.isidentifier():
+    # ``None`` is an identifier, but ``slice(None, None, None)`` is a repr.
+    if not name.isidentifier() or keyword.iskeyword(name):
         return False
     if part.startswith("*"):
         # ``*args: int`` and ``**kwargs: str``; star parameters have no default.
@@ -1100,11 +1107,11 @@ class Help(Element):
     def value(self) -> str:
         """Short summary of the documented object.
 
-        A short proto value is kept, including readable reprs (``"'Hello'"``,
-        ``"streamlit"``, ``"Point(1, 2)"``). An empty proto value or a
-        parameter-list signature uses the captured name instead, so modules
-        such as ``re`` and callable instances stay short. The docstring is
-        ``doc_string`` and is not used as ``.value``.
+        AppTest keeps a short proto value, including readable reprs such as
+        ``"'Hello'"``, ``"streamlit"``, and ``"Point(1, 2)"``. When that value
+        is empty or a parameter-list signature, and a call-site expression was
+        captured, the summary is that expression (``.name``). The full docstring
+        stays on ``doc_string``.
         """
         raw = self.proto.value
         if self.name and (not raw or _is_help_signature(raw, self.proto.type)):

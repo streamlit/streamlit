@@ -446,6 +446,7 @@ def test_help_value_keeps_readable_reprs() -> None:
         span = range(10)
         arr = np.arange(1)
         amount = Decimal("1.5")
+        unbounded = slice(None)
 
         st.help(point)
         st.help(named)
@@ -455,13 +456,27 @@ def test_help_value_keeps_readable_reprs() -> None:
         st.help(span)
         st.help(arr)
         st.help(amount)
+        st.help(unbounded)
         st.help(scale)
         st.help(gather)
         st.help(slash)
 
     at = AppTest.from_function(script).run()
     assert not at.exception
-    point, named, moment, day, pair, span, arr, amount, scale, gather, slash = at.help
+    (
+        point,
+        named,
+        moment,
+        day,
+        pair,
+        span,
+        arr,
+        amount,
+        unbounded,
+        scale,
+        gather,
+        slash,
+    ) = at.help
     assert point.name == "point"
     assert point.value == "Point(1, 2)"
     assert named.name == "named"
@@ -473,6 +488,8 @@ def test_help_value_keeps_readable_reprs() -> None:
     assert arr.name == "arr"
     assert arr.value == "array([0])"
     assert amount.value == "Decimal('1.5')"
+    assert unbounded.name == "unbounded"
+    assert unbounded.value == "slice(None, None, None)"
     assert scale.name == "scale"
     assert scale.value == "scale"
     assert "(x: int = 1, y: int = 2, z: int = 3)" in scale.proto.value
