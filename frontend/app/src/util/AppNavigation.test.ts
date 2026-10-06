@@ -15,7 +15,7 @@
  */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import { HostCommunicationManager } from "@streamlit/lib"
 import {
@@ -27,9 +27,9 @@ import {
 
 import {
   AppNavigation,
-  PageNotFoundCallback,
-  PageUrlUpdateCallback,
-  SetIconCallback,
+  type PageNotFoundCallback,
+  type PageUrlUpdateCallback,
+  type SetIconCallback,
 } from "./AppNavigation"
 
 function generateNewSession(changes = {}): NewSession {

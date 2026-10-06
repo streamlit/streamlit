@@ -94,6 +94,7 @@ export const createEmotionColors = (
 
     dataframeBorderColor: derivedColors.fadedText05,
     dataframeHeaderBackgroundColor: derivedColors.bgMix,
+    dataframeHeaderTextColor: derivedColors.fadedText60,
 
     headingColor: genericColors.bodyText,
 

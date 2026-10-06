@@ -25,7 +25,7 @@ import { render } from "~lib/test_util"
 import { iconSizes } from "~lib/theme/primitives/iconSizes"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Popover, { clampPopoverSize, PopoverProps } from "./Popover"
+import Popover, { clampPopoverSize, type PopoverProps } from "./Popover"
 
 const createWidgetMgr = (): WidgetStateManager =>
   new WidgetStateManager({

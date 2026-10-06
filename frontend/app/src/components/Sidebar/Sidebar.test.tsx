@@ -20,17 +20,17 @@ import userEvent from "@testing-library/user-event"
 import {
   mockEndpoints,
   mockTheme,
-  NavigationContextProps,
-  SidebarConfigContextProps,
+  type NavigationContextProps,
+  type SidebarConfigContextProps,
 } from "@streamlit/lib"
 import {
   renderWithContexts,
-  RenderWithContextsOptions,
-  RenderWithContextsResult,
+  type RenderWithContextsOptions,
+  type RenderWithContextsResult,
 } from "@streamlit/lib/testing"
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
-import Sidebar, { SidebarProps } from "./Sidebar"
+import Sidebar, { type SidebarProps } from "./Sidebar"
 import { getSidebarWidthLimits } from "./utils"
 
 const { minWidthPx, maxWidthPx, defaultWidthPx } = getSidebarWidthLimits(
@@ -190,7 +190,7 @@ describe("Sidebar Component", () => {
         // Click the collapse button
         const collapseButton = within(
           screen.getByTestId("stSidebarCollapseButton")
-        ).getByRole("button")
+        ).getByRole("button", { name: "Collapse sidebar" })
         await user.click(collapseButton)
 
         expect(mockOnToggleCollapse).toHaveBeenCalledWith(expectedToggleValue)

@@ -16,7 +16,7 @@
 
 import { waitFor } from "@testing-library/react"
 
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 
 import { createUploadFileHandler } from "./createFileUploadHandler"
 
@@ -123,5 +123,31 @@ describe("createUploadFileHandler", () => {
         })
       )
     })
+  })
+
+  it("defaults a missing formId to an empty string for uploadFile", () => {
+    const uploadClient = {
+      uploadFile: vi.fn().mockResolvedValue(undefined),
+    }
+
+    const handler = createUploadFileHandler({
+      getNextLocalFileId: () => 1,
+      addFiles: vi.fn(),
+      updateFile: vi.fn(),
+      uploadClient: uploadClient as unknown as FileUploadClient,
+      element: { id: "chat-input" },
+      onUploadProgress: vi.fn(),
+      onUploadComplete: vi.fn(),
+    })
+
+    handler(FILE_URLS, createFile("notes.txt"))
+
+    expect(uploadClient.uploadFile).toHaveBeenCalledWith(
+      { id: "chat-input", formId: "" },
+      FILE_URLS.uploadUrl,
+      expect.any(File),
+      expect.any(Function),
+      expect.any(AbortSignal)
+    )
   })
 })

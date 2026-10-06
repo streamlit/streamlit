@@ -22,7 +22,7 @@ import * as utils from "~lib/util/utils"
 
 import {
   DynamicButtonLabel,
-  DynamicButtonLabelProps,
+  type DynamicButtonLabelProps,
 } from "./DynamicButtonLabel"
 
 const getProps = (
@@ -48,10 +48,43 @@ describe("DynamicButtonLabel", () => {
     expect(screen.queryByTestId("stIconEmoji")).toBeNull()
   })
 
-  it("renders icon with no label", () => {
-    render(<DynamicButtonLabel {...getProps({ label: "" })} />)
+  it("names an emoji-only button from its icon", () => {
+    render(
+      <button type="button">
+        <DynamicButtonLabel {...getProps({ label: "" })} />
+      </button>
+    )
     expect(screen.getByTestId("stIconEmoji")).toHaveTextContent("😀")
     expect(screen.queryByTestId("stMarkdownContainer")).toBeNull()
+    // Icon glyphs are aria-hidden; expose a name for icon-only controls.
+    expect(screen.getByRole("button", { name: "😀" })).toBeVisible()
+  })
+
+  it("exposes a visually-hidden name for icon-only material buttons", () => {
+    render(
+      <button type="button">
+        <DynamicButtonLabel
+          {...getProps({ icon: ":material/thumb_up:", label: "" })}
+        />
+      </button>
+    )
+    expect(screen.getByRole("button", { name: "thumb_up icon" })).toBeVisible()
+    expect(screen.getByTestId("stIconMaterial")).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    )
+  })
+
+  it("does not add a visually-hidden name when a visible label is present", () => {
+    render(
+      <button type="button">
+        <DynamicButtonLabel
+          {...getProps({ icon: ":material/thumb_up:", label: "Approve" })}
+        />
+      </button>
+    )
+    expect(screen.getByRole("button", { name: "Approve" })).toBeVisible()
+    expect(screen.queryByText("thumb_up icon")).not.toBeInTheDocument()
   })
 
   it("renders an emoji icon", () => {

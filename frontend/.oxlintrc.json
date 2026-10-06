@@ -30,6 +30,12 @@
     "oxc/no-accumulating-spread": "error",
     "typescript/no-dynamic-delete": "error",
     "typescript/no-import-type-side-effects": "error",
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "fixStyle": "inline-type-imports"
+      }
+    ],
     "jsx-a11y/control-has-associated-label": "error",
     "jsx-a11y/lang": "off",
     "jsx-a11y/no-aria-hidden-on-focusable": "error",
@@ -113,30 +119,5 @@
     "promise/no-callback-in-promise": "error",
     "promise/no-new-statics": "error",
     "promise/valid-params": "error"
-  },
-  "overrides": [
-    {
-      "files": [
-        "lib/src/**/*.ts",
-        "lib/src/**/*.tsx"
-      ],
-      "rules": {
-        "typescript/consistent-type-imports": [
-          "error",
-          {
-            "fixStyle": "inline-type-imports"
-          }
-        ]
-      }
-    },
-    {
-      "files": [
-        "lib/src/**/*.test.ts",
-        "lib/src/**/*.test.tsx"
-      ],
-      "rules": {
-        "typescript/consistent-type-imports": "off"
-      }
-    }
-  ]
+  }
 }

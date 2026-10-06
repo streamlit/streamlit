@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
 import {
-  EmotionTheme,
+  type EmotionTheme,
   getOverlayZIndex,
   getPopoverContainerStyle,
   hasLightBackgroundColor,

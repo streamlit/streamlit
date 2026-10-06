@@ -25,7 +25,7 @@ import {
 
 import {
   FlexContext,
-  IFlexContext,
+  type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
@@ -34,7 +34,7 @@ import * as Utils from "~lib/theme/utils"
 import * as MobileUtil from "~lib/util/isMobile"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Multiselect, { Props } from "./Multiselect"
+import Multiselect, { type Props } from "./Multiselect"
 
 const getProps = (
   elementProps: Partial<MultiSelectProto> = {},

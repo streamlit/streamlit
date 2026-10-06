@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { forwardRef, useImperativeHandle } from "react"
+import { forwardRef, type ReactElement, useImperativeHandle } from "react"
 
 import {
   CompactSelection,
@@ -31,7 +31,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render, renderWithContexts } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 // Track DataEditor calls for assertions - separate from the component so we can use forwardRef
 const dataEditorMockFn = vi.fn()
@@ -60,7 +60,7 @@ vi.mock("@glideapps/glide-data-grid", async () => ({
 // distribution. But the file picker most likely wouldn't work anyways in jest-dom.
 vi.mock("native-file-system-adapter", () => ({}))
 
-import DataFrame, { DataFrameProps } from "./DataFrame"
+import DataFrame, { type DataFrameProps } from "./DataFrame"
 
 const getProps = (
   data: Uint8Array,
@@ -145,20 +145,42 @@ describe("DataFrame widget", () => {
     })
   }
 
-  const renderRowSelectionDataFrame = (selectionState?: string): void => {
-    render(
+  const EMPTY_SELECTION_STATE = JSON.stringify({
+    selection: { rows: [], columns: [], cells: [] },
+  })
+  const ROW_SELECTION_STATE = JSON.stringify({
+    selection: { rows: [1], columns: [], cells: [] },
+  })
+
+  const renderRowSelectionDataFrame = (
+    selectionState?: string
+  ): { rerender: (nextSelectionState?: string) => void } => {
+    const widgetMgr = createWidgetMgr()
+    const frame = (state?: string): ReactElement => (
       <DataFrame
         {...getProps(TEN_BY_TEN)}
         element={DataframeProto.create({
           arrowData: { data: TEN_BY_TEN },
           editingMode: DataframeProto.EditingMode.READ_ONLY,
           selectionMode: [DataframeProto.SelectionMode.MULTI_ROW],
-          selectionState,
+          selectionState: state,
         })}
-        widgetMgr={createWidgetMgr()}
+        widgetMgr={widgetMgr}
       />
     )
+
+    const { rerender } = render(frame(selectionState))
+    return {
+      rerender: (nextSelectionState?: string): void => {
+        rerender(frame(nextSelectionState))
+      },
+    }
   }
+
+  const selectedRows = (): number[] =>
+    (
+      getDataEditorProps() as { gridSelection: GridSelection }
+    ).gridSelection.rows.toArray()
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -220,6 +242,69 @@ describe("DataFrame widget", () => {
     const styledResizableContainer = screen.getByTestId("stDataFrame")
 
     expect(styledResizableContainer).toHaveClass("stDataFrame")
+  })
+
+  it("sets role=region and aria-label on the grid host when alt is provided", () => {
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          alt: "Top 20 customers by revenue",
+        })}
+      />
+    )
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).toHaveAttribute("role", "region")
+    expect(gridHost).toHaveAccessibleName("Top 20 customers by revenue")
+    // Outer wrapper stays unnamed so the toolbar is outside the named region.
+    expect(screen.getByTestId("stDataFrame")).not.toHaveAttribute("role")
+    expect(screen.getByTestId("stDataFrame")).not.toHaveAttribute("aria-label")
+    // Toolbar chrome reuses alt as button context (separate from the region name).
+    expect(
+      screen.getByRole("button", {
+        name: /^Fullscreen: Top 20 customers by revenue$/,
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: /^Download as CSV: Top 20 customers by revenue$/,
+      })
+    ).toBeInTheDocument()
+    // Glide still mounts under the named host and is not aria-hidden
+    // (unit tests mock DataEditor as mock-data-editor).
+    const glideEditor = screen.getByTestId("mock-data-editor")
+    expect(glideEditor).toBeVisible()
+    expect(gridHost).toContainElement(glideEditor)
+    expect(gridHost).not.toHaveAttribute("aria-hidden")
+    expect(glideEditor).not.toHaveAttribute("aria-hidden")
+  })
+
+  it("omits role and aria-label when alt is not provided", () => {
+    render(<DataFrame {...props} />)
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).not.toHaveAttribute("role")
+    expect(gridHost).not.toHaveAttribute("aria-label")
+  })
+
+  it.each(["", "   "])("omits role and aria-label when alt is %j", alt => {
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          alt,
+        })}
+      />
+    )
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).not.toHaveAttribute("role")
+    expect(gridHost).not.toHaveAttribute("aria-label")
   })
 
   it("should have a toolbar", () => {
@@ -765,13 +850,59 @@ describe("DataFrame widget", () => {
   })
 
   it("applies programmatic selection from selectionState", () => {
-    renderRowSelectionDataFrame(
-      JSON.stringify({
-        selection: { rows: [1], columns: [], cells: [] },
-      })
-    )
+    renderRowSelectionDataFrame(ROW_SELECTION_STATE)
 
     expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+  })
+
+  it("clears programmatic selection when selectionState is empty", () => {
+    const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
+
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+
+    rerender(EMPTY_SELECTION_STATE)
+
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
+  })
+
+  it("applies a later identical empty selectionState after a user reselects", () => {
+    const { rerender } = renderRowSelectionDataFrame(EMPTY_SELECTION_STATE)
+
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
+
+    selectRow(1)
+
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+
+    // User-driven reruns omit the one-shot field. processedSelectionStateRef
+    // must reset here or the next identical empty JSON is dropped.
+    rerender(undefined)
+
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+
+    rerender(EMPTY_SELECTION_STATE)
+
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
+  })
+
+  it("applies a later identical non-empty selectionState after a user reselects", () => {
+    const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
+
+    selectRow(3)
+    expect(selectedRows()).toEqual([3])
+    rerender(undefined)
+    rerender(ROW_SELECTION_STATE)
+
+    expect(selectedRows()).toEqual([1])
+  })
+
+  it("does not re-apply the same selectionState after a user selection", () => {
+    const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
+
+    selectRow(3)
+    rerender(ROW_SELECTION_STATE)
+
+    expect(selectedRows()).toEqual([3])
   })
 
   it("adds a row from the toolbar in dynamic editing mode", async () => {

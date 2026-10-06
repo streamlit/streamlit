@@ -452,6 +452,34 @@ describe("format", () => {
     ).toEqual("5")
   })
 
+  it("period column with missing freq in extension metadata returns raw duration", () => {
+    const meta = new Map<string, string>([
+      ["ARROW:extension:name", "pandas.period"],
+      ["ARROW:extension:metadata", JSON.stringify({})],
+    ])
+    expect(
+      format(BigInt(5), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("p", new Int64(), true, meta),
+        pandasType: PERIOD_DAY_PANDAS_TYPE,
+      })
+    ).toEqual("5")
+  })
+
+  it("period column with non-string freq returns raw duration", () => {
+    const meta = new Map<string, string>([
+      ["ARROW:extension:name", "pandas.period"],
+      ["ARROW:extension:metadata", JSON.stringify({ freq: 1 })],
+    ])
+    expect(
+      format(BigInt(5), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("p", new Int64(), true, meta),
+        pandasType: PERIOD_DAY_PANDAS_TYPE,
+      })
+    ).toEqual("5")
+  })
+
   it("non-finite float falls through to string coercion", () => {
     const floatType = {
       type: DataFrameCellType.DATA,

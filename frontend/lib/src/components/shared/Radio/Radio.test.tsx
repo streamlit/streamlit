@@ -21,7 +21,7 @@ import { render } from "~lib/test_util"
 import { lightTheme } from "~lib/theme/themeConfigs"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import Radio, { Props } from "./Radio"
+import Radio, { type Props } from "./Radio"
 
 const { bodyText, fadedText40 } = lightTheme.emotion.colors
 

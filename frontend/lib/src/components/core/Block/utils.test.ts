@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
+import {
+  Block as BlockProto,
+  type Element,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { BlockNode, ElementNode } from "~lib/AppNode"
 import { ElementsSetVisitor } from "~lib/render-tree/visitors/ElementsSetVisitor"

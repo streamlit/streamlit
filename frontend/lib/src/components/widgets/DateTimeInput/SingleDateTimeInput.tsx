@@ -436,7 +436,8 @@ function SingleDateTimeInput({
     }
   }, [isOpen, theme.spacing.twoXS, isInSidebar])
 
-  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
+  const { floatingStyles, setFloating, setReference } =
+    useFloatingOverlay(overlayOptions)
 
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
@@ -465,8 +466,8 @@ function SingleDateTimeInput({
         setIsCalendarActive(false)
         commitOrRevert()
       },
-      floatingSetFn: refs.setFloating,
-      referenceSetFn: refs.setReference,
+      floatingSetFn: setFloating,
+      referenceSetFn: setReference,
       restoreFocusFn: restoreFocusToField,
       // Exclude the month/year picker so clicks and Escape inside it do not
       // dismiss the calendar.

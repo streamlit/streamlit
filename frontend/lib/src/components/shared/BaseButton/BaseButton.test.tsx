@@ -22,7 +22,7 @@ import { lightTheme } from "~lib/theme/themeConfigs"
 
 import BaseButton, {
   BaseButtonKind,
-  BaseButtonProps,
+  type BaseButtonProps,
   BaseButtonSize,
 } from "./BaseButton"
 
@@ -112,5 +112,12 @@ describe("Button element", () => {
 
     const buttonWidget = screen.getByRole("button")
     expect(buttonWidget).toHaveStyle("width: 100%")
+  })
+
+  it("omits an empty aria-label so visible text remains the accessible name", () => {
+    render(<BaseButton {...getProps({ "aria-label": "" })}>Hello</BaseButton>)
+
+    const buttonWidget = screen.getByRole("button", { name: "Hello" })
+    expect(buttonWidget).not.toHaveAttribute("aria-label")
   })
 })

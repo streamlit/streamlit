@@ -33,7 +33,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-NUM_COLOR_PICKERS = 15
+NUM_COLOR_PICKERS = 16
 
 
 def test_color_picker_widget_display_themed(
@@ -396,3 +396,55 @@ def test_dynamic_color_picker_props(app: Page, assert_snapshot: ImageCompareFunc
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Updated color picker value:", "#ffffff")
+
+
+def test_color_picker_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on popover close (not while typing), and sends the buffered value on the
+    next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore color value:", "#ff0000")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_color="))
+
+    ignore_picker = get_color_picker(app, "Ignore change color picker")
+    ignore_picker.get_by_test_id("stColorPickerBlock").click()
+    text_input = app.get_by_test_id("stColorPickerPopover").locator("input")
+    text_input.fill("#00ff00")
+
+    # Give a stray rerun a chance to land before asserting it did not happen.
+    wait_for_app_run(app)
+
+    # Typing without committing must not update the URL or Python.
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_color="))
+    expect_prefixed_markdown(app, "Ignore color value:", "#ff0000")
+
+    # Escape closes the popover and commits without a rerun, and updates the URL.
+    text_input.press("Escape")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(ignore_picker.get_by_test_id("stColorPickerBlock")).to_have_css(
+        "background-color", "rgb(0, 255, 0)"
+    )
+    expect_prefixed_markdown(app, "Ignore color value:", "#ff0000")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_color=%2300ff00"))
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore color", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore color value: #00ff00", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore color value: #00ff00", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect_prefixed_markdown(app, "Ignore color value:", "#00ff00")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_color=%2300ff00"))

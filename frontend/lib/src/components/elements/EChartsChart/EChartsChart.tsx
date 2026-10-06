@@ -513,6 +513,8 @@ export function EChartsChart({
     element.theme,
   ])
 
+  const labelContext = element.alt?.trim() || undefined
+
   return (
     <StyledEChartsChartRoot isStretchHeight={isStretchHeight}>
       <StyledEChartsChartFill isStretchHeight={isStretchHeight}>
@@ -527,12 +529,14 @@ export function EChartsChart({
             onExpand={expand}
             onCollapse={collapse}
             disableFullscreenMode={disableFullscreenMode}
+            labelContext={labelContext}
           >
             {chartInstance !== null && (
               <ToolbarAction
                 label={`Download as ${downloadType.toUpperCase()}`}
                 icon={FileDownload}
                 onClick={handleDownloadChart}
+                labelContext={labelContext}
               />
             )}
           </Toolbar>

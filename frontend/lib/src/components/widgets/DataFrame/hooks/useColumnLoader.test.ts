@@ -25,9 +25,9 @@ import {
 } from "@streamlit/protobuf"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   CheckboxColumn,
-  ColumnCreator,
+  type ColumnCreator,
   ListColumn,
   NumberColumn,
   ObjectColumn,
@@ -42,7 +42,7 @@ import useColumnLoader, {
   applyColumnConfig,
   COLUMN_POSITION_PREFIX,
   COLUMN_WIDTH_MAPPING,
-  ColumnConfigProps,
+  type ColumnConfigProps,
   getColumnConfig,
   getColumnType,
   INDEX_IDENTIFIER,

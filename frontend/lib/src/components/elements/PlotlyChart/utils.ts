@@ -200,14 +200,17 @@ export function applyTheming(
 ): PlotlyFigureType {
   const spec = JSON.parse(
     replaceTemporaryColors(JSON.stringify(plotlyFigure), theme, chartTheme)
-  )
+  ) as Record<string, unknown>
   if (chartTheme === "streamlit") {
     applyStreamlitTheme(spec, theme)
   } else {
     // Apply minor theming improvements to work better with Streamlit
-    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
+    spec.layout = layoutWithThemeDefaults(
+      (spec.layout ?? {}) as Record<string, unknown>,
+      theme
+    )
   }
-  return spec
+  return spec as unknown as PlotlyFigureType
 }
 
 /**

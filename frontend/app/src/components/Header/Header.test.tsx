@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 
 import { render } from "@streamlit/lib/testing"
 
-import Header, { HeaderProps } from "./Header"
+import Header, { type HeaderProps } from "./Header"
 
 const getProps = (propOverrides: Partial<HeaderProps> = {}): HeaderProps => ({
   hasSidebar: false,
@@ -136,6 +136,9 @@ describe("Header", () => {
         <Header {...getProps({ hasSidebar: true, isSidebarOpen: false })} />
       )
       expect(screen.queryByTestId("stExpandSidebarButton")).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: "Expand sidebar" })
+      ).toBeVisible()
     })
 
     it.each([

@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import type { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   BaseButton,
   BaseButtonKind,
-  IGuestToHostMessage,
-  IToolbarItem,
+  type IGuestToHostMessage,
+  type IToolbarItem,
 } from "@streamlit/lib"
 
 import {
@@ -30,29 +30,66 @@ import {
   StyledToolbarActions,
 } from "./styled-components"
 
+const DEFAULT_TOOLBAR_ACTION_NAME = "Toolbar action"
+
+function trimHostString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+/**
+ * Accessible name for a host toolbar action.
+ *
+ * Host messages are untrusted: `label` / `key` may be missing or non-strings.
+ * Prefer a visible label, then a string key (so multiple icon-only actions stay
+ * distinct), then a stable generic name. Icons are CSS background URLs and
+ * cannot contribute a Material/emoji name.
+ */
+export function getToolbarActionAccessibleName(
+  label?: string | null,
+  key?: string | null
+): string {
+  return (
+    trimHostString(label) || trimHostString(key) || DEFAULT_TOOLBAR_ACTION_NAME
+  )
+}
+
 export interface ActionButtonProps {
   label?: string
   icon?: string
+  /** Host item key. Used when there is no visible label; may still fall back to "Toolbar action". */
+  itemKey?: string
   onClick: () => void
 }
 
 export function ActionButton({
   label,
   icon,
+  itemKey,
   onClick,
 }: ActionButtonProps): ReactElement {
+  const visibleLabel = trimHostString(label) || undefined
+  const accessibleName = getToolbarActionAccessibleName(label, itemKey)
+
   return (
     <div className="stToolbarActionButton" data-testid="stToolbarActionButton">
-      <BaseButton onClick={onClick} kind={BaseButtonKind.HEADER_BUTTON}>
+      <BaseButton
+        onClick={onClick}
+        kind={BaseButtonKind.HEADER_BUTTON}
+        // aria-label overrides contents; only set it when there is no visible label.
+        aria-label={visibleLabel ? undefined : accessibleName}
+      >
         <StyledActionButtonContainer>
           {icon && (
             <StyledActionButtonIcon
               data-testid="stToolbarActionButtonIcon"
               icon={icon}
+              aria-hidden="true"
             />
           )}
-          {label && (
-            <span data-testid="stToolbarActionButtonLabel">{label}</span>
+          {visibleLabel && (
+            <span data-testid="stToolbarActionButtonLabel">
+              {visibleLabel}
+            </span>
           )}
         </StyledActionButtonContainer>
       </BaseButton>
@@ -81,6 +118,7 @@ function ToolbarActions({
           key={key}
           label={label}
           icon={icon}
+          itemKey={key}
           onClick={() => {
             metricsMgr.enqueue("menuClick", {
               label: key,

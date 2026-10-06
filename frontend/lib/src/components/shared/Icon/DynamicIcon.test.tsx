@@ -20,9 +20,10 @@ import { render } from "~lib/test_util"
 
 import {
   DynamicIcon,
-  DynamicIconProps,
+  type DynamicIconProps,
   extractLeadingMaterialIcon,
   getFilledStarIconSrc,
+  getIconAccessibleName,
   isMaterialIcon,
   isMenuStyleIconLabel,
 } from "./DynamicIcon"
@@ -52,6 +53,8 @@ describe("Dynamic icon", () => {
     expect(testId.textContent).toEqual(icon.textContent)
     // Should have translate="no" to prevent the icon text from being translated:
     expect(testId).toHaveAttribute("translate", "no")
+    // Decorative by default; controls must supply their own accessible name.
+    expect(testId).toHaveAttribute("aria-hidden", "true")
   })
 
   it("renders without crashing with Emoji icon", () => {
@@ -84,6 +87,7 @@ describe("Dynamic icon", () => {
 
     expect(testId).toBeInTheDocument()
     expect(srcAttr).toEqual(getFilledStarIconSrc())
+    expect(testId).toHaveAttribute("alt", "")
   })
 
   it("uses 1em when size is inherit", () => {
@@ -113,6 +117,18 @@ describe("Dynamic icon", () => {
       width: "1em",
       height: "1em",
     })
+  })
+})
+
+describe("getIconAccessibleName", () => {
+  it.each([
+    [":material/thumb_up:", "thumb_up icon"],
+    [":material/add_circle:", "add_circle icon"],
+    ["spinner", "Loading"],
+    ["😀", "😀"],
+    ["emoji:⛰️", "⛰️"],
+  ])("getIconAccessibleName(%s) returns %s", (input, expected) => {
+    expect(getIconAccessibleName(input)).toBe(expected)
   })
 })
 

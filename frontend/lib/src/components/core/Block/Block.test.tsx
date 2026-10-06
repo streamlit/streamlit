@@ -14,19 +14,25 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import { screen, within } from "@testing-library/react"
+import type * as ReactAriaComponents from "react-aria-components"
 
 import {
   Block as BlockProto,
   Button as ButtonProto,
-  Element,
+  type Element,
   ForwardMsgMetadata,
   streamlit,
 } from "@streamlit/protobuf"
 
-import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import {
+  type AppNode,
+  BlockNode,
+  ElementNode,
+  TransientNode,
+} from "~lib/AppNode"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { text, textInput } from "~lib/render-tree/test-utils"
@@ -40,7 +46,7 @@ import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
 // async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
 // Mocking it here prevents the animation machinery from running in unit tests.
 vi.mock("react-aria-components", async importOriginal => {
-  const actual = await importOriginal<typeof import("react-aria-components")>()
+  const actual = await importOriginal<typeof ReactAriaComponents>()
   return { ...actual, SelectionIndicator: () => null }
 })
 

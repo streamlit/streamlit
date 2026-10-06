@@ -21,7 +21,7 @@ import { Field, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
-import { MarkdownCell } from "./cells/MarkdownCell"
+import type { MarkdownCell } from "./cells/MarkdownCell"
 import MarkdownColumn from "./MarkdownColumn"
 import { type ErrorCell, isErrorCell, isMissingValueCell } from "./utils"
 

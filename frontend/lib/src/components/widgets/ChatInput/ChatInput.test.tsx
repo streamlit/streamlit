@@ -38,7 +38,7 @@ import {
 } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import ChatInput, { Props } from "./ChatInput"
+import ChatInput, { type Props } from "./ChatInput"
 
 const useWaveformControllerMock = vi.fn()
 

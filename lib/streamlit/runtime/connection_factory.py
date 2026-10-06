@@ -34,9 +34,18 @@ if TYPE_CHECKING:
 
 # NOTE: Adding support for a new first party connection requires:
 #   1. Adding the new connection name and class to this dict.
-#   2. Writing two new @overloads for connection_factory (one for the case where the
-#      only the connection name is specified and another when both name and type are).
+#   2. Writing two new @overloads for connection_factory: one for a
+#      first-party name alone, and one for an explicit `type`.
+#      - The name-only overload must declare `type: Literal["..."] | None = None`.
+#        Otherwise the type checker binds a second positional argument to
+#        `max_entries` (runtime binds it to `type`) and absorbs a conflicting
+#        `type=` into `**kwargs`.
+#      - Declare connection-specific parameters (such as `autocommit`) as
+#        keyword-only (`*`). The implementation accepts only `name`, `type`,
+#        `max_entries`, and `ttl` by position; other parameters come through
+#        `**kwargs`.
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
+#   4. Adding assert_type cases in lib/tests/streamlit/typing/connection_types.py.
 _FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
     "snowflake": SnowflakeConnection,
     "snowflake-callers-rights": SnowflakeCallersRightsConnection,
@@ -144,8 +153,10 @@ def _get_first_party_connection(connection_class: str) -> type[BaseConnection[An
 @overload
 def connection_factory(
     name: Literal["sql"],
+    type: Literal["sql"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SQLConnection:
@@ -158,6 +169,7 @@ def connection_factory(
     type: Literal["sql"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SQLConnection:
@@ -167,8 +179,10 @@ def connection_factory(
 @overload
 def connection_factory(
     name: Literal["snowflake"],
+    type: Literal["snowflake"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeConnection:
@@ -181,6 +195,7 @@ def connection_factory(
     type: Literal["snowflake"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeConnection:
@@ -190,8 +205,10 @@ def connection_factory(
 @overload
 def connection_factory(
     name: Literal["snowflake-callers-rights"],
+    type: Literal["snowflake-callers-rights"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeCallersRightsConnection:
@@ -204,6 +221,7 @@ def connection_factory(
     type: Literal["snowflake-callers-rights"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeCallersRightsConnection:
