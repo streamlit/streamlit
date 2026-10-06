@@ -353,7 +353,7 @@ def test_progress_html_and_help() -> None:
     assert isinstance(at.help[0], Help)
     assert list(at.get("help")) == list(at.help)
     assert list(at.get("help_info")) == list(at.help)
-    assert {node.type for node in at.help} == {"help"}
+    assert {node.type for node in at.help} == {"help_info"}
 
     hello, add, dog, builtin_len, module, regex_mod, item, cached, quoted = at.help
     assert hello.value == "'Hello'"
@@ -367,7 +367,7 @@ def test_progress_html_and_help() -> None:
     assert dog.value == "Dog"
     assert dog.doc_string == "A typical dog."
     assert builtin_len.value == "len"
-    assert len(builtin_len.proto.value) > len(builtin_len.value)
+    assert builtin_len.proto.value == "builtins.len(obj, /)"
     assert module.name == "st"
     assert module.value == "streamlit"
     assert module.doc_string.startswith("Streamlit.")
@@ -378,12 +378,10 @@ def test_progress_html_and_help() -> None:
     assert len(regex_mod.doc_string) > len(regex_mod.value)
     assert item.name == "item"
     assert item.value == "item"
-    assert "(" in item.proto.value
-    assert len(item.proto.value) > len(item.value)
+    assert item.proto.value.endswith("Box(a, b, c, d, e, f, g, h, i, j)")
     assert cached.name == "cached_add"
     assert cached.value == "cached_add"
-    assert "(" in cached.proto.value
-    assert len(cached.proto.value) > len(cached.value)
+    assert cached.proto.value.endswith("cached_add(a, b, c, d, e, f, g, h)")
     assert quoted.value == "'foo(bar)'"
 
     for node in (at.progress[0], at.html[0], at.help[0]):
@@ -503,9 +501,11 @@ def test_help_value_keeps_readable_reprs() -> None:
     assert point.name == "point"
     assert point.value == "Point(1, 2)"
     assert coord.value == "Coordinate(x, y)"
+    # Positional module-qualified signatures use the captured name (`item`).
+    # An instance whose stored text is only unannotated defaults keeps it.
     assert retry.name == "retry"
-    assert retry.value != "retry"
-    assert "(timeout=5, retries=3)" in retry.value
+    assert retry.value == retry.proto.value
+    assert retry.proto.value.endswith("RetryBox(timeout=5, retries=3)")
     assert named.name == "named"
     assert named.value == "script.<locals>.NamedPoint(x=1, y=2)"
     assert moment.value == "datetime.datetime(2020, 1, 2, 3, 4)"
@@ -3085,7 +3085,7 @@ def test_get_accepts_public_attribute_names() -> None:
     assert list(at.get("help")) == list(at.help)
     assert list(at.get("help_info")) == list(at.help)
     assert len(at.get("help")) == 1
-    assert at.get("help")[0].type == "help"
+    assert at.get("help")[0].type == "help_info"
 
     assert list(at.get("container")) == list(at.container)
     assert {node.key for node in at.get("container")} == {"filters", "toolbar"}

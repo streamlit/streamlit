@@ -1552,9 +1552,8 @@ class AppTest:
         element_type: str
             An ``AppTest`` collection name such as ``"button"``,
             ``"datetime_input"``, ``"pills"``, ``"form"``, or ``"tabs"``.
-            Internal node type names such as ``"date_time_input"`` also work.
-            ``"help"`` selects ``st.help`` elements. ``"help_info"`` is the
-            proto name and still matches.
+            Internal node type names such as ``"date_time_input"`` and
+            ``"help_info"`` also work.
             ``"form_submit_button"`` selects submit buttons inside forms.
 
         Returns

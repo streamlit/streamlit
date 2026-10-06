@@ -209,7 +209,7 @@ def test_status_filter():
 
 - `at.progress[i].value` is the amount from 0 to 100 (`st.progress(0.25)` is `25`). `text` is the optional message.
 - `at.html[i].value` is the HTML body.
-- `at.help[i].value` is a short summary. Readable values stay (`"'Hello'"`, `Point(1, 2)`, `NamedPoint(x=1, y=2)`). An empty value, or a positional or annotated signature, uses the expression passed to `st.help` (`add`). A `name=value` list uses that expression only for functions, classes, and modules. Use `.doc_string` for the docstring.
+- `at.help[i].value` is a short summary. Readable values stay (`"'Hello'"`, `Point(1, 2)`). A long signature uses the expression passed to `st.help` when one was captured. The raw text is `.proto.value`, and the docstring is `.doc_string`. The node type stays `help_info`; `at.help` and `get("help")` are the public names.
 
 Elements that AppTest does not fully model (`st.balloons`, `st.page_link`, and similar) do not break `.run()`. Inspect those nodes with `at.get("<type>")`; `.value` returns the element's main proto field where one exists or `None` otherwise. Calling `.set_value()` or `.click()` on those nodes raises `AppTestError` — those names can exist as proto fields, but they are not interaction methods. For a keyed widget AppTest doesn't model, assign through `at.session_state` or use Playwright.
 

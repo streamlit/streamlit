@@ -109,8 +109,8 @@ T = TypeVar("T")
 # Public ``get()`` names that are not the node ``type`` string.
 _GET_TYPE_ALIASES: dict[str, str] = {
     "datetime_input": "date_time_input",
-    # Proto field name. The public node type is ``help``.
-    "help_info": "help",
+    # Public collection name. The node type stays the proto field name.
+    "help": "help_info",
 }
 
 
@@ -1097,7 +1097,7 @@ class Help(Element):
     def __init__(self, proto: HelpProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.key = None
-        self.type = "help"
+        self.type = "help_info"
         self.name = proto.name
 
     @property
@@ -1109,12 +1109,13 @@ class Help(Element):
     def value(self) -> str:
         """Short summary of the object passed to ``st.help``.
 
-        Readable values stay (for example ``"'Hello'"``, ``"Point(1, 2)"``,
-        and ``"NamedPoint(x=1, y=2)"``). An empty value, or a positional or
-        annotated signature, uses the expression passed to ``st.help``
-        (``.name``) when one was captured. A ``name=value`` list uses that
-        expression only for functions, classes, and modules. The docstring is
-        ``doc_string``.
+        Readable values stay, including ``"'Hello'"``, ``"Point(1, 2)"``, and
+        ``"NamedPoint(x=1, y=2)"``. Empty stored text uses ``.name``. A
+        positional or annotated signature uses ``.name`` when the stored text
+        is module-qualified or the object is a callable or class. A
+        ``name=value`` list uses ``.name`` only for those callable and class
+        types. ``.doc_string`` is the docstring. The raw stored text is
+        ``proto.value``.
         """
         raw = self.proto.value
         if self.name and (not raw or _is_help_signature(raw, self.proto.type)):

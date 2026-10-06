@@ -123,7 +123,6 @@ _TREE_TYPE_TO_PROTO: dict[str, str] = {
     "select_slider": "slider",
     "expander": "expandable",
     "status": "expandable",
-    "help": "help_info",
 }
 
 _MOCK_GROUPS: dict[str, list[tuple[str, Callable[[], object]]]] = {
