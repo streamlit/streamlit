@@ -63,11 +63,12 @@ function measureEllipsis(el: Element): OverflowMeasure {
  * and `st.text` ellipsize the host itself.
  */
 function labelOverflowState(root: HTMLElement): OverflowMeasure {
-  let sawBox = false
-  for (const el of [
-    root,
-    ...root.querySelectorAll(ELLIPSIS_TARGET_SELECTOR),
-  ]) {
+  const rootState = measureEllipsis(root)
+  if (rootState === "overflow") {
+    return "overflow"
+  }
+  let sawBox = rootState === "fits"
+  for (const el of root.querySelectorAll(ELLIPSIS_TARGET_SELECTOR)) {
     const state = measureEllipsis(el)
     if (state === "overflow") {
       return "overflow"
