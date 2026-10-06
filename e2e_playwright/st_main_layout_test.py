@@ -99,7 +99,10 @@ def setup_viewport_and_verify_title(
 
 
 def verify_sidebar_state(app: Page, expected_expanded: bool) -> None:
-    """Verify sidebar exists and has expected expanded state."""
+    """Verify the sidebar is attached and matches ``expected_expanded``.
+
+    ``data-collapsed`` is the inverse (``"false"`` when the sidebar is expanded).
+    """
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_attached()
     expect(sidebar).to_have_attribute(

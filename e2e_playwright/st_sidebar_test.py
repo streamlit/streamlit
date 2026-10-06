@@ -363,8 +363,9 @@ def test_sidebar_toggle_state_localstorage_persistence(app: Page):
     expect(sidebar_header).to_be_visible()
     sidebar_header.hover()
 
-    # data-testid is on the wrapper; aria attrs live on the inner button.
-    collapse_button = app.get_by_test_id("stSidebarCollapseButton").locator("button")
+    collapse_button = app.get_by_test_id("stSidebarCollapseButton").get_by_role(
+        "button", name="Collapse sidebar"
+    )
     expect(collapse_button).to_be_visible()
     expect(collapse_button).to_have_attribute("aria-expanded", "true")
     expect(collapse_button).to_have_attribute("aria-controls", "stSidebar")
