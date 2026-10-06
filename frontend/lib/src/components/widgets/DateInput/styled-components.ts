@@ -81,6 +81,14 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   cursor: "text",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.inputWidget,
+  // react-aria's HiddenDateInput is visually hidden, but Chromium/Firefox can
+  // still paint ::-webkit-calendar-picker-indicator inside the field.
+  "& input[type='date'], & input[type='datetime-local']": {
+    appearance: "none",
+    "&::-webkit-calendar-picker-indicator": {
+      display: "none",
+    },
+  },
   "&:focus-within": {
     borderColor: getBorderColor(theme.colors, true),
     outline: "none",

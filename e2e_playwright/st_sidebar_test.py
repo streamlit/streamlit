@@ -365,6 +365,8 @@ def test_sidebar_toggle_state_localstorage_persistence(app: Page):
 
     collapse_button = app.get_by_test_id("stSidebarCollapseButton")
     expect(collapse_button).to_be_visible()
+    expect(collapse_button).to_have_attribute("aria-expanded", "true")
+    expect(collapse_button).to_have_attribute("aria-controls", "stSidebar")
     collapse_button.click()
 
     wait_until(app, create_sidebar_collapsed_checker(sidebar))
@@ -386,6 +388,8 @@ def test_sidebar_toggle_state_localstorage_persistence(app: Page):
 
     expand_button = app.get_by_test_id("stExpandSidebarButton")
     expect(expand_button).to_be_visible()
+    expect(expand_button).to_have_attribute("aria-expanded", "false")
+    expect(expand_button).to_have_attribute("aria-controls", "stSidebar")
     expand_button.click()
 
     wait_until(app, create_sidebar_expanded_checker(sidebar))
