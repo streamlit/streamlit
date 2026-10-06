@@ -11,7 +11,7 @@ This wiki contains documentation for the Streamlit development process.
 - [Pull Requests](pull-requests.md): Branch naming, labeling, writing principles, and PR description guidelines.
 - [Core Release and Patch Process](release-process.md): Cutoff, branching, cherry-picking, publishing, and verification for regular and patch releases.
 - [WCAG command inventory](accessibility-wcag.md): Per-`st.*` command buckets for WCAG 2.2 A/AA (audited media, chart, map, data, embed, and image commands).
-- [WCAG theme & shell chrome inventory](accessibility-theme.md): Default theme tokens and library shell chrome vs 1.4.3, 1.4.11, and 2.5.8.
+- [WCAG theme & shell chrome inventory](accessibility-theme.md): Default theme tokens and library shell chrome scored against WCAG 1.4.3, 1.4.11, and 2.5.8.
 
 ## Development Guides
 
