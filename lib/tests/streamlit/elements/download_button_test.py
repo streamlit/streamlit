@@ -378,6 +378,49 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         assert mgr.execute_deferred(new_id).startswith("/media/")
         assert invoked == 4
 
+    def test_disabling_download_button_at_new_path_revokes_old_file_id(self) -> None:
+        """A later disabled st.download_button revokes the earlier file id.
+
+        The second call is at a new delta path, so coordinate matching cannot
+        see the earlier id. This fails if _download_button stops passing
+        element_id through to marshall_file.
+        """
+        invoked = 0
+
+        def generate_data() -> str:
+            nonlocal invoked
+            invoked += 1
+            return "secret"
+
+        st.download_button("Download", data=generate_data, key="dl")
+        first_msg = self.get_message_from_queue()
+        first = first_msg.delta.new_element.download_button
+        file_id = first.deferred_file_id
+        mgr = get_instance().media_file_mgr
+        assert file_id in mgr._deferred_callables
+
+        # Full rerun unmaps coordinates but keeps the callable. Reset widget
+        # ids so the same key can render again, and leave the cursor advanced
+        # so this button lands on a new path.
+        mgr.clear_session_refs()
+        self.script_run_ctx.shared.reset()
+
+        st.download_button("Download", data=generate_data, key="dl", disabled=True)
+        second_msg = self.get_message_from_queue()
+        second = second_msg.delta.new_element.download_button
+
+        assert list(first_msg.metadata.delta_path) != list(
+            second_msg.metadata.delta_path
+        )
+        assert second.id == first.id
+        assert second.disabled
+        assert not second.HasField("deferred_file_id")
+        assert second.url == ""
+        assert file_id not in mgr._deferred_callables
+        with pytest.raises(MediaFileStorageError, match="not found"):
+            mgr.execute_deferred(file_id)
+        assert invoked == 0
+
     def test_disabling_with_noncallable_data_drops_previous_callable(self) -> None:
         """Switching a button to disabled static data revokes the old generator."""
         invoked = False
@@ -402,8 +445,13 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
             mgr.execute_deferred(file_id)
         assert not invoked
 
-    def test_disabling_keyed_callable_at_new_path_revokes_old_file_id(self) -> None:
-        """A keyed button disabled at a new delta path revokes the previous file id."""
+    def test_disabling_callable_at_new_delta_path_revokes_old_file_id(self) -> None:
+        """A stable element id disabled at a new delta path revokes the old file id.
+
+        The fixed id stands in for any element id that stays the same across the
+        move, including an unkeyed button whose label and other identity inputs
+        are unchanged. A user key is what keeps the id stable when those change.
+        """
 
         def generate_data() -> str:
             return "secret"

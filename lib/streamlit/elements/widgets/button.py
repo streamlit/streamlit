@@ -1859,9 +1859,9 @@ def marshall_file(
     disabled: bool = False,
     element_id: str = "",
 ) -> None:
-    # Revoke any callable an earlier enabled run registered for this button.
-    # A client can request a file id even when the frontend shows the button
-    # as disabled. This also applies when this run passes static data.
+    # A disabled button must not leave an executable generator behind: clients
+    # can send deferred-file requests directly, regardless of the UI state.
+    # Revoke ids from earlier enabled runs, even if this run passes static data.
     if disabled and runtime.exists():
         runtime.get_instance().media_file_mgr.remove_deferred(
             coordinates, element_id=element_id

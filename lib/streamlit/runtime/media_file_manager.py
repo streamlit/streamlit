@@ -115,8 +115,8 @@ class MediaFileManager:
         # Used for deferred download button execution
         self._deferred_callables: dict[str, DeferredCallableEntry] = {}
 
-        # Deferred file ids for each session. Revocation walks one session
-        # instead of every session's callables.
+        # Dict[session ID] -> set of deferred file_ids. remove_deferred() scans
+        # only the active session's callables.
         self._deferred_ids_by_session: dict[str, set[str]] = collections.defaultdict(
             set
         )
@@ -358,10 +358,17 @@ class MediaFileManager:
     def remove_deferred(self, coordinates: str, *, element_id: str = "") -> None:
         """Revoke this session's deferred callables for one download button.
 
-        Matches ``coordinates`` and, when ``element_id`` is non-empty, that
-        element id. The id match covers a keyed button whose delta path changed.
-        Also deletes entries that ``clear_session_refs`` already unmapped.
-        Does nothing when no entry matches.
+        Drops entries at ``coordinates`` and, when ``element_id`` is set, every
+        entry with that id. The id stays stable across a move. A user ``key``
+        also keeps it stable when the label changes. Also drops entries that
+        ``clear_session_refs`` already unmapped. Does nothing when nothing matches.
+
+        Parameters
+        ----------
+        coordinates : str
+            Delta path of the button on this run.
+        element_id : str
+            Stable widget id. Empty when the caller has no element id.
 
         Safe to call from any thread.
         """
@@ -372,10 +379,10 @@ class MediaFileManager:
             if not candidate_ids:
                 return
 
-            # Matching coordinates also revokes a different button that occupied
-            # this path on the previous run. That button re-registers if it
-            # renders later in this run. Element id is what stays stable when
-            # the path moves.
+            # Also drop a different button's callable from the previous run when
+            # this button now uses that path. If that button renders later in
+            # this run, it registers a new file id. A click that still holds the
+            # old id fails until the browser receives the new delta.
             removed: list[tuple[str, str]] = []
             for file_id in list(candidate_ids):
                 entry = self._deferred_callables.get(file_id)
@@ -405,11 +412,11 @@ class MediaFileManager:
         entry = self._deferred_callables.pop(file_id, None)
         if entry is None:
             return
-        session_ids = self._deferred_ids_by_session.get(entry["session_id"])
-        if session_ids is None:
+        deferred_ids = self._deferred_ids_by_session.get(entry["session_id"])
+        if deferred_ids is None:
             return
-        session_ids.discard(file_id)
-        if not session_ids:
+        deferred_ids.discard(file_id)
+        if not deferred_ids:
             del self._deferred_ids_by_session[entry["session_id"]]
 
     def execute_deferred(self, file_id: str) -> str:

@@ -82,8 +82,8 @@ function DownloadButton(props: Props): ReactElement {
 
   useEffect(() => {
     const isDeferred = Boolean(deferredFileId?.length)
-    // Skip the source check when there is no URL. fetch("") re-requests the
-    // current page, including for a disabled callable or in raw mode.
+    // Skip the source check when there is no URL (e.g. a disabled callable
+    // download): checking an empty URL would re-fetch the current page.
     if (!isDeferred && url) {
       // Since we use a hidden link to download, we can't use the onerror event
       // to catch src url load errors. Catch with direct check instead.
