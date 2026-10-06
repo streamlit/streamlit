@@ -56,9 +56,10 @@ df = conn.query("SELECT * FROM reference_data", ttl=3600)
 
 `st.connection` itself also takes `ttl`, which caches the connection object.
 That argument stays `None` (no expiry) unless the call passes `ttl` or the
-server sets `server.connectionDefaultTTL`. This server default applies to every
-connection. Use `.streamlit/config.toml` or
-`STREAMLIT_SERVER_CONNECTION_DEFAULT_TTL`.
+server sets `runner.connectionDefaultTTL`. This server default applies to
+every connection. Use `.streamlit/config.toml` or
+`STREAMLIT_RUNNER_CONNECTION_DEFAULT_TTL`. Pass `ttl=float("inf")` to opt a
+single connection out of the default.
 
 ## Configure with st.secrets
 

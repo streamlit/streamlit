@@ -854,6 +854,25 @@ _create_option(
 )
 
 _create_option(
+    "runner.connectionDefaultTTL",
+    description="""
+        Default time to live, in seconds, for ``st.connection`` when ``ttl``
+        is omitted or ``None``.
+
+        ``None`` (default) keeps the connection cached until it is cleared.
+        An explicit non-``None`` ``ttl`` argument overrides this value. Pass
+        ``float("inf")`` as an explicit ``ttl`` to keep one connection cached
+        indefinitely even when this default is set.
+
+        Set this in ``.streamlit/config.toml`` under ``[runner]`` as
+        ``connectionDefaultTTL``, or with the environment variable
+        ``STREAMLIT_RUNNER_CONNECTION_DEFAULT_TTL``.
+    """,
+    default_val=None,
+    type_=float,
+)
+
+_create_option(
     "runner.cacheHashSeed",
     description="""
         Escape hatch for an app whose @st.cache_data / @st.cache_resource cache
@@ -1239,23 +1258,6 @@ _create_option(
     """,
     default_val=False,
     type_=bool,
-)
-
-_create_option(
-    "server.connectionDefaultTTL",
-    description="""
-        Default ``ttl``, in seconds, for ``st.connection`` when ``ttl`` is not
-        passed.
-
-        ``None`` (default) keeps the connection cached until it is cleared.
-        An explicit ``ttl`` argument overrides this value.
-
-        Set this in ``.streamlit/config.toml`` under ``[server]`` as
-        ``connectionDefaultTTL``, or with the environment variable
-        ``STREAMLIT_SERVER_CONNECTION_DEFAULT_TTL``.
-    """,
-    default_val=None,
-    type_=float,
 )
 
 _create_option(
@@ -2805,13 +2807,11 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
 # These options must be readable from the environment when the process is not
 # started with ``streamlit run``. Click maps them for the CLI; ``st.App`` and
 # ASGI servers do not.
-_CONNECTION_DEFAULT_TTL_ENV_OPTIONS: Final = ("server.connectionDefaultTTL",)
+_CONNECTION_DEFAULT_TTL_ENV_OPTIONS: Final = ("runner.connectionDefaultTTL",)
 
 
-def _parse_connection_default_ttl_env(option: ConfigOption, raw: str) -> Any:
-    """Parse one connection-default environment variable."""
-    if option.type is str:
-        return raw.strip()
+def _parse_connection_default_ttl_env(raw: str) -> Any:
+    """Parse the connection-default-TTL environment variable value."""
     try:
         return float(raw)
     except ValueError:
@@ -2837,7 +2837,7 @@ def _update_connection_default_ttl_from_env(
             continue
         _set_option(
             option.key,
-            _parse_connection_default_ttl_env(option, raw),
+            _parse_connection_default_ttl_env(raw),
             _DEFINED_BY_ENV_VAR,
         )
 

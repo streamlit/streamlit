@@ -18,6 +18,7 @@ import os
 import sys
 import threading
 import unittest
+from datetime import timedelta
 from typing import TYPE_CHECKING, Literal
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -409,7 +410,7 @@ type="snowpark"
 @pytest.fixture
 def restore_connection_default_ttl() -> Iterator[None]:
     """Restore the connection default TTL after the test."""
-    key = "server.connectionDefaultTTL"
+    key = "runner.connectionDefaultTTL"
     value = config.get_option(key)
     where_defined = config.get_where_defined(key)
     yield
@@ -418,7 +419,7 @@ def restore_connection_default_ttl() -> Iterator[None]:
 
 def _set_connection_default_ttl(ttl: object) -> None:
     """Set the server default TTL for the current test."""
-    config._set_option("server.connectionDefaultTTL", ttl, "test")
+    config._set_option("runner.connectionDefaultTTL", ttl, "test")
 
 
 @pytest.mark.usefixtures("restore_connection_default_ttl")
@@ -456,16 +457,33 @@ def test_connection_uses_configured_default_ttl(
 
 @pytest.mark.usefixtures("restore_connection_default_ttl")
 @patch("streamlit.runtime.connection_factory._create_connection")
+@pytest.mark.parametrize("explicit_ttl", [0, timedelta(minutes=5), float("inf")])
 def test_explicit_connection_ttl_overrides_server_default(
     patched_create_connection: MagicMock,
+    explicit_ttl: float | timedelta,
 ) -> None:
-    """A caller-supplied ttl, including 0, wins over the server default."""
-    _set_connection_default_ttl(" 12.5 ")
-    connection_factory("snowflake", ttl=0)
+    """A caller-supplied ttl, including 0, a timedelta, and inf, wins over the server default.
+
+    ``ttl=float("inf")`` is the documented way to opt one connection out of
+    the server default and keep it cached indefinitely.
+    """
+    _set_connection_default_ttl(30)
+    connection_factory("snowflake", ttl=explicit_ttl)
 
     patched_create_connection.assert_called_once_with(
-        "snowflake", SnowflakeConnection, max_entries=None, ttl=0
+        "snowflake", SnowflakeConnection, max_entries=None, ttl=explicit_ttl
     )
+
+
+@pytest.mark.usefixtures("restore_connection_default_ttl")
+def test_shares_cache_entry_for_equivalent_numeric_ttl() -> None:
+    """An explicit int ttl and the equal server default float ttl share one connection."""
+    _set_connection_default_ttl(30)
+    with patch.object(MockConnection, "__init__", return_value=None) as patched_init:
+        connection_factory("my_connection", MockConnection, ttl=30)
+        connection_factory("my_connection", MockConnection)
+
+    assert patched_init.call_count == 1
 
 
 @pytest.mark.usefixtures("restore_connection_default_ttl")

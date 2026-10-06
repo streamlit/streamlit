@@ -59,7 +59,7 @@ _MODULES_TO_PYPI_PACKAGES: Final[dict[str, str]] = {
     "snowflake.snowpark": "snowflake-snowpark-python",
 }
 _USE_ENV_PREFIX: Final = "env:"
-_CONNECTION_DEFAULT_TTL_KEY: Final = "server.connectionDefaultTTL"
+_CONNECTION_DEFAULT_TTL_KEY: Final = "runner.connectionDefaultTTL"
 
 # The BaseConnection bound is parameterized to `Any` below as subclasses of
 # BaseConnection are responsible for binding the type parameter of BaseConnection to a
@@ -94,6 +94,12 @@ def _create_connection(
             error_id="connection-not-base-connection-subclass",
         )
 
+    if isinstance(ttl, (int, float)) and not isinstance(ttl, bool):
+        # Normalize to one numeric form so an explicit `ttl=30` and the server
+        # default (always a float) share a single cache entry instead of
+        # splitting into two live connections with identical expiry.
+        ttl = float(ttl)
+
     # We modify our helper function's `__qualname__` here to work around default
     # `@st.cache_resource` behavior. Otherwise, `st.connection` being called with
     # different `ttl` or `max_entries` values will reset the cache with each call.
@@ -127,9 +133,9 @@ def _create_connection(
 
 
 def _invalid_connection_default_ttl(value: Any) -> StreamlitAPIException:
-    """Build the error for a bad ``server.connectionDefaultTTL`` value."""
+    """Build the error for a bad ``runner.connectionDefaultTTL`` value."""
     return StreamlitAPIException(
-        "Invalid `server.connectionDefaultTTL` value. "
+        "Invalid `runner.connectionDefaultTTL` value. "
         "Use a non-negative number of seconds, or leave the option unset "
         "to keep connections cached until they are cleared. "
         f"Received {value!r}.",
@@ -350,9 +356,11 @@ def connection_factory(  # type: ignore
         removed.
     ttl : float, timedelta, or None
         The maximum number of seconds to keep the connection in the cache.
-        If this is ``None`` (default), ``server.connectionDefaultTTL`` is used.
-        That option also defaults to ``None``, so the connection stays cached
-        until it is cleared. An explicit value overrides the server default.
+        If this is ``None`` (default), ``runner.connectionDefaultTTL`` is used.
+        If that option is unset, the connection stays cached until it is
+        cleared. An explicit non-``None`` value overrides the server default.
+        Pass ``float("inf")`` to keep this connection cached indefinitely even
+        when ``runner.connectionDefaultTTL`` is set.
     **kwargs : any
         Connection-specific keyword arguments that are passed to the
         connection's ``._connect()`` method. ``**kwargs`` are typically
