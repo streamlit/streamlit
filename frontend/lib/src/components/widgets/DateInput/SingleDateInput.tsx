@@ -642,6 +642,10 @@ function SingleDateInput({
       }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
+      // Only skip the close-commit effect when this blur also closes the
+      // preview. Blur with the popover already closed (e.g. after Escape)
+      // must not leave skipCloseCommitRef stuck for the next close.
+      let closedByBlur = false
       if (isOpen) {
         if (
           isConcreteOutsideLeave(e.relatedTarget, {
@@ -649,11 +653,12 @@ function SingleDateInput({
             excludeSelectors: popoverExcludeSelectors,
           })
         ) {
+          closedByBlur = true
           setIsOpen(false)
           setIsCalendarActive(false)
-          // Fall through to commit or early-return; set skipCloseCommitRef only
-          // when blur handles the write. Partial / non-clearable clears leave
-          // the flag unset so the close-commit effect can still revert.
+          // Fall through to commit or early-return. Partial / non-clearable
+          // clears leave skipCloseCommitRef unset so the close-commit effect
+          // can still revert.
         } else {
           // Still open and focus is ambiguous (null) or inside the popover /
           // nested pickers — Tab rAF and overlay dismissal own those leaves.
@@ -675,8 +680,9 @@ function SingleDateInput({
       }
       const pending = displayValueRef.current
       if (datesEqual(pending, value)) return
-      // Blur owns this write; skip the close-commit effect's duplicate.
-      skipCloseCommitRef.current = true
+      if (closedByBlur) {
+        skipCloseCommitRef.current = true
+      }
       onChangeRef.current(pending)
       formCommit?.(pending)
     },

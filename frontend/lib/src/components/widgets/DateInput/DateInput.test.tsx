@@ -2057,6 +2057,59 @@ describe("DateInput single-mode keyboard navigation", () => {
     })
   })
 
+  it("blur while closed does not skip the next incomplete close revert", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(
+      <div>
+        <DateInput {...props} />
+        <button type="button" data-testid="outside">
+          Outside
+        </button>
+      </div>
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getSingleDateSegments(region)
+
+    // Open from the day segment then Escape so focus returns there with the
+    // popover closed (restore suppresses reopen).
+    await user.click(day)
+    await screen.findByTestId("stDateInputCalendar")
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(day).toHaveFocus()
+
+    // Finish an edit while closed (no new focusin — calendar stays shut), then
+    // blur. Must not leave skipCloseCommitRef stuck for the next close.
+    await user.keyboard("{Backspace}{Backspace}25")
+    expect(screen.queryByTestId("stDateInputCalendar")).not.toBeInTheDocument()
+    fireEvent.blur(screen.getByTestId("stDateInputField"), {
+      relatedTarget: screen.getByTestId("outside"),
+    })
+    await waitFor(() => {
+      expect(
+        getSingleDateSegments(screen.getByTestId("stDateInput")).day
+      ).toHaveTextContent("25")
+    })
+
+    // Next open + partial clear + close must still revert.
+    const refreshed = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await clearSegment(user, refreshed.year)
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      const after = getSingleDateSegments(screen.getByTestId("stDateInput"))
+      expect(after.year).toHaveTextContent("1970")
+      expect(after.month).toHaveTextContent("01")
+      expect(after.day).toHaveTextContent("25")
+    })
+  })
+
   it("partially cleared segments revert to committed value on popover close (non-clearable)", async () => {
     const user = userEvent.setup()
     const props = getProps()

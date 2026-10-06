@@ -964,6 +964,10 @@ function RangeDateInput({
       }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
+      // Only skip the close-commit effect when this blur also closes the
+      // preview. Blur with the popover already closed (e.g. after Escape)
+      // must not leave skipCloseCommitRef stuck for the next close.
+      let closedByBlur = false
       if (isOpen) {
         if (
           isConcreteOutsideLeave(e.relatedTarget, {
@@ -971,10 +975,11 @@ function RangeDateInput({
             excludeSelectors: popoverExcludeSelectors,
           })
         ) {
+          closedByBlur = true
           setIsOpenState(false)
           setIsCalendarActive(false)
-          // Fall through; set skipCloseCommitRef only when blur writes. Partial
-          // fields leave the flag unset so the close-commit effect can revert.
+          // Fall through. Partial fields leave skipCloseCommitRef unset so
+          // the close-commit effect can still revert.
         } else {
           return
         }
@@ -983,8 +988,9 @@ function RangeDateInput({
       const pending = compact([displayStartRef.current, displayEndRef.current])
       const committed = compact([startValue, endValue])
       if (rangeEqual(pending, committed)) return
-      // Blur owns this write; skip the close-commit effect's duplicate.
-      skipCloseCommitRef.current = true
+      if (closedByBlur) {
+        skipCloseCommitRef.current = true
+      }
       onChangeRef.current(pending)
       formCommit?.(pending)
     },
