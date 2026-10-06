@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/lib",
-  "version": "1.64.0",
+  "version": "1.65.0",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -66,7 +66,7 @@
     "@luma.gl/core": "^9.4.2",
     "@luma.gl/engine": "^9.4.2",
     "@luma.gl/shadertools": "^9.4.2",
-    "@microlink/react-json-view": "^1.31.37",
+    "@microlink/react-json-view": "^1.31.38",
     "@sindresorhus/slugify": "^3.0.1",
     "@streamlit/component-v2-lib": "workspace:^",
     "@streamlit/connection": "workspace:^",
@@ -144,7 +144,7 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "@swc/plugin-emotion": "^16.0.0",
+    "@swc/plugin-emotion": "^17.0.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

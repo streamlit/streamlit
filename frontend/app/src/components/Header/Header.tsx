@@ -36,7 +36,7 @@ import {
 export interface HeaderProps {
   hasSidebar: boolean
   isSidebarOpen: boolean
-  onToggleSidebar(): void
+  onToggleSidebar: () => void
   navigation?: ReactNode
   rightContent?: ReactNode
   logoComponent?: ReactNode
@@ -92,6 +92,7 @@ const Header = ({
                     kind={BaseButtonKind.HEADER_NO_PADDING}
                     onClick={onToggleSidebar}
                     data-testid="stExpandSidebarButton"
+                    aria-label="Expand sidebar"
                   >
                     <DynamicIcon
                       size="xl"

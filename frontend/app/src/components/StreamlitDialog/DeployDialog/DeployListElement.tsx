@@ -29,7 +29,7 @@ function DeployListElement(props: IDeployListElementProps): ReactElement {
   const { children } = props
   return (
     <StyledElement>
-      <img src={Checkmark} alt={"Checkmark"} />
+      <img src={Checkmark} alt="" />
       <span>{children}</span>
     </StyledElement>
   )

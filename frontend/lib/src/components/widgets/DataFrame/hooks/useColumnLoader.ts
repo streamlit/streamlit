@@ -21,7 +21,7 @@ import {
   useState,
 } from "react"
 
-import { isArray, isEmpty, merge, mergeWith } from "lodash-es"
+import { isEmpty, merge, mergeWith } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import {
@@ -137,12 +137,12 @@ const mergeColumnConfig = (
 ): ColumnConfigProps => {
   // Don't merge arrays, just overwrite the old value with the new value
   const customMergeArrays = (
-    _objValue: object,
-    srcValue: object
-  ): object | undefined => {
+    _objValue: unknown,
+    srcValue: unknown
+  ): unknown[] | undefined => {
     // If the new value is an array, just return it as is (overwriting the old)
-    if (isArray(srcValue)) {
-      return srcValue
+    if (Array.isArray(srcValue)) {
+      return srcValue as unknown[]
     }
     return undefined
   }
@@ -252,7 +252,8 @@ export function getColumnConfig(
     return new Map()
   }
   try {
-    return new Map(Object.entries(JSON.parse(configJson)))
+    const parsed: unknown = JSON.parse(configJson)
+    return new Map(Object.entries(parsed as Record<string, ColumnConfigProps>))
   } catch (error) {
     // This is not expected to happen, but if it does, we'll return an empty map
     // and log the error to the console.

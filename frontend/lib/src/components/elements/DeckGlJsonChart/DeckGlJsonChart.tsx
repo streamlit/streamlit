@@ -55,6 +55,10 @@ import type { DeckGlElementState, DeckGLProps } from "./types"
 import { EMPTY_STATE, useDeckGl } from "./useDeckGl"
 import { shouldShowBasemap } from "./utils/mapShell"
 
+// CSV/GLTF loaders must be registered globally so pydeck JSON layers can
+// resolve those types. loaders.gl marks registerLoaders deprecated in favor of
+// per-call loader lists, which pydeck JSON does not provide.
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- see comment above
 registerLoaders([CSVLoader, GLTFLoader])
 
 const EMPTY_SELECTION = EMPTY_STATE.selection

@@ -619,6 +619,83 @@ describe("DefaultStreamlitEndpoints", () => {
         url,
       })
     })
+
+    it("merges xsrf token with existing AxiosHeaders", async () => {
+      const endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: true,
+        sendClientError: vi.fn(),
+      })
+
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
+      // @ts-expect-error
+      await endpoints.csrfRequest(url, {
+        headers: new AxiosHeaders({
+          Authorization: "Bearer token",
+        }),
+      })
+
+      expect(mockRequest).toHaveBeenCalledWith({
+        headers: {
+          "X-Xsrftoken": "mockXsrfCookie",
+          Authorization: "Bearer token",
+        },
+        withCredentials: true,
+        url,
+      })
+    })
+
+    it("preserves non-string header values when merging xsrf token", async () => {
+      const endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: true,
+        sendClientError: vi.fn(),
+      })
+
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
+      // @ts-expect-error
+      await endpoints.csrfRequest(url, {
+        headers: {
+          Authorization: "Bearer token",
+          "X-Retry-Count": 2,
+          Accept: ["application/json", "text/plain"],
+        },
+      })
+
+      expect(mockRequest).toHaveBeenCalledWith({
+        headers: {
+          "X-Xsrftoken": "mockXsrfCookie",
+          Authorization: "Bearer token",
+          "X-Retry-Count": 2,
+          Accept: ["application/json", "text/plain"],
+        },
+        withCredentials: true,
+        url,
+      })
+    })
+
+    it("preserves false AxiosHeaders sentinels when merging xsrf token", async () => {
+      const endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: true,
+        sendClientError: vi.fn(),
+      })
+
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
+      // @ts-expect-error
+      await endpoints.csrfRequest(url, {
+        headers: new AxiosHeaders({ "Content-Type": false }),
+      })
+
+      expect(mockRequest).toHaveBeenCalledWith({
+        headers: {
+          "X-Xsrftoken": "mockXsrfCookie",
+          "Content-Type": false,
+        },
+        withCredentials: true,
+        url,
+      })
+    })
   })
 
   describe("checkSourceUrlResponse", () => {

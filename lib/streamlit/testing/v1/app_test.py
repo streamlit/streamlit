@@ -833,16 +833,15 @@ class AppTest:
         return self._tree.chat_input
 
     @property
-    def chat_message(self) -> Sequence[ChatMessage]:
-        """Sequence of all ``st.chat_message`` elements.
+    def chat_message(self) -> BlockList[ChatMessage]:
+        """Sequence of all ``st.chat_message`` blocks.
 
         Returns
         -------
-        Sequence of ChatMessage
-            Sequence of all ``st.chat_message`` elements. Individual elements can be
-            accessed from an ElementList by index (order on the page). For
-            example, ``at.chat_message[0]`` for the first element.  ChatMessage
-            is an extension of the Block class.
+        BlockList of ChatMessage
+            Individual messages can be accessed by index. For example,
+            ``at.chat_message[0]``. ``st.chat_message`` has no key.
+            ChatMessage is an extension of the Block class.
         """
         return self._tree.chat_message
 
@@ -889,7 +888,7 @@ class AppTest:
         return self._tree.color_picker
 
     @property
-    def columns(self) -> Sequence[Column]:
+    def columns(self) -> BlockList[Column]:
         """Sequence of all columns within ``st.columns`` elements.
 
         Each column within a single ``st.columns`` will be returned as a
@@ -897,16 +896,15 @@ class AppTest:
 
         Returns
         -------
-        Sequence of Column
-            Sequence of all columns within ``st.columns`` elements. Individual
-            columns can be accessed from an ElementList by index (order on the
-            page). For example, ``at.columns[0]`` for the first column. Column
-            is an extension of the Block class.
+        BlockList of Column
+            Individual columns can be accessed by index. For example,
+            ``at.columns[0]``. ``st.columns`` has no key. Column is an
+            extension of the Block class.
         """
         return self._tree.columns
 
     @property
-    def container(self) -> BlockList:
+    def container(self) -> BlockList[Block]:
         """Sequence of all ``st.container`` blocks, including horizontal containers.
 
         The implicit row that ``st.columns`` creates is not included.
@@ -1046,16 +1044,47 @@ class AppTest:
         return self._tree.file_uploader
 
     @property
-    def expander(self) -> Sequence[Expander]:
-        """Sequence of all ``st.expander`` elements.
+    def form(self) -> BlockList[Block]:
+        """Sequence of all ``st.form`` blocks.
 
         Returns
         -------
-        Sequence of Expandable
-            Sequence of all ``st.expander`` elements. Individual elements can be
-            accessed from a Sequence by index (order on the page). For
-            example, ``at.expander[0]`` for the first element. Expandable is an
-            extension of the Block class.
+        BlockList
+            Individual forms can be accessed by index or by the form's
+            ``key`` (the form ID). For example, ``at.form[0]`` or
+            ``at.form(key="name-form")``.
+        """
+        return self._tree.form
+
+    @property
+    def form_submit_button(self) -> WidgetList[Button]:
+        """Sequence of all ``st.form_submit_button`` widgets.
+
+        These are also included in ``at.button``. Form widget values are only
+        sent to the script when the form's submit button is clicked, for
+        example ``at.form_submit_button[0].click().run()``.
+
+        Returns
+        -------
+        WidgetList of Button
+            Sequence of all ``st.form_submit_button`` widgets. Individual
+            widgets can be accessed from a WidgetList by index (order on the
+            page) or key. For example, ``at.form_submit_button[0]`` for the
+            first widget or ``at.form_submit_button(key="save")`` for a
+            widget with a given key.
+        """
+        return self._tree.form_submit_button
+
+    @property
+    def expander(self) -> BlockList[Expander]:
+        """Sequence of all ``st.expander`` blocks.
+
+        Returns
+        -------
+        BlockList of Expander
+            Individual expanders can be accessed by index or key. For example,
+            ``at.expander[0]`` or ``at.expander(key="details")``. Expander is
+            an extension of the Block class.
         """
         return self._tree.expander
 
@@ -1298,16 +1327,15 @@ class AppTest:
         return self._tree.success
 
     @property
-    def status(self) -> Sequence[Status]:
-        """Sequence of all ``st.status`` elements.
+    def status(self) -> BlockList[Status]:
+        """Sequence of all ``st.status`` blocks.
 
         Returns
         -------
-        Sequence of Status
-            Sequence of all ``st.status`` elements. Individual elements can be
-            accessed from a Sequence by index (order on the page). For
-            example, ``at.status[0]`` for the first element. Status is an
-            extension of the Block class.
+        BlockList of Status
+            Individual status containers can be accessed by index. For
+            example, ``at.status[0]``. ``st.status`` has no key. Status is
+            an extension of the Block class.
         """
         return self._tree.status
 
@@ -1326,7 +1354,7 @@ class AppTest:
         return self._tree.table
 
     @property
-    def tabs(self) -> Sequence[Tab]:
+    def tabs(self) -> BlockList[Tab]:
         """Sequence of all tabs within ``st.tabs`` elements.
 
         Each tab within a single ``st.tabs`` will be returned as a separate Tab
@@ -1337,11 +1365,11 @@ class AppTest:
 
         Returns
         -------
-        Sequence of Tab
-            Sequence of all tabs within ``st.tabs`` elements. Individual
-            tabs can be accessed from an ElementList by index (order on the
-            page). For example, ``at.tabs[0]`` for the first tab. Tab is an
-            extension of the Block class.
+        BlockList of Tab
+            Individual tab panels can be accessed by index. For example,
+            ``at.tabs[0]``. A ``key`` on ``st.tabs`` belongs to the tab
+            container, not each panel; look it up with ``get_by_key``. Tab
+            is an extension of the Block class.
         """
         return self._tree.tabs
 
@@ -1478,9 +1506,10 @@ class AppTest:
         ----------
         element_type: str
             An ``AppTest`` collection name such as ``"button"``,
-            ``"datetime_input"``, ``"pills"``, or ``"tabs"``. Internal node
-            type names such as ``"date_time_input"`` also work. ``"help"``
-            selects ``st.help`` elements (node type ``help_info``).
+            ``"datetime_input"``, ``"pills"``, ``"form"``, or ``"tabs"``.
+            Internal node type names such as ``"date_time_input"`` also work.
+            ``"help"`` selects ``st.help`` elements (node type ``help_info``).
+            ``"form_submit_button"`` selects submit buttons inside forms.
 
         Returns
         -------

@@ -424,6 +424,9 @@ describe("PlotlyChart Component", () => {
       b => typeof b === "object" && b.name === "Fullscreen"
     )
     expect(fullscreenButton).toBeDefined()
+    expect(fullscreenButton).toEqual(
+      expect.objectContaining({ name: "Fullscreen", title: "Fullscreen" })
+    )
   })
 
   it("hides the Plotly Cloud share button by default", () => {
@@ -562,6 +565,12 @@ describe("PlotlyChart Component", () => {
     const config = lastCallProps.config
     const fullscreenButton = config?.modeBarButtonsToAdd?.find(
       b => typeof b === "object" && b.name === "Close fullscreen"
+    )
+    expect(fullscreenButton).toEqual(
+      expect.objectContaining({
+        name: "Close fullscreen",
+        title: "Close fullscreen",
+      })
     )
 
     act(() => {

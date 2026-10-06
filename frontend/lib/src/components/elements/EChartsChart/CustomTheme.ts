@@ -837,7 +837,7 @@ function withBottoms(
       : { ...(value as Record<string, unknown>), bottom }
   }
   if (Array.isArray(value)) {
-    return value.map(item => {
+    return (value as unknown[]).map((item: unknown) => {
       if (!isPlainObject(item)) {
         return item
       }
@@ -1132,7 +1132,7 @@ export function withDefaultSeriesCursor(
     }
     return {
       ...withSeries,
-      media: media.map(entry => {
+      media: (media as unknown[]).map((entry: unknown) => {
         if (!isPlainObject(entry)) {
           return entry
         }
@@ -1165,7 +1165,7 @@ export function withDefaultSeriesCursor(
   if (Array.isArray(result.options)) {
     result = {
       ...result,
-      options: result.options.map(tick =>
+      options: (result.options as unknown[]).map((tick: unknown) =>
         isPlainObject(tick)
           ? applyCursorToMedia(tick as EChartsOptionObject)
           : tick
@@ -1224,7 +1224,7 @@ export function applyAltToOption(
     }
     return {
       ...target,
-      media: media.map(entry => {
+      media: (media as unknown[]).map((entry: unknown) => {
         if (!isPlainObject(entry)) {
           return entry
         }
@@ -1260,7 +1260,7 @@ export function applyAltToOption(
   if (Array.isArray(result.options)) {
     result = {
       ...result,
-      options: result.options.map(tick =>
+      options: (result.options as unknown[]).map((tick: unknown) =>
         isPlainObject(tick)
           ? applyToVariant(tick as EChartsOptionObject)
           : tick
