@@ -1434,8 +1434,6 @@ class ButtonMixin:
         download_button_proto.type = type
         if wrap is not None:
             download_button_proto.wrap = wrap
-        # Set disabled before registering file data. A callable download is a
-        # server-side capability and must not be registered while disabled.
         download_button_proto.disabled = disabled
         marshall_file(
             self.dg._get_delta_path_str(),
@@ -1859,14 +1857,15 @@ def marshall_file(
     *,
     disabled: bool = False,
 ) -> None:
+    # The browser's disabled check is not an authorization boundary. Drop a
+    # callable registered while this button was enabled, including when this
+    # run passes non-callable data.
+    if disabled and runtime.exists():
+        runtime.get_instance().media_file_mgr.remove_deferred(coordinates)
+
     # Check if data is a callable (for deferred downloads)
     if callable(data):
-        # The browser's disabled check is not an authorization boundary. Register
-        # the callable only while the button is enabled, and drop any entry from
-        # an earlier run that rendered it enabled.
         if disabled:
-            if runtime.exists():
-                runtime.get_instance().media_file_mgr.remove_deferred(coordinates)
             proto_download_button.url = ""
             return
 

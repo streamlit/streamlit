@@ -377,3 +377,27 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         assert mgr.execute_deferred(new_id).startswith("/media/")
         assert mgr.execute_deferred(new_id).startswith("/media/")
         assert invoked == 4
+
+    def test_disabling_with_noncallable_data_drops_previous_callable(self) -> None:
+        """Switching a button to disabled static data revokes the old generator."""
+        invoked = False
+
+        def generate_data() -> str:
+            nonlocal invoked
+            invoked = True
+            return "secret"
+
+        enabled = DownloadButtonProto()
+        marshall_file("0", generate_data, enabled, "text/plain")
+        file_id = enabled.deferred_file_id
+        mgr = get_instance().media_file_mgr
+
+        disabled = DownloadButtonProto()
+        marshall_file("0", b"static", disabled, "text/plain", disabled=True)
+
+        assert "/media/" in disabled.url
+        assert not disabled.HasField("deferred_file_id")
+        assert file_id not in mgr._deferred_callables
+        with pytest.raises(MediaFileStorageError, match="not found"):
+            mgr.execute_deferred(file_id)
+        assert not invoked
