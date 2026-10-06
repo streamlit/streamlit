@@ -104,19 +104,19 @@ at.get_by_key("filters")  # unique key, any type
 
 `st.tabs(..., key=)` stores that key on the tab container, not on the panels in `at.tabs`. Use `at.get_by_key("sections")`. `at.tabs("sections")` raises `KeyError`.
 
+Do not `set_value`, `click`, or otherwise update a disabled widget — that raises `AppTestError` (from `streamlit.testing.v1`), matching a browser user who cannot interact with it.
+
+The same `AppTest` instance keeps fragment registrations across `.run()` calls, so a callback can target `@st.fragment(key=...)` registered on an earlier run.
+
 ### Forms
 
-Widgets inside `st.form` do not commit on `.run()` alone. Set the values, then click that form's submit button in the same run. An intervening `.run()` drops the staged values. Submit buttons also appear in `at.button`; `at.form_submit_button` is only the buttons inside a form. `at.form("name-form")` is the form block (the form id is the key).
+Widgets inside `st.form` commit only when that form's submit button is clicked. Stage values with `set_value`, then click the submit button before calling `.run()`; a `.run()` without the click discards the staged values. `at.form_submit_button` lists only buttons inside a form (they also appear in `at.button`). `at.form("my_form")` returns the block created by `st.form("my_form")`.
 
 ```python
 at.text_input[0].set_value("Ada")
 at.checkbox[0].check()
 at.form_submit_button[0].click().run()
 ```
-
-Do not `set_value`, `click`, or otherwise update a disabled widget — that raises `AppTestError` (from `streamlit.testing.v1`), matching a browser user who cannot interact with it.
-
-The same `AppTest` instance keeps fragment registrations across `.run()` calls, so a callback can target `@st.fragment(key=...)` registered on an earlier run.
 
 ## Asserting on results
 
@@ -143,7 +143,7 @@ assert at.progress[0].value == 25  # st.progress(0.25) is stored as an int from 
 assert at.progress[0].text == "halfway"
 assert at.html[0].value == "<b>hi</b>"
 assert at.help[0].value == "'Hello'"
-assert at.space[0].value == "small"  # omitted st.space() size; also on .size
+assert at.space[0].value == "small"  # st.space() with no size; .size is the same value
 ```
 
 `at.help[i].value` keeps a readable repr (`"'Hello'"`, `Point(1, 2)`). When `st.help` stored a parameter-list signature, `.value` is the expression passed to `st.help` (`st.help(len)` is `"len"`, not `"builtins.len(obj, /)"`). The raw stored text is `.proto.value`, and the docstring is `.doc_string`. The node type is `help_info`; `at.help` and `get("help")` both find these elements.
@@ -167,7 +167,7 @@ at.run()
 assert at.session_state["count"] == 1
 ```
 
-Seed `at.query_params` the same way. After `.run()`, a single value is a `str` (a one-element list collapses to `str`), a blank value stays `""`, and repeated keys stay `list[str]`. `st.query_params` keeps only the last value for a repeated key.
+Seed `at.query_params` the same way. After `.run()`, a single value is a `str` (a one-element list collapses to `str`), a blank value stays `""`, and repeated keys stay `list[str]`. Repeated `st.query_params` values are kept. Item access and `to_dict()` return only the last value; `get_all(key)` returns the full list. `AppTest.query_params` keeps lists.
 
 ```python
 at.query_params["status"] = "open"

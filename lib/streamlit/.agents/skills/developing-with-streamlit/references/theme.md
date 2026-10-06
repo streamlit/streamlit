@@ -98,7 +98,7 @@ dataframeHeaderTextColor = "#ffffff"
 ```
 
 Set `dataframeHeaderTextColor` when the header background is dark or tinted.
-If unset, header text and icons use a faded `textColor`. Selecting a column keeps that header's text and icons white.
+If unset, header text and icons use a faded `textColor`. A selected column's header text and icons stay white, including when `dataframeHeaderTextColor` is set.
 
 ## Typography
 
@@ -166,7 +166,7 @@ headingFontWeights = [600, 600, 600, 500, 500, 500]
 
 # st.metric value. Size must be a string ("2.25rem", "36px", or "36"); a bare number is ignored.
 metricValueFontSize = "2.25rem"
-metricValueFontWeight = 700       # 100-900, multiple of 50; inherits if unset
+metricValueFontWeight = 700       # 100-900, multiple of 50; default 400 (ignores baseFontWeight)
 ```
 
 ### Link styling

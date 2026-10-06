@@ -331,7 +331,11 @@ if st.button("Apply"):
 
 Use this when a single control should not rerun the app until the user applies it. Use a form when several related inputs should commit together.
 
-The pending value stays in the browser until that rerun. A refresh before then drops it, unless the widget also uses `bind="query-params"`. Inside `st.form`, `on_change="ignore"` changes nothing, because the form already waits for submit. On `st.file_uploader` and `st.camera_input`, the file or photo is uploaded immediately; `"ignore"` only defers the rerun.
+Caveats for `on_change="ignore"`:
+
+- The browser holds the pending value until the next rerun. A page refresh before then loses it, unless the widget also sets `bind="query-params"`.
+- Inside `st.form`, `on_change="ignore"` has no effect; the form already defers commits until submit.
+- `st.file_uploader` and `st.camera_input` still upload the file or photo immediately; only the rerun is deferred.
 
 ## Conditional rendering
 
