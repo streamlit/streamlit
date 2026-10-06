@@ -274,7 +274,10 @@ the server's work and memory by the number of requests it makes.
 There is no separate read or delete route in v1: **an `interact` with no changes is an
 explicit rerun, not a read**, apart from collecting a timed-out run. It executes the
 script again and can repeat side effects exactly as any other Streamlit rerun does. A
-non-executing read arrives with the polling work in follow-up #4.
+client rarely needs a read, because nothing changes an agent session between
+interactions — `run_every` timers belong to the browser, and no other client shares the
+session — so the last snapshot stays current until the client acts. A non-executing read
+arrives with the polling work in follow-up #4.
 
 **An agent session is an ordinary Streamlit session with a different client.** The
 runtime treats it as one more browser tab, which settles what it shares and what it does
@@ -525,12 +528,10 @@ Rules:
   the snapshot's job is to report what the *next request* can say. So
   `st.pills(options=[1, 12], format_func=month_name)` reports `"December"`, not `12`, and
   a client that echoes a value back is always making a legal request. This holds for
-  every widget that lists options, including `st.select_slider`, whose `format_func`
-  labels are what it reports and accepts. Text typed into a widget that accepts new
-  options is the exception: it is reported as typed, because formatting it would change
-  it on every round trip. A display element is not sent back, so it
-  reports what the author passed: `st.metric` keeps its number and its `format`, which
-  the frontend applies.
+  every widget that lists options, `st.select_slider` included. Text typed into a widget
+  that accepts new options is reported as typed, since formatting it would change it on
+  every round trip. A display element is never sent back, so it reports what the author
+  passed: `st.metric` keeps its number and its `format`, which the frontend applies.
 - **Pages are identified by `url_path`.** There is no page ID in the public API, and
   `url_path` is the handle `st.Page` already exposes — it is unique, appears in the URL,
   and is auto-derived from the filename when the author does not set it (`""` for the
@@ -553,12 +554,12 @@ Rules:
   Bound parameters differ from a browser in one way: setting a bound widget drops its
   parameter instead of rewriting it, because the runtime reads the address back on every
   rerun and a stale copy would put the old value back over the edit. The parameter
-  returns when the app writes it back. A bound widget also keeps its value for the
-  session, so `{}` clears only the unbound parameters, and the runtime ignores a bound
-  parameter equal to its widget's default, as it does for a browser's address, so
-  `query_params` can move a bound widget away from its default but not back; that is
-  what `widget_state` is for. Either way these are URL
-  parameters, not a description of what produced a number; widget `value`s are that.
+  returns when the app writes it back. Two runtime rules apply as they do in a browser: a
+  bound widget keeps its value for the session, so `{}` clears only unbound parameters,
+  and a bound parameter equal to its widget's default is ignored, so `query_params` can
+  move a bound widget away from its default but not back — `widget_state` does that.
+  Either way these are URL parameters, not a description of what produced a number;
+  widget `value`s are that.
 - **A label is not an identifier.** Nothing stops an app from giving two elements the
   same `label` — two `st.metric`s can share one, with one holding a count and the other a
   duration — so a client keying by label silently drops one. Position in the tree, or an
@@ -635,7 +636,7 @@ stays usable, so an agent can correct its input and interact again.
 
 | Outcome                                                                              | Response                                                                                                                                 |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Invalid request — unknown key, disabled widget, unsupported element, a value of the wrong JSON type, outside the widget's `options`, or unreadable by the widget, missing form submit, cross-form or cross-dialog batch | Error before any execution, naming which of those it was. Nothing ran and the app is unchanged. |
+| Invalid request — an unknown key, a disabled or unsupported element, a value the checks in [Actions in v1](#actions-in-v1) refuse, a missing form submit, or a cross-form or cross-dialog batch | Error before any execution, naming which of those it was. Nothing ran and the app is unchanged. |
 | Unrecognized `page`                                                                  | On a creating call, an error after the run, carrying the `session_id` of the session it created, which stays usable; on a later call, refused before anything runs. Both list the available `pages` as data. |
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
 | Script failed to compile                                                             | `status: "error"` with the compile error and no usable action list.                                                                      |
@@ -676,12 +677,12 @@ registry accepts a key for a control that is no longer on the page, runs the scr
 changes nothing, and returns `200`: a silent no-op that reads as success. The registry
 also does not record which `st.form` an element belongs to. The document the client was
 given has both facts, which is the deeper point: **the snapshot is the contract, so the
-snapshot is what a write is judged against.** The server keeps, per
-session, what each addressable element advertised — actionable, disabled, `support`, form,
-options, fragment, and whether it is in a dialog — and checks the next request against
-that, so rejections name the actual problem: `disabled_widget` for a disabled control, `unsupported_element` for one
-this interface cannot drive, including a keyed display element, and `not_on_page` only
-when the key really is absent.
+snapshot is what a write is judged against.** The server keeps, per session, what each
+addressable element advertised — actionable, disabled, `support`, form, options, fragment,
+and whether it is in a dialog — and checks the next request against that, so rejections
+name the actual problem: `disabled_widget` for a disabled control, `unsupported_element`
+for one this interface cannot drive, including a keyed display element, and
+`not_on_page` only when the key really is absent.
 
 **Widget constraints are a separate layer, and they belong to the widgets.** Whether a
 value is one of a selectbox's `options`, inside a slider's bounds, or a well-formed
@@ -693,18 +694,21 @@ The agent path should call those validators rather than keep its own, provided e
 reports the violation and lets the caller decide: the browser path coerces, and the agent
 path rejects with `invalid_value`, because a silently reset value reads as success.
 
-Until then, v1 makes two checks of its own, after the JSON type: a number is not text
-except where it names an option, dates and times are ISO text even for a slider that
-carries them as microseconds, and a single value and a one-item list are
-interchangeable, because single-select button groups and single sliders carry one value
-in a list. A value must be one of the widget's `options`, the most common mistake, and
-the error lists the legal values. It must also be
-something the widget's own deserializer can read, because a value it cannot read raises
-in the app's run, and keeps raising on every later run. Everything else shows in the next
-snapshot's `value`: an out-of-range number, a malformed date, time, or color string, or a
-slider range with the wrong number of values is reset to the default, a fraction sent to
-an integer input is truncated, and text past `max_chars` is cut. Ranges are the
-exception: the runtime stores a reversed slider range, or a date range of any length, as
+Until then, v1 checks three things itself, each refused with `invalid_value`:
+
+- **The JSON type.** A number is not text except where it names an option, and dates and
+  times are ISO text, even for a slider that carries them as microseconds. A single value
+  and a one-item list are interchangeable, because single-select button groups and single
+  sliders carry one value in a list.
+- **The options.** A value must be one of the widget's `options`, the most common
+  mistake, and the error lists the legal values.
+- **That the widget can read it.** Its own deserializer must accept the value, because
+  one it cannot read raises in the app's run, and on every later run too.
+
+Everything else shows in the next snapshot's `value`: an out-of-range number, a
+malformed date, time, or color string, or a slider range with the wrong number of values
+is reset to the default, a fraction sent to an integer input is truncated, and text past
+`max_chars` is cut. A reversed slider range and a date range of any length are stored as
 sent, so a client sends two values, lowest first.
 [Potential follow-ups](potential-follow-ups.md) ranks the validations by how much apps
 rely on them.
@@ -893,7 +897,7 @@ back to a browser rather than mistake it for missing content:
 | `bind="query-params"` write-back                                           | Setting a bound widget drops its parameter from `query_params` instead of rewriting it, until the app writes it back. See [Actions in v1](#actions-in-v1); follow-up #8.      |
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
-| Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun.                                                                                               |
+| Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun. The last snapshot stays current until the client acts.                                       |
 | Long-running interactions                                                  | No polling or partial results; a retry after `run_timed_out` collects the run. Follow-up #4 adds an operation handle.                                                         |
 
 ### Limits and configuration
@@ -1168,9 +1172,10 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
    requests on the connection"
    ([MCP tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)),
    and the specification's own guidance for this shape is the opaque-handle pattern
-   `session_id` already implements. `interact` must never be annotated read-only. The
-   design, including why it is written by hand rather than on the SDK, is in
-   [mcp-support.md](mcp-support.md).
+   `session_id` already implements. `interact` must never be annotated read-only. Chat
+   clients also need a paging `read_data` tool, because they cannot resolve or parse a
+   `data.url`. The design, including why it is written by hand rather than on the SDK,
+   is in [mcp-support.md](mcp-support.md).
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2
@@ -1360,14 +1365,19 @@ new command or significant parameter should ship with all of the following, or a
 4. **What run timeout and session budgets should ship?** The preview is settled: 100 rows
    keeps most filtered tables complete. The run timeout bounds how long one request
    waits, not how long the run may take, since a retry collects the run in progress, so
-   its default should sit at or below the clients' own request timeouts — about a minute
-   for many MCP clients — rather than grow to fit the slowest app. Follow-up #4's
+   its default should sit below the clients' own request timeouts rather than grow to fit
+   the slowest app. The prototype's 60 s equals the MCP TypeScript SDK's default, so a
+   slow page can reach such a client as a transport failure; about 30 s is the likely
+   answer. Follow-up #4's
    operation handle would make even the retries unnecessary. The session cap and idle
    TTL need defaults chosen against real memory use. The response size is
    [open question 6](#open-questions).
-5. Which exact JSON encodings should be standardized for dates, datetimes, decimals,
-   large integers, non-finite numbers, ranges, and object-valued options? These must be
-   settled before v1 ships, with or without per-action schemas.
+5. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
+   times, and datetimes as ISO 8601 text, decimals as strings, durations as seconds,
+   non-finite numbers as `null`, ranges as two-item lists, and object-valued options as
+   their `format_func` labels. Integers beyond 2^53 are still plain JSON numbers, which
+   JavaScript parsers round. These must be settled before v1 ships, with or without
+   per-action schemas.
 6. **Does the response need a budget, and how should it be met?** The response document
    is unbounded, and two things dominate a large one: a selectbox over a few thousand
    values puts all of them in every snapshot of its page, and a figure carries its traces,
