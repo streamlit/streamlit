@@ -28,6 +28,8 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
     ScriptRunContext,
     ThreadState,
+    fragment_callback_warning_is_suppressed,
+    suppress_fragment_callback_warning,
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
 
@@ -196,3 +198,20 @@ class ThreadStateResetIntegrationTest(unittest.TestCase):
         assert ts.fragment_id is None
         assert ts.in_fragment_callback is False
         assert ts.delta_path is None
+
+
+class FragmentCallbackWarningSuppressionTest(unittest.TestCase):
+    def test_suppression_resets_after_the_write_and_after_an_exception(self):
+        """A yield-point raise must not leave later user writes un-warned."""
+        assert fragment_callback_warning_is_suppressed() is False
+
+        with suppress_fragment_callback_warning():
+            assert fragment_callback_warning_is_suppressed() is True
+
+        assert fragment_callback_warning_is_suppressed() is False
+
+        with pytest.raises(RuntimeError, match="yield"):
+            with suppress_fragment_callback_warning():
+                raise RuntimeError("yield")
+
+        assert fragment_callback_warning_is_suppressed() is False

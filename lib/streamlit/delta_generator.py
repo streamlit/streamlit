@@ -121,6 +121,7 @@ from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
+    fragment_callback_warning_is_suppressed,
 )
 
 if TYPE_CHECKING:
@@ -187,7 +188,15 @@ def _maybe_print_fragment_callback_warning() -> None:
     # on this thread, since ScriptRunContext.reset() and add_script_run_ctx()
     # are the only public entry points for binding ctx, and both seed
     # ThreadState. ThreadState.get() is therefore safe here without a guard.
-    if ctx and ThreadState.get().in_fragment_callback:
+    #
+    # The suppression flag is read only after in_fragment_callback is true, so
+    # the common element path does not touch it. Yield points set it around
+    # their own st.empty(), which is not a user element.
+    if (
+        ctx
+        and ThreadState.get().in_fragment_callback
+        and not fragment_callback_warning_is_suppressed()
+    ):
         warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
 
         logger.get_logger("root").warning(
