@@ -2524,6 +2524,27 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendarButton).toHaveFocus()
   })
 
+  it("Escape on the focused calendar button keeps focus on the toggle", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const { year } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    act(() => {
+      calendarButton.focus()
+    })
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveFocus()
+  })
+
   it("passive preview does not set aria-expanded on the calendar button", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)
@@ -2591,6 +2612,37 @@ describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
     })
     expect(calendarButton).toHaveAttribute("aria-expanded", "false")
     expect(calendarButton).not.toHaveAttribute("aria-controls")
+  })
+
+  it("Escape on the focused calendar button keeps focus on the toggle", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const { year } = getRangeDateSegments(
+      screen.getByTestId("stDateInput"),
+      "start"
+    )
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    act(() => {
+      calendarButton.focus()
+    })
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveFocus()
   })
 
   it("Alt+ArrowDown from start field segment enters active calendar", async () => {

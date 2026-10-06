@@ -1783,6 +1783,31 @@ describe("DateTimeInput widget", () => {
       })
       expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
     })
+
+    it("Escape on the focused calendar button keeps focus on the toggle", async () => {
+      const user = userEvent.setup()
+      render(
+        <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+      )
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      act(() => {
+        calendarButton.focus()
+      })
+      await user.keyboard("{Escape}")
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(calendarButton).toHaveFocus()
+    })
   })
 
   describe("Active calendar (Alt+ArrowDown)", () => {

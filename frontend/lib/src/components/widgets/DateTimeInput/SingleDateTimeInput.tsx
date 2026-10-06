@@ -442,20 +442,23 @@ function SingleDateTimeInput({
     useFloatingOverlay(overlayOptions)
 
   // After the calendar closes, return focus to the control that opened it.
-  // Active mode uses activeOriginRef (the segment from Alt+ArrowDown, or the
-  // calendar button after a toggle). Passive mode uses the last segment.
+  // Keep focus on the calendar button if it already has it (Escape after Tab
+  // onto the toggle during a passive preview). Active mode uses
+  // activeOriginRef; passive mode otherwise uses the last segment.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
-    if (isCalendarActiveRef.current && activeOriginRef.current) {
-      activeOriginRef.current.focus()
-    } else {
-      const segments =
-        triggerRef.current?.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
-      const lastSegment = segments ? Array.from(segments).at(-1) : undefined
-      if (lastSegment) {
-        lastSegment.focus()
+    if (!calendarButtonRef.current?.contains(document.activeElement)) {
+      if (isCalendarActiveRef.current && activeOriginRef.current) {
+        activeOriginRef.current.focus()
       } else {
-        triggerRef.current?.focus()
+        const segments =
+          triggerRef.current?.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
+        const lastSegment = segments ? Array.from(segments).at(-1) : undefined
+        if (lastSegment) {
+          lastSegment.focus()
+        } else {
+          triggerRef.current?.focus()
+        }
       }
     }
     requestAnimationFrame(() => {
