@@ -20,10 +20,14 @@ import os
 import tempfile
 from unittest.mock import patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.widgets.button import marshall_file
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
+from streamlit.runtime import get_instance
+from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import MemoryFile
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -305,3 +309,71 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         stored = self._stored_file(c)
         assert stored.filename is None
         assert stored.mimetype == "application/octet-stream"
+
+    def test_disabled_callable_is_not_registered(self) -> None:
+        """A disabled callable download must not disclose an executable file id."""
+        invoked = False
+
+        def generate_data() -> str:
+            nonlocal invoked
+            invoked = True
+            return "secret"
+
+        st.download_button("Download", data=generate_data, disabled=True)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.disabled
+        assert not c.HasField("deferred_file_id")
+        assert c.url == ""
+        assert not invoked
+        assert get_instance().media_file_mgr._deferred_callables == {}
+
+    def test_disabling_callable_drops_previously_registered_entry(self) -> None:
+        """A later run that renders the button disabled revokes the old file id.
+
+        A full script run unmaps session files before widgets render, but the
+        callable stays until orphan cleanup. Rendering disabled must drop it
+        immediately so execute_deferred cannot run the generator.
+        """
+        invoked = 0
+
+        def generate_data() -> str:
+            nonlocal invoked
+            invoked += 1
+            return "secret"
+
+        enabled = DownloadButtonProto()
+        marshall_file("0", generate_data, enabled, "text/plain")
+        file_id = enabled.deferred_file_id
+        mgr = get_instance().media_file_mgr
+        assert file_id in mgr._deferred_callables
+
+        # Repeat downloads of an enabled button keep working.
+        assert mgr.execute_deferred(file_id).startswith("/media/")
+        assert mgr.execute_deferred(file_id).startswith("/media/")
+        assert invoked == 2
+        assert file_id in mgr._deferred_callables
+
+        # Start of the next full run: mapping is gone, callable is still live.
+        mgr.clear_session_refs()
+        assert file_id in mgr._deferred_callables
+
+        disabled = DownloadButtonProto()
+        marshall_file("0", generate_data, disabled, "text/plain", disabled=True)
+
+        assert not disabled.HasField("deferred_file_id")
+        assert disabled.url == ""
+        assert file_id not in mgr._deferred_callables
+        with pytest.raises(MediaFileStorageError, match="not found"):
+            mgr.execute_deferred(file_id)
+        assert invoked == 2
+
+        # Enabling the button again registers a new callable. Repeat downloads
+        # of that new id still run the generator.
+        reenabled = DownloadButtonProto()
+        marshall_file("0", generate_data, reenabled, "text/plain")
+        new_id = reenabled.deferred_file_id
+        assert new_id != file_id
+        assert mgr.execute_deferred(new_id).startswith("/media/")
+        assert mgr.execute_deferred(new_id).startswith("/media/")
+        assert invoked == 4

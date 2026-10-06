@@ -43,6 +43,7 @@ class DeferredCallableEntry(TypedDict):
     mimetype: str | None
     filename: str | None
     coordinates: str
+    session_id: str
 
 
 def _get_session_id() -> str:
@@ -331,6 +332,7 @@ class MediaFileManager:
                     "mimetype": mimetype,
                     "filename": file_name,
                     "coordinates": coordinates,
+                    "session_id": session_id,
                 },
             )
 
@@ -338,6 +340,35 @@ class MediaFileManager:
             self._files_by_session_and_coord[session_id][coordinates] = file_id
 
             return file_id
+
+    def remove_deferred(self, coordinates: str) -> None:
+        """Drop deferred callables for the active session at ``coordinates``.
+
+        Removes every matching entry, including ones whose coordinate mapping
+        ``clear_session_refs`` already cleared. No-op when nothing is registered.
+
+        Safe to call from any thread.
+        """
+        session_id = _get_session_id()
+
+        with self._lock:
+            removed_ids = {
+                file_id
+                for file_id, entry in self._deferred_callables.items()
+                if entry["session_id"] == session_id
+                and entry["coordinates"] == coordinates
+            }
+            for file_id in removed_ids:
+                del self._deferred_callables[file_id]
+
+            session_files = self._files_by_session_and_coord.get(session_id)
+            if session_files is None:
+                return
+            mapped_id = session_files.get(coordinates)
+            # Only unmap a deferred id this call removed. A static file at the
+            # same coordinates is unrelated and stays referenced.
+            if mapped_id is not None and mapped_id in removed_ids:
+                del session_files[coordinates]
 
     def execute_deferred(self, file_id: str) -> str:
         """Execute a deferred callable and return the URL to the generated file.
