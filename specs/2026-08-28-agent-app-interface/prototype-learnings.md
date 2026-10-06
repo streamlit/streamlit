@@ -1132,6 +1132,29 @@ malformed date, time, and color strings, and wrong-shape slider ranges all fall 
 the widget's default or are trimmed by the runtime; a reversed slider range and a date
 range of any length are stored as sent.
 
+## 7j. QA round 3: the round-trip rule needs every option widget
+
+- **`st.select_slider` registers no option list,** so the snapshot reported its stored
+  Python value (`2`, `False`, `"s"`) next to options it lists as `format_func` labels,
+  and echoing the value back was refused. Values are now serialized for every widget the
+  snapshot lists options for, not only those the registry knows about.
+- **A display element's rendered form is the frontend's.** `st.metric`'s `display_value`
+  was always `str(number)`, because `format` is applied in the browser. It is gone;
+  `value` and `format` are reported as authored.
+- **"Wrong JSON type" now holds for text.** A number reaches a text widget only where it
+  names an option, such as `st.feedback`'s index. A single value and a one-item list stay
+  interchangeable, because single-select button groups and single sliders carry one value
+  in a list. Errors name the expected type instead of quoting the value, which may be a
+  password.
+- **A bound parameter equal to the default is ignored by the runtime,** in a browser too,
+  so `query_params` can move a bound widget away from its default but not back. This is
+  documented rather than worked around; `widget_state` sets it.
+
+Smaller fixes: a keyed display element is `unsupported_element`, not `not_on_page`; an
+`unknown_page` found after a collected timed-out creating call keeps its `session_id`;
+`st.page_link` to the default page reports `page: ""`; and MCP refuses request IDs that
+are not strings or integers.
+
 ## 8. Open questions the prototype surfaced
 
 1. **How is "the run chain settled" defined?** The prototype's grace period is a

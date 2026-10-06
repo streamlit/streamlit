@@ -145,7 +145,8 @@ def _page_link_agent_props(proto: PageLinkProto) -> str | None:
     return agent_spec.element(
         "page_link",
         label=proto.label or None,
-        page=proto.page or None,
+        # `""` is the default page, so it is kept.
+        page=proto.page,
         query_params=parse_qs(proto.query_string, keep_blank_values=True) or None,
         help=proto.help or None,
         icon=proto.icon or None,

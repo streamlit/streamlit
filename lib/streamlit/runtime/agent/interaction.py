@@ -595,11 +595,13 @@ async def _settle(
     session.last_used = time.monotonic()
 
     if interaction.unverified_page is not None:
-        _verify_page_exists(interaction.unverified_page, result.document)
+        _verify_page_exists(interaction.unverified_page, result.document, session)
     return result.document
 
 
-def _verify_page_exists(url_path: str, document: dict[str, Any]) -> None:
+def _verify_page_exists(
+    url_path: str, document: dict[str, Any], session: AgentSession
+) -> None:
     """Reject a `page` that the run showed does not exist.
 
     On a creating call the page list does not exist yet, so `_resolve_page`
@@ -610,6 +612,8 @@ def _verify_page_exists(url_path: str, document: dict[str, Any]) -> None:
 
     Checked against the page list rather than where the run ended up: an app
     may redirect with `st.switch_page`, which is not the client's mistake.
+    Only a creating call defers this check, so the error always carries the
+    session it created, including when a retry collects a timed-out run.
     """
     pages = document.get("pages", [])
     available = [page["url_path"] for page in pages]
@@ -623,6 +627,7 @@ def _verify_page_exists(url_path: str, document: dict[str, Any]) -> None:
         # The page list is the whole remedy, so it travels as data rather than
         # only inside the message.
         details={"pages": pages},
+        session_id=session.handle,
     )
 
 

@@ -237,7 +237,7 @@ Later calls reference keys from the snapshot they just read:
 | `widget_state` | Optional patch of element keys → JSON values, the same shape as `st.session_state`. Unmentioned widgets keep their current values. This is _not_ arbitrary session state — only currently addressable elements.         |
 | `trigger`      | Optional, at most one `{"key": ...}`. Payload-bearing triggers such as `st.chat_input` also carry `"value"`.                                                                                                            |
 | `page`         | Optional `url_path` of a page listed in the snapshot's `pages`, resolved by normal navigation. Defaults to the app's default page on creation, the current page otherwise. Never a Python path or internal script hash. |
-| `query_params` | Optional replacement mapping of name → list of strings; omission preserves. A widget bound to a parameter keeps its value for the session, so `{}` clears only the unbound ones; see [The snapshot](#the-snapshot).    |
+| `query_params` | Optional replacement mapping of name → list of strings; omission preserves. A widget bound to a parameter keeps its value for the session, so `{}` clears only the unbound ones, and a parameter cannot move it back to its default; see [The snapshot](#the-snapshot).    |
 | `context`      | Optional `timezone` and `locale`, read by the app as `st.context`. What a browser reports about itself without authentication, so accepting it grants nothing. Held for the session; omission preserves, and a new one replaces it. |
 
 The request blocks until the run chain settles, then returns the snapshot. An accepted
@@ -524,9 +524,11 @@ Rules:
   `options` and `value` unusable as input. Full fidelity is not automatically better here:
   the snapshot's job is to report what the *next request* can say. So
   `st.pills(options=[1, 12], format_func=month_name)` reports `"December"`, not `12`, and
-  a client that echoes a value back is always making a legal request. Where the authored
-  value is the more useful one and cannot be sent back — an `st.metric` number before
-  formatting — report both, and name the rendered one `display_*`.
+  a client that echoes a value back is always making a legal request. This holds for
+  every widget that lists options, including `st.select_slider`, whose `format_func`
+  labels are what it reports and accepts. A display element is not sent back, so it
+  reports what the author passed: `st.metric` keeps its number and its `format`, which
+  the frontend applies.
 - **Pages are identified by `url_path`.** There is no page ID in the public API, and
   `url_path` is the handle `st.Page` already exposes — it is unique, appears in the URL,
   and is auto-derived from the filename when the author does not set it (`""` for the
@@ -550,7 +552,10 @@ Rules:
   parameter instead of rewriting it, because the runtime reads the address back on every
   rerun and a stale copy would put the old value back over the edit. The parameter
   returns when the app writes it back. A bound widget also keeps its value for the
-  session, so `{}` clears only the unbound parameters. Either way these are URL
+  session, so `{}` clears only the unbound parameters, and the runtime ignores a bound
+  parameter equal to its widget's default, as it does for a browser's address, so
+  `query_params` can move a bound widget away from its default but not back; that is
+  what `widget_state` is for. Either way these are URL
   parameters, not a description of what produced a number; widget `value`s are that.
 - **A label is not an identifier.** Nothing stops an app from giving two elements the
   same `label` — two `st.metric`s can share one, with one holding a count and the other a
@@ -673,7 +678,8 @@ snapshot is what a write is judged against.** The server keeps, per
 session, what each addressable element advertised — actionable, disabled, `support`, form,
 options, fragment, and whether it is in a dialog — and checks the next request against
 that, so rejections name the actual problem: `disabled_widget` for a disabled control, `unsupported_element` for one
-this interface cannot drive, and `not_on_page` only when the key really is absent.
+this interface cannot drive, including a keyed display element, and `not_on_page` only
+when the key really is absent.
 
 **Widget constraints are a separate layer, and they belong to the widgets.** Whether a
 value is one of a selectbox's `options`, inside a slider's bounds, or a well-formed
@@ -685,8 +691,11 @@ The agent path should call those validators rather than keep its own, provided e
 reports the violation and lets the caller decide: the browser path coerces, and the agent
 path rejects with `invalid_value`, because a silently reset value reads as success.
 
-Until then, v1 makes two checks of its own. A value must be one of the widget's
-`options`, the most common mistake, and the error lists the legal values. It must also be
+Until then, v1 makes two checks of its own, after the JSON type: a number is not text
+except where it names an option, while a single value and a one-item list are
+interchangeable, because single-select button groups and single sliders carry one value
+in a list. A value must be one of the widget's `options`, the most common mistake, and
+the error lists the legal values. It must also be
 something the widget's own deserializer can read, because a value it cannot read raises
 in the app's run, and keeps raising on every later run. Everything else shows in the next
 snapshot's `value`: an out-of-range number, a malformed date, time, or color string, or a

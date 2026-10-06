@@ -206,6 +206,11 @@ async def _handle_one(message: Any, interact: InteractCall) -> dict[str, Any] | 
         return None
 
     request_id = message["id"]
+    if isinstance(request_id, bool) or not isinstance(request_id, (str, int)):
+        # MCP narrows JSON-RPC's ids to strings and integers, never null.
+        return error_response(
+            None, INVALID_REQUEST, "A request `id` must be a string or an integer."
+        )
     params = message.get("params")
     if params is None:
         params = {}

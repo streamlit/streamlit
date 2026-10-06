@@ -69,6 +69,17 @@ _UNSETTABLE_VALUE_TYPES: Final[frozenset[str]] = frozenset(
 # How many legal options an `invalid_value` error spells out.
 _LISTED_OPTIONS: Final = 20
 
+# What each wire type takes, for errors that cannot quote the value.
+_EXPECTED: Final[dict[str, str]] = {
+    "bool_value": "true or false",
+    "double_value": "a finite number",
+    "int_value": "a whole number",
+    "string_value": "a string",
+    "string_array_value": "a string or a list of strings",
+    "double_array_value": "a number or a list of numbers",
+    "int_array_value": "a whole number or a list of them",
+}
+
 
 def resolve_element_id(
     session_state: SessionState,
@@ -148,9 +159,10 @@ def _metadata(
         )
     if not state.actionable or metadata is None:
         raise AgentRequestError(
-            "not_on_page",
-            f"The element with key {key!r} is on the page but is not something "
-            "you can set or fire. Read `actions` from the latest snapshot.",
+            "unsupported_element",
+            f"The element with key {key!r} is on the page but display-only: it "
+            "has no value to set and nothing to fire. Read `actions` from the "
+            "latest snapshot.",
         )
     return metadata
 
@@ -200,8 +212,12 @@ def build_widget_states(
             metadata.value_type,
             _temporal_to_wire(key, metadata, value),
             key,
+            # An option's reported value can be a number, such as
+            # `st.feedback`'s index; free text cannot.
+            numbers_as_text=metadata.formatted_options is not None
+            or element_states[element_id].options is not None,
         )
-        _check_readable(key, metadata, encoded, value)
+        _check_readable(key, metadata, encoded)
         states.widgets.append(encoded)
         touched_forms.add(_form_of(element_states, element_id))
 
@@ -377,7 +393,7 @@ def _validate_options(
 
 
 def _check_readable(
-    key: str, metadata: WidgetMetadata[Any], state: WidgetState, value: Any
+    key: str, metadata: WidgetMetadata[Any], state: WidgetState
 ) -> None:
     """Reject a value the widget's own deserializer cannot read.
 
@@ -398,7 +414,7 @@ def _check_readable(
         metadata.deserializer(wire)
     except Exception as exc:
         raise AgentRequestError(
-            "invalid_value", f"{value!r} is not a value {key!r} accepts."
+            "invalid_value", f"The value sent for {key!r} is not one it accepts."
         ) from exc
 
 
@@ -430,12 +446,23 @@ def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> An
 
 
 def _encode(
-    element_id: str, value_type: ValueFieldName, value: Any, key: str
+    element_id: str,
+    value_type: ValueFieldName,
+    value: Any,
+    key: str,
+    *,
+    numbers_as_text: bool,
 ) -> WidgetState:
     """Write a JSON value into the ``WidgetState`` arm the widget registered.
 
     ``key`` is what the client sent and is used in errors, so a message never
     quotes an internal element ID back at a caller that used an authored key.
+    Errors name the expected type rather than quote the value, which may be a
+    password.
+
+    A single value and a one-item list are interchangeable for a list-valued
+    wire type, because single-select button groups and single sliders carry
+    one value in a list.
     """
     state = WidgetState()
     state.id = element_id
@@ -453,14 +480,14 @@ def _encode(
         elif value_type == "int_value":
             state.int_value = _as_integer(value)
         elif value_type == "string_value":
-            state.string_value = _as_string(value)
+            state.string_value = _as_string(value, numbers_as_text)
         elif value_type == "json_value":
             state.json_value = json.dumps(value)
         elif is_array_value_field_name(value_type):
             items = value if isinstance(value, list) else [value]
             array = getattr(state, value_type)
             if value_type == "string_array_value":
-                array.data.extend(_as_string(item) for item in items)
+                array.data.extend(_as_string(item, numbers_as_text) for item in items)
             elif value_type == "double_array_value":
                 array.data.extend(_as_number(item) for item in items)
             else:
@@ -474,7 +501,7 @@ def _encode(
         # OverflowError: an integer too large to become a float.
         raise AgentRequestError(
             "invalid_value",
-            f"{value!r} is not a valid value for {key!r}.",
+            f"The value for {key!r} must be {_EXPECTED.get(value_type, 'JSON')}.",
         ) from exc
 
     return state
@@ -566,11 +593,12 @@ def _as_integer(value: Any) -> int:
     return int(value)
 
 
-def _as_string(value: Any) -> str:
+def _as_string(value: Any, numbers_as_text: bool) -> str:
     """Coerce a JSON value into the widget's wire string.
 
     Date and time widgets serialize as ISO 8601, which is also what their
-    public API accepts, so an agent can send back what it read.
+    public API accepts, so an agent can send back what it read. A number is
+    accepted only where it names an option.
     """
     if isinstance(value, str):
         return value
@@ -580,6 +608,6 @@ def _as_string(value: Any) -> str:
         # Guard against `True` silently becoming the string "True" for a
         # selection widget.
         raise TypeError(f"{value!r} is not a string")
-    if isinstance(value, (int, float)):
+    if numbers_as_text and isinstance(value, (int, float)):
         return str(value)
     raise TypeError(f"{value!r} is not a string")

@@ -359,7 +359,12 @@ class _SnapshotBuilder:
 
         action = description.get("action")
         if element_id and action and not _is_write_only(description):
-            value = self._widget_value(element_id)
+            value = self._widget_value(
+                element_id,
+                has_options=isinstance(
+                    (description.get("props") or {}).get("options"), list
+                ),
+            )
             if action == "value" or value:
                 # A trigger's value only means anything while it is set, and it
                 # resets right after the run that observed it.
@@ -467,7 +472,7 @@ class _SnapshotBuilder:
             result["support"] = support
         return result
 
-    def _widget_value(self, element_id: str) -> Any:
+    def _widget_value(self, element_id: str, *, has_options: bool = False) -> Any:
         """Read a widget's live value, in the form a request may send back.
 
         For a widget with a fixed option set, ``st.session_state`` holds the
@@ -479,9 +484,11 @@ class _SnapshotBuilder:
 
         The widget's own serializer is the mapping the runtime will apply in
         reverse, so it is what keeps read and write in the same space. It is
-        used for every widget with an option list, and for a widget whose wire
-        value is text when what it holds is not plain JSON already -- a date
-        becomes its ISO string. Others -- numbers, booleans, temporal sliders,
+        used for every widget with an option list, whether the registry holds
+        the list or only the snapshot lists it (`has_options`), as for
+        `st.select_slider`. It is also used for a widget whose wire value is
+        text when what it holds is not plain JSON already -- a date becomes its
+        ISO string. Others -- numbers, booleans, temporal sliders,
         `st.feedback`'s integer -- are reported as their Python value in JSON,
         which a request may also send.
         """
@@ -495,6 +502,7 @@ class _SnapshotBuilder:
         metadata = self._session_state._new_widget_state.widget_metadata.get(element_id)
         if metadata is not None and (
             metadata.formatted_options is not None
+            or has_options
             or (
                 metadata.value_type in _STRING_WIRE_TYPES
                 and not (value is None or isinstance(value, (str, int, float)))

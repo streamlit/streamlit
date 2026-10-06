@@ -486,19 +486,16 @@ class MetricMixin:
             metric_proto,
             layout_config=layout_config,
             # `value` and `delta` are reported as authored, so a number stays a
-            # number for a caller that has to compute with it. The rendered
-            # strings come along only when they differ, which is when the
-            # author passed a number and Streamlit formatted it.
-            # `delta_color` and `delta_arrow` are likewise as authored rather than
-            # the `direction` and `color` pair they become on the wire, and only
-            # reported with a delta they apply to.
+            # number for a caller that has to compute with it. `format` is
+            # applied by the frontend, so it is reported rather than a rendered
+            # string. `delta_color` and `delta_arrow` are likewise as authored
+            # rather than the `direction` and `color` pair they become on the
+            # wire, and only reported with a delta they apply to.
             agent_props=agent_spec.element(
                 "metric",
                 label=label,
                 value=value,
-                display_value=_display_of(value, metric_proto.body),
                 delta=delta,
-                display_delta=_display_of(delta, metric_proto.delta),
                 delta_color=delta_color if delta is not None else None,
                 delta_arrow=delta_arrow if delta is not None else None,
                 delta_description=delta_description,
@@ -546,17 +543,6 @@ def _parse_metric_number(value: AnyNumber, parameter: str) -> str:
             ["int", "float", "Decimal", "NumPy number"],
             detail="Convert the value to a number type.",
         ) from ex
-
-
-def _display_of(authored: Value | Delta, rendered: str) -> str | None:
-    """The rendered string, for the agent API, when it adds anything.
-
-    An author who passed a string already sees it under `value`, so repeating
-    it as `display_value` would just be two names for one fact.
-    """
-    if not rendered or rendered == authored:
-        return None
-    return rendered
 
 
 def _parse_value(value: Value) -> str:

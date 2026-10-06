@@ -110,9 +110,9 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
         400,
         (
             "The element is on the current page but cannot be driven through "
-            "this interface: it takes input JSON cannot express (uploaded "
-            "bytes), or its `support` field says why. Inspect it in the tree "
-            "instead of acting on it."
+            "this interface: it is display-only, it takes input JSON cannot "
+            "express (uploaded bytes), or its `support` field says why. "
+            "Inspect it in the tree instead of acting on it."
         ),
     ),
     "unknown_key": (
@@ -579,6 +579,9 @@ def schemas() -> dict[str, Any]:
                         "session state.\n\n"
                         "A value outside an element's `options`, of the wrong "
                         "JSON type, or one the widget cannot read is rejected. "
+                        "A number is a string only where it names an option, "
+                        "and a single value and a one-item list are "
+                        "interchangeable for a list-valued element. "
                         "Other constraints are applied the way the app applies "
                         "them to any client: a number outside "
                         "`min_value`/`max_value`, a malformed date, time, or "
@@ -630,10 +633,14 @@ def schemas() -> dict[str, Any]:
                         "omitting it preserves the current one. Sending a "
                         'parameter bound to a widget (`bind="query-params"`) '
                         "sets that widget, which makes 'run this "
-                        "parameterized report' a single creating call. "
-                        "Leaving one out does not reset its widget, which "
-                        "keeps its value for the session and may be written "
-                        "back, so `{}` clears only the unbound ones."
+                        "parameterized report' a single creating call. The "
+                        "runtime ignores a bound parameter equal to its "
+                        "widget's default, as it does for a browser's "
+                        "address, so this cannot move a widget back to its "
+                        "default: use `widget_state` for that. Leaving one "
+                        "out does not reset its widget, which keeps its value "
+                        "for the session and may be written back, so `{}` "
+                        "clears only the unbound ones."
                     ),
                 },
                 "context": {

@@ -177,10 +177,6 @@ _DERIVED_PROPS: dict[str, dict[str, str]] = {
         "doc_string": "read from the object",
     },
     "image": {"url": _MEDIA_URL},
-    "metric": {
-        "display_value": "the rendered form of `value`",
-        "display_delta": "the rendered form of `delta`",
-    },
     "page_link": {"external": "whether `page` leaves the app"},
     "popover": {"open": "whether the popover is open in this run"},
     "pyplot": {"url": _MEDIA_URL},
