@@ -303,6 +303,38 @@ describe("useLabelTitleTooltip", () => {
     }
   })
 
+  it("clears the title when fonts finish loading and the label fits", async () => {
+    let resolveReady: () => void = () => undefined
+    const ready = new Promise<void>(resolve => {
+      resolveReady = resolve
+    })
+    const originalFonts = Object.getOwnPropertyDescriptor(document, "fonts")
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { ready, status: "loading" },
+    })
+
+    try {
+      layout.setWidths(200, 100)
+      render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+      expect(screen.getByTitle("Plain label")).toBeVisible()
+
+      layout.setWidths(100, 100)
+      expect(screen.getByTitle("Plain label")).toBeVisible()
+
+      resolveReady()
+      await waitFor(() => {
+        expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+      })
+    } finally {
+      if (originalFonts) {
+        Object.defineProperty(document, "fonts", originalFonts)
+      } else {
+        Reflect.deleteProperty(document, "fonts")
+      }
+    }
+  })
+
   it("does not measure again when document fonts are already loaded", async () => {
     let resolveReady: () => void = () => undefined
     const ready = new Promise<void>(resolve => {

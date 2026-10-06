@@ -202,6 +202,13 @@ with st.container(key="wrap_column_placements"):
 
 # A form is a layout boundary: placing the form in a column does not make
 # the submit button a direct column child, so auto wrap still wraps.
+with st.container(key="wrap_form_in_column"):
+    form_col, _ = st.columns(2)
+    with form_col.form("wrap_column_form"):
+        st.form_submit_button(
+            _WRAP_LABEL, width=150, key="wrap_auto_form_submit_in_column"
+        )
+
 # A button in an unselected tab mounts without a layout box. The title is
 # applied once that tab is shown and the label is actually clipped.
 _hidden_tab, hidden_label_tab = st.tabs(
@@ -214,10 +221,3 @@ with hidden_label_tab:
         wrap=False,
         key="wrap_false_hidden_tab_button",
     )
-
-with st.container(key="wrap_form_in_column"):
-    form_col, _ = st.columns(2)
-    with form_col.form("wrap_column_form"):
-        st.form_submit_button(
-            _WRAP_LABEL, width=150, key="wrap_auto_form_submit_in_column"
-        )

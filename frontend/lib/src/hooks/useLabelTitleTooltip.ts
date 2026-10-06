@@ -64,18 +64,16 @@ function measureEllipsis(el: Element): OverflowMeasure {
  */
 function labelOverflowState(root: HTMLElement): OverflowMeasure {
   let sawBox = false
-  const consider = (state: OverflowMeasure): boolean => {
+  for (const el of [
+    root,
+    ...root.querySelectorAll(ELLIPSIS_TARGET_SELECTOR),
+  ]) {
+    const state = measureEllipsis(el)
+    if (state === "overflow") {
+      return "overflow"
+    }
     if (state === "fits") {
       sawBox = true
-    }
-    return state === "overflow"
-  }
-  if (consider(measureEllipsis(root))) {
-    return "overflow"
-  }
-  for (const el of root.querySelectorAll(ELLIPSIS_TARGET_SELECTOR)) {
-    if (consider(measureEllipsis(el))) {
-      return "overflow"
     }
   }
   return sawBox ? "fits" : "unmeasured"

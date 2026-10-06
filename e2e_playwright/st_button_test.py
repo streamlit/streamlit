@@ -414,6 +414,11 @@ def test_short_label_has_no_native_title(app: Page):
     short_horizontal = get_element_by_key(app, "wrap_auto_short_button")
     short_explicit = get_element_by_key(app, "wrap_false_short_button")
 
+    # Wait for a clipped label's title first, so a missing short-label title is
+    # not a pass that landed before the tooltip effect ran.
+    expect(
+        get_element_by_key(app, "wrap_auto_button").get_by_title(WRAP_LABEL, exact=True)
+    ).to_be_visible()
     expect(short_horizontal.get_by_role("button", name="Short label")).to_be_visible()
     expect(short_horizontal.get_by_title("Short label", exact=True)).to_have_count(0)
     expect(short_explicit.get_by_role("button", name="Short label")).to_be_visible()
