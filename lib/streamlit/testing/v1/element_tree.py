@@ -113,15 +113,178 @@ _GET_TYPE_ALIASES: dict[str, str] = {
 }
 
 
-def _is_help_signature(value: str) -> bool:
-    """Return whether ``value`` is an unquoted ``module.name(...)`` signature.
+# Proto ``type`` strings whose ``name=value`` text is a signature, not a repr.
+# Instances use the class name (``Point``), so a dataclass repr stays a value.
+_HELP_SIGNATURE_TYPES = frozenset(
+    {
+        "BoundCachedFunc",
+        "CachedFunc",
+        "builtin_function_or_method",
+        "class",
+        "classmethod",
+        "classmethod_descriptor",
+        "function",
+        "method",
+        "method_descriptor",
+        "staticmethod",
+        "wrapper_descriptor",
+    }
+)
+
+
+def _is_help_signature(value: str, object_type: str) -> bool:
+    """Return whether ``value`` is an unquoted ``module.name(params)`` signature.
 
     ``st.help`` stores that form for callables, classes, and instances whose
-    repr is not human-readable. Quoted reprs such as ``'foo(bar)'`` are values.
+    repr is not human-readable. Quoted strings and readable reprs such as
+    ``Point(1, 2)``, ``NamedPoint(x=1, y=2)``, and ``datetime.datetime(...)``
+    are values. ``name=value`` fields are a signature only for callable and
+    class proto types.
     """
-    return (
-        bool(value) and value[0] not in "'\"" and "(" in value and value.endswith(")")
-    )
+    parsed = _help_signature_parts(value)
+    if parsed is None:
+        return False
+    prefix, parts = parsed
+    if parts == ["..."]:
+        return True
+    if not parts:
+        # ``module.Class()`` is a signature. ``Point()`` is a readable repr.
+        return "." in prefix or object_type in _HELP_SIGNATURE_TYPES
+    if not all(_is_signature_param(part) for part in parts):
+        return False
+    if all(_is_keyword_repr_field(part) for part in parts):
+        return object_type in _HELP_SIGNATURE_TYPES
+    return True
+
+
+def _help_signature_parts(value: str) -> tuple[str, list[str]] | None:
+    """Return ``(prefix, params)`` for ``prefix(params)``, or None.
+
+    An empty parameter list means ``name()``. ``["..."]`` is the fallback
+    signature. A `` -> annotation`` suffix is the Python 3.14 signature form.
+    """
+    if (
+        not value
+        or value[0] in "'\""
+        or "(" not in value
+        or (len(value) >= 300 and value.endswith("..."))
+    ):
+        return None
+    open_at = value.find("(")
+    if open_at <= 0 or not _is_dotted_name(value[:open_at]):
+        return None
+    close_at = _matching_paren(value, open_at)
+    if close_at is None:
+        return None
+    suffix = value[close_at + 1 :]
+    if suffix and not suffix.startswith(" -> "):
+        return None
+    inside = value[open_at + 1 : close_at].strip()
+    prefix = value[:open_at]
+    if inside == "...":
+        return prefix, ["..."]
+    if not inside:
+        return prefix, []
+    return prefix, _split_top_level_commas(inside)
+
+
+def _is_dotted_name(prefix: str) -> bool:
+    """Return whether ``prefix`` is a dotted name, including ``<locals>``."""
+    if not prefix:
+        return False
+    for part in prefix.split("."):
+        if part.isidentifier():
+            continue
+        inner = part[1:-1]
+        if part.startswith("<") and part.endswith(">") and inner.isidentifier():
+            continue
+        return False
+    return True
+
+
+def _matching_paren(value: str, open_at: int) -> int | None:
+    """Return the index of the ``)`` that closes the ``(`` at ``open_at``."""
+    depth = 0
+    quote: str | None = None
+    for index in range(open_at, len(value)):
+        char = value[index]
+        if quote is not None:
+            if char == quote and value[index - 1] != "\\":
+                quote = None
+            continue
+        if char in "'\"":
+            quote = char
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def _split_top_level_commas(text: str) -> list[str]:
+    """Split ``text`` on commas that are not inside brackets or quotes."""
+    parts: list[str] = []
+    start = 0
+    depth = 0
+    quote: str | None = None
+    for index, char in enumerate(text):
+        if quote is not None:
+            if char == quote and text[index - 1] != "\\":
+                quote = None
+            continue
+        if char in "'\"":
+            quote = char
+        elif char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        elif char == "," and depth == 0:
+            parts.append(text[start:index].strip())
+            start = index + 1
+    tail = text[start:].strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def _param_name_and_sep(part: str) -> tuple[str, str]:
+    """Return the parameter name and the first top-level ``:`` or ``=``."""
+    depth = 0
+    quote: str | None = None
+    for index, char in enumerate(part):
+        if quote is not None:
+            if char == quote and part[index - 1] != "\\":
+                quote = None
+            continue
+        if char in "'\"":
+            quote = char
+        elif char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        elif depth == 0 and char in ":=":
+            return part[:index].strip(), char
+    return part.strip(), ""
+
+
+def _is_signature_param(part: str) -> bool:
+    """Return whether ``part`` is one ``inspect.signature`` parameter."""
+    if part in {"*", "/", "..."}:
+        return True
+    if part.startswith("**"):
+        return part[2:].isidentifier()
+    if part.startswith("*"):
+        return part[1:].isidentifier()
+    name, separator = _param_name_and_sep(part)
+    return bool(name) and name.isidentifier() and separator in {"", ":", "="}
+
+
+def _is_keyword_repr_field(part: str) -> bool:
+    """Return whether ``part`` is a ``name=value`` field from a readable repr."""
+    name, separator = _param_name_and_sep(part)
+    return separator == "=" and name.isidentifier()
 
 
 def _unknown_element_content(proto: Any) -> Any:
@@ -916,17 +1079,17 @@ class Help(Element):
     def value(self) -> str:
         """Short summary of the documented object.
 
-        A short proto value is kept (``"'Hello'"``, ``"streamlit"``). An empty
-        proto value or an unquoted ``module.name(...)`` signature uses the
-        captured name instead, so modules such as ``re`` and callable instances
-        stay short. The docstring is ``doc_string`` and is not used as
-        ``.value``.
+        A short proto value is kept, including readable reprs (``"'Hello'"``,
+        ``"streamlit"``, ``"Point(1, 2)"``). An empty proto value or a
+        parameter-list signature uses the captured name instead, so modules
+        such as ``re`` and callable instances stay short. The docstring is
+        ``doc_string`` and is not used as ``.value``.
         """
         raw = self.proto.value
-        if self.name and (not raw or _is_help_signature(raw)):
+        if self.name and (not raw or _is_help_signature(raw, self.proto.type)):
             return self.name
-        if _is_help_signature(raw):
-            return ""
+        # No captured name: the proto value is the only summary, even when it
+        # is a signature.
         return raw
 
 

@@ -393,6 +393,81 @@ def test_progress_html_and_help() -> None:
             node.click()
 
 
+def test_help_value_keeps_readable_reprs() -> None:
+    """Parentheses in a readable repr stay on ``Help.value``.
+
+    Parameter lists still use the captured name, including functions whose
+    parameters all have defaults.
+    """
+
+    def script() -> None:
+        import datetime
+        from dataclasses import dataclass
+        from decimal import Decimal
+
+        import numpy as np
+
+        import streamlit as st
+
+        class Point:
+            """A point."""
+
+            def __init__(self, x: int, y: int) -> None:
+                self.x = x
+                self.y = y
+
+            def __repr__(self) -> str:
+                return f"Point({self.x}, {self.y})"
+
+        @dataclass
+        class NamedPoint:
+            """A named point."""
+
+            x: int
+            y: int
+
+        def scale(x: int = 1, y: int = 2, z: int = 3) -> int:
+            """Scale."""
+            return x
+
+        point = Point(1, 2)
+        named = NamedPoint(1, 2)
+        moment = datetime.datetime(2020, 1, 2, 3, 4)
+        day = datetime.date(2024, 1, 1)
+        pair = (1, 2)
+        span = range(10)
+        arr = np.arange(1)
+        amount = Decimal("1.5")
+
+        st.help(point)
+        st.help(named)
+        st.help(moment)
+        st.help(day)
+        st.help(pair)
+        st.help(span)
+        st.help(arr)
+        st.help(amount)
+        st.help(scale)
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    point, named, moment, day, pair, span, arr, amount, scale = at.help
+    assert point.name == "point"
+    assert point.value == "Point(1, 2)"
+    assert named.name == "named"
+    assert named.value == "script.<locals>.NamedPoint(x=1, y=2)"
+    assert moment.value == "datetime.datetime(2020, 1, 2, 3, 4)"
+    assert day.value == "datetime.date(2024, 1, 1)"
+    assert pair.value == "(1, 2)"
+    assert span.value == "range(0, 10)"
+    assert arr.name == "arr"
+    assert arr.value == "array([0])"
+    assert amount.value == "Decimal('1.5')"
+    assert scale.name == "scale"
+    assert scale.value == "scale"
+    assert "(x: int = 1, y: int = 2, z: int = 3)" in scale.proto.value
+
+
 @pytest.mark.parametrize("size", list(SIZE_TO_REM_MAPPING))
 def test_space_named_size(size: str) -> None:
     """Every named ``st.space`` size round-trips through ``Space.value``."""
