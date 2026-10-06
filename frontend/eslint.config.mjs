@@ -309,8 +309,8 @@ export default defineConfig([
       // TypeScript rules with type-checking
       // Production src enables no-unsafe-call / return / argument, no-misused-spread,
       // and unbound-method (see the overlay below). This block leaves those rules
-      // off so tests, which that overlay ignores, stay exempt. Other no-unsafe-*
-      // rules stay off.
+      // off so tests, which that overlay ignores, stay exempt. Assignment and
+      // member access stay off here; a later overlay enables them for Vega/Arrow.
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
@@ -517,14 +517,32 @@ export default defineConfig([
       // Calling, returning, or passing `any` infects typed APIs. Spreading a
       // class instance (protobuf, AxiosHeaders) copies enumerable own fields
       // and drops methods. Extracting a class method without binding drops
-      // `this`. Tests and the remaining no-unsafe-* rules
-      // (assignment/member-access) stay off for now; see the frontend linting
-      // plan in the wiki for the remaining queue.
+      // `this`. Tests stay exempt. Assignment and member access on `any` are
+      // enabled only for the Vega/Arrow slice below; Plotly, DeckGL, and
+      // dataframe editing still read untyped values.
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-return": "error",
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-misused-spread": "error",
       "@typescript-eslint/unbound-method": "error",
+    },
+  },
+  {
+    // Vega spec JSON and untyped Arrow `Field`/`Vector` values arrive as `any`.
+    // These files already narrow them, so assignment and member access on `any`
+    // are errors here. The list is explicit: sibling modules such as pandas
+    // styler utils stay out until their own boundary is narrowed. Plotly,
+    // DeckGL, and dataframe editing still read `any`.
+    files: [
+      "**/ArrowVegaLiteChart/useVegaElementPreprocessor.ts",
+      "**/dataframes/arrowFormatUtils.ts",
+      "**/dataframes/arrowParseUtils.ts",
+      "**/dataframes/arrowTypeUtils.ts",
+      "**/dataframes/Quiver.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
     },
   },
   // Test files specific configuration
