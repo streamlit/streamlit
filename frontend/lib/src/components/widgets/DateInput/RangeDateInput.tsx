@@ -435,10 +435,10 @@ function RangeDateInput({
   const { floatingStyles, setFloating, setReference } =
     useFloatingOverlay(overlayOptions)
 
-  // After the calendar closes, return focus to the control that opened it.
-  // Keep focus on the calendar button if it already has it (e.g. Escape after
-  // focusing the toggle). Active mode uses activeOriginRef; passive mode
-  // otherwise uses the last segment.
+  // Returns focus to the control that opened the calendar after it closes:
+  // - Calendar button already focused (e.g. Escape after focusing it): leave it.
+  // - Active mode: the element recorded in `activeOriginRef`.
+  // - Passive mode: the last date segment.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
     if (!calendarButtonRef.current?.contains(document.activeElement)) {
@@ -527,8 +527,8 @@ function RangeDateInput({
     [setQuickSelectReferenceRef]
   )
 
-  // Do not reopen a passive popover when focus moves to the calendar or clear
-  // button (e.g. Escape restore onto the toggle).
+  // Opens the passive preview when focus enters a date segment. Focus on the
+  // clear or calendar button is ignored so those controls do not reopen it.
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
       if (isRestoringFocusRef.current) return

@@ -2490,6 +2490,38 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendarButton).not.toHaveAttribute("aria-controls")
   })
 
+  it("commits typed segment edits when the calendar button closes the dialog", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    spy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(screen.getByTestId("stDateInputCalendar")).toHaveAttribute(
+        "role",
+        "dialog"
+      )
+    })
+    await user.click(calendarButton)
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(props.element.id, [newDateWire], {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
+    })
+  })
+
   it("Escape after a pointer-opened calendar restores focus to the calendar button", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)
@@ -2596,6 +2628,50 @@ describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
     })
     expect(calendarButton).toHaveAttribute("aria-expanded", "false")
     expect(calendarButton).not.toHaveAttribute("aria-controls")
+  })
+
+  it("commits typed segment edits when the calendar button closes the dialog", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+      min: "2019-01-01",
+    })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    spy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+    const end = getRangeDateSegments(region, "end")
+    await typeIntoSegment(user, start.year, "2021")
+    await typeIntoSegment(user, start.month, "02")
+    await typeIntoSegment(user, start.day, "07")
+    await typeIntoSegment(user, end.year, "2021")
+    await typeIntoSegment(user, end.month, "02")
+    await typeIntoSegment(user, end.day, "09")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(screen.getByTestId("stDateInputCalendar")).toHaveAttribute(
+        "role",
+        "dialog"
+      )
+    })
+    await user.click(calendarButton)
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2021-02-07", "2021-02-09"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+    })
   })
 
   it("Escape on the focused calendar button keeps focus on the toggle", async () => {
