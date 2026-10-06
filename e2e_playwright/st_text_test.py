@@ -166,9 +166,9 @@ def test_wrap_false_collapses_text_newlines(app: Page):
     single_line = get_element_by_key(app, "wrap_false_text").get_by_test_id("stText")
 
     # The joined line is clipped, so the title is the collapsed text.
-    expect(no_wrap_container.get_by_title(WRAP_NEWLINE_TEXT, exact=True)).to_have_count(
-        1
-    )
+    expect(
+        no_wrap_container.get_by_title(WRAP_NEWLINE_TEXT, exact=True)
+    ).to_be_visible()
     expect(wrap_container.get_by_title(WRAP_NEWLINE_TEXT, exact=True)).to_have_count(0)
 
     false_box = no_wrap.bounding_box()
