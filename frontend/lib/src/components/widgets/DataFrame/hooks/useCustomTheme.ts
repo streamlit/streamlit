@@ -125,6 +125,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.dataframeHeaderTextColor,
       headerIconSize: Math.round(convertRemToPx("1.125rem")),
+      roundingRadius: Math.round(convertRemToPx(theme.radii.default)),
       headerFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       // Cell styling:
       baseFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
