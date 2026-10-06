@@ -123,6 +123,10 @@ interface RangeDateInputProps {
    * synchronously on blur so a concurrent form submit reads the correct
    * value. Undefined when not in a form. */
   formCommit?: (dates: CalendarDate[]) => void
+  /** Called after a successful Enter commit when the form allows
+   * Enter-to-submit. Undefined when not in a form or when the form
+   * disables enter_to_submit. */
+  formSubmit?: () => void
   /** Incremented when the parent form is cleared. Signals this component to
    * reset its local display state to the parent's value props (which may not
    * have changed if segment edits were never committed). */
@@ -224,6 +228,7 @@ function RangeDateInput({
   onValidate,
   onClose,
   formCommit,
+  formSubmit,
   formResetKey,
 }: RangeDateInputProps): ReactElement {
   const theme = useEmotionTheme()
@@ -637,8 +642,12 @@ function RangeDateInput({
     [onChange, restoreFocusToField]
   )
 
-  // Alt+ArrowDown enters active calendar mode; Tab from edge segments
-  // closes the passive popover and lets focus leave the widget naturally.
+  // Capture-phase keydown (wired via onKeyDownCapture): React Aria's segment
+  // handlers swallow Enter on the bubble path, so Enter-to-commit must run
+  // before them — same pattern as DateTimeInput/TimeInput.
+  // Alt+ArrowDown enters active calendar mode; Enter commits (and may submit
+  // the form); Tab from edge segments closes the passive popover and lets
+  // focus leave the widget naturally.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.altKey && e.key === "ArrowDown") {
@@ -646,6 +655,34 @@ function RangeDateInput({
         activeOriginRef.current = e.target as HTMLElement
         if (!isOpen) setIsOpenState(true)
         setIsCalendarActive(true)
+        return
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault()
+        // Enter commits without dismissing, matching SingleDateInput /
+        // DateTimeInput. Skip commit and form submit while either field is
+        // only partially typed.
+        let canSubmit = true
+        if (hasPartiallyTypedField(triggerRef.current)) {
+          canSubmit = false
+        } else {
+          const pending = compact([
+            displayStartRef.current,
+            displayEndRef.current,
+          ])
+          const committed = compact([startValue, endValue])
+          if (!rangeEqual(pending, committed)) {
+            onChangeRef.current(pending)
+            formCommit?.(pending)
+          }
+        }
+        // `error` is the value from before this handler — React state updates
+        // from the commit above are not visible yet — so this blocks submit
+        // when a validation error was already showing (e.g. out of bounds).
+        if (canSubmit && !error) {
+          formSubmit?.()
+        }
         return
       }
 
@@ -663,7 +700,7 @@ function RangeDateInput({
         setIsOpenState(false)
       }
     },
-    [isOpen]
+    [isOpen, startValue, endValue, error, formCommit, formSubmit]
   )
 
   // In active mode: Tab cycles focus within the popover (focus trap).
@@ -893,7 +930,7 @@ function RangeDateInput({
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClickCapture={handleClickCapture}
-        onKeyDown={handleFieldKeyDown}
+        onKeyDownCapture={handleFieldKeyDown}
       >
         <StyledDateFieldsScroller data-testid="stDateInputFieldsScroller">
           <I18nProvider locale="en-US">

@@ -327,6 +327,167 @@ describe("DateInput", () => {
     })
   })
 
+  describe("Enter key behavior", () => {
+    it("commits value immediately when Enter is pressed", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateInput {...props} />)
+      spy.mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "02")
+      await typeIntoSegment(user, day, "06")
+      await user.keyboard("{Enter}")
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(props.element.id, [newDateWire], {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+      })
+    })
+
+    it("does not commit partially typed state on Enter", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateInput {...props} />)
+      spy.mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      await clearSegment(user, getSingleDateSegments(region).year)
+      await user.keyboard("{Enter}")
+
+      expect(spy).not.toHaveBeenCalled()
+    })
+
+    it("commits a range immediately when Enter is pressed", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2020-02-01", "2020-02-07"],
+        min: "2019-01-01",
+        isRange: true,
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateInput {...props} />)
+      spy.mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      const end = getRangeDateSegments(region, "end")
+      await typeIntoSegment(user, end.year, "2020")
+      await typeIntoSegment(user, end.month, "02")
+      await typeIntoSegment(user, end.day, "10")
+      await user.keyboard("{Enter}")
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2020-02-01", "2020-02-10"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+  })
+
+  describe("Form submit on Enter", () => {
+    it("calls submitForm on Enter when enter_to_submit is enabled and value is valid", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ formId: "form" })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => true)
+      render(<DateInput {...props} />)
+
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "02")
+      await typeIntoSegment(user, day, "06")
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
+        "form",
+        undefined
+      )
+    })
+
+    it("does NOT call submitForm on Enter when enter_to_submit is disabled", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ formId: "form" })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(
+        false
+      )
+      vi.spyOn(props.widgetMgr, "submitForm")
+      render(<DateInput {...props} />)
+
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "02")
+      await typeIntoSegment(user, day, "06")
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+    })
+
+    it("does NOT call submitForm on Enter when a validation error is showing", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        min: "2020-01-05",
+        max: "2020-01-25",
+        formId: "form",
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm")
+      render(<DateInput {...props} />)
+
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "01")
+      await typeIntoSegment(user, day, "30")
+
+      await screen.findByTestId("stTooltipErrorHoverTarget")
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+    })
+
+    it("calls submitForm on Enter for a range when enter_to_submit is enabled", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2020-02-01", "2020-02-07"],
+        min: "2019-01-01",
+        isRange: true,
+        formId: "form",
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => true)
+      render(<DateInput {...props} />)
+
+      const region = screen.getByTestId("stDateInput")
+      const end = getRangeDateSegments(region, "end")
+      await typeIntoSegment(user, end.year, "2020")
+      await typeIntoSegment(user, end.month, "02")
+      await typeIntoSegment(user, end.day, "10")
+      await user.keyboard("{Enter}")
+
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledWith(
+        "form",
+        undefined
+      )
+    })
+  })
+
   describe("validation and error display", () => {
     it("displays an error tooltip when the entered date for single date input is outside range", async () => {
       const user = userEvent.setup()

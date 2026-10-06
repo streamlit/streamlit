@@ -289,6 +289,14 @@ function DateInput({
     [inForm, element, widgetMgr, fragmentId]
   )
 
+  const handleFormSubmit = useCallback((): void => {
+    widgetMgr.submitForm(element.formId, fragmentId)
+  }, [element.formId, widgetMgr, fragmentId])
+
+  const allowEnterToSubmit = inForm
+    ? widgetMgr.allowFormEnterToSubmit(element.formId)
+    : false
+
   const singleValue = useMemo(
     () => isoToCalendarDate(value[0] ?? "") ?? null,
     [value]
@@ -362,6 +370,7 @@ function DateInput({
           onValidate={handleValidate}
           onClose={handleClose}
           formCommit={inForm ? handleRangeFormCommit : undefined}
+          formSubmit={allowEnterToSubmit ? handleFormSubmit : undefined}
           formResetKey={formResetKey}
         />
       ) : (
@@ -382,6 +391,7 @@ function DateInput({
           onValidate={handleValidate}
           onClose={handleClose}
           formCommit={inForm ? handleFormCommit : undefined}
+          formSubmit={allowEnterToSubmit ? handleFormSubmit : undefined}
           formResetKey={formResetKey}
         />
       )}

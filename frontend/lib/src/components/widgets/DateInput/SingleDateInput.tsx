@@ -111,6 +111,10 @@ interface SingleDateInputProps {
    * synchronously on blur so a concurrent form submit reads the correct
    * value. Undefined when not in a form. */
   formCommit?: (value: CalendarDate | null) => void
+  /** Called after a successful Enter commit when the form allows
+   * Enter-to-submit. Undefined when not in a form or when the form
+   * disables enter_to_submit. */
+  formSubmit?: () => void
   /** Incremented when the parent form is cleared. Signals this component to
    * reset its local displayValue to the parent's value prop (which may not
    * have changed if segment edits were never committed). */
@@ -134,6 +138,7 @@ function SingleDateInput({
   onValidate,
   onClose,
   formCommit,
+  formSubmit,
   formResetKey,
 }: SingleDateInputProps): ReactElement {
   const theme = useEmotionTheme()
@@ -471,8 +476,12 @@ function SingleDateInput({
     [disabled, format, onChange, displayValue, minDate]
   )
 
-  // Alt+ArrowDown enters active calendar mode; Tab from edge segments
-  // closes the passive popover and lets focus leave the widget naturally.
+  // Capture-phase keydown (wired via onKeyDownCapture): React Aria's segment
+  // handlers swallow Enter on the bubble path, so Enter-to-commit must run
+  // before them — same pattern as DateTimeInput/TimeInput.
+  // Alt+ArrowDown enters active calendar mode; Enter commits (and may submit
+  // the form); Tab from edge segments closes the passive popover and lets
+  // focus leave the widget naturally.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.altKey && e.key === "ArrowDown") {
@@ -480,6 +489,41 @@ function SingleDateInput({
         activeOriginRef.current = e.target as HTMLElement
         if (!isOpen) setIsOpen(true)
         setIsCalendarActive(true)
+        return
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault()
+        // Enter commits without dismissing, matching DateTimeInput. Skip the
+        // commit (and form submit) when segments are incomplete or a
+        // non-clearable field was fully cleared.
+        let canSubmit = true
+        const segments = triggerRef.current?.querySelectorAll(
+          '[role="spinbutton"]'
+        )
+        const placeholders = triggerRef.current?.querySelectorAll(
+          '[role="spinbutton"][data-placeholder="true"]'
+        )
+        if (segments && placeholders) {
+          const isPartiallyTyped =
+            placeholders.length > 0 && placeholders.length < segments.length
+          const isFullyCleared = placeholders.length === segments.length
+          if (isPartiallyTyped || (isFullyCleared && !clearable)) {
+            canSubmit = false
+          } else {
+            const pending = isFullyCleared ? null : displayValueRef.current
+            if (!datesEqual(pending, value)) {
+              onChangeRef.current(pending)
+              formCommit?.(pending)
+            }
+          }
+        }
+        // `error` is the value from before this handler — React state updates
+        // from the commit above are not visible yet — so this blocks submit
+        // when a validation error was already showing (e.g. out of bounds).
+        if (canSubmit && !error) {
+          formSubmit?.()
+        }
         return
       }
 
@@ -497,7 +541,7 @@ function SingleDateInput({
         setIsOpen(false)
       }
     },
-    [isOpen]
+    [isOpen, clearable, value, error, formCommit, formSubmit]
   )
 
   // In active mode: Tab cycles focus within the calendar (focus trap).
@@ -586,7 +630,7 @@ function SingleDateInput({
         onBlur={handleBlur}
         onClickCapture={handleClickCapture}
         onPaste={handlePaste}
-        onKeyDown={handleFieldKeyDown}
+        onKeyDownCapture={handleFieldKeyDown}
       >
         <StyledDateFieldsScroller data-testid="stDateInputFieldsScroller">
           <I18nProvider locale="en-US">
