@@ -140,10 +140,13 @@ To find the latest AI review and extract the verdict:
 ```bash
 PR_NUM=$(gh pr view --json number -q '.number')
 
-# Get the verdict from the latest AI review
-gh api --paginate "repos/streamlit/streamlit/pulls/${PR_NUM}/reviews" \
-  | jq -s '[.[][] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | sort_by(.submitted_at) | last | .body' \
-  | grep -A2 "## Verdict"
+# Newest AI review, including the PR-comment fallback when inline review comments are rejected.
+{
+  gh api --paginate "repos/{owner}/{repo}/pulls/${PR_NUM}/reviews" \
+    --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review"))) | {at: .submitted_at, body}'
+  gh api --paginate "repos/{owner}/{repo}/issues/${PR_NUM}/comments" \
+    --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review"))) | {at: .created_at, body}'
+} | jq -rs 'sort_by(.at) | last | .body // ""' | grep -A2 "## Verdict"
 ```
 
 The verdict section contains a bold keyword indicating the result:

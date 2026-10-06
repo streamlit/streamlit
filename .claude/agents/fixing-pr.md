@@ -43,6 +43,8 @@ Use `gh pr view` to get PR details for the current branch. If no PR exists, stop
 
 Keep an iteration count for this run, starting at 0. Every return to this step increments it, including returns from a snapshot merge, a snapshot-mismatch label, and a newly added `ai-final-review`. Stop when the count reaches 5.
 
+At the start of each iteration, set `PUSHED_REVIEW_FIXES=false`. Shell state may not survive between calls, so set it again in the shell that runs step 8. Before running the snapshot block again, set `FAILED_SNAPSHOT_PRS` to the PR numbers that failed earlier in this run.
+
 Poll CI status every 3 minutes until all workflows finish:
 
 - Use `gh run list --branch <branch> --status in_progress` and `--status queued` to check
@@ -102,12 +104,9 @@ for SNAPSHOT_PR in $SNAPSHOT_PRS; do
     gh pr close "$SNAPSHOT_PR" --delete-branch --comment "Closing this conflicting snapshot PR so a later update-snapshots run can regenerate it."
     continue
   fi
-  if [ "$STATE" = "BLOCKED" ] || [ "$STATE" = "BEHIND" ]; then
-    gh pr merge "$SNAPSHOT_PR" --squash --admin --delete-branch
-  else
-    # Pending checks do not block a squash merge onto a feature branch. Do not wait for them.
-    gh pr merge "$SNAPSHOT_PR" --squash --delete-branch
-  fi
+  # Pending checks do not block a squash merge onto a feature branch. Do not wait for them.
+  # Do not pass --admin. Feature-branch rulesets do not require it, and a refused merge is recorded below.
+  gh pr merge "$SNAPSHOT_PR" --squash --delete-branch
   # --delete-branch can make gh pr merge exit non-zero after a successful squash.
   # Count the PR as merged only when GitHub reports state MERGED.
   if [ "$(gh pr view "$SNAPSHOT_PR" --json state -q .state)" = "MERGED" ]; then
@@ -125,7 +124,10 @@ for SNAPSHOT_PR in $SNAPSHOT_PRS; do
 done
 
 if [ "$MERGED" -eq 1 ]; then
-  git pull --ff-only origin "$BRANCH"
+  if ! git pull --ff-only origin "$BRANCH"; then
+    echo "git pull --ff-only failed for $BRANCH" >&2
+    exit 1
+  fi
   HEAD_SHA=$(git rev-parse HEAD)
   # The new head's workflows are often not listed on the first poll.
   # Fail closed: an empty queue is not idle CI.
@@ -161,7 +163,7 @@ Check for failures with `gh pr checks` and `gh run list --status failure`.
 **Fix strategy:**
 
 - **Code-fixable issues** (lint, types, tests): Apply fixes directly
-- **Snapshot mismatches**: Do not edit snapshot files. Add `update-snapshots`, then return to step 2 with no further push in this iteration. This return counts toward the 5-iteration limit. `snapshot-autofix.yml` removes that label in its first step and cancels the in-progress run when this branch is pushed, so a later push drops the snapshot PR before it opens:
+- **Snapshot mismatches**: Do not edit snapshot files. Add `update-snapshots`, then return to step 2 with no further push in this iteration. This return counts toward the 5-iteration limit. Leave any other fixes from this iteration uncommitted until the snapshot PR is merged and pulled. `snapshot-autofix.yml` removes that label in its first step and cancels the in-progress run when this branch is pushed, so a later push drops the snapshot PR before it opens:
   ```
   gh pr edit --add-label "update-snapshots"
   ```
@@ -188,7 +190,7 @@ Run the /checking-changes skill (uses `make check`) to validate the changes. Wai
 
 ### 7. Push changes
 
-If there are uncommitted changes, commit with a descriptive message and push.
+If there are uncommitted changes, commit with a descriptive message and push. If those commits address the current `CHANGES_REQUESTED` AI review, set `PUSHED_REVIEW_FIXES=true` in the shell that will run step 8. Do not leave an older `true` in place for a CI-only push.
 
 ### 8. Request a final AI review after a changes-requested AI review
 
@@ -198,16 +200,21 @@ Skip this step when called from the `finalizing-pr` "AI review and fix loop". Th
 
 `do-not-merge` alone is not the signal. `ai-qa-testing.yml` adds it on QA FAIL and does not remove it on PASS, and people add it by hand. An `APPROVED` `ai-final-review` removes `do-not-merge` and can auto-approve the PR, which would clear a hold this loop did not create.
 
-Set `AI_REVIEW_VERDICT` from the `## Verdict` line of the latest review whose `user.login` is `github-actions[bot]` and whose body contains `<!-- streamlit-ai-review`. Read that line only. A mention of the same words elsewhere in the body does not count. Treat `**CHANGES REQUESTED**` and `**CHANGES_REQUESTED**` as `CHANGES_REQUESTED`. Set `PUSHED_REVIEW_FIXES` to `true` only when this iteration pushed commits that address that review. A CI-only push does not qualify.
+Set `AI_REVIEW_VERDICT` from the `## Verdict` line of the newest `github-actions[bot]` review or PR comment whose body contains `<!-- streamlit-ai-review`. The workflow falls back to a PR comment when the Reviews API rejects inline comments, so an older formal review must not win. Read that verdict line only. Treat `**CHANGES REQUESTED**` and `**CHANGES_REQUESTED**` as `CHANGES_REQUESTED`. `PUSHED_REVIEW_FIXES` is `true` only when step 7, in this same shell, pushed commits that address that review.
 
 ```bash
 # Add the label only after pushing, so the final review covers the new commits.
-# PUSHED_REVIEW_FIXES is true only after step 7 pushed commits that address this review.
-PUSHED_REVIEW_FIXES="${PUSHED_REVIEW_FIXES:-false}"
+# PUSHED_REVIEW_FIXES was set true in this shell only after step 7 pushed review fixes.
 PR_NUM=$(gh pr view --json number -q .number)
-VERDICT_LINE=$(gh api --paginate "repos/{owner}/{repo}/pulls/${PR_NUM}/reviews" \
-  | jq -rs '[.[][] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | sort_by(.submitted_at) | last | .body' \
-  | awk 'found && NF { print; exit } /^## Verdict/ { found=1 }')
+VERDICT_BODY=$(
+  {
+    gh api --paginate "repos/{owner}/{repo}/pulls/${PR_NUM}/reviews" \
+      --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review"))) | {at: .submitted_at, body}'
+    gh api --paginate "repos/{owner}/{repo}/issues/${PR_NUM}/comments" \
+      --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review"))) | {at: .created_at, body}'
+  } | jq -rs 'sort_by(.at) | last | .body // ""'
+)
+VERDICT_LINE=$(printf '%s\n' "$VERDICT_BODY" | awk 'found && NF { print; exit } /^## Verdict/ { found=1 }')
 case "$VERDICT_LINE" in
   *'**CHANGES REQUESTED**'*|*'**CHANGES_REQUESTED**'*) AI_REVIEW_VERDICT=CHANGES_REQUESTED ;;
   *'**APPROVED**'*) AI_REVIEW_VERDICT=APPROVED ;;
@@ -217,6 +224,20 @@ esac
 LABELS=$(gh pr view --json labels -q '.labels[].name')
 if [ "$PUSHED_REVIEW_FIXES" = "true" ] && [ "$AI_REVIEW_VERDICT" = "CHANGES_REQUESTED" ] && ! echo "$LABELS" | grep -qx 'ai-final-review'; then
   gh pr edit --add-label "ai-final-review"
+  FOUND_REVIEW=0
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    if gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --limit 20 \
+      --json status --jq 'map(select(.status == "queued" or .status == "in_progress" or .status == "requested" or .status == "waiting" or .status == "pending")) | length' \
+      | grep -Eq '^[1-9]'; then
+      FOUND_REVIEW=1
+      break
+    fi
+    sleep 10
+  done
+  if [ "$FOUND_REVIEW" != "1" ]; then
+    echo "No ai-pr-review run registered" >&2
+    exit 1
+  fi
 fi
 ```
 
