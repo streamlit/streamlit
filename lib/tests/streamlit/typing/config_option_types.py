@@ -14,9 +14,8 @@
 
 """Type tests for st.get_option and st.set_option.
 
-``st.set_option`` is ``streamlit.config.set_user_option``. The internal
-``streamlit.config.set_option`` takes an extra ``where_defined`` argument and
-is not the public command.
+``st.set_option`` wraps ``streamlit.config.set_user_option``. Only the
+internal ``streamlit.config.set_option`` accepts ``where_defined``.
 """
 
 from __future__ import annotations
@@ -63,8 +62,9 @@ if TYPE_CHECKING:
     # st.set_option return type tests
     # =====================================================================
 
-    # Returns None. value is Any: the scriptable options take bool or str,
-    # and client.showErrorDetails also accepts the legacy bool form.
+    # Returns None. value is Any because scriptable options use different
+    # types: bool for most, and a string level or a legacy bool for
+    # client.showErrorDetails.
     assert_type(set_option("client.showErrorDetails", True), None)
     assert_type(set_option("client.showErrorDetails", "full"), None)
     assert_type(set_option("client.toolbarMode", "auto"), None)
@@ -101,8 +101,9 @@ if TYPE_CHECKING:
     set_option(["client.showErrorDetails"], True)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     set_option(key=123, value=True)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
-    # Too many positional arguments. where_defined exists only on the internal
-    # config.set_option, not on the public command.
+    # Only internal config.set_option accepts a third positional argument
+    # (where_defined). ty reports on that extra argument; mypy reports on
+    # the whole call.
     set_option(
         "client.showErrorDetails",
         True,
