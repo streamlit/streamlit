@@ -97,7 +97,7 @@ dev = [
   "ruff==0.16.9",
   # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy==2.3.1",
+  "mypy==2.4.0",
   # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
   # Streamlit still type-checks as Python 3.10.
   "numpy<2.5",
