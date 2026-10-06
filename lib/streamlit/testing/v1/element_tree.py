@@ -916,14 +916,15 @@ class Help(Element):
     def value(self) -> str:
         """Short summary of the documented object.
 
-        This is the name ``st.help`` captured, when one exists. Otherwise it is
-        the proto value, except an unquoted ``module.name(...)`` signature,
-        which can be thousands of characters. The docstring is ``doc_string``
-        and is not used as ``.value``.
+        A short proto value is kept (``"'Hello'"``, ``"streamlit"``). An empty
+        proto value or an unquoted ``module.name(...)`` signature uses the
+        captured name instead, so modules such as ``re`` and callable instances
+        stay short. The docstring is ``doc_string`` and is not used as
+        ``.value``.
         """
-        if self.name:
-            return self.name
         raw = self.proto.value
+        if self.name and (not raw or _is_help_signature(raw)):
+            return self.name
         if _is_help_signature(raw):
             return ""
         return raw

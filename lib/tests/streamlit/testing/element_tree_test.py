@@ -292,6 +292,11 @@ def test_progress_html_and_help() -> None:
 
         import streamlit as st
 
+        @st.cache_data
+        def cached_add(a, b, c, d, e, f, g, h):
+            """Cached add."""
+            return a
+
         def add(a, b, c, d, e, f, g, h):
             """Add some numbers."""
             return a
@@ -320,6 +325,7 @@ def test_progress_html_and_help() -> None:
         st.help(st)
         st.help(re)
         st.help(item)
+        st.help(cached_add)
         st.help("foo(bar)")
 
     at = AppTest.from_function(script).run()
@@ -343,13 +349,13 @@ def test_progress_html_and_help() -> None:
     assert at.container("box").html[0].unsafe_allow_javascript is True
     assert list(at.get("html")) == list(at.html)
 
-    assert at.help.len == 8
+    assert at.help.len == 9
     assert isinstance(at.help[0], Help)
     assert list(at.get("help")) == list(at.help)
     assert list(at.get("help_info")) == list(at.help)
     assert {node.type for node in at.help} == {"help"}
 
-    hello, add, dog, builtin_len, module, regex_mod, item, quoted = at.help
+    hello, add, dog, builtin_len, module, regex_mod, item, cached, quoted = at.help
     assert hello.value == "'Hello'"
     assert hello.name == ""
     assert hello.doc_string.startswith("str(")
@@ -363,7 +369,7 @@ def test_progress_html_and_help() -> None:
     assert builtin_len.value == "len"
     assert len(builtin_len.proto.value) > len(builtin_len.value)
     assert module.name == "st"
-    assert module.value == "st"
+    assert module.value == "streamlit"
     assert module.doc_string.startswith("Streamlit.")
     assert len(module.doc_string) > len(module.value)
     assert regex_mod.name == "re"
@@ -374,6 +380,10 @@ def test_progress_html_and_help() -> None:
     assert item.value == "item"
     assert "(" in item.proto.value
     assert len(item.proto.value) > len(item.value)
+    assert cached.name == "cached_add"
+    assert cached.value == "cached_add"
+    assert "(" in cached.proto.value
+    assert len(cached.proto.value) > len(cached.value)
     assert quoted.value == "'foo(bar)'"
 
     for node in (at.progress[0], at.html[0], at.help[0]):
