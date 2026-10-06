@@ -514,7 +514,7 @@ function SingleDateInput({
   // Alt+ArrowDown enters active calendar mode; Tab from edge segments
   // closes the passive popover and lets focus leave the widget naturally.
   // The calendar button is out of tab order (tabIndex=-1), so last-segment
-  // Tab leaves the field like develop.
+  // Tab leaves the field.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.altKey && e.key === "ArrowDown") {

@@ -697,7 +697,7 @@ function SingleDateTimeInput({
       const segments = wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
       const segmentList = Array.from(segments)
       // The calendar button is out of tab order (tabIndex=-1), so edge-segment
-      // Tab leaves the field like develop.
+      // Tab leaves the field.
       const isLeavingField =
         (!e.shiftKey && e.target === segmentList.at(-1)) ||
         (e.shiftKey && e.target === segmentList[0])
