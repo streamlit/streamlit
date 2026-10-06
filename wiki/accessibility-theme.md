@@ -52,7 +52,7 @@ Names mix public config keys (`textColor`, `primaryColor`) and internal tokens (
 | Secondary / muted UI text | `fadedText60`, `grayTextColor`, placeholders, counters, hints; default `dataframeHeaderTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar, `bgMix`, dataframe header |
 | Link text | `linkColor` / `blueTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar |
 | Code text on code fill | `codeTextColor` on `codeBackgroundColor` | 1.4.3 | ≥ 4.5:1 | Code background |
-| Status text on status fill | Shipped `*TextColor` on `*BackgroundColor`; `primary` on `primarybg` | 1.4.3 | ≥ 4.5:1 | Alert / badge / metric fills on **page and default sidebar** (fills are translucent) |
+| Status text on status fill | Shipped `*TextColor` on `*BackgroundColor`; `primary` on `primarybg`; markdown purple on `purplebg` (not the same pair as violet) | 1.4.3 | ≥ 4.5:1 | Alert / badge / metric fills on **page and default sidebar** (fills are translucent) |
 | Label on primary fill | `white` (or equivalent) on `primaryColor` | 1.4.3 | ≥ 4.5:1 | Primary buttons and other primary-filled controls |
 | Primary as **text** | `primaryColor` used for copy | 1.4.3 | ≥ 4.5:1 | Page (and any surface where primary is used as text) |
 | Primary as **control** | `primaryColor` fill / outline | 1.4.11 | ≥ 3:1 | Page **and** default sidebar (`secondaryBackgroundColor` when sidebar bg is unset) |
@@ -91,8 +91,8 @@ Live scorecard for today’s default light and dark themes. Floors above are the
 | Secondary / muted UI text (`fadedText60`, `grayTextColor`, dataframe header) | Fail (~3.5–3.7) | Pass (~6.1–7.0) | Library blocks | Light only; includes default `dataframeHeaderTextColor` |
 | White label on primary fill | Fail (~3.30) | Fail (~3.30) | Library blocks | `StyledPrimaryButton` and similar |
 | `primary` as **text** on page | Fail (~3.30) | Pass (~5.7) | Library blocks | Light only; not the same as primary-on-`primarybg` |
-| Status text on status fill — **page** | Orange (~3.19), gray (~3.44), green (~4.50), primary (~2.92) fail; red/yellow/blue/violet pass | Primary fail (~3.85); others pass | Library blocks | Translucent fills on page bg; badges, metrics, `AlertContainer` |
-| Status text on status fill — **default sidebar** | Orange/gray/green/primary/red/yellow fail; blue/violet pass | Primary/red/blue/violet fail; orange/yellow/green/gray pass | Library blocks | Same fills composited onto sidebar `secondaryBackgroundColor` |
+| Status text on status fill — **page** | Orange ~3.19, gray ~3.44, green ~4.50, primary ~2.92 fail; red/yellow/blue/violet/purple pass | Primary ~3.85, purple ~2.24 fail; red/orange/yellow/blue/green/violet/gray pass | Library blocks | Translucent fills on page bg. Markdown purple (`purplebg`) is not violet. Green light is 4.497:1 (below 4.5:1). |
+| Status text on status fill — **default sidebar** | Orange ~2.87, gray ~3.30, green ~4.04, primary ~2.62, red ~4.10, yellow ~4.27 fail; blue/violet/purple pass | Primary ~3.04, red ~3.96, blue ~3.75, violet ~4.07, purple ~1.81 fail; orange/yellow/green/gray pass | Library blocks | Same fills composited onto sidebar `secondaryBackgroundColor` |
 | Body text on page / secondary | Pass (~12.5 / 11.2) | Pass (~18.1 / 14.2) | Library meets | |
 | Link text | Pass (~6.7–7.5) | Pass (~5.2–6.6) | Library meets | Markdown / in-app links |
 | Code text on code fill | Pass (~4.7) | Pass (~10.5) | Library meets | |
