@@ -199,9 +199,13 @@ jobs:
         # stagnent version number (streamlit-11.11.11)
         run: |
           # Use the AWS CLI v2 preinstalled on GitHub-hosted runners.
-          # Do not pip-install awscli: that pulls an unverified transitive graph
-          # into the same step that holds static S3 credentials (CWE-494).
-          command -v aws
+          # Do not pip-install awscli in this step: pip would download unpinned,
+          # unhashed dependencies while static S3 credentials are in the environment (CWE-494).
+          aws_bin="$(command -v aws)" || {
+            echo "::error::AWS CLI v2 not found on runner image"
+            exit 1
+          }
+          echo "$aws_bin"
           aws --version
 
           cd lib/dist
