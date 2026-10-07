@@ -218,15 +218,15 @@ st.metric("Page refreshes", st.session_state.page_refreshes)
   destination page re-establishes its own timer if it sets `run_every`. This mirrors how
   fragment auto-reruns are cleared on page change.
 - **Concurrent reruns (a tick coinciding with a user interaction, `st.rerun`, or a
-  fragment rerun).** No special handling is needed — page-level auto-rerun uses the same
-  rerun request path as everything else, and the existing machinery resolves overlaps:
-  - *No lost input.* Every rerun request (auto or user) carries the browser's latest full
-    widget-state snapshot, and the server coalesces pending rerun requests, so the newest
-    state always wins — a concurrent tick never drops a user's edit.
-  - *Bounded work.* A tick that arrives while a run is in flight is coalesced/preempted by
-    the server rather than queued without limit (at most one extra run). Full reruns are
-    deterministic for the same state, so a preempted or duplicated run simply restarts —
-    correct, at worst slightly redundant.
+  fragment rerun).** The client holds at most one page tick that fires during an active
+  run, then sends that tick once the run finishes on its own. Stop and a user full rerun
+  drop the held tick. A fragment rerun keeps it until that fragment run finishes. A page
+  tick does not replace a fragment request that has not been acknowledged yet.
+  - *No lost input.* Widget edits ride on the rerun that the interaction already sent.
+    A page tick waits instead of sending a second full rerun that would stop that
+    request and drop its trigger.
+  - *Bounded work.* At most one held tick is replayed when the run finishes. A slow run
+    is not preempted into a loop, and ticks do not queue up without limit.
   - *Natural debounce.* Every full rerun (including user-triggered ones) clears and re-arms
     the page timer, so the interval countdown restarts after each interaction. Active users
     effectively reset the timer instead of stacking a tick on top of their own rerun —

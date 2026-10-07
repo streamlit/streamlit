@@ -1476,12 +1476,16 @@ export class App extends PureComponent<Props, State> {
         }
         if (this.pageAutoRerunAwaitingNextRun) {
           // A fragment request the server never starts must not stall the
-          // page. One full interval of idle time expires it. Time inside an
-          // active run does not count: that request is still queued.
+          // page. One full interval of idle time releases the guard so a
+          // later tick can run. This tick does not send: the server may
+          // still acknowledge the fragment, and a full rerun here would
+          // stop that run and drop its trigger. Time inside an active run
+          // does not count.
           if (!this.isFragmentAutoRerunGuardStale()) {
             return
           }
           this.clearPageAutoRerunGuard()
+          return
         }
         if (this.isScriptRunActive()) {
           this.pageAutoRerunDeferred = true

@@ -5115,6 +5115,71 @@ describe("App", () => {
         vi.advanceTimersByTime(1000)
       })
 
+      // Releasing the guard must not replace the fragment request. The next
+      // interval is an ordinary page tick.
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls.at(-1)[0].rerunScript
+          .fragmentId
+      ).toBe("someFragment")
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
+    })
+
+    it("does not replace a fragment rerun when acknowledgement is slower than the page interval", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      acknowledgeConnectedRerun()
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        sendForwardMessage("autoRerun", { interval: 1.0, fragmentId: "" })
+        getStoredValue<WidgetStateManager>(
+          WidgetStateManager
+        ).sendUpdateWidgetsMessage("someFragment")
+        vi.advanceTimersByTime(1000)
+      })
+
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls.at(-1)[0].rerunScript
+          .fragmentId
+      ).toBe("someFragment")
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        fragmentIdsThisRun: ["someFragment"],
+      })
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+      )
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
       expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
     })
 
@@ -5192,6 +5257,16 @@ describe("App", () => {
         vi.advanceTimersByTime(1000)
       })
 
+      expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(0)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls.at(-1)[0].rerunScript
+          .fragmentId
+      ).toBe("someFragment")
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
       expect(autoRerunCountSince(connectionManager, callsBefore)).toBe(1)
     })
 
