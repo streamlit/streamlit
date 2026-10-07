@@ -372,7 +372,10 @@ export class App extends PureComponent<Props, State> {
   // reruns still restart the page countdown because `handleNewSession` clears
   // these timers first. The stored `interval` (in seconds) is what
   // re-registration compares against.
-  /** Timer id for `st.set_page_config(run_every=...)`. Protobuf sends an unset `fragment_id` as "", which no real fragment uses. */
+  /**
+   * Timer id for `st.set_page_config(run_every=...)`. Protobuf sends an unset
+   * `fragment_id` as "", which no real fragment uses.
+   */
   private static readonly PAGE_AUTO_RERUN_ID = ""
   private readonly autoRerunIntervals: Map<
     string,
@@ -408,6 +411,11 @@ export class App extends PureComponent<Props, State> {
   // place. A user full rerun, and a deferred page-tick replay that was queued,
   // also clear the page timer.
   private pageAutoRerunAwaitingNextRun = false
+
+  // Set only after a deferred page replay is queued. Reconnect retries that
+  // replay. An ordinary widget rerun must not set this: retrying it would
+  // stop the in-flight run and drop the click.
+  private pageAutoRerunReplayQueued = false
 
   // The BackMsg that set `pageAutoRerunAwaitingNextRun`. A full `NewSession`
   // for an older run must not drop a fragment guard at this epoch.
@@ -1105,9 +1113,11 @@ export class App extends PureComponent<Props, State> {
         // fragment auto-reruns configured):
         this.state.fragmentIdsThisRun.length > 0 ||
         this.autoRerunIntervals.size > 0 ||
-        // A deferred page replay cleared the timer before the server
-        // acknowledged it. Reconnect must rerun so the page can re-arm.
-        this.pageAutoRerunAwaitingNextRun
+        // A deferred page replay was queued and cleared the timer before the
+        // server acknowledged it. Reconnect must rerun so the page can re-arm.
+        // Do not use pageAutoRerunAwaitingNextRun here: every widget rerun
+        // sets that flag, and a second full rerun would drop the click.
+        this.pageAutoRerunReplayQueued
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
@@ -2262,7 +2272,8 @@ export class App extends PureComponent<Props, State> {
     // replacement keeps it until that run finishes.
     if (status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN) {
       this.pageAutoRerunAwaitingNextRun = true
-      // This gap is not a fragment request. A later scriptIsRunning may end it.
+      // This status does not say whether the replacement is a full rerun or a
+      // fragment. The next NewSession or scriptIsRunning resolves the guard.
       this.pageAutoRerunGuardFragmentId = undefined
       this.pageAutoRerunGuardAcked = false
     }
@@ -2580,6 +2591,7 @@ export class App extends PureComponent<Props, State> {
     this.pageAutoRerunGuardAcked = false
     this.pageAutoRerunGuardIntervalMs = 0
     this.pageAutoRerunGuardIdleSince = null
+    this.pageAutoRerunReplayQueued = false
   }
 
   private isFragmentAutoRerunGuardStale(): boolean {
@@ -2627,7 +2639,10 @@ export class App extends PureComponent<Props, State> {
     }
     this.pageAutoRerunDeferred = false
     // The message is queued. Suspend the page timer so the interval cannot
-    // send a second full rerun before the server reports this one.
+    // send a second full rerun before the server reports this one. Remember
+    // the replay itself so a reconnect can retry it without retrying every
+    // widget click.
+    this.pageAutoRerunReplayQueued = true
     this.clearAutoRerunInterval(App.PAGE_AUTO_RERUN_ID)
   }
 

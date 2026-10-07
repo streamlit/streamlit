@@ -194,14 +194,17 @@ Use `st.set_page_config(run_every=...)` only when the whole page must refresh; e
 ```python
 st.set_page_config(run_every="30s")
 
+if "price" not in st.session_state:
+    st.session_state.price = 100.0
+
 
 @st.fragment(run_every="2s")
 def ticker():
-    st.metric("Price", get_price())
+    st.metric("Price", st.session_state.price)
 
 
 ticker()
-st.dataframe(get_daily_summary())
+st.dataframe({"symbol": ["ACME"], "shares": [10]})
 ```
 
 

@@ -925,8 +925,7 @@ export class WidgetStateManager {
     fragmentId: string | undefined,
     isAutoRerun: boolean | undefined = undefined
   ): boolean {
-    // `void` means the caller does not report whether the message was queued.
-    // Treat that as sent so existing mocks keep working.
+    // Callbacks that return nothing are treated as having queued the message.
     return (
       this.props.sendRerunBackMsg(
         this.widgetStates.createWidgetStatesMsg(),

@@ -5390,6 +5390,57 @@ describe("App", () => {
       ).toBeGreaterThan(1)
     })
 
+    it("does not rerun on reconnect after a widget rerun with no page timer", () => {
+      vi.mocked(isEmbed).mockReturnValue(false)
+      renderApp(getProps())
+
+      const connectionManager = getMockConnectionManager()
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+      sendForwardMessage("newSession", { ...NEW_SESSION_JSON })
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+
+      // @ts-expect-error - sendMessage is a vi.fn mock in tests
+      const callsBefore = connectionManager.sendMessage.mock.calls.length
+      act(() => {
+        getStoredValue<WidgetStateManager>(
+          WidgetStateManager
+        ).sendUpdateWidgetsMessage(undefined)
+      })
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(1)
+
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.PINGING_SERVER
+        )
+      })
+      act(() => {
+        getMockConnectionManagerProp("connectionStateChanged")(
+          ConnectionState.CONNECTED
+        )
+      })
+
+      // The widget click is already in flight. A second full rerun would
+      // stop that run and drop the trigger.
+      expect(
+        // @ts-expect-error - sendMessage is a vi.fn mock in tests
+        connectionManager.sendMessage.mock.calls.length - callsBefore
+      ).toBe(1)
+    })
+
     it("replays a held page tick after an interrupting fragment run finishes", () => {
       vi.mocked(isEmbed).mockReturnValue(false)
       renderApp(getProps())

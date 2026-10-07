@@ -163,7 +163,7 @@ def _resolve_page_run_every(
 
     seconds = time_to_seconds(run_every, coerce_none_to_inf=False)
     # `None` is only returned for a `None` input, which already returned above.
-    if seconds is None:
+    if seconds is None:  # pragma: no cover - defensive
         raise StreamlitValueError(
             "run_every",
             ["a finite duration", "None"],
@@ -349,14 +349,16 @@ def set_page_config(
         interval refreshes the live section.
 
         .. note::
-            Auto-rerun pauses while an ``st.dialog`` is open and resumes after
-            it closes. An unsubmitted ``st.form`` does not pause it: in-progress
-            values stay on screen, but the rest of the page reruns. For
-            multi-step form flows, prefer a fragment or pass ``run_every=None``.
-            Stopping the script leaves auto-rerun armed. The next interval
-            starts the page again, the same way ``@st.fragment(run_every=...)``
-            does. Browsers may also fire the timer less often while the tab is
-            in the background.
+            - Auto-rerun pauses while an ``st.dialog`` is open and resumes after
+              it closes.
+            - An unsubmitted ``st.form`` does not pause auto-rerun. In-progress
+              values stay on screen, and the rest of the page reruns. For
+              multi-step form flows, prefer a fragment or pass ``run_every=None``.
+            - Stopping the script leaves auto-rerun armed. The next interval
+              starts the page again, the same way ``@st.fragment(run_every=...)``
+              does.
+            - Browsers may fire the timer less often while the tab is in the
+              background.
 
         .. |st.fragment| replace:: ``st.fragment``
         .. _st.fragment: https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment
