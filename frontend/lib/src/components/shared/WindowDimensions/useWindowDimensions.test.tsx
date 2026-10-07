@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { JSX } from "react"
+
 import { act, renderHook } from "@testing-library/react"
 
 import ThemeProvider from "~lib/components/core/ThemeProvider"

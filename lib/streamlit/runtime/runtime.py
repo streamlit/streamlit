@@ -562,6 +562,13 @@ class Runtime:
     ) -> None:
         """Handle an Exception raised during deserialization of a BackMsg.
 
+        The bundled Starlette server does not call this method. A frame that
+        fails to parse is a protocol violation. That server closes the
+        connection instead. This entry point remains for other hosts. It reports
+        the failure through `AppSession`, which applies the
+        `client.showErrorDetails` redaction before it sends anything to the
+        browser.
+
         Parameters
         ----------
         session_id

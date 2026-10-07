@@ -33,14 +33,12 @@ describe("TooltipIcon element", () => {
   // hover-triggered tooltip tests can work.  See Tooltip.test.tsx for a full
   // explanation of this setup.
   beforeAll(() => {
+    // eslint-disable-next-line testing-library/no-render-in-lifecycle -- useFocusVisible must run once so React Aria registers its document pointer listener.
     renderHook(() => useFocusVisible())
   })
   it("renders a TooltipIcon", () => {
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <TooltipIcon content="" ariaLabel="Help" />
       </ThemeProvider>
     )
@@ -50,10 +48,7 @@ describe("TooltipIcon element", () => {
 
   it("InlineTooltipIcon uses a default 'Help' aria-label", () => {
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <InlineTooltipIcon content="Help text" />
       </ThemeProvider>
     )
@@ -63,10 +58,7 @@ describe("TooltipIcon element", () => {
 
   it("InlineTooltipIcon ariaLabel can be overridden", () => {
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <InlineTooltipIcon content="Help text" ariaLabel="More information" />
       </ThemeProvider>
     )
@@ -93,10 +85,7 @@ describe("TooltipIcon element", () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
       render(
-        <ThemeProvider
-          theme={mockTheme.emotion}
-          baseuiTheme={mockTheme.basewebTheme}
-        >
+        <ThemeProvider theme={mockTheme.emotion}>
           <InlineTooltipIcon
             content="Help text"
             containerWidth
@@ -126,10 +115,7 @@ describe("TooltipIcon element", () => {
   it("falls back to a default aria-label when ariaLabel is an empty string", async () => {
     const user = userEvent.setup()
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         {/* Passing an empty string to validate runtime safety for ariaLabel fallback. */}
         <TooltipIcon content="Help text" ariaLabel="" />
       </ThemeProvider>
@@ -142,10 +128,7 @@ describe("TooltipIcon element", () => {
   it("renders a focusable trigger button by default", async () => {
     const user = userEvent.setup()
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <TooltipIcon content="Help text" ariaLabel="Help for widget" />
       </ThemeProvider>
     )
@@ -159,10 +142,7 @@ describe("TooltipIcon element", () => {
   it("shows tooltip content on keyboard focus and closes on blur", async () => {
     const user = userEvent.setup()
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <TooltipIcon content="Help text" ariaLabel="Help for widget" />
         <button type="button">After</button>
       </ThemeProvider>
@@ -188,10 +168,7 @@ describe("TooltipIcon element", () => {
   it("closes the tooltip on Escape", async () => {
     const user = userEvent.setup()
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <TooltipIcon content="Help text" ariaLabel="Help for widget" />
       </ThemeProvider>
     )

@@ -148,7 +148,8 @@ class MemoryUploadedFileManager(UploadedFileManager):
         return result
 
     def get_stats(
-        self, _family_names: Sequence[str] | None = None
+        self,
+        family_names: Sequence[str] | None = None,  # noqa: ARG002
     ) -> dict[str, list[CacheStat]]:
         """Return the manager's CacheStats.
 

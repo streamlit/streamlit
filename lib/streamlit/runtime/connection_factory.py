@@ -24,7 +24,7 @@ from streamlit.connections import (
     SnowflakeConnection,
     SQLConnection,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cache_resource
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.secrets import secrets_singleton
@@ -34,9 +34,18 @@ if TYPE_CHECKING:
 
 # NOTE: Adding support for a new first party connection requires:
 #   1. Adding the new connection name and class to this dict.
-#   2. Writing two new @overloads for connection_factory (one for the case where the
-#      only the connection name is specified and another when both name and type are).
+#   2. Writing two new @overloads for connection_factory: one for a
+#      first-party name alone, and one for an explicit `type`.
+#      - The name-only overload must declare `type: Literal["..."] | None = None`.
+#        Otherwise the type checker binds a second positional argument to
+#        `max_entries` (runtime binds it to `type`) and absorbs a conflicting
+#        `type=` into `**kwargs`.
+#      - Declare connection-specific parameters (such as `autocommit`) as
+#        keyword-only (`*`). The implementation accepts only `name`, `type`,
+#        `max_entries`, and `ttl` by position; other parameters come through
+#        `**kwargs`.
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
+#   4. Adding assert_type cases in lib/tests/streamlit/typing/connection_types.py.
 _FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
     "snowflake": SnowflakeConnection,
     "snowflake-callers-rights": SnowflakeCallersRightsConnection,
@@ -88,7 +97,8 @@ def _create_connection(
 
     if not issubclass(connection_class, BaseConnection):
         raise StreamlitAPIException(
-            f"{connection_class} is not a subclass of BaseConnection!"
+            f"{connection_class} is not a subclass of BaseConnection!",
+            error_id="connection-not-base-connection-subclass",
         )
 
     # We modify our helper function's `__qualname__` here to work around default
@@ -103,15 +113,16 @@ def _create_connection(
 
     scope = connection_class.scope()
     if scope not in {"global", "session"}:
-        raise StreamlitAPIException(
-            f"Connection class {connection_class} has scope '{scope}'. Valid values "
-            "are 'global' or 'session'."
+        raise StreamlitValueError(
+            "scope",
+            ["'global'", "'session'"],
+            detail=f"Connection class {connection_class.__name__} has scope {scope!r}.",
         )
 
     def on_release_wrapped(connection: ConnectionClass) -> None:
         connection.close()
 
-    __create_connection = cache_resource(
+    cached_create_connection = cache_resource(
         max_entries=max_entries,
         show_spinner="Running `st.connection(...)`.",
         ttl=ttl,
@@ -119,31 +130,37 @@ def _create_connection(
         on_release=on_release_wrapped,
     )(__create_connection)
 
-    return __create_connection(name, connection_class, **kwargs)
+    return cached_create_connection(name, connection_class, **kwargs)
 
 
 def _get_first_party_connection(connection_class: str) -> type[BaseConnection[Any]]:
     if connection_class == _SNOWPARK_CONNECTION_TYPE:
-        raise StreamlitAPIException(_SNOWPARK_CONNECTION_REMOVED_ERROR)
+        raise StreamlitAPIException(
+            _SNOWPARK_CONNECTION_REMOVED_ERROR,
+            error_id="snowpark-connection-removed",
+        )
 
     if connection_class in _FIRST_PARTY_CONNECTIONS:
         return _FIRST_PARTY_CONNECTIONS[connection_class]
 
     raise StreamlitAPIException(
         f"Invalid connection '{connection_class}'. "
-        f"Supported connection classes: {_FIRST_PARTY_CONNECTIONS}"
+        f"Supported connection classes: {_FIRST_PARTY_CONNECTIONS}",
+        error_id="invalid-first-party-connection",
     )
 
 
 @overload
 def connection_factory(
     name: Literal["sql"],
+    type: Literal["sql"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SQLConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -152,21 +169,24 @@ def connection_factory(
     type: Literal["sql"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SQLConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
 def connection_factory(
     name: Literal["snowflake"],
+    type: Literal["snowflake"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -175,21 +195,24 @@ def connection_factory(
     type: Literal["snowflake"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
 def connection_factory(
     name: Literal["snowflake-callers-rights"],
+    type: Literal["snowflake-callers-rights"] | None = None,
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeCallersRightsConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -198,10 +221,11 @@ def connection_factory(
     type: Literal["snowflake-callers-rights"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
+    *,
     autocommit: bool = False,
     **kwargs: Any,
 ) -> SnowflakeCallersRightsConnection:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -212,7 +236,7 @@ def connection_factory(
     ttl: float | timedelta | None = None,
     **kwargs: Any,
 ) -> ConnectionClass:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 @overload
@@ -223,7 +247,7 @@ def connection_factory(
     ttl: float | timedelta | None = None,
     **kwargs: Any,
 ) -> BaseConnection[Any]:
-    pass
+    pass  # pragma: no cover - typing overload
 
 
 def connection_factory(  # type: ignore
@@ -430,7 +454,10 @@ def connection_factory(  # type: ignore
         # through to the secrets.toml lookup and raise a confusing "no secrets" error
         # instead of the actionable removal message.
         if name == _SNOWPARK_CONNECTION_TYPE:
-            raise StreamlitAPIException(_SNOWPARK_CONNECTION_REMOVED_ERROR)
+            raise StreamlitAPIException(
+                _SNOWPARK_CONNECTION_REMOVED_ERROR,
+                error_id="snowpark-connection-removed",
+            )
 
         if name in _FIRST_PARTY_CONNECTIONS:
             # We allow users to simply write `st.connection("sql")` instead of

@@ -67,7 +67,7 @@ Selection of `make` commands for development (run in the repo root):
 - `frontend-fast`: Build the frontend (vite). [~40s]
 - `frontend-dev`: Start the frontend development server (hot-reload). [until stopped]
 - `frontend-lint`: Lint and check formatting of all frontend files (oxlint + eslint). [~45s]
-- `frontend-knip`: Run Knip dependency analysis. [~5s]
+- `frontend-knip`: Run Knip unused-export and unused-dependency analysis. [~5s]
 - `frontend-types`: Run the TypeScript type checker on all files (tsc). [~15s]
 - `frontend-format`: Format all frontend files (oxfmt). [~2s]
 - `frontend-tests`: Run all frontend unit tests (vitest). [~5min]
@@ -90,6 +90,7 @@ Selection of `make` commands for development (run in the repo root):
 ### Development Tips
 
 - **Follow existing patterns**: Check neighboring files for conventions.
+- Comments must describe current behavior or why the code exists. Do not describe a previous state of the code or rely on change history.
 - **Subagent model**: When launching subagents, use the same model as the parent session (`model: inherit` / omit any model override). Do not switch to a different or faster model unless the user explicitly requests it. Prefer the named custom agents in `.claude/agents/` when available.
 - You can use the `work-tmp` directory to store temporary files, specs, and scripts.
 - Use `agent-wiki/` (gitignored, cloned on first use) to share intermediate files (specs, plans, learnings) relevant for the current PR. This is a local checkout of [streamlit.wiki](https://github.com/streamlit/streamlit.wiki.git). Files are stored in `pull-requests/<pr-number>/` and accessible at `https://issues.streamlit.app/agent_wiki_explorer?file=<relative-path>`. See `sharing-pr-agent-artifacts` skill.
@@ -105,5 +106,5 @@ Selection of `make` commands for development (run in the repo root):
 - **Python Unit Tests**: Test internal behavior without frontend. Located at `lib/tests/streamlit/<package>/<module>_test.py` mirroring `lib/streamlit/<package>/<module>.py` (legacy tests may vary).
 - **Frontend Unit Tests**: Test React components, hooks, and related functionality with Vitest and React Testing Library. Co-located as `<Component>.test.tsx` next to `<Component>.tsx`.
 - **E2E Tests**: Test the entire app logic end-to-end with Playwright. Located at `e2e_playwright/<name>_test.py` with app code in `e2e_playwright/<name>.py`. User-facing features should be covered by E2E tests (e.g., parameters and commands in the public `st.` API).
-- **(Python) Type Tests**: Verify public API typing with mypy `assert_type`. Located at `lib/tests/streamlit/typing/<command>_types.py`.
+- **(Python) Type Tests**: Verify public API typing with `assert_type` under both mypy and ty. Located at `lib/tests/streamlit/typing/<command>_types.py`.
 - Prefer running specific tests / test scripts for newly added tests instead the entire test suite.

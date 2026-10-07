@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
-import { Help as HelpProto, IMember } from "@streamlit/protobuf"
+import type {
+  Help as HelpProto,
+  Member as MemberProto,
+} from "@streamlit/protobuf"
 
 import {
   StyledDocContainer,
@@ -37,7 +40,7 @@ export interface HelpProps {
 }
 
 interface MemberProps {
-  member: IMember
+  member: MemberProto.$Properties
 }
 
 /** Renders a single member row in the members table. */

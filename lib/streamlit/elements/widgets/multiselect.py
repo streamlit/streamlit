@@ -14,10 +14,11 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
+from numbers import Integral
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Generic,
     Literal,
     TypeVar,
@@ -53,28 +54,39 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
-    StreamlitInvalidMaxError,
+    StreamlitInvalidParameterTypeError,
     StreamlitSelectionCountExceedsMaxError,
+    StreamlitValueError,
 )
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import BindOption, PersistStateOption, register_widget
-from streamlit.type_util import (
-    is_iterable,
+from streamlit.runtime.state import (
+    BindOption,
+    OnChangeMode,
+    PersistStateOption,
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+    register_widget,
+    validate_on_change_mode,
 )
+from streamlit.string_util import to_help_str
+from streamlit.type_util import is_iterable
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.runtime.state import (
-        WidgetArgs,
-        WidgetCallback,
-        WidgetKwargs,
-    )
 
 T = TypeVar("T")
+
+# Proto sentinel for ``select_all=True`` (always show the bulk action).
+_SELECT_ALL_ALWAYS: Final = -1
+# Default ``select_all`` threshold (show when 1000 or fewer are selectable).
+_DEFAULT_SELECT_ALL: Final = 1000
+# Integer thresholds are stored in an int32 proto field.
+_SELECT_ALL_MAX_THRESHOLD: Final = 2**31 - 1
 
 
 class MultiSelectSerde(Generic[T]):
@@ -98,7 +110,6 @@ class MultiSelectSerde(Generic[T]):
         We do not store an option_to_formatted_option mapping because the generic
         options might not be hashable, which would raise a RuntimeError. So we do
         two lookups: option -> index -> formatted_option[index].
-
 
         Parameters
         ----------
@@ -189,6 +200,32 @@ def _check_max_selections(
         )
 
 
+# Annotated as ``object`` (not ``bool | int``) so the type-error branch below
+# stays reachable for values users pass at runtime.
+def _encode_select_all(select_all: object) -> int:
+    """Validate ``select_all`` and encode it for the proto."""
+    # Check bool before int so True encodes as always-show (-1), not 1.
+    if isinstance(select_all, bool):
+        return _SELECT_ALL_ALWAYS if select_all else 0
+    if isinstance(select_all, int):
+        if select_all < 0:
+            raise StreamlitValueError(
+                "select_all",
+                ["True", "False", "a non-negative integer"],
+                detail=(
+                    "When using an int, `select_all` must be a non-negative integer."
+                ),
+            )
+        # Clamp to the int32 max; a threshold that large is always-show for
+        # realistic lists.
+        return min(select_all, _SELECT_ALL_MAX_THRESHOLD)
+    raise StreamlitInvalidParameterTypeError(
+        "select_all",
+        type(select_all).__name__,
+        ["bool", "int"],
+    )
+
+
 class MultiSelectMixin:
     @overload
     def multiselect(
@@ -199,7 +236,7 @@ class MultiSelectMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -209,7 +246,9 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
+        select_all: bool | int = _DEFAULT_SELECT_ALL,
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T]: ...
@@ -223,7 +262,7 @@ class MultiSelectMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -233,7 +272,9 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
+        select_all: bool | int = _DEFAULT_SELECT_ALL,
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T | str]: ...
@@ -247,7 +288,7 @@ class MultiSelectMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -257,7 +298,9 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
+        select_all: bool | int = _DEFAULT_SELECT_ALL,
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]: ...
@@ -271,7 +314,7 @@ class MultiSelectMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -281,7 +324,9 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
+        select_all: bool | int = _DEFAULT_SELECT_ALL,
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
     ) -> list[T] | list[T | str]:
@@ -355,8 +400,31 @@ class MultiSelectMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this widget's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the multiselect should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the multiselect. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (selecting or removing options,
+              select-all / select matches, clearing, or adding a new option
+              when ``accept_new_options=True``). Filtering or typing alone
+              does not commit.
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The multiselect still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -419,6 +487,40 @@ class MultiSelectMixin:
             ``filter_mode=None`` is incompatible with
             ``accept_new_options=True``.
 
+        select_all : bool or int
+            Visibility of the dropdown's "Select all" or "Select X matches"
+            option. ``1000`` (default) shows the option when 1000 or fewer
+            options are selectable.
+
+            Selectable options are unselected items from ``options``. When
+            the user is searching, only matching unselected items count.
+            Custom values added with ``accept_new_options`` do not count.
+            ``max_selections`` does not change this count, but the option is
+            hidden when ``max_selections`` is already reached. The option is
+            never shown when fewer than two selectable options remain.
+
+            This can be one of the following:
+
+            - ``True``: Always show the option when two or more selectable
+              options remain. This re-enables bulk-select on lists larger
+              than the default 1000 threshold. Use it only for manageable
+              option counts; selecting thousands of values at once can
+              freeze the browser (see `#15299
+              <https://github.com/streamlit/streamlit/issues/15299>`_).
+            - ``False``: Never show the option.
+            - A non-negative integer: Show the option when the selectable
+              count is at or below this threshold. ``0`` never shows the
+              option (same as ``False``), and ``1`` never shows it either
+              because two selectable options are always required.
+
+            When no dropdown item is keyboard-focused, Enter commits the
+            first visible row. If this option is shown, that row is first,
+            so Enter bulk-selects. Pass ``False`` so Enter selects the first
+            match instead. With ``accept_new_options=True``, Enter creates a
+            typed value only when it matches no existing option. To add a
+            prefix that also matches an option, use ArrowDown or click
+            ``Add: …``.
+
         width : "stretch" or int
             The width of the multiselect widget. This can be one of the
             following:
@@ -429,6 +531,22 @@ class MultiSelectMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        wrap : bool or None
+            Whether the selected-value chips can wrap onto multiple rows. This
+            can be one of the following:
+
+            - ``None`` (default): Streamlit chooses the wrapping behavior based
+              on the layout. Inside a horizontal container or when directly
+              placed in a column (not nested in another container), the chips
+              stay in a single row and the chip
+              area scrolls horizontally; in other layouts, the chips wrap onto
+              additional rows.
+            - ``True``: If the selected chips are too wide for the widget, they
+              wrap onto additional rows and the widget grows taller.
+            - ``False``: The selected chips stay in a single row at a fixed
+              height. If they don't fit, the chip area scrolls horizontally
+              while the clear and dropdown controls stay pinned.
 
         bind : "query-params" or None
             Binding mode for syncing the widget's value with a URL query
@@ -452,6 +570,14 @@ class MultiSelectMixin:
             deduplicated. If ``max_selections`` is set, excess values
             are truncated. When ``accept_new_options`` is ``True``, any
             value is accepted.
+
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (selecting or removing options, select-all /
+            select matches, clearing, or adding a new option); typing or
+            filtering alone does not update it. As with widgets inside a
+            form, the URL can show a value that Python hasn't received yet.
+            Python receives the new value on the next rerun, so a page
+            load or share uses the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -518,6 +644,26 @@ class MultiSelectMixin:
            https://doc-multiselect-accept-new-options.streamlit.app/
            height: 350px
 
+        **Example 3: Disable Select all**
+
+        Hide the "Select all" option so the first dropdown row is the first
+        matching option instead of a bulk action. Enter then selects that
+        match.
+
+        >>> import streamlit as st
+        >>>
+        >>> clients = st.multiselect(
+        ...     "Select clients",
+        ...     ["Acme", "Globex", "Initech", "Umbrella", "Wayne"],
+        ...     select_all=False,
+        ... )
+        >>>
+        >>> st.write("You selected:", clients)
+
+        .. output::
+           https://doc-multiselect-select-all.streamlit.app/
+           height: 350px
+
         """
         # Convert empty string to single space to distinguish from None:
         # - None (default) → "" → Frontend shows contextual placeholders
@@ -543,7 +689,9 @@ class MultiSelectMixin:
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
             filter_mode=filter_mode,
+            select_all=select_all,
             width=width,
+            wrap=wrap,
             bind=bind,
             persist_state=persist_state,
             ctx=ctx,
@@ -557,7 +705,7 @@ class MultiSelectMixin:
         format_func: Callable[[Any], str] = str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -567,31 +715,46 @@ class MultiSelectMixin:
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
+        select_all: bool | int = _DEFAULT_SELECT_ALL,
         width: WidthWithoutContent = "stretch",
+        wrap: bool | None = None,
         bind: BindOption = None,
         persist_state: PersistStateOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         widget_name = "multiselect"
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=default,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
-        if max_selections is not None and max_selections < 1:
-            raise StreamlitInvalidMaxError(
-                "st.multiselect",
-                "max_selections",
-                max_selections,
-                corrective_action="To disable `st.multiselect`, use `disabled=True`."
-                if max_selections == 0
-                else None,
-            )
+        if max_selections is not None:
+            # Numpy integers are Integral but not int; bool is both and is rejected.
+            max_selections_value: object = max_selections
+            if (
+                isinstance(max_selections_value, bool)
+                or not isinstance(max_selections_value, Integral)
+                or max_selections_value < 1
+            ):
+                raise StreamlitValueError(
+                    "max_selections",
+                    ["a positive integer"],
+                    detail=(
+                        "To disable `st.multiselect`, use `disabled=True`."
+                        if isinstance(max_selections_value, Integral)
+                        and max_selections_value == 0
+                        else None
+                    ),
+                )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
         formatted_options, formatted_option_to_option_index = create_mappings(
@@ -610,8 +773,8 @@ class MultiSelectMixin:
         proto_filter_mode = validate_select_widget_filter_mode(
             filter_mode,
             accept_new_options=accept_new_options,
-            command="st.multiselect",
         )
+        encoded_select_all = _encode_select_all(select_all)
 
         form_id = current_form_id(self.dg)
         element_id = compute_and_register_element_id(
@@ -630,6 +793,7 @@ class MultiSelectMixin:
             placeholder=placeholder,
             accept_new_options=accept_new_options,
             filter_mode=filter_mode,
+            select_all=encoded_select_all,
             width=width,
         )
 
@@ -646,13 +810,22 @@ class MultiSelectMixin:
         )
         proto.options[:] = formatted_options
         if help is not None:
-            proto.help = dedent(help)
+            proto.help = to_help_str(help)
         proto.accept_new_options = accept_new_options
         proto.filter_mode = proto_filter_mode
+        proto.select_all = encoded_select_all
+        # wrap is layout-only and intentionally excluded from the element id
+        # (see compute_and_register_element_id above), so toggling it never
+        # resets the widget's value.
+        if wrap is not None:
+            proto.wrap = wrap
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
             proto.query_param_key = str(key)
+
+        if isinstance(on_change, str) and on_change == "ignore":
+            proto.ignore_rerun = True
 
         serde = MultiSelectSerde(
             indexable_options,
@@ -664,7 +837,7 @@ class MultiSelectMixin:
 
         widget_state = register_widget(
             proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,

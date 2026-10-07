@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  createEvent,
-  fireEvent,
-  screen,
-  waitFor,
-} from "@testing-library/react"
+import { act, createEvent, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { streamlit } from "@streamlit/protobuf"
@@ -28,10 +22,11 @@ import { streamlit } from "@streamlit/protobuf"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import * as UseFloatingOverlay from "~lib/hooks/useFloatingOverlay"
 import { render } from "~lib/test_util"
+import { lightTheme } from "~lib/theme/themeConfigs"
 import * as MobileUtil from "~lib/util/isMobile"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import Selectbox, { getInsertedText, Props } from "./Selectbox"
+import Selectbox, { getInsertedText, type Props } from "./Selectbox"
 
 vi.mock("~lib/WidgetStateManager")
 
@@ -52,6 +47,14 @@ async function openDropdown(
   user: ReturnType<typeof userEvent.setup>
 ): Promise<void> {
   await user.click(screen.getByRole("button", { name: "Open" }))
+}
+
+/** Place the caret after the committed label so the next keystroke appends instead of replacing. */
+function moveCaretToEnd(input: HTMLElement): void {
+  if (!(input instanceof HTMLInputElement)) {
+    throw new TypeError("Expected the combobox to be an input element")
+  }
+  input.setSelectionRange(input.value.length, input.value.length)
 }
 
 /** Force a non-zero viewport so the virtualizer renders a window of rows. */
@@ -176,6 +179,25 @@ describe("Selectbox widget", () => {
     expect(screen.getByRole("combobox")).toBeDisabled()
   })
 
+  it("disables the clear button when the selectbox is disabled and has a value", async () => {
+    const user = userEvent.setup()
+    props = getProps({
+      clearable: true,
+      value: "a",
+      disabled: true,
+    })
+    render(<Selectbox {...props} />)
+
+    const clearButton = screen.getByRole("button", { name: "Clear value" })
+    expect(clearButton).toHaveAttribute("data-disabled")
+    expect(clearButton).toHaveStyle(
+      `color: ${lightTheme.emotion.colors.fadedText40}`
+    )
+
+    await user.click(clearButton)
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
   it("does not open the dropdown when disabled and clicked", async () => {
     const user = userEvent.setup()
     props = getProps({ disabled: true })
@@ -215,7 +237,7 @@ describe("Selectbox widget", () => {
 
   it("selects an option via arrow-nav + Enter (racHandledEnterRef path)", async () => {
     // Exercises the most complex keyboard path: ArrowDown navigates to "b"
-    // which RAC commits via onSelectionChange (setting racHandledEnterRef),
+    // which RAC commits via its onChange (setting racHandledEnterRef),
     // then Enter fires our bubble-phase handler which must NOT double-commit.
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
@@ -223,15 +245,16 @@ describe("Selectbox widget", () => {
 
     await user.click(input)
     // With initial value "a" (index 0), ArrowDown navigates to "b" (index 1).
-    // RAC fires onSelectionChange("1") which commits "b" and sets racHandledEnterRef.
+    // RAC's onChange("1") commits "b" and sets racHandledEnterRef.
     // Press Enter immediately after — our handler sees racHandledEnterRef=true
-    // and skips, so onChange is called exactly once total (not twice).
+    // and skips, so the Streamlit onChange prop is called exactly once
+    // total (not twice).
     await user.keyboard("{ArrowDown}{Enter}")
 
     await waitFor(() => {
-      expect(props.onChange).toHaveBeenCalledTimes(1)
       expect(props.onChange).toHaveBeenCalledWith("b")
     })
+    expect(props.onChange).toHaveBeenCalledTimes(1)
     expect(screen.getByDisplayValue("b")).toBeVisible()
   })
 
@@ -288,6 +311,46 @@ describe("Selectbox widget", () => {
     options = screen.getAllByRole("option")
     expect(options).toHaveLength(1)
     expect(options[0]).toHaveTextContent("b")
+  })
+
+  it("restores the committed label when the already-selected option is clicked after filtering", async () => {
+    // ComboBox `onChange` is not a pure alias of `onSelectionChange`:
+    // react-stately skips `onChange` when the selected key is unchanged
+    // (`useControlledState` bails on Object.is), so re-selecting the
+    // committed option relies on RAC's resetInputValue() → onInputChange
+    // path to restore the input and clear the filter.
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["Apple", "Apricot", "Banana"],
+      value: "Apple",
+    })
+    render(<Selectbox {...currProps} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("Apple")
+
+    await user.click(input)
+    await user.keyboard("Ap")
+
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Apple" })).toBeVisible()
+      expect(screen.getByRole("option", { name: "Apricot" })).toBeVisible()
+    })
+    expect(
+      screen.queryByRole("option", { name: "Banana" })
+    ).not.toBeInTheDocument()
+    expect(input).toHaveValue("Ap")
+
+    await user.click(screen.getByRole("option", { name: "Apple" }))
+
+    await waitFor(() => {
+      expect(input).toHaveValue("Apple")
+    })
+    expect(currProps.onChange).not.toHaveBeenCalled()
+
+    await openDropdown(user)
+    await waitFor(() => {
+      expect(screen.getAllByRole("option")).toHaveLength(3)
+    })
   })
 
   it("filters options with fuzzy (non-contiguous) matches", async () => {
@@ -479,7 +542,9 @@ describe("Selectbox widget", () => {
       data: "n",
     })
     const preventDefaultSpy = vi.spyOn(compositionEvent, "preventDefault")
-    fireEvent(selectboxInput, compositionEvent)
+    act(() => {
+      selectboxInput.dispatchEvent(compositionEvent)
+    })
     expect(preventDefaultSpy).toHaveBeenCalled()
     expect(selectboxInput).toHaveValue("")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
@@ -524,10 +589,8 @@ describe("Selectbox widget", () => {
 
     await user.click(input)
     // Simulate the browser appending "c" behind the committed "Banana".
-    act(() => {
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.change(input, { target: { value: "Bananac" } })
-    })
+    moveCaretToEnd(input)
+    await user.keyboard("c")
 
     expect(input).toHaveValue("c")
     await waitFor(() => {
@@ -550,10 +613,8 @@ describe("Selectbox widget", () => {
 
     await user.click(input)
     // Simulate the browser appending "a" behind the committed "a".
-    act(() => {
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.change(input, { target: { value: "aa" } })
-    })
+    moveCaretToEnd(input)
+    await user.keyboard("a")
 
     expect(input).toHaveValue("a")
     // Filtering is active: "a"/"ab" match the query, "b" is filtered out.
@@ -579,11 +640,9 @@ describe("Selectbox widget", () => {
     expect(input).toHaveValue("foo")
 
     await user.click(input)
-    act(() => {
-      // Simulate the browser appending the keystrokes behind the committed label.
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.change(input, { target: { value: "foobar" } })
-    })
+    // Simulate the browser appending the keystrokes behind the committed label.
+    moveCaretToEnd(input)
+    await user.keyboard("bar")
 
     expect(input).toHaveValue("bar")
     await waitFor(() => {
@@ -593,9 +652,8 @@ describe("Selectbox widget", () => {
 
   it("clears the typed query on Escape and restores the committed label", async () => {
     // Regression test for https://github.com/streamlit/streamlit/issues/16004
-    // With a value already committed, typing a query then pressing Escape
-    // must drop the typed query and restore the committed label — matching
-    // pre-1.59 (BaseWeb) behavior. The committed value must not change.
+    // Escape while filtering must restore the committed label without changing
+    // the committed value.
     const user = userEvent.setup()
     props = getProps({
       options: ["Apple", "Banana", "Cherry"],
@@ -699,7 +757,7 @@ describe("Selectbox widget", () => {
 
   it("committedValueRef blur regression: selecting then tabbing shows selected value", async () => {
     // Validates that the committedValueRef pattern prevents the input from
-    // reverting to the stale propValue when onBlur fires after onSelectionChange.
+    // reverting to the stale propValue when onBlur fires after RAC's onChange.
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
 
@@ -770,13 +828,9 @@ describe("Selectbox widget", () => {
     const selectboxInput = screen.getByRole("combobox")
 
     // user.click focuses the input AND opens the dropdown (via RAC's press handler).
-    // Then fireEvent.change sets the input value without triggering a blur/focus
-    // cycle (which would close the dropdown via RAC's shouldCloseOnBlur path).
+    // keyboard enters text without another click or blur/focus cycle.
     await user.click(selectboxInput)
-    act(() => {
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.change(selectboxInput, { target: { value: "hello world!" } })
-    })
+    await user.keyboard("hello world!")
 
     await waitFor(() => {
       expect(

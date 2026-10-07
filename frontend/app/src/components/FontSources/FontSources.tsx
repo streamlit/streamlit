@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+import type { JSX } from "react"
+
 import { Helmet } from "react-helmet-async"
 
-import { FontSources as FontSourcesType } from "@streamlit/app/src/util/useThemeManager"
+import type { FontSources as FontSourcesType } from "@streamlit/app/src/util/useThemeManager"
 
 interface FontSourcesProps {
   fontSources: FontSourcesType

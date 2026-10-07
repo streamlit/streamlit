@@ -30,6 +30,9 @@ from streamlit.proto.openmetrics_data_model_pb2 import (
     SUMMARY,
     UNKNOWN,
 )
+from streamlit.proto.openmetrics_data_model_pb2 import (
+    Metric as MetricProto,
+)
 from streamlit.runtime.stats import (
     CACHE_MEMORY_FAMILY,
     CacheStat,
@@ -384,7 +387,6 @@ class CounterStatTest(unittest.TestCase):
 
     def test_counter_stat_marshall_metric_proto_combined_labels(self) -> None:
         """marshall_metric_proto should add sorted labels and a counter point."""
-        from streamlit.proto.openmetrics_data_model_pb2 import Metric as MetricProto
 
         stat = CounterStat(
             family_name="user_session_events",
@@ -490,3 +492,35 @@ class SafeSizeofTest(unittest.TestCase):
             side_effect=ReferenceError("weakly-referenced object no longer exists"),
         ):
             assert safe_sizeof(object()) == 0
+
+
+def test_gauge_stat_marshall_metric_proto_adds_sorted_labels() -> None:
+    """marshall_metric_proto adds labels sorted by name and a gauge point."""
+    stat = GaugeStat(
+        family_name="active_sessions",
+        value=7,
+        labels={"b": "2", "a": "1"},
+    )
+    metric = MetricProto()
+    stat.marshall_metric_proto(metric)
+
+    # Labels are serialized in sorted order (a before b) even though the input
+    # dict lists b first.
+    assert [(label.name, label.value) for label in metric.labels] == [
+        ("a", "1"),
+        ("b", "2"),
+    ]
+    assert len(metric.metric_points) == 1
+    assert metric.metric_points[0].gauge_value.int_value == 7
+
+
+def test_gauge_stat_marshall_metric_proto_without_labels_adds_no_labels() -> None:
+    """marshall_metric_proto adds no labels when ``labels`` is None."""
+    stat = GaugeStat(family_name="active_sessions", value=4)
+    metric = MetricProto()
+    stat.marshall_metric_proto(metric)
+
+    # The label loop is skipped for the default (None) labels, so only the
+    # gauge metric point is populated.
+    assert len(metric.labels) == 0
+    assert metric.metric_points[0].gauge_value.int_value == 4

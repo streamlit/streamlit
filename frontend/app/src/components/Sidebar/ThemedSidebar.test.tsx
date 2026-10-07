@@ -20,12 +20,12 @@ import {
   createSidebarTheme,
   emotionLightTheme,
   mockEndpoints,
-  ThemeConfig,
+  type ThemeConfig,
 } from "@streamlit/lib"
 import { renderWithContexts } from "@streamlit/lib/testing"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
-import { SidebarProps } from "./Sidebar"
+import type { SidebarProps } from "./Sidebar"
 import ThemedSidebar from "./ThemedSidebar"
 
 function getProps(props: Partial<SidebarProps> = {}): SidebarProps {
@@ -68,8 +68,6 @@ describe("createSidebarTheme", () => {
   ): ThemeConfig =>
     ({
       name: "mockTheme",
-      basewebTheme: {},
-      primitives: {},
       themeInput: {},
       emotion: {
         colors: {

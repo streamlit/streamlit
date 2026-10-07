@@ -15,8 +15,8 @@
  */
 
 import type {
+  ArrowData,
   BidiComponent as BidiComponentProto,
-  IArrowData,
 } from "@streamlit/protobuf"
 
 import { assertNever } from "~lib/util/assertNever"
@@ -28,8 +28,8 @@ type BaseParseArgs = Pick<BidiComponentProto, "json" | "bytes">
 type BidiComponentDataField = BidiComponentProto["data"]
 
 export type ParseBidiComponentDataArgs = BaseParseArgs & {
-  arrowBlobs?: Record<string, IArrowData>
-  arrowData?: IArrowData["data"] | undefined
+  arrowBlobs?: Record<string, ArrowData.$Properties>
+  arrowData?: ArrowData.$Properties["data"] | undefined
   data?: BidiComponentDataField | "mixed"
   mixedJson?: string
 }
@@ -56,7 +56,7 @@ export const parseBidiComponentData = ({
       return bytes ?? null
     case "mixed": {
       if (mixedJson && arrowBlobs) {
-        const jsonData = JSON.parse(mixedJson)
+        const jsonData: unknown = JSON.parse(mixedJson)
 
         const arrowBlobsMap: Record<string, Uint8Array> = {}
         Object.entries(arrowBlobs).forEach(([key, arrowProto]) => {

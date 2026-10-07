@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { JSX } from "react"
+
 import { renderHook } from "@testing-library/react"
 import { parseToRgba } from "color2k"
 
@@ -162,5 +164,56 @@ describe("useCustomTheme hook", () => {
     expect(customButtonHover).not.toBe(
       customResult.current.glideTheme.bgHeaderHovered
     )
+  })
+
+  it("maps dataframeHeaderTextColor to textHeader and textGroupHeader", () => {
+    const themeWithHeaderText = {
+      ...mockTheme.emotion,
+      colors: {
+        ...mockTheme.emotion.colors,
+        dataframeHeaderTextColor: "#00ff00",
+      },
+    }
+
+    const wrapper = ({
+      children,
+    }: {
+      children: React.ReactNode
+    }): JSX.Element => (
+      <ThemeProvider theme={themeWithHeaderText}>{children}</ThemeProvider>
+    )
+
+    const { result } = renderHook(() => useCustomTheme(), { wrapper })
+    const {
+      textHeader,
+      textGroupHeader,
+      textHeaderSelected,
+      bgIconHeader,
+      fgIconHeader,
+    } = result.current.glideTheme
+
+    expect(textHeader).toBe("#00ff00")
+    expect(textGroupHeader).toBe("#00ff00")
+    expect(bgIconHeader).toBe("#00ff00")
+    expect(textHeaderSelected).toBe(mockTheme.emotion.colors.white)
+    expect(fgIconHeader).toBe(mockTheme.emotion.colors.white)
+  })
+
+  it("uses the fadedText60 default for header text", () => {
+    const wrapper = ({
+      children,
+    }: {
+      children: React.ReactNode
+    }): JSX.Element => (
+      <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
+    )
+
+    const { result } = renderHook(() => useCustomTheme(), { wrapper })
+    const { textHeader, textGroupHeader, bgIconHeader } =
+      result.current.glideTheme
+
+    expect(textHeader).toBe(mockTheme.emotion.colors.fadedText60)
+    expect(textGroupHeader).toBe(mockTheme.emotion.colors.fadedText60)
+    expect(bgIconHeader).toBe(mockTheme.emotion.colors.fadedText60)
   })
 })

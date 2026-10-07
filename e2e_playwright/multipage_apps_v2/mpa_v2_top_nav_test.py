@@ -62,14 +62,14 @@ def test_mobile_fallback_to_sidebar(app: Page):
 
     # On mobile with AUTO state, sidebar should be collapsed by default
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
+    expect(sidebar).to_have_attribute("data-collapsed", "true")
 
     # Expand the sidebar to access navigation
     expand_button = app.get_by_test_id("stExpandSidebarButton")
     expand_button.click()
 
     # Wait for sidebar to expand and nav links to be visible
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(sidebar).to_have_attribute("data-collapsed", "false")
     nav_links = app.get_by_test_id("stSidebarNavLink")
     expect(nav_links.first).to_be_visible()
 
@@ -455,9 +455,8 @@ def test_mixed_empty_and_named_sections(app: Page):
 def test_top_nav_section_keyboard_and_aria(app: Page):
     """Test keyboard dismissal and ARIA state for top nav section popovers.
 
-    Covers behavior introduced when replacing BaseWeb's popover with a custom
-    FloatingPortal + useEffect dismissal handler: Escape closes the popover and
-    returns focus to the trigger, and aria-expanded reflects open/closed state.
+    Escape must close the popover and return focus to the trigger, while
+    aria-expanded reflects the open or closed state.
     """
     app.set_viewport_size({"width": 1280, "height": 800})
 
@@ -554,7 +553,7 @@ def test_mobile_sidebar_overlay_visual(
 
     # On mobile with AUTO state, sidebar should be collapsed by default
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
+    expect(sidebar).to_have_attribute("data-collapsed", "true")
 
     # Take screenshot of initial collapsed state
     assert_snapshot(app, name="st_navigation-mobile_sidebar_overlay_collapsed")
@@ -564,7 +563,7 @@ def test_mobile_sidebar_overlay_visual(
     expand_button.click()
 
     # Wait for sidebar to expand and verify navigation is visible
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(sidebar).to_have_attribute("data-collapsed", "false")
     nav_links = app.get_by_test_id("stSidebarNavLink")
     expect(nav_links).to_have_count(3)
     expect(nav_links.first).to_be_visible()
@@ -579,8 +578,7 @@ def test_mobile_sidebar_overlay_visual(
     close_button.click()
 
     # Wait for sidebar to collapse
-    # The sidebar aria-expanded attribute should be false
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
+    expect(sidebar).to_have_attribute("data-collapsed", "true")
 
     # Test navigation interaction
     # Expand sidebar again using the expand button in the header
@@ -588,7 +586,7 @@ def test_mobile_sidebar_overlay_visual(
     expand_button.click()
 
     # Wait for sidebar to expand
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(sidebar).to_have_attribute("data-collapsed", "false")
     expect(nav_links.first).to_be_visible()
 
     # Navigate to a different page
@@ -605,7 +603,7 @@ def test_mobile_sidebar_overlay_visual(
     # First collapse sidebar to access the checkbox
     close_button = app.get_by_test_id("stSidebarCollapseButton")
     close_button.click()
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
+    expect(sidebar).to_have_attribute("data-collapsed", "true")
 
     # Now click the Test Sections checkbox
     click_checkbox(app, "Test Sections")
@@ -614,7 +612,7 @@ def test_mobile_sidebar_overlay_visual(
     # Expand sidebar to see sections
     expand_button = app.get_by_test_id("stExpandSidebarButton")
     expand_button.click()
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(sidebar).to_have_attribute("data-collapsed", "false")
 
     # Verify sections are rendered in sidebar on mobile
     section_a = app.get_by_text("Section A").first
@@ -627,7 +625,7 @@ def test_mobile_sidebar_overlay_visual(
 # ===== TOP PADDING VISUAL REGRESSION TESTS =====
 # These tests validate the top padding logic in frontend/app/src/components/AppView/styled-components.ts
 # which sets different top padding values based on embedded mode, toolbar visibility, and navigation presence:
-# - 2.25rem: embedded minimal (no header, no toolbar)
+# - bare-embed clearance (calc from overlay toolbar size; 2.35rem at 16px root)
 # - 4.5rem: embedded with header but no toolbar
 # - 6rem: non-embedded default OR embedded with show_toolbar
 # - 8rem: non-embedded with top navigation present
@@ -639,7 +637,7 @@ def test_top_padding_visual_regression_embedded_modes(
     """Visual regression test for top padding in different embedded modes.
 
     Tests the top padding logic from styled-components.ts:
-    - 2.25rem: embedded minimal (no header, no toolbar)
+    - bare-embed clearance for overlay toolbars (no header, no toolbar)
     - 4.5rem: embedded with header but no toolbar
     - 6rem: embedded with show_toolbar
     """
@@ -650,17 +648,17 @@ def test_top_padding_visual_regression_embedded_modes(
     current_url = app.url
     base_url = current_url.split("?")[0]
 
-    # Test 1: Embedded minimal mode (2.25rem) - enable hidden nav first to remove headers
+    # Test 1: Embedded minimal mode - enable hidden nav first to remove headers
     click_checkbox(app, "Test Hidden Navigation")
     wait_for_app_run(app)
 
     goto_app(app, f"{base_url}?embed=true")
     wait_for_app_run(app)
 
-    # Should have minimal UI - this triggers the 2.25rem padding case
+    # Should have minimal UI - this triggers the bare-embed clearance padding
     main_content = app.get_by_test_id("stMain")
     expect(main_content).to_be_visible()
-    assert_snapshot(main_content, name="st_app_top_padding-embedded_minimal_2_25rem")
+    assert_snapshot(main_content, name="st_app_top_padding-embedded_minimal")
 
     # Test 2: Embedded with toolbar (6rem)
     goto_app(app, f"{base_url}?embed=true&show_toolbar=true")

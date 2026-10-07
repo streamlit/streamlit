@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useMemo } from "react"
+import { memo, type ReactElement, useMemo } from "react"
 
 import { range } from "lodash-es"
 
-import { streamlit, Table as TableProto } from "@streamlit/protobuf"
+import { type streamlit, Table as TableProto } from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
@@ -34,7 +34,7 @@ import { Quiver } from "~lib/dataframes/Quiver"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import {
-  StickyType,
+  type StickyType,
   StyledEmptyTableCell,
   StyledTable,
   StyledTableBorder,
@@ -47,15 +47,17 @@ import {
 export interface TableProps {
   element: TableProto
   elementHash?: string
-  widthConfig?: streamlit.IWidthConfig | null
-  heightConfig?: streamlit.IHeightConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 // Fallback offset value (in rem) used for sticky positioning when multiple header rows
 // exist. This approximates typical row height to ensure sticky headers don't overlap.
 // The actual size may vary based on content, but this default works reasonably well.
-// Header row: fontSize (1rem) * lineHeight (1.5) + vertical padding (0.5rem) = 2rem
-const FALLBACK_HEADER_ROW_OFFSET_REM = "2rem"
+// Header row height ≈ fontSize.sm (0.875rem) × lineHeights.small (1.5)
+// + vertical padding (twoXS top and bottom = 0.5rem) → 1.8125rem
+// Table.test.tsx pins the derivation against theme tokens to catch drift.
+export const FALLBACK_HEADER_ROW_OFFSET_REM = "1.8125rem"
 
 function getStickyOffset(index: number, stepPx: number): number {
   return index * stepPx
@@ -135,6 +137,12 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   // With sticky index limited to single index columns, the offset is always 0
   const indexLeftOffsets = [0]
 
+  // Only name the <table> when the author provided a non-blank alt.
+  // Blank input is treated as absent: aria-label=" " computes to an empty
+  // accessible name, which is worse than none. Native <table> already has
+  // the table role — do not add role="figure" or role="img".
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledTableContainer className="stTable" data-testid="stTable">
       {cssStyles && <style>{cssStyles}</style>}
@@ -158,6 +166,7 @@ export function Table(props: Readonly<TableProps>): ReactElement {
           data-testid="stTableStyledTable"
           useContentWidth={useContentWidth}
           hasScrollableWidth={hasScrollableWidth}
+          aria-label={accessibleName}
         >
           {numHeaderRows > 0 &&
             !hideHeader &&
@@ -281,6 +290,7 @@ function generateTableHeader(
                 <StreamlitMarkdown
                   source={header.name || "\u00A0"}
                   allowHTML={false}
+                  inheritFont
                 />
               </StyledTableCellHeader>
             )
@@ -387,6 +397,7 @@ function generateTableCell(
           <StreamlitMarkdown
             source={formattedContent || "\u00A0"}
             allowHTML={false}
+            inheritFont
           />
         </StyledTableCellHeader>
       )
@@ -405,6 +416,7 @@ function generateTableCell(
           <StreamlitMarkdown
             source={formattedContent || "\u00A0"}
             allowHTML={false}
+            inheritFont
           />
         </StyledTableCell>
       )

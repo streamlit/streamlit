@@ -120,6 +120,13 @@ message BackendOperationResponse {
   // Error message if request failed (empty on success)
   string error_msg = 2;
 
+  // Machine-readable, bounded failure classification (empty on success).
+  // Parallels the human-readable error_msg. For the one-click skills install
+  // this is the cause of the failure (e.g. "conflict", "write_failed",
+  // "source_missing"), forwarded to telemetry so the nudge's install-failure
+  // rate can be broken down by cause.
+  string error_reason = 7;
+
   oneof payload {
     // Response for deferred file requests
     DeferredFileResponsePayload deferred_file = 3;
@@ -141,11 +148,21 @@ message DeferredFileResponsePayload {
 }
 
 // Response payload for one-click skills install. A successful, empty detail
-// indicates a clean install; failures are reported via the response's
-// error_msg field instead.
+// indicates a clean install; failures are not reported here at all, but via the
+// parent response's error_msg (human-readable) and error_reason (machine-readable).
 message InstallSkillsResponsePayload {
   // Optional human-readable detail about the install outcome.
   string detail = 1;
+
+  // Why a project install was rerouted to a global copy, empty when it wasn't:
+  //   "symlinks_no_privilege" - Windows Developer Mode off (ERROR_PRIVILEGE_NOT_HELD)
+  //   "symlinks_denied"       - permissions on the project dir refused the probe
+  //   "symlinks_unsupported"  - the filesystem/OS has no directory symlinks
+  //   "symlink_failed"        - pre-check passed, then an individual link would not lay
+  // Reported on SUCCESS: most Windows users cannot lay symlinks, get rerouted, and
+  // then succeed, so this is where that cohort's diagnostic signal lives
+  // (skillsNudgeInstallSucceeded:<fallback_reason>).
+  string fallback_reason = 2;
 }
 
 // Acknowledgement payload for dismissing the skills nudge. Carries no data;

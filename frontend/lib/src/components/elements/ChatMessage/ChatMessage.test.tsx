@@ -21,7 +21,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 
-import ChatMessage, { ChatMessageProps } from "./ChatMessage"
+import ChatMessage, { type ChatMessageProps } from "./ChatMessage"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -82,11 +82,12 @@ describe("ChatMessage", () => {
         avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
       })
       render(<ChatMessage {...props} />)
-      const chatAvatar = screen.getByAltText("user avatar")
+      const chatAvatar = screen.getByTestId("stChatMessageAvatarImage")
       expect(chatAvatar).toHaveAttribute(
         "src",
         "http://example.com/avatar.jpg"
       )
+      expect(chatAvatar).toHaveAttribute("alt", "")
     })
 
     describe("crossOrigin attribute", () => {
@@ -109,7 +110,7 @@ describe("ChatMessage", () => {
           },
         })
 
-        const chatAvatar = screen.getByAltText("user avatar")
+        const chatAvatar = screen.getByTestId("stChatMessageAvatarImage")
         expect(chatAvatar).toHaveAttribute("crossOrigin", "anonymous")
       })
 
@@ -124,7 +125,7 @@ describe("ChatMessage", () => {
           },
         })
 
-        const chatAvatar = screen.getByAltText("user avatar")
+        const chatAvatar = screen.getByTestId("stChatMessageAvatarImage")
         expect(chatAvatar).not.toHaveAttribute("crossOrigin")
       })
 
@@ -152,7 +153,7 @@ describe("ChatMessage", () => {
             },
           })
 
-          const chatAvatar = screen.getByAltText("user avatar")
+          const chatAvatar = screen.getByTestId("stChatMessageAvatarImage")
           expect(chatAvatar).not.toHaveAttribute("crossOrigin")
         }
       )
@@ -167,6 +168,43 @@ describe("ChatMessage", () => {
     })
     render(<ChatMessage {...props} />)
     expect(screen.getByText("T")).toBeTruthy()
+  })
+
+  it("falls back to the name initial when an ICON avatar is unrecognized", () => {
+    const props = getProps({
+      avatar: "mystery",
+      avatarType: BlockProto.ChatMessage.AvatarType.ICON,
+      name: "alice",
+    })
+    render(<ChatMessage {...props} />)
+
+    expect(screen.getByText("A")).toBeVisible()
+    expect(screen.queryByAltText("alice avatar")).not.toBeInTheDocument()
+  })
+
+  it("falls back to the name initial when avatar type is omitted", () => {
+    const props = getProps()
+    render(
+      <ChatMessage
+        {...props}
+        // Plain object so avatarType stays undefined; create() would default it to IMAGE.
+        element={{ name: "alice", avatar: "unused" } as BlockProto.ChatMessage}
+      />
+    )
+
+    expect(screen.getByText("A")).toBeVisible()
+    expect(screen.queryByAltText("alice avatar")).not.toBeInTheDocument()
+  })
+
+  it("falls back to a default avatar when the name is empty", () => {
+    const props = getProps({
+      avatar: undefined,
+      avatarType: undefined,
+      name: "",
+    })
+    render(<ChatMessage {...props} />)
+
+    expect(screen.getByText("🧑‍💻")).toBeVisible()
   })
 
   it("renders with a 'user' icon avatar", () => {
@@ -195,6 +233,23 @@ describe("ChatMessage", () => {
     expect(assistantAvatarIcon).toBeInTheDocument()
   })
 
+  it("renders a custom material icon avatar", () => {
+    const props = getProps({
+      avatar: ":material/smart_toy:",
+      avatarType: BlockProto.ChatMessage.AvatarType.ICON,
+      name: "bot",
+    })
+    render(<ChatMessage {...props} />)
+
+    expect(screen.getByTestId("stChatMessageAvatarCustom")).toBeVisible()
+    expect(
+      screen.queryByTestId("stChatMessageAvatarUser")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stChatMessageAvatarAssistant")
+    ).not.toBeInTheDocument()
+  })
+
   it("renders with a grey background when name is 'user'", () => {
     const props = getProps()
     render(<ChatMessage {...props} />)
@@ -204,13 +259,49 @@ describe("ChatMessage", () => {
     )
   })
 
-  it("sets an aria label on the chat message", () => {
-    const props = getProps()
+  it("exposes speaker identity on a nameable content region", () => {
+    const props = getProps({
+      name: "Alice",
+      avatar: "http://example.com/avatar.jpg",
+      avatarType: BlockProto.ChatMessage.AvatarType.IMAGE,
+    })
     render(<ChatMessage {...props} />)
 
-    const chatMessageContent = screen.getByTestId("stChatMessageContent")
-    expect(chatMessageContent.getAttribute("aria-label")).toEqual(
-      "Chat message from user"
+    expect(
+      screen.getByRole("group", { name: "Chat message from Alice" })
+    ).toBeVisible()
+    expect(screen.getByTestId("stChatMessageAvatarImage")).toHaveAttribute(
+      "alt",
+      ""
     )
+  })
+
+  it("hides emoji and letter-fallback avatars from the accessibility tree", () => {
+    const emojiProps = getProps({
+      name: "Alice",
+      avatar: "😃",
+      avatarType: BlockProto.ChatMessage.AvatarType.EMOJI,
+    })
+    const { rerender } = render(<ChatMessage {...emojiProps} />)
+
+    expect(
+      screen.getByRole("group", { name: "Chat message from Alice" })
+    ).toBeVisible()
+    expect(screen.getByText("😃")).toHaveAttribute("aria-hidden", "true")
+
+    rerender(
+      <ChatMessage
+        {...getProps({
+          name: "Alice",
+          avatar: undefined,
+          avatarType: undefined,
+        })}
+      />
+    )
+
+    expect(
+      screen.getByRole("group", { name: "Chat message from Alice" })
+    ).toBeVisible()
+    expect(screen.getByText("A")).toHaveAttribute("aria-hidden", "true")
   })
 })

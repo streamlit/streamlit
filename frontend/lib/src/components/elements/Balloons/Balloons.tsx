@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo } from "react"
+import { type FC, memo } from "react"
 
 /*
  * IMPORTANT: If you change the asset imports below, make sure they still work if Streamlit is
@@ -28,7 +28,7 @@ import Balloon4 from "~lib/assets/img/balloons/balloon-4.png"
 import Balloon5 from "~lib/assets/img/balloons/balloon-5.png"
 import { RenderInPortalIfExists } from "~lib/components/core/Portal/RenderInPortalIfExists"
 import Particles, {
-  ParticleProps,
+  type ParticleProps,
 } from "~lib/components/elements/Particles/Particles"
 import { getCrossOriginAttribute } from "~lib/util/UriUtil"
 
@@ -47,7 +47,7 @@ const BALLOON_IMAGES: string[] = [
 
 const NUM_BALLOON_TYPES = BALLOON_IMAGES.length
 
-export interface Props {
+interface Props {
   scriptRunId: string
 }
 

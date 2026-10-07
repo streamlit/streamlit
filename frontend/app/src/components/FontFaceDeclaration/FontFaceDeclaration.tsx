@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import { css, Global } from "@emotion/react"
 
-import { IFontFace } from "@streamlit/protobuf"
+import type { FontFace as FontFaceProto } from "@streamlit/protobuf"
 
-interface BackwardCompatibleFontFace extends IFontFace {
+interface BackwardCompatibleFontFace extends FontFaceProto.$Properties {
   // Legacy custom-theme payloads may still send deprecated weight.
   weight?: string | number
 }

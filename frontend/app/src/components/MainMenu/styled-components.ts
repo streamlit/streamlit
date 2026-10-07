@@ -15,13 +15,14 @@
  */
 
 import { keyframes } from "@emotion/react"
-import { Keyframes } from "@emotion/serialize"
+import type { Keyframes } from "@emotion/serialize"
 import styled from "@emotion/styled"
 
 import {
-  EmotionTheme,
+  type EmotionTheme,
   getOverlayZIndex,
   getPopoverContainerStyle,
+  getToggleTrackColor,
   hasLightBackgroundColor,
 } from "@streamlit/lib"
 
@@ -292,10 +293,12 @@ export const StyledToggleTrack = styled.div<StyledToggleProps>(
     minHeight: theme.sizes.checkbox,
     padding: `0 ${theme.spacing.threeXS}`,
     borderRadius: theme.radii.full,
-    backgroundColor:
-      isChecked && !isDisabled
-        ? theme.colors.primary
-        : theme.colors.borderColor,
+    // Omit isHovered: the row already uses darkenedBgMix15 for &:hover /
+    // :focus-visible; passing hover here would make the off track match the row.
+    backgroundColor: getToggleTrackColor(theme, {
+      isSelected: isChecked,
+      isDisabled,
+    }),
     transition: "background-color 100ms ease",
   })
 )
@@ -326,8 +329,8 @@ export const StyledToggleKnob = styled.div<StyledToggleProps>(
  * Footer container for the version string.
  * Lives outside the role="menu" container (as a sibling within the
  * popover) so the CopyButton is not an invalid child of role="menu".
- * Keyboard users reach the CopyButton via Tab; focus-lock keeps
- * focus within the popover.
+ * Keyboard users reach the CopyButton via Tab; explicit handlers in
+ * MenuContent keep focus cycling within the popover.
  */
 export const StyledMenuVersionFooter = styled.div(({ theme }) => ({
   paddingLeft: theme.spacing.sm,

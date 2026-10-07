@@ -16,8 +16,8 @@
 
 import { describe, expect, it, vi } from "vitest"
 
-import { FileUploadClient } from "~lib/FileUploadClient"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { FileUploadClient } from "~lib/FileUploadClient"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { uploadFiles } from "./uploadFiles"
 

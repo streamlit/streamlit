@@ -15,11 +15,11 @@
  */
 
 import {
-  GridCell,
+  type GridCell,
   GridCellKind,
-  LoadingCell,
+  type LoadingCell,
 } from "@glideapps/glide-data-grid"
-import { RangeCellType } from "@glideapps/glide-data-grid-cells"
+import type { RangeCellType } from "@glideapps/glide-data-grid-cells"
 
 import { isIntegerType } from "~lib/dataframes/arrowTypeUtils"
 import { resolveNamedColor } from "~lib/theme/getColors"
@@ -28,8 +28,8 @@ import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   countDecimals,
   getEmptyCell,
   getErrorCell,

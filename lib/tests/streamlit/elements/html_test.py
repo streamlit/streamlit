@@ -19,7 +19,10 @@ import pytest
 
 import streamlit as st
 from streamlit.elements.html import _is_file
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -33,6 +36,18 @@ def test_is_file_with_long_string() -> None:
 def test_is_file_with_html_tag_substring() -> None:
     """Test that _is_file short-circuits for strings containing '<'."""
     assert _is_file("not<a>file") is False
+
+
+@pytest.mark.parametrize(
+    "error",
+    [OSError("broken"), ValueError("null byte"), TypeError("bad")],
+    ids=["oserror", "valueerror", "typeerror"],
+)
+def test_is_file_returns_false_on_filesystem_error(error: Exception) -> None:
+    """Path.is_file errors are treated as 'not a file'."""
+    with patch("streamlit.elements.html.Path") as mock_path:
+        mock_path.return_value.is_file.side_effect = error
+        assert _is_file("shortpath") is False
 
 
 class StHtmlAPITest(DeltaGeneratorTestCase):
@@ -72,10 +87,8 @@ class StHtmlAPITest(DeltaGeneratorTestCase):
 
     def test_st_html_empty_body_throws_error(self):
         """Test st.html with empty body throws error."""
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.html("")
-
-        assert "`st.html` body cannot be empty" in str(ctx.value)
 
     def test_st_html_with_style_tag_only(self):
         """Test st.html with only a style tag."""

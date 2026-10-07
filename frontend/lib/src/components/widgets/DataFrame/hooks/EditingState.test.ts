@@ -14,11 +14,15 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
+import {
+  type GridCell,
+  GridCellKind,
+  type TextCell,
+} from "@glideapps/glide-data-grid"
 import { Field, Utf8 } from "apache-arrow"
 
 import {
-  BaseColumnProps,
+  type BaseColumnProps,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
@@ -194,6 +198,14 @@ describe("EditingState class", () => {
       editingState.getOriginalRowIndex(2),
     ])
     expect(editingState.getNumRows()).toEqual(0)
+  })
+
+  it("does not mutate the rows array passed to deleteRows", () => {
+    const editingState = new EditingState(3)
+    const rows = [0, 2]
+    editingState.deleteRows(rows)
+    expect(rows).toEqual([0, 2])
+    expect(editingState.getNumRows()).toEqual(1)
   })
 
   it("ignores rows with required empty values in toJson", () => {

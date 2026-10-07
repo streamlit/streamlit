@@ -1,4 +1,3 @@
-import { ICustomThemeConfig } from "@streamlit/protobuf"
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
@@ -14,6 +13,8 @@ import { ICustomThemeConfig } from "@streamlit/protobuf"
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import type { CustomThemeConfig } from "@streamlit/protobuf"
 
 /**
  * A type predicate that is true if the given value is neither undefined
@@ -59,8 +60,8 @@ export interface StreamlitWindowObject {
   CUSTOM_COMPONENT_CLIENT_ID?: string
 
   // Theme related settings.
-  LIGHT_THEME?: ICustomThemeConfig
-  DARK_THEME?: ICustomThemeConfig
+  LIGHT_THEME?: CustomThemeConfig.$Properties
+  DARK_THEME?: CustomThemeConfig.$Properties
 
   // Other options.
   ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION?: boolean

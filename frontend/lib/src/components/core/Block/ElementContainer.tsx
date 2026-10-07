@@ -14,17 +14,21 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, ReactNode, Suspense, useContext } from "react"
+import {
+  memo,
+  type ReactElement,
+  type ReactNode,
+  Suspense,
+  useContext,
+} from "react"
 
-import classNames from "classnames"
-
-import { ElementNode } from "~lib/AppNode"
+import type { ElementNode } from "~lib/AppNode"
 import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { getElementId } from "~lib/util/utils"
 
-import { ElementContainerConfig } from "./ElementContainerConfig"
+import type { ElementContainerConfig } from "./ElementContainerConfig"
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 import { convertKeyToClassName, getKeyFromId } from "./utils"
 
@@ -77,11 +81,13 @@ export const ElementContainer = memo(function ElementContainer({
 
   return (
     <StyledElementContainerLayoutWrapper
-      className={classNames(
+      className={[
         "stElementContainer",
         "element-container",
-        convertKeyToClassName(userKey)
-      )}
+        convertKeyToClassName(userKey),
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-testid="stElementContainer"
       data-stale={isStale}
       isStale={isStale && !isFullScreen}

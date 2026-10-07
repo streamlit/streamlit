@@ -117,7 +117,7 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
 
         return dir(DeltaGenerator)
 
-    def __enter__(self) -> Self:  # type: ignore[override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
         """Enter context manager mode with 0.5s delay before showing skeleton.
 
         In context manager mode, we clear the immediately-shown skeleton and switch

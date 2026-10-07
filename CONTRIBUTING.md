@@ -111,7 +111,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
 | `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
 | `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
-| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end |
+| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end, or want the next papercut enhancement selected automatically |
 | `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
 | `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
@@ -135,6 +135,10 @@ Subagents run autonomously in a fresh context, which optimizes for context size 
 | `simplifying-local-changes` | When you want to simplify and refine code for clarity and maintainability |
 | `fixing-pr` | When a PR needs CI fixes, review feedback handling, and validation before merge |
 | `qa-testing-feature` | After implementing a feature to perform comprehensive QA testing before finalizing a PR |
+
+### Bundled user-facing skills
+
+Streamlit ships user-facing skills with the library under `lib/streamlit/.agents/skills/` (for example, `developing-with-streamlit`). When adding or editing those skills, follow [`lib/streamlit/.agents/skills/AGENTS.md`](./lib/streamlit/.agents/skills/AGENTS.md).
 
 ## Style Guide
 
@@ -163,23 +167,10 @@ $ brew install gh
 $ brew install ripgrep
 ```
 
-**Installing Node JS and yarn**
+**Installing nvm**
 
 We recommend that you [manage your nodejs installation with nvm](https://github.com/nvm-sh/nvm#install--update-script).
-After following the instructions linked above to install `nvm`, use the following command to install the latest supported node version
-
-```bash
-# Install node
-nvm install node
-```
-
-**Note:** Node has added Corepack which is a manager of package managers 🥳. It supports yarn! You can enable it by running the following:
-
-```bash
-corepack enable
-```
-
-You may need to `brew install corepack` depending on how you installed node.
+Install `nvm` now using those instructions. In step 2 ("Grab the code") you will install the Node version pinned in `.nvmrc` and enable Corepack (Yarn ships via Corepack).
 
 #### Ubuntu
 
@@ -188,11 +179,9 @@ You may need to `brew install corepack` depending on how you installed node.
 $ sudo apt-get update
 $ sudo apt-get install -y sudo make build-essential curl git rsync unzip protobuf-compiler
 
-# Set frontend dependencies:
+# Install nvm (Node version from .nvmrc is installed after cloning)
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install node
-$ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -210,11 +199,9 @@ $ sudo apt-get install -y ripgrep
 # Install some essentials
 $ sudo dnf install -y make gcc-c++ curl git rsync unzip protobuf-compiler
 
-# Set frontend dependencies:
+# Install nvm (Node version from .nvmrc is installed after cloning)
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install node
-$ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -246,6 +233,18 @@ git remote add remote https://github.com/streamlit/streamlit.git
 git checkout develop
 git checkout -b ${BRANCH_NAME}
 ```
+
+From the repo root, install the Node version pinned in `.nvmrc` and enable Corepack:
+
+```bash
+nvm install
+corepack enable
+
+# Re-activate the pinned version in new shells with `nvm use`,
+# or make it your default with `nvm alias default $(cat .nvmrc)`.
+```
+
+On macOS you may need to `brew install corepack` depending on how you installed Node.
 
 ### 3. Create a new Python environment
 
@@ -362,10 +361,13 @@ You should always write unit tests and end-to-end tests! This is true for new fe
   uv run pytest lib/tests/streamlit/the_test_name.py -k test_that_something_works
   ```
 
-- Some tests require you to set up credentials to connect to Snowflake and install [the `snowflake-snowpark-python` package](https://pypi.org/project/snowflake-snowpark-python/). Information on how the Snowflake environment is set up is in our [test utils](./lib/tests/testutil.py) including environment variables to be set. They are skipped by default when running tests. To enable them and disable all others, pass the `--require-integration` flag to `pytest`.
+- Integration tests need the `integration` dependency group (Snowflake, Polars, Pydantic, and others). Some also need Snowflake credentials described in [test utils](./lib/tests/testutil.py). They are skipped by default.
+
+  Install the integration environment, then run `make python-integration-tests`. Do not use a bare `uv run pytest --require-integration`: a default `uv run` re-syncs to the `dev` group and drops integration-only packages.
 
   ```bash
-  uv run pytest --require-integration
+  PYTHON_DEPENDENCY_GROUP=integration make python-init
+  make python-integration-tests
   ```
 
 #### JS unit tests
@@ -395,7 +397,7 @@ We've set up various formatting, linting, and type-checking rules that our Conti
 
 ### Python
 
-For Python, we use [ruff](https://github.com/astral-sh/ruff) for formatting & linting and [mypy](https://github.com/python/mypy) for type-checking.
+For Python, we use [ruff](https://github.com/astral-sh/ruff) for formatting & linting and [mypy](https://github.com/python/mypy) plus [ty](https://github.com/astral-sh/ty) for type-checking.
 
 #### Formatting
 
@@ -429,7 +431,7 @@ make python-types
 
 ### Javascript / Typescript
 
-For Javascript/Typescript, we utilize oxfmt, oxlint, and ESLint.
+For Javascript/Typescript, we utilize oxfmt, oxlint, ESLint, and Knip.
 
 #### Formatting
 
@@ -455,6 +457,16 @@ For type-checking, run:
 ```bash
 make frontend-types
 ```
+
+#### Dependency analysis
+
+To check for unused exports and unused `dependencies` / `devDependencies`, run:
+
+```bash
+make frontend-knip
+```
+
+Knip also fails on undeclared (`unlisted`) imports: every direct import must be listed in that workspace's `package.json`. See [`frontend/AGENTS.md`](./frontend/AGENTS.md).
 
 ### VS-Code / Cursor Setup
 
@@ -502,16 +514,67 @@ def test_streamlit_version(self):
 
 To fix this make sure your Python environment is set up correctly. Try running `make python-init` to reinstall locked development dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
 
-#### `protoc` command fails because the compiler is too old
+#### `protoc` version is too old or incompatible with the Python protobuf package
 
-If `make protobuf` reports that the installed compiler is too old, install protoc 3.20 or
-newer using the [official installation instructions](https://protobuf.dev/installation/).
-The compiler does not need to exactly match the Python protobuf runtime version.
+Local `protoc` must be at least 3.20 and no newer than the Python `protobuf`
+package in `uv.lock`. `make protobuf` only checks the 3.20 floor; a newer
+compiler fails when generated modules are imported. The compiler does not need
+to match that package exactly: Python can run code generated by an older
+compiler on a newer `protobuf` package. Compare `protoc --version` with
+`uv run python -c "import google.protobuf as p; print(p.__version__)"`.
+Drop the leading major version to convert: Python `protobuf` 6.33.6
+corresponds to `protoc` 33.6, and any `protoc` at or below that is fine.
+CI's 26.1 is an example of an older compiler that still works with the
+current lockfile. If generation already works, keep that compiler; do not
+replace a working install just to match CI.
+
+- Too old (`Error: protoc version X is < 3.20`): install a newer compiler from
+  the [official installation instructions](https://protobuf.dev/installation/),
+  still no newer than the Python `protobuf` version in `uv.lock`. Homebrew's
+  unversioned `protobuf` formula may be ahead of the lockfile.
+- Too new (`google.protobuf.runtime_version.VersionError` when generated
+  modules are imported): switch to a compiler at or below the locked package,
+  then re-run `make protobuf`. On macOS, run `brew search protobuf@` for a
+  versioned formula matching the lock's minor version (e.g. `protobuf@33` for
+  `protobuf` 6.33.x). If one exists:
+
+  ```bash
+  brew install protobuf@33
+  export PATH="$(brew --prefix protobuf@33)/bin:$PATH"
+  make protobuf
+  ```
+
+  The `PATH` export is session-scoped; a later `make protobuf` in a new shell
+  will pick Homebrew's unversioned `protoc` again unless that `PATH` is
+  persisted. If Homebrew has no matching formula, copy `PROTOC_VERSION` from
+  [`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml)
+  and install that GitHub release zip (it is an archive, not a `protoc`
+  binary). Use the asset for your OS and architecture (`osx-aarch_64`,
+  `osx-x86_64`, `linux-x86_64`, or `linux-aarch_64`), extract `bin/protoc`,
+  and put it first on `PATH`:
+
+  ```bash
+  PROTOC_VERSION=26.1  # copy from action.yml
+  PROTOC_ZIP="protoc-${PROTOC_VERSION}-osx-aarch_64.zip"
+  curl -fOL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"
+  sudo unzip -o "$PROTOC_ZIP" -d /usr/local bin/protoc
+  sudo unzip -o "$PROTOC_ZIP" -d /usr/local 'include/*'
+  rm "$PROTOC_ZIP"
+  which protoc   # should be /usr/local/bin/protoc
+  make protobuf
+  ```
+
+  `/usr/local/bin` must precede Homebrew's `protoc` on `PATH`.
+- `ImportError: cannot import name 'runtime_version'` from `google.protobuf`
+  means the Python environment is out of sync (the locked `protobuf` package
+  already includes `runtime_version`). Reinstall with `make python-init`.
 
 To reproduce CI or release-generated output, use the compiler version configured in
 [`.github/actions/make_init/action.yml`](./.github/actions/make_init/action.yml).
 
 ## Introducing dependencies
+
+Add a dependency only when it provides meaningful value that cannot easily be replicated with an in-house implementation. Each dependency increases the risk of supply-chain attacks, breakage from incompatible new versions, and conflicts with other dependencies in users' environments.
 
 We aim to only introduce dependencies in this project that have reasonable restrictions and comply with various laws.
 

@@ -20,20 +20,22 @@ import {
   streamlit,
 } from "@streamlit/protobuf"
 
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 
 import DataFrame from "./DataFrame"
 
 interface ReadOnlyGridProps {
   data: Quiver
   height?: number
-  width?: streamlit.IWidthConfig
+  width?: streamlit.WidthConfig.$Properties
   customToolbarActions?: React.ReactNode[]
+  /** Accessible name for the grid region, also composed into toolbar button aria-labels. */
+  alt?: string
 }
 
 /**
  * A lightweight wrapper around the dataframe component that allows to reuse the
- * component as a ready-only data grid for arrow data for other cases
+ * component as a read-only data grid for arrow data for other cases
  * (e.g. to show underlying data of a chart).
  *
  * The width is always set to stretch, but the height can be configured.
@@ -41,6 +43,7 @@ interface ReadOnlyGridProps {
  * @param data - The arrow data to display in the grid.
  * @param height - The height of the grid.
  * @param customToolbarActions - Custom toolbar actions to display in the grid toolbar.
+ * @param alt - Accessible name for the grid region, also composed into toolbar button aria-labels.
  *
  * @returns A React element that displays the data in a read-only grid.
  */
@@ -49,6 +52,7 @@ export const ReadOnlyGrid = ({
   height,
   width,
   customToolbarActions,
+  alt,
 }: ReadOnlyGridProps): React.ReactElement => {
   return (
     <DataFrame
@@ -64,6 +68,7 @@ export const ReadOnlyGrid = ({
           formId: "",
           columnOrder: [],
           selectionMode: [],
+          alt: alt ?? "",
         })
       }
       data={data}

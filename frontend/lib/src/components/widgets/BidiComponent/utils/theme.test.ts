@@ -16,11 +16,11 @@
 
 import { describe, expect, expectTypeOf, it } from "vitest"
 
-import {
+import type {
   StreamlitTheme,
   StreamlitThemeCssProperties,
 } from "@streamlit/component-v2-lib"
-import { ICustomThemeConfig } from "@streamlit/protobuf"
+import type { CustomThemeConfig } from "@streamlit/protobuf"
 
 import {
   extractComponentsV2Theme,
@@ -73,6 +73,7 @@ describe("BidiComponent/utils/theme", () => {
       borderColorLight: "#f5f5f5",
       dataframeBorderColor: "#f0f0f0",
       dataframeHeaderBackgroundColor: "#fafafa",
+      dataframeHeaderTextColor: "#111111",
       codeBackgroundColor: "#f7f7f7",
       codeTextColor: "#00aa00",
       headingColor: "#111111",
@@ -249,11 +250,11 @@ describe("BidiComponent/utils/theme", () => {
   // Protobuf sync enforcement for Components V2 theme mapping
   //
   // Source of truth: `CustomThemeConfig` in
-  // `proto/streamlit/proto/NewSession.proto`. The generated TS interface
-  // (`ICustomThemeConfig`) comes from `@streamlit/protobuf`. This suite ensures
-  // that any new theme field added in the protobuf is either (a) mapped in
-  // `extractComponentsV2Theme`, or (b) explicitly ignored here with rationale.
-  // This keeps the mapping self-documenting and future-proof.
+  // `proto/streamlit/proto/NewSession.proto`. The generated TS type
+  // (`CustomThemeConfig.$Properties`) comes from `@streamlit/protobuf`. This
+  // suite ensures that any new theme field added in the protobuf is either
+  // (a) mapped in `extractComponentsV2Theme`, or (b) explicitly ignored here
+  // with rationale. This keeps the mapping self-documenting and future-proof.
   //
   // When a failure happens:
   // - Type failure (missing key in the guard):
@@ -268,7 +269,10 @@ describe("BidiComponent/utils/theme", () => {
   // Goal: Newly added theming options are acknowledged and handled
   // deliberately.
   describe("#extractComponentsV2Theme", () => {
-    type ThemeProtoField = Exclude<keyof ICustomThemeConfig, "$unknowns">
+    type ThemeProtoField = Exclude<
+      keyof CustomThemeConfig.$Properties,
+      "$unknowns"
+    >
 
     // These are fields from the CustomThemeConfig proto message that we don't
     // expect to be present in the extracted theme object.
@@ -284,10 +288,8 @@ describe("BidiComponent/utils/theme", () => {
       "dark",
     ]
 
-    // This is a helper object that ensures we have an exhaustive list of all
-    // keys from the ICustomThemeConfig interface. If a new field is added to
-    // the protobuf, this object will fail to compile until the new key is
-    // added.
+    // Exhaustive key list for CustomThemeConfig.$Properties. A new protobuf
+    // field fails compilation until it is added here.
     const allProtoFieldsGuard: Record<ThemeProtoField, null> = {
       primaryColor: null,
       backgroundColor: null,
@@ -313,6 +315,7 @@ describe("BidiComponent/utils/theme", () => {
       borderColor: null,
       dataframeBorderColor: null,
       dataframeHeaderBackgroundColor: null,
+      dataframeHeaderTextColor: null,
       showWidgetBorder: null,
       redColor: null,
       orangeColor: null,

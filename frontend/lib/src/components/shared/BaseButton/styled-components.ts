@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-import { MouseEvent, ReactNode } from "react"
+import type { MouseEvent, ReactNode } from "react"
 
-import styled, { CSSObject } from "@emotion/styled"
+import styled, { type CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
+import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
+import { VISUALLY_HIDDEN_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 
 export enum BaseButtonKind {
@@ -62,14 +64,21 @@ export interface BaseButtonProps {
   "aria-label"?: string
   "aria-haspopup"?: "menu" | "true" | "dialog" | "listbox" | "tree" | "grid"
   "aria-expanded"?: boolean
+  "aria-controls"?: string
 }
 
-// Most props become required via defaults in BaseButton, but ARIA popup
-// attributes stay optional so they only appear in the DOM when explicitly set.
+// Most props become required via defaults in BaseButton, but ARIA attributes
+// stay optional so they only appear in the DOM when explicitly set.
 type RequiredBaseButtonProps = Required<
-  Omit<BaseButtonProps, "aria-haspopup" | "aria-expanded">
+  Omit<
+    BaseButtonProps,
+    "aria-haspopup" | "aria-expanded" | "aria-controls" | "aria-label"
+  >
 > &
-  Pick<BaseButtonProps, "aria-haspopup" | "aria-expanded">
+  Pick<
+    BaseButtonProps,
+    "aria-haspopup" | "aria-expanded" | "aria-controls" | "aria-label"
+  >
 
 function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   switch (size) {
@@ -504,6 +513,8 @@ export const StyledBorderlessIconButtonActive = styled(
 
 export const StyledTooltipNormal = styled.div(({ theme }) => ({
   display: "block",
+  maxWidth: "100%",
+  minWidth: 0,
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
     display: "none",
   },
@@ -511,10 +522,18 @@ export const StyledTooltipNormal = styled.div(({ theme }) => ({
 
 export const StyledTooltipMobile = styled.div(({ theme }) => ({
   display: "none",
+  maxWidth: "100%",
+  minWidth: 0,
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
     display: "block",
   },
 }))
+
+/**
+ * Absolute CSS px floor for element-toolbar hit targets (WCAG 2.2 SC 2.5.8).
+ * Overlay toolbar offsets import this so a floor change cannot drift from spacing.
+ */
+export const ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX = "24px"
 
 export const StyledElementToolbarButton = styled(
   StyledBaseButton
@@ -529,7 +548,12 @@ export const StyledElementToolbarButton = styled(
     display: "flex",
     gap: theme.spacing.xs,
     alignItems: "center",
-    minHeight: "unset",
+    // WCAG 2.2 SC 2.5.8 Target Size (Minimum): ≥24×24 CSS px for every
+    // supported root font size. Prefer the rem token so targets grow with
+    // theme.baseFontSize; floor so a smaller root (e.g. 14) cannot shrink
+    // below the criterion.
+    minWidth: `max(${theme.sizes.smallElementHeight}, ${ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX})`,
+    minHeight: `max(${theme.sizes.smallElementHeight}, ${ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX})`,
     // line height should be the same as the icon size
     lineHeight: theme.iconSizes.md,
     width: "auto",
@@ -559,26 +583,41 @@ export const StyledElementToolbarButton = styled(
   }
 })
 
-export const StyledButtonGroup = styled.div<{ containerWidth: boolean }>(
-  ({ containerWidth }) => ({
-    width: containerWidth ? "100%" : "auto",
+export const StyledButtonGroup = styled.div<{
+  containerWidth: boolean
+}>(({ containerWidth }) => ({
+  // Stretch fills the parent; content-width stays intrinsic. Local overflow
+  // for wrap=False is handled by StyledToggleButtonGroup's maxWidth.
+  width: containerWidth ? "100%" : "auto",
+}))
+
+export const StyledButtonLabel = styled.div<{ $truncate?: boolean }>(
+  ({ $truncate }) => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    // Allow the label to shrink within a flex parent (e.g. a popover/menu
+    // trigger with a chevron) so its text can ellipsize instead of wrapping.
+    ...($truncate && { minWidth: 0 }),
   })
 )
 
-export const StyledButtonLabel = styled.div(() => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "100%",
-}))
+export const StyledButtonMainLabel = styled.span<{ $truncate?: boolean }>(
+  ({ theme, $truncate }) => ({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.sm,
+    minWidth: 0,
+    // Constrain the label to the button width so the text portion ellipsizes
+    // while icons and shortcuts keep their intrinsic size.
+    ...($truncate && { maxWidth: "100%" }),
+  })
+)
 
-export const StyledButtonMainLabel = styled.span(({ theme }) => ({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: theme.spacing.sm,
-  minWidth: 0,
-}))
+/** Screen-reader-only text used to name icon-only buttons. */
+export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
 
 export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   display: "inline-flex",
@@ -590,6 +629,9 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   fontFamily: "inherit",
   lineHeight: theme.lineHeights.tight,
   letterSpacing: "0.01em",
+  // Keep the shortcut visible when wrap=false: the markdown label absorbs the
+  // truncation, so the shortcut (like the icon) must not be compressed.
+  flexShrink: 0,
 }))
 
 // --- React Aria ToggleButtonGroup styled components ---
@@ -597,32 +639,52 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
 // State is driven by React Aria data attributes ([data-selected], [data-hovered],
 // [data-focus-visible], [data-disabled]) rather than swapping BaseButtonKind variants.
 
-export const StyledToggleButtonGroup = styled(ToggleButtonGroup)<{
+export const StyledToggleButtonGroup = styled(ToggleButtonGroup, {
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
+})<{
   $isPills: boolean
   $containerWidth: boolean
-}>(({ theme, $isPills, $containerWidth }) => {
-  const baseStyle = {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    maxWidth: $containerWidth ? "100%" : "fit-content",
-    margin: 0,
-  }
-  const width = $containerWidth ? "100%" : "auto"
-  if ($isPills) {
-    return {
-      ...baseStyle,
-      columnGap: theme.spacing.twoXS,
-      rowGap: theme.spacing.twoXS,
-      width,
-    }
+  $wrap: boolean
+}>(({ theme, $isPills, $containerWidth, $wrap }) => ({
+  display: "flex",
+  flexWrap: $wrap ? ("wrap" as const) : ("nowrap" as const),
+  // Content-width wraps with maxWidth:fit-content (prior behavior).
+  // wrap=False caps at the parent so overflow scrolls locally, not on the page.
+  maxWidth: $wrap ? ($containerWidth ? "100%" : "fit-content") : "100%",
+  width: $containerWidth ? "100%" : "auto",
+  margin: 0,
+  columnGap: $isPills ? theme.spacing.twoXS : theme.spacing.none,
+  rowGap: theme.spacing.twoXS,
+  ...(!$wrap && {
+    overflowX: "auto" as const,
+    overflowY: "hidden" as const,
+    // overflowY:hidden clips the 0.2rem focus ring above/below options.
+    // Vertical padding makes room; negative margin keeps outer layout the same.
+    paddingBlock: theme.sizes.focusRingWidth,
+    marginBlock: `-${theme.sizes.focusRingWidth}`,
+    ...getHorizontalOverflowFadeStyles(theme.spacing.lg),
+  }),
+}))
+
+/**
+ * Returns the flex sizing for a single option. While wrapping, stretch-width
+ * options share the row (`1 1 fit-content`). Without wrapping they keep their
+ * natural width (`min-width: fit-content` beats the base `max-width:
+ * contentMaxWidth`, and `flex-shrink: 0` prevents compression) so long labels
+ * stay readable and the group scrolls instead of ellipsizing.
+ */
+function getToggleOptionFlex(
+  wrap: boolean,
+  containerWidth: boolean
+): CSSObject {
+  if (wrap) {
+    return { flex: containerWidth ? "1 1 fit-content" : undefined }
   }
   return {
-    ...baseStyle,
-    columnGap: theme.spacing.none,
-    rowGap: theme.spacing.twoXS,
-    width,
+    flex: containerWidth ? "1 0 fit-content" : "0 0 auto",
+    minWidth: "fit-content",
   }
-})
+}
 
 const StyledBaseToggleButton = styled(ToggleButton)(({ theme }) => ({
   display: "inline-flex",
@@ -669,10 +731,11 @@ const StyledBaseToggleButton = styled(ToggleButton)(({ theme }) => ({
 
 export const StyledPillsToggleButton = styled(StyledBaseToggleButton)<{
   $containerWidth: boolean
-}>(({ theme, $containerWidth }) => ({
+  $wrap: boolean
+}>(({ theme, $containerWidth, $wrap }) => ({
   borderRadius: theme.radii.full,
   padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
-  flex: $containerWidth ? "1 1 fit-content" : undefined,
+  ...getToggleOptionFlex($wrap, $containerWidth),
   "&[data-selected]:not([data-disabled])": {
     backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
@@ -727,11 +790,13 @@ export const StyledSegmentedControlToggleButton = styled(
   StyledBaseToggleButton
 )<{
   $containerWidth: boolean
-}>(({ theme, $containerWidth }) => ({
+  $wrap: boolean
+}>(({ theme, $containerWidth, $wrap }) => ({
   padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
   borderRadius: "0",
-  flex: $containerWidth ? "1 1 fit-content" : undefined,
-  maxWidth: "100%",
+  ...getToggleOptionFlex($wrap, $containerWidth),
+  // Cap segment width only when wrapping; scroll mode keeps natural widths.
+  maxWidth: $wrap ? "100%" : undefined,
   marginRight: `-${theme.sizes.borderWidth}`,
 
   "&:first-child": {

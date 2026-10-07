@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useContext } from "react"
+import { type ReactElement, useContext } from "react"
 
 import {
   createSidebarTheme,
@@ -22,7 +22,7 @@ import {
   ThemeProvider,
 } from "@streamlit/lib"
 
-import Sidebar, { SidebarProps } from "./Sidebar"
+import Sidebar, { type SidebarProps } from "./Sidebar"
 
 const ThemedSidebar = ({
   children,
@@ -32,10 +32,7 @@ const ThemedSidebar = ({
   const sidebarTheme = createSidebarTheme(activeTheme)
 
   return (
-    <ThemeProvider
-      theme={sidebarTheme.emotion}
-      baseuiTheme={sidebarTheme.basewebTheme}
-    >
+    <ThemeProvider theme={sidebarTheme.emotion}>
       <Sidebar {...sidebarProps}>{children}</Sidebar>
     </ThemeProvider>
   )

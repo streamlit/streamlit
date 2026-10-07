@@ -32,7 +32,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, Protocol, runtime_checkable
 
 from streamlit import config, dataframe_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitIncompatibleParametersError
 from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
@@ -329,7 +329,8 @@ def _validate_lazy_columns(data: object) -> None:
         raise StreamlitAPIException(
             "`lazy=True` is not supported for dataframes with multi-level "
             "(`MultiIndex`) column headers. Flatten the column headers or set "
-            "`lazy=False`."
+            "`lazy=False`.",
+            error_id="lazy-multiindex-columns",
         )
 
 
@@ -353,7 +354,8 @@ def _get_native_row_count(source: DataframeSource, lazy: bool | None) -> int | N
         if lazy is True:
             raise StreamlitAPIException(
                 "`lazy=True` is not supported for this object because Streamlit "
-                "could not determine its row count for lazy loading."
+                "could not determine its row count for lazy loading.",
+                error_id="lazy-could-not-determine-row-count",
             ) from ex
         _LOGGER.info(
             "Could not determine row count for native lazy dataframe source; "
@@ -365,7 +367,8 @@ def _get_native_row_count(source: DataframeSource, lazy: bool | None) -> int | N
     if row_count is None and lazy is True:
         raise StreamlitAPIException(
             "`lazy=True` is not supported for this object because the first "
-            "lazy dataframe version requires a known row count."
+            "lazy dataframe version requires a known row count.",
+            error_id="lazy-requires-known-row-count",
         )
     return row_count
 
@@ -385,9 +388,12 @@ def resolve_lazy_source(
 
     Raises
     ------
+    StreamlitIncompatibleParametersError
+        If ``lazy=True`` is requested with an incompatible option such as
+        ``on_select``.
     StreamlitAPIException
-        If ``lazy=True`` is requested for an input or option combination that
-        cannot be served lazily.
+        If ``lazy=True`` is requested for an object Streamlit cannot serve
+        lazily, including ``pandas.Styler`` and MultiIndex columns.
     """
     if data is None:
         # An empty dataframe is always rendered eagerly.
@@ -402,16 +408,20 @@ def resolve_lazy_source(
             raise StreamlitAPIException(
                 "`lazy=True` is not supported for `pandas.Styler` objects. "
                 "Styler output is tied to the fully materialized table. Remove "
-                "`lazy=True` or pass the underlying dataframe instead."
+                "`lazy=True` or pass the underlying dataframe instead.",
+                error_id="lazy-styler-not-supported",
             )
         return None
 
     if is_selection_activated:
         if lazy is True:
-            raise StreamlitAPIException(
-                "`lazy=True` is not supported together with `on_select`. "
-                "Lazy dataframes cannot use position-based selection in this "
-                'version. Set `on_select="ignore"` or remove `lazy=True`.'
+            raise StreamlitIncompatibleParametersError(
+                "lazy=True",
+                "on_select",
+                explanation=(
+                    "Lazy dataframes cannot use position-based selection in this "
+                    'version. Set `on_select="ignore"` or remove `lazy=True`.'
+                ),
             )
         # For lazy=None we fall back to eager rendering to preserve the existing
         # selection behavior.
@@ -493,7 +503,8 @@ def resolve_lazy_source(
                 "`lazy=True` is not supported for this object because no lazy "
                 "adapter is available for it yet. Remove `lazy=True` to use the "
                 "default preview behavior, or convert it to a pandas/Polars "
-                "dataframe first."
+                "dataframe first.",
+                error_id="lazy-no-adapter-available",
             )
         return None
 

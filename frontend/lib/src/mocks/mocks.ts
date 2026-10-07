@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { IAppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 
-import { SessionInfo, Props as SessionInfoProps } from "~lib/SessionInfo"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { SessionInfo, type Props as SessionInfoProps } from "~lib/SessionInfo"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
 /** Create mock SessionInfo.props */
 export function mockSessionInfoProps(
@@ -65,7 +65,11 @@ export function mockEndpoints(
     buildAppPageURL: vi
       .fn()
       .mockImplementation(
-        (_pageLinkBaseURL: string, page: IAppPage, pageIndex: number) => {
+        (
+          _pageLinkBaseURL: string,
+          page: AppPage.$Properties,
+          pageIndex: number
+        ) => {
           return `http://mock/app/page/${page.pageName}.${pageIndex}`
         }
       ),
@@ -79,6 +83,6 @@ export function mockEndpoints(
   }
 }
 
-export function mockConvertRemToPx(scssVar: string): number {
-  return Number(scssVar.replace("rem", "")) * 16
+export function mockConvertRemToPx(cssValue: string): number {
+  return Number(cssValue.replace("rem", "")) * 16
 }

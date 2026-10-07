@@ -79,6 +79,8 @@ if TYPE_CHECKING:
         str,
     )
     assert_type(color_picker("Pick a color", on_change=None), str)
+    assert_type(color_picker("Pick a color", on_change="rerun"), str)
+    assert_type(color_picker("Pick a color", on_change="ignore"), str)
 
     # Full combination of parameters
     assert_type(
@@ -94,6 +96,7 @@ if TYPE_CHECKING:
             label_visibility="visible",
             width="stretch",
             bind=None,
+            persist_state="session",
         ),
         str,
     )

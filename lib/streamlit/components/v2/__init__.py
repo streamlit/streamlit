@@ -25,7 +25,7 @@ from streamlit.components.v2.component_definition_resolver import (
 from streamlit.components.v2.get_bidi_component_manager import (
     get_bidi_component_manager,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitInvalidParameterTypeError
 
 if TYPE_CHECKING:
     from streamlit.components.v2.types import ComponentRenderer
@@ -72,14 +72,17 @@ def _register_component(
 
     Raises
     ------
-    StreamlitAPIException
+    StreamlitInvalidParameterTypeError
         If ``css`` or ``js`` parameters are not strings or None.
     """
     # Parameter type guards: only strings or None are supported for js/css
     for _param_name, _param_value in (("css", css), ("js", js)):
         if _param_value is not None and not isinstance(_param_value, str):
-            raise StreamlitAPIException(
-                f"{_param_name} parameter must be a string or None. Pass a string path or glob."
+            raise StreamlitInvalidParameterTypeError(
+                _param_name,
+                type(_param_value).__name__,
+                ["str", "None"],
+                detail="Pass a string path or glob.",
             )
 
     component_key = name
@@ -497,13 +500,13 @@ def component(
         export default function(component) {
             const { setStateValue, parentElement } = component;
             const sidebar = document.querySelector('section.stSidebar');
-            const initialState = sidebar.getAttribute('aria-expanded') === 'true';
+            const initialState = sidebar.getAttribute('data-collapsed') === 'false';
 
-            // Create observer to watch for aria-expanded attribute changes
+            // Observe `data-collapsed` and report sidebar expansion-state changes.
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'aria-expanded') {
-                        const newIsExpanded = sidebar.getAttribute('aria-expanded') === 'true';
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'data-collapsed') {
+                        const newIsExpanded = sidebar.getAttribute('data-collapsed') === 'false';
                         setStateValue('expanded', newIsExpanded);
                     }
                 });
@@ -512,7 +515,7 @@ def component(
             // Start observing
             observer.observe(sidebar, {
                 attributes: true,
-                attributeFilter: ['aria-expanded']
+                attributeFilter: ['data-collapsed']
             });
 
             // Set initial state

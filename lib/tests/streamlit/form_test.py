@@ -22,7 +22,13 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementKey,
+    StreamlitInvalidLayoutContextError,
+    StreamlitValueAssignmentNotAllowedError,
+    StreamlitValueError,
+)
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
 )
@@ -246,11 +252,15 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_multiple_forms_same_key(self):
         """Multiple forms with the same key are not allowed."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitDuplicateElementKey) as ctx:
             st.form(key="foo")
             st.form(key="foo")
 
-        assert "There are multiple identical forms with `key='foo'`" in str(ctx.value)
+        assert str(ctx.value) == (
+            "There are multiple elements with the same `key='foo'`. "
+            "To fix this, please make sure that the `key` argument is unique for "
+            "each element you create."
+        )
 
     def test_multiple_forms_same_labels_different_keys(self):
         """Multiple forms with different keys are allowed."""
@@ -265,7 +275,7 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_form_in_form(self):
         """Test that forms cannot be nested in other forms."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as ctx:
             with st.form("foo"):
                 with st.form("bar"):
                     pass
@@ -275,7 +285,7 @@ class FormMarshallingTest(DeltaGeneratorTestCase):
     def test_button_in_form(self):
         """Test that buttons are not allowed in forms."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as ctx:
             with st.form("foo"):
                 st.button("foo")
 
@@ -306,7 +316,7 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
     def test_submit_button_outside_form(self):
         """Test that a submit button is not allowed outside a form."""
 
-        with pytest.raises(StreamlitAPIException) as ctx:
+        with pytest.raises(StreamlitInvalidLayoutContextError) as ctx:
             st.form_submit_button()
 
         assert "`st.form_submit_button()` must be used inside an `st.form()`" in str(
@@ -339,6 +349,25 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
 
         last_delta = self.get_delta_from_queue()
         assert last_delta.new_element.button.type == "secondary"
+
+    def test_submit_button_wrap_default(self):
+        """By default wrap is left unset (auto) so the frontend resolves it."""
+
+        form = st.form("foo")
+        form.form_submit_button()
+
+        button_proto = self.get_delta_from_queue().new_element.button
+        assert not button_proto.HasField("wrap")
+
+    @parameterized.expand([(True,), (False,)])
+    def test_submit_button_wrap(self, wrap_value: bool):
+        """Test that the wrap parameter is forwarded to the submit button proto."""
+
+        form = st.form("foo")
+        form.form_submit_button(wrap=wrap_value)
+
+        button_proto = self.get_delta_from_queue().new_element.button
+        assert button_proto.wrap is wrap_value
 
     def test_submit_button_with_key(self):
         """Test that a submit button can have a custom key."""
@@ -396,8 +425,14 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         """Test that invalid submit button icon positions raise an error."""
 
         form = st.form("foo")
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `icon_position` value"):
             form.form_submit_button(icon_position="center")  # type: ignore[arg-type]
+
+    def test_submit_button_invalid_type(self) -> None:
+        """An unknown submit-button type raises StreamlitValueError."""
+        form = st.form("foo")
+        with pytest.raises(StreamlitValueError, match=r"Invalid `type` value"):
+            form.form_submit_button(type="magic")  # type: ignore[arg-type]
 
     def test_return_false_when_not_submitted(self):
         with st.form("form1"):
@@ -503,6 +538,19 @@ class FormStateInteractionTest(DeltaGeneratorTestCase):
         with st.form("form"):
             st.radio("radio", ["a", "b", "c"], 0)
             st.form_submit_button(on_click=lambda x: x)
+
+    def test_form_rejects_session_state_assignment(self) -> None:
+        """Creating a form after assigning its key raises StreamlitValueAssignmentNotAllowedError."""
+        st.session_state["my_form"] = True
+
+        with pytest.raises(StreamlitValueAssignmentNotAllowedError) as ctx:
+            st.form(key="my_form")
+
+        message = str(ctx.value)
+        assert "`st.session_state['my_form']`" in message
+        assert "read-only" in message
+        assert "event widget" not in message.lower()
+        assert "different session state key" in message
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))

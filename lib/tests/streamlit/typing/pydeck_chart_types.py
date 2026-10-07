@@ -14,22 +14,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from typing_extensions import assert_type
 
 # Perform type checking tests for st.pydeck_chart.
-# The return type depends on the on_select parameter:
-# - no on_select / on_select="rerun" / callable -> returns PydeckState
-# - on_select="ignore" (with selection_mode="single-object") -> returns
-#   DeltaGenerator
-# Note: because the "ignore" overload has no default value, omitting on_select
-# resolves to the "rerun" overload and therefore returns PydeckState.
+# Return type depends on on_select:
+# - omitted or "ignore" -> DeltaGenerator
+# - "rerun" or a callback -> PydeckState
 if TYPE_CHECKING:
     from pydeck import Deck
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.deck_gl_json_chart import PydeckMixin, PydeckState
+    from streamlit.elements.deck_gl_json_chart import PydeckMixin, PydeckSelectionState
+    from streamlit.typing import PydeckState
 
     pydeck_chart = PydeckMixin().pydeck_chart
 
@@ -37,20 +35,32 @@ if TYPE_CHECKING:
 
     # =====================================================================
     # Basic return type tests
-    # (no on_select -> resolves to the "rerun" overload -> PydeckState)
+    # (omitted on_select -> DeltaGenerator)
     # =====================================================================
 
-    assert_type(pydeck_chart(deck), PydeckState)
-    assert_type(pydeck_chart(None), PydeckState)
-    assert_type(pydeck_chart(), PydeckState)
+    assert_type(pydeck_chart(deck), DeltaGenerator)
+    assert_type(pydeck_chart(None), DeltaGenerator)
+    assert_type(pydeck_chart(), DeltaGenerator)
+
+    pydeck_state = pydeck_chart(deck, on_select="rerun")
+    assert_type(pydeck_state.selection, PydeckSelectionState)
+    assert_type(pydeck_state["selection"], PydeckSelectionState)
+    assert_type(pydeck_state.selection.indices, dict[str, list[int]])
+    assert_type(pydeck_state.selection["indices"], dict[str, list[int]])
+    assert_type(pydeck_state.selection.objects, dict[str, list[dict[str, Any]]])
+    assert_type(pydeck_state.selection["objects"], dict[str, list[dict[str, Any]]])
 
     # =====================================================================
     # Return type tests with on_select="ignore" -> DeltaGenerator
-    # (requires selection_mode="single-object" to match the overload)
     # =====================================================================
 
+    assert_type(pydeck_chart(deck, on_select="ignore"), DeltaGenerator)
     assert_type(
         pydeck_chart(deck, on_select="ignore", selection_mode="single-object"),
+        DeltaGenerator,
+    )
+    assert_type(
+        pydeck_chart(deck, on_select="ignore", selection_mode="multi-object"),
         DeltaGenerator,
     )
 
@@ -59,6 +69,13 @@ if TYPE_CHECKING:
     # =====================================================================
 
     assert_type(pydeck_chart(deck, on_select="rerun"), PydeckState)
+
+    # Non-literal on_select returns the union of both result types.
+    on_select: Literal["ignore", "rerun"] = "rerun"
+    # ty infers `PydeckState` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        pydeck_chart(deck, on_select=on_select), DeltaGenerator | PydeckState
+    )
 
     # =====================================================================
     # Return type tests with callback function -> PydeckState
@@ -76,49 +93,25 @@ if TYPE_CHECKING:
 
     # =====================================================================
     # Test width parameter ("stretch" or int)
-    # (both the "rerun" -> PydeckState and "ignore" -> DeltaGenerator paths)
     # =====================================================================
 
-    assert_type(pydeck_chart(deck, width="stretch"), PydeckState)
-    assert_type(pydeck_chart(deck, width=500), PydeckState)
-    assert_type(
-        pydeck_chart(
-            deck, on_select="ignore", selection_mode="single-object", width=500
-        ),
-        DeltaGenerator,
-    )
+    assert_type(pydeck_chart(deck, width="stretch"), DeltaGenerator)
+    assert_type(pydeck_chart(deck, width=500), DeltaGenerator)
 
     # =====================================================================
     # Test height parameter ("stretch" or int)
-    # (both the "rerun" -> PydeckState and "ignore" -> DeltaGenerator paths)
     # =====================================================================
 
-    assert_type(pydeck_chart(deck, height="stretch"), PydeckState)
-    assert_type(pydeck_chart(deck, height=400), PydeckState)
-    assert_type(
-        pydeck_chart(
-            deck, on_select="ignore", selection_mode="single-object", height=400
-        ),
-        DeltaGenerator,
-    )
+    assert_type(pydeck_chart(deck, height="stretch"), DeltaGenerator)
+    assert_type(pydeck_chart(deck, height=400), DeltaGenerator)
 
     # =====================================================================
     # Test use_container_width parameter (deprecated bool or None)
-    # (both the "rerun" -> PydeckState and "ignore" -> DeltaGenerator paths)
     # =====================================================================
 
-    assert_type(pydeck_chart(deck, use_container_width=True), PydeckState)
-    assert_type(pydeck_chart(deck, use_container_width=False), PydeckState)
-    assert_type(pydeck_chart(deck, use_container_width=None), PydeckState)
-    assert_type(
-        pydeck_chart(
-            deck,
-            on_select="ignore",
-            selection_mode="single-object",
-            use_container_width=True,
-        ),
-        DeltaGenerator,
-    )
+    assert_type(pydeck_chart(deck, use_container_width=True), DeltaGenerator)
+    assert_type(pydeck_chart(deck, use_container_width=False), DeltaGenerator)
+    assert_type(pydeck_chart(deck, use_container_width=None), DeltaGenerator)
 
     # =====================================================================
     # Test selection_mode parameter ("single-object" or "multi-object")
@@ -135,18 +128,11 @@ if TYPE_CHECKING:
 
     # =====================================================================
     # Test key parameter (str, int, or None)
-    # (both the "rerun" -> PydeckState and "ignore" -> DeltaGenerator paths)
     # =====================================================================
 
-    assert_type(pydeck_chart(deck, key="my_chart"), PydeckState)
-    assert_type(pydeck_chart(deck, key=123), PydeckState)
-    assert_type(pydeck_chart(deck, key=None), PydeckState)
-    assert_type(
-        pydeck_chart(
-            deck, on_select="ignore", selection_mode="single-object", key="my_chart"
-        ),
-        DeltaGenerator,
-    )
+    assert_type(pydeck_chart(deck, key="my_chart"), DeltaGenerator)
+    assert_type(pydeck_chart(deck, key=123), DeltaGenerator)
+    assert_type(pydeck_chart(deck, key=None), DeltaGenerator)
 
     # =====================================================================
     # Test with all parameters combined (on_select="ignore" -> DeltaGenerator)
@@ -161,6 +147,7 @@ if TYPE_CHECKING:
             selection_mode="single-object",
             on_select="ignore",
             key="full_chart",
+            alt="Full chart description",
         ),
         DeltaGenerator,
     )
@@ -178,6 +165,7 @@ if TYPE_CHECKING:
             selection_mode="multi-object",
             on_select="rerun",
             key="selectable_chart",
+            alt="Selectable map description",
         ),
         PydeckState,
     )
@@ -195,20 +183,28 @@ if TYPE_CHECKING:
             selection_mode="single-object",
             on_select=my_callback,
             key="callback_chart",
+            alt="Callback map description",
         ),
         PydeckState,
     )
+
+    assert_type(
+        pydeck_chart(deck, on_select="ignore", alt="Named map"),
+        DeltaGenerator,
+    )
+    assert_type(pydeck_chart(deck, alt=None), DeltaGenerator)
 
     # =====================================================================
     # Invalid usages - should NOT type check
     # =====================================================================
 
     # Invalid width / height values (only int or "stretch")
-    pydeck_chart(deck, width="invalid")  # type: ignore[call-overload]
-    pydeck_chart(deck, height=None)  # type: ignore[call-overload]
+    pydeck_chart(deck, width="invalid")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
+    pydeck_chart(deck, height=None)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid selection_mode value
-    pydeck_chart(deck, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]
+    pydeck_chart(deck, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     # Invalid on_select value
-    pydeck_chart(deck, on_select="invalid")  # type: ignore[call-overload]
+    pydeck_chart(deck, on_select="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+    pydeck_chart(deck, alt=123)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]

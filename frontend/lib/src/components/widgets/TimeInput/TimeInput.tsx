@@ -15,11 +15,11 @@
  */
 
 import {
-  ClipboardEvent,
-  FocusEvent,
-  KeyboardEvent,
+  type ClipboardEvent,
+  type FocusEvent,
+  type KeyboardEvent,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useId,
@@ -33,7 +33,7 @@ import { Cancel } from "@emotion-icons/material-rounded"
 import { Time } from "@internationalized/date"
 import { I18nProvider, type TimeValue } from "react-aria-components"
 
-import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
+import type { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import Icon from "~lib/components/shared/Icon/Icon"
@@ -44,7 +44,7 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -54,7 +54,7 @@ import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledClearButton,
@@ -142,16 +142,14 @@ function TimeInput({
     onFormCleared: stableOnFormCleared,
   })
 
-  // Local display state drives the TimeField directly, avoiding the
-  // useEffect-delay in useBasicWidgetState that would cause React Aria
-  // to see a stale value mid-render and reset its segment edit buffer.
+  // Local display state drives the TimeField so typed digits can stay
+  // uncommitted until blur, without React Aria resetting its segment buffer.
   const [displayValue, setDisplayValue] = useState<string | null>(value)
 
   // Tracks whether the user has a pending (uncommitted) edit. Drives the
   // "Press Enter to apply/submit form" hint via InputInstructions.
-  // Explicit state — NOT derived from (displayValue !== value) — to avoid a
-  // one-render flicker after arrow-key/immediate commits where value still
-  // reflects the previous async update cycle.
+  // Explicit state — not derived from (displayValue !== value) — because
+  // typed digits update displayValue before the commit on blur.
   const [dirty, setDirty] = useState(false)
 
   const [isFocused, setIsFocused] = useState(false)
@@ -274,12 +272,12 @@ function TimeInput({
       if (commitImmediatelyRef.current) {
         commitImmediatelyRef.current = false
         setDirty(false)
-        setValueWithSource({ value: newValue, fromUi: true })
+        setValueWithSource({ value: newValue, fromUser: true })
         if (inForm) {
           updateWidgetMgrState(
             element,
             widgetMgr,
-            { value: newValue, fromUi: true },
+            { value: newValue, fromUser: true },
             fragmentId
           )
         }
@@ -316,7 +314,7 @@ function TimeInput({
       setValidationError(null)
       setDirty(false)
       if (displayValueRef.current === valueRef.current) return
-      setValueWithSource({ value: displayValueRef.current, fromUi: true })
+      setValueWithSource({ value: displayValueRef.current, fromUser: true })
       // Inside a form, write synchronously so that a Submit click in the same
       // event loop gets the just-committed value. setValueWithSource defers its
       // WidgetStateManager write to a useEffect which hasn't run yet.
@@ -324,7 +322,7 @@ function TimeInput({
         updateWidgetMgrState(
           element,
           widgetMgr,
-          { value: displayValueRef.current, fromUi: true },
+          { value: displayValueRef.current, fromUser: true },
           fragmentId
         )
       }
@@ -342,12 +340,12 @@ function TimeInput({
     setValidationError(null)
     setPasteOverride(null)
     if (valueRef.current === null) return
-    setValueWithSource({ value: null, fromUi: true })
+    setValueWithSource({ value: null, fromUser: true })
     if (inForm) {
       updateWidgetMgrState(
         element,
         widgetMgr,
-        { value: null, fromUi: true },
+        { value: null, fromUser: true },
         fragmentId
       )
     }
@@ -510,12 +508,15 @@ function TimeInput({
         setValidationError(null)
         setDirty(false)
         if (displayValueRef.current !== valueRef.current) {
-          setValueWithSource({ value: displayValueRef.current, fromUi: true })
+          setValueWithSource({
+            value: displayValueRef.current,
+            fromUser: true,
+          })
           if (inForm) {
             updateWidgetMgrState(
               element,
               widgetMgr,
-              { value: displayValueRef.current, fromUi: true },
+              { value: displayValueRef.current, fromUser: true },
               fragmentId
             )
           }
@@ -802,12 +803,15 @@ function updateWidgetMgrState(
   vws: ValueWithSource<string | null>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setStringValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, vws.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  })
 }
 
 export default memo(TimeInput)

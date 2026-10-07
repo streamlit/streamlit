@@ -122,8 +122,14 @@ class CheckSessionStateRules(ElementPoliciesTest):
         mock_session_state.is_new_state_value.return_value = True
         patched_get_session_state.return_value = mock_session_state
 
-        with pytest.raises(StreamlitValueAssignmentNotAllowedError):
+        with pytest.raises(StreamlitValueAssignmentNotAllowedError) as e:
             check_session_state_rules(5, key=_KEY, writes_allowed=False)
+
+        message = str(e.value)
+        assert f"`st.session_state[{_KEY!r}]`" in message
+        assert f"st.session_state.{_KEY}" not in message
+        assert "different session state key" in message
+        assert "event widget" not in message.lower()
 
 
 class SpecialSessionStatesTest(ElementPoliciesTest):
@@ -185,10 +191,14 @@ class CheckCacheReplayTest(ElementPoliciesTest):
         patched_st_exception.assert_not_called()
 
     @patch("streamlit.exception")
-    def test_cache_replay_rules_fails(self, patched_st_exception):
+    @patch("streamlit.elements.lib.policies._LOGGER")
+    def test_cache_replay_rules_fails(self, patched_logger, patched_st_exception):
         in_cached_function.set(True)
         check_cache_replay_rules()
         patched_st_exception.assert_called()
+        patched_logger.warning.assert_called_once()
+        _, kwargs = patched_logger.warning.call_args
+        assert kwargs.get("stack_info") is True
         # Reset the global flag to avoid affecting other tests
         in_cached_function.set(False)
 

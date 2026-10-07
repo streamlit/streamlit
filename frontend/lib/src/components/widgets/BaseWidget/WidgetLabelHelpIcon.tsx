@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
 import type { Props as StreamlitMarkdownProps } from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
@@ -53,6 +53,7 @@ export const WidgetLabelHelpIcon = memo(function WidgetLabelHelpIcon({
   containerWidth,
 }: WidgetLabelHelpIconProps): ReactElement {
   return (
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- WidgetLabelHelpIcon is the public API; it still wraps this deprecated layout styled-component.
     <StyledWidgetLabelHelp>
       <TooltipIcon
         content={content}

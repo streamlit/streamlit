@@ -16,7 +16,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 
 import { LazyDataframeCache } from "./LazyDataframeCache"
 

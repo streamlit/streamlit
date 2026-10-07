@@ -23,7 +23,8 @@ from typing_extensions import assert_type
 # - accept_file=False and accept_audio=False (default) -> returns str | None
 # - accept_file=True/multiple/directory OR accept_audio=True -> returns ChatInputValue | None
 if TYPE_CHECKING:
-    from streamlit.elements.widgets.chat import ChatInputValue, ChatMixin
+    from streamlit.elements.widgets.chat import ChatMixin
+    from streamlit.typing import ChatInputValue, UploadedFile
 
     chat_input = ChatMixin().chat_input
 
@@ -63,6 +64,42 @@ if TYPE_CHECKING:
         chat_input("Message", accept_file="multiple", accept_audio=True),
         ChatInputValue | None,
     )
+
+    # Non-literal bool values return the union of both result types.
+    accept: bool = True
+    # ty infers `ChatInputValue | None` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        chat_input("Message", accept_file=accept), str | ChatInputValue | None
+    )
+    # ty infers `ChatInputValue | None` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        chat_input("Message", accept_audio=accept), str | ChatInputValue | None
+    )
+
+    # Mixed: accept_audio=True with a non-literal accept_file infers
+    # ChatInputValue | None, including when audio_sample_rate is passed.
+    assert_type(
+        chat_input("Message", accept_file=accept, accept_audio=True),
+        ChatInputValue | None,
+    )
+    assert_type(
+        chat_input(
+            "Message",
+            accept_file=accept,
+            accept_audio=True,
+            audio_sample_rate=16000,
+        ),
+        ChatInputValue | None,
+    )
+
+    chat_value = chat_input("Message", accept_file=True, accept_audio=True)
+    if chat_value is not None:
+        assert_type(chat_value.text, str)
+        assert_type(chat_value["text"], str)
+        assert_type(chat_value.files, list[UploadedFile])
+        assert_type(chat_value["files"], list[UploadedFile])
+        assert_type(chat_value.audio, UploadedFile | None)
+        assert_type(chat_value["audio"], UploadedFile | None)
 
     # =====================================================================
     # Test key parameter (str or int)
@@ -114,6 +151,10 @@ if TYPE_CHECKING:
     # =====================================================================
     # Test audio_sample_rate parameter (only with accept_audio=True)
     # =====================================================================
+
+    # audio_sample_rate is only on the accept_audio=True overloads, so passing
+    # it with accept_audio omitted is a type error.
+    chat_input("Message", audio_sample_rate=16000)  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
     assert_type(
         chat_input("Message", accept_audio=True, audio_sample_rate=16000),

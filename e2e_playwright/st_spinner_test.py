@@ -41,6 +41,28 @@ def test_spinner_time(app: Page):
     updated_text = app.get_by_test_id("stSpinner").text_content()
     assert initial_text != updated_text
 
+    # The label sits in a live region; the elapsed time deliberately does not,
+    # since it is rewritten every 100ms.
+    status = app.get_by_test_id("stSpinner").get_by_role("status")
+    expect(status).to_have_text("Loading...")
+    expect(status).not_to_contain_text("seconds")
+
+
+def test_spinner_slows_but_keeps_animating_under_reduced_motion(app: Page):
+    """The spinner slows down rather than stopping when reduced motion is set.
+
+    Stopping the animation parks the accent segment at its rest angle, which
+    reads as a hung app rather than a working one (see issue #16598).
+    """
+    app.emulate_media(reduced_motion="reduce")
+    get_button(app, "Run spinner basic").click()
+
+    spinner_icon = app.get_by_test_id("stSpinnerIcon")
+    expect(spinner_icon).to_be_visible()
+    expect(spinner_icon).to_have_css("animation-duration", "1.8s")
+    expect(spinner_icon).to_have_css("animation-iteration-count", "infinite")
+    expect(spinner_icon).not_to_have_css("animation-name", "none")
+
 
 def test_double_spinner(app: Page):
     """Test that nested spinners appear in the correct order."""

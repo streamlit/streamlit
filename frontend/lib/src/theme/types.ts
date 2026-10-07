@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
-import { lightThemePrimitives } from "baseui"
+import type { CustomThemeConfig } from "@streamlit/protobuf"
 
-import { CustomThemeConfig } from "@streamlit/protobuf"
-
-import { baseuiLightTheme } from "./baseui"
-import emotionBaseTheme from "./emotionBaseTheme"
-import {
+import type emotionBaseTheme from "./emotionBaseTheme"
+import type {
   OptionalThemeColors,
   RequiredThemeColors,
 } from "./emotionBaseTheme/themeColors"
-import { ThemeShadows } from "./getShadows"
+import type { ThemeShadows } from "./getShadows"
 import type { NamedColor } from "./namedColors"
-import { type PrimitiveColors } from "./primitives/colors"
+import type { PrimitiveColors } from "./primitives/colors"
 
 /**
  * Comprehensive type for emotion theme colors.
@@ -87,6 +84,8 @@ type SpecialEmotionColors = {
   dataframeBorderColor: string
   // Used for dataframe header background
   dataframeHeaderBackgroundColor: string
+  // Used for dataframe column and group header text
+  dataframeHeaderTextColor: string
 
   headingColor: string
 
@@ -113,11 +112,6 @@ export type ThemeConfig = {
   // Allows custom themes to still show as "Light", "Dark", or "Use System Setting"
   displayName?: string
   emotion: EmotionTheme
-  // For use with Baseweb's ThemeProvider. This is required in order for us to
-  // create separate themes for in the children. Currently required to accommodate
-  // sidebar theming.
-  basewebTheme: typeof baseuiLightTheme
-  primitives: typeof lightThemePrimitives
   themeInput?: Partial<CustomThemeConfig>
 }
 
@@ -129,6 +123,12 @@ type IconSizes = typeof emotionBaseTheme.iconSizes
 type ThemeSpacings = typeof emotionBaseTheme.spacing
 
 export type IconSize = keyof IconSizes
+
+/**
+ * Icon size token, or `"inherit"` to match the parent font-size (`1em`).
+ * Use inherit for inline contexts such as heading icons.
+ */
+export type IconSizeProp = IconSize | "inherit"
 export type ThemeSpacing = keyof ThemeSpacings
 export type PresetThemeName = "Light" | "Dark"
 

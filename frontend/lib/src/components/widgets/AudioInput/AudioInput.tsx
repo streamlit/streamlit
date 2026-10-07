@@ -16,16 +16,17 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
 
 import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 
-import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
+import type { AudioInput as AudioInputProto } from "@streamlit/protobuf"
 
 import { useWaveformController } from "~lib/components/audio/core/useWaveformController"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
@@ -33,18 +34,19 @@ import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import useDownloadUrl from "~lib/hooks/useDownloadUrl"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
+import { plainTextWithBlockGaps } from "~lib/util/plainText"
 import { uploadFiles } from "~lib/util/uploadFiles"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import AudioInputActionButtons from "./AudioInputActionButtons"
 import AudioInputErrorState from "./AudioInputErrorState"
@@ -165,7 +167,7 @@ const AudioInput: React.FC<Props> = ({
         const timestamp = new Date()
           .toISOString()
           .slice(0, 16)
-          .replace(/:/g, "-")
+          .replaceAll(":", "-")
         const file = new File([wavBlob], `${timestamp}_audio.wav`, {
           type: wavBlob.type,
         })
@@ -274,24 +276,11 @@ const AudioInput: React.FC<Props> = ({
     },
   })
 
-  // Update the ref after controller is initialized
+  // Handlers read this ref so they call the latest controller. The hook returns
+  // a new object every render.
   controllerRef.current = controller
 
-  const {
-    state,
-    isPlaybackPlaying,
-    start: startController,
-    stop: stopController,
-    approve: approveController,
-    cancel: cancelController,
-    playback: {
-      play: playbackPlayFn,
-      pause: playbackPauseFn,
-      load: playbackLoadFn,
-      getCurrentTimeMs: playbackGetCurrentTimeMsFn,
-      getDurationMs: playbackGetDurationMsFn,
-    },
-  } = controller
+  const { state, isPlaybackPlaying, playback } = controller
 
   const handleClear = useCallback(
     async ({
@@ -318,14 +307,17 @@ const AudioInput: React.FC<Props> = ({
       setProgressTime(STARTING_TIME_STRING)
       setRecordingTime(STARTING_TIME_STRING)
 
-      cancelController()
+      controllerRef.current?.cancel()
 
       if (updateWidgetManager) {
         widgetMgr.setFileUploaderStateValue(
-          element,
+          element.id,
           {},
-          { fromUi: true },
-          fragmentId
+          {
+            formId: element.formId,
+            fragmentId,
+            fromUser: true,
+          }
         )
       }
 
@@ -345,7 +337,6 @@ const AudioInput: React.FC<Props> = ({
       deleteFileUrl,
       recordingUrl,
       uploadClient,
-      cancelController,
       element,
       widgetMgr,
       fragmentId,
@@ -358,7 +349,7 @@ const AudioInput: React.FC<Props> = ({
   useEffect(() => {
     const updatePlaybackTime = (): void => {
       if (isPlaybackPlaying) {
-        setProgressTime(formatTime(playbackGetCurrentTimeMsFn()))
+        setProgressTime(formatTime(playback.getCurrentTimeMs()))
         playbackTimerRef.current = requestAnimationFrame(updatePlaybackTime)
       }
     }
@@ -376,7 +367,7 @@ const AudioInput: React.FC<Props> = ({
         playbackTimerRef.current = null
       }
     }
-  }, [isPlaybackPlaying, playbackGetCurrentTimeMsFn])
+  }, [isPlaybackPlaying, playback])
 
   useEffect(() => {
     if (!recordingUrl) {
@@ -388,12 +379,12 @@ const AudioInput: React.FC<Props> = ({
 
     const loadRecording = async (): Promise<void> => {
       try {
-        await playbackLoadFn(recordingUrl)
+        await playback.load(recordingUrl)
         if (cancelled) {
           return
         }
 
-        const durationMs = playbackGetDurationMsFn()
+        const durationMs = playback.getDurationMs()
         if (durationMs > 0) {
           setProgressTime(formatTime(durationMs))
         }
@@ -410,7 +401,7 @@ const AudioInput: React.FC<Props> = ({
     return () => {
       cancelled = true
     }
-  }, [recordingUrl, recordingTime, playbackLoadFn, playbackGetDurationMsFn])
+  }, [recordingUrl, recordingTime, playback])
 
   useEffect(() => {
     if (isNullOrUndefined(widgetFormId)) return
@@ -443,29 +434,22 @@ const AudioInput: React.FC<Props> = ({
   const onClickPlayPause = useCallback(async () => {
     try {
       if (isPlaybackPlaying) {
-        const currentTime = playbackGetCurrentTimeMsFn()
-        playbackPauseFn()
+        const currentTime = playback.getCurrentTimeMs()
+        playback.pause()
         setProgressTime(formatTime(currentTime))
       } else if (state === "idle" && recordingUrl) {
         // WaveSurfer can report a tiny non-zero offset (~<100ms) at start of playback.
         // Snap the UI timer back to the canonical start value so the display stays deterministic.
-        if (playbackGetCurrentTimeMsFn() <= 100) {
+        if (playback.getCurrentTimeMs() <= 100) {
           setProgressTime(STARTING_TIME_STRING)
         }
-        await playbackPlayFn()
+        await playback.play()
       }
     } catch {
       // Playback control error - set error state for user feedback
       setIsError(true)
     }
-  }, [
-    isPlaybackPlaying,
-    playbackGetCurrentTimeMsFn,
-    playbackPauseFn,
-    playbackPlayFn,
-    recordingUrl,
-    state,
-  ])
+  }, [isPlaybackPlaying, recordingUrl, state, playback])
 
   const startRecording = useCallback(async () => {
     if (recordingUrl) {
@@ -474,21 +458,25 @@ const AudioInput: React.FC<Props> = ({
 
     try {
       setProgressTime(STARTING_TIME_STRING)
-      await startController()
+      await controllerRef.current?.start()
     } catch {
       // Error handling is done via event listeners
     }
-  }, [handleClear, recordingUrl, startController])
+  }, [handleClear, recordingUrl])
 
   const stopRecording = useCallback(async () => {
     try {
-      const { blob } = await stopController()
-      await approveController(blob)
+      const current = controllerRef.current
+      if (!current) {
+        return
+      }
+      const { blob } = await current.stop()
+      await current.approve(blob)
     } catch {
       // Stop recording or approval error - set error state for user feedback
       setIsError(true)
     }
-  }, [approveController, stopController])
+  }, [])
 
   const downloadRecording = useDownloadUrl(recordingUrl, "recording.wav")
 
@@ -524,6 +512,34 @@ const AudioInput: React.FC<Props> = ({
   const showNoMicPermissionsOrPlaceholderOrError =
     hasNoMicPermissions || showPlaceholder || isError
 
+  const labelTextRef = useRef<HTMLSpanElement>(null)
+  // Widget labels are markdown; compose rendered plain text into toolbar names,
+  // not the markdown source. Observe the visual label node for late markdown
+  // (KaTeX/emoji skeletons), matching the image-caption path.
+  const [labelContext, setLabelContext] = useState<string | undefined>()
+  useLayoutEffect(() => {
+    const node = labelTextRef.current
+    if (!element.label || !node) {
+      setLabelContext(undefined)
+      return
+    }
+
+    const syncLabelPlainText = (): void => {
+      const text = plainTextWithBlockGaps(node)
+      setLabelContext(text || undefined)
+    }
+
+    syncLabelPlainText()
+
+    const observer = new MutationObserver(syncLabelPlainText)
+    observer.observe(node, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+    return () => observer.disconnect()
+  }, [element.label])
+
   return (
     <StyledAudioInputContainerDiv
       className="stAudioInput"
@@ -535,6 +551,7 @@ const AudioInput: React.FC<Props> = ({
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
+        labelTextRef={labelTextRef}
       >
         {element.help && (
           <WidgetLabelHelpIcon
@@ -555,6 +572,7 @@ const AudioInput: React.FC<Props> = ({
               label="Download as WAV"
               icon={FileDownload}
               onClick={handleDownloadClick}
+              labelContext={labelContext}
             />
           )}
           {deleteFileUrl && (
@@ -562,6 +580,7 @@ const AudioInput: React.FC<Props> = ({
               label="Clear recording"
               icon={Delete}
               onClick={handleDeleteClick}
+              labelContext={labelContext}
             />
           )}
         </Toolbar>

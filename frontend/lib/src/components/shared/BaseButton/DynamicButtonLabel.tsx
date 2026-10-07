@@ -16,8 +16,12 @@
 
 import { useMemo } from "react"
 
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import {
+  DynamicIcon,
+  getIconAccessibleName,
+} from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 import { formatShortcutForDisplay } from "~lib/hooks/useRegisterShortcut"
 import type { IconSize } from "~lib/theme/types"
 import { isFromMac } from "~lib/util/utils"
@@ -26,6 +30,7 @@ import {
   StyledButtonLabel,
   StyledButtonMainLabel,
   StyledButtonShortcut,
+  StyledVisuallyHidden,
 } from "./styled-components"
 
 export interface DynamicButtonLabelProps {
@@ -34,6 +39,19 @@ export interface DynamicButtonLabelProps {
   iconSize?: IconSize
   iconPosition?: "left" | "right"
   shortcut?: string | null
+  /**
+   * When false, the label stays on one line and truncates with an ellipsis
+   * instead of wrapping. Icons and shortcuts keep their intrinsic size.
+   */
+  wrap?: boolean
+  /**
+   * When true, add a native browser tooltip (`title`) exposing the full label so
+   * a label truncated with an ellipsis (`wrap=false`) can still be read on hover.
+   * The tooltip uses the rendered plain text (the button's accessible name), so
+   * a Markdown label is shown without its raw syntax. The title is attached only
+   * when that label is actually clipped.
+   */
+  addTitleTooltip?: boolean
 }
 
 export const DynamicButtonLabel = ({
@@ -42,24 +60,52 @@ export const DynamicButtonLabel = ({
   iconSize,
   iconPosition = "left",
   shortcut,
+  wrap = true,
+  addTitleTooltip = false,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
   const displayShortcut = useMemo(() => {
     return formatShortcutForDisplay(shortcut, { isMac: isFromMac() })
   }, [shortcut])
 
+  const truncate = !wrap
+
+  const { titleRef, labelTextRef } = useLabelTitleTooltip(
+    addTitleTooltip,
+    label
+  )
+
+  // Icon glyphs are aria-hidden, so an icon-only control would have no accessible
+  // name. Use hidden text rather than aria-label here: this component does not own
+  // the button, and content-based naming lets a parent aria-label take precedence.
+  const iconOnlyAccessibleName =
+    icon && !label?.trim() ? getIconAccessibleName(icon) : undefined
+
   return (
-    <StyledButtonLabel>
-      <StyledButtonMainLabel data-has-shortcut={Boolean(displayShortcut)}>
+    <StyledButtonLabel ref={titleRef} $truncate={truncate}>
+      <StyledButtonMainLabel
+        data-has-shortcut={Boolean(displayShortcut)}
+        $truncate={truncate}
+      >
+        {iconOnlyAccessibleName && (
+          <StyledVisuallyHidden>{iconOnlyAccessibleName}</StyledVisuallyHidden>
+        )}
         {icon && iconPosition === "left" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
         {label && (
-          <StreamlitMarkdown
-            source={label}
-            allowHTML={false}
-            isLabel
-            disableLinks
-          />
+          // Wrap only the rendered Markdown label so we can read its plain text
+          // for the native title without picking up the icon or shortcut.
+          // `display: contents` adds no box and leaves the layout unchanged.
+          <span ref={labelTextRef} style={{ display: "contents" }}>
+            <StreamlitMarkdown
+              source={label}
+              allowHTML={false}
+              isLabel
+              disableLinks
+              truncate={truncate}
+              inheritLineHeight
+            />
+          </span>
         )}
         {icon && iconPosition === "right" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />

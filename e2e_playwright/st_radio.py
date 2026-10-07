@@ -23,7 +23,7 @@ markdown_options = (
     "*italics text*",
     "~strikethrough text~",
     "shortcode: :blush:",
-    # link should not work in radio options
+    # Links in option labels are non-navigable; caption links can navigate.
     "[link text](www.example.com)",
     "`code text`",
     ":red[red] :blue[blue] :green[green] :violet[violet] :orange[orange]",
@@ -237,3 +237,22 @@ v15 = st.radio(
     key="radio_gh14814",
 )
 st.write("value 15:", v15.value)
+
+# --- on_change="ignore" radio ---
+# Run counter so test_radio_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_radio = st.radio(
+    "Ignore change radio",
+    ["alpha", "beta", "gamma"],
+    key="ignore_radio",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore radio value:", ignore_radio)
+
+if st.button("Apply ignore radio", key="apply_ignore_radio"):
+    st.write("Applied ignore radio value:", ignore_radio)

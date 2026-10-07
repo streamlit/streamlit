@@ -30,7 +30,12 @@ from streamlit.elements.widgets.button_group import (
     _MultiSelectButtonGroupSerde,
     _SingleSelectButtonGroupSerde,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitDuplicateElementId,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.session_state import get_script_run_ctx
@@ -296,6 +301,151 @@ class TestButtonGroupSerde:
         res = serde.deserialize(["apple", "naranja"])
         assert res == ["B"]  # Only the valid ES option is returned
 
+    def test_multi_select_deserialize_partial_stale_restores_full_fallback(self):
+        """Partial-stale labels restore the full selection instead of truncating.
+
+        Interdependent pills: one selected option's label changes, another's does
+        not. The one resolvable label must not truncate the selection, so the stored
+        ["A","B"] is restored rather than ["B"] (which would reach on_change as a
+        deselection).
+        """
+        options = ["A", "B"]
+        # This run's mapping: A's label changed ("A (1)" -> "A (5)"); B's is stable.
+        formatted_options = ["A (5)", "B (2)"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "A (5)", "B": "B (2)"}[x],
+            session_state_fallback=["A", "B"],  # user actually had both selected
+        )
+        # Wire carries A's stale label but B's current one.
+        res = serde.deserialize(["A (1)", "B (2)"])
+        assert res == ["A", "B"], (
+            "Expected the full session-state selection to be restored, not truncated to ['B']"
+        )
+
+    def test_multi_select_deserialize_genuine_deselect_ignores_fallback(self):
+        """A genuine deselect is honored even when a session-state fallback exists.
+
+        A deselected option is absent from the wire entirely (not a dropped stale
+        label), so no entry is dropped and the fallback must not fire. Otherwise
+        deselecting A while B stays selected would spuriously restore ["A","B"].
+        """
+        options = ["A", "B"]
+        formatted_options = ["A (5)", "B (2)"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "A (5)", "B": "B (2)"}[x],
+            session_state_fallback=["A", "B"],  # last known selection was both
+        )
+        # User deselected A; the wire carries only B's current, valid label.
+        res = serde.deserialize(["B (2)"])
+        assert res == ["B"], (
+            "Expected the deselect to be honored, not overridden by fallback"
+        )
+
+    def test_multi_select_deserialize_deselect_with_stale_label_never_reselects(self):
+        """A deselect is honored and never reselects the removed option, even when
+        the remaining label goes stale in the same rerun.
+
+        Regression guard: a dropped-stale entry used to restore the full fallback,
+        reselecting the deselected pill. Here one stale wire entry but two unresolved
+        candidates (stale_count < len(candidates)) signals a deselect, so the
+        fallback is not restored; the opaque stale label can't be attributed to an
+        option, so the result is empty. Key property: the deselected A never returns.
+        """
+        options = ["A", "B"]
+        # B's label changed this run ("B (2)" -> "B (7)"); the wire still carries the
+        # stale "B (2)", so it cannot be resolved against the current mapping.
+        formatted_options = ["A (5)", "B (7)"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "A (5)", "B": "B (7)"}[x],
+            session_state_fallback=["A", "B"],  # last known selection was both
+        )
+        # User deselected A AND B's label went stale: wire carries only B's stale
+        # label ("B (2)" from the previous mapping). Nothing resolves, and the
+        # fallback is not restored because the wire shrank.
+        res = serde.deserialize(["B (2)"])
+        assert res == [], (
+            "Expected the deselect to be honored with no fallback restore; the "
+            f"deselected option must never be reselected (got {res!r})"
+        )
+
+    def test_multi_select_deserialize_deselect_with_partial_stale_drops_unresolvable(
+        self,
+    ):
+        """A resolvable survivor is kept while a stale sibling is dropped on deselect.
+
+        Three options were selected; A is deselected, B stays resolvable, C goes
+        stale. C's opaque label can't be attributed, so it is dropped rather than
+        guessed at (guessing could restore the deselected A). Result: just ["B"].
+        """
+        options = ["A", "B", "C"]
+        # C's label changed this run; A and B are stable.
+        formatted_options = ["A (1)", "B (1)", "C (9)"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "A (1)", "B": "B (1)", "C": "C (9)"}[x],
+            session_state_fallback=["A", "B", "C"],  # all three were selected
+        )
+        # User deselected A; B stays (resolvable), C's label went stale.
+        # Wire: B's current label + C's stale label.
+        res = serde.deserialize(["B (1)", "C (2)"])
+        assert res == ["B"], (
+            "Expected only the resolvable survivor B, with the deselected A never "
+            f"reselected (got {res!r})"
+        )
+
+    def test_multi_select_deserialize_add_selection_with_stale_label_keeps_both(self):
+        """A newly selected option is kept when another label goes stale in the
+        same rerun.
+
+        Regression guard: the previous ``len(ui_value) >= len(fallback)`` heuristic
+        restored the full fallback on any drop, discarding a same-rerun addition.
+        User has ["A"] and selects B while A's label goes stale; only B resolves.
+        One stale entry matches one unresolved candidate (A) - no deselect - so A is
+        recovered and B kept, yielding ["A","B"] rather than the stale-only ["A"].
+        """
+        options = ["A", "B"]
+        # A's label changed this run ("A (old)" -> "A (new)"); B's is current.
+        formatted_options = ["A (new)", "B (1)"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: {"A": "A (new)", "B": "B (1)"}[x],
+            session_state_fallback=["A"],  # only A was previously selected
+        )
+        # Wire carries A's stale label ("A (old)") plus B's newly selected label.
+        res = serde.deserialize(["A (old)", "B (1)"])
+        assert res == ["A", "B"], (
+            "Expected the newly selected B to be kept alongside the recovered A, "
+            f"not discarded by restoring the stale-only fallback (got {res!r})"
+        )
+
     def test_multi_select_deserialize_all_stale_session_fallback_beats_default(self):
         """Session-state fallback takes priority over configured default for multi-select.
 
@@ -423,7 +573,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             (
                 st.pills,
                 ("label", ["a", "b", "c"]),
-                {"help": "Test help param"},
+                {"help": "    Test help param"},
                 ["a", "b", "c"],
                 "content",
                 ButtonGroupProto.Style.PILLS,
@@ -468,6 +618,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
         if test_label:
             assert delta.label == command_args[0]
+            assert delta.help == "Test help param"
         assert (
             delta.label_visibility.value
             is LabelVisibility.LabelVisibilityOptions.VISIBLE
@@ -548,6 +699,31 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         button_group_2 = self.get_delta_from_queue().new_element.button_group
 
         assert button_group_1.id != button_group_2.id
+
+    def test_omitted_label_leaves_proto_label_unset(self) -> None:
+        """Omitted labels stay unset so the frontend collapses them."""
+        ButtonGroupMixin._internal_button_group(st._main, ["a", "b", "c"])
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.label == ""
+        assert not delta.HasField("label_visibility")
+
+    def test_omitted_label_invalid_visibility_raises(self) -> None:
+        """Omitted labels still validate ``label_visibility``."""
+        with pytest.raises(
+            StreamlitValueError, match=r"Invalid `label_visibility` value"
+        ):
+            ButtonGroupMixin._internal_button_group(
+                st._main,
+                ["a", "b"],
+                label_visibility="wrong_value",  # type: ignore[arg-type]
+            )
+
+    def test_non_string_label_is_coerced(self) -> None:
+        """Non-string labels are coerced without collapsing the proto label."""
+        st.pills(123, ["a", "b", "c"])  # type: ignore[arg-type]
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.label == "123"
+        assert delta.HasField("label_visibility")
 
     @parameterized.expand(
         get_command_matrix(
@@ -707,9 +883,26 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert c.default[:] == expected
         assert [option.content for option in c.options] == ["Coffee", "Tea", "Water"]
 
-    @parameterized.expand(get_command_matrix([]))
+    @parameterized.expand(
+        [
+            (
+                lambda *args, **kwargs: st.pills("label", *args, **kwargs),
+                "pills",
+            ),
+            (
+                lambda *args, **kwargs: st.segmented_control("label", *args, **kwargs),
+                "segmented_control",
+            ),
+            (
+                lambda *args, **kwargs: ButtonGroupMixin._internal_button_group(
+                    st._main, *args, **kwargs
+                ),
+                "segmented_control",
+            ),
+        ]
+    )
     def test_default_for_single_select_must_be_single_value(
-        self, command: Callable[..., None]
+        self, command: Callable[..., None], expected_command: str
     ):
         """Test that passing multiple values as default for single select raises an
         exception."""
@@ -719,10 +912,9 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 default=["Coffee", "Tea"],
                 selection_mode="single",
             )
-        assert (
-            str(exception.value)
-            == "The default argument to `st.pills` must be a single value when "
-            "`selection_mode='single'`."
+        assert str(exception.value) == (
+            f"The default argument to `st.{expected_command}` must be a single "
+            "value when `selection_mode='single'`."
         )
 
     @parameterized.expand(
@@ -884,12 +1076,11 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(get_command_matrix([]))
     def test_invalid_selection_mode(self, command: Callable[..., None]):
         """Test that passing an invalid selection_mode raises an exception."""
-        with pytest.raises(StreamlitAPIException) as exception:
+        with pytest.raises(StreamlitValueError) as exception:
             command(["a", "b"], selection_mode="foo")
         assert (
             str(exception.value)
-            == "The selection_mode argument must be one of ['single', 'multi']. "
-            "The argument passed was 'foo'."
+            == "Invalid `selection_mode` value. Supported values: 'single', 'multi'."
         )
 
     @parameterized.expand(get_command_matrix([]))
@@ -969,17 +1160,48 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         )
         assert el.width_config.use_content is True
 
+    @parameterized.expand(get_command_matrix([]))
+    def test_button_group_wrap_default(self, command: Callable[..., None]):
+        """By default wrap is left unset (auto) so the frontend can resolve it
+        based on the layout."""
+        command(["a", "b", "c"])
+        proto = self.get_delta_from_queue().new_element.button_group
+        assert not proto.HasField("wrap")
+
+    @parameterized.expand(
+        [
+            (command, wrap_value)
+            for (command,) in get_command_matrix([])
+            for wrap_value in (True, False)
+        ]
+    )
+    def test_button_group_wrap(self, command: Callable[..., None], wrap_value: bool):
+        """The wrap parameter is forwarded to the button group proto."""
+        command(["a", "b", "c"], wrap=wrap_value)
+        proto = self.get_delta_from_queue().new_element.button_group
+        assert proto.wrap is wrap_value
+
+    def test_button_group_wrap_excluded_from_id(self):
+        """wrap is layout-only and must not change the element id.
+
+        Two otherwise-identical pills that differ only in wrap collide on the
+        same auto-generated id, proving wrap is excluded from id computation and
+        so preserves widget state when toggled.
+        """
+        st.pills("same label", ["a", "b", "c"])
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.pills("same label", ["a", "b", "c"], wrap=False)
+
     def test_invalid_style(self):
         """Test internal button_group command does not accept invalid style."""
 
-        with pytest.raises(StreamlitAPIException) as exception:
+        with pytest.raises(StreamlitValueError) as exception:
             ButtonGroupMixin._internal_button_group(
                 st._main, ["a", "b", "c"], style="foo"
             )
         assert (
-            str(exception.value) == "The style argument must be one of "
-            "['pills', 'segmented_control']. "
-            "The argument passed was 'foo'."
+            str(exception.value)
+            == "Invalid `style` value. Supported values: 'pills', 'segmented_control'."
         )
 
     @parameterized.expand(
@@ -1662,6 +1884,188 @@ class TestDynamicFormatFuncCallback:
         assert at.button_group("fruit").value == "A"
 
 
+class TestDynamicFormatFuncVisualSelection:
+    """Selected pills stay highlighted when format_func labels change between reruns.
+
+    Regression coverage for gh-16269 (interdependent labels, e.g. a record count
+    that shifts when a parent filter clears) and the language-switch path
+    previously handled by ``used_session_state_fallback`` (#15522). The frontend
+    tracks selection by label, so the backend must resend ``set_value`` with the
+    fresh label when it changes, otherwise the pill looks deselected even though
+    the return value is unchanged.
+    """
+
+    def test_single_select_resends_new_label_when_format_func_output_changes(self):
+        """set_value + fresh raw_values are sent when the selected label changes.
+
+        Simulates the issue #16269 flow: a child pill's label embeds a count
+        that changes between reruns while the selection ("D") is unchanged.
+        """
+
+        def script():
+            import streamlit as st
+
+            count = st.session_state.get("count", 2)
+            st.pills(
+                "Category B",
+                ["D", "E"],
+                format_func=lambda x: f"{x} ({count})",
+                key="catb",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # User selects "D", displayed as "D (2)".
+        at.button_group("catb").select("D").run()
+        assert not at.exception
+        assert at.button_group("catb").value == "D"
+
+        # The count behind the label changes (as when a parent filter clears),
+        # without the user touching this widget.
+        at.session_state["count"] = 3
+        at = at.run()
+        assert not at.exception
+
+        catb = at.button_group("catb")
+        # The return value is preserved ...
+        assert catb.value == "D"
+        # ... and the backend re-pushes the fresh label so the pill stays
+        # selected instead of silently deselecting.
+        assert catb.proto.set_value is True
+        assert list(catb.proto.raw_values) == ["D (3)"]
+
+    def test_multi_select_resends_new_labels_when_format_func_output_changes(self):
+        """Multi-select resends fresh labels for every still-selected option."""
+
+        def script():
+            import streamlit as st
+
+            count = st.session_state.get("count", 2)
+            st.pills(
+                "Category B",
+                ["D", "E", "F"],
+                format_func=lambda x: f"{x} ({count})",
+                selection_mode="multi",
+                key="catb",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        at.button_group("catb").select("D").select("E").run()
+        assert not at.exception
+        assert at.button_group("catb").value == ["D", "E"]
+
+        at.session_state["count"] = 3
+        at = at.run()
+        assert not at.exception
+
+        catb = at.button_group("catb")
+        assert catb.value == ["D", "E"]
+        assert catb.proto.set_value is True
+        assert list(catb.proto.raw_values) == ["D (3)", "E (3)"]
+
+    def test_no_set_value_pushed_when_label_unchanged_on_plain_rerun(self):
+        """A plain rerun with an unchanged label must not force set_value.
+
+        Anti-regression guard: the label-change detection must not fire on every
+        rerun, which would churn the frontend and re-run set_value effects
+        needlessly. When nothing changes, set_value stays False.
+        """
+
+        def script():
+            import streamlit as st
+
+            # Static label - format_func output never changes between runs.
+            st.pills(
+                "Category B", ["D", "E"], format_func=lambda x: f"{x}!", key="catb"
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        at.button_group("catb").select("D").run()
+        assert not at.exception
+
+        # Plain rerun with no interaction and no label change.
+        at = at.run()
+        assert not at.exception
+
+        catb = at.button_group("catb")
+        assert catb.value == "D"
+        assert catb.proto.set_value is False
+        assert list(catb.proto.raw_values) == []
+
+    def test_multi_select_no_set_value_pushed_when_labels_unchanged(self):
+        """Multi-select plain rerun with unchanged labels must not force set_value.
+
+        Locks in the label-ordering assumption: the fresh serialization of the
+        still-selected options must match the order the frontend sent, otherwise
+        ``labels_changed`` would fire spuriously on every multi-select rerun.
+        """
+
+        def script():
+            import streamlit as st
+
+            st.pills(
+                "Category B",
+                ["D", "E", "F"],
+                format_func=lambda x: f"{x}!",
+                selection_mode="multi",
+                key="catb",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        at.button_group("catb").select("D").select("E").run()
+        assert not at.exception
+        assert at.button_group("catb").value == ["D", "E"]
+
+        # Plain rerun with no interaction and no label change.
+        at = at.run()
+        assert not at.exception
+
+        catb = at.button_group("catb")
+        assert catb.value == ["D", "E"]
+        assert catb.proto.set_value is False
+        assert list(catb.proto.raw_values) == []
+
+    def test_no_set_value_pushed_for_empty_selection_on_plain_rerun(self):
+        """An empty selection must not force set_value on a plain rerun.
+
+        Boundary guard for the deselected case: with nothing selected the stored
+        wire labels are empty, so comparing them against the empty fresh
+        serialization must leave ``labels_changed`` False.
+        """
+
+        def script():
+            import streamlit as st
+
+            count = st.session_state.get("count", 2)
+            st.pills(
+                "Category B",
+                ["D", "E"],
+                format_func=lambda x: f"{x} ({count})",
+                key="catb",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+        assert at.button_group("catb").value is None
+
+        # Changing the label count while nothing is selected must not push a value.
+        at.session_state["count"] = 3
+        at = at.run()
+        assert not at.exception
+
+        catb = at.button_group("catb")
+        assert catb.value is None
+        assert catb.proto.set_value is False
+        assert list(catb.proto.raw_values) == []
+
+
 class PillsBindQueryParamsTest(DeltaGeneratorTestCase):
     """Tests for st.pills bind='query-params' functionality."""
 
@@ -1685,8 +2089,8 @@ class PillsBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.pills("label", ["a", "b"], key="my_key", bind="invalid-value")
 
     def test_bind_with_format_func(self):
@@ -1797,8 +2201,8 @@ class RequiredParameterTest(DeltaGeneratorTestCase):
     ):
         """Test that required=True with selection_mode='multi' raises an exception."""
         with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be used with.*selection_mode='multi'",
+            StreamlitIncompatibleParametersError,
+            match=r"`required` is only supported for single-select mode",
         ):
             command("label", ["a", "b", "c"], selection_mode="multi", required=True)
 

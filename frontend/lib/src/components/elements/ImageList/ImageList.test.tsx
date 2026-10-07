@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
-import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
+import {
+  ImageList as ImageListProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 
-import ImageList, { ImageListProps } from "./ImageList"
+import ImageList, { type ImageListProps } from "./ImageList"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -41,7 +45,7 @@ describe("ImageList Element", () => {
 
   const getProps = (
     elementProps: Partial<ImageListProto> = {},
-    widthConfig?: streamlit.IWidthConfig | null
+    widthConfig?: streamlit.WidthConfig.$Properties | null
   ): ImageListProps => ({
     element: ImageListProto.create({
       imgs: [
@@ -64,6 +68,10 @@ describe("ImageList Element", () => {
     })
   })
 
+  afterEach(() => {
+    document.body.style.overflow = ""
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<ImageList {...props} />)
@@ -83,11 +91,27 @@ describe("ImageList Element", () => {
       expect(link).toHaveAttribute("href", "https://streamlit.io")
       expect(link).toHaveAttribute("target", "_blank")
       expect(link).toHaveAttribute("rel", "noreferrer")
-      expect(link).toHaveAttribute("aria-label", "a")
+      expect(link).toHaveAttribute("aria-labelledby")
+      expect(link).toHaveAccessibleName("a")
+      expect(link).not.toHaveAttribute("aria-label")
 
       // Image should be inside the link
       const image = screen.getByRole("img")
       expect(link).toContainElement(image)
+    })
+
+    it("names the link from rendered caption plain text, not markdown source", () => {
+      const props = getProps({
+        imgs: [
+          { caption: "**Revenue** by quarter", url: "/media/mockImage1.jpeg" },
+        ],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAccessibleName("Revenue by quarter")
+      expect(link).not.toHaveAccessibleName("**Revenue** by quarter")
     })
 
     it("uses link URL as aria-label when no caption is provided", () => {
@@ -99,6 +123,79 @@ describe("ImageList Element", () => {
 
       const link = screen.getByTestId("stImageLink")
       expect(link).toHaveAttribute("aria-label", "https://streamlit.io")
+    })
+
+    it("uses non-empty alt as the link name when caption is absent", () => {
+      const props = getProps({
+        imgs: [{ url: "/media/mockImage1.jpeg", alt: "Product photo" }],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("aria-label", "Product photo")
+      expect(screen.getByRole("img")).toHaveAttribute("alt", "Product photo")
+    })
+
+    it("falls back from a caption that renders no text to alt or the URL", () => {
+      // Label markdown strips horizontal rules, so `---` alone leaves no text.
+      const props = getProps({
+        imgs: [
+          {
+            caption: "---",
+            url: "/media/mockImage1.jpeg",
+            alt: "Product photo",
+          },
+        ],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).not.toHaveAttribute("aria-labelledby")
+      expect(link).toHaveAttribute("aria-label", "Product photo")
+      expect(link).toHaveAccessibleName("Product photo")
+    })
+
+    it("uses asynchronously rendered caption text as the link name", async () => {
+      // Start with a caption that renders no text (stripped HR), then simulate
+      // a plugin finishing and injecting visible caption content.
+      const props = getProps({
+        imgs: [
+          {
+            caption: "---",
+            url: "/media/mockImage1.jpeg",
+            alt: "Product photo",
+          },
+        ],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("aria-label", "Product photo")
+
+      screen
+        .getByTestId("stImageCaption")
+        .appendChild(document.createTextNode("Loaded caption"))
+
+      await waitFor(() => {
+        expect(link).toHaveAttribute("aria-labelledby")
+      })
+      expect(link).toHaveAccessibleName("Loaded caption")
+    })
+
+    it("keeps decorative empty alt on the img and names the link from the URL", () => {
+      const props = getProps({
+        imgs: [{ url: "/media/mockImage1.jpeg", alt: "" }],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("aria-label", "https://streamlit.io")
+      const img = screen.getByTestId("stImageContainer").querySelector("img")
+      expect(img).toHaveAttribute("alt", "")
     })
 
     it("does not render link wrapper when link is not provided", () => {
@@ -141,17 +238,76 @@ describe("ImageList Element", () => {
       "JAVASCRIPT:alert(1)",
       "java\nscript:alert(1)",
       "vbscript:msgbox(1)",
-    ])("blocks dangerous link URLs: %s", linkUrl => {
+    ])(
+      "does not wrap the image when the link URL is dangerous: %s",
+      linkUrl => {
+        const props = getProps({
+          imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+          link: linkUrl,
+        })
+        render(<ImageList {...props} />)
+
+        expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
+        expect(screen.queryByRole("link")).not.toBeInTheDocument()
+        expect(screen.getByRole("img")).toBeVisible()
+        expect(screen.getByTestId("stImageCaption")).toHaveTextContent("a")
+      }
+    )
+  })
+
+  describe("Image alt attribute", () => {
+    it("omits the img alt attribute when no alt is provided", () => {
       const props = getProps({
-        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
-        link: linkUrl,
+        imgs: [{ url: "/media/mockImage1.jpeg" }],
       })
       render(<ImageList {...props} />)
 
-      const link = screen.getByTestId("stImageLink")
-      expect(link).toHaveAttribute("href", "#")
-      expect(link).toHaveAttribute("target", "_self")
-      expect(link).toHaveAttribute("rel", "noreferrer")
+      expect(screen.getByRole("img")).not.toHaveAttribute("alt")
+    })
+
+    it("omits the img alt attribute on every image in a list", () => {
+      const props = getProps({
+        imgs: [
+          { url: "/media/mockImage1.jpeg" },
+          { url: "/media/mockImage2.jpeg" },
+          { url: "/media/mockImage3.jpeg" },
+        ],
+      })
+      render(<ImageList {...props} />)
+
+      const images = screen.getAllByRole("img")
+      expect(images).toHaveLength(3)
+      for (const image of images) {
+        expect(image).not.toHaveAttribute("alt")
+      }
+    })
+
+    it("sets decorative empty alt and omits alt when unset", () => {
+      const { rerender } = render(
+        <ImageList
+          {...getProps({
+            imgs: [{ url: "/media/mockImage1.jpeg", alt: "" }],
+          })}
+        />
+      )
+      // Decorative images (alt="") are presentational and may be excluded
+      // from the accessibility tree / getByRole("img").
+      const decorativeImg = screen
+        .getByTestId("stImageContainer")
+        .querySelector("img")
+      expect(decorativeImg).toHaveAttribute("alt", "")
+
+      rerender(
+        <ImageList
+          {...getProps({
+            imgs: [{ url: "/media/mockImage1.jpeg" }],
+          })}
+        />
+      )
+      const unlabeledImg = screen
+        .getByTestId("stImageContainer")
+        .querySelector("img")
+      expect(unlabeledImg).not.toHaveAttribute("alt")
     })
   })
 
@@ -256,8 +412,7 @@ describe("ImageList Element", () => {
     const images = screen.getAllByRole("img")
     expect(images).toHaveLength(2)
 
-    // Trigger the error event on the first image using fireEvent
-    fireEvent.error(images[0])
+    images[0].dispatchEvent(new Event("error"))
 
     // Verify the error was sent with correct parameters
     expect(sendClientErrorToHost).toHaveBeenCalledWith(
@@ -266,6 +421,184 @@ describe("ImageList Element", () => {
       "onerror triggered",
       "https://mock.media.url/"
     )
+  })
+
+  it("fills available width when rendered in fullscreen", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(<ImageList {...props} />)
+
+    await user.click(screen.getByLabelText("Fullscreen"))
+
+    screen.getAllByRole("img").forEach(image => {
+      expect(image).toHaveStyle({ width: "100%", objectFit: "contain" })
+    })
+
+    await user.click(screen.getByLabelText("Close fullscreen"))
+    expect(document.body.style.overflow).toBe("unset")
+  })
+
+  describe("toolbar accessible name", () => {
+    it("uses a plain Fullscreen label for multi-image lists", () => {
+      render(<ImageList {...getProps()} />)
+
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+    })
+
+    it("composes a single-image caption into the Fullscreen aria-label", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Black Square as PNG.",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Black Square as PNG\.$/,
+        })
+      ).toBeInTheDocument()
+    })
+
+    it("prefers a single-image alt over caption for the Fullscreen aria-label", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Visible caption",
+                url: "/media/mockImage1.jpeg",
+                alt: "Sunrise over a mountain ridge",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Sunrise over a mountain ridge$/,
+        })
+      ).toBeInTheDocument()
+    })
+
+    it("composes rendered caption plain text, not markdown source", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "**Revenue** by quarter",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Revenue by quarter$/,
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Fullscreen: \*\*Revenue\*\*/,
+        })
+      ).not.toBeInTheDocument()
+    })
+
+    it("inserts spaces between caption block nodes in the Fullscreen name", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Line one\n\nLine two",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Line one Line two$/,
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Fullscreen: Line oneLine two/,
+        })
+      ).not.toBeInTheDocument()
+    })
+
+    it("omits caption context when the caption renders no text", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [{ caption: "---", url: "/media/mockImage1.jpeg" }],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+    })
+
+    it("drops caption context when rerendering from one image to a gallery", () => {
+      const { rerender } = render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Black Square as PNG.",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Black Square as PNG\.$/,
+        })
+      ).toBeInTheDocument()
+
+      rerender(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Black Square as PNG.",
+                url: "/media/mockImage1.jpeg",
+              },
+              { caption: "b", url: "/media/mockImage2.jpeg" },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Fullscreen: Black Square/,
+        })
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe("crossOrigin attribute", () => {

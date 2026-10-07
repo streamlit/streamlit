@@ -23,6 +23,7 @@ from e2e_playwright.conftest import (
     build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -36,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     open_popover,
 )
 
-MULTISELECT_COUNT = 29
+MULTISELECT_COUNT = 39
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -50,7 +51,14 @@ def select_for_multiselect(
     ms = get_multiselect(page, label)
     ms.scroll_into_view_if_needed()
     ms.locator("input").click()
-    page.get_by_role("option", name=option_text, exact=True).first.click()
+    option = page.get_by_role("option", name=option_text, exact=True).first
+    expect(option).to_be_visible()
+    option.click()
+    # Wait until the selection is committed in the UI before Escape. On WebKit
+    # under CI load, pressing Escape immediately after click can close the
+    # listbox before the option selection is applied, so the subsequent rerun
+    # never updates the value text.
+    expect(ms.locator(f'span[title="{option_text}"]')).to_be_visible()
     if close_after_selecting:
         page.keyboard.press("Escape")
     wait_for_app_run(page)
@@ -61,6 +69,11 @@ def remove_from_multiselect(page: Page, label: str, option_text: str) -> None:
     ms = get_multiselect(page, label)
     ms.get_by_role("button", name=f"Remove {option_text}", exact=True).click()
     wait_for_app_run(page)
+
+
+def _close_dropdown(app: Page) -> None:
+    app.keyboard.press("Escape")
+    expect(app.get_by_test_id("stMultiSelectDropdown")).not_to_be_visible()
 
 
 def test_multiselect_on_load(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -250,6 +263,32 @@ def test_multiselect_valid_options(app: Page):
     ms = get_multiselect(app, "multiselect 1")
     expect(ms).to_contain_text("multiselect 1")
     expect(ms.locator("input")).to_have_attribute("placeholder", "Please select")
+
+
+def test_multiselect_ctrl_cmd_a_selects_filter_text(app: Page):
+    """Should select typed filter text with Control/Command+A so Backspace can delete it."""
+    input_elem = _get_multiselect_input(app, "multiselect 1")
+    input_elem.click()
+    expect(app.get_by_role("option", name="male", exact=True)).to_be_visible()
+
+    # Empty-filter Ctrl/Cmd+A must not bulk-select options.
+    input_elem.press("ControlOrMeta+a")
+    expect(get_multiselect(app, "multiselect 1").locator("[data-tag]")).to_have_count(0)
+    expect_text(app, "value 1: []")
+
+    input_elem.press_sequentially("ma")
+    expect(app.get_by_role("option", name="male", exact=True)).to_be_visible()
+
+    input_elem.press("ControlOrMeta+a")
+    expect(input_elem).to_have_js_property("selectionStart", 0)
+    expect(input_elem).to_have_js_property("selectionEnd", 2)
+    expect(get_multiselect(app, "multiselect 1").locator("[data-tag]")).to_have_count(0)
+    expect_text(app, "value 1: []")
+
+    input_elem.press("Backspace")
+    expect(input_elem).to_have_value("")
+    expect(get_multiselect(app, "multiselect 1").locator("[data-tag]")).to_have_count(0)
+    expect_text(app, "value 1: []")
 
 
 def test_multiselect_no_valid_options(app: Page):
@@ -581,22 +620,36 @@ def test_multiselect_preserves_scroll_position_on_remove(app: Page):
     multiselect_elem = get_multiselect(app, "multiselect 17 - show maxHeight")
 
     # Get the tags container (scrollable area inside the trigger group)
-    value_container = multiselect_elem.locator('[role="group"] > div').first
+    value_container = multiselect_elem.get_by_test_id("stMultiSelectTagsContainer")
 
-    # Scroll to middle of the value container (not bottom, to avoid clamping issues
-    # when items are removed and scrollHeight decreases)
-    value_container.evaluate("el => { el.scrollTop = el.scrollHeight / 2; }")
+    # Scroll to the bottom of the tags container and wait for scroll to settle
+    value_container.evaluate("el => { el.scrollTop = el.scrollHeight; }")
+    wait_until(app, lambda: value_container.evaluate("el => el.scrollTop") > 0)
 
     # Get initial scroll position (should be > 0 since there are many items)
     initial_scroll = value_container.evaluate("el => el.scrollTop")
     assert initial_scroll > 0
 
-    # Remove an item by clicking its delete button
-    remove_from_multiselect(app, "multiselect 17 - show maxHeight", "twenty")
+    # Remove the last tag ("forty") which is visible at the bottom scroll position.
+    # Using the last tag avoids Playwright's auto-scroll-into-view changing scrollTop
+    # before the click handler fires.
+    remove_from_multiselect(app, "multiselect 17 - show maxHeight", "forty")
 
-    # Verify scroll position is preserved
-    final_scroll = value_container.evaluate("el => el.scrollTop")
-    assert final_scroll == initial_scroll
+    # Verify scroll position is preserved (or clamped to the new max if content shrank).
+    # The scroll restore happens in a rAF callback, so use wait_until.
+    wait_until(
+        app,
+        lambda: (
+            abs(
+                value_container.evaluate("el => el.scrollTop")
+                - min(
+                    initial_scroll,
+                    value_container.evaluate("el => el.scrollHeight - el.clientHeight"),
+                )
+            )
+            <= 1
+        ),
+    )
 
 
 def test_multiselect_custom_objects_without_eq(app: Page):
@@ -684,6 +737,116 @@ def test_multiselect_filter_mode_none_disables_typing_but_keeps_selection(app: P
     expect_text(app, "value 23: ['No']")
 
 
+def test_select_all_parameter(app: Page):
+    """select_all controls bulk-action visibility and thresholds."""
+    # False: no bulk action; the first row is the first match.
+    ms_false = get_multiselect(app, "select_all False")
+    ms_false.scroll_into_view_if_needed()
+    input_false = _get_multiselect_input(app, "select_all False")
+    input_false.click()
+
+    options = app.get_by_role("option")
+    expect(options).to_have_count(3)
+    expect(options.nth(0)).to_have_text("apple")
+    expect(app.get_by_role("option", name="Select all")).not_to_be_visible()
+
+    input_false.press_sequentially("ap")
+    expect(app.get_by_role("option", name="Select 2 matches")).not_to_be_visible()
+    expect(app.get_by_role("option")).to_have_count(2)
+    expect(app.get_by_role("option").nth(0)).to_have_text("apple")
+
+    input_false.press("Enter")
+    wait_for_app_run(app)
+
+    expect_text(app, "select_all False: ['apple']")
+    expect(ms_false.locator('span[title="apricot"]')).not_to_be_visible()
+    _close_dropdown(app)
+
+    # True: Select all is shown; unfocused Enter bulk-selects all 8 items.
+    ms_true = get_multiselect(app, "select_all True")
+    ms_true.scroll_into_view_if_needed()
+    input_true = _get_multiselect_input(app, "select_all True")
+    input_true.click()
+    expect(app.get_by_role("option", name="Select all")).to_be_visible()
+    expect(app.get_by_role("option").nth(0)).to_have_text("Select all")
+    input_true.press("Enter")
+    wait_for_app_run(app)
+    expect_text(
+        app,
+        "select_all True: ['item 0', 'item 1', 'item 2', 'item 3', "
+        "'item 4', 'item 5', 'item 6', 'item 7']",
+    )
+    _close_dropdown(app)
+
+    # Integer threshold uses the filtered selectable count.
+    ms_threshold = get_multiselect(app, "select_all threshold")
+    ms_threshold.scroll_into_view_if_needed()
+    input_threshold = _get_multiselect_input(app, "select_all threshold")
+    input_threshold.click()
+
+    expect(app.get_by_role("option", name="Select all")).not_to_be_visible()
+    expect(app.get_by_role("option", name="alpha", exact=True)).to_be_visible()
+
+    input_threshold.press_sequentially("al")
+    select_matches = app.get_by_role("option", name="Select 3 matches")
+    expect(select_matches).to_be_visible()
+    expect(app.get_by_role("option", name="Select all")).not_to_be_visible()
+
+    select_matches.click()
+    wait_for_app_run(app)
+
+    expect_text(app, "select_all threshold: ['alpha', 'alpine', 'alta']")
+    _close_dropdown(app)
+
+    # max_selections hides Select all once the cap is reached.
+    ms_max = get_multiselect(app, "select_all with max_selections")
+    ms_max.scroll_into_view_if_needed()
+    input_max = _get_multiselect_input(app, "select_all with max_selections")
+    input_max.click()
+
+    expect(app.get_by_role("option", name="Select all")).to_be_visible()
+    app.get_by_role("option", name="Select all").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "select_all with max_selections: ['red', 'green']")
+    _close_dropdown(app)
+
+    input_max.click()
+    expect(app.get_by_role("option", name="Select all")).not_to_be_visible()
+    expect(app.get_by_test_id("stMultiSelectDropdown")).to_have_text(
+        "You can only select up to 2 options. Remove an option first.",
+        use_inner_text=True,
+    )
+    _close_dropdown(app)
+
+    # Custom chips do not count toward the threshold.
+    ms_chips = get_multiselect(app, "select_all custom chips")
+    ms_chips.scroll_into_view_if_needed()
+    input_chips = _get_multiselect_input(app, "select_all custom chips")
+    input_chips.click()
+
+    expect(app.get_by_role("option", name="Select all")).not_to_be_visible()
+    input_chips.press_sequentially("custom")
+    input_chips.press("Enter")
+    wait_for_app_run(app)
+    expect_text(app, "select_all custom chips: ['custom']")
+    _close_dropdown(app)
+
+    input_chips.click()
+    expect(app.get_by_role("option", name="Select all")).not_to_be_visible()
+    expect(app.get_by_role("option", name="one", exact=True)).to_be_visible()
+
+    # Selecting one real option drops the selectable count to the threshold.
+    # Select all must appear even though a custom chip is also selected.
+    app.get_by_role("option", name="one", exact=True).click()
+    wait_for_app_run(app)
+    expect_text(app, "select_all custom chips: ['custom', 'one']")
+    _close_dropdown(app)
+
+    input_chips.click()
+    expect(app.get_by_role("option", name="Select all")).to_be_visible()
+
+
 # --- Query parameter binding tests ---
 
 
@@ -711,13 +874,16 @@ def test_multiselect_query_param_seeding_multiple(page: Page, app_base_url: str)
 def test_multiselect_query_param_updates_url(app: Page):
     """Test that changing a bound multiselect updates the URL."""
     select_for_multiselect(app, "Bound multiselect", "Red", True)
-    expect(app).to_have_url(re.compile(r"\?bound_multi=Red"))
+    # Assert text first to confirm the rerun completed before checking the URL
     expect_text(app, "bound_multi: ['Red']")
+    expect(app).to_have_url(re.compile(r"\?bound_multi=Red"), timeout=10_000)
 
     # Add a second selection
     select_for_multiselect(app, "Bound multiselect", "Blue", True)
-    expect(app).to_have_url(re.compile(r"bound_multi=Red&bound_multi=Blue"))
     expect_text(app, "bound_multi: ['Red', 'Blue']")
+    expect(app).to_have_url(
+        re.compile(r"bound_multi=Red&bound_multi=Blue"), timeout=10_000
+    )
 
 
 def test_multiselect_query_param_default_override(page: Page, app_base_url: str):
@@ -919,3 +1085,137 @@ def test_multiselect_selected_tags_have_working_tooltips(app: Page):
     assert water_pointer_events == "auto", (
         f"Expected pointer-events: auto, got: {water_pointer_events}"
     )
+
+
+def _wrap_tags_container(page: Page, key: str) -> Locator:
+    """Return the scrollable tags container of a keyed wrap multiselect."""
+    return get_element_by_key(page, key).get_by_test_id("stMultiSelectTagsContainer")
+
+
+def test_multiselect_wrap(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test the wrap parameter for st.multiselect.
+
+    ``wrap=False`` keeps the selected chips in a single, horizontally scrollable
+    row (deterministic one-row height), while ``wrap=True`` lets them wrap onto
+    additional rows. The auto default (``wrap=None``) resolves to no-wrap inside
+    a horizontal container and to wrapping in a normal vertical layout.
+    """
+    wrap_false = _wrap_tags_container(app, "multiselect_wrap_false")
+    wrap_true = _wrap_tags_container(app, "multiselect_wrap_true")
+    auto_horizontal = _wrap_tags_container(app, "multiselect_wrap_auto_horizontal")
+    auto_vertical = _wrap_tags_container(app, "multiselect_wrap_auto_vertical")
+
+    for container in (wrap_false, wrap_true, auto_horizontal, auto_vertical):
+        expect(container).to_be_visible()
+
+    def _height(container: Locator) -> float:
+        box = container.bounding_box()
+        assert box is not None, (
+            "Expected the wrap tags container to have a bounding box."
+        )
+        return box["height"]
+
+    # Poll the layout heights instead of asserting once so transient first-paint
+    # heights don't flake the comparisons.
+    # wrap=True grows onto multiple rows; wrap=False stays a single row.
+    wait_until(app, lambda: _height(wrap_false) < _height(wrap_true))
+    # Auto must match the height of the mode it resolves to (a stronger check
+    # than a one-sided inequality, which a broken resolution landing between the
+    # two modes could still satisfy): no-wrap inside a horizontal container (like
+    # wrap=False) and wrapping in a vertical layout (like wrap=True). A small
+    # tolerance absorbs sub-pixel rounding.
+    height_tolerance = 2
+    wait_until(
+        app,
+        lambda: abs(_height(auto_horizontal) - _height(wrap_false)) <= height_tolerance,
+    )
+    wait_until(
+        app,
+        lambda: abs(_height(auto_vertical) - _height(wrap_true)) <= height_tolerance,
+    )
+
+    # wrap=False must scroll horizontally because the chips overflow the row ...
+    wait_until(
+        app, lambda: wrap_false.evaluate("el => el.scrollWidth > el.clientWidth")
+    )
+    # ... and must NOT stack into multiple rows (no vertical overflow / growth).
+    wait_until(
+        app,
+        lambda: not wrap_false.evaluate("el => el.scrollHeight > el.clientHeight + 2"),
+    )
+
+    # The single-row control shows a fade affordance on the overflowing edge ...
+    expect(wrap_false).to_have_attribute("data-can-scroll-end", "")
+    # ... and the wrapping control never shows a scroll fade.
+    expect(wrap_true).not_to_have_attribute("data-can-scroll-end", "")
+
+    # The clear and dropdown controls stay pinned outside the scrolling chip area.
+    wrap_false_widget = get_element_by_key(app, "multiselect_wrap_false")
+    expect(wrap_false_widget.get_by_role("button", name="Clear all")).to_be_visible()
+    expect(wrap_false_widget.get_by_role("button", name="Open")).to_be_visible()
+
+    assert_snapshot(wrap_false_widget, name="st_multiselect-wrap_false")
+    assert_snapshot(
+        get_element_by_key(app, "multiselect_wrap_true"),
+        name="st_multiselect-wrap_true",
+    )
+
+
+def test_multiselect_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    # The app writes str(ignore_multi), so the empty default is markdown "[]".
+    expect_prefixed_markdown(app, "Ignore multiselect value:", "[]")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_multi="))
+
+    ignore_input = _get_multiselect_input(app, "Ignore change multiselect")
+
+    # Filtering does not commit the value, so Python and the URL remain unchanged.
+    ignore_input.click()
+    ignore_input.fill("be")
+    expect(ignore_input).to_have_value("be")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore multiselect value:", "[]")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_multi="))
+
+    # Reset the combobox so the later option click does not toggle an already-open dropdown.
+    # Two Escapes: first clears filter text, second closes the dropdown.
+    ignore_input.press("Escape")
+    _close_dropdown(app)
+
+    # Choosing an option updates the URL without rerunning the app.
+    select_for_multiselect(app, "Ignore change multiselect", "beta", True)
+
+    # Extra settle on top of select_for_multiselect's wait_for_app_run, to catch a delayed rerun.
+    wait_for_app_run(app)
+
+    # Verify no rerun occurred (run count should still be 1)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(
+        get_multiselect(app, "Ignore change multiselect").locator('span[title="beta"]')
+    ).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore multiselect value:", "[]")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_multi=beta"))
+
+    # Click button to trigger a rerun - buffered value should be sent
+    app.get_by_role("button", name="Apply ignore multiselect", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Ignore multiselect value: ['beta']", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore multiselect value: ['beta']", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(
+        get_multiselect(app, "Ignore change multiselect").locator('span[title="beta"]')
+    ).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore multiselect value:", "['beta']")

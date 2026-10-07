@@ -16,13 +16,12 @@
 
 import { useEffect, useMemo, useRef } from "react"
 
-import { v4 as uuidv4 } from "uuid"
-
-import {
+import type {
   CleanupFunction,
   FrontendRendererArgs,
   FrontendState,
 } from "@streamlit/component-v2-lib"
+import { generateUuid } from "@streamlit/utils"
 
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { blobUrlManager } from "~lib/components/widgets/BidiComponent/utils/blobUrl"
@@ -70,7 +69,11 @@ const loadAndRunModule = async <T extends FrontendState>({
   parentElement: HTMLElement | ShadowRoot
   widgetMgr: WidgetStateManager
 }): Promise<CleanupFunction | void> => {
-  const module = await import(/* @vite-ignore */ moduleUrl)
+  const module = (await import(/* @vite-ignore */ moduleUrl)) as {
+    default?: (
+      args: FrontendRendererArgs
+    ) => CleanupFunction | void | Promise<CleanupFunction | void>
+  }
 
   if (!module) {
     throw new Error("JS module does not exist.")
@@ -95,12 +98,11 @@ const loadAndRunModule = async <T extends FrontendState>({
       newValue = { [name]: value } as T
     }
 
-    void widgetMgr.setJsonValue(
-      { id: componentIdForWidgetMgr, formId },
-      newValue,
-      { fromUi: true },
-      fragmentId
-    )
+    void widgetMgr.setJsonValue(componentIdForWidgetMgr, newValue, {
+      formId,
+      fragmentId,
+      fromUser: true,
+    })
   }
 
   const setTriggerValue = <T extends FrontendState>(
@@ -121,9 +123,8 @@ const loadAndRunModule = async <T extends FrontendState>({
     }
     const triggerId = makeTriggerAggregatorId(componentIdForWidgetMgr)
     void widgetMgr.setTriggerValue(
-      { id: triggerId, formId },
-      { fromUi: true },
-      fragmentId,
+      triggerId,
+      { formId, fragmentId, fromUser: true },
       { event: name, value }
     )
   }
@@ -181,7 +182,7 @@ export const useHandleJsContent = ({
   setError: (error: Error) => void
   skip?: boolean
 }): void => {
-  const thisUuid = useMemo(() => uuidv4(), [])
+  const thisUuid = useMemo(() => generateUuid(), [])
   const componentId = `st-bidi-component-${thisUuid}`
 
   const {
@@ -222,6 +223,34 @@ export const useHandleJsContent = ({
       return
     }
 
+    let scriptElement: HTMLScriptElement | undefined
+    let resolveScriptLoad: (() => void) | undefined
+    let rejectScriptLoad: ((reason: Error) => void) | undefined
+    let cancelled = false
+    const handleScriptLoad = (): void => {
+      resolveScriptLoad?.()
+    }
+    const handleScriptError = (): void => {
+      rejectScriptLoad?.(
+        new Error(`Failed to load script from ${externalJsSourcePathUrl}`)
+      )
+    }
+
+    // If this run was cancelled after the module initialized, invoke its
+    // teardown instead of storing it — otherwise listeners/requests leak.
+    const adoptCleanup = (cleanup: CleanupFunction | void): void => {
+      if (!cancelled) {
+        cleanupRef.current = cleanup
+        return
+      }
+
+      void Promise.resolve(cleanup)
+        .then(result => result?.())
+        .catch((error: unknown) => {
+          LOG.error("Failed to run custom component cleanup", error)
+        })
+    }
+
     const run = async (): Promise<void> => {
       try {
         if (inlineJsContent) {
@@ -230,41 +259,8 @@ export const useHandleJsContent = ({
             `st-bidi-${componentName}`
           )
 
-          cleanupRef.current = await loadAndRunModule({
-            componentId,
-            componentIdForWidgetMgr: id,
-            componentName,
-            data,
-            formId,
-            fragmentId,
-            getWidgetValue,
-            moduleUrl: url,
-            parentElement: containerRefCurrent,
-            widgetMgr,
-          })
-        } else if (externalJsSourcePathUrl) {
-          const scriptUrl = externalJsSourcePathUrl
-
-          try {
-            // Load the script
-            await new Promise<void>((resolve, reject) => {
-              const scriptElement = document.createElement("script")
-              scriptElement.type = "module"
-              scriptElement.src = scriptUrl
-              scriptElement.async = true
-              scriptElement.onload = () => resolve()
-              scriptElement.onerror = () =>
-                reject(
-                  new Error(
-                    `Failed to load script from ${externalJsSourcePathUrl}`
-                  )
-                )
-              document.head.appendChild(scriptElement)
-              scriptElementRef.current = scriptElement
-            })
-
-            // Run the module and store the cleanup function
-            cleanupRef.current = await loadAndRunModule({
+          adoptCleanup(
+            await loadAndRunModule({
               componentId,
               componentIdForWidgetMgr: id,
               componentName,
@@ -272,10 +268,47 @@ export const useHandleJsContent = ({
               formId,
               fragmentId,
               getWidgetValue,
-              moduleUrl: scriptUrl,
+              moduleUrl: url,
               parentElement: containerRefCurrent,
               widgetMgr,
             })
+          )
+        } else if (externalJsSourcePathUrl) {
+          const scriptUrl = externalJsSourcePathUrl
+
+          try {
+            // Load the script
+            await new Promise<void>((resolve, reject) => {
+              scriptElement = document.createElement("script")
+              scriptElement.type = "module"
+              scriptElement.src = scriptUrl
+              scriptElement.async = true
+              resolveScriptLoad = resolve
+              rejectScriptLoad = reject
+              scriptElement.addEventListener("load", handleScriptLoad)
+              scriptElement.addEventListener("error", handleScriptError)
+              document.head.appendChild(scriptElement)
+              scriptElementRef.current = scriptElement
+            })
+
+            if (cancelled) {
+              return
+            }
+
+            adoptCleanup(
+              await loadAndRunModule({
+                componentId,
+                componentIdForWidgetMgr: id,
+                componentName,
+                data,
+                formId,
+                fragmentId,
+                getWidgetValue,
+                moduleUrl: scriptUrl,
+                parentElement: containerRefCurrent,
+                widgetMgr,
+              })
+            )
           } catch (error) {
             throw normalizeError(
               error,
@@ -291,6 +324,18 @@ export const useHandleJsContent = ({
     }
 
     void run()
+
+    return () => {
+      cancelled = true
+      scriptElement?.removeEventListener("load", handleScriptLoad)
+      scriptElement?.removeEventListener("error", handleScriptError)
+      // Resolve rather than reject so a theme/data re-run does not flash a
+      // false component error; the `cancelled` flag then skips mounting the module.
+      resolveScriptLoad?.()
+      if (scriptElement?.parentNode) {
+        scriptElement.parentNode.removeChild(scriptElement)
+      }
+    }
   }, [
     componentId,
     componentName,
@@ -319,9 +364,11 @@ export const useHandleJsContent = ({
       if (maybeCleanup) {
         void Promise.resolve(maybeCleanup)
           .then(result => {
-            result?.()
+            // Return the cleanup result so a thenable teardown stays in the
+            // chain; `result?.(); return` would drop async cleanup rejections.
+            return result?.()
           })
-          .catch(error => {
+          .catch((error: unknown) => {
             LOG.error("Failed to run custom component cleanup", error)
           })
       }

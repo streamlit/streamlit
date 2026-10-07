@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { darken, lighten, transparentize } from "color2k"
+import { darken, lighten, mix, transparentize } from "color2k"
 import { getLogger } from "loglevel"
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
+import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { baseTheme, darkTheme, lightTheme } from "~lib/theme/themeConfigs"
-import { ThemeConfig } from "~lib/theme/types"
+import type { ThemeConfig } from "~lib/theme/types"
 import {
   AUTO_THEME_NAME,
   bgColorToBaseString,
@@ -112,8 +112,8 @@ describe("Styling utils", () => {
   // These tests verify theme integration only
   describe("theme.shadows (integration)", () => {
     it("light and dark themes have shadows with the same property keys", () => {
-      const lightKeys = Object.keys(lightTheme.emotion.shadows).sort()
-      const darkKeys = Object.keys(darkTheme.emotion.shadows).sort()
+      const lightKeys = Object.keys(lightTheme.emotion.shadows).toSorted()
+      const darkKeys = Object.keys(darkTheme.emotion.shadows).toSorted()
 
       expect(lightKeys).toEqual(darkKeys)
     })
@@ -1115,6 +1115,65 @@ describe("createEmotionTheme", () => {
     )
   })
 
+  it("sets the dataframeHeaderTextColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      dataframeHeaderTextColor: "#FFC0CB",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderTextColor).toBe("#FFC0CB")
+  })
+
+  it("uses default dataframeHeaderTextColor if not configured", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.colors.dataframeHeaderTextColor).toBe(
+      theme.colors.fadedText60
+    )
+  })
+
+  it("derives dataframeHeaderTextColor from custom textColor", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      textColor: "#123456",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderTextColor).toBe(
+      theme.colors.fadedText60
+    )
+    expect(theme.colors.dataframeHeaderTextColor).not.toBe("#123456")
+  })
+
+  it("keeps configured dataframeHeaderTextColor when textColor is also set", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      textColor: "#123456",
+      dataframeHeaderTextColor: "#FFC0CB",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderTextColor).toBe("#FFC0CB")
+    expect(theme.colors.dataframeHeaderTextColor).not.toBe(
+      theme.colors.fadedText60
+    )
+    expect(theme.colors.bodyText).toBe("#123456")
+  })
+
+  it.each(["codeBackgroundColor", "dataframeHeaderBackgroundColor"] as const)(
+    "derives %s from custom secondaryBackgroundColor",
+    colorKey => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        backgroundColor: "#ffffff",
+        secondaryBackgroundColor: "#FAFAF9",
+      }
+
+      const theme = createEmotionTheme(themeInput)
+      const expectedBgMix = mix("#ffffff", "#FAFAF9", 0.5)
+      expect(theme.colors[colorKey]).toBe(expectedBgMix)
+      expect(theme.colors[colorKey]).not.toBe(
+        lightTheme.emotion.colors[colorKey]
+      )
+    }
+  )
+
   it("sets the borderColor properties based on borderColor config", () => {
     const themeInput: Partial<CustomThemeConfig> = {
       borderColor: "blue",
@@ -1844,7 +1903,7 @@ describe("createEmotionTheme", () => {
 
   // Code text color handling
   it("uses configured codeTextColor when provided", () => {
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       codeTextColor: "#ff0000",
       greenTextColor: "#00aa00", // This should be ignored when codeTextColor is set
     }
@@ -1922,7 +1981,7 @@ describe("createEmotionTheme", () => {
   })
 
   it("prioritizes codeTextColor over greenTextColor when both are configured", () => {
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       codeTextColor: "#ff0000", // Explicit code text color
       greenTextColor: "#00ff00", // This should be ignored for codeTextColor
     }
@@ -1933,7 +1992,7 @@ describe("createEmotionTheme", () => {
   })
 
   it("prioritizes codeTextColor over derived greenTextColor from greenColor", () => {
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       base: CustomThemeConfig.BaseTheme.LIGHT,
       codeTextColor: "#ff0000", // Explicit code text color
       greenColor: "#29b09d", // This would derive a different greenTextColor
@@ -1947,7 +2006,7 @@ describe("createEmotionTheme", () => {
 
   it("handles invalid codeTextColor by logging warning and falling back to default greenTextColor", () => {
     const logWarningSpy = vi.spyOn(LOG, "warn")
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       codeTextColor: "invalid-color",
       greenTextColor: "#00aa00",
     }
@@ -1963,7 +2022,7 @@ describe("createEmotionTheme", () => {
 
   it("falls back to default when both codeTextColor and greenTextColor are invalid", () => {
     const logWarningSpy = vi.spyOn(LOG, "warn")
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       base: CustomThemeConfig.BaseTheme.LIGHT,
       codeTextColor: "invalid-code-color",
       greenTextColor: "invalid-green-color",
@@ -1987,7 +2046,7 @@ describe("createEmotionTheme", () => {
   })
 
   it("handles codeTextColor without # prefix correctly", () => {
-    const themeInput: Partial<ICustomThemeConfig> = {
+    const themeInput: Partial<CustomThemeConfig.$Properties> = {
       codeTextColor: "00ff00", // Green without # prefix
     }
     const theme = createEmotionTheme(themeInput, lightTheme)
@@ -2886,16 +2945,25 @@ describe("createEmotionTheme", () => {
   // == Theme font weight properties ==
 
   it.each([
-    // Test valid font weights
-    [100, 100, 300, 400],
-    [200, 200, 400, 500],
-    [300, 300, 500, 600],
-    [400, 400, 600, 700],
-    [500, 500, 700, 800],
-    [600, 600, 800, 900],
+    // Test valid font weights (base, normal, semiBold, bold, extrabold)
+    [100, 100, 200, 300, 400],
+    [150, 150, 250, 350, 450],
+    [200, 200, 300, 400, 500],
+    [300, 300, 400, 500, 600],
+    [350, 350, 450, 550, 650],
+    [400, 400, 500, 600, 700],
+    [500, 500, 600, 700, 800],
+    [550, 550, 650, 750, 850],
+    [600, 600, 700, 800, 900],
   ])(
     "sets the font weights based on the baseFontWeight config '%s'",
-    (baseFontWeight, expectedNormal, expectedBold, expectedExtrabold) => {
+    (
+      baseFontWeight,
+      expectedNormal,
+      expectedSemiBold,
+      expectedBold,
+      expectedExtrabold
+    ) => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
         baseFontWeight,
@@ -2905,6 +2973,7 @@ describe("createEmotionTheme", () => {
 
       expect(logWarningSpy).not.toHaveBeenCalled()
       expect(theme.fontWeights.normal).toBe(expectedNormal)
+      expect(theme.fontWeights.semiBold).toBe(expectedSemiBold)
       expect(theme.fontWeights.bold).toBe(expectedBold)
       expect(theme.fontWeights.extrabold).toBe(expectedExtrabold)
     }
@@ -2912,7 +2981,8 @@ describe("createEmotionTheme", () => {
 
   it.each([
     // Test invalid font weights
-    [150, 400, 600, 700], // Not an increment of 100
+    [125, 400, 600, 700], // Not an increment of 50
+    [575, 400, 600, 700], // Not an increment of 50
     [700, 400, 600, 700], // Not between 100 and 600
     [400.5, 400, 600, 700], // Not an integer
   ])(
@@ -2926,7 +2996,7 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid baseFontWeight: ${baseFontWeight} in theme. The baseFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weight.`
+        `Invalid baseFontWeight: ${baseFontWeight} in theme. The baseFontWeight must be an integer 100-600, and an increment of 50. Falling back to default font weight.`
       )
 
       expect(theme.fontWeights.normal).toBe(expectedNormal)
@@ -2938,10 +3008,13 @@ describe("createEmotionTheme", () => {
   it.each([
     // Test valid font weights
     [100, 400, 600, 700, 100, 300, 400],
+    [150, 400, 600, 700, 150, 350, 450],
     [200, 400, 600, 700, 200, 400, 500],
     [300, 400, 600, 700, 300, 500, 600],
+    [350, 400, 600, 700, 350, 550, 650],
     [400, 400, 600, 700, 400, 600, 700],
     [500, 400, 600, 700, 500, 700, 800],
+    [550, 400, 600, 700, 550, 750, 850],
     [600, 400, 600, 700, 600, 800, 900],
   ])(
     "sets the font weights based on the codeFontWeight config '%s'",
@@ -2978,7 +3051,8 @@ describe("createEmotionTheme", () => {
     [700, 400, 600, 700, 400], // Not between 100 and 600
     [800, 400, 600, 700, 400], // Not between 100 and 600
     [900, 400, 600, 700, 400], // Not between 100 and 600
-    [150, 400, 600, 700, 400], // Not an increment of 100
+    [125, 400, 600, 700, 400], // Not an increment of 50
+    [575, 400, 600, 700, 400], // Not an increment of 50
     [1000, 400, 600, 700, 400], // Not between 100 and 900
     [400.5, 400, 600, 700, 400], // Not an integer
   ])(
@@ -2998,7 +3072,7 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid codeFontWeight: ${codeFontWeight} in theme. The codeFontWeight must be an integer 100-600, and an increment of 100. Falling back to default font weight.`
+        `Invalid codeFontWeight: ${codeFontWeight} in theme. The codeFontWeight must be an integer 100-600, and an increment of 50. Falling back to default font weight.`
       )
 
       expect(theme.fontWeights.normal).toBe(expectedNormal)
@@ -3013,13 +3087,17 @@ describe("createEmotionTheme", () => {
   it.each([
     // Test valid headingFontWeights for h1-h6
     [[100, 100, 100, 100, 100, 100]],
+    [[150, 150, 150, 150, 150, 150]],
     [[200, 200, 200, 200, 200, 200]],
     [[300, 300, 300, 300, 300, 300]],
+    [[350, 350, 350, 350, 350, 350]],
     [[400, 400, 400, 400, 400, 400]],
     [[500, 500, 500, 500, 500, 500]],
+    [[550, 550, 550, 550, 550, 550]],
     [[600, 600, 600, 600, 600, 600]],
     [[700, 700, 700, 700, 700, 700]],
     [[800, 800, 800, 800, 800, 800]],
+    [[850, 850, 850, 850, 850, 850]],
     [[900, 900, 900, 900, 900, 900]],
   ])(
     "sets the font weights based on the headingFontWeights configs '%s'",
@@ -3044,8 +3122,8 @@ describe("createEmotionTheme", () => {
   it.each([
     // Test invalid font weights for h1-h6
     {
-      headingFontWeights: [150, 200, 300, 400, 500, 600],
-      invalidFontWeight: 150,
+      headingFontWeights: [125, 200, 300, 400, 500, 600],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h1FontWeight",
       expectedWeights: [
         baseTheme.emotion.fontWeights.h1FontWeight,
@@ -3083,8 +3161,8 @@ describe("createEmotionTheme", () => {
       ],
     },
     {
-      headingFontWeights: [200, 150, 300, 400, 500, 600],
-      invalidFontWeight: 150,
+      headingFontWeights: [200, 125, 300, 400, 500, 600],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h2FontWeight",
       expectedWeights: [
         200,
@@ -3122,8 +3200,8 @@ describe("createEmotionTheme", () => {
       ],
     },
     {
-      headingFontWeights: [200, 300, 150, 400, 500, 600],
-      invalidFontWeight: 150,
+      headingFontWeights: [200, 300, 125, 400, 500, 600],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h3FontWeight",
       expectedWeights: [
         200,
@@ -3161,8 +3239,8 @@ describe("createEmotionTheme", () => {
       ],
     },
     {
-      headingFontWeights: [200, 300, 400, 150, 500, 600],
-      invalidFontWeight: 150,
+      headingFontWeights: [200, 300, 400, 125, 500, 600],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h4FontWeight",
       expectedWeights: [
         200,
@@ -3200,8 +3278,8 @@ describe("createEmotionTheme", () => {
       ],
     },
     {
-      headingFontWeights: [200, 300, 400, 500, 150, 600],
-      invalidFontWeight: 150,
+      headingFontWeights: [200, 300, 400, 500, 125, 600],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h5FontWeight",
       expectedWeights: [
         200,
@@ -3239,8 +3317,8 @@ describe("createEmotionTheme", () => {
       ],
     },
     {
-      headingFontWeights: [200, 300, 400, 500, 600, 150],
-      invalidFontWeight: 150,
+      headingFontWeights: [200, 300, 400, 500, 600, 125],
+      invalidFontWeight: 125,
       invalidFontWeightConfig: "h6FontWeight",
       expectedWeights: [
         200,
@@ -3293,7 +3371,7 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid ${invalidFontWeightConfig} in headingFontWeights: ${invalidFontWeight} in theme. The ${invalidFontWeightConfig} in headingFontWeights must be an integer 100-900, and an increment of 100. Falling back to default font weight.`
+        `Invalid ${invalidFontWeightConfig} in headingFontWeights: ${invalidFontWeight} in theme. The ${invalidFontWeightConfig} in headingFontWeights must be an integer 100-900, and an increment of 50. Falling back to default font weight.`
       )
 
       // Check that the heading font weights are set correctly
@@ -3396,11 +3474,40 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
+        `Invalid metricValueFontWeight: ${metricValueFontWeight} in theme. The metricValueFontWeight must be an integer 100-900, and an increment of 50. Falling back to default font weight.`
       )
       expect(theme.fontWeights.metricValueFontWeight).toBe(400)
     }
   )
+
+  it.each([125, 575])(
+    "logs a warning and uses default metricValueFontWeight if value is not an increment of 50: %s",
+    metricValueFontWeight => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid metricValueFontWeight: ${metricValueFontWeight} in theme. The metricValueFontWeight must be an integer 100-900, and an increment of 50. Falling back to default font weight.`
+      )
+      expect(theme.fontWeights.metricValueFontWeight).toBe(400)
+    }
+  )
+
+  it("accepts a 50-step metricValueFontWeight (550)", () => {
+    const logWarningSpy = vi.spyOn(LOG, "warn")
+    const themeInput: Partial<CustomThemeConfig> = {
+      metricValueFontWeight: 550,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(logWarningSpy).not.toHaveBeenCalled()
+    expect(theme.fontWeights.metricValueFontWeight).toBe(550)
+  })
 
   // == Theme font properties ==
 
@@ -4067,6 +4174,34 @@ describe("Custom theme creation", () => {
       // theme.sidebar.textColor="sidebar-text" (no override in theme.dark.sidebar)
       expect(result.sidebar?.textColor).toBe("sidebar-text") // theme.sidebar wins (no override)
     })
+
+    it("replaces chart color arrays atomically instead of merging by index", () => {
+      const themeInput = new CustomThemeConfig({
+        chartCategoricalColors: ["#aaa", "#bbb", "#ccc"],
+        light: new CustomThemeConfig({
+          chartCategoricalColors: ["#111"],
+        }),
+      })
+
+      const result = handleSectionInheritance(themeInput, "light")
+
+      expect(result.chartCategoricalColors).toEqual(["#111"])
+    })
+
+    it("replaces partial headingFontSizes atomically instead of inheriting tail from parent", () => {
+      const themeInput = new CustomThemeConfig({
+        headingFontSizes: ["2.0", "1.5", "1.25", "1.0", "0.875", "0.75"],
+        dark: new CustomThemeConfig({
+          headingFontSizes: ["1.8", "1.3"],
+        }),
+      })
+
+      const result = handleSectionInheritance(themeInput, "dark")
+
+      // The dark section's partial array replaces wholesale — unspecified
+      // sizes fall back to Streamlit defaults, not the [theme] tail.
+      expect(result.headingFontSizes).toEqual(["1.8", "1.3"])
+    })
   })
 
   describe("createCustomThemes", () => {
@@ -4172,6 +4307,143 @@ describe("Custom theme creation", () => {
       expect(customThemes[1].name).toBe(CUSTOM_THEME_DARK_NAME)
       expect(customThemes[1].emotion.colors.primary).toBe("gold")
       expect(customThemes[1].emotion.colors.bgColor).toBe("black")
+    })
+
+    it("applies chart color overrides per light/dark section", () => {
+      const lightCategorical = [
+        "#111111",
+        "#222222",
+        "#333333",
+        "#444444",
+        "#555555",
+        "#666666",
+        "#777777",
+        "#888888",
+        "#999999",
+        "#aaaaaa",
+      ]
+      const darkCategorical = [
+        "#a1a1a1",
+        "#b2b2b2",
+        "#c3c3c3",
+        "#d4d4d4",
+        "#e5e5e5",
+        "#f6f6f6",
+        "#010101",
+        "#020202",
+        "#030303",
+        "#040404",
+      ]
+      const themeCategorical = [
+        "#ff0000",
+        "#00ff00",
+        "#0000ff",
+        "#ffff00",
+        "#ff00ff",
+        "#00ffff",
+        "#ffffff",
+        "#000000",
+        "#123456",
+        "#654321",
+      ]
+
+      const themeInput = new CustomThemeConfig({
+        chartCategoricalColors: themeCategorical,
+        light: {
+          chartCategoricalColors: lightCategorical,
+        },
+        dark: {
+          chartCategoricalColors: darkCategorical,
+        },
+      })
+
+      const customThemes = createCustomThemes(themeInput)
+
+      expect(customThemes).toHaveLength(3)
+      expect(customThemes[0].emotion.colors.chartCategoricalColors).toEqual(
+        lightCategorical
+      )
+      expect(customThemes[1].emotion.colors.chartCategoricalColors).toEqual(
+        darkCategorical
+      )
+    })
+
+    it("inherits chart colors from theme when light/dark omit them", () => {
+      const themeCategorical = [
+        "#ff0000",
+        "#00ff00",
+        "#0000ff",
+        "#ffff00",
+        "#ff00ff",
+        "#00ffff",
+        "#ffffff",
+        "#000000",
+        "#123456",
+        "#654321",
+      ]
+
+      const themeInput = new CustomThemeConfig({
+        chartCategoricalColors: themeCategorical,
+        light: {
+          primaryColor: "lightblue",
+        },
+        dark: {
+          primaryColor: "darkblue",
+        },
+      })
+
+      const customThemes = createCustomThemes(themeInput)
+
+      expect(customThemes[0].emotion.colors.chartCategoricalColors).toEqual(
+        themeCategorical
+      )
+      expect(customThemes[1].emotion.colors.chartCategoricalColors).toEqual(
+        themeCategorical
+      )
+    })
+
+    it("applies sidebar chart color overrides via createSidebarTheme", () => {
+      const mainCategorical = [
+        "#ff0000",
+        "#00ff00",
+        "#0000ff",
+        "#ffff00",
+        "#ff00ff",
+        "#00ffff",
+        "#ffffff",
+        "#000000",
+        "#123456",
+        "#654321",
+      ]
+      const sidebarCategorical = [
+        "#111111",
+        "#222222",
+        "#333333",
+        "#444444",
+        "#555555",
+        "#666666",
+        "#777777",
+        "#888888",
+        "#999999",
+        "#aaaaaa",
+      ]
+
+      const themeInput = new CustomThemeConfig({
+        chartCategoricalColors: mainCategorical,
+        sidebar: {
+          chartCategoricalColors: sidebarCategorical,
+        },
+      })
+
+      const [customTheme] = createCustomThemes(themeInput)
+      const sidebarTheme = createSidebarTheme(customTheme)
+
+      expect(sidebarTheme.emotion.colors.chartCategoricalColors).toEqual(
+        sidebarCategorical
+      )
+      expect(customTheme.emotion.colors.chartCategoricalColors).toEqual(
+        mainCategorical
+      )
     })
 
     it("handles nested sidebar configs in light section", () => {

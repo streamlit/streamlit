@@ -16,10 +16,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import {
-  type CellClickedEventArgs,
-  type DataEditorProps,
-  type Item,
+import type {
+  CellClickedEventArgs,
+  DataEditorProps,
+  Item,
 } from "@glideapps/glide-data-grid"
 
 import type { Dataframe as DataframeProto } from "@streamlit/protobuf"
@@ -139,12 +139,11 @@ function useButtonColumnInteractions({
       if (!widgetId) return
 
       const clickState = JSON.stringify({ row: rowIndex, label })
-      widgetMgr.setStringTriggerValue(
-        { id: widgetId, formId: element.formId },
-        clickState,
-        { fromUi: true },
-        fragmentId
-      )
+      widgetMgr.setStringTriggerValue(widgetId, clickState, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: true,
+      })
     },
     [
       clearButtonActionMenu,
@@ -175,9 +174,8 @@ function useButtonColumnInteractions({
     ): void => {
       cancelPendingMenuOpen()
 
-      // When clicking between menu items or buttons, we need a clean transition.
-      // The frame boundary forces BaseUI's Popover to remount at the new click
-      // coordinates instead of reusing stale positioning from the previous menu.
+      // Clear the menu, then reopen on the next frame so the popover remounts
+      // at the new click coordinates instead of keeping the previous position.
       setButtonActionMenu(undefined)
       menuRafRef.current = requestAnimationFrame(() => {
         menuRafRef.current = null

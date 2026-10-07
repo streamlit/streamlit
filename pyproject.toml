@@ -36,19 +36,23 @@ dependencies = ["streamlit"]
 [tool.uv]
 # The development toolchain is the default local environment.
 default-groups = ["dev"]
-# Keep this floor low enough for Dependabot's bundled uv.
-# Raise it when Dependabot ships a newer uv and we want a tighter floor.
+# Keep this floor compatible with Dependabot's bundled uv and downstream CI
+# consumers that create environments from this repository.
+# Check their compatibility before raising it.
 required-version = ">=0.11.8"
-# Resolve the development lock only for the currently supported Python range.
-environments = ["python_version < '3.15'"]
+# Resolve the development lock only for supported Python and runtime environments.
+environments = ["python_version < '3.15' and sys_platform != 'emscripten'"]
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
-# Explicit pandas version constraints by Python version:
-# - Python 3.10: use pandas 2.x (pandas 3.x requires Python >= 3.11)
-# - Python 3.11+: use pandas 3.x
+# Explicit version constraints by Python version:
+# - Python 3.10: pandas 2.x / websockets 16.x (pandas 3.x and websockets 17.x
+#   require Python >= 3.11)
+# - Python 3.11+: pandas 3.x / websockets 17.x
 override-dependencies = [
   "pandas>=1.4.0,<3; python_version < '3.11'",
   "pandas>=3.0.0,<4; python_version >= '3.11'",
+  "websockets>=12.0.0,<17; python_version < '3.11'",
+  "websockets>=17.0.0,<18; python_version >= '3.11'",
 ]
 
 [tool.uv.sources]
@@ -88,12 +92,12 @@ dev = [
   { include-group = "test" },
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.63",
+  "ty==0.0.84",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.16.0",
+  "ruff==0.16.10",
   # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy==2.3.0",
+  "mypy==2.4.0",
   # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
   # Streamlit still type-checks as Python 3.10.
   "numpy<2.5",
@@ -104,8 +108,6 @@ dev = [
   "twine",
   "wheel",
   "pytz",
-  # Used for updating emojis via: scripts/update_emojis.py
-  "emoji",
   # mypy type stubs
   "types-protobuf",
   "types-pytz",
@@ -155,7 +157,7 @@ test = [
   "httpx2",
   # Playwright and E2E test dependencies:
   # We pin playwright to an exact version to avoid new browser versions breaking our CI.
-  "playwright==1.61.0",
+  "playwright==1.63.0",
   "pytest-playwright",
   "pixelmatch",
   "pytest-xdist",
@@ -311,6 +313,9 @@ ignore = [
   "RUF105",  # Checks for legacy `# noqa` comments (migrates them to `# ruff:ignore`).
   "RUF106",  # Checks for rule codes in suppression comments (migrates to human-readable names).
   "RUF201",  # Checks for rule codes in config selectors (migrates to human-readable names).
+  # New code-less preview rule in ruff 0.16.5 (pedantic category). Autouse
+  # fixtures are intentional in our pytest and e2e test setup.
+  "pytest-fixture-autouse",
 ]
 extend-safe-fixes = ["TC002", "TC003"]
 
@@ -345,6 +350,7 @@ extend-safe-fixes = ["TC002", "TC003"]
   "RUF029",  # Allow async functions without await (test fixtures, mocks, ASGI callables).
   "RUF069",  # Allow float equality checks in test assertions.
   "S",       # Ignore bandit security rules (test code doesn't need security hardening).
+  "TID251",  # Allow direct hash constructors in test fixtures and FIPS policy probes.
   "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
@@ -357,6 +363,13 @@ extend-safe-fixes = ["TC002", "TC003"]
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
 ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"hashlib.md5".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.sha1".msg = "Use an approved constructor or streamlit.util.create_fast_hasher; only use SHA-1 directly when a protocol requires it."
+"hashlib.blake2b".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.blake2s".msg = "Use streamlit.util.create_fast_hasher for non-security hashing."
+"hashlib.new".msg = "Use a named approved constructor or streamlit.util.create_fast_hasher."
 
 [tool.ruff.lint.isort]
 known-first-party = ["streamlit", "shared", "tests", "e2e_playwright"]
@@ -475,15 +488,32 @@ ignore_missing_imports = true
 # ty Configuration
 # =============================================================================
 
+# Point the module-resolution root at ./lib (the real parent of the `streamlit`
+# package) rather than ./lib/streamlit. This ensures files resolve under their
+# true dotted paths (e.g. `streamlit.typing`), which is required so that
+# `lib/streamlit/typing.py` does NOT shadow the standard-library `typing` module
+# (a first-party top-level `typing` corrupts stdlib type resolution and panics ty).
 [tool.ty.environment]
-root = ["./lib/streamlit"]
+root = ["./lib"]
 
 [tool.ty.src]
-include = ["lib/streamlit", "e2e_playwright", "scripts"]
+include = [
+  "lib/streamlit",
+  # Public-API typing tests; the type checkers run them, not pytest.
+  "lib/tests/streamlit/typing",
+  "e2e_playwright",
+  "scripts",
+]
 exclude = [
   "e2e_playwright/compilation_error_dialog.py",
   "lib/streamlit/vendor/**",
 ]
+
+[tool.ty.analysis]
+# Altair mark_* methods annotate return type as Self. ty currently resolves
+# those as T@__call__, which falsely flags .encode/.add_params/etc. Treat
+# Altair as Any until ty correctly binds Self on Altair's MarkMethodMixin.
+replace-imports-with-any = ["altair.**"]
 
 [tool.ty.rules]
 unresolved-import = "ignore"

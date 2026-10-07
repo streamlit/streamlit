@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
-import type { IconSize } from "~lib/theme/types"
+import type { IconSizeProp } from "~lib/theme/types"
 
 import {
   StyledMaterialIcon,
-  StyledMaterialIconProps,
+  type StyledMaterialIconProps,
 } from "./styled-components"
 
 interface MaterialIconProps {
   iconName: string
   pack: string
-  size?: IconSize
+  size?: IconSizeProp
   color?: string
   margin?: string
   padding?: string
@@ -53,6 +53,9 @@ const MaterialFontIcon = ({
     <StyledMaterialIcon
       {...getDefaultProps(props)}
       data-testid={props.testid || "stIconMaterial"}
+      // Decorative by default; icon-only controls must name the control
+      // (aria-label / visually-hidden text), not this ligature span.
+      aria-hidden="true"
       // Prevent the icon text from being translated
       // this would break the icon display in the UI.
       // https://github.com/streamlit/streamlit/issues/10168

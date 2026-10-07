@@ -75,22 +75,22 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # key is required
-    form()  # type: ignore[call-arg]
+    form()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
 
     # key must be a string
-    form(123)  # type: ignore[arg-type]
+    form(123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # clear_on_submit must be a bool
-    form("my_form", clear_on_submit="yes")  # type: ignore[arg-type]
+    form("my_form", clear_on_submit="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # enter_to_submit must be a bool
-    form("my_form", enter_to_submit="no")  # type: ignore[arg-type]
+    form("my_form", enter_to_submit="no")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # border must be a bool
-    form("my_form", border="yes")  # type: ignore[arg-type]
+    form("my_form", border="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # width only accepts "stretch", "content", or int
-    form("my_form", width="invalid")  # type: ignore[arg-type]
+    form("my_form", width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # height only accepts "content", "stretch", or int
-    form("my_form", height="invalid")  # type: ignore[arg-type]
+    form("my_form", height="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

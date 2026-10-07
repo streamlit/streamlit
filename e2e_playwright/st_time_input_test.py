@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -32,11 +32,12 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
     get_time_input,
+    paste_into,
     type_time,
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 21
+NUM_TIME_INPUTS = 22
 
 
 def test_time_input_widget_rendering(
@@ -405,23 +406,6 @@ def test_time_input_query_param_step_not_snapped(page: Page, app_base_url: str):
 # --- Paste behavior tests ---
 
 
-def _paste_into(locator: Locator, text: str) -> None:
-    """Simulate a paste event with the given text on a Playwright locator."""
-    locator.evaluate(
-        """(el, text) => {
-            const dt = new DataTransfer();
-            dt.setData('text/plain', text);
-            const event = new ClipboardEvent('paste', {
-                bubbles: true,
-                cancelable: true,
-            });
-            Object.defineProperty(event, 'clipboardData', { value: dt });
-            el.dispatchEvent(event);
-        }""",
-        text,
-    )
-
-
 def test_paste_behavior(app: Page):
     """Test paste scenarios: valid formats, invalid with error/recovery, partial digits, empty field."""
     # --- Valid paste: HH:MM and HHMM ---
@@ -431,29 +415,29 @@ def test_paste_behavior(app: Page):
     minute_segment = time_display_1.locator("[role='spinbutton']").last
     hour_segment.click()
 
-    _paste_into(hour_segment, "14:30")
+    paste_into(hour_segment, "14:30")
     wait_for_app_run(app)
     expect_markdown(app, "Value 1: 14:30:00")
 
-    _paste_into(hour_segment, "2215")
+    paste_into(hour_segment, "2215")
     wait_for_app_run(app)
     expect_markdown(app, "Value 1: 22:15:00")
 
     # --- Invalid paste shows error, does not commit ---
-    _paste_into(hour_segment, "08:99")
+    paste_into(hour_segment, "08:99")
     expect(time_input_1.get_by_test_id("stTimeInputError")).to_be_visible()
     expect(hour_segment).to_have_text("08")
     expect(minute_segment).to_have_text("99")
     expect_markdown(app, "Value 1: 22:15:00")
 
     # --- Recovery via valid paste ---
-    _paste_into(hour_segment, "10:30")
+    paste_into(hour_segment, "10:30")
     wait_for_app_run(app)
     expect(time_input_1.get_by_test_id("stTimeInputError")).not_to_be_visible()
     expect_markdown(app, "Value 1: 10:30:00")
 
     # --- Arrow key revert after invalid paste ---
-    _paste_into(hour_segment, "08:99")
+    paste_into(hour_segment, "08:99")
     expect(time_input_1.get_by_test_id("stTimeInputError")).to_be_visible()
 
     minute_segment.click()
@@ -466,7 +450,7 @@ def test_paste_behavior(app: Page):
 
     # --- Partial digit into segment ---
     minute_segment.click()
-    _paste_into(minute_segment, "22")
+    paste_into(minute_segment, "22")
     wait_for_app_run(app)
     expect_markdown(app, "Value 1: 10:22:00")
 
@@ -477,12 +461,12 @@ def test_paste_behavior(app: Page):
     minute_segment_8 = time_display_8.locator("[role='spinbutton']").last
     hour_segment_8.click()
 
-    _paste_into(hour_segment_8, "16:45")
+    paste_into(hour_segment_8, "16:45")
     wait_for_app_run(app)
     expect_markdown(app, "Value 8: 16:45:00")
 
     minute_segment_8.click()
-    _paste_into(minute_segment_8, "30")
+    paste_into(minute_segment_8, "30")
     wait_for_app_run(app)
     expect_markdown(app, "Value 8: 16:30:00")
 
@@ -494,7 +478,7 @@ def test_paste_error_state_snapshot(app: Page, assert_snapshot: ImageCompareFunc
     hour_segment = time_display.locator("[role='spinbutton']").first
     hour_segment.click()
 
-    _paste_into(hour_segment, "25:00")
+    paste_into(hour_segment, "25:00")
 
     # Wait for error icon to appear
     expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
@@ -513,7 +497,7 @@ def test_paste_in_form_context(app: Page):
     hour_segment.click()
 
     # Paste a valid time
-    _paste_into(hour_segment, "14:30")
+    paste_into(hour_segment, "14:30")
 
     # Value should NOT commit until form is submitted (form widgets defer)
     expect(app.get_by_text("Form time:")).not_to_be_visible()
@@ -526,7 +510,7 @@ def test_paste_in_form_context(app: Page):
 
     # Test invalid paste in form doesn't block submission of prior valid value
     hour_segment.click()
-    _paste_into(hour_segment, "99:99")
+    paste_into(hour_segment, "99:99")
     expect(time_input.get_by_test_id("stTimeInputError")).to_be_visible()
 
     # Submit form — should still submit the last committed value (14:30)
@@ -610,3 +594,95 @@ def test_form_enter_to_submit(app: Page):
 
     # Must NOT happen: the non-enter form must not have been submitted.
     expect(app.get_by_text("Form time:", exact=True)).not_to_be_visible()
+
+
+def test_time_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on commit, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore time value:", "08:45:00")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_time="))
+
+    time_input = get_time_input(app, "Ignore change time input")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    spinbuttons = time_display.get_by_role("spinbutton")
+    hour_segment = spinbuttons.first
+    minute_segment = spinbuttons.nth(1)
+
+    # Typing without committing must not update the URL or Python.
+    type_time(time_display, "14", "30", commit=False)
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore time value:", "08:45:00")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_time="))
+
+    # Enter commits the buffered value without a rerun, and updates the URL.
+    minute_segment.press("Enter")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect_prefixed_markdown(app, "Ignore time value:", "08:45:00")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_time=14%3A30"))
+    expect(hour_segment).to_have_text("14")
+    expect(minute_segment).to_have_text("30")
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore time", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore time value: 14:30:00", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore time value: 14:30:00", exact=True)
+    ).to_be_visible()
+
+    # Type-then-click: blur commits the dirty value, then the button reruns.
+    type_time(time_display, "16", "00", commit=False)
+    app.get_by_role("button", name="Apply ignore time", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore time value: 16:00:00", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore time value: 16:00:00", exact=True)
+    ).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_time=16%3A00"))
+
+    # Arrow keys commit immediately without a rerun, and update the URL.
+    # step=900 (default): ArrowUp from 16:00 → 16:15.
+    minute_segment.click()
+    minute_segment.press("ArrowUp")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore time value: 16:00:00", exact=True)).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_time=16%3A15"))
+    expect(hour_segment).to_have_text("16")
+    expect(minute_segment).to_have_text("15")
+
+    # Valid paste commits immediately without a rerun, and updates the URL.
+    hour_segment.click()
+    paste_into(hour_segment, "14:30")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore time value: 16:00:00", exact=True)).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_time=14%3A30"))
+    expect(hour_segment).to_have_text("14")
+    expect(minute_segment).to_have_text("30")
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect_prefixed_markdown(app, "Ignore time value:", "14:30:00")
+    time_display = get_time_input(app, "Ignore change time input").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    spinbuttons = time_display.get_by_role("spinbutton")
+    expect(spinbuttons.first).to_have_text("14")
+    expect(spinbuttons.nth(1)).to_have_text("30")

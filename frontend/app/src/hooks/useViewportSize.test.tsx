@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
+import type { JSX } from "react"
+
 import { act, renderHook } from "@testing-library/react"
 
 import {
   mockTheme,
   ThemeContext,
+  type ThemeContextProps,
   ThemeProvider,
   WindowDimensionsProvider,
 } from "@streamlit/lib"
-import type { ThemeContextProps } from "@streamlit/lib"
 
 import { useViewportSize } from "./useViewportSize"
 

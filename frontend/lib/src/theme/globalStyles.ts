@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { css, SerializedStyles } from "@emotion/react"
+import { css, type SerializedStyles } from "@emotion/react"
 import { transparentize } from "color2k"
 
 import type { EmotionTheme } from "./types"
@@ -46,16 +46,6 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
   *::before,
   *::after {
     box-sizing: border-box;
-  }
-
-  // The BaseWeb layer host (see RootStyleProvider) is a full-viewport,
-  // fixed-position container with pointer-events: none so it never blocks
-  // clicks on the app underneath. Its children (BaseWeb dropdowns, popovers,
-  // calendars, etc.) must re-enable pointer events to remain interactive.
-  // TODO: Remove this once the migration away from BaseWeb is finished and
-  // the layer host is no longer needed.
-  [data-st-baseweb-layer-host="true"] > * {
-    pointer-events: auto;
   }
 
   // Body

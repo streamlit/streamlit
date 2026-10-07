@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { vi } from "vitest"
 
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 import * as utils from "~lib/util/utils"
 
 import {
   DynamicButtonLabel,
-  DynamicButtonLabelProps,
+  type DynamicButtonLabelProps,
 } from "./DynamicButtonLabel"
 
 const getProps = (
@@ -34,6 +34,7 @@ const getProps = (
 })
 
 describe("DynamicButtonLabel", () => {
+  mockEllipsizedLabels()
   it("renders without crashing", () => {
     render(<DynamicButtonLabel {...getProps()} />)
     const buttonLabel = screen.getByText("Button Label")
@@ -48,10 +49,43 @@ describe("DynamicButtonLabel", () => {
     expect(screen.queryByTestId("stIconEmoji")).toBeNull()
   })
 
-  it("renders icon with no label", () => {
-    render(<DynamicButtonLabel {...getProps({ label: "" })} />)
+  it("names an emoji-only button from its icon", () => {
+    render(
+      <button type="button">
+        <DynamicButtonLabel {...getProps({ label: "" })} />
+      </button>
+    )
     expect(screen.getByTestId("stIconEmoji")).toHaveTextContent("😀")
     expect(screen.queryByTestId("stMarkdownContainer")).toBeNull()
+    // Icon glyphs are aria-hidden; expose a name for icon-only controls.
+    expect(screen.getByRole("button", { name: "😀" })).toBeVisible()
+  })
+
+  it("exposes a visually-hidden name for icon-only material buttons", () => {
+    render(
+      <button type="button">
+        <DynamicButtonLabel
+          {...getProps({ icon: ":material/thumb_up:", label: "" })}
+        />
+      </button>
+    )
+    expect(screen.getByRole("button", { name: "thumb_up icon" })).toBeVisible()
+    expect(screen.getByTestId("stIconMaterial")).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    )
+  })
+
+  it("does not add a visually-hidden name when a visible label is present", () => {
+    render(
+      <button type="button">
+        <DynamicButtonLabel
+          {...getProps({ icon: ":material/thumb_up:", label: "Approve" })}
+        />
+      </button>
+    )
+    expect(screen.getByRole("button", { name: "Approve" })).toBeVisible()
+    expect(screen.queryByText("thumb_up icon")).not.toBeInTheDocument()
   })
 
   it("renders an emoji icon", () => {
@@ -71,29 +105,25 @@ describe("DynamicButtonLabel", () => {
   })
 
   it("positions the icon to the left by default", () => {
-    const { container } = render(<DynamicButtonLabel {...getProps()} />)
-    const wrapper = container.firstElementChild as HTMLElement
-    expect(wrapper).toBeDefined()
-    const mainLabel = wrapper.querySelector('[data-has-shortcut="false"]')
-    expect(mainLabel).toBeDefined()
-    expect(mainLabel?.firstElementChild).not.toHaveAttribute(
-      "data-testid",
-      "stMarkdownContainer"
-    )
+    render(<DynamicButtonLabel {...getProps()} />)
+    const markdown = screen.getByTestId("stMarkdownContainer")
+    const icon = screen.getByTestId("stIconEmoji")
+    // Icon precedes the markdown label in document order.
+    expect(
+      icon.compareDocumentPosition(markdown) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 
   it("renders the icon to the right when requested", () => {
-    const { container } = render(
-      <DynamicButtonLabel {...getProps({ iconPosition: "right" })} />
-    )
-    const wrapper = container.firstElementChild as HTMLElement
-    expect(wrapper).toBeDefined()
-    const mainLabel = wrapper.querySelector('[data-has-shortcut="false"]')
-    expect(mainLabel).toBeDefined()
-    expect(mainLabel?.firstElementChild).toHaveAttribute(
-      "data-testid",
-      "stMarkdownContainer"
-    )
+    render(<DynamicButtonLabel {...getProps({ iconPosition: "right" })} />)
+    const markdown = screen.getByTestId("stMarkdownContainer")
+    const icon = screen.getByTestId("stIconEmoji")
+    // Markdown precedes the icon in document order when iconPosition is right.
+    // (A display:contents wrapper around the markdown means firstElementChild
+    // is not the stMarkdownContainer itself.)
+    expect(
+      markdown.compareDocumentPosition(icon) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 
   it("renders shortcut text when provided", () => {
@@ -112,5 +142,89 @@ describe("DynamicButtonLabel", () => {
 
     expect(screen.getByText("Ctrl + N")).toBeInTheDocument()
     spy.mockRestore()
+  })
+
+  it("applies truncate styles to the label when wrap is false", () => {
+    render(<DynamicButtonLabel {...getProps({ wrap: false })} />)
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveStyle({
+      "text-overflow": "ellipsis",
+      "white-space": "nowrap",
+      "line-height": "inherit",
+    })
+    expect(screen.getByText("Button Label")).toHaveStyle({
+      "line-height": "inherit",
+    })
+  })
+
+  it("does not truncate the label by default (wrap=true)", () => {
+    render(<DynamicButtonLabel {...getProps()} />)
+    expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
+      "text-overflow": "ellipsis",
+    })
+  })
+
+  it("keeps the icon and shortcut visible when wrap is false", () => {
+    render(
+      <DynamicButtonLabel {...getProps({ wrap: false, shortcut: "ctrl+k" })} />
+    )
+    expect(screen.getByTestId("stIconEmoji")).toBeVisible()
+    expect(screen.getByText("Ctrl + K")).toBeVisible()
+    expect(screen.getByTestId("stMarkdownContainer")).toHaveTextContent(
+      "Button Label"
+    )
+  })
+
+  it("adds a native title tooltip with the full label when enabled", () => {
+    render(
+      <DynamicButtonLabel
+        {...getProps({ addTitleTooltip: true, wrap: false })}
+      />
+    )
+    expect(screen.getByTitle("Button Label")).toBeVisible()
+  })
+
+  it("uses the plain text of a Markdown label for the title", () => {
+    render(
+      <DynamicButtonLabel
+        {...getProps({
+          label: "**Bold** report",
+          addTitleTooltip: true,
+          wrap: false,
+        })}
+      />
+    )
+    // The title is the rendered plain text, not the raw Markdown source.
+    expect(screen.getByTitle("Bold report")).toBeVisible()
+    expect(screen.queryByTitle("**Bold** report")).not.toBeInTheDocument()
+  })
+
+  it("re-syncs the title when markdown DOM content changes asynchronously", async () => {
+    render(
+      <DynamicButtonLabel
+        {...getProps({
+          label: "First label",
+          addTitleTooltip: true,
+          wrap: false,
+        })}
+      />
+    )
+    expect(screen.getByTitle("First label")).toBeVisible()
+
+    // Simulate a late Markdown plugin paint (e.g. emoji shortcodes) that
+    // replaces skeleton/empty content without changing React props.
+    const markdown = screen.getByTestId("stMarkdownContainer")
+    const textHost = markdown.querySelector("p") ?? markdown
+    textHost.textContent = "Updated plain text"
+
+    await waitFor(() => {
+      expect(screen.getByTitle("Updated plain text")).toBeVisible()
+    })
+    expect(screen.queryByTitle("First label")).not.toBeInTheDocument()
+  })
+
+  it("does not set a title by default", () => {
+    render(<DynamicButtonLabel {...getProps()} />)
+    expect(screen.queryByTitle("Button Label")).not.toBeInTheDocument()
   })
 })

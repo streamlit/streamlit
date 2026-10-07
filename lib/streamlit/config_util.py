@@ -665,8 +665,6 @@ def _load_theme_file(
 
     except (
         StreamlitInvalidThemeError,
-        StreamlitInvalidThemeOptionError,
-        StreamlitInvalidThemeSectionError,
         FileNotFoundError,
     ):
         # Re-raise these specific exceptions
@@ -873,8 +871,6 @@ def process_theme_inheritance(
 
     except (
         StreamlitInvalidThemeError,
-        StreamlitInvalidThemeOptionError,
-        StreamlitInvalidThemeSectionError,
         FileNotFoundError,
     ):
         # Re-raise expected user errors as-is to preserve specific error messages

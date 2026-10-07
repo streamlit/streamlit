@@ -18,10 +18,11 @@ import type {
   AxiosProgressEvent,
   AxiosRequestConfig,
   AxiosResponse,
+  RawAxiosRequestHeaders,
 } from "axios"
 import { getLogger } from "loglevel"
 
-import { IAppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import {
   buildHttpUri,
   getCookie,
@@ -30,7 +31,7 @@ import {
   StreamlitConfig,
 } from "@streamlit/utils"
 
-import { FileUploadClientConfig, StreamlitEndpoints } from "./types"
+import type { FileUploadClientConfig, StreamlitEndpoints } from "./types"
 import { parseUriIntoBaseParts } from "./utils"
 
 const LOG = getLogger("DefaultStreamlitEndpoints")
@@ -244,7 +245,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
   /** Construct a URL for an app page in a multi-page app. */
   public buildAppPageURL(
     pageLinkBaseURL: string | undefined,
-    page: IAppPage
+    page: AppPage.$Properties
   ): string {
     const urlPath = page.urlPathname as string
     const navigateTo = page.isDefault ? "" : urlPath
@@ -379,10 +380,10 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
    * CSRF headers if client has CSRF protection enabled.
    * Uses dynamic import to load axios only when needed (file upload/delete operations).
    */
-  private async csrfRequest<T = unknown, R = AxiosResponse<T>>(
+  private async csrfRequest<T = unknown>(
     url: string,
     params: AxiosRequestConfig
-  ): Promise<R> {
+  ): Promise<AxiosResponse<T>> {
     params.url = url
 
     if (this.csrfEnabled) {
@@ -390,7 +391,7 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       if (notNullOrUndefined(xsrfCookie)) {
         params.headers = {
           "X-Xsrftoken": xsrfCookie,
-          ...params.headers,
+          ...toPlainRequestHeaders(params.headers),
         }
         params.withCredentials = true
       }
@@ -398,6 +399,22 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
 
     // Dynamic import to avoid loading axios in the entry bundle
     const { default: axios } = await import("axios")
-    return axios.request<T, R>(params)
+    return axios.request<T>(params)
   }
+}
+
+/**
+ * Copy axios request headers into a plain object so object-spread does not
+ * copy an AxiosHeaders class instance. Use `Object.entries` rather than
+ * `toJSON()`, which omits `false`/`null` sentinels axios uses to skip later
+ * defaults such as `Content-Type`.
+ */
+function toPlainRequestHeaders(
+  headers: AxiosRequestConfig["headers"]
+): RawAxiosRequestHeaders {
+  if (!headers) {
+    return {}
+  }
+
+  return Object.fromEntries(Object.entries(headers))
 }

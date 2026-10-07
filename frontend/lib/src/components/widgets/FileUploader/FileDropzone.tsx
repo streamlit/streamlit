@@ -18,7 +18,7 @@ import { memo } from "react"
 
 import Dropzone, {
   type DropzoneInputProps,
-  FileRejection,
+  type FileRejection,
 } from "react-dropzone"
 
 import BaseButton, {

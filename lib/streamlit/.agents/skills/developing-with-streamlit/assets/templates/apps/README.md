@@ -145,7 +145,7 @@ def metric_card(metric_name: str):
         st.markdown(f"**{metric_name}**")  # Stays stable while the body loads
         with st.skeleton(height=300):
             data = load_metric(metric_name)  # Cached; loads in parallel
-            st.line_chart(data)
+            st.line_chart(data, alt=f"{metric_name} over time")
 ```
 
 Keep `st.dialog` / `st.switch_page` and writes to containers created *outside*
