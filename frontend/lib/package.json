@@ -93,7 +93,7 @@
     "mermaid": "^11.17.2",
     "moment": "^2.31.0",
     "moment-duration-format": "^2.3.2",
-    "moment-timezone": "^0.6.4",
+    "moment-timezone": "^0.6.5",
     "native-file-system-adapter": "^3.0.1",
     "node-emoji": "^2.2.0",
     "numbro": "^2.5.0",
