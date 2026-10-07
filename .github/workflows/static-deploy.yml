@@ -31,8 +31,11 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.STATIC_S3_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.STATIC_S3_SECRET_KEY }}
         run: |
-          # Install awscli via uv:
-          uv pip install awscli==1.37.6
+          # Use the AWS CLI v2 preinstalled on GitHub-hosted runners.
+          # Do not pip-install awscli: that pulls an unverified transitive graph
+          # into the same step that holds static S3 credentials (CWE-494).
+          command -v aws
+          aws --version
 
           # Remove old build files from static (which have hashes in their names)
           aws s3 rm s3://notebooks.streamlit.io/static --recursive

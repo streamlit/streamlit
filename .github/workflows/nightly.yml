@@ -190,8 +190,11 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.CORE_PREVIEWS_S3_SECRET_KEY }}
         run: |
-          # Install awscli via pip/uv:
-          uv pip install awscli==1.37.6
+          # Use the AWS CLI v2 preinstalled on GitHub-hosted runners.
+          # Do not pip-install awscli: that pulls an unverified transitive graph
+          # into the same step that holds static S3 credentials (CWE-494).
+          command -v aws
+          aws --version
 
           cd lib/dist
           export WHEELFILE="$(ls -t *.whl | head -n 1)"

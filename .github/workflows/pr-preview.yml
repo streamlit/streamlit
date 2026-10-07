@@ -198,8 +198,11 @@ jobs:
         # To create a consistent location for the release/demo whl file, we need a
         # stagnent version number (streamlit-11.11.11)
         run: |
-          # Install awscli via uv:
-          uv pip install awscli==1.37.6
+          # Use the AWS CLI v2 preinstalled on GitHub-hosted runners.
+          # Do not pip-install awscli: that pulls an unverified transitive graph
+          # into the same step that holds static S3 credentials (CWE-494).
+          command -v aws
+          aws --version
 
           cd lib/dist
           export WHEELFILE="$(ls -t *.whl | head -n 1)"
