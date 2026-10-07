@@ -33,7 +33,7 @@ from click.testing import CliRunner
 from streamlit.web import cli, skills
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator, Iterator
 
 
 def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
@@ -59,7 +59,7 @@ _needs_permission_bits = pytest.mark.skipif(
 
 
 @contextmanager
-def _unreadable(*dirs: Path) -> Iterator[None]:
+def _unreadable(*dirs: Path) -> Generator[None, None, None]:
     """Set ``dirs`` to mode 0o000 so ``lstat()`` fails, then restore 0o700.
 
     Restores even on test failure: pytest cannot clean up a 0o000 ``tmp_path``.

@@ -22,7 +22,7 @@ import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { BaseButtonKind } from "~lib/components/shared/BaseButton/styled-components"
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 import { iconSizes } from "~lib/theme/primitives/iconSizes"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -289,6 +289,8 @@ describe("MenuButton widget", () => {
   })
 
   describe("wrap=false", () => {
+    mockEllipsizedLabels()
+
     it("keeps the chevron visible and sets the full label as a native title", () => {
       const props = getProps({ label: "A very long menu label", wrap: false })
       render(<MenuButton {...props} />)

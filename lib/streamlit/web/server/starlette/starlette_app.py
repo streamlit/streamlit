@@ -66,7 +66,7 @@ from streamlit.web.server.starlette.starlette_websocket import create_websocket_
 
 if TYPE_CHECKING:
     import asyncio
-    from collections.abc import AsyncIterator, Callable, Mapping, Sequence
+    from collections.abc import AsyncGenerator, Callable, Mapping, Sequence
     from contextlib import AbstractAsyncContextManager
     from typing import TypeAlias
 
@@ -281,7 +281,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     # Define lifespan context manager for startup/shutdown events
     @asynccontextmanager
-    async def _lifespan(_app: Starlette) -> AsyncIterator[None]:
+    async def _lifespan(_app: Starlette) -> AsyncGenerator[None, None]:
         _set_anyio_thread_limiter()
         # Startup
         await runtime.start()
@@ -734,7 +734,7 @@ class App:
         )
 
     @asynccontextmanager
-    async def _combined_lifespan(self, _app: Starlette) -> AsyncIterator[None]:
+    async def _combined_lifespan(self, _app: Starlette) -> AsyncGenerator[None, None]:
         """Combine Streamlit runtime lifecycle with user's lifespan.
 
         The runtime must already be created (via _create_runtime) before this

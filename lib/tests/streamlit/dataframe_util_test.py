@@ -18,7 +18,7 @@ import enum
 import os
 import sqlite3
 import unittest
-from collections.abc import Iterator, Mapping
+from collections.abc import Generator, Iterator, Mapping
 from contextlib import closing, contextmanager
 from datetime import date
 from decimal import Decimal
@@ -1819,7 +1819,7 @@ class _FakeXarrayDataArray:
 @contextmanager
 def _as_polars(
     *, dataframe: bool = False, series: bool = False, lazyframe: bool = False
-) -> Iterator[None]:
+) -> Generator[None, None, None]:
     """Treat objects as the given Polars type for conversion helpers."""
     with (
         patch.object(dataframe_util, "is_polars_dataframe", return_value=dataframe),

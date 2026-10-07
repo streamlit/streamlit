@@ -21,7 +21,7 @@ from typing_extensions import assert_type
 # Perform type checking tests for st.App. These are checked by mypy and ty,
 # never executed at runtime.
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable
+    from collections.abc import AsyncGenerator, Callable
     from contextlib import AbstractAsyncContextManager, asynccontextmanager
     from pathlib import Path
     from typing import Any
@@ -67,11 +67,11 @@ if TYPE_CHECKING:
     def maybe_suppress_error(exc: Exception) -> bool | None: ...
 
     @asynccontextmanager
-    async def lifespan_with_state(app: App) -> AsyncIterator[dict[str, Any]]:
+    async def lifespan_with_state(app: App) -> AsyncGenerator[dict[str, Any], None]:
         yield {"ready": True}
 
     @asynccontextmanager
-    async def lifespan_none(app: App) -> AsyncIterator[None]:
+    async def lifespan_none(app: App) -> AsyncGenerator[None, None]:
         yield None
 
     # =====================================================================

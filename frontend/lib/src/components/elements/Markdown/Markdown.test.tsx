@@ -36,7 +36,7 @@ import { Direction } from "~lib/components/core/Layout/utils"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Markdown, { type MarkdownProps } from "./Markdown"
@@ -293,6 +293,8 @@ describe("Markdown element with help", () => {
 })
 
 describe("Markdown wrap", () => {
+  mockEllipsizedLabels()
+
   it("does not truncate by default", () => {
     render(<Markdown {...getProps()} />)
     expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({

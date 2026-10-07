@@ -64,17 +64,22 @@ from streamlit.testing.v1.element_tree import (
     Feedback,
     FileUploader,
     Header,
+    Help,
+    Html,
     Image,
     Info,
     InitialValue,
     Json,
     Latex,
+    LinkButton,
     Markdown,
     MenuButton,
     Metric,
     Multiselect,
     Node,
     NumberInput,
+    PageLink,
+    Progress,
     Radio,
     Selectbox,
     SelectSlider,
@@ -293,6 +298,9 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+        # Page hash at the end of the previous run. A new PagesManager starts at
+        # "", and ScriptRunner treats that mismatch as a page change.
+        self._finished_page_script_hash = ""
         # Pages registered by the most recent run, used to resolve switch_page()
         # against st.navigation hashes (which follow url_path, not filename).
         self._registered_pages: dict[PageHash, PageInfo] = {}
@@ -506,6 +514,7 @@ class AppTest:
         pages_manager = PagesManager(
             self._script_path, script_cache, setup_watcher=False
         )
+        pages_manager.set_current_page_script_hash(self._finished_page_script_hash)
 
         saved_secrets: Secrets = st.secrets
         # Only modify global secrets stuff if we have been given secrets
@@ -527,9 +536,15 @@ class AppTest:
         self._register_uploaded_files(script_runner)
 
         with patch_config_options({"global.appTest": True}):
+            # switch_page() sets _page_hash to the destination. An empty
+            # request stays on the page the previous run finished on. Sending
+            # "" would substitute the main-script hash, which does not match
+            # the url-path hash a multipage app finished on.
+            requested_page_hash = self._page_hash or self._finished_page_script_hash
             self._tree = script_runner.run(
-                widget_state, self.query_params, timeout, self._page_hash
+                widget_state, self.query_params, timeout, requested_page_hash
             )
+            self._finished_page_script_hash = pages_manager.current_page_script_hash
             self._tree._runner = self
             # A failed run that never reaches st.navigation leaves a
             # main-page-only fallback. Keep the last navigation registry in
@@ -833,16 +848,15 @@ class AppTest:
         return self._tree.chat_input
 
     @property
-    def chat_message(self) -> Sequence[ChatMessage]:
-        """Sequence of all ``st.chat_message`` elements.
+    def chat_message(self) -> BlockList[ChatMessage]:
+        """Sequence of all ``st.chat_message`` blocks.
 
         Returns
         -------
-        Sequence of ChatMessage
-            Sequence of all ``st.chat_message`` elements. Individual elements can be
-            accessed from an ElementList by index (order on the page). For
-            example, ``at.chat_message[0]`` for the first element.  ChatMessage
-            is an extension of the Block class.
+        BlockList of ChatMessage
+            Individual messages can be accessed by index. For example,
+            ``at.chat_message[0]``. ``st.chat_message`` has no key.
+            ChatMessage is an extension of the Block class.
         """
         return self._tree.chat_message
 
@@ -889,7 +903,7 @@ class AppTest:
         return self._tree.color_picker
 
     @property
-    def columns(self) -> Sequence[Column]:
+    def columns(self) -> BlockList[Column]:
         """Sequence of all columns within ``st.columns`` elements.
 
         Each column within a single ``st.columns`` will be returned as a
@@ -897,16 +911,15 @@ class AppTest:
 
         Returns
         -------
-        Sequence of Column
-            Sequence of all columns within ``st.columns`` elements. Individual
-            columns can be accessed from an ElementList by index (order on the
-            page). For example, ``at.columns[0]`` for the first column. Column
-            is an extension of the Block class.
+        BlockList of Column
+            Individual columns can be accessed by index. For example,
+            ``at.columns[0]``. ``st.columns`` has no key. Column is an
+            extension of the Block class.
         """
         return self._tree.columns
 
     @property
-    def container(self) -> BlockList:
+    def container(self) -> BlockList[Block]:
         """Sequence of all ``st.container`` blocks, including horizontal containers.
 
         The implicit row that ``st.columns`` creates is not included.
@@ -1046,7 +1059,7 @@ class AppTest:
         return self._tree.file_uploader
 
     @property
-    def form(self) -> BlockList:
+    def form(self) -> BlockList[Block]:
         """Sequence of all ``st.form`` blocks.
 
         Returns
@@ -1078,16 +1091,15 @@ class AppTest:
         return self._tree.form_submit_button
 
     @property
-    def expander(self) -> Sequence[Expander]:
-        """Sequence of all ``st.expander`` elements.
+    def expander(self) -> BlockList[Expander]:
+        """Sequence of all ``st.expander`` blocks.
 
         Returns
         -------
-        Sequence of Expandable
-            Sequence of all ``st.expander`` elements. Individual elements can be
-            accessed from a Sequence by index (order on the page). For
-            example, ``at.expander[0]`` for the first element. Expandable is an
-            extension of the Block class.
+        BlockList of Expander
+            Individual expanders can be accessed by index or key. For example,
+            ``at.expander[0]`` or ``at.expander(key="details")``. Expander is
+            an extension of the Block class.
         """
         return self._tree.expander
 
@@ -1104,6 +1116,34 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.header
+
+    @property
+    def help(self) -> ElementList[Help]:
+        """Sequence of all ``st.help`` elements.
+
+        Returns
+        -------
+        ElementList of Help
+            Sequence of all ``st.help`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.help[0]`` for the first element. Help is an
+            extension of the Element class.
+        """
+        return self._tree.help
+
+    @property
+    def html(self) -> ElementList[Html]:
+        """Sequence of all ``st.html`` elements.
+
+        Returns
+        -------
+        ElementList of Html
+            Sequence of all ``st.html`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.html[0]`` for the first element. Html is an
+            extension of the Element class.
+        """
+        return self._tree.html
 
     @property
     def image(self) -> ElementList[Image]:
@@ -1160,6 +1200,21 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.latex
+
+    @property
+    def link_button(self) -> ElementList[LinkButton]:
+        """Sequence of all ``st.link_button`` elements.
+
+        Returns
+        -------
+        ElementList of LinkButton
+            Sequence of all ``st.link_button`` elements. Individual elements
+            can be accessed from an ElementList by index (order on the page)
+            or key. For example, ``at.link_button[0]`` for the first element
+            or ``at.link_button(key="docs")`` for an element with a given key.
+            LinkButton is an extension of the Element class.
+        """
+        return self._tree.link_button
 
     @property
     def markdown(self) -> ElementList[Markdown]:
@@ -1230,6 +1285,34 @@ class AppTest:
             ``at.number_input(key="my_key")`` for a widget with a given key.
         """
         return self._tree.number_input
+
+    @property
+    def page_link(self) -> ElementList[PageLink]:
+        """Sequence of all ``st.page_link`` elements.
+
+        Returns
+        -------
+        ElementList of PageLink
+            Sequence of all ``st.page_link`` elements. Individual elements can
+            be accessed from an ElementList by index (order on the page). For
+            example, ``at.page_link[0]`` for the first element. PageLink is an
+            extension of the Element class.
+        """
+        return self._tree.page_link
+
+    @property
+    def progress(self) -> ElementList[Progress]:
+        """Sequence of all ``st.progress`` elements.
+
+        Returns
+        -------
+        ElementList of Progress
+            Sequence of all ``st.progress`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.progress[0]`` for the first element. Progress is an
+            extension of the Element class.
+        """
+        return self._tree.progress
 
     @property
     def radio(self) -> WidgetList[Radio[Any]]:
@@ -1330,16 +1413,15 @@ class AppTest:
         return self._tree.success
 
     @property
-    def status(self) -> Sequence[Status]:
-        """Sequence of all ``st.status`` elements.
+    def status(self) -> BlockList[Status]:
+        """Sequence of all ``st.status`` blocks.
 
         Returns
         -------
-        Sequence of Status
-            Sequence of all ``st.status`` elements. Individual elements can be
-            accessed from a Sequence by index (order on the page). For
-            example, ``at.status[0]`` for the first element. Status is an
-            extension of the Block class.
+        BlockList of Status
+            Individual status containers can be accessed by index. For
+            example, ``at.status[0]``. ``st.status`` has no key. Status is
+            an extension of the Block class.
         """
         return self._tree.status
 
@@ -1358,7 +1440,7 @@ class AppTest:
         return self._tree.table
 
     @property
-    def tabs(self) -> Sequence[Tab]:
+    def tabs(self) -> BlockList[Tab]:
         """Sequence of all tabs within ``st.tabs`` elements.
 
         Each tab within a single ``st.tabs`` will be returned as a separate Tab
@@ -1369,11 +1451,11 @@ class AppTest:
 
         Returns
         -------
-        Sequence of Tab
-            Sequence of all tabs within ``st.tabs`` elements. Individual
-            tabs can be accessed from an ElementList by index (order on the
-            page). For example, ``at.tabs[0]`` for the first tab. Tab is an
-            extension of the Block class.
+        BlockList of Tab
+            Individual tab panels can be accessed by index. For example,
+            ``at.tabs[0]``. A ``key`` on ``st.tabs`` belongs to the tab
+            container, not each panel; look it up with ``get_by_key``. Tab
+            is an extension of the Block class.
         """
         return self._tree.tabs
 
@@ -1511,8 +1593,8 @@ class AppTest:
         element_type: str
             An ``AppTest`` collection name such as ``"button"``,
             ``"datetime_input"``, ``"pills"``, ``"form"``, or ``"tabs"``.
-            Internal node type names such as ``"date_time_input"`` also work.
-            ``"help"`` selects ``st.help`` elements (node type ``help_info``).
+            Internal node type names such as ``"date_time_input"`` and
+            ``"help_info"`` also work.
             ``"form_submit_button"`` selects submit buttons inside forms.
 
         Returns

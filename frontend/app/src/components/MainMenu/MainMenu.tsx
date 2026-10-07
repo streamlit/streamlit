@@ -950,7 +950,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
 
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open: isMenuOpen,
     placement: "bottom-end",
     offsetPx: convertRemToPx(theme.spacing.twoXS),
@@ -993,8 +993,8 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: isMenuOpen,
     onClose: closeMenu,
-    floatingSetFn: refs.setFloating,
-    referenceSetFn: refs.setReference,
+    floatingSetFn: setFloating,
+    referenceSetFn: setReference,
   })
 
   const setTriggerAndReferenceRef = useCallback(

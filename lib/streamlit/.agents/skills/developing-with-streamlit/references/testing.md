@@ -98,12 +98,25 @@ Widgets, keyed display elements, and keyed containers are addressable by index (
 at.selectbox(key="status").select("Active").run()
 at.button(key="submit").click().run()
 at.container(key="filters").text_input[0].set_value("q").run()
+at.expander(key="details")  # keyed lookup, like container
 at.get_by_key("filters")  # unique key, any type
 ```
+
+`st.tabs(..., key=)` stores that key on the tab container, not on the panels in `at.tabs`. Use `at.get_by_key("sections")`. `at.tabs("sections")` raises `KeyError`.
 
 Do not `set_value`, `click`, or otherwise update a disabled widget — that raises `AppTestError` (from `streamlit.testing.v1`), matching a browser user who cannot interact with it.
 
 The same `AppTest` instance keeps fragment registrations across `.run()` calls, so a callback can target `@st.fragment(key=...)` registered on an earlier run.
+
+### Forms
+
+Widgets inside `st.form` commit only when that form's submit button is clicked. Stage values with `set_value`, then click the submit button before calling `.run()`; a `.run()` without the click discards the staged values. `at.form_submit_button` lists only buttons inside a form (they also appear in `at.button`). `at.form("my_form")` returns the block created by `st.form("my_form")`.
+
+```python
+at.text_input[0].set_value("Ada")
+at.checkbox[0].check()
+at.form_submit_button[0].click().run()
+```
 
 ## Asserting on results
 
@@ -123,6 +136,20 @@ assert not at.success  # no st.success rendered
 assert at.warning[0].value == "Low balance"
 ```
 
+`st.progress`, `st.html`, `st.help`, `st.space`, `st.link_button`, and `st.page_link` are read-only lists. Assert on what the script produced; `.set_value()` and `.click()` raise `AppTestError`. `.click()` does not open a link-button URL or follow a page link. Switch pages with `AppTest.switch_page`.
+
+```python
+assert at.progress[0].value == 25  # st.progress(0.25) is stored as an int from 0 to 100
+assert at.progress[0].text == "halfway"
+assert at.html[0].value == "<b>hi</b>"
+assert at.help[0].value == "'Hello'"
+assert at.space[0].value == "small"  # st.space() with no size; .size is the same value
+assert at.link_button[0].value == "Docs"  # the label; .url is the target
+assert at.page_link[0].value == "Example"  # the label, or the inferred page title
+```
+
+`at.help[i].value` keeps a readable repr (`"'Hello'"`, `Point(1, 2)`). When `st.help` stored a parameter-list signature, `.value` is the expression passed to `st.help` (`st.help(len)` is `"len"`, not `"builtins.len(obj, /)"`). The raw stored text is `.proto.value`, and the docstring is `.doc_string`. The node type is `help_info`; `at.help` and `get("help")` both find these elements.
+
 ### Assert the app didn't crash
 
 `at.exception` collects any uncaught exception surfaced by the script. Check it after every run:
@@ -140,6 +167,16 @@ assert not at.exception
 at.session_state["user"] = "alice"  # seed before running
 at.run()
 assert at.session_state["count"] == 1
+```
+
+Seed `at.query_params` the same way. After `.run()`, a single value is a `str` (a one-element list collapses to `str`), a blank value stays `""`, and repeated keys stay `list[str]`. Repeated `st.query_params` values are kept. Item access and `to_dict()` return only the last value; `get_all(key)` returns the full list. `AppTest.query_params` keeps lists.
+
+```python
+at.query_params["status"] = "open"
+at.query_params["tag"] = ["a", "b"]
+at.run()
+assert at.query_params["status"] == "open"
+assert at.query_params["tag"] == ["a", "b"]
 ```
 
 ## Using pytest
@@ -204,7 +241,7 @@ def test_status_filter():
 
 `AppTest` covers widget interaction and the elements your script produces, but it does **not** reproduce every front-end interaction. In particular, **selections on `st.dataframe` and charts** (click-to-select rows, Altair/Plotly selection events) can't be triggered through `AppTest` — there's no setter for them, so you can't assert on what a user's on-chart selection would return. The same applies to anything that only exists in the rendered browser: custom-component JavaScript, CSS, and scroll/resize behavior. Cover those with Playwright e2e tests instead.
 
-Elements that AppTest does not fully model (`st.progress`, `st.html`, `st.balloons`, `st.page_link`, and similar) do not break `.run()`. Inspect those nodes with `at.get("<type>")`; `.value` returns the element's main proto field where one exists (for example `40` for `st.progress(40)`) or `None` otherwise. Calling `.set_value()` or `.click()` on those nodes raises `AppTestError` — those names can exist as proto fields, but they are not interaction methods. For a keyed widget AppTest doesn't model, assign through `at.session_state` or use Playwright.
+Elements that AppTest does not fully model (`st.balloons`, `st.snow`, and similar) do not break `.run()`. Inspect those nodes with `at.get("<type>")`; `.value` returns the element's main proto field where one exists or `None` otherwise. Calling `.set_value()` or `.click()` on those nodes raises `AppTestError` — those names can exist as proto fields, but they are not interaction methods. For a keyed widget AppTest doesn't model, assign through `at.session_state` or use Playwright.
 
 ## References
 

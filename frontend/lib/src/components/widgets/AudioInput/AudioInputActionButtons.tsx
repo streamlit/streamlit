@@ -72,30 +72,30 @@ export interface AudioInputActionButtonProps {
   isUploading: boolean
   isError: boolean
   recordingUrlExists: boolean
-  startRecording(): void
-  stopRecording(): void
-  onClickPlayPause(): void
-  onClear(): void
+  startRecording: () => void
+  stopRecording: () => void
+  onClickPlayPause: () => void
+  onClear: () => void
 }
 
 interface AudioInputStopRecordingButtonProps {
   disabled: boolean
-  stopRecording(): void
+  stopRecording: () => void
 }
 
 interface AudioInputPlayPauseButtonProps {
   disabled: boolean
   isPlaying: boolean
-  onClickPlayPause(): void
+  onClickPlayPause: () => void
 }
 
 interface AudioInputStartRecordingButtonProps {
   disabled: boolean
-  startRecording(): void
+  startRecording: () => void
 }
 
 interface AudioInputResetButtonProps {
-  onClick(): void
+  onClick: () => void
 }
 
 const AudioInputStopRecordingButton: React.FC<

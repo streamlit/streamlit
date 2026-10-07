@@ -81,6 +81,14 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   cursor: "text",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.inputWidget,
+  // React Aria's `HiddenDateInput` is visually hidden, but Chromium and Firefox
+  // can still paint `::-webkit-calendar-picker-indicator` inside the field.
+  "& input[type='date'], & input[type='datetime-local']": {
+    appearance: "none",
+    "&::-webkit-calendar-picker-indicator": {
+      display: "none",
+    },
+  },
   "&:focus-within": {
     borderColor: getBorderColor(theme.colors, true),
     outline: "none",
@@ -206,6 +214,13 @@ export const StyledClearButton = styled.button(({ theme }) => ({
     borderRadius: theme.radii.sm,
   },
 }))
+
+/**
+ * Calendar toggle button. Same icon-button styles as the clear control
+ * (including disabled); kept as a separate export so calendar and clear stay
+ * distinct components.
+ */
+export const StyledCalendarButton = styled(StyledClearButton)({})
 
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
 const visuallyHiddenStyle = {

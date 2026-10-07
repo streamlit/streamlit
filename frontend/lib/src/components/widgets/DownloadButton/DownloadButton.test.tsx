@@ -240,6 +240,16 @@ describe("DownloadButton widget", () => {
     )
   })
 
+  it("does not check the source url when a callable download has no url", () => {
+    const props = getProps({
+      url: "",
+      deferredFileId: undefined,
+    })
+    render(<DownloadButton {...props} />)
+
+    expect(props.endpoints.checkSourceUrlResponse).not.toHaveBeenCalled()
+  })
+
   describe("Deferred downloads", () => {
     it("renders deferred download button", () => {
       const props = getProps({

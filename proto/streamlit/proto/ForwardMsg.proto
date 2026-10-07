@@ -103,12 +103,7 @@ message ForwardMsg {
     BackendOperationResponse backend_operation_response = 27;
   }
 
-  // The ID of the last BackMsg that we received before sending this
-  // ForwardMsg. As its name suggests, this field should only be used for
-  // testing.
-  string debug_last_backmsg_id = 17;
-
-  reserved 7, 8, 16, 25;
+  reserved 7, 8, 16, 17, 25;
   // Next: 29
 }
 

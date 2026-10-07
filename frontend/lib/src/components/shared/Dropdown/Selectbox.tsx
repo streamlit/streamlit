@@ -255,7 +255,8 @@ const Selectbox: FC<Props> = ({
     }
   }, [theme.spacing.twoXS, isInSidebar])
 
-  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
+  const { floatingStyles, setFloating, setReference } =
+    useFloatingOverlay(overlayOptions)
 
   // Locally committed value (last value sent to Streamlit). Re-synced from
   // propValue when the backend pushes an update (form-clear, session state, etc.).
@@ -634,7 +635,7 @@ const Selectbox: FC<Props> = ({
             openRef={openDropdownRef}
             closeRef={closeDropdownRef}
           />
-          <StyledGroup ref={refs.setReference}>
+          <StyledGroup ref={setReference}>
             <StyledInput
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
@@ -670,7 +671,7 @@ const Selectbox: FC<Props> = ({
             </StyledOpenButton>
           </StyledGroup>
           <StyledPopover
-            ref={refs.setFloating}
+            ref={setFloating}
             data-testid="stSelectboxVirtualDropdown"
             placement="bottom left"
             isNonModal

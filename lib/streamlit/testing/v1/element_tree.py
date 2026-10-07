@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import builtins
+import keyword
 import textwrap
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
@@ -80,12 +81,17 @@ if TYPE_CHECKING:
     from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Heading_pb2 import Heading as HeadingProto
+    from streamlit.proto.Help_pb2 import Help as HelpProto
+    from streamlit.proto.Html_pb2 import Html as HtmlProto
     from streamlit.proto.Image_pb2 import ImageList as ImageListProto
     from streamlit.proto.Json_pb2 import Json as JsonProto
+    from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
     from streamlit.proto.MenuButton_pb2 import MenuButton as MenuButtonProto
     from streamlit.proto.Metric_pb2 import Metric as MetricProto
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
+    from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
+    from streamlit.proto.Progress_pb2 import Progress as ProgressProto
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
     from streamlit.proto.Space_pb2 import Space as SpaceProto
@@ -105,17 +111,219 @@ T = TypeVar("T")
 # Public ``get()`` names that are not the node ``type`` string.
 _GET_TYPE_ALIASES: dict[str, str] = {
     "datetime_input": "date_time_input",
-    "columns": "column",
+    # Public collection name. The node type stays the proto field name.
     "help": "help_info",
-    "tabs": "tab",
 }
+
+
+# Proto type strings for callables and classes. ``name=value`` text is a
+# signature for these types. Instances use the class name, so a dataclass
+# repr such as ``Point(x=1, y=2)`` stays a value.
+_HELP_SIGNATURE_TYPES = frozenset(
+    {
+        "BoundCachedFunc",
+        "CachedFunc",
+        "builtin_function_or_method",
+        "class",
+        "classmethod",
+        "classmethod_descriptor",
+        "function",
+        "method",
+        "method_descriptor",
+        "staticmethod",
+        "wrapper_descriptor",
+    }
+)
+
+
+def _is_help_signature(value: str, object_type: str) -> bool:
+    """Return whether ``value`` is an unquoted ``module.name(params)`` signature.
+
+    ``st.help`` stores that form for callables, classes, and instances whose
+    repr is not human-readable. Quoted strings and readable reprs such as
+    ``Point(1, 2)``, ``Coordinate(x, y)``, and ``NamedPoint(x=1, y=2)`` are
+    values. A positional parameter list is a signature when it is
+    module-qualified or the proto type is a callable or class. ``name=value``
+    fields are a signature only for callable and class proto types.
+    """
+    parsed = _help_signature_parts(value)
+    if parsed is None:
+        return False
+    prefix, parts = parsed
+    if parts == ["..."]:
+        return True
+    if not parts:
+        # ``module.Class()`` is a signature. ``Point()`` is a readable repr.
+        return "." in prefix or object_type in _HELP_SIGNATURE_TYPES
+    if not all(_is_signature_param(part) for part in parts):
+        return False
+    if all(_is_keyword_repr_field(part) for part in parts):
+        return object_type in _HELP_SIGNATURE_TYPES
+    # ``Coordinate(x, y)`` is a repr. ``module.Box(a, b)`` is a signature.
+    return "." in prefix or object_type in _HELP_SIGNATURE_TYPES
+
+
+def _help_signature_parts(value: str) -> tuple[str, list[str]] | None:
+    """Return ``(prefix, params)`` for ``prefix(params)``, or None.
+
+    An empty parameter list means ``name()``. ``["..."]`` is the fallback
+    signature. A `` -> annotation`` suffix is the return annotation from
+    ``inspect.signature``.
+
+    ``st.help`` truncates long reprs to 300 characters plus ``...``. Those
+    truncated strings are not signatures.
+    """
+    if (
+        not value
+        or value[0] in "'\""
+        or "(" not in value
+        or (len(value) >= 300 and value.endswith("..."))
+    ):
+        return None
+    open_at = value.find("(")
+    if open_at <= 0 or not _is_dotted_name(value[:open_at]):
+        return None
+    close_at = _matching_paren(value, open_at)
+    if close_at is None:
+        return None
+    suffix = value[close_at + 1 :]
+    if suffix and not suffix.startswith(" -> "):
+        return None
+    inside = value[open_at + 1 : close_at].strip()
+    prefix = value[:open_at]
+    if inside == "...":
+        return prefix, ["..."]
+    if not inside:
+        return prefix, []
+    return prefix, _split_top_level_commas(inside)
+
+
+def _is_dotted_name(prefix: str) -> bool:
+    """Return whether ``prefix`` is a dotted name, including ``<locals>``."""
+    if not prefix:
+        return False
+    for part in prefix.split("."):
+        if part.isidentifier():
+            continue
+        inner = part[1:-1]
+        if part.startswith("<") and part.endswith(">") and inner.isidentifier():
+            continue
+        return False
+    return True
+
+
+def _closes_quote(text: str, index: int, quote: str) -> bool:
+    """Return whether ``text[index]`` closes ``quote``.
+
+    A quote is escaped only when an odd number of backslashes precedes it.
+    """
+    if text[index] != quote:
+        return False
+    slashes = 0
+    cursor = index - 1
+    while cursor >= 0 and text[cursor] == "\\":
+        slashes += 1
+        cursor -= 1
+    return slashes % 2 == 0
+
+
+def _matching_paren(value: str, open_at: int) -> int | None:
+    """Return the index of the ``)`` that closes the ``(`` at ``open_at``."""
+    depth = 0
+    quote: str | None = None
+    for index in range(open_at, len(value)):
+        char = value[index]
+        if quote is not None:
+            if _closes_quote(value, index, quote):
+                quote = None
+            continue
+        if char in "'\"":
+            quote = char
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def _split_top_level_commas(text: str) -> list[str]:
+    """Split ``text`` on commas that are not inside brackets or quotes."""
+    parts: list[str] = []
+    start = 0
+    depth = 0
+    quote: str | None = None
+    for index, char in enumerate(text):
+        if quote is not None:
+            if _closes_quote(text, index, quote):
+                quote = None
+            continue
+        if char in "'\"":
+            quote = char
+        elif char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        elif char == "," and depth == 0:
+            parts.append(text[start:index].strip())
+            start = index + 1
+    tail = text[start:].strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def _param_name_and_sep(part: str) -> tuple[str, str]:
+    """Return the parameter name and the first top-level ``:`` or ``=``."""
+    depth = 0
+    quote: str | None = None
+    for index, char in enumerate(part):
+        if quote is not None:
+            if _closes_quote(part, index, quote):
+                quote = None
+            continue
+        if char in "'\"":
+            quote = char
+        elif char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        elif depth == 0 and char in ":=":
+            return part[:index].strip(), char
+    return part.strip(), ""
+
+
+def _is_signature_param(part: str) -> bool:
+    """Return whether ``part`` is one ``inspect.signature`` parameter."""
+    if part in {"*", "/", "..."}:
+        return True
+    body = part
+    if part.startswith("**"):
+        body = part[2:]
+    elif part.startswith("*"):
+        body = part[1:]
+    name, separator = _param_name_and_sep(body)
+    # ``None`` is an identifier, but ``slice(None, None, None)`` is a repr.
+    if not name.isidentifier() or keyword.iskeyword(name):
+        return False
+    if part.startswith("*"):
+        # ``*args: int`` and ``**kwargs: str``; star parameters have no default.
+        return separator in {"", ":"}
+    return separator in {"", ":", "="}
+
+
+def _is_keyword_repr_field(part: str) -> bool:
+    """Return whether ``part`` is a ``name=value`` field from a readable repr."""
+    name, separator = _param_name_and_sep(part)
+    return separator == "=" and name.isidentifier()
 
 
 def _unknown_element_content(proto: Any) -> Any:
     """Best-effort payload for an unimplemented element's proto.
 
     Many display protos store content in ``body``, ``text``, or ``label``
-    rather than ``value`` (for example ``st.html``).
+    rather than ``value`` (for example ``st.page_link``).
     """
     fields = getattr(getattr(proto, "DESCRIPTOR", None), "fields_by_name", None)
     if fields:
@@ -390,11 +598,14 @@ class WidgetList(ElementList[W_co], Generic[W_co]):
     """ElementList narrowed to widgets for typing."""
 
 
-class BlockList:
+B_co = TypeVar("B_co", bound="Block", covariant=True)
+
+
+class BlockList(Generic[B_co]):
     """Sequence of layout blocks with optional lookup by user key."""
 
-    def __init__(self, els: Sequence[Block]) -> None:
-        self._list = list(els)
+    def __init__(self, els: Sequence[B_co]) -> None:
+        self._list: list[B_co] = list(els)
 
     def __len__(self) -> int:
         return len(self._list)
@@ -404,23 +615,23 @@ class BlockList:
         return len(self)
 
     @overload
-    def __getitem__(self, idx: int) -> Block: ...
+    def __getitem__(self, idx: int) -> B_co: ...
 
     @overload
-    def __getitem__(self, idx: slice) -> BlockList: ...
+    def __getitem__(self, idx: slice) -> BlockList[B_co]: ...
 
-    def __getitem__(self, idx: int | slice) -> Block | BlockList:
+    def __getitem__(self, idx: int | slice) -> B_co | BlockList[B_co]:
         if isinstance(idx, slice):
             return BlockList(self._list[idx])
         return self._list[idx]
 
-    def __iter__(self) -> Iterator[Block]:
+    def __iter__(self) -> Iterator[B_co]:
         return iter(self._list)
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
-    def __eq__(self, other: BlockList | object) -> bool:
+    def __eq__(self, other: BlockList[Any] | object) -> bool:
         if isinstance(other, BlockList):
             return self._list == other._list
         return self._list == other
@@ -428,7 +639,7 @@ class BlockList:
     def __hash__(self) -> int:
         return hash(tuple(self._list))
 
-    def __call__(self, key: str) -> Block:
+    def __call__(self, key: str) -> B_co:
         """Return the first block in this collection with the given user key.
 
         The same key can appear on different block types, so this returns the
@@ -875,6 +1086,153 @@ class Image(Element):
     def captions(self) -> list[str]:
         """The image captions for this element."""
         return [img.caption for img in self.proto.imgs]
+
+
+@dataclass(repr=False)
+class Help(Element):
+    """A representation of ``st.help``."""
+
+    proto: HelpProto = field(repr=False)
+    key: None
+    name: str
+
+    def __init__(self, proto: HelpProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.key = None
+        self.type = "help_info"
+        self.name = proto.name
+
+    @property
+    def doc_string(self) -> str:
+        """Docstring ``st.help`` displays for the object."""
+        return self.proto.doc_string
+
+    @property
+    def value(self) -> str:
+        """Short summary of the object passed to ``st.help``.
+
+        Readable values stay, including ``"'Hello'"``, ``"Point(1, 2)"``, and
+        ``"NamedPoint(x=1, y=2)"``. Empty stored text uses ``.name``. A
+        positional or annotated signature uses ``.name`` when the stored text
+        is module-qualified or the object is a callable or class. A
+        ``name=value`` list uses ``.name`` only for those callable and class
+        types. ``.doc_string`` is the docstring. The raw stored text is
+        ``proto.value``.
+        """
+        raw = self.proto.value
+        if self.name and (not raw or _is_help_signature(raw, self.proto.type)):
+            return self.name
+        # No captured name: the proto value is the only summary, even when it
+        # is a signature.
+        return raw
+
+
+@dataclass(repr=False)
+class Html(Element):
+    """A representation of ``st.html``."""
+
+    proto: HtmlProto = field(repr=False)
+    key: None
+
+    def __init__(self, proto: HtmlProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.key = None
+        self.type = "html"
+
+    @property
+    def value(self) -> str:
+        """The HTML body passed to ``st.html``."""
+        return self.proto.body
+
+
+@dataclass(repr=False)
+class Progress(Element):
+    """A representation of ``st.progress``."""
+
+    proto: ProgressProto = field(repr=False)
+    key: None
+
+    def __init__(self, proto: ProgressProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.key = None
+        self.type = "progress"
+
+    @property
+    def value(self) -> int:
+        """Progress from 0 to 100.
+
+        Floats passed to ``st.progress`` in the 0.0-1.0 range are stored as
+        this integer (``0.25`` becomes ``25``).
+        """
+        return self.proto.value
+
+    @property
+    def text(self) -> str:
+        """Message shown with the bar. Empty when ``text`` was omitted."""
+        return self.proto.text
+
+
+@dataclass(repr=False)
+class LinkButton(Element):
+    """A representation of ``st.link_button``.
+
+    Read-only. ``.click()`` does not open the URL or rerun the script.
+    """
+
+    proto: LinkButtonProto = field(repr=False)
+
+    def __init__(self, proto: LinkButtonProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.type = "link_button"
+        self.key = user_key_from_element_id(proto.id) if proto.id else None
+
+    @property
+    def value(self) -> str:
+        """The button label in every ``on_click`` mode.
+
+        AppTest does not click link buttons, so this is never the click
+        trigger value.
+        """
+        return self.proto.label
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        key_part = f" (key={self.key!r})" if self.key else ""
+        raise AppTestError(
+            f"{method}() is not supported for link_button{key_part}. "
+            "AppTest does not open URLs or trigger on_click. "
+            "Use a Playwright e2e test."
+        )
+
+
+@dataclass(repr=False)
+class PageLink(Element):
+    """A representation of ``st.page_link``.
+
+    Read-only. Switch pages with ``AppTest.switch_page``, not ``.click()``.
+    """
+
+    proto: PageLinkProto = field(repr=False)
+    key: None
+
+    def __init__(self, proto: PageLinkProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.key = None
+        self.type = "page_link"
+
+    @property
+    def value(self) -> str:
+        """The link label.
+
+        When ``label`` is omitted, this is the title Streamlit inferred from
+        the page.
+        """
+        return self.proto.label
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        raise AppTestError(
+            f"{method}() is not supported for page_link. "
+            "Switch pages with AppTest.switch_page(page_path)."
+        )
 
 
 @dataclass(repr=False)
@@ -2267,8 +2625,12 @@ class Block:
         return WidgetList(self.get("chat_input"))  # type: ignore
 
     @property
-    def chat_message(self) -> Sequence[ChatMessage]:
-        return self.get("chat_message")  # type: ignore
+    def chat_message(self) -> BlockList[ChatMessage]:
+        # Skip this node so a chat message does not match itself when querying
+        # descendants (same contract as container).
+        return BlockList(
+            [e for e in self if isinstance(e, ChatMessage) and e is not self]
+        )
 
     @property
     def checkbox(self) -> WidgetList[Checkbox]:
@@ -2283,11 +2645,13 @@ class Block:
         return WidgetList(self.get("color_picker"))  # type: ignore
 
     @property
-    def columns(self) -> Sequence[Column]:
-        return self.get("column")  # type: ignore
+    def columns(self) -> BlockList[Column]:
+        # Skip this node so a column does not match itself when querying
+        # descendants (same contract as container).
+        return BlockList([e for e in self if isinstance(e, Column) and e is not self])
 
     @property
-    def container(self) -> BlockList:
+    def container(self) -> BlockList[Block]:
         """``st.container`` blocks, including horizontal/flex containers.
 
         The implicit row wrapper created by ``st.columns`` is excluded.
@@ -2342,7 +2706,7 @@ class Block:
         return WidgetList(self.get("file_uploader"))  # type: ignore
 
     @property
-    def form(self) -> BlockList:
+    def form(self) -> BlockList[Block]:
         """``st.form`` blocks. The form ID is ``Block.key``."""
         return BlockList(
             [
@@ -2360,12 +2724,22 @@ class Block:
         return WidgetList([button for button in self.button if _widget_form_id(button)])
 
     @property
-    def expander(self) -> Sequence[Expander]:
-        return self.get("expander")  # type: ignore
+    def expander(self) -> BlockList[Expander]:
+        # Skip this node so an expander does not match itself when querying
+        # descendants (same contract as container).
+        return BlockList([e for e in self if isinstance(e, Expander) and e is not self])
 
     @property
     def header(self) -> ElementList[Header]:
         return ElementList(self.get("header"))  # type: ignore
+
+    @property
+    def help(self) -> ElementList[Help]:
+        return ElementList(self.get("help"))  # type: ignore
+
+    @property
+    def html(self) -> ElementList[Html]:
+        return ElementList(self.get("html"))  # type: ignore
 
     @property
     def image(self) -> ElementList[Image]:
@@ -2382,6 +2756,10 @@ class Block:
     @property
     def latex(self) -> ElementList[Latex]:
         return ElementList(self.get("latex"))  # type: ignore
+
+    @property
+    def link_button(self) -> ElementList[LinkButton]:
+        return ElementList(self.get("link_button"))  # type: ignore
 
     @property
     def markdown(self) -> ElementList[Markdown]:
@@ -2404,6 +2782,14 @@ class Block:
         return WidgetList(self.get("number_input"))  # type: ignore
 
     @property
+    def page_link(self) -> ElementList[PageLink]:
+        return ElementList(self.get("page_link"))  # type: ignore
+
+    @property
+    def progress(self) -> ElementList[Progress]:
+        return ElementList(self.get("progress"))  # type: ignore
+
+    @property
     def radio(self) -> WidgetList[Radio[Any]]:
         return WidgetList(self.get("radio"))  # type: ignore
 
@@ -2424,8 +2810,10 @@ class Block:
         return ElementList(self.get("space"))  # type: ignore
 
     @property
-    def status(self) -> Sequence[Status]:
-        return self.get("status")  # type: ignore
+    def status(self) -> BlockList[Status]:
+        # Skip this node so a status block does not match itself when querying
+        # descendants (same contract as container).
+        return BlockList([e for e in self if isinstance(e, Status) and e is not self])
 
     @property
     def subheader(self) -> ElementList[Subheader]:
@@ -2440,8 +2828,10 @@ class Block:
         return ElementList(self.get("table"))  # type: ignore
 
     @property
-    def tabs(self) -> Sequence[Tab]:
-        return self.get("tab")  # type: ignore
+    def tabs(self) -> BlockList[Tab]:
+        # Skip this node so a tab does not match itself when querying
+        # descendants (same contract as container).
+        return BlockList([e for e in self if isinstance(e, Tab) and e is not self])
 
     @property
     def text(self) -> ElementList[Text]:
@@ -2482,7 +2872,8 @@ class Block:
         ``datetime_input`` vs ``date_time_input``) are accepted. Node type
         names (usually the proto field name) keep working. ``pills`` /
         ``segmented_control`` / ``container`` / ``form`` /
-        ``form_submit_button`` use the same filtering as the matching
+        ``form_submit_button`` / ``expander`` / ``tabs`` / ``columns`` /
+        ``status`` / ``chat_message`` use the same filtering as the matching
         attributes.
         """
         if element_type == "pills":
@@ -2495,6 +2886,16 @@ class Block:
             return list(self.form)
         if element_type == "form_submit_button":
             return list(self.form_submit_button)
+        if element_type == "chat_message":
+            return list(self.chat_message)
+        if element_type in {"columns", "column"}:
+            return list(self.columns)
+        if element_type == "expander":
+            return list(self.expander)
+        if element_type == "status":
+            return list(self.status)
+        if element_type in {"tabs", "tab"}:
+            return list(self.tabs)
         resolved = _GET_TYPE_ALIASES.get(element_type, element_type)
         return [e for e in self if e.type == resolved]
 
@@ -3015,10 +3416,16 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     new_node = Subheader(elt.heading, root=root)
                 else:
                     new_node = UnknownElement(elt, root=root)
+            elif ty == "help_info":
+                new_node = Help(elt.help_info, root=root)
+            elif ty == "html":
+                new_node = Html(elt.html, root=root)
             elif ty == "imgs":
                 new_node = Image(elt.imgs, root=root)
             elif ty == "json":
                 new_node = Json(elt.json, root=root)
+            elif ty == "link_button":
+                new_node = LinkButton(elt.link_button, root=root)
             elif ty == "markdown":
                 if elt.markdown.element_type == MarkdownProto.Type.NATIVE:
                     new_node = Markdown(elt.markdown, root=root)
@@ -3038,6 +3445,10 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Multiselect(elt.multiselect, root=root)
             elif ty == "number_input":
                 new_node = NumberInput(elt.number_input, root=root)
+            elif ty == "page_link":
+                new_node = PageLink(elt.page_link, root=root)
+            elif ty == "progress":
+                new_node = Progress(elt.progress, root=root)
             elif ty == "radio":
                 new_node = Radio(elt.radio, root=root)
             elif ty == "selectbox":

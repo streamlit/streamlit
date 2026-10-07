@@ -1824,9 +1824,9 @@ class LayoutsMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. The icon and chevron remain
-            visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. The icon and
+            chevron remain visible.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for

@@ -340,9 +340,9 @@ class ButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. Icons and keyboard shortcuts
-            remain visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. Icons and
+            keyboard shortcuts remain visible.
 
         Returns
         -------
@@ -687,9 +687,9 @@ class ButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. Icons and keyboard shortcuts
-            remain visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. Icons and
+            keyboard shortcuts remain visible.
 
         Returns
         -------
@@ -1120,9 +1120,9 @@ class ButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. Icons and keyboard shortcuts
-            remain visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. Icons and
+            keyboard shortcuts remain visible.
 
         Returns
         -------
@@ -1459,10 +1459,16 @@ class ButtonMixin:
         download_button_proto.type = type
         if wrap is not None:
             download_button_proto.wrap = wrap
-        marshall_file(
-            self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
-        )
         download_button_proto.disabled = disabled
+        marshall_file(
+            self.dg._get_delta_path_str(),
+            data,
+            download_button_proto,
+            mime,
+            file_name,
+            disabled=disabled,
+            element_id=element_id,
+        )
 
         if help is not None:
             download_button_proto.help = to_help_str(help)
@@ -1934,9 +1940,24 @@ def marshall_file(
     proto_download_button: DownloadButtonProto,
     mimetype: str | None,
     file_name: str | None = None,
+    *,
+    disabled: bool = False,
+    element_id: str = "",
 ) -> None:
+    # A disabled button must not leave an executable generator behind: clients
+    # can send deferred-file requests directly, regardless of the UI state.
+    # Revoke ids from earlier enabled runs, even if this run passes static data.
+    if disabled and runtime.exists():
+        runtime.get_instance().media_file_mgr.remove_deferred(
+            coordinates, element_id=element_id
+        )
+
     # Check if data is a callable (for deferred downloads)
     if callable(data):
+        if disabled:
+            proto_download_button.url = ""
+            return
+
         if not runtime.exists():
             # When running in "raw mode", we can't access the MediaFileManager.
             proto_download_button.url = ""
@@ -1953,6 +1974,7 @@ def marshall_file(
             mimetype,
             coordinates,
             file_name=file_name,
+            element_id=element_id,
         )
         proto_download_button.deferred_file_id = file_id
         proto_download_button.url = ""  # No URL yet, will be generated on click

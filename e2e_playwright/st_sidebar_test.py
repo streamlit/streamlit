@@ -29,7 +29,7 @@ def create_sidebar_collapsed_checker(sidebar: Locator) -> Callable[[], bool]:
     """Helper to create a function that checks if sidebar is collapsed."""
 
     def check_sidebar_collapsed() -> bool:
-        return sidebar.get_attribute("aria-expanded") == "false"
+        return sidebar.get_attribute("data-collapsed") == "true"
 
     return check_sidebar_collapsed
 
@@ -38,7 +38,7 @@ def create_sidebar_expanded_checker(sidebar: Locator) -> Callable[[], bool]:
     """Helper to create a function that checks if sidebar is expanded."""
 
     def check_sidebar_expanded() -> bool:
-        return sidebar.get_attribute("aria-expanded") == "true"
+        return sidebar.get_attribute("data-collapsed") == "false"
 
     return check_sidebar_expanded
 
@@ -90,10 +90,10 @@ def test_sidebar_overwriting_elements(app: Page):
 def test_sidebar_collapse_on_mobile_resize(app: Page):
     app.set_viewport_size({"width": 800, "height": 400})
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(sidebar).to_have_attribute("data-collapsed", "false")
 
     app.set_viewport_size({"width": 400, "height": 800})
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
+    expect(sidebar).to_have_attribute("data-collapsed", "true")
 
 
 def test_sidebar_no_collapse_on_text_input_mobile(app: Page):
@@ -107,7 +107,7 @@ def test_sidebar_no_collapse_on_text_input_mobile(app: Page):
     ).click()
 
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(sidebar).to_have_attribute("data-collapsed", "false")
 
 
 def test_sidebar_chart_and_toolbar(app: Page):
@@ -357,14 +357,18 @@ def test_sidebar_toggle_state_localstorage_persistence(app: Page):
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_visible()
 
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(sidebar).to_have_attribute("data-collapsed", "false")
 
     sidebar_header = app.get_by_test_id("stSidebarHeader")
     expect(sidebar_header).to_be_visible()
     sidebar_header.hover()
 
-    collapse_button = app.get_by_test_id("stSidebarCollapseButton")
+    collapse_button = app.get_by_test_id("stSidebarCollapseButton").get_by_role(
+        "button", name="Collapse sidebar"
+    )
     expect(collapse_button).to_be_visible()
+    expect(collapse_button).to_have_attribute("aria-expanded", "true")
+    expect(collapse_button).to_have_attribute("aria-controls", "stSidebar")
     collapse_button.click()
 
     wait_until(app, create_sidebar_collapsed_checker(sidebar))
@@ -386,6 +390,8 @@ def test_sidebar_toggle_state_localstorage_persistence(app: Page):
 
     expand_button = app.get_by_test_id("stExpandSidebarButton")
     expect(expand_button).to_be_visible()
+    expect(expand_button).to_have_attribute("aria-expanded", "false")
+    expect(expand_button).to_have_attribute("aria-controls", "stSidebar")
     expand_button.click()
 
     wait_until(app, create_sidebar_expanded_checker(sidebar))
@@ -512,4 +518,4 @@ def test_sidebar_stays_open_on_custom_component_popover_click_mobile(app: Page):
     option_button.click()
 
     # Sidebar should remain expanded (not collapse due to click on portal-like element)
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(sidebar).to_have_attribute("data-collapsed", "false")
