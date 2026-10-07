@@ -51,8 +51,8 @@ import {
 } from "~lib/components/widgets/DateInput/CalendarPopoverHeader"
 import { getSafeLocale } from "~lib/components/widgets/DateInput/dateInputUtils"
 import {
+  handlePassivePreviewFieldTab,
   isConcreteOutsideLeave,
-  isFocusInsideWidget,
   usePopoverInteractionFlag,
 } from "~lib/components/widgets/DateInput/focusLeave"
 import { ReorderedSegments } from "~lib/components/widgets/DateInput/ReorderedSegments"
@@ -209,9 +209,8 @@ function SingleDateTimeInput({
     setPrevValue(value)
     setDisplayValue(value)
     setPendingTime(null)
-    // Keep the dedup guard once the prop catches up to the value just committed.
-    // Stale closures (the Tab frame callback, an earlier blur handler) still see
-    // the old value and would otherwise commit again.
+    // Keep the dedup guard when the prop catches up; stale Tab/blur closures
+    // still see the old value and would otherwise commit again.
     if (!dateTimesEqual(value, lastCommittedRef.current ?? null)) {
       lastCommittedRef.current = undefined
     }
@@ -293,9 +292,7 @@ function SingleDateTimeInput({
     popoverRef,
     popoverExcludeSelectors
   )
-  /** Tab and Shift+Tab dismiss paths set this after committing while the
-   * popover is still mounted. handleBlur skips that following blur so it does
-   * not commit again before the value prop catches up. */
+  /** Tab leave arms this so the following blur does not double-commit. */
   const skipNextBlurCommitRef = useRef(false)
 
   /** The datetime the two controls describe between them when the field itself
@@ -716,60 +713,38 @@ function SingleDateTimeInput({
 
       if (e.key !== "Tab" || !isOpen) return
 
-      // Forward Tab from the calendar toggle leaves the widget.
-      if (
-        !e.shiftKey &&
-        calendarButtonRef.current?.contains(e.target as Node)
-      ) {
-        // Commit before closing, as the popover's own Tab handler does. Leaving
-        // it to the blur that follows would run the commit after the popover has
-        // unmounted, and a time given only there would be unreadable by then.
+      // Commit before unmount (popover-only time) and skip the following blur.
+      const leaveAndCommit = (): void => {
         skipNextBlurCommitRef.current = true
         commitOrRevert()
         setIsOpen(false)
         setIsCalendarActive(false)
-        return
       }
-
-      const wrapper = triggerRef.current
-      if (!wrapper) return
-      const segments = wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
-      const segmentList = Array.from(segments)
-      // Shift+Tab from the first segment leaves the widget.
-      if (e.shiftKey && e.target === segmentList[0]) {
-        skipNextBlurCommitRef.current = true
-        commitOrRevert()
-        setIsOpen(false)
-        setIsCalendarActive(false)
-        return
-      }
-      // Forward Tab from the last segment normally lands on the calendar button,
-      // so the preview stays open. macOS browsers that follow the system
-      // keyboard-navigation setting (Safari, Firefox) skip buttons on Tab by
-      // default. Focus has already left the widget, so close the preview once
-      // the Tab settles.
-      if (!e.shiftKey && e.target === segmentList.at(-1)) {
-        // Let the frame callback below own the commit: skip the blur that fires
-        // first when focus leaves the widget.
-        skipNextBlurCommitRef.current = true
-        requestAnimationFrame(() => {
-          if (
-            isFocusInsideWidget(document.activeElement, {
-              field: triggerRef.current,
-              popover: popoverRef.current,
-              excludeSelectors: popoverExcludeSelectors,
-            })
-          ) {
+      handlePassivePreviewFieldTab(
+        e,
+        {
+          field: triggerRef.current,
+          calendarButton: calendarButtonRef.current,
+          popover: popoverRef.current,
+          excludeSelectors: popoverExcludeSelectors,
+          segmentSelector: SEGMENT_SELECTOR,
+        },
+        {
+          immediate: leaveAndCommit,
+          beforeFocusSettles: () => {
+            skipNextBlurCommitRef.current = true
+          },
+          focusStayedInside: () => {
             skipNextBlurCommitRef.current = false
-            return
-          }
-          commitOrRevert()
-          setIsOpen(false)
-          setIsCalendarActive(false)
-          // Clear even when blur was consumed by popoverInteractionRef instead.
-          skipNextBlurCommitRef.current = false
-        })
-      }
+          },
+          afterFocusSettles: () => {
+            commitOrRevert()
+            setIsOpen(false)
+            setIsCalendarActive(false)
+            skipNextBlurCommitRef.current = false
+          },
+        }
+      )
     },
     [
       isOpen,
@@ -824,12 +799,10 @@ function SingleDateTimeInput({
 
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
-      // Safari blurs the field on mousedown in the popover before the click
-      // lands; the pointerdown flag marks that blur as not a leave.
+      // Safari: popover mousedown blurs the field before click; flag = not a leave.
       if (popoverInteractionRef.current) {
         popoverInteractionRef.current = false
-        // A Tab dismiss may have armed skipNextBlurCommitRef; this return already
-        // skipped the commit, so clear it so the next real blur is not dropped.
+        // Clear a Tab-armed skip so the next real blur is not dropped.
         skipNextBlurCommitRef.current = false
         return
       }
@@ -850,8 +823,7 @@ function SingleDateTimeInput({
           setIsOpen(false)
           setIsCalendarActive(false)
         }
-        // Focus moved nowhere (null) or into the popover: let the Tab check or
-        // overlay dismissal close the preview.
+        // Null / inside popover: Tab frame and overlay own those leaves.
         return
       }
       commitOrRevert()

@@ -22,16 +22,9 @@ import {
 } from "react"
 
 /**
- * Whether blur `relatedTarget` means focus left the date/datetime widget for a
- * concrete outside control (so the passive calendar preview should dismiss).
- *
- * `null` is not a leave — browsers (notably Safari) fire that on mousedown of
- * unfocused calendar chrome before `click`. Callers must ignore blur when a
- * popover `pointerdown` is in flight (see `usePopoverInteractionFlag`).
- *
- * `document.body` counts as leave once popover-pointerdown has been ruled out:
- * Safari can park focus on body during calendar mousedown, but that path is
- * gated by the interaction flag before this helper runs.
+ * Concrete outside leave for blur `relatedTarget`.
+ * `null` is not a leave (Safari calendar mousedown). `document.body` is a leave
+ * once popover pointerdown is ruled out. Ignore blur while the popover flag is set.
  */
 export function isConcreteOutsideLeave(
   relatedTarget: EventTarget | null,
@@ -52,7 +45,7 @@ export function isConcreteOutsideLeave(
   return true
 }
 
-/** True when `active` is still inside the field, popover, or excluded portals. */
+/** True when focus is still in the field, popover, or an excluded portal. */
 export function isFocusInsideWidget(
   active: EventTarget | null,
   options: {
@@ -73,14 +66,71 @@ export function isFocusInsideWidget(
   return false
 }
 
+export type PassivePreviewTabLeave = {
+  immediate: () => void
+  afterFocusSettles: () => void
+  beforeFocusSettles?: () => void
+  focusStayedInside?: () => void
+}
+
 /**
- * Tracks pointerdown inside the calendar popover (or excluded nested portals)
- * so the field can ignore the blur that Safari fires before the click lands.
- *
- * Desktop mouse order is pointerdown → blur → pointerup → click. On iOS Safari,
- * pointerup runs before the compatibility mousedown that blurs, so clearing on
- * pointerup drops the flag before blur can consume it. Clear on the following
- * click (or pointercancel) instead; blur handlers also clear when they skip.
+ * Tab leave for an open passive preview. Does not preventDefault. Returns true
+ * when a leave path ran or was scheduled. Use a `data-type` segmentSelector —
+ * iOS React Aria segments are textboxes, not spinbuttons.
+ */
+export function handlePassivePreviewFieldTab(
+  e: Pick<KeyboardEvent, "key" | "shiftKey" | "target">,
+  ctx: {
+    field: HTMLElement | null
+    calendarButton: Node | null
+    popover: Node | null
+    excludeSelectors?: readonly string[]
+    segmentSelector: string
+  },
+  leave: PassivePreviewTabLeave
+): boolean {
+  if (e.key !== "Tab") return false
+
+  if (!e.shiftKey && ctx.calendarButton?.contains(e.target as Node)) {
+    leave.immediate()
+    return true
+  }
+
+  if (!ctx.field) return false
+  const segments = Array.from(
+    ctx.field.querySelectorAll<HTMLElement>(ctx.segmentSelector)
+  )
+
+  if (e.shiftKey && e.target === segments[0]) {
+    leave.immediate()
+    return true
+  }
+
+  if (!e.shiftKey && e.target === segments.at(-1)) {
+    // Safari/Firefox may skip the icon button; close once focus settles outside.
+    leave.beforeFocusSettles?.()
+    requestAnimationFrame(() => {
+      if (
+        isFocusInsideWidget(document.activeElement, {
+          field: ctx.field,
+          popover: ctx.popover,
+          excludeSelectors: ctx.excludeSelectors,
+        })
+      ) {
+        leave.focusStayedInside?.()
+        return
+      }
+      leave.afterFocusSettles()
+    })
+    return true
+  }
+
+  return false
+}
+
+/**
+ * Popover pointerdown flag so field blur (Safari, before click) is not a leave.
+ * Clear on click/cancel — not pointerup (iOS fires pointerup before the blur).
  */
 export function usePopoverInteractionFlag(
   isOpen: boolean,
@@ -100,8 +150,7 @@ export function usePopoverInteractionFlag(
     const onPointerDown = (e: PointerEvent): void => {
       const target = e.target
       if (!(target instanceof Node)) return
-      // Native listeners see text-node targets (e.g. a calendar day number).
-      // React normalizes those to the parent element; do the same for closest().
+      // Native listeners see text nodes; normalize for closest().
       const targetElement =
         target instanceof Element ? target : target.parentElement
       if (popoverRef.current?.contains(target)) {
@@ -121,7 +170,6 @@ export function usePopoverInteractionFlag(
     }
 
     document.addEventListener("pointerdown", onPointerDown, true)
-    // Clear on click, not pointerup (see JSDoc).
     document.addEventListener("click", clear, true)
     document.addEventListener("pointercancel", clear, true)
     return () => {

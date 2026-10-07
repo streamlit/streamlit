@@ -17,211 +17,174 @@
 import type { RefObject } from "react"
 
 import { act, fireEvent, renderHook } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
+  handlePassivePreviewFieldTab,
   isConcreteOutsideLeave,
   isFocusInsideWidget,
   usePopoverInteractionFlag,
 } from "./focusLeave"
 
-describe("isConcreteOutsideLeave", () => {
+const flushRaf = (): Promise<void> =>
+  act(
+    async () =>
+      new Promise<void>(resolve => {
+        requestAnimationFrame(() => {
+          resolve()
+        })
+      })
+  )
+
+describe("focusLeave helpers", () => {
   afterEach(() => {
     document.body.innerHTML = ""
   })
 
-  it("treats null as not a leave", () => {
-    expect(
-      isConcreteOutsideLeave(null, { popover: document.createElement("div") })
-    ).toBe(false)
-  })
-
-  it("treats document.body as a leave once popover interaction is ruled out", () => {
-    expect(
-      isConcreteOutsideLeave(document.body, {
-        popover: document.createElement("div"),
-      })
-    ).toBe(true)
-  })
-
-  it("treats targets inside the popover as not a leave", () => {
+  it("classifies relatedTarget and focus containment", () => {
     const popover = document.createElement("div")
     const cell = document.createElement("button")
     popover.appendChild(cell)
-    expect(isConcreteOutsideLeave(cell, { popover })).toBe(false)
-  })
-
-  it("treats targets in excluded portals as not a leave", () => {
+    const outside = document.createElement("button")
+    document.body.appendChild(outside)
     const portal = document.createElement("div")
     portal.className = "stDateInputHeaderPickerPopover"
     const item = document.createElement("button")
     portal.appendChild(item)
     document.body.appendChild(portal)
+    expect(isConcreteOutsideLeave(null, { popover })).toBe(false)
+    expect(isConcreteOutsideLeave(document.body, { popover })).toBe(true)
+    expect(isConcreteOutsideLeave(outside, { popover })).toBe(true)
+    expect(isConcreteOutsideLeave(cell, { popover })).toBe(false)
     expect(
       isConcreteOutsideLeave(item, {
-        popover: document.createElement("div"),
+        popover,
         excludeSelectors: [".stDateInputHeaderPickerPopover"],
       })
     ).toBe(false)
+    const field = document.createElement("div")
+    const segment = document.createElement("span")
+    field.appendChild(segment)
+    expect(isFocusInsideWidget(segment, { field, popover })).toBe(true)
+    expect(isFocusInsideWidget(cell, { field, popover })).toBe(true)
+    expect(isFocusInsideWidget(outside, { field, popover })).toBe(false)
   })
 
-  it("treats a concrete outside element as a leave", () => {
+  it("handles passive preview Tab leave paths", async () => {
+    const field = document.createElement("div")
+    const first = document.createElement("span")
+    first.setAttribute("data-type", "year")
+    const last = document.createElement("span")
+    last.setAttribute("data-type", "day")
+    const button = document.createElement("button")
+    field.append(first, last, button)
+    document.body.appendChild(field)
+    const leave = {
+      immediate: vi.fn(),
+      afterFocusSettles: vi.fn(),
+      beforeFocusSettles: vi.fn(),
+      focusStayedInside: vi.fn(),
+    }
+    const ctx = {
+      field,
+      calendarButton: button,
+      popover: null,
+      segmentSelector: '[data-type]:not([data-type="literal"])',
+    }
+
+    expect(
+      handlePassivePreviewFieldTab(
+        { key: "Tab", shiftKey: false, target: button },
+        ctx,
+        leave
+      )
+    ).toBe(true)
+    expect(leave.immediate).toHaveBeenCalledOnce()
+    leave.immediate.mockClear()
+    expect(
+      handlePassivePreviewFieldTab(
+        { key: "Tab", shiftKey: true, target: first },
+        ctx,
+        leave
+      )
+    ).toBe(true)
+    expect(leave.immediate).toHaveBeenCalledOnce()
+
     const outside = document.createElement("button")
     document.body.appendChild(outside)
     expect(
-      isConcreteOutsideLeave(outside, {
-        popover: document.createElement("div"),
-      })
+      handlePassivePreviewFieldTab(
+        { key: "Tab", shiftKey: false, target: last },
+        ctx,
+        leave
+      )
     ).toBe(true)
-  })
-})
+    expect(leave.beforeFocusSettles).toHaveBeenCalledOnce()
+    outside.focus()
+    await flushRaf()
+    expect(leave.afterFocusSettles).toHaveBeenCalledOnce()
 
-describe("isFocusInsideWidget", () => {
-  afterEach(() => {
-    document.body.innerHTML = ""
-  })
-
-  it("detects focus in the field or popover", () => {
-    const field = document.createElement("div")
-    const popover = document.createElement("div")
-    const segment = document.createElement("span")
-    const cell = document.createElement("button")
-    field.appendChild(segment)
-    popover.appendChild(cell)
-    expect(isFocusInsideWidget(segment, { field, popover })).toBe(true)
-    expect(isFocusInsideWidget(cell, { field, popover })).toBe(true)
-    expect(
-      isFocusInsideWidget(document.createElement("button"), { field, popover })
-    ).toBe(false)
-  })
-})
-
-describe("usePopoverInteractionFlag", () => {
-  afterEach(() => {
-    document.body.innerHTML = ""
-  })
-
-  const mountFlag = (
-    popover: HTMLElement,
-    excludeSelectors: readonly string[] = []
-  ): {
-    flag: RefObject<boolean>
-    rerender: (isOpen: boolean) => void
-    unmount: () => void
-  } => {
-    const popoverRef: RefObject<HTMLElement | null> = { current: popover }
-    document.body.appendChild(popover)
-
-    const { result, rerender, unmount } = renderHook(
-      ({ isOpen }: { isOpen: boolean }) =>
-        usePopoverInteractionFlag(isOpen, popoverRef, excludeSelectors),
-      { initialProps: { isOpen: true } }
+    leave.afterFocusSettles.mockClear()
+    leave.focusStayedInside.mockClear()
+    handlePassivePreviewFieldTab(
+      { key: "Tab", shiftKey: false, target: last },
+      ctx,
+      leave
     )
-
-    return {
-      flag: result.current,
-      rerender: (isOpen: boolean) => {
-        rerender({ isOpen })
-      },
-      unmount,
-    }
-  }
-
-  it("keeps the flag through pointerup until click (iOS-safe order)", () => {
-    const popover = document.createElement("div")
-    const cell = document.createElement("button")
-    popover.appendChild(cell)
-    const { flag } = mountFlag(popover)
-
-    expect(flag.current).toBe(false)
-
-    // Discrete pointer phases: userEvent.click collapses them into one gesture.
-    /* eslint-disable testing-library/prefer-user-event */
-    fireEvent.pointerDown(cell)
-    expect(flag.current).toBe(true)
-
-    // iOS fires pointerup before the blur this flag must still guard.
-    fireEvent.pointerUp(cell)
-    expect(flag.current).toBe(true)
-
-    fireEvent.click(cell)
-    /* eslint-enable testing-library/prefer-user-event */
-    expect(flag.current).toBe(false)
+    button.focus()
+    await flushRaf()
+    expect(leave.focusStayedInside).toHaveBeenCalledOnce()
+    expect(leave.afterFocusSettles).not.toHaveBeenCalled()
   })
 
-  it("clears on pointercancel", () => {
-    const popover = document.createElement("div")
-    const cell = document.createElement("button")
-    popover.appendChild(cell)
-    const { flag } = mountFlag(popover)
-
-    /* eslint-disable testing-library/prefer-user-event */
-    fireEvent.pointerDown(cell)
-    expect(flag.current).toBe(true)
-
-    fireEvent.pointerCancel(cell)
-    /* eslint-enable testing-library/prefer-user-event */
-    expect(flag.current).toBe(false)
-  })
-
-  it("sets the flag for excluded portal pointerdown", () => {
-    const popover = document.createElement("div")
-    const portal = document.createElement("div")
-    portal.className = "stDateInputHeaderPickerPopover"
-    const item = document.createElement("button")
-    portal.appendChild(item)
-    document.body.appendChild(portal)
-    const { flag } = mountFlag(popover, [".stDateInputHeaderPickerPopover"])
-
-    /* eslint-disable testing-library/prefer-user-event */
-    fireEvent.pointerDown(item)
-    /* eslint-enable testing-library/prefer-user-event */
-    expect(flag.current).toBe(true)
-  })
-
-  it("sets the flag when pointerdown hits a text node inside the popover", () => {
+  it("tracks popover pointer phases, portals, text nodes, and teardown", () => {
     const popover = document.createElement("div")
     const cell = document.createElement("button")
     const dayNumber = document.createTextNode("20")
     cell.appendChild(dayNumber)
     popover.appendChild(cell)
-    const { flag } = mountFlag(popover)
+    const portal = document.createElement("div")
+    portal.className = "stDateInputHeaderPickerPopover"
+    const item = document.createElement("button")
+    portal.appendChild(item)
+    document.body.append(popover, portal)
+    const ref: RefObject<HTMLElement | null> = { current: popover }
+    const { result, rerender, unmount } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        usePopoverInteractionFlag(isOpen, ref, [
+          ".stDateInputHeaderPickerPopover",
+        ]),
+      { initialProps: { isOpen: true } }
+    )
+    const flag = result.current
 
-    // Native listeners see the text node; React would normalize to the button.
-    /* eslint-disable testing-library/prefer-user-event */
-    fireEvent.pointerDown(dayNumber)
-    /* eslint-enable testing-library/prefer-user-event */
-    expect(flag.current).toBe(true)
-  })
-
-  it("clears when the popover closes", () => {
-    const popover = document.createElement("div")
-    const cell = document.createElement("button")
-    popover.appendChild(cell)
-    const { flag, rerender } = mountFlag(popover)
-
-    /* eslint-disable testing-library/prefer-user-event */
+    /* eslint-disable testing-library/prefer-user-event -- discrete pointer phases */
+    expect(flag.current).toBe(false)
     fireEvent.pointerDown(cell)
-    /* eslint-enable testing-library/prefer-user-event */
     expect(flag.current).toBe(true)
-
+    fireEvent.pointerUp(cell)
+    expect(flag.current).toBe(true) // iOS: must survive pointerup
+    fireEvent.click(cell)
+    expect(flag.current).toBe(false)
+    fireEvent.pointerDown(cell)
+    fireEvent.pointerCancel(cell)
+    expect(flag.current).toBe(false)
+    fireEvent.pointerDown(item)
+    expect(flag.current).toBe(true)
+    fireEvent.click(item)
+    fireEvent.pointerDown(dayNumber)
+    expect(flag.current).toBe(true)
+    fireEvent.pointerDown(cell)
     act(() => {
-      rerender(false)
+      rerender({ isOpen: false })
     })
     expect(flag.current).toBe(false)
-  })
-
-  it("stops listening after unmount", () => {
-    const popover = document.createElement("div")
-    const cell = document.createElement("button")
-    popover.appendChild(cell)
-    const { flag, unmount } = mountFlag(popover)
-
+    act(() => {
+      rerender({ isOpen: true })
+    })
     act(() => {
       unmount()
     })
-
-    /* eslint-disable testing-library/prefer-user-event */
     fireEvent.pointerDown(cell)
     /* eslint-enable testing-library/prefer-user-event */
     expect(flag.current).toBe(false)

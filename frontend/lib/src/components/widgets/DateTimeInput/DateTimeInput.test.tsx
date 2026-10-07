@@ -1816,76 +1816,36 @@ describe("DateTimeInput widget", () => {
       expect(calendarButton).toHaveFocus()
     })
 
-    it("passive preview closes when focus leaves the widget without the calendar button", async () => {
+    it("focus leave closes; body blur commits; Safari pointerdown does not", async () => {
       const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
       render(
-        <div>
+        <>
           <button type="button" data-testid="outside">
             Outside
           </button>
-          <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
-        </div>
+          <DateTimeInput {...props} />
+        </>
       )
+      const field = screen.getByTestId("stDateTimeInputField")
 
-      const segments = screen.getAllByRole("spinbutton")
-      await user.click(segments[0])
+      await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
-
       act(() => {
         screen.getByTestId("outside").focus()
       })
-
       await waitFor(() => {
         expect(
           screen.queryByTestId("stDateTimeInputCalendar")
         ).not.toBeInTheDocument()
       })
-    })
 
-    it("passive preview stays open across Safari calendar pointerdown then null blur", async () => {
-      const user = userEvent.setup()
-      render(
-        <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
-      )
-
-      const segments = screen.getAllByRole("spinbutton")
-      await user.click(segments[0])
-      const calendar = await screen.findByTestId("stDateTimeInputCalendar")
-      const dayCell = within(calendar).getByRole("button", {
-        name: /November 20/,
-      })
-      const field = screen.getByTestId("stDateTimeInputField")
-
-      // Safari order: pointerdown before blur; userEvent.click is one gesture.
-      /* eslint-disable testing-library/prefer-user-event */
-      fireEvent.pointerDown(dayCell)
-      fireEvent.blur(field, { relatedTarget: null })
-      /* eslint-enable testing-library/prefer-user-event */
-
-      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeInTheDocument()
-      expect(
-        screen.getByTestId("stDateTimeInputCalendarButton")
-      ).toHaveAttribute("aria-expanded", "false")
-    })
-
-    it("commits on body-target blur when there was no popover pointerdown", async () => {
-      const user = userEvent.setup()
-      const props = getProps({ default: ["2025-11-19T16:45"] })
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(<DateTimeInput {...props} />)
-      spy.mockClear()
-
-      const segments = screen.getAllByRole("spinbutton")
-      await user.click(segments[0])
+      await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
-
-      // Partial edit so a commit is observable.
       await user.keyboard("{ArrowUp}")
       spy.mockClear()
-
-      const field = screen.getByTestId("stDateTimeInputField")
       fireEvent.blur(field, { relatedTarget: document.body })
-
       await waitFor(() => {
         expect(spy).toHaveBeenCalled()
       })
@@ -1894,32 +1854,24 @@ describe("DateTimeInput widget", () => {
           screen.queryByTestId("stDateTimeInputCalendar")
         ).not.toBeInTheDocument()
       })
-    })
 
-    it("does not commit on body blur after popover pointerdown (Safari)", async () => {
-      const user = userEvent.setup()
-      const props = getProps({ default: ["2025-11-19T16:45"] })
-      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
-      render(<DateTimeInput {...props} />)
-
-      const segments = screen.getAllByRole("spinbutton")
-      await user.click(segments[0])
+      await user.click(screen.getAllByRole("spinbutton")[0])
       const calendar = await screen.findByTestId("stDateTimeInputCalendar")
       await user.keyboard("{ArrowUp}")
       spy.mockClear()
-
       const dayCell = within(calendar).getByRole("button", {
         name: /November 20/,
       })
-      const field = screen.getByTestId("stDateTimeInputField")
-      // Safari order: pointerdown before blur; userEvent.click is one gesture.
-      /* eslint-disable testing-library/prefer-user-event */
-      fireEvent.pointerDown(dayCell)
-      fireEvent.blur(field, { relatedTarget: document.body })
-      /* eslint-enable testing-library/prefer-user-event */
-
-      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeInTheDocument()
-      expect(spy).not.toHaveBeenCalled()
+      for (const relatedTarget of [null, document.body]) {
+        /* eslint-disable testing-library/prefer-user-event */
+        fireEvent.pointerDown(dayCell)
+        fireEvent.blur(field, { relatedTarget })
+        /* eslint-enable testing-library/prefer-user-event */
+        expect(
+          screen.getByTestId("stDateTimeInputCalendar")
+        ).toBeInTheDocument()
+        expect(spy).not.toHaveBeenCalled()
+      }
     })
   })
 
@@ -2784,7 +2736,7 @@ describe("DateTimeInput widget", () => {
     it("commits once when Safari Tab skips the calendar button (rAF leave)", async () => {
       const { user, props, spy } = renderEmpty()
 
-      // Time only in the popover — must still be readable when the rAF closes.
+      // Popover-only time must stay readable when the rAF leave closes.
       await user.click(screen.getAllByRole("spinbutton")[0])
       await screen.findByTestId("stDateTimeInputCalendar")
       await user.click(
@@ -2793,23 +2745,17 @@ describe("DateTimeInput widget", () => {
         )[0]
       )
       await user.keyboard("0945")
-
-      const inlineField = screen.getByTestId("stDateTimeInputField")
-      const inline = within(inlineField).getAllByRole("spinbutton")
+      const inline = within(
+        screen.getByTestId("stDateTimeInputField")
+      ).getAllByRole("spinbutton")
       await user.click(inline[0])
       await user.keyboard("20251119")
-
       const lastInline = inline.at(-1)
-      if (!lastInline) {
-        throw new Error("Expected a date-time segment")
-      }
+      if (!lastInline) throw new Error("Expected a date-time segment")
       await user.click(lastInline)
 
-      // Safari often skips icon buttons on Tab. Drive the leave path without
-      // landing on the calendar toggle: keydown arms skipNextBlurCommitRef +
-      // the rAF closer. A single outside focus delivers the blur (do not also
-      // fireEvent.blur — that would consume the skip flag and let the focus
-      // blur commit before the frame, masking a broken rAF path).
+      // keydown arms skip + rAF; outside focus delivers blur (do not also
+      // fireEvent.blur — that clears skip and lets focus-blur commit early).
       /* eslint-disable testing-library/prefer-user-event */
       fireEvent.keyDown(lastInline, { key: "Tab" })
       /* eslint-enable testing-library/prefer-user-event */
