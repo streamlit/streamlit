@@ -67,9 +67,10 @@ dependencies = [
   # versioning, i.e. "major" version increase != breaking changes
   "packaging>=20",
   # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
-  # the index dtype. 1.5.0 is the oldest release that also publishes Python 3.11
-  # wheels.
-  "pandas>=1.5.0,<4",
+  # the index dtype. 1.5.3 is the oldest release that publishes Python 3.11
+  # wheels and calls Column.size() in the dataframe interchange protocol.
+  # 1.5.0–1.5.2 treat size as an attribute and crash those tests.
+  "pandas>=1.5.3,<4",
   # 9.2.0 is the first release that publishes Python 3.11 wheels.
   "pillow>=9.2.0,<13",
   "pydeck>=0.8.0b4,<1",

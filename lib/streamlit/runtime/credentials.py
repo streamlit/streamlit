@@ -213,9 +213,10 @@ class Credentials:
         # Create intermediate directories if necessary
         os.makedirs(os.path.dirname(self._conf_file), exist_ok=True)
 
-        # tomli-w cannot serialize None, so an invalid email is omitted.
-        email = self.activation.email
-        data = {} if email is None else {"email": email}
+        # tomli-w cannot serialize None. Store an invalid email as "" so the
+        # file still has an email key that load() can read.
+        email = self.activation.email or ""
+        data = {"email": email}
 
         import tomli_w
 

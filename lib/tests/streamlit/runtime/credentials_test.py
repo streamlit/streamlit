@@ -19,6 +19,7 @@ from __future__ import annotations
 import os
 import re
 import textwrap
+import tomllib
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, call, mock_open, patch
@@ -369,6 +370,9 @@ class CredentialsClassTest(unittest.TestCase):
             creds.activation = _verify_email("some_email")
             creds.save()
             assert len(m.request_history) == 0
+            # An invalid email is stored as "" so a later load() can read the file.
+            saved = Path(creds._conf_file).read_text(encoding="utf-8")
+            assert tomllib.loads(saved)["general"]["email"] == ""
 
     @tempdir()
     def test_email_send_exception_handling(self, temp_dir):

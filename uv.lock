@@ -4030,7 +4030,7 @@ requires-dist = [
     { name = "orjson", marker = "extra == 'charts'", specifier = ">=3.5.0" },
     { name = "orjson", marker = "extra == 'performance'", specifier = ">=3.5.0" },
     { name = "packaging", specifier = ">=20" },
-    { name = "pandas", specifier = ">=1.5.0,<4" },
+    { name = "pandas", specifier = ">=1.5.3,<4" },
     { name = "pillow", specifier = ">=9.2.0,<13" },
     { name = "plotly", marker = "extra == 'charts'", specifier = ">=4.0.0" },
     { name = "protobuf", specifier = ">=5.26.1,<8" },
