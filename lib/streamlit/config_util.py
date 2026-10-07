@@ -200,10 +200,9 @@ def show_config(
                 )
 
             toml_default = _dump_toml_value("default", option.default_val).strip()
-            # Strip ``default = `` so the comment shows the value. Table dumps
-            # (``[default]``) have no assignment prefix and stay intact.
-            if toml_default.startswith("default = "):
-                toml_default = toml_default.removeprefix("default = ").strip()
+            # Drop an assignment prefix so the comment shows the value. A table
+            # dump (``[default]``) has no prefix, so removeprefix leaves it.
+            toml_default = toml_default.removeprefix("default = ").strip()
 
             if len(toml_default) > 0:
                 # Ensure a line break before appending "Default" comment, if not already there

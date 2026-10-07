@@ -59,10 +59,8 @@ repos:
         pass_filenames: true
       - id: oxfmt-yaml
         name: Oxfmt-yaml
-        # Run the frontend oxfmt binary from the repo root. `yarn --cwd frontend`
-        # changes directory, so `frontend/.oxfmtrc.json` is looked up inside
-        # `frontend/frontend`. Paths stay repo-root relative because oxfmt
-        # rejects `..`.
+        # Run oxfmt from the repo root so --config and the globs resolve
+        # relative to it (oxfmt rejects paths containing "..").
         entry: frontend/node_modules/.bin/oxfmt --config frontend/.oxfmtrc.json ".github/**/*.{yml,yaml}"
         files: ^.github/.*\.(yml|yaml)$
         language: system

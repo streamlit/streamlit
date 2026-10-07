@@ -148,8 +148,8 @@ class Credentials:
         import tomllib
 
         try:
-            with open(self._conf_file, encoding="utf-8") as f:
-                data = tomllib.loads(f.read()).get("general")
+            with open(self._conf_file, "rb") as f:
+                data = tomllib.load(f).get("general")
             if data is None:
                 raise RuntimeError  # noqa: TRY301
             self.activation = _verify_email(data.get("email"))
@@ -207,21 +207,20 @@ class Credentials:
         """Save to toml file and send email."""
         from requests.exceptions import RequestException
 
-        if self.activation is None:
+        if self.activation is None or not self.activation.is_valid:
             return
 
         # Create intermediate directories if necessary
         os.makedirs(os.path.dirname(self._conf_file), exist_ok=True)
 
-        # tomli-w cannot serialize None. Store an invalid email as "" so the
-        # file still has an email key that load() can read.
+        # activate() only saves valid activations, whose email is a str.
+        # Fall back to "" because tomli-w cannot serialize None.
         email = self.activation.email or ""
-        data = {"email": email}
 
         import tomli_w
 
         with open(self._conf_file, "w", encoding="utf-8") as f:
-            f.write(tomli_w.dumps({"general": data}))
+            f.write(tomli_w.dumps({"general": {"email": email}}))
 
         try:
             _send_email(self.activation.email)

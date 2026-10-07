@@ -60,16 +60,16 @@ dependencies = [
   # API that our built-in charts rely on.
   "altair>=5.0.0,<7,!=5.4.0,!=5.4.1",
   "click>=7.0,<9",
-  # 1.25.0 is the oldest NumPy that Matplotlib 3.11 accepts. That Matplotlib
-  # release requires Python >=3.11, so it is the one installed on our minimum.
+  # The minimum-dependency job installs the locked Matplotlib 3.11, which
+  # requires numpy>=1.25. NumPy 1.23.2 has Python 3.11 wheels, but that job
+  # fails collection with it.
   "numpy>=1.25.0,<3",
   # The "packaging" package isn't version-capped because they use calendar-based
   # versioning, i.e. "major" version increase != breaking changes
   "packaging>=20",
-  # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
-  # the index dtype. 1.5.3 is the oldest release that publishes Python 3.11
-  # wheels and calls Column.size() in the dataframe interchange protocol.
-  # 1.5.0–1.5.2 treat size as an attribute and crash those tests.
+  # pandas 1.5.0–1.5.2 expose the dataframe interchange `Column.size` as an
+  # attribute instead of a method, which crashes interchange conversion of
+  # string columns.
   "pandas>=1.5.3,<4",
   # 9.2.0 is the first release that publishes Python 3.11 wheels.
   "pillow>=9.2.0,<13",
