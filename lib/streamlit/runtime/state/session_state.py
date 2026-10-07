@@ -162,6 +162,11 @@ class WStates(MutableMapping[str, Any]):
 
     states: dict[str, WState] = field(default_factory=dict)
     widget_metadata: dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
+    # Browser string payloads, keyed by widget id, kept after the proto is
+    # deserialized. Re-serializing calls format_func, which can already
+    # return a new label and hide the change (gh-17175).
+    frontend_string_values: dict[str, str] = field(default_factory=dict)
+    frontend_string_array_values: dict[str, list[str]] = field(default_factory=dict)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -222,9 +227,16 @@ class WStates(MutableMapping[str, Any]):
 
     def __setitem__(self, k: str, v: WState) -> None:
         self.states[k] = v
+        # Only a frontend proto carries a browser label. __getitem__ writes
+        # Value straight into `states`, so deserializing keeps that label.
+        if isinstance(v, Serialized):
+            self._remember_frontend_wire(k, v.value)
+        else:
+            self._forget_frontend_wire(k)
 
     def __delitem__(self, k: str) -> None:
         del self.states[k]
+        self._forget_frontend_wire(k)
 
     def __len__(self) -> int:
         return len(self.states)
@@ -250,6 +262,26 @@ class WStates(MutableMapping[str, Any]):
         """
         self.states.update(other.states)
         self.widget_metadata.update(other.widget_metadata)
+        self.frontend_string_values.update(other.frontend_string_values)
+        self.frontend_string_array_values.update(other.frontend_string_array_values)
+
+    def _remember_frontend_wire(self, widget_id: str, proto: WidgetStateProto) -> None:
+        """Save a string or string-array payload and drop any other value type."""
+        field_name = proto.WhichOneof("value")
+        if field_name == "string_value":
+            self.frontend_string_values[widget_id] = proto.string_value
+            self.frontend_string_array_values.pop(widget_id, None)
+        elif field_name == "string_array_value":
+            self.frontend_string_array_values[widget_id] = list(
+                proto.string_array_value.data
+            )
+            self.frontend_string_values.pop(widget_id, None)
+        else:
+            self._forget_frontend_wire(widget_id)
+
+    def _forget_frontend_wire(self, widget_id: str) -> None:
+        self.frontend_string_values.pop(widget_id, None)
+        self.frontend_string_array_values.pop(widget_id, None)
 
     def set_widget_from_proto(self, widget_state: WidgetStateProto) -> None:
         """Set a widget's serialized value, overwriting any existing value it has."""
@@ -278,6 +310,13 @@ class WStates(MutableMapping[str, Any]):
                 fragment_ids_this_run,
             )
         }
+        # Replacing `states` above skips __delitem__, which drops wire payloads.
+        # Forget payloads for widgets that are no longer stored.
+        stale_wire_ids = (
+            set(self.frontend_string_values) | set(self.frontend_string_array_values)
+        ) - set(self.states)
+        for widget_id in stale_wire_ids:
+            self._forget_frontend_wire(widget_id)
 
     def get_serialized(self, k: str) -> WidgetStateProto | None:
         """Get the serialized value of the widget with the given id.
@@ -1574,27 +1613,40 @@ class SessionState:
         widget_id = metadata.id
         ctx = get_script_run_ctx()
 
-        # Capture the stored wire value *before* swapping in this run's
-        # serializer, so it reflects the value as it was actually stored (using
-        # the serializer it was stored with). For string and string-array widgets
-        # we expose this so callers can reconcile a stored value against freshly
-        # computed state without re-deriving it from the deserialized value.
+        # Prefer the browser payload captured when the frontend value arrived,
+        # before this run's serializer is installed. Callbacks deserialize the
+        # proto first; re-serializing would call format_func and can already
+        # return the new label (gh-17175).
         incoming_serialized_value: str | None = None
         incoming_serialized_values: list[str] | None = None
+        widget_state = self._new_widget_state
         if metadata.value_type == "string_value":
-            stored_proto = self._new_widget_state.get_serialized(widget_id)
-            if (
-                stored_proto is not None
-                and stored_proto.WhichOneof("value") == "string_value"
-            ):
-                incoming_serialized_value = stored_proto.string_value
+            if widget_id in widget_state.frontend_string_values:
+                incoming_serialized_value = widget_state.frontend_string_values[
+                    widget_id
+                ]
+            else:
+                stored_proto = widget_state.get_serialized(widget_id)
+                if (
+                    stored_proto is not None
+                    and stored_proto.WhichOneof("value") == "string_value"
+                ):
+                    incoming_serialized_value = stored_proto.string_value
         elif metadata.value_type == "string_array_value":
-            stored_proto = self._new_widget_state.get_serialized(widget_id)
-            if (
-                stored_proto is not None
-                and stored_proto.WhichOneof("value") == "string_array_value"
-            ):
-                incoming_serialized_values = list(stored_proto.string_array_value.data)
+            if widget_id in widget_state.frontend_string_array_values:
+                # Copy so a caller cannot mutate the stored browser payload.
+                incoming_serialized_values = list(
+                    widget_state.frontend_string_array_values[widget_id]
+                )
+            else:
+                stored_proto = widget_state.get_serialized(widget_id)
+                if (
+                    stored_proto is not None
+                    and stored_proto.WhichOneof("value") == "string_array_value"
+                ):
+                    incoming_serialized_values = list(
+                        stored_proto.string_array_value.data
+                    )
 
         self._set_widget_metadata(metadata)
         if user_key is not None:

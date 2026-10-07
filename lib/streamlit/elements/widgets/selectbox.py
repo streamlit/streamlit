@@ -812,8 +812,22 @@ class SelectboxMixin:
                 widget_state.incoming_serialized_value,
             )
 
-        if value_needs_reset or widget_state.value_changed:
-            serialized_value = serde.serialize(current_value)
+        serialized_value = serde.serialize(current_value)
+        # The frontend tracks the selection by the label it was sent. Push the
+        # new label when format_func changes it, or a later rerun clears the
+        # widget (gh-17175). Leave user-entered text alone: it is not a
+        # formatted option.
+        labels_changed = (
+            serialized_value is not None
+            and widget_state.incoming_serialized_value is not None
+            and serialized_value in formatted_option_to_option_index
+            and widget_state.incoming_serialized_value != serialized_value
+        )
+        should_set_value = (
+            value_needs_reset or widget_state.value_changed or labels_changed
+        )
+
+        if should_set_value:
             if serialized_value is not None:
                 selectbox_proto.raw_value = serialized_value
             selectbox_proto.set_value = True
@@ -826,7 +840,7 @@ class SelectboxMixin:
             "selectbox",
             selectbox_proto,
             layout_config=layout_config,
-            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            has_one_shot_effect=should_set_value,
         )
         return current_value
 

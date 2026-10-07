@@ -37,8 +37,10 @@ from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
+from streamlit.proto.WidgetStates_pb2 import WidgetState
 from streamlit.runtime.state.widgets import register_widget_from_metadata
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.element_tree import Selectbox
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import (
@@ -1123,3 +1125,149 @@ class SelectboxOnChangeModeTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue(1).new_element.selectbox
         assert c.ignore_rerun is True
+
+
+def test_selectbox_resends_new_label_when_format_func_output_changes():
+    """A label change re-sends the fresh label instead of losing the selection.
+
+    The frontend tracks the selection by label and resends it verbatim, so the
+    backend must push the new label or a later rerun resets the widget.
+    Regression test for gh-17175.
+    """
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+
+        def on_change() -> None:
+            st.session_state["callback_count"] = (
+                st.session_state.get("callback_count", 0) + 1
+            )
+
+        st.selectbox(
+            "Pick one",
+            ["D", "E"],
+            format_func=lambda x: f"{x} ({count})",
+            index=None,
+            key="picker",
+            on_change=on_change,
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").select("E").run()
+    assert at.selectbox(key="picker").value == "E"
+    assert at.session_state["callback_count"] == 1
+
+    # The count behind the label changes without the user touching the widget.
+    at.session_state["callback_count"] = 0
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.selectbox(key="picker")
+    assert picker.value == "E"
+    assert picker.proto.set_value is True
+    assert picker.proto.raw_value == "E (3)"
+    # Only the display string changed, so on_change must not fire.
+    assert at.session_state["callback_count"] == 0
+
+    # With the labels unchanged, nothing is re-sent.
+    at = at.run()
+    assert at.selectbox(key="picker").value == "E"
+    assert at.selectbox(key="picker").proto.set_value is False
+    assert at.session_state["callback_count"] == 0
+
+
+def test_selectbox_label_change_does_not_rewrite_user_entered_value(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """User-entered text (accept_new_options) is not rewritten when labels change."""
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        # AppTest would format every value. The browser leaves typed text unchanged.
+        ws = WidgetState(id=self.id)
+        if self.value is not None:
+            label = self.format_func(self.value)
+            ws.string_value = label if label in self.options else str(self.value)
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+        st.selectbox(
+            "Pick one",
+            ["D", "E"],
+            format_func=lambda x: f"{x} ({count})",
+            index=None,
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").set_value("custom").run()
+    assert at.selectbox(key="picker").value == "custom"
+
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.selectbox(key="picker")
+    assert picker.value == "custom"
+    assert picker.proto.set_value is False
+
+
+def test_selectbox_resends_label_when_format_func_reads_session_state(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """A live format_func still refreshes the label the browser is holding.
+
+    AppTest would reformat the outgoing value, so this keeps the previous
+    label the way the browser does. Regression test for gh-17175.
+    """
+    held: dict[str, str | None] = {"label": None}
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        # Keep the label last pushed to the browser.
+        ws = WidgetState(id=self.id)
+        if self.value is None:
+            return ws
+        if self.proto.set_value and self.proto.raw_value:
+            held["label"] = self.proto.raw_value
+        elif held["label"] is None:
+            held["label"] = str(self.format_func(self.value))
+        ws.string_value = held["label"] or ""
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        def fmt(option: str) -> str:
+            return f"{option} ({st.session_state.get('count', 2)})"
+
+        st.selectbox(
+            "Pick one",
+            ["D", "E"],
+            format_func=fmt,
+            index=None,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").select("E").run()
+    assert at.selectbox(key="picker").value == "E"
+
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.selectbox(key="picker")
+    assert picker.value == "E"
+    assert picker.proto.set_value is True
+    assert picker.proto.raw_value == "E (3)"
+
+    at = at.run()
+    assert at.selectbox(key="picker").value == "E"
+    assert at.selectbox(key="picker").proto.set_value is False

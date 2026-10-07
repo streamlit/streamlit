@@ -5901,6 +5901,69 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
 
         assert result.incoming_serialized_value == "incoming_value"
 
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_incoming_wire_value_ignores_live_reserialization(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """The wire label stays the browser string after the proto is deserialized.
+
+        Re-serializing would call format_func, which can already return a new
+        label (gh-17175).
+        """
+        widget_id = "$$ID-hash-cb"
+        produced = {"label": "old label"}
+
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda raw: raw,
+            serializer=lambda _value: produced["label"],
+            value_type="string_value",
+        )
+        proto = WidgetStateProto()
+        proto.id = widget_id
+        proto.string_value = "old label"
+        self.session_state._new_widget_state.set_widget_from_proto(proto)
+        self.session_state._new_widget_state.set_widget_metadata(metadata)
+        # Callbacks deserialize before the widget is registered again.
+        assert self.session_state._new_widget_state[widget_id] == "old label"
+
+        produced["label"] = "new label"
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.incoming_serialized_value == "old label"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_incoming_wire_array_ignores_live_reserialization(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """String-array widgets keep the browser's labels across deserialization."""
+        widget_id = "$$ID-hash-cb"
+        produced = {"labels": ["D (0)", "F (0)"]}
+
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda raw: list(raw) if raw is not None else [],
+            serializer=lambda _value: list(produced["labels"]),
+            value_type="string_array_value",
+        )
+        proto = WidgetStateProto()
+        proto.id = widget_id
+        proto.string_array_value.data[:] = ["D (0)", "F (0)"]
+        self.session_state._new_widget_state.set_widget_from_proto(proto)
+        self.session_state._new_widget_state.set_widget_metadata(metadata)
+        assert self.session_state._new_widget_state[widget_id] == ["D (0)", "F (0)"]
+
+        produced["labels"] = ["D (1)", "F (1)"]
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.incoming_serialized_values == ["D (0)", "F (0)"]
+
 
 class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
     """A disabled widget's on-change callback must not fire for frontend

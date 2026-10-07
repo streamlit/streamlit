@@ -621,8 +621,21 @@ class RadioMixin:
             cast("T | None", widget_state.value), opt, index, key, format_func
         )
 
-        if value_needs_reset or widget_state.value_changed:
-            serialized_value = serde.serialize(current_value)
+        serialized_value = serde.serialize(current_value)
+        # The frontend tracks the selection by the label it was sent. Push the
+        # new label when format_func changes it, or a later rerun clears the
+        # widget (gh-17175).
+        labels_changed = (
+            serialized_value is not None
+            and widget_state.incoming_serialized_value is not None
+            and serialized_value in formatted_option_to_option_index
+            and widget_state.incoming_serialized_value != serialized_value
+        )
+        should_set_value = (
+            value_needs_reset or widget_state.value_changed or labels_changed
+        )
+
+        if should_set_value:
             if serialized_value is not None:
                 radio_proto.raw_value = serialized_value
             radio_proto.set_value = True
@@ -633,7 +646,7 @@ class RadioMixin:
             "radio",
             radio_proto,
             layout_config=layout_config,
-            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            has_one_shot_effect=should_set_value,
         )
         return current_value
 

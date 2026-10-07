@@ -41,7 +41,9 @@ from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
+from streamlit.proto.WidgetStates_pb2 import WidgetState
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.element_tree import Multiselect
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import (
@@ -1157,3 +1159,105 @@ class MultiselectOnChangeModeTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue(1).new_element.multiselect
         assert c.ignore_rerun is True
+
+
+def test_multiselect_resends_new_labels_when_format_func_output_changes():
+    """A label change re-sends fresh labels for every selected option, in order.
+
+    Regression test for gh-17175.
+    """
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+
+        def on_change() -> None:
+            st.session_state["callback_count"] = (
+                st.session_state.get("callback_count", 0) + 1
+            )
+
+        st.multiselect(
+            "Pick some",
+            ["D", "E", "F"],
+            format_func=lambda x: f"{x} ({count})",
+            key="picker",
+            on_change=on_change,
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.multiselect(key="picker").select("F").select("D").run()
+    assert at.multiselect(key="picker").value == ["F", "D"]
+    assert at.session_state["callback_count"] == 1
+
+    # The count behind the labels changes without the user touching the widget.
+    at.session_state["callback_count"] = 0
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.multiselect(key="picker")
+    assert picker.value == ["F", "D"]
+    assert picker.proto.set_value is True
+    assert list(picker.proto.raw_values) == ["F (3)", "D (3)"]
+    # Only the display strings changed, so on_change must not fire.
+    assert at.session_state["callback_count"] == 0
+
+    # With the labels unchanged, nothing is re-sent.
+    at = at.run()
+    assert at.multiselect(key="picker").value == ["F", "D"]
+    assert at.multiselect(key="picker").proto.set_value is False
+    assert at.session_state["callback_count"] == 0
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [
+        pytest.param(["custom"], id="typed_text"),
+        pytest.param(["D", "custom"], id="option_and_typed_text"),
+    ],
+)
+def test_multiselect_label_change_does_not_rewrite_user_entered_values(
+    monkeypatch: pytest.MonkeyPatch,
+    selection: list[str],
+) -> None:
+    """User-entered text is not rewritten when option labels change.
+
+    When typed text is mixed with a real option, the refresh is skipped for
+    the whole selection so format_func is not applied to the typed string.
+    A later browser rerun may then drop the real option; that is not asserted.
+    """
+
+    def frontend_widget_state(self: Multiselect) -> WidgetState:
+        # AppTest would format every value. The browser leaves typed text unchanged.
+        ws = WidgetState(id=self.id)
+        for v in self.value:
+            label = self.format_func(v)
+            ws.string_array_value.data.append(
+                label if label in self.options else str(v)
+            )
+        return ws
+
+    monkeypatch.setattr(Multiselect, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+        st.multiselect(
+            "Pick some",
+            ["D", "E"],
+            format_func=lambda x: f"{x} ({count})",
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.multiselect(key="picker").set_value(selection).run()
+    assert at.multiselect(key="picker").value == selection
+
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.multiselect(key="picker")
+    assert picker.value == selection
+    assert picker.proto.set_value is False
