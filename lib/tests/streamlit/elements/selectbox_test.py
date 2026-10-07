@@ -1218,6 +1218,55 @@ def test_selectbox_label_change_does_not_rewrite_user_entered_value(
     assert picker.proto.set_value is False
 
 
+def test_selectbox_does_not_rewrite_typed_text_that_formats_to_an_option(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Typed text stays typed when format_func maps it onto an option label.
+
+    options [1, 2] format as "Item 1" and "Item 2". Typing "1" must not be
+    pushed back as "Item 1", or the next rerun selects the integer option.
+    """
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        # The browser keeps typed text. It applies set_value when the server
+        # replaces that text with an option label.
+        ws = WidgetState(id=self.id)
+        if self.value is None:
+            return ws
+        if self.proto.set_value and self.proto.raw_value:
+            ws.string_value = self.proto.raw_value
+            return ws
+        ws.string_value = (
+            str(self.value)
+            if isinstance(self.value, str)
+            else str(self.format_func(self.value))
+        )
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        st.selectbox(
+            "Pick one",
+            [1, 2],
+            format_func=lambda option: f"Item {int(option)}",
+            index=None,
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").set_value("1").run()
+    assert at.selectbox(key="picker").value == "1"
+
+    at = at.run()
+    picker = at.selectbox(key="picker")
+    assert picker.value == "1"
+    assert picker.proto.set_value is False
+
+
 def test_selectbox_resends_label_when_format_func_reads_session_state(
     monkeypatch: pytest.MonkeyPatch,
 ):

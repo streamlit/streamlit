@@ -1261,3 +1261,42 @@ def test_multiselect_label_change_does_not_rewrite_user_entered_values(
     picker = at.multiselect(key="picker")
     assert picker.value == selection
     assert picker.proto.set_value is False
+
+
+def test_multiselect_does_not_rewrite_typed_text_that_formats_to_an_option(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Typed text stays typed when format_func maps it onto an option label."""
+
+    def frontend_widget_state(self: Multiselect) -> WidgetState:
+        ws = WidgetState(id=self.id)
+        if self.proto.set_value and list(self.proto.raw_values):
+            ws.string_array_value.data[:] = self.proto.raw_values
+            return ws
+        for value in self.value:
+            ws.string_array_value.data.append(
+                str(value) if isinstance(value, str) else str(self.format_func(value))
+            )
+        return ws
+
+    monkeypatch.setattr(Multiselect, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        st.multiselect(
+            "Pick some",
+            [1, 2],
+            format_func=lambda option: f"Item {int(option)}",
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.multiselect(key="picker").set_value(["1"]).run()
+    assert at.multiselect(key="picker").value == ["1"]
+
+    at = at.run()
+    picker = at.multiselect(key="picker")
+    assert picker.value == ["1"]
+    assert picker.proto.set_value is False

@@ -344,6 +344,39 @@ def create_mappings(
     )
 
 
+def is_option_value(
+    value: Any,
+    serialized_label: str | None,
+    options: Sequence[Any],
+    formatted_option_to_option_index: dict[str, int],
+) -> bool:
+    """Return whether `value` is a real option, not text the user typed.
+
+    ``format_func`` can map typed text onto an existing option label. That text
+    must not be refreshed as if it were the option. Custom options are
+    deepcopied and may not compare equal; typed text is a string, so a
+    non-string value is still the option.
+    """
+    if serialized_label is None:
+        return False
+    option_index = formatted_option_to_option_index.get(serialized_label)
+    if option_index is None:
+        return False
+    option = options[option_index]
+    if _values_equal(option, value):
+        return True
+    # A deepcopied custom option compares unequal. Typed text is a string.
+    return not isinstance(value, str)
+
+
+def _values_equal(left: Any, right: Any) -> bool:
+    """Compare two option values, treating ambiguous comparisons as unequal."""
+    try:
+        return bool(left == right)
+    except Exception:
+        return False
+
+
 def validate_and_sync_value_with_options(
     current_value: T | None,
     opt: Sequence[T],

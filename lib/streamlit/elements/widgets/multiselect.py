@@ -37,6 +37,7 @@ from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     create_mappings,
     get_default_indices,
+    is_option_value,
     maybe_coerce_enum_sequence,
     validate_and_sync_multiselect_value_with_options,
     validate_select_widget_filter_mode,
@@ -884,13 +885,20 @@ class MultiSelectMixin:
         # The frontend tracks each selection by the label it was sent. Push new
         # labels when format_func changes them, or a later rerun drops the
         # selection (gh-17175). Skip the push when any selected value is typed
-        # text (accept_new_options). That text has no formatted label, and
-        # pushing would replace what the user typed.
+        # text (accept_new_options). That text can format onto an option label,
+        # and pushing would replace what the user typed.
         labels_changed = (
             widget_state.incoming_serialized_values is not None
             and widget_state.incoming_serialized_values != serialized_values
+            and len(current_values) == len(serialized_values)
             and all(
-                value in formatted_option_to_option_index for value in serialized_values
+                is_option_value(
+                    value,
+                    label,
+                    indexable_options,
+                    formatted_option_to_option_index,
+                )
+                for value, label in zip(current_values, serialized_values, strict=False)
             )
         )
         should_set_value = (

@@ -34,6 +34,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.options_selector_utils import (
     SelectWidgetFilterMode,
     create_mappings,
+    is_option_value,
     maybe_coerce_enum,
     resolve_value_against_options,
     validate_select_widget_filter_mode,
@@ -814,13 +815,18 @@ class SelectboxMixin:
 
         serialized_value = serde.serialize(current_value)
         # The frontend tracks the selection by the label it was sent. Push the
-        # new label when format_func changes it, or a later rerun clears the
-        # widget (gh-17175). Leave user-entered text alone: it is not a
-        # formatted option.
+        # new label when format_func changes it for a real option, or a later
+        # rerun clears the widget (gh-17175). Typed text stays as entered, even
+        # when format_func maps it onto another option's label.
         labels_changed = (
             serialized_value is not None
             and widget_state.incoming_serialized_value is not None
-            and serialized_value in formatted_option_to_option_index
+            and is_option_value(
+                current_value,
+                serialized_value,
+                opt,
+                formatted_option_to_option_index,
+            )
             and widget_state.incoming_serialized_value != serialized_value
         )
         should_set_value = (
