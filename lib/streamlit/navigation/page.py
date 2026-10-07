@@ -46,7 +46,8 @@ def _raise_if_unsafe_page_path(page_path: str, *, error_prefix: str = "") -> Non
 
     # Reject UNC, device-namespace, and extended-prefix paths before filesystem
     # access can initiate an SMB connection or access a Windows device directly.
-    # Standard absolute and drive-local paths remain allowed by the navigation APIs.
+    # Standard absolute paths (for example, "C:\app\page.py") remain allowed
+    # because they are part of the public st.Page and navigation API contract.
     if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
         raise StreamlitAPIException(
             f"{error_prefix}Network paths and device paths are not supported.",

@@ -611,7 +611,7 @@ def test_st_switch_page_with_path_argument(
     patched_normalize_path_join,
     page_arg,
 ):
-    """``switch_page`` resolves both ``str`` and ``pathlib.Path`` arguments via the pages manager."""
+    """Resolve string and Path arguments, including parent-relative and drive paths."""
     patched_normalize_path_join.return_value = "/some/path/pages/page_1.py"
     ctx = _make_pages_lookup_ctx("/some/path/pages/page_1.py")
     patched_get_script_run_ctx.return_value = ctx

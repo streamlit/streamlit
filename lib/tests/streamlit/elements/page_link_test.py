@@ -111,10 +111,10 @@ class PageLinkTest(DeltaGeneratorTestCase):
             ("non_windows_double_slash", False, "//server/share/page.py"),
         ]
     )
-    def test_allows_supported_local_paths(
+    def test_allows_paths_accepted_by_the_public_api(
         self, _name: str, is_windows: bool, page: str
     ) -> None:
-        """Navigation keeps accepting local paths allowed by the public API."""
+        """Relative, drive-absolute, and non-Windows double-slash paths resolve."""
         ctx = MagicMock()
         ctx.main_script_path = "/app/main.py"
         ctx.pages_manager.get_pages.return_value = {
