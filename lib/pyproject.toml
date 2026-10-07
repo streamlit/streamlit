@@ -60,8 +60,9 @@ dependencies = [
   # API that our built-in charts rely on.
   "altair>=5.0.0,<7,!=5.4.0,!=5.4.1",
   "click>=7.0,<9",
-  # 1.23.2 is the first 1.23 release that publishes Python 3.11 wheels.
-  "numpy>=1.23.2,<3",
+  # 1.25.0 is the oldest NumPy that Matplotlib 3.11 accepts. That Matplotlib
+  # release requires Python >=3.11, so it is the one installed on our minimum.
+  "numpy>=1.25.0,<3",
   # The "packaging" package isn't version-capped because they use calendar-based
   # versioning, i.e. "major" version increase != breaking changes
   "packaging>=20",
