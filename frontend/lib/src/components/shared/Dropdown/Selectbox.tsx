@@ -57,8 +57,8 @@ import { isMobile } from "~lib/util/isMobile"
 import {
   getSelectPlaceholder,
   isNullOrUndefined,
-  notNullOrUndefined,
   type LabelVisibilityOptions,
+  notNullOrUndefined,
 } from "~lib/util/utils"
 
 import {
