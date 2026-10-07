@@ -49,77 +49,64 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
         400,
         (
             "The request is malformed: an unknown field, a wrong type, "
-            "`widget_state` on a creating call, or navigation combined with widget "
-            "changes."
+            "`widget_state` or `trigger` on a creating call, or navigation "
+            "combined with widget changes."
         ),
     ),
     "request_too_large": (
         413,
-        (
-            "The body is larger than `server.maxWidgetStateSize`, the bound the "
-            "app's WebSocket applies to a browser's messages too."
-        ),
+        "The body is larger than `server.maxWidgetStateSize`.",
     ),
     "invalid_value": (
         400,
         (
-            "A value is not acceptable for the element it addresses -- outside the "
-            "element's options, over its selection limit, or of the wrong type."
+            "A value the element cannot take: of the wrong JSON type, outside "
+            "its options or over its selection limit, or one the widget cannot "
+            "read. The message lists the legal options where there are some."
         ),
     ),
     "not_a_value": (
         400,
-        (
-            "The element is a trigger and must be fired with `trigger`, not set "
-            "through `widget_state`."
-        ),
+        "The element is a trigger: fire it with `trigger`.",
     ),
     "not_a_trigger": (
         400,
-        (
-            "The element holds a value and must be set through `widget_state`, not "
-            "fired with `trigger`."
-        ),
+        "The element holds a value: set it through `widget_state`.",
     ),
     "missing_form_submit": (
         400,
         (
-            "The request set fields belonging to an `st.form` without firing "
-            "one of that form's submit triggers. A form defers its values "
-            "until submitted, so the fields alone would change nothing."
+            "Fields of an `st.form` were sent without one of its submit "
+            "triggers, so they would change nothing."
         ),
     ),
     "cross_dialog_batch": (
         400,
         (
-            "The request combined widgets in an open `st.dialog` with widgets "
-            "outside it. That takes a full rerun, which closes the dialog "
-            "without running its contents, so send the dialog's widgets on "
-            "their own first."
+            "Widgets in an open `st.dialog` were combined with widgets outside "
+            "it. Send the dialog's on their own first."
         ),
     ),
     "cross_form_batch": (
         400,
         (
-            "One interaction cannot span two forms, or mix form fields with "
-            "controls outside the form. Send each form's fields together with that "
-            "form's submit trigger."
+            "One request cannot span two forms, or mix a form's fields with "
+            "other controls."
         ),
     ),
     "unsupported_element": (
         400,
         (
-            "The element is on the current page but cannot be driven through "
-            "this interface: it is display-only, it takes input JSON cannot "
-            "express (uploaded bytes), or its `support` field says why. "
-            "Inspect it in the tree instead of acting on it."
+            "The element is on the page but cannot be driven here: it is "
+            "display-only, takes input JSON cannot express (uploads), or its "
+            "`support` field says why."
         ),
     ),
     "unknown_key": (
         404,
         (
-            "No element with that key is registered in this session. Keys come "
-            "from the latest snapshot and must not be constructed."
+            "No element with that key exists in this session. Keys come from "
+            "the latest snapshot and are never constructed."
         ),
     ),
     "unknown_page": (
@@ -129,33 +116,27 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
     "unknown_session": (
         404,
         (
-            "The `session_id` does not exist or has expired. Omit `session_id` to "
-            "start a new session; an unknown one is never a silent fresh start."
+            "The `session_id` does not exist or has expired. Omit it to start a "
+            "new session."
         ),
     ),
     "not_on_page": (
         409,
         (
-            "The element exists in this session but is not something you can act "
-            "on right now: it may belong to a page you navigated away from, or it "
-            "may only appear after another control changes. Read `actions` from "
-            "the latest snapshot. An element that is on the page but unusable "
-            "reports `disabled_widget` or `unsupported_element` instead."
+            "The element exists in this session but not on the current page: "
+            "it may be on a page you left, or appear only after another control "
+            "changes."
         ),
     ),
     "disabled_widget": (
         409,
-        (
-            "The element is on the current page but disabled. Something else on "
-            "the page controls that; change it first."
-        ),
+        "The element is on the page but disabled; something else on the page enables it.",
     ),
     "session_busy": (
         409,
         (
-            "The session already has an interaction in flight, or is still running "
-            "one that returned `run_timed_out`. One interaction per session at a "
-            "time; collect a timed-out run by sending only `session_id`."
+            "The session already has an interaction in flight, or a timed-out "
+            "run is still going. Collect that run by sending only `session_id`."
         ),
     ),
     # 202 rather than 504: the request was accepted and its run is still going,
@@ -165,12 +146,9 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
     "run_timed_out": (
         202,
         (
-            "The app did not finish within `server.agentRunTimeout` and is still "
-            "running. This is expected for slow work, such as an app's first "
-            "load of data it has not cached yet, and nothing is lost: send the "
-            "same request again, or an empty one with only `session_id`, and it "
-            "waits for that run instead of starting it over. A different request "
-            "gets `session_busy` until the run finishes."
+            "Not a failure: the run outlasted `server.agentRunTimeout` and is "
+            "still going. Send the same request again, or only `session_id`, to "
+            "collect it."
         ),
     ),
     "internal_error": (
@@ -182,32 +160,24 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
     ),
     "not_available": (
         403,
-        (
-            "The agent API is not served by this app. It is off unless "
-            "`server.enableAgentApi` is set."
-        ),
+        "The agent API is off. The operator enables it with `server.enableAgentApi`.",
     ),
     "host_not_allowed": (
         403,
-        (
-            "The request's `Host` is not in `server.allowedHosts`, which the app "
-            "enforces for its WebSocket too."
-        ),
+        "The request's `Host` is not in `server.allowedHosts`.",
     ),
     "origin_not_allowed": (
         403,
         (
-            "The request carries an `Origin` -- it was sent by a web page -- that "
-            "is not in `server.corsAllowedOrigins`. Programmatic clients send no "
-            "`Origin` and are not affected."
+            "Sent by a web page whose `Origin` is not in "
+            "`server.corsAllowedOrigins`. Programmatic clients send no `Origin`."
         ),
     ),
     "too_many_sessions": (
         429,
         (
-            "The server already holds its maximum number of agent sessions "
-            "(`server.agentMaxSessions`). Reuse an existing `session_id`, or "
-            "retry once idle sessions expire."
+            "The server already holds `server.agentMaxSessions` sessions. Reuse "
+            "a `session_id`, or retry once idle ones expire."
         ),
     ),
 }
@@ -244,17 +214,9 @@ Geometry (width, height, gaps, alignment) is omitted throughout: it carries no \
 meaning for a non-visual client. Optional content the author never supplied is \
 omitted rather than sent as null.
 
-`fragment` appears on a node that lives inside an `st.fragment` (including an \
-`st.dialog` body, which is one). Acting on it reruns that fragment alone, \
-which is both faster and the only way to interact with a dialog without \
-closing it. A scoped rerun leaves the other regions as the last run left \
-them, exactly as it does in a browser: keeping a page coherent across its own \
-fragments is the app's job, and `st.rerun("<key>")` is how an app refreshes \
-another one.
-
-A dialog node itself has no `fragment`: it is the overlay around one, and its \
-body is the child container. Read the scope from the node you intend to act \
-on, not from the dialog.
+Values are plain JSON, here and in table previews: dates, times, and datetimes \
+are ISO 8601 text, decimals are strings, durations are seconds, non-finite \
+numbers are `null`, and binary data is `{"bytes": <length>}`.
 """
 
 _KEY_DESCRIPTION: Final = """\
@@ -268,6 +230,34 @@ contract.
 
 Absent for elements that have no identity, such as most display commands.
 """
+
+# One request body per common step. Keys are illustrative: a real request uses
+# keys read from the latest snapshot.
+_REQUEST_EXAMPLES: Final = {
+    "create": {
+        "summary": "Start a session and read the app",
+        "value": {},
+    },
+    "set_filter": {
+        "summary": "Set a widget",
+        "value": {"session_id": "s_7f3a", "widget_state": {"region": "Europe"}},
+    },
+    "submit_form": {
+        "summary": "Fill a form and submit it",
+        "value": {
+            "session_id": "s_7f3a",
+            "widget_state": {"title": "Printer jammed", "priority": "High"},
+            "trigger": {"key": "submit"},
+        },
+    },
+    "parameterized_report": {
+        "summary": "Open a page with bound query parameters, in one call",
+        "value": {
+            "page": "revenue",
+            "query_params": {"region": ["Europe"], "quarter": ["2026-Q2"]},
+        },
+    },
+}
 
 
 def build_openapi_document(
@@ -343,7 +333,8 @@ def build_openapi_document(
                     "required": False,
                     "content": {
                         "application/json": {
-                            "schema": {"$ref": "#/components/schemas/InteractRequest"}
+                            "schema": {"$ref": "#/components/schemas/InteractRequest"},
+                            "examples": _REQUEST_EXAMPLES,
                         }
                     },
                 },
@@ -361,12 +352,10 @@ def build_openapi_document(
                     },
                     "202": {
                         "description": (
-                            "Accepted, but the run is still going after "
-                            "`server.agentRunTimeout`: an `Error` with code "
-                            "`run_timed_out` and the `session_id`. Not a "
-                            "failure. Send the same request again, or one with "
-                            "only `session_id`, to wait for the run and get its "
-                            "snapshot."
+                            "Not a failure: the run is still going. An `Error` "
+                            "with code `run_timed_out` and the `session_id`; "
+                            "retry as the operation's description says to "
+                            "collect the run."
                         ),
                         "content": {
                             "application/json": {
@@ -519,16 +508,17 @@ interaction" means one submission, not one execution.
 
 An interaction with no changes is an explicit rerun, not a read. It executes \
 the script again and can repeat side effects exactly as any other rerun does. \
-The one exception is a retry after a timeout, below.
+The one exception is a retry after a timeout, below. You rarely need a read: \
+nothing changes a session between interactions, so the last snapshot stays \
+current until you act.
 
-**A timeout is not a failure.** Slow work -- typically an app's first load of \
-data it has not cached yet -- can outlast `server.agentRunTimeout`, and the \
-request then returns `202` with `run_timed_out` and the `session_id` while the \
-app keeps running. Send the same request again, or an empty one with only \
-`session_id`: the retry waits for that run instead of starting it over, and \
-returns its result once it finishes, so a slow run completes over several \
-retries. A retry never fires a trigger twice. Any other request gets \
-`session_busy` until the run finishes.
+**A timeout is not a failure.** Slow work, such as an app's first load of data \
+it has not cached, can outlast `server.agentRunTimeout`. The request then \
+returns `202` with `run_timed_out` and the `session_id` while the app keeps \
+running. Send the same request again, or only `session_id`: the retry waits \
+for that run instead of starting it over, so a slow run completes over several \
+retries and a trigger fires once. Any other request gets `session_busy` until \
+the run finishes.
 
 Reuse one session for a sequence of interactions rather than creating one per \
 request. Each creating call runs the app from the start and holds a session \
@@ -543,13 +533,9 @@ behind `st.login` shows its signed-out state.
 """
 
 _ERROR_RESPONSE_DESCRIPTION: Final = """\
-A request-level failure. Nothing ran and the app is unchanged, except for \
-`run_timed_out` and a creating call that named an unrecognized `page` (see \
-`Error`).
-
-An app that raised during the run is *not* an error response: it is a 200 \
-whose `status` is `error`, carrying a real but truncated snapshot, because the \
-script did run and produced output up to the point it raised.
+A refused request, described by `Error`. An app that raised during its run is \
+not one: that is a 200 whose `status` is `error`, carrying the snapshot up to \
+the point it raised.
 """
 
 
@@ -574,36 +560,32 @@ def schemas() -> dict[str, Any]:
                     "description": (
                         "A patch of element keys to JSON values, the same shape "
                         "as `st.session_state`. Unmentioned elements keep their "
-                        "current values. Only elements listed in the last "
-                        "snapshot's `actions` may be set; this is not arbitrary "
-                        "session state.\n\n"
-                        "A value outside an element's `options`, of the wrong "
-                        "JSON type, or one the widget cannot read is rejected. "
-                        "A number is a string only where it names an option, "
-                        "dates and times are ISO text, a date or time "
-                        "slider's included, and a single value and a one-item "
-                        "list are interchangeable for a list-valued element. "
-                        "Other constraints are applied the way the app applies "
-                        "them to any client: a number outside "
+                        "current values. Only keys in the last snapshot's "
+                        "`actions` may be set, so this is not arbitrary session "
+                        "state, and it cannot be sent on a creating call, "
+                        "because keys only exist once the app has run.\n\n"
+                        "Refused with `invalid_value`:\n"
+                        "- The wrong JSON type. A number counts as text only "
+                        "where it names an option, and dates and times are ISO "
+                        "text, a date or time slider's included. A single "
+                        "value and a one-item list are interchangeable for a "
+                        "list-valued element.\n"
+                        "- A value outside the element's `options` or over its "
+                        "selection limit.\n"
+                        "- A value the widget cannot read.\n\n"
+                        "Applied the way the app applies it to any client, so "
+                        "read `value` in the response: a number outside "
                         "`min_value`/`max_value`, a malformed date, time, or "
                         "color string, or a slider range with the wrong number "
-                        "of values resets the widget to its default, a fraction "
-                        "sent to a whole-number input is truncated, and text "
-                        "past `max_chars` is cut. A reversed slider range and a "
-                        "date range of any length are stored as sent, so send "
-                        "two values, lowest first. Send values within what the "
-                        "element advertises, and read `value` in the response "
-                        "to see what was applied.\n\n"
-                        "Fields belonging to an `st.form` must be sent together "
-                        "with one of that form's submit triggers, because a "
-                        "form defers its values until submitted.\n\n"
-                        "Keys that all belong to one `fragment` rerun only "
-                        "that fragment; keys spanning several regions rerun "
-                        "the whole app. Keys inside an open `st.dialog` must "
-                        "be sent on their own, because a full rerun closes "
-                        "the dialog.\n\n"
-                        "Cannot be sent on a creating call, because element "
-                        "keys only exist once the app has run."
+                        "of values resets to the default; a fraction sent to a "
+                        "whole-number input is truncated; text past "
+                        "`max_chars` is cut; and a reversed slider range or a "
+                        "date range of any length is stored as sent, so send "
+                        "two values, lowest first.\n\n"
+                        "An `st.form`'s fields go together with one of its "
+                        "submit triggers, because a form defers its values "
+                        "until submitted. Keys inside an open `st.dialog` go on "
+                        "their own; see `fragment` on `Node`."
                     ),
                 },
                 "trigger": {
@@ -706,6 +688,10 @@ def schemas() -> dict[str, Any]:
                 "session_id",
                 "status",
                 "observed_at",
+                "app_title",
+                "page",
+                "pages",
+                "query_params",
                 "tree",
                 "actions",
             ],
@@ -881,9 +867,10 @@ def schemas() -> dict[str, Any]:
                         "What a widget holds now, in the form a request may "
                         "send back: for a widget with a `format_func`, the "
                         "formatted option rather than the author's underlying "
-                        "Python value. Sending it unchanged is always valid, "
-                        "and its shape is the shape the element accepts -- a "
-                        "two-item list stays a two-item list.\n\n"
+                        "Python value, and text typed into a widget that "
+                        "accepts new options as typed. Sending it unchanged is "
+                        "always valid, and its shape is the shape the element "
+                        "accepts -- a two-item list stays a two-item list.\n\n"
                         "Present for elements whose `actions` entry has kind "
                         "`value`, except a `text_input` with `type: "
                         '"password"`, whose value can be set but is never '
@@ -938,10 +925,17 @@ def schemas() -> dict[str, Any]:
                     "type": "string",
                     "description": (
                         "The owning `st.fragment`, for nodes inside one, as an "
-                        "opaque id. Acting on such a node reruns that fragment "
-                        "alone, and every key in one request must belong to the "
-                        "same fragment or to none. Compare the id for equality "
-                        "against other nodes; do not parse or persist it."
+                        "opaque id to compare for equality, not to parse or "
+                        "persist. An `st.dialog` body is a fragment too.\n\n"
+                        "Keys that all belong to one fragment rerun only that "
+                        "fragment, as in a browser, and the rest of the page "
+                        "stays as the last run left it. Keys spanning several "
+                        "regions rerun the whole app, which closes an open "
+                        "dialog without running its contents, so a dialog's "
+                        "keys must be sent on their own.\n\n"
+                        "A dialog node itself has no `fragment`: it is the "
+                        "overlay, and its body is the child container. Read "
+                        "the scope from the node you intend to act on."
                     ),
                 },
             },
@@ -989,7 +983,7 @@ def schemas() -> dict[str, Any]:
                     "properties": {
                         "truncated": {
                             "type": "boolean",
-                            "description": "The inverse of `complete`.",
+                            "description": "Whether rows exist beyond these.",
                         },
                         "rows": {
                             "type": "array",
@@ -997,8 +991,8 @@ def schemas() -> dict[str, Any]:
                             "description": (
                                 "Rows as values in `columns` order, so zip them "
                                 "with `columns` to get names and types. Values "
-                                "keep their JSON types, and a cell that holds a "
-                                "list stays a list.\n\n"
+                                "are encoded as described on `Node`, and a cell "
+                                "that holds a list stays a list.\n\n"
                                 "Not objects: repeating the column names on "
                                 "every row is most of a long preview's size."
                             ),
@@ -1020,7 +1014,8 @@ def schemas() -> dict[str, Any]:
                         "the page and collected once they stop rendering. "
                         "Fetch it while working with the snapshot that "
                         "produced it, always take the URL from the *latest* "
-                        "snapshot, and never store, share, or re-resolve one."
+                        "snapshot, and never store, share, or re-resolve one. "
+                        "A collected URL answers `404`."
                     ),
                 },
                 "unavailable": {
