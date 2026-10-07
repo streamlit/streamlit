@@ -65,6 +65,11 @@ import {
   parseDateFieldPaste,
   SEGMENT_SELECTOR,
 } from "./dateInputUtils"
+import {
+  isConcreteOutsideLeave,
+  isFocusInsideWidget,
+  usePopoverInteractionFlag,
+} from "./focusLeave"
 import { ReorderedSegments } from "./ReorderedSegments"
 import {
   StyledCalendarButton,
@@ -214,6 +219,15 @@ function SingleDateInput({
   onChangeRef.current = onChange
 
   const [isOpen, setIsOpen] = useState(false)
+  const popoverExcludeSelectors = useMemo(
+    () => [`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`],
+    []
+  )
+  const popoverInteractionRef = usePopoverInteractionFlag(
+    isOpen,
+    popoverRef,
+    popoverExcludeSelectors
+  )
 
   const wasOpenRef = useRef(isOpen)
   // `value` is in deps so the effect re-evaluates when the committed value
@@ -511,10 +525,9 @@ function SingleDateInput({
     [disabled, format, onChange, displayValue, minDate]
   )
 
-  // Alt+ArrowDown enters active calendar mode; Tab from edge segments
-  // closes the passive popover and lets focus leave the widget naturally.
-  // The calendar button is out of tab order (tabIndex=-1), so last-segment
-  // Tab leaves the field.
+  // Alt+ArrowDown enters active calendar mode. While the passive preview is open:
+  // - Tab from the last segment moves to the calendar button (preview stays open).
+  // - Tab from the calendar button, or Shift+Tab from the first segment, closes it.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.altKey && e.key === "ArrowDown") {
@@ -526,20 +539,50 @@ function SingleDateInput({
       }
 
       if (e.key !== "Tab" || !isOpen) return
+
+      // Forward Tab from the calendar toggle leaves the widget.
+      if (
+        !e.shiftKey &&
+        calendarButtonRef.current?.contains(e.target as Node)
+      ) {
+        setIsOpen(false)
+        setIsCalendarActive(false)
+        return
+      }
+
       const wrapper = triggerRef.current
       if (!wrapper) return
       const segments = wrapper.querySelectorAll<HTMLElement>(
         '[role="spinbutton"]'
       )
       const segmentList = Array.from(segments)
-      const isLeavingField =
-        (!e.shiftKey && e.target === segmentList.at(-1)) ||
-        (e.shiftKey && e.target === segmentList[0])
-      if (isLeavingField) {
+      // Shift+Tab from the first segment leaves the widget.
+      if (e.shiftKey && e.target === segmentList[0]) {
         setIsOpen(false)
+        setIsCalendarActive(false)
+        return
+      }
+      // Forward Tab from the last segment: stay open when focus lands on the
+      // calendar button. Close after the Tab if focus left the widget instead
+      // (default Safari often skips buttons).
+      if (!e.shiftKey && e.target === segmentList.at(-1)) {
+        requestAnimationFrame(() => {
+          if (
+            calendarButtonRef.current?.contains(document.activeElement) ||
+            isFocusInsideWidget(document.activeElement, {
+              field: triggerRef.current,
+              popover: popoverRef.current,
+              excludeSelectors: popoverExcludeSelectors,
+            })
+          ) {
+            return
+          }
+          setIsOpen(false)
+          setIsCalendarActive(false)
+        })
       }
     },
-    [isOpen]
+    [isOpen, popoverExcludeSelectors]
   )
 
   // In active mode: Tab cycles focus within the calendar (focus trap).
@@ -590,8 +633,37 @@ function SingleDateInput({
   // concurrent Submit click reads the correct value.
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
+      // Safari: mousedown on unfocused calendar chrome blurs the field before
+      // click; pointerdown on the popover sets this flag first.
+      if (popoverInteractionRef.current) {
+        popoverInteractionRef.current = false
+        return
+      }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
+      // Only skip the close-commit effect when this blur also closes the
+      // preview. Blur with the popover already closed (e.g. after Escape)
+      // must not leave skipCloseCommitRef stuck for the next close.
+      let closedByBlur = false
+      if (isOpen) {
+        if (
+          isConcreteOutsideLeave(e.relatedTarget, {
+            popover: popoverRef.current,
+            excludeSelectors: popoverExcludeSelectors,
+          })
+        ) {
+          closedByBlur = true
+          setIsOpen(false)
+          setIsCalendarActive(false)
+          // Fall through to commit or early-return. Partial / non-clearable
+          // clears leave skipCloseCommitRef unset so the close-commit effect
+          // can still revert.
+        } else {
+          // Still open and focus is ambiguous (null) or inside the popover /
+          // nested pickers — Tab rAF and overlay dismissal own those leaves.
+          return
+        }
+      }
       const segments = triggerRef.current?.querySelectorAll(
         '[role="spinbutton"]'
       )
@@ -607,10 +679,20 @@ function SingleDateInput({
       }
       const pending = displayValueRef.current
       if (datesEqual(pending, value)) return
+      if (closedByBlur) {
+        skipCloseCommitRef.current = true
+      }
       onChangeRef.current(pending)
       formCommit?.(pending)
     },
-    [formCommit, value, clearable]
+    [
+      formCommit,
+      value,
+      clearable,
+      isOpen,
+      popoverExcludeSelectors,
+      popoverInteractionRef,
+    ]
   )
 
   return (
@@ -686,7 +768,6 @@ function SingleDateInput({
             aria-controls={isCalendarActive ? popoverId : undefined}
             data-testid="stDateInputCalendarButton"
             disabled={disabled}
-            tabIndex={-1}
             onMouseDown={e => e.preventDefault()}
           >
             <Icon content={CalendarToday} size="base" />

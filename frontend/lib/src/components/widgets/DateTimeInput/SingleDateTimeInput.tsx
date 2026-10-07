@@ -50,6 +50,11 @@ import {
   DATE_INPUT_HEADER_PICKER_POPOVER_CLASS,
 } from "~lib/components/widgets/DateInput/CalendarPopoverHeader"
 import { getSafeLocale } from "~lib/components/widgets/DateInput/dateInputUtils"
+import {
+  isConcreteOutsideLeave,
+  isFocusInsideWidget,
+  usePopoverInteractionFlag,
+} from "~lib/components/widgets/DateInput/focusLeave"
 import { ReorderedSegments } from "~lib/components/widgets/DateInput/ReorderedSegments"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
@@ -204,7 +209,12 @@ function SingleDateTimeInput({
     setPrevValue(value)
     setDisplayValue(value)
     setPendingTime(null)
-    lastCommittedRef.current = undefined
+    // Keep the dedup guard when the prop caught up to what we just committed.
+    // Clearing it here lets a second dismissal path (blur after Tab, rAF after
+    // blur) write again once React has applied onChange.
+    if (!dateTimesEqual(value, lastCommittedRef.current ?? null)) {
+      lastCommittedRef.current = undefined
+    }
   }
 
   // Whether focus was inside the field when a form clear remounted it, so the
@@ -274,6 +284,18 @@ function SingleDateTimeInput({
   formCommitRef.current = formCommit
 
   const [isOpen, setIsOpen] = useState(false)
+  const popoverExcludeSelectors = useMemo(
+    () => [`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`],
+    []
+  )
+  const popoverInteractionRef = usePopoverInteractionFlag(
+    isOpen,
+    popoverRef,
+    popoverExcludeSelectors
+  )
+  // Tab/Shift+Tab dismiss already commits; ignore the blur that follows so we
+  // do not double-write (lastCommittedRef helps, but blur can race state).
+  const skipNextBlurCommitRef = useRef(false)
 
   /** The datetime the two controls describe between them when the field itself
    * holds no value: a complete date read from the inline segments, plus a time
@@ -692,24 +714,68 @@ function SingleDateTimeInput({
       }
 
       if (e.key !== "Tab" || !isOpen) return
+
+      // Forward Tab from the calendar toggle leaves the widget.
+      if (
+        !e.shiftKey &&
+        calendarButtonRef.current?.contains(e.target as Node)
+      ) {
+        // Commit before closing, as the popover's own Tab handler does. Leaving
+        // it to the blur that follows would run the commit after the popover has
+        // unmounted, and a time given only there would be unreadable by then.
+        skipNextBlurCommitRef.current = true
+        commitOrRevert()
+        setIsOpen(false)
+        setIsCalendarActive(false)
+        return
+      }
+
       const wrapper = triggerRef.current
       if (!wrapper) return
       const segments = wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
       const segmentList = Array.from(segments)
-      // The calendar button is out of tab order (tabIndex=-1), so edge-segment
-      // Tab leaves the field.
-      const isLeavingField =
-        (!e.shiftKey && e.target === segmentList.at(-1)) ||
-        (e.shiftKey && e.target === segmentList[0])
-      if (isLeavingField) {
-        // Commit before closing, as the popover's own Tab handler does. Leaving
-        // it to the blur that follows would run the commit after the popover has
-        // unmounted, and a time given only there would be unreadable by then.
+      // Shift+Tab from the first segment leaves the widget.
+      if (e.shiftKey && e.target === segmentList[0]) {
+        skipNextBlurCommitRef.current = true
         commitOrRevert()
         setIsOpen(false)
+        setIsCalendarActive(false)
+        return
+      }
+      // Forward Tab from the last segment: stay open when focus lands on the
+      // calendar button. Close after the Tab if focus left the widget instead
+      // (default Safari often skips buttons).
+      if (!e.shiftKey && e.target === segmentList.at(-1)) {
+        // Blur runs before this rAF when focus leaves; arm the skip now so a
+        // Safari skip-button leave does not commit on blur and again in rAF.
+        skipNextBlurCommitRef.current = true
+        requestAnimationFrame(() => {
+          if (
+            calendarButtonRef.current?.contains(document.activeElement) ||
+            isFocusInsideWidget(document.activeElement, {
+              field: triggerRef.current,
+              popover: popoverRef.current,
+              excludeSelectors: popoverExcludeSelectors,
+            })
+          ) {
+            skipNextBlurCommitRef.current = false
+            return
+          }
+          commitOrRevert()
+          setIsOpen(false)
+          setIsCalendarActive(false)
+        })
       }
     },
-    [isOpen, displayValue, error, formSubmit, commitOrRevert, applyStepSnap]
+    [
+      isOpen,
+      displayValue,
+      error,
+      formSubmit,
+      commitOrRevert,
+      applyStepSnap,
+      popoverExcludeSelectors,
+    ]
   )
 
   // Active mode: Tab cycles within popover. Passive: Tab closes.
@@ -754,16 +820,35 @@ function SingleDateTimeInput({
 
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
+      // Safari: mousedown on unfocused calendar chrome blurs the field before
+      // click; pointerdown on the popover sets this flag first.
+      if (popoverInteractionRef.current) {
+        popoverInteractionRef.current = false
+        return
+      }
+      if (skipNextBlurCommitRef.current) {
+        skipNextBlurCommitRef.current = false
+        return
+      }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      if (
-        isOpen &&
-        (!e.relatedTarget || popoverRef.current?.contains(e.relatedTarget))
-      )
+      if (isOpen) {
+        if (
+          isConcreteOutsideLeave(e.relatedTarget, {
+            popover: popoverRef.current,
+            excludeSelectors: popoverExcludeSelectors,
+          })
+        ) {
+          commitOrRevert()
+          setIsOpen(false)
+          setIsCalendarActive(false)
+        }
+        // null while open (no popover pointerdown): Tab rAF / overlay own leave.
         return
+      }
       commitOrRevert()
     },
-    [isOpen, commitOrRevert]
+    [isOpen, commitOrRevert, popoverExcludeSelectors, popoverInteractionRef]
   )
 
   // Calendar value for display: extract date portion from displayValue.
@@ -921,7 +1006,6 @@ function SingleDateTimeInput({
             aria-controls={isCalendarActive ? popoverId : undefined}
             data-testid="stDateTimeInputCalendarButton"
             disabled={disabled}
-            tabIndex={-1}
             onMouseDown={e => e.preventDefault()}
           >
             <Icon content={CalendarToday} size="base" />

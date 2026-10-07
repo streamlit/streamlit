@@ -323,7 +323,8 @@ describe("DateInput", () => {
       // Before blur: no widget write yet.
       expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
 
-      // Blur commits the buffered value even outside a form.
+      // Tab past the calendar button to leave the field and commit.
+      await user.tab()
       await user.tab()
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element.id,
@@ -744,8 +745,8 @@ describe("DateInput", () => {
       // Before blur: segment edits are buffered locally — no widget write yet.
       expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
 
-      // Blur (simulates clicking a form Submit button) writes the pending
-      // value synchronously so form submit reads the correct state.
+      // Tab past the calendar button to leave the field and commit.
+      await user.tab()
       await user.tab()
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element.id,
@@ -760,7 +761,14 @@ describe("DateInput", () => {
       props.widgetMgr.setFormSubmitBehaviors("form", true)
       vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
-      render(<DateInput {...props} />)
+      render(
+        <>
+          <button type="button" data-testid="outside">
+            Outside
+          </button>
+          <DateInput {...props} />
+        </>
+      )
       vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
 
       const region = screen.getByTestId("stDateInput")
@@ -769,11 +777,25 @@ describe("DateInput", () => {
       // Partially clear the year segment (leaves placeholders in year,
       // but month and day remain filled — a mid-edit state)
       await clearSegment(user, year)
+      expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
 
-      // Blur should NOT commit the partially typed state — form submit
-      // should read the original committed value, not an incomplete date.
-      await user.tab()
+      // Concrete outside leave while the preview is open: must not commit, and
+      // close-commit must still revert the incomplete display.
+      fireEvent.blur(screen.getByTestId("stDateInputField"), {
+        relatedTarget: screen.getByTestId("outside"),
+      })
       expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateInputCalendar")
+        ).not.toBeInTheDocument()
+        const refreshed = getSingleDateSegments(
+          screen.getByTestId("stDateInput")
+        )
+        expect(refreshed.year).toHaveTextContent("1970")
+        expect(refreshed.month).toHaveTextContent("01")
+        expect(refreshed.day).toHaveTextContent("20")
+      })
     })
 
     it("commits cleared value on blur when all segments are cleared in a form widget", async () => {
@@ -804,8 +826,9 @@ describe("DateInput", () => {
       await clearSegment(user, month)
       await clearSegment(user, day)
 
-      // Blur with all segments cleared commits empty — deliberate empty intent,
-      // distinct from partially typed.
+      // Tab past the calendar button to leave and commit the cleared state —
+      // fully cleared is a valid user intent, distinct from partially typed.
+      await user.tab()
       await user.tab()
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element.id,
@@ -834,7 +857,8 @@ describe("DateInput", () => {
       await clearSegment(user, month)
       await clearSegment(user, day)
 
-      // Leave the field to close the popover and revert.
+      // Tab past the calendar button to leave the field.
+      await user.tab()
       await user.tab()
       // Close-commit reverts the display locally; no setStringArrayValue
       // should fire (avoids a spurious backend rerun with an unchanged value).
@@ -1838,20 +1862,25 @@ describe("DateInput single-mode keyboard navigation", () => {
     return { calendar, gridCell, segments }
   }
 
-  it("Tab from last segment closes calendar (does not enter it)", async () => {
+  it("Tab from last segment focuses calendar button, then leaves and closes", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)
 
     const region = screen.getByTestId("stDateInput")
     const { day } = getSingleDateSegments(region)
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
 
     // Focus the last segment (day)
     await user.click(day)
     // Calendar should be open
     await screen.findByTestId("stDateInputCalendar")
 
-    // Tab from day segment should close the calendar (calendar button is
-    // out of tab order).
+    // Tab from day segment moves to the calendar toggle (popover stays open)
+    await user.tab()
+    expect(calendarButton).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+
+    // Tab from the calendar button leaves the widget and closes the popover
     await user.tab()
     await waitFor(() => {
       expect(
@@ -2025,6 +2054,59 @@ describe("DateInput single-mode keyboard navigation", () => {
       expect(
         screen.queryByTestId("stDateInputCalendar")
       ).not.toBeInTheDocument()
+    })
+  })
+
+  it("blur while closed does not skip the next incomplete close revert", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    render(
+      <div>
+        <DateInput {...props} />
+        <button type="button" data-testid="outside">
+          Outside
+        </button>
+      </div>
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getSingleDateSegments(region)
+
+    // Open from the day segment then Escape so focus returns there with the
+    // popover closed (restore suppresses reopen).
+    await user.click(day)
+    await screen.findByTestId("stDateInputCalendar")
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(day).toHaveFocus()
+
+    // Finish an edit while closed (no new focusin — calendar stays shut), then
+    // blur. Must not leave skipCloseCommitRef stuck for the next close.
+    await user.keyboard("{Backspace}{Backspace}25")
+    expect(screen.queryByTestId("stDateInputCalendar")).not.toBeInTheDocument()
+    fireEvent.blur(screen.getByTestId("stDateInputField"), {
+      relatedTarget: screen.getByTestId("outside"),
+    })
+    await waitFor(() => {
+      expect(
+        getSingleDateSegments(screen.getByTestId("stDateInput")).day
+      ).toHaveTextContent("25")
+    })
+
+    // Next open + partial clear + close must still revert.
+    const refreshed = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await clearSegment(user, refreshed.year)
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      const after = getSingleDateSegments(screen.getByTestId("stDateInput"))
+      expect(after.year).toHaveTextContent("1970")
+      expect(after.month).toHaveTextContent("01")
+      expect(after.day).toHaveTextContent("25")
     })
   })
 
@@ -2241,9 +2323,10 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     // Focus and close the popover via Tab
     await user.click(year)
     await screen.findByTestId("stDateInputCalendar")
-    // Close by tabbing through all segments and out
+    // Close by tabbing through all segments, the calendar button, and out
     await user.tab() // to month
     await user.tab() // to day
+    await user.tab() // to calendar button
     await user.tab() // leaves widget, closes popover
     await waitFor(() => {
       expect(
@@ -2350,12 +2433,13 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(month).toHaveFocus()
   })
 
-  it("passive mode still closes on Tab from last segment (no regression)", async () => {
+  it("passive mode Tab goes to calendar button then closes on second Tab", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)
 
     const region = screen.getByTestId("stDateInput")
     const { day } = getSingleDateSegments(region)
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
 
     await user.click(day)
     await screen.findByTestId("stDateInputCalendar")
@@ -2365,13 +2449,81 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendar).not.toHaveAttribute("role", "dialog")
     expect(calendar).not.toHaveAttribute("aria-modal")
 
-    // Tab from day should close (passive behavior; calendar button is not
-    // in the tab order).
+    // Tab from day focuses the calendar toggle without entering active mode
+    await user.tab()
+    expect(calendarButton).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).not.toHaveAttribute(
+      "role",
+      "dialog"
+    )
+
+    // Tab from the calendar button leaves and closes
     await user.tab()
     await waitFor(() => {
       expect(
         screen.queryByTestId("stDateInputCalendar")
       ).not.toBeInTheDocument()
+    })
+  })
+
+  it("passive preview closes when focus leaves the widget without the calendar button", async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <button type="button" data-testid="outside">
+          Outside
+        </button>
+        <DateInput {...getProps()} />
+      </>
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getSingleDateSegments(region)
+    const outside = screen.getByTestId("outside")
+
+    await user.click(day)
+    await screen.findByTestId("stDateInputCalendar")
+
+    // Simulates Safari Tab from the last segment skipping icon buttons.
+    act(() => {
+      outside.focus()
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("passive preview stays open across Safari calendar pointerdown then null blur", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getSingleDateSegments(region)
+    const field = screen.getByTestId("stDateInputField")
+
+    await user.click(day)
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const nextDay = within(calendar).getByRole("button", {
+      name: /January 21, 1970/,
+    })
+
+    // Safari: pointerdown on the cell, then blur with null relatedTarget,
+    // then click. The popover-interaction flag must keep the preview open.
+    /* eslint-disable testing-library/prefer-user-event */
+    fireEvent.pointerDown(nextDay)
+    fireEvent.blur(field, { relatedTarget: null })
+    /* eslint-enable testing-library/prefer-user-event */
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+
+    await user.click(nextDay)
+
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalled()
     })
   })
 
@@ -2421,8 +2573,9 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
       "dialog"
     )
 
-    // Close by Tab from the last segment, then re-open by click: must stay
-    // passive.
+    // Close by tabbing past the calendar button, then re-open by click: must
+    // stay passive.
+    await user.tab()
     await user.tab()
     await waitFor(() => {
       expect(
@@ -2465,7 +2618,7 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
     expect(calendarButton).toHaveAttribute("aria-expanded", "false")
     expect(calendarButton).not.toHaveAttribute("aria-controls")
-    expect(calendarButton).toHaveAttribute("tabIndex", "-1")
+    expect(calendarButton).not.toHaveAttribute("tabIndex", "-1")
   })
 
   it("calendar button opens active calendar and toggles aria-expanded", async () => {
@@ -2598,7 +2751,7 @@ describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
     expect(calendarButton).toHaveAttribute("aria-expanded", "false")
     expect(calendarButton).not.toHaveAttribute("aria-controls")
-    expect(calendarButton).toHaveAttribute("tabIndex", "-1")
+    expect(calendarButton).not.toHaveAttribute("tabIndex", "-1")
   })
 
   it("calendar button opens active calendar and toggles aria-expanded", async () => {
@@ -3125,7 +3278,7 @@ describe("DateInput range-mode paste handling", () => {
 })
 
 describe("DateInput range-mode keyboard navigation", () => {
-  it("Tab from last end-date segment closes calendar", async () => {
+  it("Tab from last end-date segment focuses calendar button, then closes", async () => {
     const user = userEvent.setup()
     render(
       <DateInput
@@ -3138,9 +3291,14 @@ describe("DateInput range-mode keyboard navigation", () => {
 
     const region = screen.getByTestId("stDateInput")
     const { day } = getRangeDateSegments(region, "end")
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
 
     await user.click(day)
     await screen.findByTestId("stDateInputCalendar")
+
+    await user.tab()
+    expect(calendarButton).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
 
     await user.tab()
     await waitFor(() => {

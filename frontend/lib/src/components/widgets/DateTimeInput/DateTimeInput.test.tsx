@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { act, screen, waitFor, within } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import type { MockInstance } from "vitest"
 
@@ -889,7 +895,8 @@ describe("DateTimeInput widget", () => {
         await clearSegment(user, segment)
       }
 
-      // Tab from last segment to leave the field (closes popover + blur)
+      // Tab past the calendar button to leave the field (closes popover + blur)
+      await user.tab()
       await user.tab()
 
       // Close-commit reverts display locally; no setStringArrayValue fires
@@ -1198,7 +1205,8 @@ describe("DateTimeInput widget", () => {
       // Popover should be open
       expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
 
-      // Tab away from the last segment — this closes popover + triggers blur
+      // Tab past the calendar button — this closes popover + triggers blur
+      await user.tab()
       await user.tab()
 
       await waitFor(() => {
@@ -1418,7 +1426,8 @@ describe("DateTimeInput widget", () => {
       // After Escape, focus is restored to the last segment (minute).
       // Edit again via ArrowUp (step-snap 17:45 → 18:00) without reopening.
       await user.keyboard("{ArrowUp}")
-      // Tab away from last segment — must still commit the new value.
+      // Tab past the calendar button — must still commit the new value.
+      await user.tab()
       await user.tab()
 
       await waitFor(() => {
@@ -1691,7 +1700,7 @@ describe("DateTimeInput widget", () => {
       expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
       expect(calendarButton).toHaveAttribute("aria-expanded", "false")
       expect(calendarButton).not.toHaveAttribute("aria-controls")
-      expect(calendarButton).toHaveAttribute("tabIndex", "-1")
+      expect(calendarButton).not.toHaveAttribute("tabIndex", "-1")
     })
 
     it("calendar button opens active calendar and toggles aria-expanded", async () => {
@@ -1806,6 +1815,112 @@ describe("DateTimeInput widget", () => {
       })
       expect(calendarButton).toHaveFocus()
     })
+
+    it("passive preview closes when focus leaves the widget without the calendar button", async () => {
+      const user = userEvent.setup()
+      render(
+        <div>
+          <button type="button" data-testid="outside">
+            Outside
+          </button>
+          <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+        </div>
+      )
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      act(() => {
+        screen.getByTestId("outside").focus()
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it("passive preview stays open across Safari calendar pointerdown then null blur", async () => {
+      const user = userEvent.setup()
+      render(
+        <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+      )
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      const calendar = await screen.findByTestId("stDateTimeInputCalendar")
+      const dayCell = within(calendar).getByRole("button", {
+        name: /November 20/,
+      })
+      const field = screen.getByTestId("stDateTimeInputField")
+
+      // Safari order: pointerdown before blur; userEvent.click is one gesture.
+      /* eslint-disable testing-library/prefer-user-event */
+      fireEvent.pointerDown(dayCell)
+      fireEvent.blur(field, { relatedTarget: null })
+      /* eslint-enable testing-library/prefer-user-event */
+
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeInTheDocument()
+      expect(
+        screen.getByTestId("stDateTimeInputCalendarButton")
+      ).toHaveAttribute("aria-expanded", "false")
+    })
+
+    it("commits on body-target blur when there was no popover pointerdown", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      // Partial edit so a commit is observable.
+      await user.keyboard("{ArrowUp}")
+      spy.mockClear()
+
+      const field = screen.getByTestId("stDateTimeInputField")
+      fireEvent.blur(field, { relatedTarget: document.body })
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalled()
+      })
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it("does not commit on body blur after popover pointerdown (Safari)", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      const calendar = await screen.findByTestId("stDateTimeInputCalendar")
+      await user.keyboard("{ArrowUp}")
+      spy.mockClear()
+
+      const dayCell = within(calendar).getByRole("button", {
+        name: /November 20/,
+      })
+      const field = screen.getByTestId("stDateTimeInputField")
+      // Safari order: pointerdown before blur; userEvent.click is one gesture.
+      /* eslint-disable testing-library/prefer-user-event */
+      fireEvent.pointerDown(dayCell)
+      fireEvent.blur(field, { relatedTarget: document.body })
+      /* eslint-enable testing-library/prefer-user-event */
+
+      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeInTheDocument()
+      expect(spy).not.toHaveBeenCalled()
+    })
   })
 
   describe("Active calendar (Alt+ArrowDown)", () => {
@@ -1870,8 +1985,8 @@ describe("DateTimeInput widget", () => {
       await user.click(segments[0])
       await screen.findByTestId("stDateTimeInputCalendar")
 
-      // Close by tabbing through all segments and out
-      for (let i = 0; i < segments.length; i++) {
+      // Close by tabbing through all segments, the calendar button, and out
+      for (let i = 0; i < segments.length + 1; i++) {
         await user.tab()
       }
       await waitFor(() => {
@@ -2651,7 +2766,7 @@ describe("DateTimeInput widget", () => {
       await user.click(inline[0])
       await user.keyboard("20251119")
 
-      // Tab from the last segment closes the popover, so the merge has to
+      // Tab past the calendar button closes the popover, so the merge has to
       // happen while it is still mounted — otherwise its half is unreadable
       // and both halves are discarded.
       const lastInline = inline.at(-1)
@@ -2659,6 +2774,7 @@ describe("DateTimeInput widget", () => {
         throw new Error("Expected a date-time segment")
       }
       await user.click(lastInline)
+      await user.tab()
       await user.tab()
 
       await expectCommitted(spy, props, "2025-11-19T09:45")

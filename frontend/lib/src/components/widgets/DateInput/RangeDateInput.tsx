@@ -74,6 +74,11 @@ import {
   SEGMENT_SELECTOR,
   validateDate,
 } from "./dateInputUtils"
+import {
+  isConcreteOutsideLeave,
+  isFocusInsideWidget,
+  usePopoverInteractionFlag,
+} from "./focusLeave"
 import { ReorderedSegments } from "./ReorderedSegments"
 import {
   StyledCalendarButton,
@@ -347,6 +352,18 @@ function RangeDateInput({
   onCloseRef.current = onClose
 
   const [isOpen, setIsOpenState] = useState(false)
+  const popoverExcludeSelectors = useMemo(
+    () => [
+      `.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`,
+      `.${DATE_INPUT_QUICK_SELECT_POPOVER_CLASS}`,
+    ],
+    []
+  )
+  const popoverInteractionRef = usePopoverInteractionFlag(
+    isOpen,
+    popoverRef,
+    popoverExcludeSelectors
+  )
 
   const wasOpenRef = useRef(isOpen)
   useEffect(() => {
@@ -654,10 +671,9 @@ function RangeDateInput({
     [onChange, restoreFocusToField]
   )
 
-  // Alt+ArrowDown enters active calendar mode; Tab from edge segments
-  // closes the passive popover and lets focus leave the widget naturally.
-  // The calendar button is out of tab order (tabIndex=-1), so last-segment
-  // Tab leaves the field.
+  // Alt+ArrowDown enters active calendar mode. While the passive preview is open:
+  // - Tab from the last segment moves to the calendar button (preview stays open).
+  // - Tab from the calendar button, or Shift+Tab from the first segment, closes it.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.altKey && e.key === "ArrowDown") {
@@ -669,20 +685,50 @@ function RangeDateInput({
       }
 
       if (e.key !== "Tab" || !isOpen) return
+
+      // Forward Tab from the calendar toggle leaves the widget.
+      if (
+        !e.shiftKey &&
+        calendarButtonRef.current?.contains(e.target as Node)
+      ) {
+        setIsOpenState(false)
+        setIsCalendarActive(false)
+        return
+      }
+
       const wrapper = triggerRef.current
       if (!wrapper) return
       const segments = wrapper.querySelectorAll<HTMLElement>(
         '[role="spinbutton"]'
       )
       const segmentList = Array.from(segments)
-      const isLeavingField =
-        (!e.shiftKey && e.target === segmentList.at(-1)) ||
-        (e.shiftKey && e.target === segmentList[0])
-      if (isLeavingField) {
+      // Shift+Tab from the first segment leaves the widget.
+      if (e.shiftKey && e.target === segmentList[0]) {
         setIsOpenState(false)
+        setIsCalendarActive(false)
+        return
+      }
+      // Forward Tab from the last segment: stay open when focus lands on the
+      // calendar button. Close after the Tab if focus left the widget instead
+      // (default Safari often skips buttons).
+      if (!e.shiftKey && e.target === segmentList.at(-1)) {
+        requestAnimationFrame(() => {
+          if (
+            calendarButtonRef.current?.contains(document.activeElement) ||
+            isFocusInsideWidget(document.activeElement, {
+              field: triggerRef.current,
+              popover: popoverRef.current,
+              excludeSelectors: popoverExcludeSelectors,
+            })
+          ) {
+            return
+          }
+          setIsOpenState(false)
+          setIsCalendarActive(false)
+        })
       }
     },
-    [isOpen]
+    [isOpen, popoverExcludeSelectors]
   )
 
   // In active mode: Tab cycles focus within the popover (focus trap).
@@ -911,16 +957,50 @@ function RangeDateInput({
   // concurrent Submit click reads the correct value.
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
+      if (popoverInteractionRef.current) {
+        popoverInteractionRef.current = false
+        return
+      }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
+      // Only skip the close-commit effect when this blur also closes the
+      // preview. Blur with the popover already closed (e.g. after Escape)
+      // must not leave skipCloseCommitRef stuck for the next close.
+      let closedByBlur = false
+      if (isOpen) {
+        if (
+          isConcreteOutsideLeave(e.relatedTarget, {
+            popover: popoverRef.current,
+            excludeSelectors: popoverExcludeSelectors,
+          })
+        ) {
+          closedByBlur = true
+          setIsOpenState(false)
+          setIsCalendarActive(false)
+          // Fall through. Partial fields leave skipCloseCommitRef unset so
+          // the close-commit effect can still revert.
+        } else {
+          return
+        }
+      }
       if (hasPartiallyTypedField(triggerRef.current)) return
       const pending = compact([displayStartRef.current, displayEndRef.current])
       const committed = compact([startValue, endValue])
       if (rangeEqual(pending, committed)) return
+      if (closedByBlur) {
+        skipCloseCommitRef.current = true
+      }
       onChangeRef.current(pending)
       formCommit?.(pending)
     },
-    [formCommit, startValue, endValue]
+    [
+      formCommit,
+      startValue,
+      endValue,
+      isOpen,
+      popoverExcludeSelectors,
+      popoverInteractionRef,
+    ]
   )
 
   const hasValue = displayStart !== null || displayEnd !== null
@@ -1018,7 +1098,6 @@ function RangeDateInput({
             aria-controls={isCalendarActive ? popoverId : undefined}
             data-testid="stDateInputCalendarButton"
             disabled={disabled}
-            tabIndex={-1}
             onMouseDown={e => e.preventDefault()}
           >
             <Icon content={DateRange} size="base" />
