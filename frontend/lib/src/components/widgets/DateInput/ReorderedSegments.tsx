@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type ReactElement, useContext, useRef } from "react"
+import { type ReactElement, useContext } from "react"
 
 import { DateFieldStateContext } from "react-aria-components"
 import type { DateSegment as IDateSegment } from "react-stately"
@@ -72,8 +72,7 @@ export function ReorderedSegments({
   includeTime?: boolean
 }): ReactElement | null {
   const state = useContext(DateFieldStateContext)
-  const fieldInputRef = useRef<HTMLDivElement>(null)
-  useDateFieldSingleTabStop(fieldInputRef)
+  const fieldInputRef = useDateFieldSingleTabStop()
 
   if (!state) return null
 

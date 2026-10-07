@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type RefObject, useLayoutEffect } from "react"
+import { useCallback, useRef } from "react"
 
 import { SEGMENT_SELECTOR } from "./dateInputUtils"
 
@@ -52,15 +52,22 @@ export function applyDateFieldSingleTabStop(
 }
 
 /**
- * Keeps a DateField container on one Tab stop. Pass the element that wraps
- * that field's segments (e.g. `StyledDateFieldInput`).
+ * Callback ref that keeps a DateField container on one Tab stop. Attach to the
+ * element that wraps that field's segments (e.g. `StyledDateFieldInput`).
+ *
+ * Uses a callback ref (not useLayoutEffect + object ref) so setup runs when the
+ * node mounts — DateField state can be missing on the first render, which would
+ * leave an object-ref effect with a null `current` and never re-run.
  */
-export function useDateFieldSingleTabStop(
-  containerRef: RefObject<HTMLElement | null>
-): void {
-  useLayoutEffect(() => {
-    const container = containerRef.current
-    if (!container) return
+export function useDateFieldSingleTabStop(): (
+  node: HTMLElement | null
+) => void {
+  const cleanupRef = useRef<(() => void) | null>(null)
+
+  return useCallback((node: HTMLElement | null) => {
+    cleanupRef.current?.()
+    cleanupRef.current = null
+    if (!node) return
 
     let lastTabbable: HTMLElement | null = null
     let applying = false
@@ -69,7 +76,7 @@ export function useDateFieldSingleTabStop(
       if (applying) return
       applying = true
       try {
-        lastTabbable = applyDateFieldSingleTabStop(container, preferred)
+        lastTabbable = applyDateFieldSingleTabStop(node, preferred)
       } finally {
         applying = false
       }
@@ -88,17 +95,17 @@ export function useDateFieldSingleTabStop(
     const observer = new MutationObserver(() => {
       apply(lastTabbable)
     })
-    observer.observe(container, {
+    observer.observe(node, {
       subtree: true,
       childList: true,
       attributes: true,
       attributeFilter: ["tabindex"],
     })
 
-    container.addEventListener("focusin", onFocusIn)
-    return () => {
+    node.addEventListener("focusin", onFocusIn)
+    cleanupRef.current = () => {
       observer.disconnect()
-      container.removeEventListener("focusin", onFocusIn)
+      node.removeEventListener("focusin", onFocusIn)
     }
-  }, [containerRef])
+  }, [])
 }

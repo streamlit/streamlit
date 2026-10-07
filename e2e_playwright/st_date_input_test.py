@@ -911,6 +911,53 @@ def test_range_date_active_calendar_keyboard_navigation(app: Page):
     expect(last_segment).to_be_focused()
 
 
+def test_single_date_field_has_one_tab_stop(app: Page):
+    """Each date field is one Tab stop; arrows move between segments."""
+    date_input = get_date_input(app, "Single date")
+    date_field = date_input.get_by_test_id("stDateInputField")
+    segments = date_field.get_by_role("spinbutton")
+    first = segments.nth(0)
+    second = segments.nth(1)
+    calendar_button = date_input.get_by_test_id("stDateInputCalendarButton")
+
+    expect(first).to_have_attribute("tabindex", "0")
+    expect(second).to_have_attribute("tabindex", "-1")
+    expect(segments.nth(2)).to_have_attribute("tabindex", "-1")
+
+    first.click()
+    app.keyboard.press("ArrowRight")
+    expect(second).to_be_focused()
+    expect(second).to_have_attribute("tabindex", "0")
+    expect(first).to_have_attribute("tabindex", "-1")
+
+    # Tab leaves the field (does not stop on the third segment).
+    app.keyboard.press("Tab")
+    expect(calendar_button).to_be_focused()
+
+
+def test_range_date_tabs_start_end_then_calendar(app: Page):
+    """Range Tab order is start field → end field → calendar button."""
+    date_input = get_date_input(app, "Range, two dates")
+    date_field = date_input.get_by_test_id("stDateInputField")
+    start = date_field.locator('[data-range-field="start"]')
+    end = date_field.locator('[data-range-field="end"]')
+    start_first = start.get_by_role("spinbutton").first
+    start_second = start.get_by_role("spinbutton").nth(1)
+    end_first = end.get_by_role("spinbutton").first
+    calendar_button = date_input.get_by_test_id("stDateInputCalendarButton")
+
+    expect(start_first).to_have_attribute("tabindex", "0")
+    expect(start_second).to_have_attribute("tabindex", "-1")
+    expect(end_first).to_have_attribute("tabindex", "0")
+    expect(end.get_by_role("spinbutton").nth(1)).to_have_attribute("tabindex", "-1")
+
+    start_first.click()
+    app.keyboard.press("Tab")
+    expect(end_first).to_be_focused()
+    app.keyboard.press("Tab")
+    expect(calendar_button).to_be_focused()
+
+
 def test_year_picker_does_not_revert_month(app: Page):
     """Changing the year after changing the month must not revert the month."""
     # "Single datetime" starts at July 6, 2019
