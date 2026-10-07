@@ -31,7 +31,11 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import Page, _validate_registered_page
+from streamlit.navigation.page import (
+    Page,
+    _raise_if_unsafe_page_path,
+    _validate_registered_page,
+)
 from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.pages_manager import PagesManager
@@ -464,6 +468,8 @@ def switch_page(  # type: ignore[misc]
         # Convert Path to string if necessary
         if isinstance(page, Path):
             page = str(page)
+
+        _raise_if_unsafe_page_path(page)
 
         main_script_directory = get_main_script_directory(ctx.main_script_path)
         requested_page = os.path.realpath(
