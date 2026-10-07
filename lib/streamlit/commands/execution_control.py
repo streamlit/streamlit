@@ -60,12 +60,10 @@ _KEYED_RERUN_ALLOWED_LOCATIONS: frozenset[RunLocation] = frozenset(
 
 
 def _force_yield_point() -> None:
-    """Yield so the runner can act on a pending rerun or stop.
+    """Enqueue an element so the runner can act on a pending rerun or stop.
 
-    Enqueueing an element is the yield point. When a request is already
-    pending, the runner raises before that ForwardMsg is sent, so the
-    placeholder is not delivered. The write is not a user element, and the
-    fragment-callback warning applies only to user elements.
+    The runner raises before that ForwardMsg is sent, so the placeholder never
+    reaches the browser. Skip the fragment-callback warning for this write.
     """
     with suppress_fragment_callback_warning():
         st.empty()

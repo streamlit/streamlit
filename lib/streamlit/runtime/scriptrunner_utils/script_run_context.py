@@ -84,10 +84,9 @@ in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "in_cached_function", default=False
 )
 
-# True while Streamlit itself is writing the element that forces a yield point
-# (st.rerun / st.switch_page / st.stop). That write is not a user element, so
-# the fragment-callback warning must ignore it. Read only when a fragment
-# callback is actually running; the common element path never touches it.
+# True while st.switch_page() or st.stop() writes its yield-point element
+# (body-level st.rerun() does this too). That write is not a user element,
+# so the fragment-callback warning ignores it.
 _fragment_callback_warning_suppressed: contextvars.ContextVar[bool] = (
     contextvars.ContextVar("fragment_callback_warning_suppressed", default=False)
 )
@@ -205,8 +204,8 @@ class ThreadState:
             _thread_state.reset(token)
 
 
-def fragment_callback_warning_is_suppressed() -> bool:
-    """Whether the current write is Streamlit's own yield-point element."""
+def is_fragment_callback_warning_suppressed() -> bool:
+    """Whether the fragment-callback element warning is suppressed for this write."""
     return _fragment_callback_warning_suppressed.get()
 
 
