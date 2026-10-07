@@ -415,6 +415,108 @@ def test_switch_page_widgets():
     assert at.slider[0].value == 0
 
 
+@pytest.mark.parametrize(
+    ("persist_clause", "kept_while_hidden", "value_after_show"),
+    [
+        (', persist_state="page"', True, "SKU-42"),
+        (', persist_state="session"', True, "SKU-42"),
+        ("", False, ""),
+    ],
+)
+def test_page_persist_same_page_hide_show(
+    persist_clause: str, kept_while_hidden: bool, value_after_show: str
+) -> None:
+    """A same-page hide and show follows persist_state for a keyed text input."""
+    script = (
+        "import streamlit as st\n"
+        'if st.toggle("Show", key="show"):\n'
+        f'    st.text_input("SKU", key="sku"{persist_clause})\n'
+    )
+    at = AppTest.from_string(script).run()
+    at.toggle[0].set_value(True).run()
+    at.text_input[0].set_value("SKU-42").run()
+    at.toggle[0].set_value(False).run()
+    if kept_while_hidden:
+        assert at.session_state["sku"] == "SKU-42"
+    else:
+        assert "sku" not in at.session_state
+    at.toggle[0].set_value(True).run()
+    assert at.text_input[0].value == value_after_show
+
+
+def test_switch_page_clears_page_persist_keeps_session(tmp_path: Path) -> None:
+    """switch_page drops page persistence and keeps session persistence."""
+    main_script = tmp_path / "main.py"
+    other_page = tmp_path / "pages" / "other.py"
+    other_page.parent.mkdir()
+    main_script.write_text(
+        "import streamlit as st\n"
+        'st.text_input("Page", key="page_sku", persist_state="page")\n'
+        'st.text_input("Session", key="session_sku", persist_state="session")\n',
+        encoding="utf-8",
+    )
+    other_page.write_text(
+        'import streamlit as st\nst.text("other")\n',
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(main_script).run()
+    at.text_input(key="page_sku").set_value("SKU-42")
+    at.text_input(key="session_sku").set_value("SESS-9")
+    at.run()
+    at.switch_page("pages/other.py").run()
+    assert at.text[0].value == "other"
+    assert "page_sku" not in at.session_state
+    assert at.session_state["session_sku"] == "SESS-9"
+
+    at.switch_page("main.py").run()
+    assert at.text_input(key="page_sku").value == ""
+    assert at.text_input(key="session_sku").value == "SESS-9"
+
+
+def test_keyed_tabs_on_change_rerun_survives_child_run() -> None:
+    """A keyed tab with on_change='rerun' stays selected after a child widget run."""
+    at = AppTest.from_string(
+        "import streamlit as st\n"
+        'a, b = st.tabs(["A", "B"], key="section", on_change="rerun")\n'
+        "if b.open:\n"
+        '    st.text_input("Note", key="note")\n'
+    ).run()
+    assert len(at.text_input) == 0
+
+    at.session_state["section"] = "B"
+    at.run()
+    at.text_input[0].set_value("kept").run()
+    assert at.session_state["section"] == "B"
+    assert at.get_by_key("section").proto.tab_container.default_tab_index == 1
+    assert at.text_input[0].value == "kept"
+
+
+def test_page_persist_pages_directory_same_page_hide_show(tmp_path: Path) -> None:
+    """A pages/ app keeps page persistence across a same-page hide and show."""
+    app_script = tmp_path / "app.py"
+    other_page = tmp_path / "pages" / "other.py"
+    other_page.parent.mkdir()
+    app_script.write_text(
+        "import streamlit as st\n"
+        'if st.toggle("Show", key="show"):\n'
+        '    st.text_input("SKU", key="sku", persist_state="page")\n',
+        encoding="utf-8",
+    )
+    other_page.write_text(
+        'import streamlit as st\nst.text("other")\n',
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(app_script).run()
+    at.toggle[0].set_value(True).run()
+    at.text_input[0].set_value("SKU-42").run()
+    at.toggle[0].set_value(False).run()
+    assert at.session_state["sku"] == "SKU-42"
+    at.toggle[0].set_value(True).run()
+    assert at.text_input[0].value == "SKU-42"
+
+
 def test_navigation_with_callable_pages():
     """Test st.navigation renders callable pages correctly.
 

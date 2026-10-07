@@ -296,6 +296,9 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+        # Hash installed by the previous run after navigation. A new PagesManager
+        # starts at "" and ScriptRunner treats that as a page change.
+        self._finished_page_script_hash = ""
         # Pages registered by the most recent run, used to resolve switch_page()
         # against st.navigation hashes (which follow url_path, not filename).
         self._registered_pages: dict[PageHash, PageInfo] = {}
@@ -509,6 +512,7 @@ class AppTest:
         pages_manager = PagesManager(
             self._script_path, script_cache, setup_watcher=False
         )
+        pages_manager.set_current_page_script_hash(self._finished_page_script_hash)
 
         saved_secrets: Secrets = st.secrets
         # Only modify global secrets stuff if we have been given secrets
@@ -533,6 +537,7 @@ class AppTest:
             self._tree = script_runner.run(
                 widget_state, self.query_params, timeout, self._page_hash
             )
+            self._finished_page_script_hash = pages_manager.current_page_script_hash
             self._tree._runner = self
             # A failed run that never reaches st.navigation leaves a
             # main-page-only fallback. Keep the last navigation registry in
