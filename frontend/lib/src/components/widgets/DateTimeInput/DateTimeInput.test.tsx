@@ -2807,10 +2807,11 @@ describe("DateTimeInput widget", () => {
 
       // Safari often skips icon buttons on Tab. Drive the leave path without
       // landing on the calendar toggle: keydown arms skipNextBlurCommitRef +
-      // the rAF closer; blur/focus land outside before the frame runs.
+      // the rAF closer. A single outside focus delivers the blur (do not also
+      // fireEvent.blur — that would consume the skip flag and let the focus
+      // blur commit before the frame, masking a broken rAF path).
       /* eslint-disable testing-library/prefer-user-event */
       fireEvent.keyDown(lastInline, { key: "Tab" })
-      fireEvent.blur(inlineField, { relatedTarget: null })
       /* eslint-enable testing-library/prefer-user-event */
       act(() => {
         screen.getByTestId("outside").focus()

@@ -135,6 +135,8 @@ describe("usePopoverInteractionFlag", () => {
 
     expect(flag.current).toBe(false)
 
+    // Discrete pointer phases: userEvent.click collapses them into one gesture.
+    /* eslint-disable testing-library/prefer-user-event */
     fireEvent.pointerDown(cell)
     expect(flag.current).toBe(true)
 
@@ -143,6 +145,7 @@ describe("usePopoverInteractionFlag", () => {
     expect(flag.current).toBe(true)
 
     fireEvent.click(cell)
+    /* eslint-enable testing-library/prefer-user-event */
     expect(flag.current).toBe(false)
   })
 
@@ -152,10 +155,12 @@ describe("usePopoverInteractionFlag", () => {
     popover.appendChild(cell)
     const { flag } = mountFlag(popover)
 
+    /* eslint-disable testing-library/prefer-user-event */
     fireEvent.pointerDown(cell)
     expect(flag.current).toBe(true)
 
     fireEvent.pointerCancel(cell)
+    /* eslint-enable testing-library/prefer-user-event */
     expect(flag.current).toBe(false)
   })
 
@@ -168,7 +173,9 @@ describe("usePopoverInteractionFlag", () => {
     document.body.appendChild(portal)
     const { flag } = mountFlag(popover, [".stDateInputHeaderPickerPopover"])
 
+    /* eslint-disable testing-library/prefer-user-event */
     fireEvent.pointerDown(item)
+    /* eslint-enable testing-library/prefer-user-event */
     expect(flag.current).toBe(true)
   })
 
@@ -178,7 +185,9 @@ describe("usePopoverInteractionFlag", () => {
     popover.appendChild(cell)
     const { flag, rerender } = mountFlag(popover)
 
+    /* eslint-disable testing-library/prefer-user-event */
     fireEvent.pointerDown(cell)
+    /* eslint-enable testing-library/prefer-user-event */
     expect(flag.current).toBe(true)
 
     act(() => {
@@ -197,7 +206,9 @@ describe("usePopoverInteractionFlag", () => {
       unmount()
     })
 
+    /* eslint-disable testing-library/prefer-user-event */
     fireEvent.pointerDown(cell)
+    /* eslint-enable testing-library/prefer-user-event */
     expect(flag.current).toBe(false)
   })
 })
