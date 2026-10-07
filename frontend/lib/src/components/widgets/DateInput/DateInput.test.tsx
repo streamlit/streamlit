@@ -2309,12 +2309,9 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     const region = screen.getByTestId("stDateInput")
     const { year } = getSingleDateSegments(region)
 
-    // Focus and close the popover via Tab
+    // Focus and close the popover via Tab (one stop in the field, then calendar)
     await user.click(year)
     await screen.findByTestId("stDateInputCalendar")
-    // Close by tabbing through all segments, the calendar button, and out
-    await user.tab() // to month
-    await user.tab() // to day
     await user.tab() // to calendar button
     await user.tab() // leaves widget, closes popover
     await waitFor(() => {
@@ -2547,6 +2544,66 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendarButton).toHaveAttribute("aria-expanded", "false")
     expect(calendarButton).not.toHaveAttribute("aria-controls")
     expect(calendarButton).not.toHaveAttribute("tabIndex", "-1")
+  })
+
+  it("keeps a single Tab stop per date field; arrows move between segments", async () => {
+    const user = userEvent.setup()
+    render(
+      <div>
+        <DateInput {...getProps({ format: "YYYY/MM/DD" })} />
+        <button type="button" data-testid="after">
+          After
+        </button>
+      </div>
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+
+    expect(year.tabIndex).toBe(0)
+    expect(month.tabIndex).toBe(-1)
+    expect(day.tabIndex).toBe(-1)
+
+    await user.click(year)
+    await user.keyboard("{ArrowRight}")
+    expect(month).toHaveFocus()
+    expect(month.tabIndex).toBe(0)
+    expect(year.tabIndex).toBe(-1)
+
+    await user.tab()
+    expect(calendarButton).toHaveFocus()
+    await user.tab()
+    expect(screen.getByTestId("after")).toHaveFocus()
+  })
+
+  it("Tabs start → end → calendar in range mode", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+          format: "YYYY/MM/DD",
+        })}
+      />
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+    const end = getRangeDateSegments(region, "end")
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+
+    expect(start.year.tabIndex).toBe(0)
+    expect(start.month.tabIndex).toBe(-1)
+    expect(end.year.tabIndex).toBe(0)
+    expect(end.month.tabIndex).toBe(-1)
+
+    await user.click(start.year)
+    await user.tab()
+    expect(end.year).toHaveFocus()
+    await user.tab()
+    expect(calendarButton).toHaveFocus()
   })
 
   it("calendar button opens active calendar and toggles aria-expanded", async () => {

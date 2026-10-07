@@ -678,7 +678,8 @@ function RangeDateInput({
         return
       }
 
-      if (e.key !== "Tab" || !isOpen) return
+      // Active calendar owns Tab (popover focus trap). See SingleDateInput.
+      if (e.key !== "Tab" || !isOpen || isCalendarActiveRef.current) return
 
       const closePreview = (): void => {
         setIsOpenState(false)
