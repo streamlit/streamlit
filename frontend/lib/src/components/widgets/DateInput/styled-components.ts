@@ -204,6 +204,8 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   justifyContent: "center",
   background: "none",
   border: "none",
+  // Match Multiselect clear so focusRing follows a rounded shape.
+  borderRadius: theme.radii.default,
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
   marginRight: theme.spacing.sm,
