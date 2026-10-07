@@ -43,6 +43,18 @@ export const StyledMapContainer = styled.div(({ theme }) => ({
   inset: 0,
   borderRadius: theme.radii.default,
   overflow: "hidden",
+  // `.deck-widgets-root` must cover the map. Deck places tooltips by
+  // subtracting the root's box from the canvas, so a root that does not
+  // cover the map shifts the tooltip by the chart height. The overlay keeps
+  // pointer-events none so it does not intercept pans and picks; clickable
+  // deck controls set pointer-events on their own elements. Do not add
+  // !important: the same properties may also be set inline, and those
+  // values need to win.
+  ".deck-widgets-root": {
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "none",
+  },
 }))
 
 export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
