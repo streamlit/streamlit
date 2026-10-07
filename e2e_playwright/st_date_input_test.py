@@ -960,10 +960,12 @@ def test_range_date_tabs_start_end_then_calendar(app: Page):
 
 def test_disabled_date_field_is_not_a_tab_stop(app: Page):
     """Disabled date segments stay out of the tab order."""
+    # "Disabled, no date" uses value=[] so it is an empty range (six segments).
     date_input = get_date_input(app, "Disabled, no date")
     segments = date_input.get_by_test_id("stDateInputField").get_by_role("spinbutton")
-    expect(segments).to_have_count(3)
-    for i in range(3):
+    expect(segments).to_have_count(6)
+    for i in range(6):
+        expect(segments.nth(i)).not_to_have_attribute("tabindex", "0")
         expect(segments.nth(i)).to_have_attribute("tabindex", "-1")
 
 

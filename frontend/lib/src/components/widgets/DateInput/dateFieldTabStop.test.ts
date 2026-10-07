@@ -59,18 +59,20 @@ describe("applyDateFieldSingleTabStop", () => {
 
   it("keeps disabled segments out of the tab order", () => {
     const container = document.createElement("div")
+    // React Aria omits the tabindex attribute when disabled.
     const year = makeSegment("year", -1)
     const month = makeSegment("month", -1)
     const day = makeSegment("day", -1)
     for (const segment of [year, month, day]) {
       segment.setAttribute("aria-disabled", "true")
+      segment.removeAttribute("tabindex")
     }
     container.append(year, month, day)
 
     expect(applyDateFieldSingleTabStop(container)).toBeNull()
-    expect(year.tabIndex).toBe(-1)
-    expect(month.tabIndex).toBe(-1)
-    expect(day.tabIndex).toBe(-1)
+    expect(year.getAttribute("tabindex")).toBe("-1")
+    expect(month.getAttribute("tabindex")).toBe("-1")
+    expect(day.getAttribute("tabindex")).toBe("-1")
   })
 
   it("ignores a disabled preferred segment", () => {

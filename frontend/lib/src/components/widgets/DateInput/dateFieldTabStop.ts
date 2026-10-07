@@ -41,11 +41,12 @@ export function applyDateFieldSingleTabStop(
   )
   if (segments.length === 0) return null
 
-  // React Aria leaves disabled segments without tabIndex (DOM `-1`). Do not
-  // promote them: `aria-disabled` alone does not remove a span from Tab order.
+  // React Aria omits tabIndex when disabled (attribute absent / property -1).
+  // Do not promote them: `aria-disabled` alone does not remove a span from Tab
+  // order. Force `-1` so a prior single-stop `0` is cleared on disable.
   if (segments.every(isDisabledSegment)) {
     for (const segment of segments) {
-      if (segment.tabIndex !== -1) {
+      if (segment.getAttribute("tabindex") !== "-1") {
         segment.tabIndex = -1
       }
     }

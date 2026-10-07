@@ -673,4 +673,5 @@ def test_disabled_datetime_field_is_not_a_tab_stop(app: Page):
     )
     expect(segments).to_have_count(5)
     for i in range(5):
+        expect(segments.nth(i)).not_to_have_attribute("tabindex", "0")
         expect(segments.nth(i)).to_have_attribute("tabindex", "-1")
