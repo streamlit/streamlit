@@ -22,8 +22,6 @@ import urllib.error
 import urllib.request
 from typing import TYPE_CHECKING, Any, TypedDict
 
-import tomli_w
-
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
@@ -50,6 +48,10 @@ def _dump_toml_value(key: str, value: Any) -> str:
     """
     if value is None:
         return ""
+
+    # Imported here so a normal script run does not load tomli_w.
+    import tomli_w
+
     return tomli_w.dumps({key: value})
 
 

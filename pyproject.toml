@@ -60,7 +60,7 @@ streamlit = { path = "lib", editable = true }
 # a version constraint when it is functionally required:
 #   - Exact pins (==) for tools we deliberately hold back and let Dependabot bump on
 #     its own PRs (ty, mypy, ruff, playwright).
-#   - Upper caps (<) for versions known to break us (numpy, pytest, pandas-stubs);
+#   - Upper caps (<) for versions known to break us (numpy, pytest);
 #     these are mirrored by `ignore` entries in .github/dependabot.yml.
 #   - `!=` exclusions of a single known-broken release (pytest-rerunfailures,
 #     pytest-github-actions-annotate-failures); these need no dependabot.yml entry,
@@ -107,11 +107,7 @@ dev = [
   "types-requests",
   "types-setuptools",
   "types-Authlib",
-  # Cap pandas-stubs below 3.0.0: mypy/ty check against the installed stubs, and 2.x
-  # vs 3.x disagree, so a `# type: ignore` needed on one major is flagged unused on the
-  # other. Mirrored by an `ignore` in dependabot.yml so Dependabot doesn't try to widen
-  # past the cap.
-  "pandas-stubs<3.0.0",
+  "pandas-stubs",
 ]
 
 # Test dependencies
