@@ -43,13 +43,12 @@ export const StyledMapContainer = styled.div(({ theme }) => ({
   inset: 0,
   borderRadius: theme.radii.default,
   overflow: "hidden",
-  // `.deck-widgets-root` must cover the map. Deck places tooltips by
-  // subtracting the root's box from the canvas, so a root that does not
-  // cover the map shifts the tooltip by the chart height. The overlay keeps
-  // pointer-events none so it does not intercept pans and picks; clickable
-  // deck controls set pointer-events on their own elements. Do not add
-  // !important: the same properties may also be set inline, and those
-  // values need to win.
+  // deck.gl positions tooltips relative to `.deck-widgets-root`, so the root
+  // must overlay the canvas without intercepting pointer events. Omit
+  // `!important` so deck.gl's inline styles take precedence once a release
+  // sets them.
+  // TODO: Remove once @deck.gl/react includes
+  // https://github.com/visgl/deck.gl/pull/10724.
   ".deck-widgets-root": {
     position: "absolute",
     inset: 0,

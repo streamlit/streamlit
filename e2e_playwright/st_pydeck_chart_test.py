@@ -311,6 +311,8 @@ def test_pydeck_chart_alt_sets_accessible_name(app: Page) -> None:
     expect(unlabeled).to_have_accessible_name("")
 
 
+# Firefox CI never inserts `.deck-tooltip` on hover. Chromium and WebKit do.
+@pytest.mark.skip_browser("firefox")
 def test_pydeck_tooltip_stays_near_cursor(app: Page) -> None:
     """The tooltip origin stays within 16px of the cursor."""
     chart = select_subtest(app, "tooltip_position_subtest")
