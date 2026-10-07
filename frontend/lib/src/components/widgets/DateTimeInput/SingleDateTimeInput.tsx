@@ -532,7 +532,7 @@ function SingleDateTimeInput({
         onFocusChange(new CalendarDate(date.year, date.month, date.day))
       }
     },
-    [onFocusChange, onValidate]
+    [onFocusChange, onValidate, setPendingTime]
   )
 
   // Calendar date selection: merge the date with whatever time the user has
@@ -555,7 +555,7 @@ function SingleDateTimeInput({
       setIsCalendarActive(true)
       activeOriginRef.current = null
     },
-    [onValidate, resolveGivenTime]
+    [onValidate, resolveGivenTime, setPendingTime]
   )
 
   // Opens the passive preview when focus enters a date/time segment. Focus on
@@ -898,7 +898,7 @@ function SingleDateTimeInput({
       setDisplayValue(merged)
       onValidate(merged)
     },
-    [onValidate]
+    [onValidate, setPendingTime]
   )
 
   const handlePopoverTimeKeyDown = useCallback(
