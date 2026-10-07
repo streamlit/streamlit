@@ -46,6 +46,7 @@ import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
+import { useSyncComboBoxEnterTargetFocus } from "~lib/components/shared/Dropdown/useSyncComboBoxEnterTargetFocus"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -138,97 +139,49 @@ const updateWidgetMgrState = (
 }
 
 /**
- * Null-render component mounted inside <ComboBox> to expose RAC's open/close
- * methods and to keep selectionManager.focusedKey on the Enter target so the
- * combobox exposes aria-activedescendant while typing (#16841).
- *
- * RAC clears focusedKey on every inputValue change. Sync runs here (with
- * access to state.collection) because setFocusedKey no-ops when the key is
- * not yet in the collection — a parent effect can race the ListBox.
+ * Null-render component mounted inside <ComboBox> to expose React Aria's
+ * open/close methods and to keep selectionManager.focusedKey on the Enter
+ * target so the combobox exposes aria-activedescendant while typing (#16841).
  */
 const DropdownController = memo<{
   openRef: React.MutableRefObject<
     ((focusStrategy?: "first" | "last" | null) => void) | null
   >
+  closeRef: React.MutableRefObject<(() => void) | null>
   focusedKeyRef: React.MutableRefObject<Key | null>
   /** Default Enter target (hover or first visible row) when syncing focus. */
   enterTargetKey: Key | null
-}>(({ openRef, focusedKeyRef, enterTargetKey }) => {
-  const state = useContext(ComboBoxStateContext)
-  // Keep a live state pointer for rAF retries — focusedKey updates recreate
-  // the context value, and a stale closure would call a detached manager.
-  const stateRef = useRef(state)
-  stateRef.current = state
+  /** Skip sync when hover ends so arrow focus is not overwritten. */
+  skipEnterTargetFocusSync: boolean
+}>(
+  ({
+    openRef,
+    closeRef,
+    focusedKeyRef,
+    enterTargetKey,
+    skipEnterTargetFocusSync,
+  }) => {
+    const state = useContext(ComboBoxStateContext)
 
-  useEffect(() => {
-    if (state) {
-      openRef.current = (focusStrategy = null) =>
-        state.open(focusStrategy, "manual")
-    }
-    return () => {
-      openRef.current = null
-    }
-  }, [state, openRef])
+    useEffect(() => {
+      if (state) {
+        openRef.current = (focusStrategy = null) =>
+          state.open(focusStrategy, "manual")
+        closeRef.current = () => state.close()
+      }
+      return () => {
+        openRef.current = null
+        closeRef.current = null
+      }
+    }, [state, openRef, closeRef])
 
-  useEffect(() => {
-    if (!state?.isOpen) return
+    useSyncComboBoxEnterTargetFocus(enterTargetKey, skipEnterTargetFocusSync)
 
-    let cancelled = false
-    let rafId = 0
-    const startedAt = performance.now()
-
-    const focusedMatchesEnterTarget = (): boolean => {
-      const current = stateRef.current
-      if (!current) return isNullOrUndefined(enterTargetKey)
-      const focused = current.selectionManager.focusedKey
-      return (
-        isNullOrUndefined(enterTargetKey) ||
-        (notNullOrUndefined(focused) &&
-          String(focused) === String(enterTargetKey))
-      )
-    }
-
-    const applyEnterTargetFocus = (): boolean => {
-      const current = stateRef.current
-      if (!current) return false
-      // SelectionManager.setFocusedKey no-ops when the key is missing from the
-      // collection, so it is safe to call before Virtualizer registers items.
-      current.selectionManager.setFocusedKey(enterTargetKey)
-      return focusedMatchesEnterTarget()
-    }
-
-    // Child effects run before ComboBox's clear-on-inputValue effect, so the
-    // first apply can be wiped. Keep re-applying on animation frames until the
-    // key sticks (after Virtualizer registers the item) or the user arrow-navs
-    // to a different key. Do not list `state` as a dep — focusedKey updates
-    // recreate state and would reset arrow-nav back to the Enter target.
-    const schedule = (): void => {
-      rafId = requestAnimationFrame(() => {
-        if (cancelled) return
-        if (applyEnterTargetFocus()) return
-        const focused = stateRef.current?.selectionManager.focusedKey
-        if (
-          notNullOrUndefined(focused) &&
-          notNullOrUndefined(enterTargetKey) &&
-          String(focused) !== String(enterTargetKey)
-        ) {
-          return
-        }
-        if (performance.now() - startedAt < 1000) schedule()
-      })
-    }
-    applyEnterTargetFocus()
-    schedule()
-    return () => {
-      cancelled = true
-      cancelAnimationFrame(rafId)
-    }
-  }, [state?.isOpen, state?.inputValue, enterTargetKey])
-
-  // Read synchronously — an effect would leave a stale-read window for keydown handlers
-  focusedKeyRef.current = state?.selectionManager.focusedKey ?? null
-  return null
-})
+    // Read synchronously — an effect would leave a stale-read window for keydown handlers
+    focusedKeyRef.current = state?.selectionManager.focusedKey ?? null
+    return null
+  }
+)
 DropdownController.displayName = "DropdownController"
 
 const TagRemoveIcon: FC = () => (
@@ -312,11 +265,20 @@ const Multiselect: FC<Props> = props => {
   const openDropdownRef = useRef<
     ((focusStrategy?: "first" | "last" | null) => void) | null
   >(null)
+  const closeDropdownRef = useRef<(() => void) | null>(null)
   const focusedKeyRef = useRef<Key | null>(null)
-  // Hover is React state so enterTargetKey (and aria focusedKey sync) updates.
+  // Hover is state so the active row can follow the pointer. Arrow-key
+  // focus stays put when the pointer leaves a row.
   const [hoveredKey, setHoveredKey] = useState<Key | null>(null)
   const hoveredKeyRef = useRef<Key | null>(null)
   hoveredKeyRef.current = hoveredKey
+  // Skip focus sync on hover-end so enterTargetKey falling back to the first
+  // row does not overwrite an ArrowUp/Down selection.
+  const prevHoveredKeyRef = useRef(hoveredKey)
+  const skipEnterTargetFocusSync =
+    notNullOrUndefined(prevHoveredKeyRef.current) &&
+    isNullOrUndefined(hoveredKey)
+  prevHoveredKeyRef.current = hoveredKey
 
   // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
   // flip up when near the bottom, rather than overflowing (see #16181).
@@ -350,6 +312,7 @@ const Multiselect: FC<Props> = props => {
   const displayOptionsRef = useRef(displayOptions)
   displayOptionsRef.current = displayOptions
   // Enter / aria-activedescendant target: hover wins when still listed, else first row.
+  // A hovered key filtered out of displayOptions is ignored here (no cleanup effect).
   const enterTargetKey = useMemo((): string | null => {
     if (
       notNullOrUndefined(hoveredKey) &&
@@ -358,15 +321,6 @@ const Multiselect: FC<Props> = props => {
       return String(hoveredKey)
     }
     return displayOptions[0]?.id ?? null
-  }, [hoveredKey, displayOptions])
-
-  useEffect(() => {
-    if (
-      notNullOrUndefined(hoveredKey) &&
-      !displayOptions.some(o => o.id === hoveredKey)
-    ) {
-      setHoveredKey(null)
-    }
   }, [hoveredKey, displayOptions])
 
   const valueRef = useRef(value)
@@ -773,6 +727,15 @@ const Multiselect: FC<Props> = props => {
         openDropdownRef.current?.()
       }
 
+      // Close before React Aria's Tab shortcut can commit() the synced
+      // focusedKey (including "Select all"). isOpenRef is cleared sync so
+      // handleChange drops any late selection callback from close.
+      if (e.key === "Tab" && isOpenRef.current) {
+        e.stopPropagation()
+        isOpenRef.current = false
+        closeDropdownRef.current?.()
+      }
+
       if (e.key === "Escape") {
         if (filterActiveRef.current) {
           // Layered: first Escape clears filter (keeps dropdown open),
@@ -900,8 +863,10 @@ const Multiselect: FC<Props> = props => {
         >
           <DropdownController
             openRef={openDropdownRef}
+            closeRef={closeDropdownRef}
             focusedKeyRef={focusedKeyRef}
             enterTargetKey={enterTargetKey}
+            skipEnterTargetFocusSync={skipEnterTargetFocusSync}
           />
           <StyledTrigger
             ref={setReference}

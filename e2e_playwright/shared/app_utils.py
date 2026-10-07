@@ -311,8 +311,8 @@ def select_selectbox_option(
     selectbox_input.wait_for(state="visible")
     selectbox_input.click()
     # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
-    # Note: this shifts focus to the first option, so the initially-selected item
-    # will not be highlighted when the dropdown first opens.
+    # With the Enter-target focus sync, the first option is already active after
+    # open; this ArrowDown moves to the next option (fine — we filter + click by name).
     selectbox_input.press("ArrowDown")
 
     # Wait for dropdown to be visible before typing

@@ -283,6 +283,101 @@ describe("Selectbox widget", () => {
     expect(activeOption).toHaveTextContent("apple")
   })
 
+  it("does not commit on Tab after opening the menu", async () => {
+    const user = userEvent.setup()
+    props = getProps({
+      value: undefined,
+      options: ["apple", "apricot", "banana"],
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    await user.keyboard("{Tab}")
+
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  it("does not commit a typed filter on Tab", async () => {
+    const user = userEvent.setup()
+    props = getProps({
+      value: undefined,
+      options: ["apple", "apricot", "banana"],
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.type(input, "ap")
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    await user.keyboard("{Tab}")
+
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  it("does not commit a creatable option on Tab when acceptNewOptions is true", async () => {
+    const user = userEvent.setup()
+    props = getProps({
+      value: undefined,
+      options: ["apple"],
+      acceptNewOptions: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.type(input, "xyz")
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: /Add: xyz/i })).toBeVisible()
+    })
+    await user.keyboard("{Tab}")
+
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  it("keeps ArrowDown focus after typing while the Enter-target sync settles", async () => {
+    const user = userEvent.setup()
+    props = getProps({
+      value: undefined,
+      options: ["apple", "apricot", "banana"],
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.type(input, "ap")
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    // Arrow after the Enter target is focused — a late retry frame must not
+    // snap focus back to the first match.
+    await user.keyboard("{ArrowDown}")
+    await waitFor(() => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(activeId).toBeTruthy()
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        "apricot"
+      )
+    })
+    await user.keyboard("{Enter}")
+
+    expect(props.onChange).toHaveBeenCalledWith("apricot")
+  })
+
   it("doesn't filter options based on index", async () => {
     const user = userEvent.setup()
     render(<Selectbox {...props} />)

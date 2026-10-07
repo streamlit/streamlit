@@ -328,6 +328,89 @@ describe("Multiselect widget", () => {
     expect(activeOption).toHaveTextContent("apple")
   })
 
+  it("does not commit on Tab after opening the menu with select all", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: [] })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Select all" })).toBeVisible()
+    })
+    const callsBeforeTab =
+      props.widgetMgr.setStringArrayValue.mock.calls.length
+    await user.keyboard("{Tab}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
+      callsBeforeTab
+    )
+  })
+
+  it("does not commit a typed filter on Tab", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.type(input, "ap")
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    const callsBeforeTab =
+      props.widgetMgr.setStringArrayValue.mock.calls.length
+    await user.keyboard("{Tab}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
+      callsBeforeTab
+    )
+  })
+
+  it("keeps arrow focus after the pointer leaves a row", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    const input = screen.getByRole("combobox")
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    // First option (apple) is already active; two ArrowDowns land on banana.
+    await user.keyboard("{ArrowDown}{ArrowDown}")
+    const banana = screen.getByRole("option", { name: "banana" })
+    await user.hover(banana)
+    await user.unhover(banana)
+    await user.keyboard("{Enter}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["banana"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+  })
+
   it("filters based on label, not value", async () => {
     const user = userEvent.setup()
     const props = getProps({ default: [] })

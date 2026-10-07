@@ -629,13 +629,13 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     selectbox_input.click()
     expect(selectbox_input).to_be_focused()
 
-    # ArrowDown reliably opens the dropdown (backup for pointer-triggered open,
-    # matching select_selectbox_option) and highlights the first option.
-    selectbox_input.press("ArrowDown")
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
+    # The Enter target is already active once the menu opens, so the first
+    # option ("Yes") is focused before any ArrowDown.
+    expect(options.first).to_have_attribute("data-focused", "true")
 
     # Typing must NOT filter the list: character input is blocked, so all
     # options stay visible.
@@ -648,8 +648,8 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     # toHaveValue("")).
     expect(selectbox_input).to_have_value("")
 
-    # Keyboard navigation still selects: a second ArrowDown reaches "No" and
-    # Enter commits it, proving Arrow/Enter work after focusing via click.
+    # Keyboard navigation still selects: one ArrowDown moves from the already-
+    # focused first option to "No", then Enter commits it.
     selectbox_input.press("ArrowDown")
     selectbox_input.press("Enter")
     expect_markdown(app, "value 23: No")

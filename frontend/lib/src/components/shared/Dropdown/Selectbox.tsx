@@ -58,7 +58,6 @@ import {
   getSelectPlaceholder,
   isNullOrUndefined,
   type LabelVisibilityOptions,
-  notNullOrUndefined,
 } from "~lib/util/utils"
 
 import {
@@ -72,6 +71,7 @@ import {
   StyledOpenButton,
   StyledPopover,
 } from "./Selectbox.styled"
+import { useSyncComboBoxEnterTargetFocus } from "./useSyncComboBoxEnterTargetFocus"
 
 export interface Props {
   value: string | null | undefined
@@ -140,8 +140,8 @@ export const getInsertedText = (
 }
 
 /**
- * Null-render component mounted inside <ComboBox> to expose RAC's internal
- * open/close methods and to keep focusedKey on the Enter target for
+ * Null-render component mounted inside <ComboBox> to expose React Aria's
+ * internal open/close methods and to keep focusedKey on the Enter target for
  * aria-activedescendant while typing (#16841).
  */
 const DropdownController = memo<{
@@ -150,10 +150,6 @@ const DropdownController = memo<{
   enterTargetKey: Key | null
 }>(({ openRef, closeRef, enterTargetKey }) => {
   const state = useContext(ComboBoxStateContext)
-  // Keep a live state pointer for rAF retries — focusedKey updates recreate
-  // the context value, and a stale closure would call a detached manager.
-  const stateRef = useRef(state)
-  stateRef.current = state
 
   useEffect(() => {
     if (state) {
@@ -166,60 +162,7 @@ const DropdownController = memo<{
     }
   }, [state, openRef, closeRef])
 
-  useEffect(() => {
-    if (!state?.isOpen) return
-
-    let cancelled = false
-    let rafId = 0
-    const startedAt = performance.now()
-
-    const focusedMatchesEnterTarget = (): boolean => {
-      const current = stateRef.current
-      if (!current) return isNullOrUndefined(enterTargetKey)
-      const focused = current.selectionManager.focusedKey
-      return (
-        isNullOrUndefined(enterTargetKey) ||
-        (notNullOrUndefined(focused) &&
-          String(focused) === String(enterTargetKey))
-      )
-    }
-
-    const applyEnterTargetFocus = (): boolean => {
-      const current = stateRef.current
-      if (!current) return false
-      // SelectionManager.setFocusedKey no-ops when the key is missing from the
-      // collection, so it is safe to call before Virtualizer registers items.
-      current.selectionManager.setFocusedKey(enterTargetKey)
-      return focusedMatchesEnterTarget()
-    }
-
-    // Child effects run before ComboBox's clear-on-inputValue effect, so the
-    // first apply can be wiped. Keep re-applying on animation frames until the
-    // key sticks (after Virtualizer registers the item) or the user arrow-navs
-    // to a different key. Do not list `state` as a dep — focusedKey updates
-    // recreate state and would reset arrow-nav back to the Enter target.
-    const schedule = (): void => {
-      rafId = requestAnimationFrame(() => {
-        if (cancelled) return
-        if (applyEnterTargetFocus()) return
-        const focused = stateRef.current?.selectionManager.focusedKey
-        if (
-          notNullOrUndefined(focused) &&
-          notNullOrUndefined(enterTargetKey) &&
-          String(focused) !== String(enterTargetKey)
-        ) {
-          return
-        }
-        if (performance.now() - startedAt < 1000) schedule()
-      })
-    }
-    applyEnterTargetFocus()
-    schedule()
-    return () => {
-      cancelled = true
-      cancelAnimationFrame(rafId)
-    }
-  }, [state?.isOpen, state?.inputValue, enterTargetKey])
+  useSyncComboBoxEnterTargetFocus(enterTargetKey)
 
   return null
 })
@@ -604,6 +547,14 @@ const Selectbox: FC<Props> = ({
       ) {
         openDropdownRef.current?.()
       }
+      // Close before React Aria's Tab shortcut can commit() the synced
+      // focusedKey. isOpenRef is cleared sync so handleSelectionChange drops
+      // any late selection callback from close.
+      if (e.key === "Tab" && isOpenRef.current) {
+        e.stopPropagation()
+        isOpenRef.current = false
+        closeDropdownRef.current?.()
+      }
       if (e.key === "Escape") {
         // Escape while filtering restores the committed label (see #16004).
         // Handle this before the clear-on-Escape branch below, or Escape
@@ -652,20 +603,17 @@ const Selectbox: FC<Props> = ({
 
       if (!wasOpenBeforeEnterRef.current) return
 
-      if (displayOptions.length > 0) {
-        const exactMatch = displayOptions.find(
-          o => !o.isCreatable && o.value === inputValue
-        )
-        const target =
-          exactMatch ??
-          (!displayOptions[0].isCreatable ? displayOptions[0] : null)
-        if (target) {
-          commitSelection(target.value)
-          closeDropdownRef.current?.()
-        }
+      // Resolve via enterTargetId so the committed row matches the highlighted
+      // aria-activedescendant row (exact match, else first non-creatable).
+      const target = enterTargetId
+        ? displayOptions.find(o => o.id === enterTargetId)
+        : null
+      if (target && !target.isCreatable) {
+        commitSelection(target.value)
+        closeDropdownRef.current?.()
       }
     },
-    [commitSelection, creatableItem, displayOptions, inputValue]
+    [commitSelection, creatableItem, displayOptions, enterTargetId, inputValue]
   )
 
   const handleClearValue = useCallback((): void => {
