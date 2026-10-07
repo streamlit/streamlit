@@ -23,13 +23,14 @@ function isDisabledSegment(segment: HTMLElement): boolean {
 }
 
 /**
- * Applies a single Tab stop within a DateField: one editable segment keeps
- * `tabIndex={0}`, the rest `-1`. Arrow keys still move focus (React Aria);
- * on focus we promote the focused segment so Tab/Shift+Tab leave the field.
+ * Leaves one segment tabbable (`tabIndex` 0) and sets the others to -1.
+ * `preferred` wins when it is an enabled segment of the field; otherwise the
+ * segment that is already tabbable, or the first enabled segment. When every
+ * segment is `aria-disabled`, all stay at -1.
  *
- * Temporary until react-aria-components ships `keyboardNavigationBehavior="tab"`
- * (adobe/react-spectrum#10294). RAC resets segment `tabIndex` to 0 on render,
- * so we re-apply after mutations and on focusin.
+ * Callers re-apply this after render. React Aria sets every editable
+ * segment's `tabIndex` prop to 0. Temporary until
+ * `keyboardNavigationBehavior="tab"` ships (adobe/react-spectrum#10294).
  */
 export function applyDateFieldSingleTabStop(
   container: HTMLElement,
@@ -82,12 +83,12 @@ export function applyDateFieldSingleTabStop(
 }
 
 /**
- * Callback ref that keeps a DateField container on one Tab stop. Attach to the
- * element that wraps that field's segments (e.g. `StyledDateFieldInput`).
+ * Callback ref that keeps one DateField on a single Tab stop. Pass it to
+ * the element that wraps that field's segments (`StyledDateFieldInput`).
  *
- * Uses a callback ref (not useLayoutEffect + object ref) so setup runs when the
- * node mounts — DateField state can be missing on the first render, which would
- * leave an object-ref effect with a null `current` and never re-run.
+ * Setup runs when the node mounts. A layout effect on an object ref would
+ * see `null` while DateField state is missing and would not run again
+ * once the node exists.
  */
 export function useDateFieldSingleTabStop(): (
   node: HTMLElement | null

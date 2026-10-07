@@ -75,12 +75,18 @@ export type PassivePreviewTabLeave = {
 }
 
 /**
- * Routes Tab while the passive preview is open. Returns true when handled.
- * Does not preventDefault. Tab from any segment waits one frame so we can see
- * whether focus moved to another segment (range start→end), the calendar
- * button, the grid (Safari/Firefox skip-button), or outside. Focus that lands
- * in the still-open grid is moved to the calendar button. Use a `data-type`
- * segmentSelector (iOS uses textboxes).
+ * Handles Tab while the passive preview is open. Returns true when this
+ * helper handled the key. Does not call `preventDefault`.
+ *
+ * Forward Tab, and Shift+Tab from any segment except the first, wait one
+ * frame so the caller can tell these apart:
+ * - Focus moved to another segment (range start → end): keep the preview
+ * - Focus moved to the calendar button: keep the preview
+ * - Focus landed in the grid (Safari/Firefox skip the button): move it to the button
+ * - Focus left the widget: close the preview
+ *
+ * `segmentSelector` must match `data-type` segments. On iOS those segments
+ * are textboxes.
  */
 export function handlePassivePreviewFieldTab(
   e: Pick<KeyboardEvent, "key" | "shiftKey" | "target">,
