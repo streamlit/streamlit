@@ -826,6 +826,7 @@ class SelectboxMixin:
                 serialized_value,
                 opt,
                 formatted_option_to_option_index,
+                format_func,
             )
             and widget_state.incoming_serialized_value != serialized_value
         )

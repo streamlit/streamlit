@@ -1263,6 +1263,37 @@ def test_multiselect_label_change_does_not_rewrite_user_entered_values(
     assert picker.proto.set_value is False
 
 
+def test_multiselect_resends_shared_label_for_earlier_option():
+    """A shared label still refreshes when the selection is the first option.
+
+    Duplicate labels keep the last option in the index, while multiselect
+    deserializes the first match. The earlier option must still be pushed.
+    """
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+        st.multiselect(
+            "Pick some",
+            ["A", "B"],
+            default=["A"],
+            format_func=lambda _option: f"Choice ({count})",
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    assert at.multiselect(key="picker").value == ["A"]
+
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.multiselect(key="picker")
+    assert picker.value == ["A"]
+    assert picker.proto.set_value is True
+    assert list(picker.proto.raw_values) == ["Choice (3)"]
+
+
 def test_multiselect_does_not_rewrite_typed_text_that_formats_to_an_option(
     monkeypatch: pytest.MonkeyPatch,
 ):

@@ -897,6 +897,7 @@ class MultiSelectMixin:
                     label,
                     indexable_options,
                     formatted_option_to_option_index,
+                    format_func,
                 )
                 for value, label in zip(current_values, serialized_values, strict=False)
             )

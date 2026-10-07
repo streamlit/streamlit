@@ -349,11 +349,14 @@ def is_option_value(
     serialized_label: str | None,
     options: Sequence[Any],
     formatted_option_to_option_index: dict[str, int],
+    format_func: Callable[[Any], str],
 ) -> bool:
     """Return whether `value` is a real option, not text the user typed.
 
     ``format_func`` can map typed text onto an existing option label. That text
-    must not be refreshed as if it were the option. Custom options are
+    must not be refreshed as if it were the option. Duplicate labels keep only
+    the last option in the index, while multiselect deserializes the first
+    match, so every option with this label is checked. Custom options are
     deepcopied and may not compare equal; typed text is a string, so a
     non-string value is still the option.
     """
@@ -362,9 +365,13 @@ def is_option_value(
     option_index = formatted_option_to_option_index.get(serialized_label)
     if option_index is None:
         return False
-    option = options[option_index]
-    if _values_equal(option, value):
+    if _values_equal(options[option_index], value):
         return True
+    # Duplicate labels: the map keeps the last option. An earlier option can
+    # still be the selection.
+    for option in options:
+        if format_func(option) == serialized_label and _values_equal(option, value):
+            return True
     # A deepcopied custom option compares unequal. Typed text is a string.
     return not isinstance(value, str)
 
