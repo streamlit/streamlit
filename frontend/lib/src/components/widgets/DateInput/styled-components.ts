@@ -209,9 +209,11 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   marginRight: theme.spacing.sm,
   flexShrink: 0,
   ...getSecondaryIconButtonColorStyles(theme),
+  "&:focus": {
+    outline: "none",
+  },
   "&:focus-visible": {
-    outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-    borderRadius: theme.radii.sm,
+    boxShadow: theme.shadows.focusRing,
   },
 }))
 
