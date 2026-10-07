@@ -329,6 +329,7 @@ import streamlit.components.v2  # noqa: F401
 # ``st.*`` names stay type errors. mypy only honors the unaliased
 # ``TYPE_CHECKING`` name here; an alias made unknown names type-check as
 # valid. Deleting it afterward keeps it off the public ``st`` surface.
+from types import ModuleType as _ModuleType
 from typing import TYPE_CHECKING
 
 
@@ -341,21 +342,19 @@ class _MissingStreamlitAttributeMessage:
     ``streamlit.command_suggestions`` or ``difflib``.
     """
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, module: _ModuleType) -> None:
         self._name = name
+        self._module = module
 
     def __str__(self) -> str:
         try:
-            import sys
-
             # Import the submodule directly so a failed load hits the fallback
             # below. ``from streamlit import`` looks the name up first and
-            # re-enters ``__getattr__``. ``sys.modules[__name__]`` is this
-            # module; ``__name__`` is not the missing attribute.
+            # re-enters ``__getattr__``.
             import streamlit.command_suggestions as command_suggestions  # noqa: PLR0402
 
             return command_suggestions.missing_streamlit_attribute_message(
-                self._name, sys.modules[__name__]
+                self._name, self._module
             )
         except Exception:  # pragma: no cover - defensive
             return f"module 'streamlit' has no attribute '{self._name}'"
@@ -370,7 +369,7 @@ if not TYPE_CHECKING:
         # Telemetry records AttributeError.name and .obj as
         # AttributeError:<attribute> instead of parsing the message.
         raise AttributeError(
-            _MissingStreamlitAttributeMessage(name),
+            _MissingStreamlitAttributeMessage(name, module),
             name=name,
             obj=module,
         )

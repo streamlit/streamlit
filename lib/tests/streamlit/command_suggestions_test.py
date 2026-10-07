@@ -214,6 +214,8 @@ import sys
 import streamlit as st
 
 before = set(sys.modules)
+# Later difflib diffs are meaningful only when this import did not load it.
+assert "difflib" not in before
 assert hasattr(st, "date") is False
 assert getattr(st, "date", None) is None
 assert hasattr(st, "_not_public") is False
