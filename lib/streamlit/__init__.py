@@ -345,12 +345,15 @@ class _MissingStreamlitAttributeMessage:
         self._name = name
 
     def __str__(self) -> str:
-        # ``__name__`` is this module ("streamlit"), not the missing attribute.
-        # ``getattr`` of the missing name would re-enter ``__getattr__``.
-        import sys
-        from streamlit import command_suggestions
-
         try:
+            import sys
+
+            # Import the submodule directly so a failed load hits the fallback
+            # below. ``from streamlit import`` looks the name up first and
+            # re-enters ``__getattr__``. ``sys.modules[__name__]`` is this
+            # module; ``__name__`` is not the missing attribute.
+            import streamlit.command_suggestions as command_suggestions  # noqa: PLR0402
+
             return command_suggestions.missing_streamlit_attribute_message(
                 self._name, sys.modules[__name__]
             )

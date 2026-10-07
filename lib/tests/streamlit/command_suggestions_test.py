@@ -222,11 +222,12 @@ added = set(sys.modules) - before
 assert "streamlit.command_suggestions" not in added, sorted(added)
 assert "difflib" not in added, sorted(added)
 
-# Must not raise RuntimeError while sys.modules is being iterated.
-listed = [
-    m for m in sys.modules.values() if getattr(m, "date", None) is not None
-]
-assert isinstance(listed, list)
+# Regression for #17298: probing st while iterating sys.modules must not
+# raise RuntimeError. Only probe st so another module's lazy __getattr__
+# cannot fail this check.
+for module in sys.modules.values():
+    if module is st:
+        getattr(module, "date", None)
 
 try:
     from streamlit import experimental_rerun
@@ -239,7 +240,7 @@ else:
     raise AssertionError("expected ImportError")
 
 assert "streamlit.command_suggestions" not in sys.modules
-assert "difflib" not in sys.modules
+assert "difflib" not in set(sys.modules) - before
 
 try:
     st.experimental_rerun
@@ -258,7 +259,7 @@ assert shown == (
     "st.experimental_rerun has been removed. Use st.rerun instead."
 )
 assert "streamlit.command_suggestions" in sys.modules
-assert "difflib" not in sys.modules
+assert "difflib" not in set(sys.modules) - before
 
 try:
     st.text_inpt
