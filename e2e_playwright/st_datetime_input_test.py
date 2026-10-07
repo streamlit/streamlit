@@ -663,3 +663,14 @@ def test_datetime_field_has_one_tab_stop(app: Page):
 
     app.keyboard.press("Tab")
     expect(calendar_button).to_be_focused()
+
+
+def test_disabled_datetime_field_is_not_a_tab_stop(app: Page):
+    """Disabled datetime segments stay out of the tab order."""
+    datetime_input = get_datetime_input(app, "Datetime input 3 (disabled)")
+    segments = datetime_input.get_by_test_id("stDateTimeInputField").get_by_role(
+        "spinbutton"
+    )
+    expect(segments).to_have_count(5)
+    for i in range(5):
+        expect(segments.nth(i)).to_have_attribute("tabindex", "-1")

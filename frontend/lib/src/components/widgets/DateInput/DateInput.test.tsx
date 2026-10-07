@@ -2580,13 +2580,18 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
   it("Tabs start → end → calendar in range mode", async () => {
     const user = userEvent.setup()
     render(
-      <DateInput
-        {...getProps({
-          isRange: true,
-          default: ["2019-07-06", "2019-07-08"],
-          format: "YYYY/MM/DD",
-        })}
-      />
+      <div>
+        <DateInput
+          {...getProps({
+            isRange: true,
+            default: ["2019-07-06", "2019-07-08"],
+            format: "YYYY/MM/DD",
+          })}
+        />
+        <button type="button" data-testid="after">
+          After
+        </button>
+      </div>
     )
 
     const region = screen.getByTestId("stDateInput")
@@ -2600,10 +2605,19 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(end.month.tabIndex).toBe(-1)
 
     await user.click(start.year)
+    expect(await screen.findByTestId("stDateInputCalendar")).toBeVisible()
     await user.tab()
     expect(end.year).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
     await user.tab()
     expect(calendarButton).toHaveFocus()
+    await user.tab()
+    expect(screen.getByTestId("after")).toHaveFocus()
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("calendar button opens active calendar and toggles aria-expanded", async () => {

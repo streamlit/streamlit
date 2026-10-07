@@ -939,23 +939,32 @@ def test_range_date_tabs_start_end_then_calendar(app: Page):
     """Range Tab order is start field → end field → calendar button."""
     date_input = get_date_input(app, "Range, two dates")
     date_field = date_input.get_by_test_id("stDateInputField")
-    start = date_field.locator('[data-range-field="start"]')
-    end = date_field.locator('[data-range-field="end"]')
-    start_first = start.get_by_role("spinbutton").first
-    start_second = start.get_by_role("spinbutton").nth(1)
-    end_first = end.get_by_role("spinbutton").first
+    # Start year/month/day then end year/month/day (six spinbuttons).
+    segments = date_field.get_by_role("spinbutton")
+    start_first = segments.nth(0)
+    start_second = segments.nth(1)
+    end_first = segments.nth(3)
     calendar_button = date_input.get_by_test_id("stDateInputCalendarButton")
 
     expect(start_first).to_have_attribute("tabindex", "0")
     expect(start_second).to_have_attribute("tabindex", "-1")
     expect(end_first).to_have_attribute("tabindex", "0")
-    expect(end.get_by_role("spinbutton").nth(1)).to_have_attribute("tabindex", "-1")
+    expect(segments.nth(4)).to_have_attribute("tabindex", "-1")
 
     start_first.click()
     app.keyboard.press("Tab")
     expect(end_first).to_be_focused()
     app.keyboard.press("Tab")
     expect(calendar_button).to_be_focused()
+
+
+def test_disabled_date_field_is_not_a_tab_stop(app: Page):
+    """Disabled date segments stay out of the tab order."""
+    date_input = get_date_input(app, "Disabled, no date")
+    segments = date_input.get_by_test_id("stDateInputField").get_by_role("spinbutton")
+    expect(segments).to_have_count(3)
+    for i in range(3):
+        expect(segments.nth(i)).to_have_attribute("tabindex", "-1")
 
 
 def test_year_picker_does_not_revert_month(app: Page):

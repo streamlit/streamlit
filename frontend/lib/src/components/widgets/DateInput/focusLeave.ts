@@ -111,9 +111,9 @@ export function handlePassivePreviewFieldTab(
   )
   if (!fromSegment) return false
 
-  // Shift+Tab from the widget's first segment always leaves (no prior segment).
-  // Keep this synchronous — a rAF leave races React act() in unit tests and is
-  // unnecessary when the destination cannot be another field segment.
+  // Shift+Tab from the first segment cannot land on another field segment, so
+  // close synchronously (a deferred leave is only needed when focus may stay
+  // inside the widget, e.g. range start → end).
   if (
     e.shiftKey &&
     (target === segments[0] || segments[0]?.contains(target))

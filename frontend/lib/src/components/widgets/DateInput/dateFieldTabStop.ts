@@ -18,6 +18,10 @@ import { useCallback, useRef } from "react"
 
 import { SEGMENT_SELECTOR } from "./dateInputUtils"
 
+function isDisabledSegment(segment: HTMLElement): boolean {
+  return segment.getAttribute("aria-disabled") === "true"
+}
+
 /**
  * Applies a single Tab stop within a DateField: one editable segment keeps
  * `tabIndex={0}`, the rest `-1`. Arrow keys still move focus (React Aria);
@@ -36,10 +40,36 @@ export function applyDateFieldSingleTabStop(
   )
   if (segments.length === 0) return null
 
-  const tabbable =
-    preferred && segments.includes(preferred)
+  // React Aria leaves disabled segments without tabIndex (DOM `-1`). Do not
+  // promote them: `aria-disabled` alone does not remove a span from Tab order.
+  if (segments.every(isDisabledSegment)) {
+    for (const segment of segments) {
+      if (segment.tabIndex !== -1) {
+        segment.tabIndex = -1
+      }
+    }
+    return null
+  }
+
+  const enabledPreferred =
+    preferred && segments.includes(preferred) && !isDisabledSegment(preferred)
       ? preferred
-      : (segments.find(s => s.tabIndex === 0) ?? segments[0])
+      : null
+
+  const tabbable =
+    enabledPreferred ??
+    segments.find(s => s.tabIndex === 0 && !isDisabledSegment(s)) ??
+    segments.find(s => !isDisabledSegment(s)) ??
+    null
+
+  if (!tabbable) {
+    for (const segment of segments) {
+      if (segment.tabIndex !== -1) {
+        segment.tabIndex = -1
+      }
+    }
+    return null
+  }
 
   for (const segment of segments) {
     const next = segment === tabbable ? 0 : -1
@@ -91,7 +121,7 @@ export function useDateFieldSingleTabStop(): (
       apply(target)
     }
 
-    // RAC re-sets tabIndex=0 when segments re-render; restore our stop.
+    // Re-apply when segments remount or their tabindex changes (for example, isDisabled).
     const observer = new MutationObserver(() => {
       apply(lastTabbable)
     })

@@ -56,4 +56,34 @@ describe("applyDateFieldSingleTabStop", () => {
     expect(month.tabIndex).toBe(-1)
     expect(day.tabIndex).toBe(0)
   })
+
+  it("keeps disabled segments out of the tab order", () => {
+    const container = document.createElement("div")
+    const year = makeSegment("year", -1)
+    const month = makeSegment("month", -1)
+    const day = makeSegment("day", -1)
+    for (const segment of [year, month, day]) {
+      segment.setAttribute("aria-disabled", "true")
+    }
+    container.append(year, month, day)
+
+    expect(applyDateFieldSingleTabStop(container)).toBeNull()
+    expect(year.tabIndex).toBe(-1)
+    expect(month.tabIndex).toBe(-1)
+    expect(day.tabIndex).toBe(-1)
+  })
+
+  it("ignores a disabled preferred segment", () => {
+    const container = document.createElement("div")
+    const year = makeSegment("year", -1)
+    const month = makeSegment("month")
+    const day = makeSegment("day", -1)
+    year.setAttribute("aria-disabled", "true")
+    container.append(year, month, day)
+
+    expect(applyDateFieldSingleTabStop(container, year)).toBe(month)
+    expect(year.tabIndex).toBe(-1)
+    expect(month.tabIndex).toBe(0)
+    expect(day.tabIndex).toBe(-1)
+  })
 })
