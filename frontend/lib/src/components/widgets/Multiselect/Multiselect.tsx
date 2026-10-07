@@ -42,7 +42,7 @@ import {
   type MultiSelect as MultiSelectProto,
   streamlit,
 } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
+import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
@@ -179,11 +179,12 @@ const DropdownController = memo<{
 
     const focusedMatchesEnterTarget = (): boolean => {
       const current = stateRef.current
-      if (!current) return enterTargetKey == null
+      if (!current) return isNullOrUndefined(enterTargetKey)
       const focused = current.selectionManager.focusedKey
       return (
-        enterTargetKey == null ||
-        (focused != null && String(focused) === String(enterTargetKey))
+        isNullOrUndefined(enterTargetKey) ||
+        (notNullOrUndefined(focused) &&
+          String(focused) === String(enterTargetKey))
       )
     }
 
@@ -207,8 +208,8 @@ const DropdownController = memo<{
         if (applyEnterTargetFocus()) return
         const focused = stateRef.current?.selectionManager.focusedKey
         if (
-          focused != null &&
-          enterTargetKey != null &&
+          notNullOrUndefined(focused) &&
+          notNullOrUndefined(enterTargetKey) &&
           String(focused) !== String(enterTargetKey)
         ) {
           return
@@ -222,7 +223,6 @@ const DropdownController = memo<{
       cancelled = true
       cancelAnimationFrame(rafId)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   }, [state?.isOpen, state?.inputValue, enterTargetKey])
 
   // Read synchronously — an effect would leave a stale-read window for keydown handlers

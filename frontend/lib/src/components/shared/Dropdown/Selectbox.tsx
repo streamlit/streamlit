@@ -57,6 +57,7 @@ import { isMobile } from "~lib/util/isMobile"
 import {
   getSelectPlaceholder,
   isNullOrUndefined,
+  notNullOrUndefined,
   type LabelVisibilityOptions,
 } from "~lib/util/utils"
 
@@ -174,11 +175,12 @@ const DropdownController = memo<{
 
     const focusedMatchesEnterTarget = (): boolean => {
       const current = stateRef.current
-      if (!current) return enterTargetKey == null
+      if (!current) return isNullOrUndefined(enterTargetKey)
       const focused = current.selectionManager.focusedKey
       return (
-        enterTargetKey == null ||
-        (focused != null && String(focused) === String(enterTargetKey))
+        isNullOrUndefined(enterTargetKey) ||
+        (notNullOrUndefined(focused) &&
+          String(focused) === String(enterTargetKey))
       )
     }
 
@@ -202,8 +204,8 @@ const DropdownController = memo<{
         if (applyEnterTargetFocus()) return
         const focused = stateRef.current?.selectionManager.focusedKey
         if (
-          focused != null &&
-          enterTargetKey != null &&
+          notNullOrUndefined(focused) &&
+          notNullOrUndefined(enterTargetKey) &&
           String(focused) !== String(enterTargetKey)
         ) {
           return
@@ -217,7 +219,6 @@ const DropdownController = memo<{
       cancelled = true
       cancelAnimationFrame(rafId)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   }, [state?.isOpen, state?.inputValue, enterTargetKey])
 
   return null
