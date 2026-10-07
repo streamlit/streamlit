@@ -338,8 +338,8 @@ describe("Multiselect widget", () => {
     await waitFor(() => {
       expect(screen.getByRole("option", { name: "Select all" })).toBeVisible()
     })
-    const callsBeforeTab =
-      props.widgetMgr.setStringArrayValue.mock.calls.length
+    const callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock
+      .calls.length
     await user.keyboard("{Tab}")
 
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
@@ -366,8 +366,8 @@ describe("Multiselect widget", () => {
       },
       { timeout: 3000 }
     )
-    const callsBeforeTab =
-      props.widgetMgr.setStringArrayValue.mock.calls.length
+    const callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock
+      .calls.length
     await user.keyboard("{Tab}")
 
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
