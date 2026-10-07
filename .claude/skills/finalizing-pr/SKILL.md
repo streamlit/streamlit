@@ -116,7 +116,7 @@ Run the AI review and fix loop up to 5 times. After each review, always run `fix
 ```
 for iteration 1 to 5:
     1. Trigger AI review by applying the "ai-review" label
-    2. Run the `fixing-pr` subagent in foreground to wait for CI, fix failures, and address review comments. Tell it to skip "Request a final AI review after a changes-requested AI review". This loop stays on `ai-review`
+    2. Run the `fixing-pr` subagent in foreground to wait for CI, fix failures, and address review comments
     3. Check the latest AI review verdict
     4. If it is "approved" → exit loop
 ```
@@ -140,19 +140,16 @@ To find the latest AI review and extract the verdict:
 ```bash
 PR_NUM=$(gh pr view --json number -q '.number')
 
-# Newest AI review, including the PR-comment fallback when inline review comments are rejected.
-{
-  gh api --paginate "repos/{owner}/{repo}/pulls/${PR_NUM}/reviews" \
-    --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review"))) | {at: .submitted_at, body}'
-  gh api --paginate "repos/{owner}/{repo}/issues/${PR_NUM}/comments" \
-    --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review"))) | {at: .created_at, body}'
-} | jq -rs 'sort_by(.at) | last | .body // ""' | grep -A2 "## Verdict"
+# Get the verdict from the latest AI review
+gh api --paginate "repos/streamlit/streamlit/pulls/${PR_NUM}/reviews" \
+  | jq -s '[.[][] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | sort_by(.submitted_at) | last | .body' \
+  | grep -A2 "## Verdict"
 ```
 
 The verdict section contains a bold keyword indicating the result:
 
 - **`**APPROVED**`** → exit loop, PR is ready
-- **`**CHANGES REQUESTED**`** or **`**CHANGES_REQUESTED**`** → continue iterating, address the feedback
+- **`**CHANGES_REQUESTED**`** → continue iterating, address the feedback
 
 Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` pushed follow-up CI fixes. Those commits are covered by CI but not by the AI review.
 
@@ -167,10 +164,7 @@ gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml 
 gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status in_progress
 ```
 
-Run `/fixing-pr` once after this step, whether step 11 approved the PR or ran out of iterations. Then commit and push anything still uncommitted.
-
-- Do not add `ai-final-review` again here.
-- `fixing-pr` may add that label after it pushes commits that address a `CHANGES_REQUESTED` final review. Step 11 tells it not to do that during the `ai-review` loop.
+Run `/fixing-pr` once so it can wait for CI and address comments. Do this exactly once, whether step 11 was approved or ran out of iterations. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push remaining changes.
 
 ### 13. Post agent metrics
 
