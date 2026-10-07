@@ -777,7 +777,7 @@ describe("DateInput", () => {
       // Partially clear the year segment (leaves placeholders in year,
       // but month and day remain filled — a mid-edit state)
       await clearSegment(user, year)
-      expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
 
       // Concrete outside leave while the preview is open: must not commit, and
       // close-commit must still revert the incomplete display.

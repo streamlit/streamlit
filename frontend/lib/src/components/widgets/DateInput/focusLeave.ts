@@ -99,12 +99,19 @@ export function usePopoverInteractionFlag(
 
     const onPointerDown = (e: PointerEvent): void => {
       const target = e.target
-      if (!(target instanceof Element)) return
+      if (!(target instanceof Node)) return
+      // Native listeners see text-node targets (e.g. a calendar day number).
+      // React normalizes those to the parent element; do the same for closest().
+      const targetElement =
+        target instanceof Element ? target : target.parentElement
       if (popoverRef.current?.contains(target)) {
         popoverInteractionRef.current = true
         return
       }
-      if (excludeSelectorsRef.current.some(sel => target.closest(sel))) {
+      if (
+        targetElement &&
+        excludeSelectorsRef.current.some(sel => targetElement.closest(sel))
+      ) {
         popoverInteractionRef.current = true
       }
     }
@@ -114,9 +121,7 @@ export function usePopoverInteractionFlag(
     }
 
     document.addEventListener("pointerdown", onPointerDown, true)
-    // Capture click, not pointerup: iOS fires pointerup before the blur this
-    // flag must still guard. requestAnimationFrame after pointerdown would
-    // clear too early on that same path.
+    // Clear on click, not pointerup (see JSDoc).
     document.addEventListener("click", clear, true)
     document.addEventListener("pointercancel", clear, true)
     return () => {

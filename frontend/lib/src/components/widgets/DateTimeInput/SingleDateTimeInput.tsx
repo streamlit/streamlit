@@ -209,9 +209,9 @@ function SingleDateTimeInput({
     setPrevValue(value)
     setDisplayValue(value)
     setPendingTime(null)
-    // Keep the dedup guard when the prop caught up to what we just committed.
-    // Clearing it here lets a second dismissal path (blur after Tab, rAF after
-    // blur) write again once React has applied onChange.
+    // Keep the dedup guard once the prop catches up to the value just committed.
+    // Stale closures (the Tab frame callback, an earlier blur handler) still see
+    // the old value and would otherwise commit again.
     if (!dateTimesEqual(value, lastCommittedRef.current ?? null)) {
       lastCommittedRef.current = undefined
     }
@@ -293,9 +293,9 @@ function SingleDateTimeInput({
     popoverRef,
     popoverExcludeSelectors
   )
-  /** Set by the Tab/Shift+Tab dismiss paths, which commit before the popover
-   * unmounts. The blur that follows is skipped so it does not commit again
-   * against a `value` prop that has not yet caught up. */
+  /** Tab and Shift+Tab dismiss paths set this after committing while the
+   * popover is still mounted. handleBlur skips that following blur so it does
+   * not commit again before the value prop catches up. */
   const skipNextBlurCommitRef = useRef(false)
 
   /** The datetime the two controls describe between them when the field itself
@@ -744,16 +744,16 @@ function SingleDateTimeInput({
         return
       }
       // Forward Tab from the last segment normally lands on the calendar button,
-      // so the preview stays open. Safari skips buttons on Tab unless "Press Tab
-      // to highlight each item" is enabled; in that case focus has left the
-      // widget and the preview is closed after the Tab settles.
+      // so the preview stays open. macOS browsers that follow the system
+      // keyboard-navigation setting (Safari, Firefox) skip buttons on Tab by
+      // default. Focus has already left the widget, so close the preview once
+      // the Tab settles.
       if (!e.shiftKey && e.target === segmentList.at(-1)) {
-        // Blur runs before this rAF when focus leaves; arm the skip now so a
-        // Safari skip-button leave does not commit on blur and again in rAF.
+        // Let the frame callback below own the commit: skip the blur that fires
+        // first when focus leaves the widget.
         skipNextBlurCommitRef.current = true
         requestAnimationFrame(() => {
           if (
-            calendarButtonRef.current?.contains(document.activeElement) ||
             isFocusInsideWidget(document.activeElement, {
               field: triggerRef.current,
               popover: popoverRef.current,
@@ -766,6 +766,8 @@ function SingleDateTimeInput({
           commitOrRevert()
           setIsOpen(false)
           setIsCalendarActive(false)
+          // Clear even when blur was consumed by popoverInteractionRef instead.
+          skipNextBlurCommitRef.current = false
         })
       }
     },
@@ -822,10 +824,13 @@ function SingleDateTimeInput({
 
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
-      // Safari: mousedown on unfocused calendar chrome blurs the field before
-      // click; pointerdown on the popover sets this flag first.
+      // Safari blurs the field on mousedown in the popover before the click
+      // lands; the pointerdown flag marks that blur as not a leave.
       if (popoverInteractionRef.current) {
         popoverInteractionRef.current = false
+        // A Tab dismiss may have armed skipNextBlurCommitRef; this return already
+        // skipped the commit, so clear it so the next real blur is not dropped.
+        skipNextBlurCommitRef.current = false
         return
       }
       if (skipNextBlurCommitRef.current) {
@@ -845,7 +850,8 @@ function SingleDateTimeInput({
           setIsOpen(false)
           setIsCalendarActive(false)
         }
-        // null while open (no popover pointerdown): Tab rAF / overlay own leave.
+        // Focus moved nowhere (null) or into the popover: let the Tab check or
+        // overlay dismissal close the preview.
         return
       }
       commitOrRevert()

@@ -179,6 +179,21 @@ describe("usePopoverInteractionFlag", () => {
     expect(flag.current).toBe(true)
   })
 
+  it("sets the flag when pointerdown hits a text node inside the popover", () => {
+    const popover = document.createElement("div")
+    const cell = document.createElement("button")
+    const dayNumber = document.createTextNode("20")
+    cell.appendChild(dayNumber)
+    popover.appendChild(cell)
+    const { flag } = mountFlag(popover)
+
+    // Native listeners see the text node; React would normalize to the button.
+    /* eslint-disable testing-library/prefer-user-event */
+    fireEvent.pointerDown(dayNumber)
+    /* eslint-enable testing-library/prefer-user-event */
+    expect(flag.current).toBe(true)
+  })
+
   it("clears when the popover closes", () => {
     const popover = document.createElement("div")
     const cell = document.createElement("button")

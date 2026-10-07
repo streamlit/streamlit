@@ -563,13 +563,13 @@ function SingleDateInput({
         return
       }
       // Forward Tab from the last segment normally lands on the calendar button,
-      // so the preview stays open. Safari skips buttons on Tab unless "Press Tab
-      // to highlight each item" is enabled; in that case focus has left the
-      // widget and the preview is closed after the Tab settles.
+      // so the preview stays open. macOS browsers that follow the system
+      // keyboard-navigation setting (Safari, Firefox) skip buttons on Tab by
+      // default. Focus has already left the widget, so close the preview once
+      // the Tab settles.
       if (!e.shiftKey && e.target === segmentList.at(-1)) {
         requestAnimationFrame(() => {
           if (
-            calendarButtonRef.current?.contains(document.activeElement) ||
             isFocusInsideWidget(document.activeElement, {
               field: triggerRef.current,
               popover: popoverRef.current,
@@ -634,8 +634,8 @@ function SingleDateInput({
   // concurrent Submit click reads the correct value.
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
-      // Safari: mousedown on unfocused calendar chrome blurs the field before
-      // click; pointerdown on the popover sets this flag first.
+      // Safari blurs the field on mousedown in the popover before the click
+      // lands; the pointerdown flag marks that blur as not a leave.
       if (popoverInteractionRef.current) {
         popoverInteractionRef.current = false
         return
@@ -660,8 +660,8 @@ function SingleDateInput({
           // clears leave skipCloseCommitRef unset so the close-commit effect
           // can still revert.
         } else {
-          // Still open and focus is ambiguous (null) or inside the popover /
-          // nested pickers — Tab rAF and overlay dismissal own those leaves.
+          // Null focus, or focus inside the popover / nested pickers: the Tab
+          // frame and overlay dismissal own those leaves.
           return
         }
       }
