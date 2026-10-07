@@ -577,12 +577,11 @@ class ButtonGroupMixin:
             whether or not Streamlit reruns the app when the user interacts
             with the pills. ``on_change`` can be one of the following:
 
-            - ``"rerun"`` (default): Streamlit will rerun the app when the
-              user commits a new value (selecting an option, replacing the
-              selection, deselecting an option unless ``required=True`` in
-              single-select mode, adding or removing an option in
-              multi-select mode, or activating the same selection change
-              from the keyboard).
+            - ``"rerun"`` (default): Streamlit reruns the app when the user
+              selects, replaces, or clears a pill. Clearing is unavailable
+              when ``required=True`` in single-select mode. In multi-select
+              mode, adding or removing a pill also reruns. Keyboard
+              activation commits the same way as a click.
 
             - ``"ignore"``: Streamlit will not rerun the app when the user
               commits a new value. The pills still update in the UI.
@@ -664,15 +663,11 @@ class ButtonGroupMixin:
             repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
             are deduplicated.
 
-            When ``on_change="ignore"``, the URL is updated as soon as the
-            value is committed (selecting an option, replacing the
-            selection, deselecting an option unless ``required=True`` in
-            single-select mode, adding or removing an option in
-            multi-select mode, or activating the same selection change
-            from the keyboard). As with widgets inside a form, the URL can
-            show a value that Python hasn't received yet. Python receives
-            the new value on the next rerun, so a page load or share uses
-            the updated URL value.
+            When ``on_change="ignore"``, Streamlit updates the URL on the
+            same commits described above. As with widgets inside a form,
+            the URL can show a value that Python hasn't received yet.
+            Python receives the new value on the next rerun, so a page load
+            or share uses the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -1449,7 +1444,7 @@ class ButtonGroupMixin:
         if bind == "query-params" and key is not None:
             proto.query_param_key = str(key)
 
-        if style == "pills" and isinstance(on_change, str) and on_change == "ignore":
+        if isinstance(on_change, str) and on_change == "ignore":
             proto.ignore_rerun = True
 
         widget_state = register_widget(
