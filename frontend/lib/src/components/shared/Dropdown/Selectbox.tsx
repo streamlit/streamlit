@@ -149,6 +149,11 @@ const DropdownController = memo<{
   enterTargetKey: Key | null
 }>(({ openRef, closeRef, enterTargetKey }) => {
   const state = useContext(ComboBoxStateContext)
+  // Keep a live state pointer for rAF retries — focusedKey updates recreate
+  // the context value, and a stale closure would call a detached manager.
+  const stateRef = useRef(state)
+  stateRef.current = state
+
   useEffect(() => {
     if (state) {
       openRef.current = () => state.open(null, "manual")
@@ -163,19 +168,55 @@ const DropdownController = memo<{
   useEffect(() => {
     if (!state?.isOpen) return
 
-    const applyEnterTargetFocus = (): void => {
+    let cancelled = false
+    let rafId = 0
+    const startedAt = performance.now()
+
+    const focusedMatchesEnterTarget = (): boolean => {
+      const current = stateRef.current
+      if (!current) return enterTargetKey == null
+      const focused = current.selectionManager.focusedKey
+      return (
+        enterTargetKey == null ||
+        (focused != null && String(focused) === String(enterTargetKey))
+      )
+    }
+
+    const applyEnterTargetFocus = (): boolean => {
+      const current = stateRef.current
+      if (!current) return false
       // SelectionManager.setFocusedKey no-ops when the key is missing from the
       // collection, so it is safe to call before Virtualizer registers items.
-      state.selectionManager.setFocusedKey(enterTargetKey)
+      current.selectionManager.setFocusedKey(enterTargetKey)
+      return focusedMatchesEnterTarget()
     }
 
     // Child effects run before ComboBox's clear-on-inputValue effect, so the
-    // first apply can be wiped. rAF re-applies after that clear settles.
-    // Do not list `state` as a dep — focusedKey updates recreate state and
-    // would reset arrow-nav back to the Enter target.
+    // first apply can be wiped. Keep re-applying on animation frames until the
+    // key sticks (after Virtualizer registers the item) or the user arrow-navs
+    // to a different key. Do not list `state` as a dep — focusedKey updates
+    // recreate state and would reset arrow-nav back to the Enter target.
+    const schedule = (): void => {
+      rafId = requestAnimationFrame(() => {
+        if (cancelled) return
+        if (applyEnterTargetFocus()) return
+        const focused = stateRef.current?.selectionManager.focusedKey
+        if (
+          focused != null &&
+          enterTargetKey != null &&
+          String(focused) !== String(enterTargetKey)
+        ) {
+          return
+        }
+        if (performance.now() - startedAt < 1000) schedule()
+      })
+    }
     applyEnterTargetFocus()
-    const rafId = requestAnimationFrame(applyEnterTargetFocus)
-    return () => cancelAnimationFrame(rafId)
+    schedule()
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(rafId)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- see above
   }, [state?.isOpen, state?.inputValue, enterTargetKey])
 

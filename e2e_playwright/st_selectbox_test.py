@@ -204,12 +204,26 @@ def test_shows_correct_options_via_fuzzy_search(
     """Test that the fuzzy matching of options via typing works correctly."""
     selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
 
-    # Click to open dropdown, then fill to filter:
+    # Click to open dropdown, then type to filter:
     selectbox_input.click()
-    selectbox_input.fill("exp")
+    selectbox_input.press_sequentially("exp")
 
-    # Check filtered options
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(1)
+    expect(options.first).to_have_text("e2e/scripts/st_expander.py")
+
+    # Typing keeps aria-activedescendant on the Enter target (#16841).
+    expect(options.first).to_have_attribute("data-focused", "true")
+    expect(selectbox_input).to_have_attribute(
+        "aria-activedescendant", re.compile(r".+")
+    )
+    active_id = selectbox_input.get_attribute("aria-activedescendant")
+    assert active_id is not None
+    expect(app.locator(f'[id="{active_id}"]')).to_have_text(
+        "e2e/scripts/st_expander.py"
+    )
+
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
 
