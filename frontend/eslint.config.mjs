@@ -310,7 +310,8 @@ export default defineConfig([
       // Production src enables no-unsafe-call / return / argument, no-misused-spread,
       // and unbound-method (see the overlay below). This block leaves those rules
       // off so tests, which that overlay ignores, stay exempt. Assignment and
-      // member access stay off here; a later overlay enables them for Vega/Arrow.
+      // member access stay off here; a later overlay enables them for the
+      // Vega/Arrow, Plotly, DeckGL, and dataframe-editing files.
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
@@ -518,8 +519,8 @@ export default defineConfig([
       // class instance (protobuf, AxiosHeaders) copies enumerable own fields
       // and drops methods. Extracting a class method without binding drops
       // `this`. Tests stay exempt. Assignment and member access on `any` are
-      // enabled only for the Vega/Arrow slice below; Plotly, DeckGL, and
-      // dataframe editing still read untyped values.
+      // enabled for the Vega/Arrow, Plotly, DeckGL, and dataframe-editing
+      // slices below. Other production files still read untyped values.
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-return": "error",
       "@typescript-eslint/no-unsafe-argument": "error",
@@ -528,17 +529,20 @@ export default defineConfig([
     },
   },
   {
-    // Vega spec JSON and untyped Arrow `Field`/`Vector` values arrive as `any`.
-    // These files already narrow them, so assignment and member access on `any`
-    // are errors here. The list is explicit: sibling modules such as pandas
-    // styler utils stay out until their own boundary is narrowed. Plotly,
-    // DeckGL, and dataframe editing still read `any`.
+    // Vega spec JSON, untyped Arrow `Field`/`Vector` values, Plotly figure
+    // JSON, pydeck specs, and dataframe cell edits arrive as `any`. These
+    // files already narrow them, so assignment and member access on `any`
+    // are errors here. The list is explicit: sibling modules stay out until
+    // their own boundary is narrowed.
     files: [
       "**/ArrowVegaLiteChart/useVegaElementPreprocessor.ts",
       "**/dataframes/arrowFormatUtils.ts",
       "**/dataframes/arrowParseUtils.ts",
       "**/dataframes/arrowTypeUtils.ts",
       "**/dataframes/Quiver.ts",
+      "**/PlotlyChart/PlotlyChart.tsx",
+      "**/DeckGlJsonChart/useDeckGl.tsx",
+      "**/DataFrame/hooks/EditingState.ts",
     ],
     rules: {
       "@typescript-eslint/no-unsafe-assignment": "error",
