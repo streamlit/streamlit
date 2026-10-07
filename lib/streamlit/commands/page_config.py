@@ -397,15 +397,19 @@ def set_page_config(
     >>>
     >>> st.set_page_config(run_every="60s")
     >>>
+    >>> if "page_ticks" not in st.session_state:
+    ...     st.session_state.page_ticks = 0
+    >>> st.session_state.page_ticks += 1
     >>> if "price" not in st.session_state:
     ...     st.session_state.price = 100.0
     >>>
     >>> @st.fragment(run_every="2s")
     ... def ticker():
-    ...     st.metric("Price", st.session_state.price)
+    ...     st.session_state.price += 0.1
+    ...     st.metric("Price", round(st.session_state.price, 2))
     >>>
     >>> ticker()
-    >>> st.dataframe({"symbol": ["ACME"], "shares": [10]})
+    >>> st.metric("Page refreshes", st.session_state.page_ticks)
     """
 
     resolved_run_every: float | None = None

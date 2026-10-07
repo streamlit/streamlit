@@ -176,15 +176,19 @@ st.set_page_config(run_every="60s")  # refresh the whole page every minute
 
 if "price" not in st.session_state:
     st.session_state.price = 100.0
+if "page_refreshes" not in st.session_state:
+    st.session_state.page_refreshes = 0
+st.session_state.page_refreshes += 1
 
 
 @st.fragment(run_every="2s")  # this section refreshes faster
 def live_ticker():
-    st.metric("Price", st.session_state.price)
+    st.session_state.price += 0.1
+    st.metric("Price", round(st.session_state.price, 2))
 
 
 live_ticker()
-st.dataframe({"symbol": ["ACME"], "shares": [10]})  # refreshed by the page interval
+st.metric("Page refreshes", st.session_state.page_refreshes)
 ```
 
 > [!NOTE]
