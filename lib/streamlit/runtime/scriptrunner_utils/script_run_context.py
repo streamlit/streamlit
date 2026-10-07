@@ -84,9 +84,9 @@ in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "in_cached_function", default=False
 )
 
-# True while st.switch_page() or st.stop() writes its yield-point element
-# (body-level st.rerun() does this too). That write is not a user element,
-# so the fragment-callback warning ignores it.
+# The fragment-callback warning skips the internal yield-point placeholder.
+# st.stop(), st.switch_page(), and body-level st.rerun() enqueue that
+# st.empty(), and the runner raises before the placeholder is sent.
 _fragment_callback_warning_suppressed: contextvars.ContextVar[bool] = (
     contextvars.ContextVar("fragment_callback_warning_suppressed", default=False)
 )

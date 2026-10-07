@@ -201,7 +201,7 @@ class ThreadStateResetIntegrationTest(unittest.TestCase):
 
 
 class FragmentCallbackWarningSuppressionTest(unittest.TestCase):
-    def test_suppression_resets_after_the_write_and_after_an_exception(self):
+    def test_suppression_resets_after_exit_and_after_an_exception(self):
         """The suppression flag is false again after the block exits, including when the block raises."""
         assert is_fragment_callback_warning_suppressed() is False
 

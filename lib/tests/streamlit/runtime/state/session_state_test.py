@@ -571,11 +571,14 @@ class WStateTests(unittest.TestCase):
                         st.stop()
 
                     st.button("go", on_click=cb)
+                    st.text("after")
 
                 frag()
 
             at = AppTest.from_function(script).run()
             at.button[0].click().run()
+            assert [text.value for text in at.text] == []
+            assert len(at.exception) == 0
 
             mock_logger.warning.assert_not_called()
 
