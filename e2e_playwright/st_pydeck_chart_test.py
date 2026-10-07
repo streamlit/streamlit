@@ -358,7 +358,7 @@ def test_pydeck_tooltip_stays_near_cursor(app: Page) -> None:
             const target = document.elementFromPoint(rect.left + 20, rect.bottom - 20)
             const chart = element.closest('[data-testid="stDeckGlJsonChart"]')
             return {
-                isWidgetsRoot: Boolean(target?.matches(".deck-widgets-root")),
+                isWidgetsRoot: Boolean(target?.closest(".deck-widgets-root")),
                 insideChart: Boolean(target && chart?.contains(target)),
             }
         }"""
