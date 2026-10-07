@@ -5441,7 +5441,7 @@ describe("App", () => {
       ).toBe(1)
     })
 
-    it("reruns on reconnect after a widget rerun clears the page timer", () => {
+    it("does not rerun on reconnect after a widget rerun clears the page timer", () => {
       vi.mocked(isEmbed).mockReturnValue(false)
       renderApp(getProps())
 
@@ -5485,12 +5485,13 @@ describe("App", () => {
         )
       })
 
-      // The page timer was cleared and has not been armed again. Reconnect
-      // has to rerun so run_every can come back.
+      // The click is already in flight. A second full rerun would stop that
+      // run and drop the trigger, so the cleared page timer is not retried.
+      // The script re-arms run_every when this run is acknowledged.
       expect(
         // @ts-expect-error - sendMessage is a vi.fn mock in tests
         connectionManager.sendMessage.mock.calls.length - callsBefore
-      ).toBe(2)
+      ).toBe(1)
     })
 
     it("replays a held page tick after an interrupting fragment run finishes", () => {

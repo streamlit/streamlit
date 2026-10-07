@@ -414,13 +414,10 @@ export class App extends PureComponent<Props, State> {
 
   // Set only after a deferred page replay is queued. Reconnect retries that
   // replay. An ordinary widget rerun must not set this: retrying it would
-  // stop the in-flight run and drop the click.
+  // stop the in-flight run and drop the click. That includes a widget rerun
+  // that cleared the page timer. The script re-arms `run_every` when that
+  // run is acknowledged.
   private pageAutoRerunReplayQueued = false
-
-  // A full rerun cleared a live page timer and the next run has not armed one
-  // yet. Reconnect must rerun so `run_every` can come back. A widget click on
-  // an app with no page timer does not set this.
-  private pageAutoRerunClearedPendingRearm = false
 
   // The BackMsg that set `pageAutoRerunAwaitingNextRun`. A full `NewSession`
   // for an older run must not drop a fragment guard at this epoch.
@@ -937,15 +934,6 @@ export class App extends PureComponent<Props, State> {
           if (!this.pageAutoRerunAwaitingNextRun) {
             this.flushDeferredPageAutoRerun()
           }
-          // The replacement run finished without arming a page timer, so this
-          // page is not waiting to restore run_every.
-          if (
-            this.pageAutoRerunClearedPendingRearm &&
-            !this.pageAutoRerunAwaitingNextRun &&
-            !this.autoRerunIntervals.has(App.PAGE_AUTO_RERUN_ID)
-          ) {
-            this.pageAutoRerunClearedPendingRearm = false
-          }
         }
       }
 
@@ -1127,13 +1115,12 @@ export class App extends PureComponent<Props, State> {
         // fragment auto-reruns configured):
         this.state.fragmentIdsThisRun.length > 0 ||
         this.autoRerunIntervals.size > 0 ||
-        // A deferred page replay was queued, or a full rerun cleared a live page
-        // timer that has not been armed again. Reconnect must rerun so the
-        // page can re-arm. Do not use pageAutoRerunAwaitingNextRun here: every
-        // widget rerun sets that flag, and a second full rerun would drop a
-        // click on an app that has no page timer.
-        this.pageAutoRerunReplayQueued ||
-        this.pageAutoRerunClearedPendingRearm
+        // A deferred page replay was queued and cleared the timer before the
+        // server acknowledged it. Reconnect must rerun so the page can re-arm.
+        // Do not also retry a widget rerun that cleared the page timer: that
+        // message already consumed the trigger, and a second full rerun would
+        // stop the in-flight click.
+        this.pageAutoRerunReplayQueued
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
@@ -1537,7 +1524,6 @@ export class App extends PureComponent<Props, State> {
 
     if (id === App.PAGE_AUTO_RERUN_ID) {
       this.lastPageAutoRerunIntervalMs = intervalMs
-      this.pageAutoRerunClearedPendingRearm = false
       // The timer was already gone when the fragment request was sent, so the
       // guard has no interval yet. The one being armed is the window.
       if (
@@ -1615,9 +1601,6 @@ export class App extends PureComponent<Props, State> {
       this.clearAutoRerunInterval(fragmentId)
       if (!fragmentId) {
         this.clearHeldPageAutoRerun()
-        // The server stopped the page timer on purpose. Do not treat that as
-        // a timer waiting to be armed again.
-        this.pageAutoRerunClearedPendingRearm = false
       }
     })
   }
@@ -2549,14 +2532,10 @@ export class App extends PureComponent<Props, State> {
    * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
    */
   cleanupAutoReruns = (keepFragmentGuard = false): void => {
-    const hadPageTimer = this.autoRerunIntervals.has(App.PAGE_AUTO_RERUN_ID)
     this.autoRerunIntervals.forEach(entry => {
       this.clearStoredAutoRerunTimer(entry)
     })
     this.autoRerunIntervals.clear()
-    if (hadPageTimer) {
-      this.pageAutoRerunClearedPendingRearm = true
-    }
     if (keepFragmentGuard) {
       this.pageAutoRerunDeferred = false
     } else {
@@ -2572,9 +2551,6 @@ export class App extends PureComponent<Props, State> {
     if (existing !== undefined) {
       this.clearStoredAutoRerunTimer(existing)
       this.autoRerunIntervals.delete(fragmentId)
-      if (!fragmentId) {
-        this.pageAutoRerunClearedPendingRearm = true
-      }
     }
   }
 
