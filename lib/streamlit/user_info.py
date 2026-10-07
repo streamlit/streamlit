@@ -357,9 +357,10 @@ def logout() -> None:
     if context is not None:
         session_id = context.session_id
 
-        # Mark the session non-resumable before clearing the shared user dict.
-        # Clearing the dict first lets a concurrent disconnect save an
-        # anonymous session that a reconnect can resume.
+        # Mark the session non-resumable before emptying the shared user dict.
+        # Otherwise a concurrent disconnect can store an anonymous session that
+        # a reconnect resumes. The clear below still runs when there is no
+        # runtime or the runtime call does not find a session.
         if runtime.exists():
             runtime.get_instance().clear_user_info_for_session(session_id)
 
