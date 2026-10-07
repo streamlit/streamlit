@@ -629,19 +629,17 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     selectbox_input.click()
     expect(selectbox_input).to_be_focused()
 
-    # Click alone does not always open the menu in CI; ArrowDown is the backup
-    # open (matching select_selectbox_option). That key may also move focus when
-    # the Enter-target sync has already settled on the first option.
-    if selectbox_input.get_attribute("aria-expanded") != "true":
-        selectbox_input.press("ArrowDown")
+    # ArrowDown is the backup open when click alone does not open the menu in CI
+    # (matching select_selectbox_option). It may also move focus off the first
+    # option when the Enter-target sync has already settled.
+    selectbox_input.press("ArrowDown")
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
-    # Normalize to the first option so the one-ArrowDown contract is stable.
+    # Re-anchor on the first option so the one-ArrowDown contract is stable.
+    # Extra ArrowUps are no-ops once focus is already on the first row.
     for _ in range(3):
-        if options.first.get_attribute("data-focused") == "true":
-            break
         selectbox_input.press("ArrowUp")
     expect(options.first).to_have_attribute("data-focused", "true")
 

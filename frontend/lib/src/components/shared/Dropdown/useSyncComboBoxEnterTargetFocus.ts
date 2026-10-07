@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-import { useContext, useEffect, useRef } from "react"
+import { type MutableRefObject, useContext, useEffect, useRef } from "react"
 
 import { ComboBoxStateContext, type Key } from "react-aria-components"
 
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
+
+/** Max time spent retrying setFocusedKey until Virtualizer registers the row. */
+const MAX_SYNC_RETRY_MS = 1000
 
 /**
  * Keep ComboBox `selectionManager.focusedKey` on the Enter commit target while
@@ -27,38 +30,64 @@ import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
  * React Aria clears `focusedKey` on every `inputValue` change. This effect
  * re-applies the target from inside ComboBox (where the collection is visible).
  * `setFocusedKey` no-ops until Virtualizer has registered the row, so we retry
- * on animation frames for up to one second.
+ * on animation frames for up to {@link MAX_SYNC_RETRY_MS}.
  *
  * @param enterTargetKey - Option id Enter will commit, or null when none.
- * @param skipApply - When true, leave `focusedKey` alone (e.g. multiselect
- *   hover-end must not fall back to the first row after ArrowUp/Down).
+ * @param skipApplyRef - When `.current` is true, leave `focusedKey` alone for
+ *   this run and clear the flag (e.g. multiselect hover-end must not fall back
+ *   to the first row after ArrowUp/Down). Set from an event handler, not render.
  */
 export function useSyncComboBoxEnterTargetFocus(
   enterTargetKey: Key | null,
-  skipApply = false
+  skipApplyRef?: MutableRefObject<boolean>
 ): void {
   const state = useContext(ComboBoxStateContext)
   // Keep a live state pointer for rAF retries — focusedKey updates recreate
   // the context value, and a stale closure would call a detached manager.
   const stateRef = useRef(state)
   stateRef.current = state
+  // Last key this hook successfully wrote. Hover (and other enterTargetKey
+  // changes) may replace that auto-synced row; ArrowUp/Down to a different
+  // row must not be overwritten.
+  const lastSyncedKeyRef = useRef<Key | null>(null)
 
   useEffect(() => {
-    if (!state?.isOpen || skipApply) return
+    if (!state?.isOpen) {
+      lastSyncedKeyRef.current = null
+      return
+    }
+    if (skipApplyRef?.current) {
+      skipApplyRef.current = false
+      return
+    }
 
     let cancelled = false
     let rafId = 0
     const startedAt = performance.now()
 
-    const userMovedAway = (): boolean => {
+    // True when focus is already on some other row that we did not auto-sync.
+    // A null key is not that case: React Aria clears focusedKey on each query
+    // change, and this effect re-applies the Enter target. The last auto-synced
+    // key is also not a user move — hover may replace it.
+    const anotherRowIsFocused = (): boolean => {
       const current = stateRef.current
       if (!current) return false
       const focused = current.selectionManager.focusedKey
-      return (
-        notNullOrUndefined(focused) &&
-        notNullOrUndefined(enterTargetKey) &&
-        String(focused) !== String(enterTargetKey)
-      )
+      if (
+        isNullOrUndefined(focused) ||
+        isNullOrUndefined(enterTargetKey) ||
+        String(focused) === String(enterTargetKey)
+      ) {
+        return false
+      }
+      const lastSynced = lastSyncedKeyRef.current
+      if (
+        notNullOrUndefined(lastSynced) &&
+        String(focused) === String(lastSynced)
+      ) {
+        return false
+      }
+      return true
     }
 
     const focusedMatchesEnterTarget = (): boolean => {
@@ -76,11 +105,15 @@ export function useSyncComboBoxEnterTargetFocus(
       const current = stateRef.current
       if (!current) return false
       // Read first: once the user has arrowed elsewhere, do not overwrite.
-      if (userMovedAway()) return true
+      if (anotherRowIsFocused()) return true
       // SelectionManager.setFocusedKey no-ops when the key is missing from the
       // collection, so it is safe to call before Virtualizer registers items.
       current.selectionManager.setFocusedKey(enterTargetKey)
-      return focusedMatchesEnterTarget()
+      if (focusedMatchesEnterTarget()) {
+        lastSyncedKeyRef.current = enterTargetKey
+        return true
+      }
+      return false
     }
 
     // ComboBox's effect clears focusedKey after this effect, and setFocusedKey
@@ -96,7 +129,7 @@ export function useSyncComboBoxEnterTargetFocus(
       rafId = requestAnimationFrame(() => {
         if (cancelled) return
         if (applyEnterTargetFocus()) return
-        if (performance.now() - startedAt < 1000) schedule()
+        if (performance.now() - startedAt < MAX_SYNC_RETRY_MS) schedule()
       })
     }
 
@@ -107,5 +140,5 @@ export function useSyncComboBoxEnterTargetFocus(
       cancelled = true
       cancelAnimationFrame(rafId)
     }
-  }, [state?.isOpen, state?.inputValue, enterTargetKey, skipApply])
+  }, [state?.isOpen, state?.inputValue, enterTargetKey, skipApplyRef])
 }

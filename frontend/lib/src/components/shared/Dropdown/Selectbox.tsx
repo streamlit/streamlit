@@ -549,9 +549,9 @@ const Selectbox: FC<Props> = ({
       }
       // Close before React Aria's Tab shortcut can commit() the synced
       // focusedKey. isOpenRef is cleared sync so handleSelectionChange drops
-      // any late selection callback from close.
+      // any late selection callback from close. Do not stopPropagation — dialog
+      // FocusScope needs to see Tab for containment.
       if (e.key === "Tab" && isOpenRef.current) {
-        e.stopPropagation()
         isOpenRef.current = false
         closeDropdownRef.current?.()
       }
