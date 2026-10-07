@@ -25,9 +25,9 @@ if st.button("Bump label count"):
 
 
 def fmt(option: str) -> str:
-    # Read session state on every call. Closing over this run's integer hides
-    # a label change: the browser resends the previous label, and format_func
-    # must still see that stale label.
+    # Read the counter on every call so this run's label differs from the
+    # label the browser still has. The server must detect that mismatch and
+    # push the new label.
     return f"{option} ({st.session_state.get('label_count', 0)})"
 
 

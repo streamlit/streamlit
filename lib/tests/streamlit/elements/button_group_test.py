@@ -1931,9 +1931,18 @@ class TestDynamicFormatFuncVisualSelection:
         # The return value is preserved ...
         assert catb.value == "D"
         # ... and the backend re-pushes the fresh label so the pill stays
-        # selected instead of silently deselecting.
+        # selected instead of silently deselecting. deserialize dropped the
+        # stale "D (2)" label; this is the one push for that mismatch.
         assert catb.proto.set_value is True
         assert list(catb.proto.raw_values) == ["D (3)"]
+
+        # The label is unchanged on the next rerun, so nothing is pushed again.
+        at = at.run()
+        assert not at.exception
+        catb = at.button_group("catb")
+        assert catb.value == "D"
+        assert catb.proto.set_value is False
+        assert list(catb.proto.raw_values) == []
 
     def test_multi_select_resends_new_labels_when_format_func_output_changes(self):
         """Multi-select resends fresh labels for every still-selected option."""
@@ -1965,6 +1974,14 @@ class TestDynamicFormatFuncVisualSelection:
         assert catb.value == ["D", "E"]
         assert catb.proto.set_value is True
         assert list(catb.proto.raw_values) == ["D (3)", "E (3)"]
+
+        # One push for the stale labels, then no churn while they stay put.
+        at = at.run()
+        assert not at.exception
+        catb = at.button_group("catb")
+        assert catb.value == ["D", "E"]
+        assert catb.proto.set_value is False
+        assert list(catb.proto.raw_values) == []
 
     def test_no_set_value_pushed_when_label_unchanged_on_plain_rerun(self):
         """A plain rerun with an unchanged label must not force set_value.

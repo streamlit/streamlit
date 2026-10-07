@@ -162,9 +162,10 @@ class WStates(MutableMapping[str, Any]):
 
     states: dict[str, WState] = field(default_factory=dict)
     widget_metadata: dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
-    # Browser string payloads, keyed by widget id, kept after the proto is
-    # deserialized. Re-serializing calls format_func, which can already
-    # return a new label and hide the change (gh-17175).
+    # Raw labels the browser sent, keyed by widget id. Kept after
+    # deserialization so register_widget can detect format_func label changes.
+    # Re-serializing would call a live format_func that may already return the
+    # new label (gh-17175).
     frontend_string_values: dict[str, str] = field(default_factory=dict)
     frontend_string_array_values: dict[str, list[str]] = field(default_factory=dict)
 
@@ -1595,6 +1596,11 @@ class SessionState:
         left untouched.
         """
         removed = self._new_widget_state.states.pop(widget_id, None) is not None
+        # states.pop skips __delitem__, which forgets the browser label. A
+        # finished run prunes that label later; an interrupted run
+        # (remove_stale_widgets=False) would otherwise leave it for the next
+        # register_widget.
+        self._new_widget_state._forget_frontend_wire(widget_id)
         removed = self._old_state.pop(widget_id, None) is not None or removed
         removed = self._old_state.pop(user_key, None) is not None or removed
         return removed

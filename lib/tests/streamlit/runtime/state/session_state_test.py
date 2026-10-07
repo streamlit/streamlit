@@ -255,6 +255,61 @@ class WStateTests(unittest.TestCase):
         assert "widget_id_2" not in self.wstates  # Stale widget in fragment, removed
         assert "widget_id_3" in self.wstates  # Unrelated widget, not removed
 
+    def test_value_overwrite_forgets_browser_label(self):
+        """A deserialized Value replaces the browser label it came from."""
+        proto = WidgetStateProto()
+        proto.id = "widget_id_1"
+        proto.string_value = "old label"
+        self.wstates.set_widget_from_proto(proto)
+
+        self.wstates.set_from_value("widget_id_1", "deserialized")
+
+        assert "widget_id_1" not in self.wstates.frontend_string_values
+        assert "widget_id_1" not in self.wstates.frontend_string_array_values
+
+    def test_non_string_proto_forgets_browser_label(self):
+        """A non-string proto does not keep a previous browser label."""
+        proto = WidgetStateProto()
+        proto.id = "widget_id_1"
+        proto.string_value = "old label"
+        self.wstates.set_widget_from_proto(proto)
+
+        replacement = WidgetStateProto()
+        replacement.id = "widget_id_1"
+        replacement.int_value = 5
+        self.wstates.set_widget_from_proto(replacement)
+
+        assert "widget_id_1" not in self.wstates.frontend_string_values
+        assert "widget_id_1" not in self.wstates.frontend_string_array_values
+
+    def test_del_forgets_browser_label(self):
+        proto = WidgetStateProto()
+        proto.id = "widget_id_1"
+        proto.string_value = "old label"
+        self.wstates.set_widget_from_proto(proto)
+
+        del self.wstates["widget_id_1"]
+
+        assert "widget_id_1" not in self.wstates.frontend_string_values
+        assert "widget_id_1" not in self.wstates.frontend_string_array_values
+
+    def test_remove_stale_widgets_forgets_browser_labels(self):
+        """Replacing states skips __delitem__, so the prune drops leftover labels."""
+        kept = WidgetStateProto()
+        kept.id = "widget_id_1"
+        kept.string_value = "kept"
+        self.wstates.set_widget_from_proto(kept)
+
+        dropped = WidgetStateProto()
+        dropped.id = "widget_id_2"
+        dropped.string_array_value.data[:] = ["gone"]
+        self.wstates.set_widget_from_proto(dropped)
+
+        self.wstates.remove_stale_widgets({"widget_id_1"}, None)
+
+        assert self.wstates.frontend_string_values == {"widget_id_1": "kept"}
+        assert self.wstates.frontend_string_array_values == {}
+
     def test_get_serialized_nonexistent_id(self):
         assert self.wstates.get_serialized("nonexistent_id") is None
 
@@ -5963,6 +6018,79 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
         result = self.session_state.register_widget(metadata, user_key="cb")
 
         assert result.incoming_serialized_values == ["D (0)", "F (0)"]
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_drop_widget_value_forgets_browser_label(self, mock_ctx: MagicMock) -> None:
+        """A dropped widget forgets its browser label without waiting for prune.
+
+        ``_drop_widget_value`` pops ``states`` and skips ``__delitem__``. An
+        interrupted run (``remove_stale_widgets=False``) never prunes, so the
+        next registration must not see the dropped label.
+        """
+        widget_id = "$$ID-hash-cb"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda raw: raw if raw is not None else "default",
+            serializer=lambda value: value,
+            value_type="string_value",
+        )
+        proto = WidgetStateProto()
+        proto.id = widget_id
+        proto.string_value = "old label"
+        self.session_state._new_widget_state.set_widget_from_proto(proto)
+        self.session_state._set_key_widget_mapping(widget_id, "cb")
+        self.session_state._old_state[widget_id] = "old label"
+        self.session_state._old_state["cb"] = "old label"
+
+        assert self.session_state._drop_widget_value(widget_id, "cb") is True
+        assert (
+            widget_id not in self.session_state._new_widget_state.frontend_string_values
+        )
+        assert (
+            widget_id
+            not in self.session_state._new_widget_state.frontend_string_array_values
+        )
+
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.incoming_serialized_value is None
+
+    def test_compact_state_forgets_browser_label(self) -> None:
+        """Compaction clears widget state through ``WStates.clear``."""
+        widget_id = "$$ID-hash-cb"
+        proto = WidgetStateProto()
+        proto.id = widget_id
+        proto.string_value = "old label"
+        self.session_state._new_widget_state.set_widget_from_proto(proto)
+        self.session_state._new_widget_state.set_widget_metadata(
+            WidgetMetadata(
+                id=widget_id,
+                deserializer=lambda raw: raw,
+                serializer=lambda value: value,
+                value_type="string_value",
+            )
+        )
+        array_id = "$$ID-hash-array"
+        array_proto = WidgetStateProto()
+        array_proto.id = array_id
+        array_proto.string_array_value.data[:] = ["D (0)"]
+        self.session_state._new_widget_state.set_widget_from_proto(array_proto)
+        self.session_state._new_widget_state.set_widget_metadata(
+            WidgetMetadata(
+                id=array_id,
+                deserializer=lambda raw: list(raw),
+                serializer=lambda value: value,
+                value_type="string_array_value",
+            )
+        )
+
+        self.session_state._compact_state()
+
+        assert self.session_state._new_widget_state.frontend_string_values == {}
+        assert self.session_state._new_widget_state.frontend_string_array_values == {}
 
 
 class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):

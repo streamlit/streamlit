@@ -883,8 +883,9 @@ class MultiSelectMixin:
         serialized_values = serde.serialize(current_values)
         # The frontend tracks each selection by the label it was sent. Push new
         # labels when format_func changes them, or a later rerun drops the
-        # selection (gh-17175). Skip the push when any value is user-entered
-        # text so format_func cannot rewrite it.
+        # selection (gh-17175). Skip the push when any selected value is typed
+        # text (accept_new_options). That text has no formatted label, and
+        # pushing would replace what the user typed.
         labels_changed = (
             widget_state.incoming_serialized_values is not None
             and widget_state.incoming_serialized_values != serialized_values
