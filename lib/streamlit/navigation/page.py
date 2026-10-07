@@ -44,13 +44,15 @@ def _raise_if_unsafe_page_path(page_path: str, *, error_prefix: str = "") -> Non
             error_id="page-path-contains-null-bytes",
         )
 
-    # Reject UNC, device-namespace, and extended-prefix paths before filesystem
-    # access can initiate an SMB connection or access a Windows device directly.
-    # Standard absolute paths (for example, "C:\app\page.py") remain allowed
-    # because they are part of the public st.Page and navigation API contract.
+    # Reject UNC, device-namespace, and extended-prefix paths lexically: resolving
+    # them can make Windows open an SMB connection and leak the server process's
+    # NTLM credentials, or access a Windows device directly. Drive-absolute paths
+    # (for example, "C:\app\page.py") remain allowed by the navigation API contract.
     if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
         raise StreamlitAPIException(
-            f"{error_prefix}Network paths and device paths are not supported.",
+            f"{error_prefix}Network paths and device paths are not supported. "
+            "Use a path relative to the app entrypoint, or a local absolute path "
+            r"such as 'C:\app\page.py'.",
             error_id="page-network-path-not-supported",
         )
 
