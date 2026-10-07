@@ -22,9 +22,9 @@ import {
 } from "react"
 
 /**
- * True when blur's `relatedTarget` is outside the field and popover.
- * `null` is not outside (Safari calendar mousedown). `document.body` is outside.
- * Callers ignore blur while a popover pointer is in progress (not read here).
+ * True when blur's `relatedTarget` is outside the popover (callers check the
+ * field). `null` is not a leave; `document.body` is. Callers also skip blur
+ * while a popover pointer is in progress.
  */
 export function isConcreteOutsideLeave(
   relatedTarget: EventTarget | null,
@@ -66,6 +66,7 @@ export function isFocusInsideWidget(
   return false
 }
 
+/** Tab leave callbacks: immediate (button/first segment) or after one frame. */
 export type PassivePreviewTabLeave = {
   immediate: () => void
   afterFocusSettles: () => void
@@ -111,7 +112,7 @@ export function handlePassivePreviewFieldTab(
     leave.beforeFocusSettles?.()
     requestAnimationFrame(() => {
       const active = document.activeElement
-      // Button-skipping browsers can Tab into the passive grid; park on toggle.
+      // Browsers that skip buttons can Tab into the open grid — move to the button.
       if (
         active instanceof Node &&
         ctx.popover?.contains(active) &&
@@ -164,19 +165,17 @@ export function usePopoverInteractionFlag(
     }
 
     const onPointerDown = (e: PointerEvent): void => {
+      // Ignore non-primary presses (they never clear via `click`).
+      if (e.button > 0) return
       const target = e.target
       if (!(target instanceof Node)) return
       // Native listeners see text nodes; normalize for closest().
-      const targetElement =
-        target instanceof Element ? target : target.parentElement
+      const el = target instanceof Element ? target : target.parentElement
       if (popoverRef.current?.contains(target)) {
         popoverInteractionRef.current = true
         return
       }
-      if (
-        targetElement &&
-        excludeSelectorsRef.current.some(sel => targetElement.closest(sel))
-      ) {
+      if (el && excludeSelectorsRef.current.some(sel => el.closest(sel))) {
         popoverInteractionRef.current = true
       }
     }

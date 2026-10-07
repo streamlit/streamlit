@@ -213,8 +213,8 @@ function SingleDateTimeInput({
     setPrevValue(value)
     setDisplayValue(value)
     setPendingTime(null)
-    // Keep lastCommittedRef when `value` echoes the commit just sent. A stale
-    // Tab or blur closure still sees the old value and would commit again.
+    // Keep lastCommittedRef when `value` is the commit just sent. A Tab or blur
+    // handler that still sees the previous value would otherwise commit again.
     if (!dateTimesEqual(value, lastCommittedRef.current ?? null)) {
       lastCommittedRef.current = undefined
     }
@@ -292,7 +292,7 @@ function SingleDateTimeInput({
     popoverRef,
     POPOVER_EXCLUDE_SELECTORS
   )
-  /** Tab leave arms this so handleBlur skips the following blur commit. */
+  /** Set when Tab starts leaving so handleBlur does not commit that leave again. */
   const skipNextBlurCommitRef = useRef(false)
 
   /** The datetime the two controls describe between them when the field itself
@@ -713,8 +713,7 @@ function SingleDateTimeInput({
 
       if (e.key !== "Tab" || !isOpen) return
 
-      // Commit before unmount (popover-only time). Let the frame callback own
-      // the commit: skip the blur that fires first when focus leaves.
+      // Commit while mounted (popover-only time); skip the following blur commit.
       const leaveAndCommit = (): void => {
         skipNextBlurCommitRef.current = true
         commitOrRevert()
@@ -816,7 +815,7 @@ function SingleDateTimeInput({
           setIsOpen(false)
           setIsCalendarActive(false)
         }
-        // null / inside popover: Tab frame and overlay dismissal own leave.
+        // null / inside popover: next-frame Tab or outside click closes.
         return
       }
       commitOrRevert()

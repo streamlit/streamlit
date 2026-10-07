@@ -525,7 +525,8 @@ function SingleDateInput({
     [disabled, format, onChange, displayValue, minDate]
   )
 
-  // Alt+ArrowDown → active calendar. Passive Tab leave: see handlePassivePreviewFieldTab.
+  // Passive preview stays open on Tab to the calendar button; closes on leave.
+  // Alt+ArrowDown opens the active calendar.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.altKey && e.key === "ArrowDown") {
@@ -612,7 +613,7 @@ function SingleDateInput({
       }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      // Only set skipCloseCommitRef when this blur closes the preview.
+      // skipCloseCommitRef only when this blur commits (incomplete closes revert).
       let closedByBlur = false
       if (isOpen) {
         if (
@@ -625,7 +626,7 @@ function SingleDateInput({
           setIsOpen(false)
           setIsCalendarActive(false)
         } else {
-          // null / inside popover: Tab frame and overlay dismissal own leave.
+          // null / inside popover: next-frame Tab or outside click closes.
           return
         }
       }
