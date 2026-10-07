@@ -77,8 +77,10 @@ export function isFocusInsideWidget(
  * Tracks pointerdown inside the calendar popover (or excluded nested portals)
  * so the field can ignore the blur that Safari fires before the click lands.
  *
- * Event order is pointerdown → blur → pointerup → click. The flag is set on
- * pointerdown and cleared after blur consumes it, or on pointerup/cancel.
+ * Desktop mouse order is pointerdown → blur → pointerup → click. On iOS Safari,
+ * pointerup runs before the compatibility mousedown that blurs, so clearing on
+ * pointerup drops the flag before blur can consume it. Clear on the following
+ * click (or pointercancel) instead; blur handlers also clear when they skip.
  */
 export function usePopoverInteractionFlag(
   isOpen: boolean,
@@ -112,11 +114,14 @@ export function usePopoverInteractionFlag(
     }
 
     document.addEventListener("pointerdown", onPointerDown, true)
-    document.addEventListener("pointerup", clear, true)
+    // Capture click, not pointerup: iOS fires pointerup before the blur this
+    // flag must still guard. requestAnimationFrame after pointerdown would
+    // clear too early on that same path.
+    document.addEventListener("click", clear, true)
     document.addEventListener("pointercancel", clear, true)
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true)
-      document.removeEventListener("pointerup", clear, true)
+      document.removeEventListener("click", clear, true)
       document.removeEventListener("pointercancel", clear, true)
     }
   }, [isOpen, popoverRef])

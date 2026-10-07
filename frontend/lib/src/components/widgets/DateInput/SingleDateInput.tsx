@@ -552,19 +552,20 @@ function SingleDateInput({
 
       const wrapper = triggerRef.current
       if (!wrapper) return
-      const segments = wrapper.querySelectorAll<HTMLElement>(
-        '[role="spinbutton"]'
+      // SEGMENT_SELECTOR (not role=spinbutton): iOS React Aria uses textbox.
+      const segmentList = Array.from(
+        wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
       )
-      const segmentList = Array.from(segments)
       // Shift+Tab from the first segment leaves the widget.
       if (e.shiftKey && e.target === segmentList[0]) {
         setIsOpen(false)
         setIsCalendarActive(false)
         return
       }
-      // Forward Tab from the last segment: stay open when focus lands on the
-      // calendar button. Close after the Tab if focus left the widget instead
-      // (default Safari often skips buttons).
+      // Forward Tab from the last segment normally lands on the calendar button,
+      // so the preview stays open. Safari skips buttons on Tab unless "Press Tab
+      // to highlight each item" is enabled; in that case focus has left the
+      // widget and the preview is closed after the Tab settles.
       if (!e.shiftKey && e.target === segmentList.at(-1)) {
         requestAnimationFrame(() => {
           if (

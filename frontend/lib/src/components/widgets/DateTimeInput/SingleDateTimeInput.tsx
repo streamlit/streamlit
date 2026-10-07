@@ -293,8 +293,9 @@ function SingleDateTimeInput({
     popoverRef,
     popoverExcludeSelectors
   )
-  // Tab/Shift+Tab dismiss already commits; ignore the blur that follows so we
-  // do not double-write (lastCommittedRef helps, but blur can race state).
+  /** Set by the Tab/Shift+Tab dismiss paths, which commit before the popover
+   * unmounts. The blur that follows is skipped so it does not commit again
+   * against a `value` prop that has not yet caught up. */
   const skipNextBlurCommitRef = useRef(false)
 
   /** The datetime the two controls describe between them when the field itself
@@ -742,9 +743,10 @@ function SingleDateTimeInput({
         setIsCalendarActive(false)
         return
       }
-      // Forward Tab from the last segment: stay open when focus lands on the
-      // calendar button. Close after the Tab if focus left the widget instead
-      // (default Safari often skips buttons).
+      // Forward Tab from the last segment normally lands on the calendar button,
+      // so the preview stays open. Safari skips buttons on Tab unless "Press Tab
+      // to highlight each item" is enabled; in that case focus has left the
+      // widget and the preview is closed after the Tab settles.
       if (!e.shiftKey && e.target === segmentList.at(-1)) {
         // Blur runs before this rAF when focus leaves; arm the skip now so a
         // Safari skip-button leave does not commit on blur and again in rAF.

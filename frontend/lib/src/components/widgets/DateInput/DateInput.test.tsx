@@ -3278,6 +3278,74 @@ describe("DateInput range-mode paste handling", () => {
 })
 
 describe("DateInput range-mode keyboard navigation", () => {
+  it("passive preview closes when focus leaves the range widget without the calendar button", async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <button type="button" data-testid="outside">
+          Outside
+        </button>
+        <DateInput
+          {...getProps({
+            isRange: true,
+            default: ["2019-07-06", "2019-07-08"],
+          })}
+        />
+      </>
+    )
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getRangeDateSegments(region, "end")
+    const outside = screen.getByTestId("outside")
+
+    await user.click(day)
+    await screen.findByTestId("stDateInputCalendar")
+
+    act(() => {
+      outside.focus()
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("passive preview stays open across Safari calendar pointerdown then null blur (range)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getRangeDateSegments(region, "end")
+    const field = screen.getByTestId("stDateInputField")
+
+    await user.click(day)
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    const nextDay = within(calendar).getByRole("button", {
+      name: /July 9, 2019/,
+    })
+
+    // Safari: pointerdown on the cell, then blur with null relatedTarget,
+    // then click. The popover-interaction flag must keep the preview open.
+    /* eslint-disable testing-library/prefer-user-event */
+    fireEvent.pointerDown(nextDay)
+    fireEvent.blur(field, { relatedTarget: null })
+    /* eslint-enable testing-library/prefer-user-event */
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+
+    await user.click(nextDay)
+
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalled()
+    })
+  })
+
   it("Tab from last end-date segment focuses calendar button, then closes", async () => {
     const user = userEvent.setup()
     render(

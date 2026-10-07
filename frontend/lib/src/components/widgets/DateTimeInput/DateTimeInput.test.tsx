@@ -2748,7 +2748,6 @@ describe("DateTimeInput widget", () => {
       )
     })
 
-    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
     it("completes the value when Tab leaves the field, not just on dismissal", async () => {
       const { user, props, spy } = renderEmpty()
 
@@ -2778,6 +2777,8 @@ describe("DateTimeInput widget", () => {
       await user.tab()
 
       await expectCommitted(spy, props, "2025-11-19T09:45")
+      // Blur/rAF must not double-commit after the leave Tabs.
+      expect(spy).toHaveBeenCalledTimes(1)
     })
 
     it("prefers the popover time over an inline draft when both are on screen at dismissal", async () => {
