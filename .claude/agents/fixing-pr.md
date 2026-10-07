@@ -49,7 +49,7 @@ Poll CI status every 3 minutes until all workflows finish:
 
 ### 3. Merge snapshot update PRs
 
-Squash-merge open snapshot-autofix PRs that target this branch (`snapshots/<pr-number>-<run-id>`), without waiting for their checks. After a merge, return to step 2. If one conflicts, skip it and continue.
+Squash-merge open snapshot-autofix PRs that target this branch (`snapshots/<pr-number>-<run-id>`), without waiting for their checks. After a merge, pull that commit and return to step 2. If one conflicts, skip it and continue.
 
 ### 4. Fix CI failures
 
