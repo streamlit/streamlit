@@ -14,9 +14,16 @@
  * limitations under the License.
  */
 
+import type { RefObject } from "react"
+
+import { act, fireEvent, renderHook } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 
-import { isConcreteOutsideLeave, isFocusInsideWidget } from "./focusLeave"
+import {
+  isConcreteOutsideLeave,
+  isFocusInsideWidget,
+  usePopoverInteractionFlag,
+} from "./focusLeave"
 
 describe("isConcreteOutsideLeave", () => {
   afterEach(() => {
@@ -86,5 +93,111 @@ describe("isFocusInsideWidget", () => {
     expect(
       isFocusInsideWidget(document.createElement("button"), { field, popover })
     ).toBe(false)
+  })
+})
+
+describe("usePopoverInteractionFlag", () => {
+  afterEach(() => {
+    document.body.innerHTML = ""
+  })
+
+  const mountFlag = (
+    popover: HTMLElement,
+    excludeSelectors: readonly string[] = []
+  ): {
+    flag: RefObject<boolean>
+    rerender: (isOpen: boolean) => void
+    unmount: () => void
+  } => {
+    const popoverRef: RefObject<HTMLElement | null> = { current: popover }
+    document.body.appendChild(popover)
+
+    const { result, rerender, unmount } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        usePopoverInteractionFlag(isOpen, popoverRef, excludeSelectors),
+      { initialProps: { isOpen: true } }
+    )
+
+    return {
+      flag: result.current,
+      rerender: (isOpen: boolean) => {
+        rerender({ isOpen })
+      },
+      unmount,
+    }
+  }
+
+  it("keeps the flag through pointerup until click (iOS-safe order)", () => {
+    const popover = document.createElement("div")
+    const cell = document.createElement("button")
+    popover.appendChild(cell)
+    const { flag } = mountFlag(popover)
+
+    expect(flag.current).toBe(false)
+
+    fireEvent.pointerDown(cell)
+    expect(flag.current).toBe(true)
+
+    // iOS fires pointerup before the blur this flag must still guard.
+    fireEvent.pointerUp(cell)
+    expect(flag.current).toBe(true)
+
+    fireEvent.click(cell)
+    expect(flag.current).toBe(false)
+  })
+
+  it("clears on pointercancel", () => {
+    const popover = document.createElement("div")
+    const cell = document.createElement("button")
+    popover.appendChild(cell)
+    const { flag } = mountFlag(popover)
+
+    fireEvent.pointerDown(cell)
+    expect(flag.current).toBe(true)
+
+    fireEvent.pointerCancel(cell)
+    expect(flag.current).toBe(false)
+  })
+
+  it("sets the flag for excluded portal pointerdown", () => {
+    const popover = document.createElement("div")
+    const portal = document.createElement("div")
+    portal.className = "stDateInputHeaderPickerPopover"
+    const item = document.createElement("button")
+    portal.appendChild(item)
+    document.body.appendChild(portal)
+    const { flag } = mountFlag(popover, [".stDateInputHeaderPickerPopover"])
+
+    fireEvent.pointerDown(item)
+    expect(flag.current).toBe(true)
+  })
+
+  it("clears when the popover closes", () => {
+    const popover = document.createElement("div")
+    const cell = document.createElement("button")
+    popover.appendChild(cell)
+    const { flag, rerender } = mountFlag(popover)
+
+    fireEvent.pointerDown(cell)
+    expect(flag.current).toBe(true)
+
+    act(() => {
+      rerender(false)
+    })
+    expect(flag.current).toBe(false)
+  })
+
+  it("stops listening after unmount", () => {
+    const popover = document.createElement("div")
+    const cell = document.createElement("button")
+    popover.appendChild(cell)
+    const { flag, unmount } = mountFlag(popover)
+
+    act(() => {
+      unmount()
+    })
+
+    fireEvent.pointerDown(cell)
+    expect(flag.current).toBe(false)
   })
 })

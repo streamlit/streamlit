@@ -2781,6 +2781,56 @@ describe("DateTimeInput widget", () => {
       expect(spy).toHaveBeenCalledTimes(1)
     })
 
+    it("commits once when Safari Tab skips the calendar button (rAF leave)", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      // Time only in the popover — must still be readable when the rAF closes.
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      const inline = within(inlineField).getAllByRole("spinbutton")
+      await user.click(inline[0])
+      await user.keyboard("20251119")
+
+      const lastInline = inline.at(-1)
+      if (!lastInline) {
+        throw new Error("Expected a date-time segment")
+      }
+      await user.click(lastInline)
+
+      // Safari often skips icon buttons on Tab. Drive the leave path without
+      // landing on the calendar toggle: keydown arms skipNextBlurCommitRef +
+      // the rAF closer; blur/focus land outside before the frame runs.
+      /* eslint-disable testing-library/prefer-user-event */
+      fireEvent.keyDown(lastInline, { key: "Tab" })
+      fireEvent.blur(inlineField, { relatedTarget: null })
+      /* eslint-enable testing-library/prefer-user-event */
+      act(() => {
+        screen.getByTestId("outside").focus()
+      })
+      await act(
+        async () =>
+          new Promise<void>(resolve => {
+            requestAnimationFrame(() => {
+              resolve()
+            })
+          })
+      )
+
+      await expectCommitted(spy, props, "2025-11-19T09:45")
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(
+        screen.queryByTestId("stDateTimeInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
     it("prefers the popover time over an inline draft when both are on screen at dismissal", async () => {
       const { user, props, spy } = renderEmpty()
 
