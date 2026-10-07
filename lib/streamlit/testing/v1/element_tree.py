@@ -85,10 +85,12 @@ if TYPE_CHECKING:
     from streamlit.proto.Html_pb2 import Html as HtmlProto
     from streamlit.proto.Image_pb2 import ImageList as ImageListProto
     from streamlit.proto.Json_pb2 import Json as JsonProto
+    from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
     from streamlit.proto.MenuButton_pb2 import MenuButton as MenuButtonProto
     from streamlit.proto.Metric_pb2 import Metric as MetricProto
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
+    from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
     from streamlit.proto.Progress_pb2 import Progress as ProgressProto
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
@@ -1168,6 +1170,55 @@ class Progress(Element):
     def text(self) -> str:
         """Message shown with the bar. Empty when ``text`` was omitted."""
         return self.proto.text
+
+
+@dataclass(repr=False)
+class LinkButton(Element):
+    """A representation of ``st.link_button``.
+
+    Read-only. ``.click()`` does not open the URL or rerun the script.
+    """
+
+    proto: LinkButtonProto = field(repr=False)
+
+    def __init__(self, proto: LinkButtonProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.type = "link_button"
+        self.key = user_key_from_element_id(proto.id) if proto.id else None
+
+    @property
+    def value(self) -> str:
+        """The button label.
+
+        ``on_click="rerun"`` still reports the label. AppTest does not click
+        the link or apply the trigger value.
+        """
+        return self.proto.label
+
+
+@dataclass(repr=False)
+class PageLink(Element):
+    """A representation of ``st.page_link``.
+
+    Read-only. Switch pages with ``AppTest.switch_page``, not ``.click()``.
+    """
+
+    proto: PageLinkProto = field(repr=False)
+    key: None
+
+    def __init__(self, proto: PageLinkProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.key = None
+        self.type = "page_link"
+
+    @property
+    def value(self) -> str:
+        """The link label.
+
+        When ``label`` is omitted, this is the title Streamlit inferred from
+        the page.
+        """
+        return self.proto.label
 
 
 @dataclass(repr=False)
@@ -2693,6 +2744,10 @@ class Block:
         return ElementList(self.get("latex"))  # type: ignore
 
     @property
+    def link_button(self) -> ElementList[LinkButton]:
+        return ElementList(self.get("link_button"))  # type: ignore
+
+    @property
     def markdown(self) -> ElementList[Markdown]:
         return ElementList(self.get("markdown"))  # type: ignore
 
@@ -2711,6 +2766,10 @@ class Block:
     @property
     def number_input(self) -> WidgetList[NumberInput]:
         return WidgetList(self.get("number_input"))  # type: ignore
+
+    @property
+    def page_link(self) -> ElementList[PageLink]:
+        return ElementList(self.get("page_link"))  # type: ignore
 
     @property
     def progress(self) -> ElementList[Progress]:
@@ -3351,6 +3410,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Image(elt.imgs, root=root)
             elif ty == "json":
                 new_node = Json(elt.json, root=root)
+            elif ty == "link_button":
+                new_node = LinkButton(elt.link_button, root=root)
             elif ty == "markdown":
                 if elt.markdown.element_type == MarkdownProto.Type.NATIVE:
                     new_node = Markdown(elt.markdown, root=root)
@@ -3370,6 +3431,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Multiselect(elt.multiselect, root=root)
             elif ty == "number_input":
                 new_node = NumberInput(elt.number_input, root=root)
+            elif ty == "page_link":
+                new_node = PageLink(elt.page_link, root=root)
             elif ty == "progress":
                 new_node = Progress(elt.progress, root=root)
             elif ty == "radio":

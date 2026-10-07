@@ -36,6 +36,8 @@ from streamlit.testing.v1.element_tree import (
     BlockList,
     Help,
     Html,
+    LinkButton,
+    PageLink,
     Progress,
     Space,
     UnknownElement,
@@ -389,6 +391,101 @@ def test_progress_html_and_help() -> None:
             node.set_value(1)
         with pytest.raises(AppTestError, match="click"):
             node.click()
+
+
+def test_link_button_and_page_link() -> None:
+    """``st.link_button`` and ``st.page_link`` are inspectable and not interactive.
+
+    ``.value`` stays the label, including ``on_click="rerun"`` link buttons
+    and page links whose label is inferred from the page title. ``.click()``
+    does not navigate.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        def home() -> None:
+            st.page_link(pages["other"])
+
+        def other_body() -> None:
+            st.write("other")
+
+        pages = {
+            "home": st.Page(home, title="Home", default=True),
+            "other": st.Page(other_body, title="Other page", url_path="other"),
+        }
+        st.navigation(list(pages.values())).run()
+
+        st.link_button(
+            "Docs",
+            "https://docs.streamlit.io",
+            key="docs",
+            help="Open docs",
+            type="primary",
+        )
+        st.link_button("Home", "https://example.com")
+        st.link_button(
+            "Rerun",
+            "https://example.com/rerun",
+            key="rerun",
+            on_click="rerun",
+        )
+        st.sidebar.link_button("Side", "https://example.com/side", key="side")
+        st.page_link(
+            "https://example.com",
+            label="Example",
+            query_params={"x": "1"},
+        )
+        with st.container(key="box"):
+            st.page_link("https://streamlit.io", label="Streamlit", icon="🎈")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+
+    assert at.link_button.len == 4
+    assert isinstance(at.link_button[0], LinkButton)
+    assert at.main.link_button.len == 3
+    assert at.sidebar.link_button.len == 1
+    docs = at.link_button(key="docs")
+    assert docs.value == "Docs"
+    assert docs.url == "https://docs.streamlit.io"
+    assert docs.help == "Open docs"
+    assert docs.key == "docs"
+    assert at.link_button[1].value == "Home"
+    assert at.link_button[1].key is None
+    assert at.link_button[1].url == "https://example.com"
+    rerun = at.link_button(key="rerun")
+    assert rerun.value == "Rerun"
+    assert rerun.url == "https://example.com/rerun"
+    assert at.sidebar.link_button(key="side").value == "Side"
+    assert list(at.get("link_button")) == list(at.link_button)
+    assert {node.type for node in at.link_button} == {"link_button"}
+
+    assert at.page_link.len == 3
+    assert isinstance(at.page_link[0], PageLink)
+    inferred, example, nested = at.page_link
+    assert inferred.value == "Other page"
+    assert inferred.page == "other"
+    assert inferred.external is False
+    assert inferred.key is None
+    assert example.value == "Example"
+    assert example.page == "https://example.com"
+    assert example.external is True
+    assert example.query_string == "x=1"
+    assert nested.value == "Streamlit"
+    assert nested.icon == "🎈"
+    assert at.container("box").page_link[0].value == "Streamlit"
+    assert list(at.get("page_link")) == list(at.page_link)
+
+    repr(docs)
+    repr(example)
+
+    for node in (docs, example):
+        with pytest.raises(AppTestError, match="set_value"):
+            node.set_value("nope")
+        with pytest.raises(AppTestError, match="click"):
+            node.click()
+    assert at.page_link[0].value == "Other page"
 
 
 def test_help_value_keeps_readable_reprs() -> None:
