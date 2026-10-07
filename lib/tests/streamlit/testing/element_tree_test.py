@@ -393,12 +393,12 @@ def test_progress_html_and_help() -> None:
             node.click()
 
 
-def test_link_button_and_page_link() -> None:
-    """``st.link_button`` and ``st.page_link`` are inspectable and not interactive.
+def test_link_button_and_page_link_are_read_only() -> None:
+    """``st.link_button`` and ``st.page_link`` are inspectable.
 
     ``.value`` stays the label, including ``on_click="rerun"`` link buttons
     and page links whose label is inferred from the page title. ``.click()``
-    does not navigate.
+    and ``.set_value()`` raise ``AppTestError``.
     """
 
     def script() -> None:
@@ -477,15 +477,18 @@ def test_link_button_and_page_link() -> None:
     assert at.container("box").page_link[0].value == "Streamlit"
     assert list(at.get("page_link")) == list(at.page_link)
 
-    repr(docs)
-    repr(example)
+    assert repr(docs) == "LinkButton(key='docs')"
+    assert repr(example) == "PageLink()"
 
-    for node in (docs, example):
+    for node, click_hint in (
+        (docs, "Playwright"),
+        (rerun, "on_click"),
+        (example, "switch_page"),
+    ):
         with pytest.raises(AppTestError, match="set_value"):
             node.set_value("nope")
-        with pytest.raises(AppTestError, match="click"):
+        with pytest.raises(AppTestError, match=click_hint):
             node.click()
-    assert at.page_link[0].value == "Other page"
 
 
 def test_help_value_keeps_readable_reprs() -> None:

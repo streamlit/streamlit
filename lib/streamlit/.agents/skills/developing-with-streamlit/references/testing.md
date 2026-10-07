@@ -136,7 +136,7 @@ assert not at.success  # no st.success rendered
 assert at.warning[0].value == "Low balance"
 ```
 
-`st.progress`, `st.html`, `st.help`, `st.space`, `st.link_button`, and `st.page_link` are read-only lists. Assert on what the script produced; `.set_value()` and `.click()` raise `AppTestError`.
+`st.progress`, `st.html`, `st.help`, `st.space`, `st.link_button`, and `st.page_link` are read-only lists. Assert on what the script produced; `.set_value()` and `.click()` raise `AppTestError`. `.click()` does not open a link-button URL or follow a page link. Switch pages with `AppTest.switch_page`.
 
 ```python
 assert at.progress[0].value == 25  # st.progress(0.25) is stored as an int from 0 to 100
@@ -241,7 +241,7 @@ def test_status_filter():
 
 `AppTest` covers widget interaction and the elements your script produces, but it does **not** reproduce every front-end interaction. In particular, **selections on `st.dataframe` and charts** (click-to-select rows, Altair/Plotly selection events) can't be triggered through `AppTest` — there's no setter for them, so you can't assert on what a user's on-chart selection would return. The same applies to anything that only exists in the rendered browser: custom-component JavaScript, CSS, and scroll/resize behavior. Cover those with Playwright e2e tests instead.
 
-Elements that AppTest does not fully model (`st.balloons`, `st.snow`, and similar) do not break `.run()`. Inspect those nodes with `at.get("<type>")`; `.value` returns the element's main proto field where one exists or `None` otherwise. Calling `.set_value()` or `.click()` on those nodes raises `AppTestError` — those names can exist as proto fields, but they are not interaction methods. For a keyed widget AppTest doesn't model, assign through `at.session_state` or use Playwright. `st.page_link` does not navigate on `.click()`; switch pages with `AppTest.switch_page`.
+Elements that AppTest does not fully model (`st.balloons`, `st.snow`, and similar) do not break `.run()`. Inspect those nodes with `at.get("<type>")`; `.value` returns the element's main proto field where one exists or `None` otherwise. Calling `.set_value()` or `.click()` on those nodes raises `AppTestError` — those names can exist as proto fields, but they are not interaction methods. For a keyed widget AppTest doesn't model, assign through `at.session_state` or use Playwright.
 
 ## References
 

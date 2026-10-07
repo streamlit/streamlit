@@ -1188,12 +1188,20 @@ class LinkButton(Element):
 
     @property
     def value(self) -> str:
-        """The button label.
+        """The button label in every ``on_click`` mode.
 
-        ``on_click="rerun"`` still reports the label. AppTest does not click
-        the link or apply the trigger value.
+        AppTest does not click link buttons, so this is never the click
+        trigger value.
         """
         return self.proto.label
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        key_part = f" (key={self.key!r})" if self.key else ""
+        raise AppTestError(
+            f"{method}() is not supported for link_button{key_part}. "
+            "AppTest does not open URLs or trigger on_click. "
+            "Use a Playwright e2e test."
+        )
 
 
 @dataclass(repr=False)
@@ -1219,6 +1227,12 @@ class PageLink(Element):
         the page.
         """
         return self.proto.label
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        raise AppTestError(
+            f"{method}() is not supported for page_link. "
+            "Switch pages with AppTest.switch_page(page_path)."
+        )
 
 
 @dataclass(repr=False)
