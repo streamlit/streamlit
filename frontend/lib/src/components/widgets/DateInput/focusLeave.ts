@@ -22,9 +22,9 @@ import {
 } from "react"
 
 /**
- * Concrete outside leave for blur `relatedTarget`.
- * `null` is not a leave (Safari calendar mousedown). `document.body` is a leave
- * once popover pointerdown is ruled out. Ignore blur while the popover flag is set.
+ * True when blur's `relatedTarget` is outside the field and popover.
+ * `null` is not outside (Safari calendar mousedown). `document.body` is outside.
+ * Callers ignore blur while a popover pointer is in progress (not read here).
  */
 export function isConcreteOutsideLeave(
   relatedTarget: EventTarget | null,
@@ -74,9 +74,10 @@ export type PassivePreviewTabLeave = {
 }
 
 /**
- * Tab leave for an open passive preview. Does not preventDefault. Returns true
- * when a leave path ran or was scheduled. Use a `data-type` segmentSelector —
- * iOS React Aria segments are textboxes, not spinbuttons.
+ * Routes Tab while the passive preview is open. Returns true when handled.
+ * Does not preventDefault. Last-segment Tab waits one frame (Safari/Firefox may
+ * skip the icon button); focus that lands in the still-open grid is moved to
+ * the calendar button. Use a `data-type` segmentSelector (iOS uses textboxes).
  */
 export function handlePassivePreviewFieldTab(
   e: Pick<KeyboardEvent, "key" | "shiftKey" | "target">,
@@ -107,11 +108,26 @@ export function handlePassivePreviewFieldTab(
   }
 
   if (!e.shiftKey && e.target === segments.at(-1)) {
-    // Safari/Firefox may skip the icon button; close once focus settles outside.
     leave.beforeFocusSettles?.()
     requestAnimationFrame(() => {
+      const active = document.activeElement
+      // Button-skipping browsers can Tab into the passive grid; park on toggle.
       if (
-        isFocusInsideWidget(document.activeElement, {
+        active instanceof Node &&
+        ctx.popover?.contains(active) &&
+        !(
+          ctx.calendarButton instanceof Node &&
+          ctx.calendarButton.contains(active)
+        )
+      ) {
+        if (ctx.calendarButton instanceof HTMLElement) {
+          ctx.calendarButton.focus()
+        }
+        leave.focusStayedInside?.()
+        return
+      }
+      if (
+        isFocusInsideWidget(active, {
           field: ctx.field,
           popover: ctx.popover,
           excludeSelectors: ctx.excludeSelectors,
@@ -170,6 +186,7 @@ export function usePopoverInteractionFlag(
     }
 
     document.addEventListener("pointerdown", onPointerDown, true)
+    // Clear on click, not pointerup (see JSDoc).
     document.addEventListener("click", clear, true)
     document.addEventListener("pointercancel", clear, true)
     return () => {

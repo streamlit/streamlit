@@ -2057,7 +2057,7 @@ describe("DateInput single-mode keyboard navigation", () => {
     })
   })
 
-  it("blur while closed does not skip the next incomplete close revert", async () => {
+  it("still reverts an incomplete edit on close after a blur committed while the popover was closed", async () => {
     const user = userEvent.setup()
     render(
       <>
@@ -3224,7 +3224,7 @@ describe("DateInput passive preview leave (single and range)", () => {
   ] as const
 
   it.each(modes)(
-    "Safari pointerdown stays open; focus leave without toggle closes ($mode)",
+    "pointerdown stays open; Safari skip-button Tab closes outside ($mode)",
     async ({ props, getDay, nextDayName }) => {
       const user = userEvent.setup()
       const widgetProps = props()
@@ -3238,7 +3238,8 @@ describe("DateInput passive preview leave (single and range)", () => {
         </>
       )
 
-      await user.click(getDay(screen.getByTestId("stDateInput")))
+      const lastSegment = getDay(screen.getByTestId("stDateInput"))
+      await user.click(lastSegment)
       const calendar = await screen.findByTestId("stDateInputCalendar")
       const nextDay = within(calendar).getByRole("button", {
         name: nextDayName,
@@ -3249,19 +3250,27 @@ describe("DateInput passive preview leave (single and range)", () => {
         relatedTarget: null,
       })
       /* eslint-enable testing-library/prefer-user-event */
-      expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
 
       await user.click(nextDay)
       await waitFor(() => {
         expect(widgetProps.widgetMgr.setStringArrayValue).toHaveBeenCalled()
       })
 
-      // Safari Tab often skips icon buttons; focus leave must still close.
+      // rAF leave (park-on-grid covered in focusLeave.test.ts).
       await user.click(getDay(screen.getByTestId("stDateInput")))
       await screen.findByTestId("stDateInputCalendar")
-      act(() => {
+      /* eslint-disable testing-library/prefer-user-event */
+      await act(async () => {
+        fireEvent.keyDown(getDay(screen.getByTestId("stDateInput")), {
+          key: "Tab",
+        })
         screen.getByTestId("outside").focus()
+        await new Promise<void>(r => {
+          requestAnimationFrame(() => r())
+        })
       })
+      /* eslint-enable testing-library/prefer-user-event */
       await waitFor(() => {
         expect(
           screen.queryByTestId("stDateInputCalendar")

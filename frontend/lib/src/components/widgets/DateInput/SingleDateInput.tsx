@@ -88,6 +88,10 @@ import {
   StyledVisuallyHidden,
 } from "./styled-components"
 
+const POPOVER_EXCLUDE_SELECTORS = [
+  `.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`,
+] as const
+
 interface SingleDateInputProps {
   value: CalendarDate | null
   onChange: (value: CalendarDate | null) => void
@@ -219,14 +223,10 @@ function SingleDateInput({
   onChangeRef.current = onChange
 
   const [isOpen, setIsOpen] = useState(false)
-  const popoverExcludeSelectors = useMemo(
-    () => [`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`],
-    []
-  )
   const popoverInteractionRef = usePopoverInteractionFlag(
     isOpen,
     popoverRef,
-    popoverExcludeSelectors
+    POPOVER_EXCLUDE_SELECTORS
   )
 
   const wasOpenRef = useRef(isOpen)
@@ -384,7 +384,7 @@ function SingleDateInput({
       restoreFocusFn: restoreFocusToField,
       // Exclude the month/year picker so clicks and Escape inside it do not
       // dismiss the calendar.
-      excludeSelectors: [`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`],
+      excludeSelectors: POPOVER_EXCLUDE_SELECTORS,
       excludeEscape: true,
     })
 
@@ -548,13 +548,13 @@ function SingleDateInput({
           field: triggerRef.current,
           calendarButton: calendarButtonRef.current,
           popover: popoverRef.current,
-          excludeSelectors: popoverExcludeSelectors,
+          excludeSelectors: POPOVER_EXCLUDE_SELECTORS,
           segmentSelector: SEGMENT_SELECTOR,
         },
         { immediate: closePreview, afterFocusSettles: closePreview }
       )
     },
-    [isOpen, popoverExcludeSelectors]
+    [isOpen]
   )
 
   // In active mode: Tab cycles focus within the calendar (focus trap).
@@ -605,30 +605,27 @@ function SingleDateInput({
   // concurrent Submit click reads the correct value.
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
-      // Safari: popover mousedown blurs the field before click; flag = not a leave.
+      // Safari fires field blur on popover mousedown before click — not a leave.
       if (popoverInteractionRef.current) {
         popoverInteractionRef.current = false
         return
       }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      // Set skipCloseCommitRef only when this blur closes the preview. A blur
-      // while already closed (e.g. after Escape) must not stick the skip flag.
+      // Only set skipCloseCommitRef when this blur closes the preview.
       let closedByBlur = false
       if (isOpen) {
         if (
           isConcreteOutsideLeave(e.relatedTarget, {
             popover: popoverRef.current,
-            excludeSelectors: popoverExcludeSelectors,
+            excludeSelectors: POPOVER_EXCLUDE_SELECTORS,
           })
         ) {
           closedByBlur = true
           setIsOpen(false)
           setIsCalendarActive(false)
-          // Fall through. Partial / non-clearable clears leave skip unset so
-          // the close-commit effect can still revert.
         } else {
-          // Null / inside popover: Tab frame and overlay own those leaves.
+          // null / inside popover: Tab frame and overlay dismissal own leave.
           return
         }
       }
@@ -653,14 +650,7 @@ function SingleDateInput({
       onChangeRef.current(pending)
       formCommit?.(pending)
     },
-    [
-      formCommit,
-      value,
-      clearable,
-      isOpen,
-      popoverExcludeSelectors,
-      popoverInteractionRef,
-    ]
+    [formCommit, value, clearable, isOpen, popoverInteractionRef]
   )
 
   return (

@@ -77,8 +77,12 @@ describe("focusLeave helpers", () => {
     const last = document.createElement("span")
     last.setAttribute("data-type", "day")
     const button = document.createElement("button")
+    const popover = document.createElement("div")
+    const cell = document.createElement("div")
+    cell.tabIndex = 0
+    popover.appendChild(cell)
     field.append(first, last, button)
-    document.body.appendChild(field)
+    document.body.append(field, popover)
     const leave = {
       immediate: vi.fn(),
       afterFocusSettles: vi.fn(),
@@ -88,7 +92,7 @@ describe("focusLeave helpers", () => {
     const ctx = {
       field,
       calendarButton: button,
-      popover: null,
+      popover,
       segmentSelector: '[data-type]:not([data-type="literal"])',
     }
 
@@ -124,6 +128,7 @@ describe("focusLeave helpers", () => {
     await flushRaf()
     expect(leave.afterFocusSettles).toHaveBeenCalledOnce()
 
+    // Toggle focus: stay open. Grid focus (Safari skip-button): park on toggle.
     leave.afterFocusSettles.mockClear()
     leave.focusStayedInside.mockClear()
     handlePassivePreviewFieldTab(
@@ -133,6 +138,17 @@ describe("focusLeave helpers", () => {
     )
     button.focus()
     await flushRaf()
+    expect(leave.focusStayedInside).toHaveBeenCalledOnce()
+
+    leave.focusStayedInside.mockClear()
+    handlePassivePreviewFieldTab(
+      { key: "Tab", shiftKey: false, target: last },
+      ctx,
+      leave
+    )
+    cell.focus()
+    await flushRaf()
+    expect(button).toHaveFocus()
     expect(leave.focusStayedInside).toHaveBeenCalledOnce()
     expect(leave.afterFocusSettles).not.toHaveBeenCalled()
   })

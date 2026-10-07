@@ -1867,9 +1867,7 @@ describe("DateTimeInput widget", () => {
         fireEvent.pointerDown(dayCell)
         fireEvent.blur(field, { relatedTarget })
         /* eslint-enable testing-library/prefer-user-event */
-        expect(
-          screen.getByTestId("stDateTimeInputCalendar")
-        ).toBeInTheDocument()
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
         expect(spy).not.toHaveBeenCalled()
       }
     })
