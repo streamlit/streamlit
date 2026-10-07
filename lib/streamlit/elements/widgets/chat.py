@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, MutableMapping, Sequence
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -207,7 +207,7 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
         return f"{type(self).__name__}({args})"
 
 
-class PresetNames(str, Enum):
+class PresetNames(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
     AI = "ai"  # Equivalent to assistant

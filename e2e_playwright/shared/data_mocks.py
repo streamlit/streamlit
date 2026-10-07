@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import random
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import NamedTuple
 
@@ -292,16 +292,14 @@ DATETIME_TYPES_DF = pd.DataFrame(
             (pd.to_datetime("2022-03-11 17:41:00-05:00")) for _ in range(8)
         ]
         + [None],
-        "datetime_UTC_TZ": [
-            random_date().replace(tzinfo=timezone.utc) for _ in range(8)
-        ]
+        "datetime_UTC_TZ": [random_date().replace(tzinfo=UTC) for _ in range(8)]
         + [None],
         # TODO: Mixed timezones within a column will force the column to be of type object
         # It also seems to not work correctly.
         "mixed_timezones": [
             random.choice(
                 [
-                    random_date().replace(tzinfo=timezone.utc),
+                    random_date().replace(tzinfo=UTC),
                     pd.to_datetime("2022-03-11 17:41:00-05:00"),
                     random_date(),
                 ]

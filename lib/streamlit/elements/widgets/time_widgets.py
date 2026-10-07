@@ -682,7 +682,7 @@ class DateInputSerde:
         for fmt in ("%Y-%m-%d", "%Y/%m/%d"):
             try:
                 return datetime.strptime(value, fmt).date()
-            except ValueError:  # noqa: PERF203
+            except ValueError:
                 continue
         raise ValueError(f"Unable to parse date: {value}")
 

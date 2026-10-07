@@ -24,7 +24,7 @@ import re
 import secrets
 import threading
 from collections import OrderedDict
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Final, Literal
 
 from streamlit import config_util, development, env_util, file_util, util
@@ -93,7 +93,7 @@ _DEFINED_BY_ENV_VAR: Final = "environment variable"
 _LOGGER: Final = logging.getLogger(__name__)
 
 
-class ShowErrorDetailsConfigOptions(str, Enum):
+class ShowErrorDetailsConfigOptions(StrEnum):
     """Valid options for the "client.showErrorDetails" config."""
 
     FULL = "full"
@@ -115,7 +115,7 @@ class ShowErrorDetailsConfigOptions(str, Enum):
         # (e.g. st.set_option("client.showErrorDetails", False)).
 
 
-class CustomThemeCategories(str, Enum):
+class CustomThemeCategories(StrEnum):
     """Theme categories that can be set with custom theme config."""
 
     SIDEBAR = "sidebar"
@@ -2852,9 +2852,9 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
 
     """
     try:
-        import toml
+        import tomllib
 
-        parsed_config_file = toml.loads(raw_toml)
+        parsed_config_file = tomllib.loads(raw_toml)
     except Exception:
         # Catching any parsing exception to prevent this from breaking our
         # config change watcher logic.

@@ -349,8 +349,8 @@ def _is_under_dir(filename: str, directory: Path) -> bool:
         return Path(filename).resolve().is_relative_to(directory)
     except (OSError, ValueError, RuntimeError):
         # Keep the frame rather than hide one we cannot classify.
-        # RuntimeError covers 3.10-3.12 pathlib turning symlink-loop ELOOP
-        # into RuntimeError instead of OSError.
+        # Python 3.11 and 3.12 raise RuntimeError, not OSError, when pathlib
+        # hits a symlink loop (ELOOP).
         return False
 
 
@@ -418,10 +418,8 @@ def _traceback_has_frames(tbe: traceback.TracebackException) -> bool:
         and _traceback_has_frames(tbe.__context__)
     ):
         return True
-    # ExceptionGroup children exist on 3.11+ TracebackException as ``exceptions``.
-    return any(
-        _traceback_has_frames(sub) for sub in getattr(tbe, "exceptions", None) or ()
-    )
+    # ``exceptions`` is None unless this is an ExceptionGroup.
+    return any(_traceback_has_frames(sub) for sub in tbe.exceptions or ())
 
 
 def _filter_traceback_exception(tbe: traceback.TracebackException) -> None:
@@ -431,8 +429,8 @@ def _filter_traceback_exception(tbe: traceback.TracebackException) -> None:
         _filter_traceback_exception(tbe.__cause__)
     if tbe.__context__ is not None:
         _filter_traceback_exception(tbe.__context__)
-    # ExceptionGroup children exist on 3.11+ TracebackException as ``exceptions``.
-    for sub in getattr(tbe, "exceptions", None) or ():
+    # ``exceptions`` is None unless this is an ExceptionGroup.
+    for sub in tbe.exceptions or ():
         _filter_traceback_exception(sub)
 
 
@@ -514,7 +512,7 @@ def _format_traceback_rows(
         rows.append(separator)
     rows.extend(own_rows)
 
-    children = getattr(tbe, "exceptions", None) or ()
+    children = tbe.exceptions
     if children:
         # Remaining depth 0 matches CPython: format through
         # ``max_group_depth`` nested groups, then truncate children.

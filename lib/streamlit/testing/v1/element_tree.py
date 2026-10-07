@@ -31,13 +31,12 @@ from typing import (
     Final,
     Generic,
     NoReturn,
+    Self,
     TypeAlias,
     TypeVar,
     cast,
     overload,
 )
-
-from typing_extensions import Self
 
 from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag

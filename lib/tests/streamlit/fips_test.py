@@ -26,10 +26,9 @@ import sys
 import time
 import urllib.request
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn, Self
 
 import pytest
-from typing_extensions import Self
 from websockets.exceptions import ConnectionClosed, InvalidHandshake
 from websockets.sync.client import connect
 

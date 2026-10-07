@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 
 import pytest
 from parameterized import parameterized
@@ -700,8 +700,8 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
         """Test that 2024-06-15 produces the correct microsecond value."""
 
         result = _try_parse_iso_to_micros("2024-06-15")
-        dt = datetime.combine(date(2024, 6, 15), time(), tzinfo=timezone.utc)
-        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        dt = datetime.combine(date(2024, 6, 15), time(), tzinfo=UTC)
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
         expected = (dt - epoch).total_seconds() * 1_000_000
         assert result == expected
 
@@ -710,8 +710,8 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
 
         result = _try_parse_iso_to_micros("14:30")
         assert result is not None
-        dt = datetime.combine(date(2000, 1, 1), time(14, 30), tzinfo=timezone.utc)
-        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        dt = datetime.combine(date(2000, 1, 1), time(14, 30), tzinfo=UTC)
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
         expected = (dt - epoch).total_seconds() * 1_000_000
         assert result == expected
 
@@ -725,8 +725,8 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
 
         result = _try_parse_iso_to_micros("2024-06-15T14:30")
         assert result is not None
-        dt = datetime(2024, 6, 15, 14, 30, tzinfo=timezone.utc)
-        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        dt = datetime(2024, 6, 15, 14, 30, tzinfo=UTC)
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
         expected = (dt - epoch).total_seconds() * 1_000_000
         assert result == expected
 

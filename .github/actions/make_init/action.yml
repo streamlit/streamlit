@@ -6,7 +6,7 @@ description: Sets up uv, Python, virtualenv, React, and compiles protobuf.
 
 inputs:
   python_version:
-    description: "Python version to install via uv (e.g., '3.12', '3.10')"
+    description: "Python version to install via uv (e.g., '3.12', '3.11')"
     required: true
   use_cached_venv:
     description: "Use Cached Virtual Env"

@@ -609,7 +609,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     def test_use_right_display_values(self):
         """Test that _use_display_values gets correct value for "display_value" instead of the original one."""
 
-        class Status(str, enum.Enum):
+        class Status(str, enum.Enum):  # noqa: UP042
             success = "Success status"
 
         df = pd.DataFrame({"pipeline": ["Success"], "status": [Status.success]})

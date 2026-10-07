@@ -176,7 +176,7 @@ parameterized loaders so per-argument entries stay bounded.
 
 ## Dependencies
 
-All templates require Python >=3.10 and use:
+All templates require Python >=3.11 and use:
 - `streamlit`
 - `altair>=5.5.0`
 - `pandas>=2.2.3`

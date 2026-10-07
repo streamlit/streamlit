@@ -559,7 +559,7 @@ class ConfigTest(unittest.TestCase):
             config._update_config_with_toml(toml_content, "test")
 
     def test_parsing_invalid_toml(self):
-        """Test that exceptions during toml.loads are caught and logged."""
+        """Test that invalid TOML is logged and leaves the current config unchanged."""
         # Create a dummy default option
         config._create_option(
             "_test.invalidTomlTest",

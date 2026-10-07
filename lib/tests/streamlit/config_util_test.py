@@ -974,16 +974,6 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         assert len(filtered_theme["theme"]["sidebar"]["chartSequentialColors"]) == 10
         assert len(filtered_theme["theme"]["sidebar"]["chartDivergingColors"]) == 10
 
-    def test_load_theme_file_missing_toml(self):
-        """Test _load_theme_file when toml module is missing."""
-
-        # Mock the import toml statement to raise ImportError
-        with patch.dict("sys.modules", {"toml": None}):
-            with pytest.raises(StreamlitAPIException) as cm:
-                config_util._load_theme_file("theme.toml", self.config_template)
-
-            assert "toml' package is required" in str(cm.value)
-
     def test_load_theme_file_local_success(self):
         """Test loading theme file from local path successfully."""
         theme_toml = """

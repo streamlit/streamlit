@@ -33,7 +33,7 @@ from io import BytesIO, TextIOWrapper
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
-from typing import TYPE_CHECKING, Any, Final, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, Self
 from urllib import parse
 
 import pytest
@@ -51,7 +51,6 @@ from playwright.sync_api import (
     Route,
     expect,
 )
-from typing_extensions import Self
 
 from e2e_playwright.shared.app_target import (
     AppTarget,

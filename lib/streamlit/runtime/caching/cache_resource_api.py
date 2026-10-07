@@ -975,7 +975,7 @@ class ResourceCache(Cache[R]):
                         # TTLCleanupCache only reliably calls on_release for popitem -
                         # so just use that.
                         self._mem_cache.popitem()
-                    except Exception as e:  # noqa: PERF203 (we require a tight scope)
+                    except Exception as e:
                         errors.append(e)
 
                 # Log all errors encountered at warning. This could potentially result in a

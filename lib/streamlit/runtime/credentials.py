@@ -145,11 +145,11 @@ class Credentials:
             _LOGGER.error("Credentials already loaded. Not rereading file.")
             return
 
-        import toml
+        import tomllib
 
         try:
             with open(self._conf_file, encoding="utf-8") as f:
-                data = toml.load(f).get("general")
+                data = tomllib.loads(f.read()).get("general")
             if data is None:
                 raise RuntimeError  # noqa: TRY301
             self.activation = _verify_email(data.get("email"))
@@ -213,13 +213,14 @@ class Credentials:
         # Create intermediate directories if necessary
         os.makedirs(os.path.dirname(self._conf_file), exist_ok=True)
 
-        # Write the file
-        data = {"email": self.activation.email}
+        # tomli-w cannot serialize None, so an invalid email is omitted.
+        email = self.activation.email
+        data = {} if email is None else {"email": email}
 
-        import toml
+        import tomli_w
 
         with open(self._conf_file, "w", encoding="utf-8") as f:
-            toml.dump({"general": data}, f)
+            f.write(tomli_w.dumps({"general": data}))
 
         try:
             _send_email(self.activation.email)

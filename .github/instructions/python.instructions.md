@@ -6,7 +6,7 @@ applyTo: "**/*.py"
 
 # Python Development Guide
 
-- Supported Python versions: 3.10 - 3.14
+- Supported Python versions: 3.11 - 3.14
 - Docstrings: Numpy style
 - Linter: Ruff 0.x (config in root `pyproject.toml`)
 - Formatter: Ruff 0.x (config in root `pyproject.toml`)
@@ -26,7 +26,7 @@ applyTo: "**/*.py"
 - Prefer keyword arguments, use positional values only for required values that frame the API. Enhancing arguments should be keyword-only.
 - Capitalize comments, use proper grammar and punctuation, and no cursing.
 - Inside a module, anything that is declared at the root level MUST be prefixed with a _ if it's only used inside that module (anything private).
-- Prioritize new features in Python 3.10+.
+- Prioritize new features in Python 3.11+.
 
 ## Docstrings
 

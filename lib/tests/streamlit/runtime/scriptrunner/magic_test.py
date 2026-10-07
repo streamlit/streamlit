@@ -15,7 +15,6 @@
 """Magic unit test."""
 
 import ast
-import sys
 import unittest
 
 from streamlit.runtime.scriptrunner import magic
@@ -116,9 +115,6 @@ finally:
 """
         self._testCode(CODE_TRY_STATEMENT, 9)
 
-    @unittest.skipIf(
-        not sys.version_info >= (3, 11), "Not supported in this Python version"
-    )
     def test_try_star_statement(self):
         """Test try statements with except* clauses"""
         CODE_TRY_STAR_STATEMENT = """
@@ -145,9 +141,6 @@ finally:
 """
         self._testCode(CODE_TRY_STAR_STATEMENT, 9)
 
-    @unittest.skipIf(
-        not sys.version_info >= (3, 10), "Not supported in this Python version"
-    )
     def test_match_statement(self):
         """Test match statements"""
         CODE_MATCH_STATEMENT = """
