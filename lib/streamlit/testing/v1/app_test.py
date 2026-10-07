@@ -296,8 +296,8 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
-        # Hash installed by the previous run after navigation. A new PagesManager
-        # starts at "" and ScriptRunner treats that as a page change.
+        # Page hash at the end of the previous run. A new PagesManager starts at
+        # "", and ScriptRunner treats that mismatch as a page change.
         self._finished_page_script_hash = ""
         # Pages registered by the most recent run, used to resolve switch_page()
         # against st.navigation hashes (which follow url_path, not filename).
@@ -534,8 +534,13 @@ class AppTest:
         self._register_uploaded_files(script_runner)
 
         with patch_config_options({"global.appTest": True}):
+            # switch_page() sets _page_hash to the destination. An empty
+            # request stays on the page the previous run finished on. Sending
+            # "" would substitute the main-script hash, which does not match
+            # the url-path hash a multipage app finished on.
+            requested_page_hash = self._page_hash or self._finished_page_script_hash
             self._tree = script_runner.run(
-                widget_state, self.query_params, timeout, self._page_hash
+                widget_state, self.query_params, timeout, requested_page_hash
             )
             self._finished_page_script_hash = pages_manager.current_page_script_hash
             self._tree._runner = self

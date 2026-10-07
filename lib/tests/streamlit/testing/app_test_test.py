@@ -426,7 +426,10 @@ def test_switch_page_widgets():
 def test_page_persist_same_page_hide_show(
     persist_clause: str, kept_while_hidden: bool, value_after_show: str
 ) -> None:
-    """A same-page hide and show follows persist_state for a keyed text input."""
+    """A keyed text input keeps or drops its value when hidden and shown on the same page.
+
+    The result follows persist_state.
+    """
     script = (
         "import streamlit as st\n"
         'if st.toggle("Show", key="show"):\n'
@@ -509,6 +512,83 @@ def test_page_persist_pages_directory_same_page_hide_show(tmp_path: Path) -> Non
     )
 
     at = AppTest.from_file(app_script).run()
+    at.toggle[0].set_value(True).run()
+    at.text_input[0].set_value("SKU-42").run()
+    at.toggle[0].set_value(False).run()
+    assert at.session_state["sku"] == "SKU-42"
+    at.toggle[0].set_value(True).run()
+    assert at.text_input[0].value == "SKU-42"
+
+
+def test_keyed_tabs_on_change_rerun_survives_child_run_in_navigation() -> None:
+    """A keyed tab inside st.navigation stays selected after a child widget run."""
+
+    def script():
+        import streamlit as st
+
+        def home():
+            b = st.tabs(["A", "B"], key="section", on_change="rerun")[1]
+            if b.open:
+                st.text_input("Note", key="note")
+
+        st.navigation([st.Page(home, title="Home")]).run()
+
+    at = AppTest.from_function(script).run()
+    assert len(at.text_input) == 0
+
+    at.session_state["section"] = "B"
+    at.run()
+    at.text_input[0].set_value("kept").run()
+    assert at.session_state["section"] == "B"
+    assert at.get_by_key("section").proto.tab_container.default_tab_index == 1
+    assert at.text_input[0].value == "kept"
+
+
+def test_keyed_tabs_on_change_rerun_survives_child_run_in_pages_directory(
+    tmp_path: Path,
+) -> None:
+    """A keyed tab in a pages/ app stays selected after a child widget run."""
+    app_script = tmp_path / "app.py"
+    other_page = tmp_path / "pages" / "other.py"
+    other_page.parent.mkdir()
+    app_script.write_text(
+        "import streamlit as st\n"
+        'a, b = st.tabs(["A", "B"], key="section", on_change="rerun")\n'
+        "if b.open:\n"
+        '    st.text_input("Note", key="note")\n',
+        encoding="utf-8",
+    )
+    other_page.write_text(
+        'import streamlit as st\nst.text("other")\n',
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(app_script).run()
+    assert len(at.text_input) == 0
+
+    at.session_state["section"] = "B"
+    at.run()
+    at.text_input[0].set_value("kept").run()
+    assert at.session_state["section"] == "B"
+    assert at.get_by_key("section").proto.tab_container.default_tab_index == 1
+    assert at.text_input[0].value == "kept"
+
+
+def test_page_persist_before_navigation_same_page_hide_show() -> None:
+    """A page-scoped input before st.navigation keeps its value when hidden and shown."""
+
+    def script():
+        import streamlit as st
+
+        def home():
+            st.text("home")
+
+        if st.toggle("Show", key="show"):
+            st.text_input("SKU", key="sku", persist_state="page")
+
+        st.navigation([st.Page(home, title="Home")]).run()
+
+    at = AppTest.from_function(script).run()
     at.toggle[0].set_value(True).run()
     at.text_input[0].set_value("SKU-42").run()
     at.toggle[0].set_value(False).run()
