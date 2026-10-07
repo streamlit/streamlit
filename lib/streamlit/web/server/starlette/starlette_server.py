@@ -48,7 +48,7 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _package_version
 from typing import TYPE_CHECKING, Any, Final
 
-from packaging.version import InvalidVersion
+from packaging.version import InvalidVersion, Version
 
 from streamlit import config
 from streamlit.config_option import ConfigOption
@@ -222,11 +222,8 @@ def _websockets_uses_latin1_header_decode(websockets_version: str) -> bool:
     Combined with uvicorn < 0.52.0, that decode can abort /_stcore/stream when
     a reverse proxy forwards non-ASCII identity headers (#16030).
     """
-    if not is_version_less_than(websockets_version, "17"):
-        return True
-    return not is_version_less_than(
-        websockets_version, "16.1"
-    ) and is_version_less_than(websockets_version, "16.1.1")
+    version = Version(websockets_version)
+    return version >= Version("17") or Version("16.1") <= version < Version("16.1.1")
 
 
 def _maybe_warn_uvicorn_websockets_mismatch() -> None:
@@ -234,17 +231,20 @@ def _maybe_warn_uvicorn_websockets_mismatch() -> None:
     try:
         websockets_version = _package_version("websockets")
         uvicorn_version = _package_version("uvicorn")
-        if not _websockets_uses_latin1_header_decode(
+        is_affected = _websockets_uses_latin1_header_decode(
             websockets_version
-        ) or not is_version_less_than(uvicorn_version, "0.52.0"):
-            return
+        ) and is_version_less_than(uvicorn_version, "0.52.0")
     except (PackageNotFoundError, InvalidVersion):
         return
 
+    if not is_affected:
+        return
+
     _LOGGER.warning(
-        "Installed websockets %s with uvicorn %s can drop the /_stcore/stream "
+        "Installed websockets %s with uvicorn %s can abort the /_stcore/stream "
         "handshake when a reverse proxy forwards non-ASCII headers. "
-        "Upgrade uvicorn to >= 0.52.0.",
+        "Upgrade uvicorn to >= 0.52.0, or, on websockets 16.1, upgrade "
+        "websockets to >= 16.1.1 and < 17.",
         websockets_version,
         uvicorn_version,
     )

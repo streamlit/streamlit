@@ -467,8 +467,10 @@ class TestWarnUvicornWebsocketsMismatch:
 
         mock_warning.assert_called_once()
         message, logged_websockets, logged_uvicorn = mock_warning.call_args.args
+        assert "abort" in message
         assert "/_stcore/stream" in message
         assert "0.52.0" in message
+        assert "16.1.1" in message
         assert logged_websockets == websockets_version
         assert logged_uvicorn == uvicorn_version
 
