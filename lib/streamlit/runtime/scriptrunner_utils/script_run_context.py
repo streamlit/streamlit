@@ -84,9 +84,8 @@ in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "in_cached_function", default=False
 )
 
-# The fragment-callback warning skips the internal yield-point placeholder.
-# st.stop(), st.switch_page(), and body-level st.rerun() enqueue that
-# st.empty(), and the runner raises before the placeholder is sent.
+# True while execution_control enqueues its internal st.empty() yield point,
+# so the fragment-callback element warning ignores that write.
 _fragment_callback_warning_suppressed: contextvars.ContextVar[bool] = (
     contextvars.ContextVar("fragment_callback_warning_suppressed", default=False)
 )
@@ -211,7 +210,7 @@ def is_fragment_callback_warning_suppressed() -> bool:
 
 @contextlib.contextmanager
 def suppress_fragment_callback_warning() -> Generator[None, None, None]:
-    """Ignore the fragment-callback element warning for one internal write."""
+    """Suppress the fragment-callback element warning within this block."""
     token = _fragment_callback_warning_suppressed.set(True)
     try:
         yield

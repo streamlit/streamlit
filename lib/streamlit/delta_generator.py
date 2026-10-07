@@ -191,9 +191,10 @@ def _maybe_print_fragment_callback_warning() -> None:
     if not ctx or not ThreadState.get().in_fragment_callback:
         return
 
-    # The internal yield-point placeholder is not a user element: the runner
-    # discards it before send. Skip the warning for that write. Read the flag
-    # only on this path so ordinary element writes skip the ContextVar lookup.
+    # The internal yield-point placeholder is not a user element. The runner
+    # raises in _enqueue_forward_msg before sending it. Skip the warning for
+    # that write. Read the flag only on this path so ordinary element writes
+    # skip the ContextVar lookup.
     if is_fragment_callback_warning_suppressed():
         return
 

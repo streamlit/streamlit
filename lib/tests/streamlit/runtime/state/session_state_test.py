@@ -617,7 +617,7 @@ class WStateTests(unittest.TestCase):
             at = AppTest.from_function(script).run()
             at.button[0].click().run()
 
-            mock_logger.warning.assert_called()
+            mock_logger.warning.assert_called_once()
             warning_msg = mock_logger.warning.call_args[0]
             assert any(
                 "callback that displays one or more elements" in msg
