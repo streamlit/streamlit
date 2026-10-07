@@ -18,7 +18,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { ArrowTable } from "./ArrowTable"
 import { EXAMPLE_DF } from "./mock_data"
-import { Streamlit, Theme } from "./streamlit"
+import { Streamlit, type Theme } from "./streamlit"
 import { tick } from "./test_utils"
 
 const dispatchMessage = (data: Record<string, unknown>): void => {
@@ -322,6 +322,47 @@ describe("Streamlit", () => {
     expect(arrowTable.columns).toEqual(4)
     expect(arrowTable.headerRows).toEqual(1)
     expect(arrowTable.headerColumns).toEqual(1)
+  })
+
+  it("keeps a __proto__ dataframe key as an own property", async () => {
+    const streamlitEventsListener = vi.fn()
+    Streamlit.events.addEventListener(
+      "streamlit:render",
+      streamlitEventsListener
+    )
+    Streamlit.setComponentReady()
+
+    dispatchMessage({
+      type: "streamlit:render",
+      args: {},
+      dfs: [
+        {
+          key: "__proto__",
+          value: {
+            data: {
+              data: EXAMPLE_DF.data,
+              index: EXAMPLE_DF.index,
+              columns: EXAMPLE_DF.columns,
+            },
+          },
+        },
+      ],
+    })
+    await tick()
+
+    expect(streamlitEventsListener.mock.calls).toHaveLength(1)
+    const renderEvent = streamlitEventsListener.mock.calls[0][0]
+    expect(Object.hasOwn(renderEvent.detail.args, "__proto__")).toBe(true)
+    expect(Object.getPrototypeOf(renderEvent.detail.args)).toBe(
+      Object.prototype
+    )
+    expect(({} as { rows?: number }).rows).toBeUndefined()
+    const arrowTable = Object.getOwnPropertyDescriptor(
+      renderEvent.detail.args,
+      "__proto__"
+    )?.value
+    expect(arrowTable.rows).toEqual(6)
+    expect(arrowTable.columns).toEqual(4)
   })
 
   it("The parent frame can disable component", async () => {

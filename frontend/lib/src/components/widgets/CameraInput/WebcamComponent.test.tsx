@@ -21,7 +21,10 @@ import Webcam from "react-webcam"
 import { render } from "~lib/test_util"
 
 import { FacingMode } from "./SwitchFacingModeButton"
-import WebcamComponent, { Props, WebcamPermission } from "./WebcamComponent"
+import WebcamComponent, {
+  type Props,
+  WebcamPermission,
+} from "./WebcamComponent"
 
 vi.mock("react-webcam")
 
@@ -146,6 +149,12 @@ describe("Test Webcam Component", () => {
       screen.getByTestId("stCameraInputWebcamComponent")
     ).toBeInTheDocument()
     expect(screen.getByTestId("stCameraInputSwitchButton")).toBeInTheDocument()
+    expect(
+      within(screen.getByTestId("stCameraInputSwitchButton")).getByRole(
+        "button",
+        { name: "Switch camera" }
+      )
+    ).toBeVisible()
   })
 
   it("changes `facingMode` when SwitchFacingMode button clicked", async () => {

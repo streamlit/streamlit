@@ -15,11 +15,11 @@
  */
 import { getLogger } from "loglevel"
 
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import type { IframeMessage } from "./componentUtils"
-import { ComponentMessageType } from "./enums"
+import type { ComponentMessageType } from "./enums"
 
 type ComponentMessageListener = (
   type: ComponentMessageType,
@@ -107,9 +107,11 @@ export class ComponentRegistry {
   }
 
   private readonly onMessageEvent = (event: MessageEvent): void => {
+    const payload: unknown = event.data
     if (
-      isNullOrUndefined(event.data) ||
-      !Object.hasOwn(event.data, "isStreamlitMessage")
+      isNullOrUndefined(payload) ||
+      typeof payload !== "object" ||
+      !Object.hasOwn(payload, "isStreamlitMessage")
     ) {
       // Disregard messages that don't come from components.
       return
@@ -117,7 +119,7 @@ export class ComponentRegistry {
 
     if (isNullOrUndefined(event.source)) {
       // This should not be possible.
-      LOG.warn(`Received component message with no eventSource!`, event.data)
+      LOG.warn(`Received component message with no eventSource!`, payload)
       return
     }
 
@@ -126,18 +128,18 @@ export class ComponentRegistry {
     if (isNullOrUndefined(listener) || typeof listener !== "function") {
       LOG.warn(
         `Received component message for unregistered ComponentInstance!`,
-        event.data
+        payload
       )
       return
     }
 
-    const { type } = event.data
+    const type = (payload as { type?: unknown }).type
     if (isNullOrUndefined(type)) {
-      LOG.warn(`Received Streamlit message with no type!`, event.data)
+      LOG.warn(`Received Streamlit message with no type!`, payload)
       return
     }
 
     // Forward the message on to the appropriate ComponentInstance.
-    listener(type, event.data)
+    listener(type as ComponentMessageType, payload as IframeMessage)
   }
 }

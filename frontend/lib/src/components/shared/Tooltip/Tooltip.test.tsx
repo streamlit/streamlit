@@ -18,7 +18,7 @@ import {
   act,
   cleanup,
   renderHook,
-  RenderResult,
+  type RenderResult,
   screen,
 } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -26,7 +26,7 @@ import { useFocusVisible } from "react-aria"
 
 import { render } from "~lib/test_util"
 
-import Tooltip, { Placement, TooltipProps } from "./Tooltip"
+import Tooltip, { Placement, type TooltipProps } from "./Tooltip"
 
 const getProps = (
   propOverrides: Partial<TooltipProps> = {}

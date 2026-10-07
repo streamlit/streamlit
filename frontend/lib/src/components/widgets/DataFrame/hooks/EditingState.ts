@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { GridCell } from "@glideapps/glide-data-grid"
+import type { GridCell } from "@glideapps/glide-data-grid"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   isMissingValueCell,
 } from "~lib/components/widgets/DataFrame/columns"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
@@ -133,7 +133,7 @@ class EditingState {
 
     // Convert undefined values to null, otherwise this is removed here since
     // undefined does not exist in JSON.
-    const json = JSON.stringify(currentState, (_k, v) =>
+    const json = JSON.stringify(currentState, (_k, v: unknown) =>
       v === undefined ? null : v
     )
     return json
@@ -152,7 +152,11 @@ class EditingState {
     this.deletedRows = []
 
     // Parse JSON editing string:
-    const editingState = JSON.parse(editingStateJson)
+    const editingState = JSON.parse(editingStateJson) as {
+      edited_rows: Record<string, Record<string, unknown>>
+      added_rows: Record<string, unknown>[]
+      deleted_rows: number[]
+    }
     // Map columns to column index
     const columnsByIndex = new Map<number, BaseColumn>()
     columns.forEach(column => {

@@ -22,9 +22,9 @@
 
 import type { AxiosProgressEvent } from "axios"
 
-import { type AppPage, ForwardMsg } from "@streamlit/protobuf"
+import type { AppPage, ForwardMsg } from "@streamlit/protobuf"
 
-import { ConnectionState } from "./ConnectionState"
+import type { ConnectionState } from "./ConnectionState"
 
 export type OnMessage = (ForwardMsg: ForwardMsg) => void
 

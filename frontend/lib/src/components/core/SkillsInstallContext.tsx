@@ -16,7 +16,7 @@
 
 import {
   createContext,
-  RefObject,
+  type RefObject,
   useContext,
   useLayoutEffect,
   useRef,

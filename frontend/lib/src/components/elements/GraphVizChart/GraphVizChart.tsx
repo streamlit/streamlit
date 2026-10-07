@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect } from "react"
+import { memo, type ReactElement, useEffect } from "react"
 
-import { Engine, graphviz } from "d3-graphviz"
+import { type Engine, graphviz } from "d3-graphviz"
 import { getLogger } from "loglevel"
 
-import {
+import type {
   GraphVizChart as GraphVizChartProto,
   streamlit,
 } from "@streamlit/protobuf"
@@ -173,6 +173,7 @@ function GraphVizChart({
         onExpand={expand}
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
+        labelContext={accessibleName}
       ></Toolbar>
       <StyledGraphVizChart
         className="stGraphVizChart"

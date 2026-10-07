@@ -29,7 +29,7 @@ from starlette.routing import Route
 import streamlit as st
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator
 
     from starlette.requests import Request
 
@@ -111,7 +111,7 @@ async def custom_api_error_handler(
 
 # --- Lifespan hooks ---
 @asynccontextmanager
-async def lifespan(app: st.App) -> AsyncIterator[dict[str, Any]]:  # noqa: ARG001
+async def lifespan(app: st.App) -> AsyncGenerator[dict[str, Any], None]:  # noqa: ARG001
     """Track startup and shutdown events via lifespan context manager."""
     _lifespan_events.append("startup")
     yield {"initialized": True}

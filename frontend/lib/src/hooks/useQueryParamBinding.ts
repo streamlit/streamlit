@@ -16,7 +16,7 @@
 
 import { useEffect } from "react"
 
-import {
+import type {
   DateType,
   WidgetStateManager,
   WidgetValueType,

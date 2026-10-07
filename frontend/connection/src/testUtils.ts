@@ -16,7 +16,7 @@
 
 import type { AppPage } from "@streamlit/protobuf"
 
-import { StreamlitEndpoints } from "./types"
+import type { StreamlitEndpoints } from "./types"
 
 /** Return a mock StreamlitEndpoints implementation. */
 export function mockEndpoints(

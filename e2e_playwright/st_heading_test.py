@@ -522,8 +522,11 @@ def test_wrap_false_ellipsizes_headings_and_sets_title(
     expect(wrap_true.get_by_title(WRAP_TEXT, exact=True)).to_have_count(0)
 
     extra_lines = get_element_by_key(app, "wrap_false_heading_extra_lines")
+    extra_first_line = "First line versus plan for the complete fiscal year dashboard"
     expect(extra_lines.get_by_text("Second line that must not appear")).to_have_count(0)
-    expect(extra_lines.get_by_title("First line", exact=True)).to_be_visible()
+    expect(extra_lines.get_by_title(extra_first_line, exact=True)).to_be_visible()
     expect(
-        extra_lines.get_by_title("First line\nSecond line that must not appear")
+        extra_lines.get_by_title(
+            f"{extra_first_line}\nSecond line that must not appear"
+        )
     ).to_have_count(0)

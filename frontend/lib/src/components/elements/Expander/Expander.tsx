@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useState } from "react"
+import { memo, type ReactElement, useCallback, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import {
+  DynamicIcon,
+  getIconAccessibleName,
+} from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  StepIconTone,
+  type StepIconTone,
   StyledDetails,
   StyledDetailsPanel,
   StyledExpandableContainer,
@@ -102,6 +105,29 @@ function resolveStepIcon(
   return icon
     ? { iconValue: icon, tone: "default" }
     : { iconValue: DEFAULT_STEP_ICON, tone: "muted" }
+}
+
+/** Accessible name for an expander whose Markdown label renders no text. */
+function resolveBlankLabelName(
+  label: string,
+  icon: string,
+  isStep: boolean,
+  hasStepState: boolean
+): string | undefined {
+  if (label.trim()) {
+    return undefined
+  }
+  // st.status always encodes progress into `icon`. For status steps that
+  // would duplicate the appended state text ("Loading — running" / "check
+  // icon — complete"); use the stable "Step" fallback instead. Blank-label
+  // expander steps with a user icon (no status state) still name from icon.
+  if (isStep && hasStepState) {
+    return "Step"
+  }
+  if (icon) {
+    return getIconAccessibleName(icon)
+  }
+  return isStep ? "Step" : "Expander"
 }
 
 interface ExpanderIconProps {
@@ -268,6 +294,15 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const stepState = STEP_STATES[state]
   const stepIcon = resolveStepIcon(stepState, icon)
   const stepStateLabel = isStep ? stepState?.stateLabel : undefined
+  // Material/emoji icons and chevrons are aria-hidden. Inject a content-based
+  // name (not aria-label) when the markdown label is blank so step status
+  // text (" — running") can still append to the accessible name.
+  const blankLabelAccessibleName = resolveBlankLabelName(
+    label,
+    icon,
+    isStep,
+    Boolean(stepState)
+  )
 
   const summaryHeading = (
     <StyledSummaryHeading expanderType={type}>
@@ -315,8 +350,12 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
         <StreamlitMarkdown source={label} allowHTML={false} isLabel />
       </StyledSummaryLabelWrapper>
 
+      {blankLabelAccessibleName && (
+        <StyledVisuallyHidden>{blankLabelAccessibleName}</StyledVisuallyHidden>
+      )}
+
       {/* Append the state as hidden text rather than setting an aria-label:
-          this keeps the rendered markdown label as the accessible name, and it
+          this keeps the markdown or injected empty-label name, and it
           also reaches non-collapsible steps, which ignore aria-label. */}
       {stepStateLabel && (
         <StyledVisuallyHidden>{` — ${stepStateLabel}`}</StyledVisuallyHidden>

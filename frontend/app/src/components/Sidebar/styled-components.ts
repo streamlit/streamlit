@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+import { type EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 
 import {
   getSidebarResizeHandleBackgroundImage,
@@ -54,8 +54,12 @@ interface StyledSidebarProps {
 
 export const StyledSidebar = styled.section<StyledSidebarProps>(
   ({ theme, isCollapsed, adjustTop, sidebarWidth, windowInnerWidth }) => {
-    const minWidth = isCollapsed ? 0 : Math.min(200, windowInnerWidth)
-    const maxWidth = isCollapsed ? 0 : Math.min(600, windowInnerWidth * 0.9)
+    const minWidth = isCollapsed
+      ? 0
+      : `min(${theme.sizes.minSidebarWidth}, ${windowInnerWidth}px)`
+    const maxWidth = isCollapsed
+      ? 0
+      : `min(${theme.sizes.maxSidebarWidth}, ${windowInnerWidth * 0.9}px)`
 
     return {
       position: "relative",

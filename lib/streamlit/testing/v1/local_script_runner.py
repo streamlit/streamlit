@@ -210,10 +210,11 @@ class LocalScriptRunner(ScriptRunner):
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
-        # Remove orphaned files now that the script has run and files in use
-        # are marked as active. Skipped for a run that never reached its body, which
-        # re-registered nothing and would look like everything is orphaned.
-        if ctx.has_script_started:
+        # Skip orphan cleanup when:
+        # - The body never ran (nothing was re-registered, so everything
+        #   would look orphaned)
+        # - No Runtime exists (get_instance() would raise)
+        if ctx.has_script_started and runtime.exists():
             runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
     def _new_module(self, name: str) -> types.ModuleType:

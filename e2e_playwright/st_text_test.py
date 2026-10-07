@@ -151,7 +151,10 @@ def test_wrap_false_ellipsizes_text_and_sets_title(
     assert_snapshot(no_wrap_container, name="st_text-wrap_false")
 
 
-WRAP_NEWLINE_TEXT = "Line one Line two Line three extra"
+WRAP_NEWLINE_TEXT = (
+    "Line one Line two Line three extra versus plan "
+    "for the complete fiscal year dashboard"
+)
 
 
 def test_wrap_false_collapses_text_newlines(app: Page):
@@ -162,6 +165,7 @@ def test_wrap_false_collapses_text_newlines(app: Page):
     wraps = wrap_container.get_by_test_id("stText")
     single_line = get_element_by_key(app, "wrap_false_text").get_by_test_id("stText")
 
+    # The joined line is clipped, so the title is the collapsed text.
     expect(
         no_wrap_container.get_by_title(WRAP_NEWLINE_TEXT, exact=True)
     ).to_be_visible()

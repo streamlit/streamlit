@@ -70,7 +70,7 @@ streamlit run app.py --server.port=8080
 streamlit run app.py --server.headless=true
 streamlit run app.py --server.runOnSave=true
 streamlit run app.py --server.address=0.0.0.0
-streamlit run app.py --client.showErrorDetails=false
+streamlit run app.py --client.showErrorDetails=none
 streamlit run app.py --theme.primaryColor=blue
 ```
 
@@ -81,7 +81,7 @@ streamlit run app.py \
     --server.port=8080 \
     --server.headless=true \
     --theme.primaryColor=blue \
-    --client.showErrorDetails=false
+    --client.showErrorDetails=none
 ```
 
 ## Passing arguments to your script

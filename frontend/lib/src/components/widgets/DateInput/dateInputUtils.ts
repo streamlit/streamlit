@@ -22,7 +22,7 @@ import {
 } from "@internationalized/date"
 import type { DateSegment as IDateSegment } from "react-stately"
 
-import { DateInput as DateInputProto } from "@streamlit/protobuf"
+import type { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 /**
  * Date utilities using `@internationalized/date`. Wire format is always

@@ -37,6 +37,7 @@ from e2e_playwright.load_testing.metrics_collector import (
 from e2e_playwright.shared.git_utils import get_git_root
 
 _SCENARIOS_DIR: Final = Path(__file__).parent / "scenarios"
+_LOAD_TEST_SERVER_START_ATTEMPTS: Final = 3
 
 
 @dataclass
@@ -172,12 +173,6 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # n
         print(f"\nCombined results written to: {filepath}")
 
 
-@pytest.fixture
-def load_test_port() -> int:
-    """Get an available port for the load test server."""
-    return find_available_port()
-
-
 def get_scenario_path(scenario_name: str) -> Path:
     """Get the path to a scenario script."""
     script_path = _SCENARIOS_DIR / f"{scenario_name}.py"
@@ -226,14 +221,60 @@ def start_load_test_server(
     )
 
 
-def wait_for_server(port: int, timeout: int = 60) -> bool:
+def wait_for_server(
+    port: int,
+    timeout: int = 60,
+    *,
+    process: subprocess.Popen[str] | None = None,
+) -> bool:
     """Wait for the server to become ready."""
     start = time.time()
     while time.time() - start < timeout:
         if is_app_server_running(port):
             return True
+        # Health will never come up if the child already exited.
+        if process is not None and process.poll() is not None:
+            return False
         time.sleep(0.5)
     return False
+
+
+def terminate_process(process: subprocess.Popen[str], timeout: int = 10) -> None:
+    """Terminate a process, falling back to kill if it doesn't respond."""
+    process.terminate()
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+
+
+def start_healthy_load_test_server(
+    scenario_path: Path,
+    *,
+    max_attempts: int = _LOAD_TEST_SERVER_START_ATTEMPTS,
+) -> tuple[subprocess.Popen[str], int]:
+    """Start a load-test server, retrying on a new port if health never comes up.
+
+    Returns the process and the port that became healthy.
+
+    Raises
+    ------
+    RuntimeError
+        If every attempt fails its health check.
+    """
+    tried_ports: list[int] = []
+    for _ in range(max_attempts):
+        port = find_available_port()
+        tried_ports.append(port)
+        process = start_load_test_server(port, scenario_path)
+        if wait_for_server(port, process=process):
+            return process, port
+        terminate_process(process)
+
+    raise RuntimeError(
+        f"Server failed to start after {max_attempts} attempts (ports: {tried_ports})"
+    )
 
 
 def _run_git_command(args: list[str]) -> str:

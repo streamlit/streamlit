@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactNode } from "react"
+import type { ReactNode } from "react"
 
 import {
   act,
@@ -32,6 +32,38 @@ import { encodeToWav } from "./encodeToWav"
 import type { StopResult } from "./types"
 import { useWaveformController } from "./useWaveformController"
 
+const loadWaveSurferModulesTest = vi.hoisted(() => {
+  let delayedLoad: (() => Promise<unknown>) | null = null
+
+  const loadActual = async (): Promise<unknown> => {
+    const [WaveSurferModule, RecordPluginModule] = await Promise.all([
+      import("wavesurfer.js"),
+      import("wavesurfer.js/dist/plugins/record.js"),
+    ])
+    return {
+      WaveSurfer: WaveSurferModule.default,
+      RecordPluginClass: RecordPluginModule.default,
+    }
+  }
+
+  return {
+    setDelayedLoad: (impl: typeof delayedLoad): void => {
+      delayedLoad = impl
+    },
+    loadActual,
+    loadWaveSurferModules: vi.fn(async () => {
+      if (delayedLoad) {
+        return delayedLoad()
+      }
+      return loadActual()
+    }),
+  }
+})
+
+vi.mock("~lib/components/audio/core/loadWaveSurferModules", () => ({
+  loadWaveSurferModules: loadWaveSurferModulesTest.loadWaveSurferModules,
+}))
+
 // Mock WaveSurfer and RecordPlugin
 vi.mock("wavesurfer.js", () => ({
   default: {
@@ -39,7 +71,7 @@ vi.mock("wavesurfer.js", () => ({
   },
 }))
 
-vi.mock("wavesurfer.js/dist/plugins/record", () => ({
+vi.mock("wavesurfer.js/dist/plugins/record.js", () => ({
   default: {
     create: vi.fn(),
   },
@@ -266,7 +298,7 @@ describe("useWaveformController", () => {
 
     const WaveSurferModule = await import("wavesurfer.js")
     const RecordPluginModule =
-      await import("wavesurfer.js/dist/plugins/record")
+      await import("wavesurfer.js/dist/plugins/record.js")
 
     // Mock the WaveSurfer.create to return our mock instance
     const createMock = WaveSurferModule.default.create as ReturnType<
@@ -366,7 +398,7 @@ describe("useWaveformController", () => {
 
     const WaveSurferModule = await import("wavesurfer.js")
     const RecordPluginModule =
-      await import("wavesurfer.js/dist/plugins/record")
+      await import("wavesurfer.js/dist/plugins/record.js")
 
     const createMock = WaveSurferModule.default.create as ReturnType<
       typeof vi.fn
@@ -458,7 +490,7 @@ describe("useWaveformController", () => {
 
       const WaveSurferModule = await import("wavesurfer.js")
       const RecordPluginModule =
-        await import("wavesurfer.js/dist/plugins/record")
+        await import("wavesurfer.js/dist/plugins/record.js")
       ;(
         WaveSurferModule.default.create as ReturnType<typeof vi.fn>
       ).mockReturnValue(mockWaveSurfer)
@@ -503,6 +535,8 @@ describe("useWaveformController", () => {
 
     afterEach(() => {
       vi.unstubAllGlobals()
+      loadWaveSurferModulesTest.setDelayedLoad(null)
+      vi.useRealTimers()
     })
 
     const startRecording = async (result: {
@@ -678,6 +712,124 @@ describe("useWaveformController", () => {
 
       expect(mockWaveSurfer.load).toHaveBeenCalledWith("blob:mock-url")
       expect(mockWaveSurfer.seekTo).toHaveBeenCalledWith(0)
+    })
+
+    it("waits for in-flight WaveSurfer init before playback.load", async () => {
+      const { result } = renderHook(
+        () =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+          }),
+        { wrapper }
+      )
+
+      await act(async () => {
+        await result.current.playback.load(new Blob(["audio"]))
+      })
+
+      expect(mockWaveSurfer.load).toHaveBeenCalledWith("blob:mock-url")
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+    })
+
+    it("keeps start() waiting when sampleRate changes during import", async () => {
+      const releaseImport: Array<() => void> = []
+      loadWaveSurferModulesTest.setDelayedLoad(async () => {
+        await new Promise<void>(resolve => {
+          releaseImport.push(resolve)
+        })
+        return loadWaveSurferModulesTest.loadActual()
+      })
+
+      const WaveSurferModule = await import("wavesurfer.js")
+      const createMock = WaveSurferModule.default.create as ReturnType<
+        typeof vi.fn
+      >
+      createMock.mockClear()
+      createMock.mockReturnValue(mockWaveSurfer)
+
+      const { result, rerender } = renderHook(
+        ({ sampleRate }: { sampleRate: number }) =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+            sampleRate,
+          }),
+        { wrapper, initialProps: { sampleRate: 16000 } }
+      )
+
+      expect(releaseImport).toHaveLength(1)
+
+      let startResult: Promise<void> = Promise.resolve()
+      act(() => {
+        startResult = result.current.start()
+      })
+
+      rerender({ sampleRate: 8000 })
+      expect(releaseImport).toHaveLength(2)
+
+      await act(async () => {
+        releaseImport[0]()
+        await Promise.resolve()
+      })
+
+      expect(createMock).not.toHaveBeenCalled()
+      expect(mockRecordPlugin.startRecording).not.toHaveBeenCalled()
+
+      await act(async () => {
+        releaseImport[1]()
+        await startResult
+      })
+
+      expect(createMock).toHaveBeenCalledTimes(1)
+      expect(mockRecordPlugin.startRecording).toHaveBeenCalledWith({
+        sampleRate: { ideal: 8000 },
+      })
+      expect(result.current.state).toBe("recording")
+      expect(mockEvents.onError).not.toHaveBeenCalled()
+    })
+
+    it("creates only the latest WaveSurfer when sampleRate changes during import", async () => {
+      vi.useFakeTimers()
+      loadWaveSurferModulesTest.setDelayedLoad(async () => {
+        await new Promise<void>(resolve => {
+          setTimeout(resolve, 50)
+        })
+        return loadWaveSurferModulesTest.loadActual()
+      })
+
+      const WaveSurferModule = await import("wavesurfer.js")
+      const createMock = WaveSurferModule.default.create as ReturnType<
+        typeof vi.fn
+      >
+      createMock.mockClear()
+      createMock.mockReturnValue(mockWaveSurfer)
+
+      const { result, rerender } = renderHook(
+        ({ sampleRate }: { sampleRate: number }) =>
+          useWaveformController({
+            containerRef: mockContainerRef,
+            events: mockEvents,
+            sampleRate,
+          }),
+        { wrapper, initialProps: { sampleRate: 16000 } }
+      )
+
+      rerender({ sampleRate: 8000 })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(50)
+      })
+
+      expect(createMock).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        await result.current.start()
+      })
+
+      expect(mockRecordPlugin.startRecording).toHaveBeenCalledWith({
+        sampleRate: { ideal: 8000 },
+      })
     })
 
     it("cancels an in-progress recording and resets the player", async () => {

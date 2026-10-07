@@ -44,8 +44,7 @@ import * as ReactJsonViewModule from "@microlink/react-json-view"
 
 import { resolveDefaultExport } from "./resolveDefaultExport"
 
-type ReactJsonViewComponent =
-  (typeof import("@microlink/react-json-view"))["default"]
+type ReactJsonViewComponent = (typeof ReactJsonViewModule)["default"]
 
 const ReactJsonView = resolveDefaultExport(
   ReactJsonViewModule

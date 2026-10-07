@@ -15,9 +15,9 @@
  */
 
 import {
-  MouseEvent,
-  ReactElement,
-  ReactNode,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -27,7 +27,7 @@ import {
 
 import { getLogger } from "loglevel"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   isMobile,
   NavigationContext,

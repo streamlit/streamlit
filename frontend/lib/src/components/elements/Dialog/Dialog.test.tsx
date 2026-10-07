@@ -23,7 +23,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Dialog, { Props as DialogProps } from "./Dialog"
+import Dialog, { type Props as DialogProps } from "./Dialog"
 
 const getProps = (
   elementProps: Partial<BlockProto.Dialog> = {},
@@ -296,6 +296,53 @@ describe("Dialog container", () => {
         expect(modal).toBeVisible()
 
         // Verify dialog content is rendered
+        expect(screen.getByText("test")).toBeVisible()
+      }
+    )
+  })
+
+  describe("dialog position", () => {
+    it("renders a centered dialog when position is omitted", () => {
+      const props = getProps()
+      // Simulate a payload that never set the enum. protobufjs keeps the
+      // proto3 default on the prototype, so `delete` would be a no-op.
+      Object.defineProperty(props.element, "position", { value: undefined })
+      render(
+        <Dialog {...props}>
+          <div>test</div>
+        </Dialog>
+      )
+
+      expect(screen.getByTestId("stDialog")).toHaveStyle({
+        justifyContent: "center",
+      })
+      expect(screen.getByText("test")).toBeVisible()
+    })
+
+    it.each([
+      {
+        position: BlockProto.Dialog.DialogPosition.CENTER,
+        justifyContent: "center",
+      },
+      {
+        position: BlockProto.Dialog.DialogPosition.LEFT,
+        justifyContent: "flex-start",
+      },
+      {
+        position: BlockProto.Dialog.DialogPosition.RIGHT,
+        justifyContent: "flex-end",
+      },
+    ])(
+      "places a $position dialog with overlay justifyContent $justifyContent",
+      ({ position, justifyContent }) => {
+        const props = getProps({ position })
+        render(
+          <Dialog {...props}>
+            <div>test</div>
+          </Dialog>
+        )
+
+        expect(screen.getByTestId("stDialog")).toHaveStyle({ justifyContent })
         expect(screen.getByText("test")).toBeVisible()
       }
     )

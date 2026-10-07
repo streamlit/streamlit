@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { Element } from "@streamlit/protobuf"
+import type { Element } from "@streamlit/protobuf"
 
-import { AppNode } from "~lib/render-tree/AppNode.interface"
-import { BlockNode } from "~lib/render-tree/BlockNode"
-import { ElementNode } from "~lib/render-tree/ElementNode"
-import { TransientNode } from "~lib/render-tree/TransientNode"
+import type { AppNode } from "~lib/render-tree/AppNode.interface"
+import type { BlockNode } from "~lib/render-tree/BlockNode"
+import type { ElementNode } from "~lib/render-tree/ElementNode"
+import type { TransientNode } from "~lib/render-tree/TransientNode"
 import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 /**

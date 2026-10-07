@@ -14,12 +14,18 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, ReactNode, useCallback, useMemo } from "react"
+import {
+  memo,
+  type ReactElement,
+  type ReactNode,
+  useCallback,
+  useMemo,
+} from "react"
 
 import {
   createElement,
   Prism as SyntaxHighlighter,
-  SyntaxHighlighterProps,
+  type SyntaxHighlighterProps,
 } from "react-syntax-highlighter"
 
 import { isNullOrUndefined } from "@streamlit/utils"

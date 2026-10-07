@@ -981,6 +981,7 @@ class DataEditorStableIdTest(DeltaGeneratorTestCase):
             column_config={"a": "A"},
             row_height=25,
             placeholder="Empty",
+            alt="First description",
         )
         id2 = self._get_id(
             df,
@@ -991,6 +992,7 @@ class DataEditorStableIdTest(DeltaGeneratorTestCase):
             column_config={"a": "Renamed A"},
             row_height=35,
             placeholder="Nothing here",
+            alt="A totally different description",
         )
 
         assert id1 == id2
@@ -1119,6 +1121,58 @@ class DataEditorTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.dataframe
         assert proto.placeholder == "N/A"
+
+    def test_data_editor_marshals_nonempty_alt_and_omits_blank_values(self) -> None:
+        """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
+        df = pd.DataFrame({"A": [1, 2]})
+
+        st.data_editor(df, alt="Editable customer list")
+        el = self.get_delta_from_queue().new_element.dataframe
+        assert el.HasField("alt")
+        assert el.alt == "Editable customer list"
+
+        # Each call below produces the same element ID, so clear the registry
+        # to avoid a duplicate-ID error.
+        self.script_run_ctx.shared.widget_ids_this_run.clear()
+        st.data_editor(df)
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+        self.script_run_ctx.shared.widget_ids_this_run.clear()
+        st.data_editor(df, alt=None)
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+        self.script_run_ctx.shared.widget_ids_this_run.clear()
+        st.data_editor(df, alt="")
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+        self.script_run_ctx.shared.widget_ids_this_run.clear()
+        st.data_editor(df, alt="  ")
+        assert not self.get_delta_from_queue().new_element.dataframe.HasField("alt")
+
+    def test_data_editor_alt_strips_whitespace(self) -> None:
+        """Leading and trailing whitespace is stripped from alt."""
+        st.data_editor(pd.DataFrame({"A": [1]}), alt="  Editable list  ")
+        el = self.get_delta_from_queue().new_element.dataframe
+        assert el.HasField("alt")
+        assert el.alt == "Editable list"
+
+    def test_data_editor_alt_is_included_in_element_id(self) -> None:
+        """Changing only alt remounts the data editor."""
+        df = pd.DataFrame({"A": [1, 2]})
+
+        def editor_id(**kwargs: object) -> str:
+            # Each call below produces the same element ID, so clear the registry
+            # to avoid a duplicate-ID error.
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.data_editor(df, **kwargs)
+            return self.get_delta_from_queue().new_element.dataframe.id
+
+        with_alt = editor_id(alt="First description")
+        with_other_alt = editor_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt != with_other_alt
+        assert editor_id(alt="First description") == with_alt
 
     def test_just_use_container_width(self):
         """Test that use_container_width parameter works and shows deprecation warning."""

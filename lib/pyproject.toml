@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.64.0"
+version = "1.65.0"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
@@ -110,7 +110,7 @@ snowflake = [
   "snowflake-connector-python>=3.3.0",
 ]
 # Optional dependency required for PDF rendering:
-pdf = ["streamlit-pdf>=1.0.0"]
+pdf = ["streamlit-pdf>=2.1.0"]
 # Optional dependencies required for auth:
 auth = [
   "Authlib>=1.3.2",

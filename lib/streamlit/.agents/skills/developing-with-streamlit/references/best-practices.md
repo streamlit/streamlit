@@ -52,13 +52,27 @@ query = st.text_input(
 )
 ```
 
+Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short and specific; see [media-display.md](media-display.md) and [data-display.md](data-display.md).
+
+```python
+# BAD: Meaningful image with no alt
+st.image("revenue.png", caption="Q3 revenue")
+
+# GOOD: Short accessible name, independent of caption
+st.image(
+    "revenue.png",
+    caption="Q3 revenue",
+    alt="Bar chart of monthly Q3 revenue rising to $1.2M in September",
+)
+```
+
 ## HTML and iframes
 
 Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or deprecated `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
 
 Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` commands.
 
-- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command.
+- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command. Pass `alt=` to set the iframe `title`. The default is a shared `"st.iframe"` name on every embed.
 - Use `st.html` for static HTML or CSS that should render directly in the app instead of inside an iframe. JavaScript is ignored by default; only enable it with `unsafe_allow_javascript=True` when necessary, and never enable it for untrusted content.
 
 ## Layout
@@ -133,7 +147,7 @@ import streamlit as st
 from utils.data import load_sales
 
 st.title("Sales")
-st.line_chart(load_sales())
+st.line_chart(load_sales(), alt="Sales over time")
 ```
 
 ## Performance
@@ -250,13 +264,15 @@ if details.open:
 
 ## Data and charts
 
-Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart rather than a third-party component.
+Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description).
 
 ```python
 # GOOD: Native charts for common cases
-st.line_chart(df, x="date", y="revenue")
-st.bar_chart(df, x="category", y="orders")
-st.scatter_chart(df, x="revenue", y="margin", color="segment")
+st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
+st.bar_chart(df, x="category", y="orders", alt="Orders by category")
+st.scatter_chart(
+    df, x="revenue", y="margin", color="segment", alt="Margin versus revenue by segment"
+)
 
 # GOOD: Altair for complex charts
 chart = (
@@ -268,7 +284,7 @@ chart = (
         color="region:N",
     )
 )
-st.altair_chart(chart)
+st.altair_chart(chart, alt="Revenue by region over time")
 ```
 
 Keep sensitive data out of frontend payloads. Hiding a dataframe column only hides it visually; pre-filter sensitive columns before display.

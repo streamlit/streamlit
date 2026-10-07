@@ -15,13 +15,13 @@
  */
 
 import {
-  BaseGridCell,
-  Theme as GlideTheme,
-  GridCell,
+  type BaseGridCell,
+  type Theme as GlideTheme,
+  type GridCell,
   GridCellKind,
-  GridColumn,
-  LoadingCell,
-  TextCell,
+  type GridColumn,
+  type LoadingCell,
+  type TextCell,
 } from "@glideapps/glide-data-grid"
 import { Vector } from "apache-arrow"
 import { isString, merge, toString } from "lodash-es"
@@ -30,7 +30,7 @@ import "moment-duration-format"
 import "moment-timezone"
 import numbro from "numbro"
 
-import { ArrowType } from "~lib/dataframes/arrowTypeUtils"
+import type { ArrowType } from "~lib/dataframes/arrowTypeUtils"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
@@ -350,7 +350,8 @@ export function toSafeArray(data: unknown): unknown[] {
     if (data.trim().startsWith("[") && data.trim().endsWith("]")) {
       // Support for JSON arrays: ["foo", 1, null, "test"]
       try {
-        return JSON.parse(data)
+        const parsed: unknown = JSON.parse(data)
+        return Array.isArray(parsed) ? parsed : [data]
       } catch {
         return [data]
       }
@@ -361,8 +362,8 @@ export function toSafeArray(data: unknown): unknown[] {
   }
 
   try {
-    const parsedData = JSON.parse(
-      JSON.stringify(data, (_key, value) =>
+    const parsedData: unknown = JSON.parse(
+      JSON.stringify(data, (_key, value: unknown) =>
         typeof value === "bigint" ? Number(value) : value
       )
     )
@@ -425,7 +426,7 @@ export function toSafeString(data: unknown): string {
     try {
       return toString(data)
     } catch {
-      return JSON.stringify(data, (_key, value) =>
+      return JSON.stringify(data, (_key, value: unknown) =>
         typeof value === "bigint" ? Number(value) : value
       )
     }
@@ -550,7 +551,7 @@ export function toJsonString(value: unknown): string {
 
   try {
     // Try to convert the value to a JSON string
-    return JSON.stringify(value, (_key, val) =>
+    return JSON.stringify(value, (_key, val: unknown) =>
       // BigInt are not supported by JSON.stringify
       // so we convert them to a number as fallback
       typeof val === "bigint" ? Number(val) : val

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { PropsWithChildren, ReactElement } from "react"
+import type { PropsWithChildren, ReactElement } from "react"
 
-import { act, renderHook, RenderHookResult } from "@testing-library/react"
+import { act, renderHook, type RenderHookResult } from "@testing-library/react"
 
 import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import { TestAppWrapper } from "~lib/test_util"

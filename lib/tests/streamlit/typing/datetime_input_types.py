@@ -100,6 +100,19 @@ if TYPE_CHECKING:
         ),
         datetime,
     )
+    assert_type(
+        datetime_input("foo", datetime(2025, 11, 19, 16, 45), on_change=None),
+        datetime,
+    )
+    assert_type(
+        datetime_input("foo", datetime(2025, 11, 19, 16, 45), on_change="rerun"),
+        datetime,
+    )
+    assert_type(
+        datetime_input("foo", datetime(2025, 11, 19, 16, 45), on_change="ignore"),
+        datetime,
+    )
+    assert_type(datetime_input("foo", value=None, on_change="ignore"), datetime | None)
 
     # With key and help
     assert_type(

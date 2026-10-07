@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon/TooltipIcon"
