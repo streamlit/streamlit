@@ -29,6 +29,7 @@ from streamlit.errors import (
     StreamlitAuthError,
     StreamlitMissingAuthlibError,
 )
+from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.pages_manager import PagesManager
@@ -270,6 +271,26 @@ class UserInfoAuthTest(DeltaGeneratorTestCase):
         c = self.get_message_from_queue().auth_redirect
 
         assert c.url.startswith("/auth/logout")
+
+    def test_user_logout_clears_user_after_marking_session(self):
+        """Logout marks the session before the in-flight user info is cleared."""
+        user_info_when_marked: dict[str, str | bool | dict[str, str] | None] = {}
+
+        def clear_user_info_for_session(session_id: str) -> None:
+            assert session_id == self.script_run_ctx.session_id
+            user_info_when_marked.update(self.script_run_ctx.user_info)
+
+        runtime = Runtime._instance
+        assert isinstance(runtime, MagicMock)
+        runtime.clear_user_info_for_session = clear_user_info_for_session
+
+        st.logout()
+
+        assert user_info_when_marked == {"email": "test@example.com"}
+        assert self.script_run_ctx.user_info == {}
+        assert self.get_message_from_queue().auth_redirect.url.startswith(
+            "/auth/logout"
+        )
 
 
 class TestTokensProxy:

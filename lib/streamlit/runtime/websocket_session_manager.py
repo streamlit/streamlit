@@ -244,14 +244,25 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
             session.disconnect_file_watchers()
             session.clear_session_caches()
 
-            self._session_storage.save(
-                SessionInfo(
-                    client=None,
-                    session=session,
-                    script_run_count=active_session_info.script_run_count,
+            # Logged-out sessions are not stored for reconnect. Re-read the
+            # flag after leaving the active map: logout on the script thread
+            # can clear it between this read and save(). Drop that stored
+            # entry and shut the session down. The session leaves the active
+            # map first so lookups do not observe it while it shuts down.
+            resumable = session.is_resumable()
+            if resumable:
+                self._session_storage.save(
+                    SessionInfo(
+                        client=None,
+                        session=session,
+                        script_run_count=active_session_info.script_run_count,
+                    )
                 )
-            )
             del self._active_session_info_by_id[session_id]
+            if not session.is_resumable():
+                if resumable:
+                    self._session_storage.delete(session_id)
+                session.shutdown()
             with self._stats_lock:
                 self._disconnect_count += 1
                 self._accumulate_session_duration(session_id)

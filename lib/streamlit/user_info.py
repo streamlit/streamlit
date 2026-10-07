@@ -355,12 +355,15 @@ def logout() -> None:
     """
     context = _get_script_run_ctx()
     if context is not None:
-        context.user_info.clear()
         session_id = context.session_id
 
+        # Mark the session non-resumable before clearing the shared user dict.
+        # Clearing the dict first lets a concurrent disconnect save an
+        # anonymous session that a reconnect can resume.
         if runtime.exists():
-            instance = runtime.get_instance()
-            instance.clear_user_info_for_session(session_id)
+            runtime.get_instance().clear_user_info_for_session(session_id)
+
+        context.user_info.clear()
 
         base_path = config.get_option("server.baseUrlPath")
 

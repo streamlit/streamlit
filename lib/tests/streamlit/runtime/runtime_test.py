@@ -18,6 +18,7 @@ import asyncio
 import os
 import shutil
 import tempfile
+import threading
 import unittest
 from typing import TYPE_CHECKING
 from unittest.mock import ANY, MagicMock, call, patch
@@ -35,6 +36,9 @@ from streamlit.runtime import (
     RuntimeState,
     SessionClient,
     SessionClientDisconnectedError,
+)
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    MemoryCacheStorageManager,
 )
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
@@ -117,9 +121,6 @@ class RuntimeSingletonTest(unittest.TestCase):
         We construct a RuntimeConfig with a sentinel ``MemoryCacheStorageManager``
         and verify the property returns the same instance.
         """
-        from streamlit.runtime.caching.storage.dummy_cache_storage import (
-            MemoryCacheStorageManager,
-        )
 
         sentinel_manager = MemoryCacheStorageManager()
         config = RuntimeConfig(
@@ -735,6 +736,90 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.start()
         # Should not raise.
         self.runtime.clear_user_info_for_session("not_a_session_id")
+
+    async def test_clear_user_info_for_active_session_stays_connected(self):
+        """An active session stays connected after its user info is cleared."""
+        await self.runtime.start()
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info={"email": "alice@example.com"}
+        )
+
+        self.runtime.clear_user_info_for_session(session_id)
+
+        assert self.runtime.is_active_session(session_id)
+        session_info = self.runtime._session_mgr.get_session_info(session_id)
+        assert session_info is not None
+        assert session_info.session.is_resumable() is False
+        assert session_info.session._user_info == {}
+
+
+class ClearUserInfoStoredSessionRuntimeTest(RuntimeTestCase):
+    """clear_user_info_for_session deletes a disconnected session from storage.
+
+    Uses WebsocketSessionManager. RuntimeTestCase's MockSessionManager does
+    not persist disconnected sessions.
+    """
+
+    async def asyncSetUp(self) -> None:
+        Runtime._instance = None
+        self.runtime = Runtime(
+            RuntimeConfig(
+                script_path="mock/script/path.py",
+                media_file_storage=MemoryMediaFileStorage("/mock/media"),
+                uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
+                cache_storage_manager=MemoryCacheStorageManager(),
+                session_manager_class=WebsocketSessionManager,
+                session_storage=MemorySessionStorage(),
+            )
+        )
+
+    async def test_clear_user_info_for_stored_session_drops_it(self) -> None:
+        """clear_user_info_for_session deletes a disconnected stored session."""
+        await self.runtime.start()
+        with patch(
+            "streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock()
+        ):
+            session_id = self.runtime.connect_session(
+                client=MockSessionClient(),
+                user_info={"email": "alice@example.com"},
+            )
+            self.runtime.disconnect_session(session_id)
+            assert self.runtime._session_mgr.get_session_info(session_id) is not None
+
+            self.runtime.clear_user_info_for_session(session_id)
+            assert self.runtime._session_mgr.get_session_info(session_id) is None
+
+            new_session_id = self.runtime.connect_session(
+                client=MockSessionClient(),
+                user_info={},
+                existing_session_id=session_id,
+            )
+
+        assert new_session_id != session_id
+
+    async def test_clear_user_info_for_stored_session_from_script_thread(self) -> None:
+        """A script-thread logout closes a stored session on the event loop."""
+        await self.runtime.start()
+        with patch(
+            "streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock()
+        ):
+            session_id = self.runtime.connect_session(
+                client=MockSessionClient(),
+                user_info={"email": "alice@example.com"},
+            )
+            self.runtime.disconnect_session(session_id)
+
+            thread = threading.Thread(
+                target=self.runtime.clear_user_info_for_session,
+                args=(session_id,),
+            )
+            thread.start()
+            thread.join()
+
+            # The close is queued until this coroutine yields to the loop.
+            assert self.runtime._session_mgr.get_session_info(session_id) is not None
+            await asyncio.sleep(0)
+            assert self.runtime._session_mgr.get_session_info(session_id) is None
 
 
 class ScriptCheckTest(RuntimeTestCase):
