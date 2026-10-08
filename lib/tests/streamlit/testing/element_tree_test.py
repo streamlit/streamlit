@@ -1775,11 +1775,10 @@ def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
 
 
 def test_inspectable_elements_reject_unsupported_interactions() -> None:
-    """Inspectable-only nodes reject set_value/click with AppTestError.
+    """Inspectable-only nodes reject set_value and click with AppTestError.
 
-    ``st.audio_input`` is still an ``UnknownElement``. Typed ``Markdown`` is
-    covered too. ``Element.__getattr__`` must not leak a proto field named
-    ``set_value`` (pagination's proto field is a bool) as a callable.
+    ``st.audio_input`` has no typed wrapper yet. Typed ``Markdown`` is covered
+    too.
     """
 
     def script():

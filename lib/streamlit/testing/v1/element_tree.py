@@ -1947,8 +1947,10 @@ class Pagination(Widget):
     """A representation of ``st.pagination``.
 
     ``.value`` is the current page (1-indexed). ``set_value`` and ``select``
-    choose a page the way a browser user clicks a page button. Pages outside
-    ``1 .. num_pages`` raise ``AppTestError``.
+    choose a page. ``AppTestError`` is raised when:
+
+    - the widget is disabled
+    - the page is not an int from 1 through ``num_pages`` (``bool`` is invalid)
     """
 
     _value: int | InitialValue
@@ -1965,6 +1967,7 @@ class Pagination(Widget):
         """Set the current page (1-indexed)."""
         self._assert_can_interact()
         num_pages = int(self.proto.num_pages)
+        # bool is a subclass of int, but True/False are not page numbers.
         if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= num_pages:
             key_part = f" (key={self.key!r})" if self.key else ""
             raise AppTestError(
