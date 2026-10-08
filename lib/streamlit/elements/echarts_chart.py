@@ -702,9 +702,11 @@ class EChartsMixin:
             and keep those digits when rounding changes the value (``76.2380``).
             Exact shorter values stay short (``12.5``). Numbers from 0 up to 1
             keep up to six significant digits. Very small numbers use scientific
-            notation, and very long ones use compact notation. Set
-            ``tooltip.formatter`` or ``tooltip.valueFormatter`` to replace that
-            formatting.
+            notation. Very long ones use compact notation, or scientific
+            notation when that is still long. To replace that formatting, set
+            ``tooltip.formatter`` to a string template (for example
+            ``"{b}: {c}"``). ``theme=None`` skips it along with the rest of the
+            Streamlit theme.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this

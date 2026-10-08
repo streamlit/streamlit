@@ -333,6 +333,9 @@ describe("formatEChartsTooltipValue", () => {
     [1e-8, "1E-8"],
     // Grouped form is longer than the tooltip length cap.
     [1e15, "1000T"],
+    // Compact form is still longer than the cap.
+    [1e27, "1E27"],
+    [-1e27, "-1E27"],
   ])("formats extreme %s as %s", (value, expected) => {
     expect(formatEChartsTooltipValue(value)).toBe(expected)
   })
@@ -350,7 +353,7 @@ describe("formatEChartsTooltipValue", () => {
     ["an empty string", ""],
     ["NaN", Number.NaN],
     ["Infinity", Number.POSITIVE_INFINITY],
-    ["an invalid date", new Date(Number.NaN)],
+    ["a date", new Date(2026, 9, 1, 3, 4, 5)],
   ])("renders %s as a dash", (_label, value) => {
     expect(formatEChartsTooltipValue(value)).toBe("-")
   })
@@ -360,12 +363,6 @@ describe("formatEChartsTooltipValue", () => {
       "10",
       "76.2380",
     ])
-  })
-
-  it("formats a date as a local timestamp", () => {
-    expect(formatEChartsTooltipValue(new Date(2026, 9, 1, 3, 4, 5))).toBe(
-      "2026-10-01 03:04:05"
-    )
   })
 })
 
@@ -959,6 +956,40 @@ describe("applyStreamlitOptionDefaults", () => {
     const series = result.series as Array<Record<string, unknown>>
     const data = series[0].data as Array<Record<string, unknown>>
     expect(data[0].name).toBe("<img src=x onerror=alert(1)>")
+  })
+
+  it("matches axis label line height to an author font size", () => {
+    const result = applyDefaults({
+      xAxis: { axisLabel: { fontSize: 28 } },
+      yAxis: [
+        { axisLabel: { fontSize: 20, lineHeight: 24 } },
+        { axisLabel: { color: "red" } },
+      ],
+      angleAxis: { axisLabel: { fontSize: 16 } },
+      series: [],
+    })
+
+    const xAxis = result.xAxis as { axisLabel: { lineHeight: number } }
+    expect(xAxis.axisLabel.lineHeight).toBe(28)
+    const yAxes = result.yAxis as Array<{
+      axisLabel: { lineHeight?: number }
+    }>
+    // An author line height wins over the theme font size.
+    expect(yAxes[0].axisLabel.lineHeight).toBe(24)
+    // No author font size: leave line height to the theme.
+    expect(yAxes[1].axisLabel.lineHeight).toBeUndefined()
+    const angleAxis = result.angleAxis as { axisLabel: { lineHeight: number } }
+    expect(angleAxis.axisLabel.lineHeight).toBe(16)
+  })
+
+  it("does not rewrite axis label line height when theme is not streamlit", () => {
+    const option = {
+      xAxis: { axisLabel: { fontSize: 28 } },
+      series: [],
+    }
+    const result = applyDefaults(option, "")
+
+    expect(result.xAxis).toBe(option.xAxis)
   })
 })
 

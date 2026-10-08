@@ -36,16 +36,46 @@ export const STREAMLIT_THEME = "streamlit"
 export type EChartsOptionObject = Record<string, unknown>
 
 /**
- * Longest thousands-separated tooltip number, not counting a leading minus.
- *
- * Four fraction digits already shorten ordinary values. Only huge magnitudes
- * that are still longer switch to compact notation.
+ * Longest grouped tooltip number (excluding a leading minus) before switching
+ * to compact notation. Compact text that is still longer switches to
+ * scientific notation.
  */
 const MAX_TOOLTIP_TEXT_LENGTH = 18
 
 const TOOLTIP_FRACTION_DIGITS = 4
 
 const TOOLTIP_SIGNIFICANT_DIGITS = 6
+
+const TOOLTIP_COMPACT_SIGNIFICANT_DIGITS = 4
+
+// Reused across tooltip updates. The digit options are a fixed set, so a
+// hover should not construct a new formatter for every series value.
+const scientificTooltipFormat = new Intl.NumberFormat("en-US", {
+  notation: "scientific",
+  maximumSignificantDigits: TOOLTIP_SIGNIFICANT_DIGITS,
+})
+
+const significantTooltipFormat = new Intl.NumberFormat("en-US", {
+  maximumSignificantDigits: TOOLTIP_SIGNIFICANT_DIGITS,
+  useGrouping: true,
+})
+
+const shortTooltipFormat = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: TOOLTIP_FRACTION_DIGITS,
+  useGrouping: true,
+})
+
+const paddedTooltipFormat = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: TOOLTIP_FRACTION_DIGITS,
+  maximumFractionDigits: TOOLTIP_FRACTION_DIGITS,
+  useGrouping: true,
+})
+
+const compactTooltipFormat = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumSignificantDigits: TOOLTIP_COMPACT_SIGNIFICANT_DIGITS,
+})
 
 function formatTooltipItem(value: unknown): string {
   if (typeof value === "number") {
@@ -55,38 +85,24 @@ function formatTooltipItem(value: unknown): string {
     // A blank string is a missing value, same as null.
     return value === "" ? "-" : value
   }
-  if (typeof value === "boolean" || typeof value === "bigint") {
+  // The chart spec is JSON, so tooltip values are numbers, strings, booleans,
+  // or missing. Other types (including Date and bigint) do not arrive here.
+  if (typeof value === "boolean") {
     return String(value)
-  }
-  if (value instanceof Date) {
-    return formatTooltipDate(value)
   }
   return "-"
 }
 
-/** Format a tooltip date in local time. Treat an invalid date as missing. */
-function formatTooltipDate(value: Date): string {
-  if (Number.isNaN(value.getTime())) {
-    return "-"
-  }
-  const pad = (part: number): string => String(part).padStart(2, "0")
-  const date = `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
-  const time = `${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`
-  return `${date} ${time}`
-}
-
 /**
- * Fraction digits for an ordinary tooltip number.
+ * Formatter for tooltip numbers of magnitude 1 or greater.
  *
- * When rounding to four digits changes the value, keep the trailing zero
- * (``76.2380``). Exact shorter values stay short (``12.5``, integers).
+ * Pad to four fraction digits only when rounding changed the value, so
+ * readers can tell it was rounded (``76.2380``). Exact shorter values stay
+ * short (``12.5``, integers).
  */
-function tooltipFractionDigitOptions(value: number): Intl.NumberFormatOptions {
+function ordinaryTooltipFormat(value: number): Intl.NumberFormat {
   const rounded = Number(value.toFixed(TOOLTIP_FRACTION_DIGITS))
-  return {
-    minimumFractionDigits: rounded === value ? 0 : TOOLTIP_FRACTION_DIGITS,
-    maximumFractionDigits: TOOLTIP_FRACTION_DIGITS,
-  }
+  return rounded === value ? shortTooltipFormat : paddedTooltipFormat
 }
 
 function formatTooltipNumber(value: number): string {
@@ -96,35 +112,27 @@ function formatTooltipNumber(value: number): string {
   const absolute = Math.abs(value)
   // Four fraction digits would round these non-zero values to 0.
   if (absolute !== 0 && absolute < 10 ** -TOOLTIP_FRACTION_DIGITS) {
-    return new Intl.NumberFormat("en-US", {
-      notation: "scientific",
-      maximumSignificantDigits: TOOLTIP_SIGNIFICANT_DIGITS,
-    }).format(value)
+    return scientificTooltipFormat.format(value)
   }
 
-  let digitOptions: Intl.NumberFormatOptions
-  if (absolute >= 1) {
-    digitOptions = tooltipFractionDigitOptions(value)
-  } else {
-    // Four decimal places would clip a small fraction (0.000123456 → 0.0001).
-    digitOptions = { maximumSignificantDigits: TOOLTIP_SIGNIFICANT_DIGITS }
-  }
-  const plain = new Intl.NumberFormat("en-US", {
-    ...digitOptions,
-    useGrouping: true,
-  }).format(value)
-  const unsignedLength = plain.startsWith("-")
-    ? plain.length - 1
-    : plain.length
-  if (unsignedLength <= MAX_TOOLTIP_TEXT_LENGTH) {
+  // Four decimal places would clip a small fraction (0.000123456 → 0.0001).
+  const plainFormat =
+    absolute >= 1 ? ordinaryTooltipFormat(value) : significantTooltipFormat
+  const plain = plainFormat.format(value)
+  if (unsignedTextLength(plain) <= MAX_TOOLTIP_TEXT_LENGTH) {
     return plain
   }
 
-  return new Intl.NumberFormat("en-US", {
-    notation: "compact",
-    // Significant digits, so the suffix form stays short (`1.235T`).
-    maximumSignificantDigits: TOOLTIP_FRACTION_DIGITS,
-  }).format(value)
+  // Grouped compact text can still exceed the cap (`1e27` → `1,000,…T`).
+  const compact = compactTooltipFormat.format(value)
+  if (unsignedTextLength(compact) <= MAX_TOOLTIP_TEXT_LENGTH) {
+    return compact
+  }
+  return scientificTooltipFormat.format(value)
+}
+
+function unsignedTextLength(text: string): number {
+  return text.startsWith("-") ? text.length - 1 : text.length
 }
 
 /**
@@ -132,7 +140,8 @@ function formatTooltipNumber(value: number): string {
  *
  * Returns plain text that ECharts escapes: one string, or one string per
  * entry for multi-value points such as candlesticks. An option
- * ``tooltip.formatter`` or ``tooltip.valueFormatter`` replaces this.
+ * ``tooltip.formatter`` replaces this. ``tooltip.valueFormatter`` would too,
+ * but the chart spec is JSON and cannot carry that callback.
  */
 export function formatEChartsTooltipValue(value: unknown): string | string[] {
   if (Array.isArray(value)) {
@@ -170,12 +179,14 @@ function buildAxisDefaults(
       fontFamily: theme.genericFonts.bodyFont,
       fontSize,
       // Keep the line box at the font size. A taller box lifts the glyphs off
-      // the tick and into the series.
+      // the tick and into the series. An author ``fontSize`` is matched in
+      // ``withAxisLabelLineHeight`` so a larger multiline label does not keep
+      // this smaller spacing.
       lineHeight: fontSize,
       // ECharts' default margin is a fixed 8px. Scale the gap with the base font.
       margin: convertRemToPx(theme.spacing.sm),
-      // Stroke with the page color so a series or gridline crossing a label
-      // (for example labels inside the plot) drops out around the glyphs.
+      // Paint a page-colored stroke around the glyphs so a series or gridline
+      // that crosses a label stays readable.
       textBorderColor: theme.colors.bgColor,
       textBorderWidth: 2,
     },
@@ -315,7 +326,8 @@ export function buildStreamlitEChartsTheme(
         // Use the theme's normal weight so values match the series name.
         fontWeight: theme.fontWeights.normal,
       },
-      // Plain text so ECharts escapes it. Do not inject an HTML formatter.
+      // Returns plain text, which ECharts HTML-escapes. Never set an HTML
+      // formatter here (see the product spec's tooltip XSS note).
       valueFormatter: formatEChartsTooltipValue,
     },
     categoryAxis: axisDefaults,
@@ -1111,23 +1123,98 @@ function buildDefaultGrid(
   return grid
 }
 
+/** Axis option keys whose theme ``axisLabel.lineHeight`` is the theme font size. */
+const THEMED_AXIS_KEYS = [
+  "xAxis",
+  "yAxis",
+  "angleAxis",
+  "radiusAxis",
+  "parallelAxis",
+  "singleAxis",
+] as const
+
+/**
+ * Match ``axisLabel.lineHeight`` to an author ``fontSize``.
+ *
+ * The theme pins ``lineHeight`` to the theme font size. ECharts keeps that
+ * value when an author sets only ``fontSize``, so a larger multiline label
+ * uses the smaller spacing and its lines overlap. An author ``lineHeight``
+ * is left alone.
+ */
+function withAxisLabelLineHeight(
+  option: EChartsOptionObject
+): EChartsOptionObject {
+  let next: EChartsOptionObject | undefined
+  for (const key of THEMED_AXIS_KEYS) {
+    if (!(key in option)) {
+      continue
+    }
+    const updated = alignAxisLabelLineHeight(option[key])
+    if (updated === option[key]) {
+      continue
+    }
+    next = next ?? { ...option }
+    next[key] = updated
+  }
+  return next ?? option
+}
+
+function alignAxisLabelLineHeight(value: unknown): unknown {
+  if (isPlainObject(value)) {
+    return alignAxisRecord(value as Record<string, unknown>)
+  }
+  if (!Array.isArray(value)) {
+    return value
+  }
+  let changed = false
+  const axes = value.map((item: unknown) => {
+    if (!isPlainObject(item)) {
+      return item
+    }
+    const aligned = alignAxisRecord(item as Record<string, unknown>)
+    if (aligned !== item) {
+      changed = true
+    }
+    return aligned
+  })
+  return changed ? axes : value
+}
+
+function alignAxisRecord(
+  axis: Record<string, unknown>
+): Record<string, unknown> {
+  const axisLabel = axis.axisLabel
+  if (!isPlainObject(axisLabel)) {
+    return axis
+  }
+  const label = axisLabel as Record<string, unknown>
+  if (typeof label.fontSize !== "number" || label.lineHeight !== undefined) {
+    return axis
+  }
+  return {
+    ...axis,
+    axisLabel: { ...label, lineHeight: label.fontSize },
+  }
+}
+
 /**
  * Non-destructively fill a small number of option-level gaps that the init
  * theme cannot cover (``aria.enabled``, title size/weight/padding, the
- * ``grid`` layout, and stacking of bottom-anchored chart controls).
+ * ``grid`` layout, stacking of bottom-anchored chart controls, and axis-label
+ * line height when the author sets ``fontSize``).
  *
  * ``aria.enabled`` is filled regardless of the theme: ``theme=None`` opts out of
  * Streamlit's *visual* styling, and dropping the screen-reader description along
  * with it would make an accessibility regression a side effect of a styling
- * choice. Title size, ``grid``, and control stacking are purely visual, so they
- * only run under ``theme="streamlit"``.
+ * choice. Title size, ``grid``, control stacking, and axis-label line height
+ * are purely visual, so they only run under ``theme="streamlit"``.
  *
  * Only keys the user has not set are written, so explicit user values (e.g.
  * ``series[0].itemStyle.color`` or a top-level ``color``) always survive. For
- * security, it never injects a tooltip/label ``formatter`` and never changes
- * ``tooltip.renderMode`` — ECharts' default escaping of tooltip/label values is
- * relied upon. The theme ``valueFormatter`` shortens tooltip numbers and
- * returns plain text that ECharts escapes.
+ * security, this function never injects a tooltip or label formatter and never
+ * changes ``tooltip.renderMode``. ECharts escapes tooltip and label text by
+ * default. The theme ``valueFormatter`` shortens tooltip numbers and returns
+ * plain text that ECharts escapes.
  *
  * Timeline specs nest the chart under ``baseOption``, which is where ECharts
  * reads ``aria`` and ``grid`` from, so the defaults are filled in there instead.
@@ -1198,7 +1285,7 @@ function fillOptionDefaults(
     }
   }
 
-  return laidOut
+  return withAxisLabelLineHeight(laidOut)
 }
 
 /**
