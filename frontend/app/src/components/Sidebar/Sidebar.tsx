@@ -296,7 +296,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       // Resizable's types omit these StyledSidebar props (id, isCollapsed,
       // sidebarWidth, windowInnerWidth), but it forwards extra props to the `as`
       // component. The id is the target of the collapse/expand aria-controls.
-      // @ts-expect-error
+      // @ts-expect-error - Resizable types omit StyledSidebar props it still forwards
       id={SIDEBAR_ELEMENT_ID}
       isCollapsed={isCollapsed}
       sidebarWidth={sidebarWidth}

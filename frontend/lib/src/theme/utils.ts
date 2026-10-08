@@ -587,7 +587,8 @@ const setHeadingFontSizes = (
 
       // If valid configured value, overwrite the default heading font size
       if (convertedSize) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font sizes have no index signature
         headingFontSizesOverrides[headingFontSizeKey] = convertedSize
       }
     })
@@ -666,7 +667,8 @@ const setFontWeights = (
           inSidebar
         )
       ) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font weights have no index signature
         fontWeightOverrides[headingFontWeightKey] = weight
       }
     })
@@ -726,7 +728,7 @@ export const createEmotionTheme = (
 
   const parsedColors = Object.entries(customColors).reduce(
     (colorsArg: Record<string, string>, [key, color]) => {
-      // @ts-expect-error
+      // @ts-expect-error - remaining theme values are not all typed as color strings
       const validatedColor = parseColor(color, key, inSidebar)
       if (validatedColor) {
         colorsArg[key] = validatedColor

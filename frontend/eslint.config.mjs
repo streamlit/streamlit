@@ -526,6 +526,18 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-misused-spread": "error",
       "@typescript-eslint/unbound-method": "error",
+      // Production suppressions must say why they are needed. Tests still use
+      // bare @ts-expect-error heavily; requiring descriptions there is a
+      // separate cleanup. Options replace the base rule, so keep ts-ignore banned.
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        {
+          "ts-expect-error": "allow-with-description",
+          "ts-nocheck": false,
+          "ts-check": false,
+          "ts-ignore": true,
+        },
+      ],
     },
   },
   {
