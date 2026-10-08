@@ -76,7 +76,7 @@ def set_page_config(
 | `help` | `st.Page` | `None` | Default description for that page. Tooltip in the nav. Inherited by `st.page_link`. |
 | `page_description` | `st.set_page_config` | `None` | Overrides the running page's description for this run. |
 
-Both accept the same GitHub-flavored Markdown as other `help` parameters, and both are dedented the same way (`to_help_str`), so a triple-quoted string can be indented with the script. `None` and a blank string mean unset. `Page.help` returns `""` when unset, matching `Page.icon`.
+`help` accepts the same GitHub-flavored Markdown as other `help` parameters, because the nav tooltip renders it. `page_description` is plain text. Meta tags, link previews, and the agent snapshot store the string as text, so Markdown there would show up as raw syntax or have to be stripped before anyone sees it. Both values are dedented, so a triple-quoted string can be indented with the script. `None` and a blank string mean unset. `Page.help` returns `""` when unset, matching `Page.icon`.
 
 `help` is the nav word because that is what `st.page_link`, buttons, and the other tooltip parameters are already called (API principles #7 and #10). `page_description` is the page-config word because that command's parameters are `page_title` and `page_icon`, and it is not a hover target. The two names are one sentence: `Page.help` is the default, `page_description` overrides it.
 
@@ -96,10 +96,12 @@ Calls that omit `page_description` leave a value set earlier in the same run, sa
 
 **Where the resolved sentence is published.**
 
-- `<meta name="description">` and `<meta property="og:description">`, using the plain text of the Markdown (markers removed, link text kept). Tags are created or replaced when a description exists, and removed when the running page resolves to none, so a previous page's sentence does not linger. A host-injected description is left alone until an author description is set; after that, Streamlit owns these two tags for the session.
-- The built-in nav item (sidebar, top nav, and the overflow menu), as a tooltip.
-- The nav link's accessible description, using that same plain text.
-- The agent snapshot ([#16843](https://github.com/streamlit/streamlit/pull/16843)). The current page carries the resolved sentence next to `title` and `icon`. Every entry in `pages` carries that page's `Page.help`, so an agent can choose a page without running it. `page_description` changes the open page only. The same plain text is used, not the raw Markdown. This spec does not define the agent endpoint; it supplies the sentence that snapshot was missing.
+- `<meta name="description">` and `<meta property="og:description">`. Tags are created or replaced when a description exists, and removed when the running page resolves to none, so a previous page's sentence does not linger. A host-injected description is left alone until an author description is set; after that, Streamlit owns these two tags for the session.
+- The built-in nav item (sidebar, top nav, and the overflow menu), as a tooltip. `Page.help` is rendered as Markdown. A `page_description` override is shown as plain text.
+- The nav link's accessible description, as plain text.
+- The agent snapshot ([#16843](https://github.com/streamlit/streamlit/pull/16843)). The current page carries the resolved sentence next to `title` and `icon`. Every entry in `pages` carries that page's `Page.help`, so an agent can choose a page without running it. `page_description` changes the open page only. This spec does not define the agent endpoint; it supplies the sentence that snapshot was missing.
+
+Published text is plain. `page_description` is used as written. `Page.help` is reduced to text first (Markdown markers removed, link text kept) when it is the description that fills a meta tag, an accessible description, or the snapshot.
 
 The tooltip matches `st.page_link`: hover the item itself, no question-mark icon, the same hover delay as `st.page_link` (500ms today), and immediate open on keyboard focus. On touch there is no popup; the link still exposes the plain-text sentence as its accessible description. Keyboard focus announces that sentence once.
 
@@ -195,7 +197,7 @@ Adopt **Option 1**. The tooltip is `help` because that is the established parame
 - **Arbitrary `<meta>` tags**, including Google Search Console verification ([#16634](https://github.com/streamlit/streamlit/issues/16634)).
 - **`keywords`, `author`, `robots`, and JSON-LD.** `keywords` is ignored by search engines. Indexing policy and structured data are separate features.
 - **Visible subtitle** under the page heading, and copying the description into the About dialog.
-- **A length limit** or a separate plain-text parameter. Markdown is allowed; plain text is derived.
+- **A length limit.** Docs suggest one or two sentences; consumers truncate on their own.
 
 ## Checklist
 
