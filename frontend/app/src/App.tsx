@@ -820,7 +820,7 @@ export class App extends PureComponent<Props, State> {
         },
       }
 
-      // @ts-expect-error
+      // @ts-expect-error - iframe-resizer contentWindow path has no type declarations
       void import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
@@ -838,9 +838,9 @@ export class App extends PureComponent<Props, State> {
     _prevProps: Readonly<Props>,
     prevState: Readonly<State>
   ): void {
-    // @ts-expect-error
+    // @ts-expect-error - prerenderReady flag is missing from Window
     if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
-      // @ts-expect-error
+      // @ts-expect-error - prerenderReady flag is missing from Window
       window.prerenderReady = true
     }
     if (this.state.scriptRunState !== prevState.scriptRunState) {
@@ -2278,7 +2278,7 @@ export class App extends PureComponent<Props, State> {
 
     // It's not a problem that we're mucking around with private fields since
     // this is a test-only method anyway.
-    // @ts-expect-error
+    // @ts-expect-error - test-only access to the private websocket message cache
     this.connectionManager?.websocketConnection?.cache.messages.clear()
   }
 

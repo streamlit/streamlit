@@ -52,7 +52,11 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import Page, _validate_registered_page
+from streamlit.navigation.page import (
+    Page,
+    _raise_if_unsafe_page_path,
+    _validate_registered_page,
+)
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
@@ -1728,6 +1732,8 @@ class ButtonMixin:
                     layout_config=layout_config,
                     agent_props=_page_link_agent_props(page_link_proto),
                 )
+
+            _raise_if_unsafe_page_path(page)
 
             ctx_main_script = ""
             all_app_pages = {}
