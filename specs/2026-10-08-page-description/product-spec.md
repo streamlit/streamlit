@@ -7,7 +7,7 @@ created: 2026-10-08
 
 ## Summary
 
-Add an authored page description in the two places a page already has a title. `st.Page(help=...)` is the sentence for that page, shown as a tooltip on the nav item and on `st.page_link`, and available without running the page. `st.set_page_config(page_description=...)` overrides it for the current run. The resolved sentence is what search snippets and link previews read.
+Add an authored page description in the two places a page already has a title. `st.Page(help=...)` is the sentence for that page, shown as a tooltip on the nav item and on `st.page_link`, and available without running the page. `st.set_page_config(page_description=...)` overrides it for the current run. The resolved sentence is what search snippets, link previews, and an agent snapshot read.
 
 ```python
 import streamlit as st
@@ -26,9 +26,10 @@ st.navigation([revenue]).run()
 
 [#16878](https://github.com/streamlit/streamlit/issues/16878) asks for a first-class page description. A page can already declare `title` / `page_title` and `icon` / `page_icon`. There is no matching place to say what the page is. Authors put that sentence in `st.caption`, `st.markdown`, or `menu_items["About"]`, none of which is structured metadata and none of which the nav can show before the page runs.
 
-The same sentence is wanted in four places:
+The same sentence is wanted in five places:
 
 - **Navigation.** `st.Page` can name a page and cannot explain it, so a nav list cannot tell "Regional revenue" apart from "Reports" without running the page. `st.page_link` already has a hover tooltip (`help`), but the built-in nav does not, and the link's tooltip is not shared with the page.
+- **Agents.** The agent snapshot in [#16843](https://github.com/streamlit/streamlit/pull/16843) identifies each page by `url_path`, `title`, and `icon` only. Widget `help` is already in the snapshot; the page itself has no equivalent, so a model has to infer what "Regional revenue" means from body copy such as `st.caption`. That fails when the meaning is not on the page, and it fails for every page the agent has not opened. `Page.help` is known when `st.navigation` declares the page, which is the same moment the snapshot's `pages` list exists. [#16843](https://github.com/streamlit/streamlit/pull/16843) lists this as its authored-descriptions follow-up ([#16878](https://github.com/streamlit/streamlit/issues/16878)).
 - **Search snippets.** Google uses `<meta name="description">` when it describes the page better than body text. Self-hosted apps have no way to set it ([#16634](https://github.com/streamlit/streamlit/issues/16634), [#2469](https://github.com/streamlit/streamlit/issues/2469)).
 - **Link previews.** Open Graph `og:description` is the preview body. Community Cloud injects sharing tags; other deployments do not ([#6567](https://github.com/streamlit/streamlit/issues/6567)).
 - **The page itself, once it is running.** A page often wants a more specific sentence than the nav default ("Net revenue by billing region for the selected quarter").
@@ -98,6 +99,7 @@ Calls that omit `page_description` leave a value set earlier in the same run, sa
 - `<meta name="description">` and `<meta property="og:description">`, using the plain text of the Markdown (markers removed, link text kept). Tags are created or replaced when a description exists, and removed when the running page resolves to none, so a previous page's sentence does not linger. A host-injected description is left alone until an author description is set; after that, Streamlit owns these two tags for the session.
 - The built-in nav item (sidebar, top nav, and the overflow menu), as a tooltip.
 - The nav link's accessible description, using that same plain text.
+- The agent snapshot ([#16843](https://github.com/streamlit/streamlit/pull/16843)). The current page carries the resolved sentence next to `title` and `icon`. Every entry in `pages` carries that page's `Page.help`, so an agent can choose a page without running it. `page_description` changes the open page only. The same plain text is used, not the raw Markdown. This spec does not define the agent endpoint; it supplies the sentence that snapshot was missing.
 
 The tooltip matches `st.page_link`: hover the item itself, no question-mark icon, the same hover delay as `st.page_link` (500ms today), and immediate open on keyboard focus. On touch there is no popup; the link still exposes the plain-text sentence as its accessible description. Keyboard focus announces that sentence once.
 
@@ -187,7 +189,7 @@ Adopt **Option 1**. The tooltip is `help` because that is the established parame
 
 ## Out of Scope (Future Work)
 
-- **`title` and `description` on `st.App`.** Static app identity, including a site name in `<title>` and `og:site_name`, and a description available before the script runs. Tracked on [#16878](https://github.com/streamlit/streamlit/issues/16878).
+- **`title` and `description` on `st.App`.** Static app identity, including a site name in `<title>` and `og:site_name`, and a description available before the script runs. The agent spec's static app descriptor depends on this ([#16843](https://github.com/streamlit/streamlit/pull/16843)). Tracked on [#16878](https://github.com/streamlit/streamlit/issues/16878). Page-level text in the snapshot does not wait on it.
 - **Description in the initial HTML** for clients that do not run JavaScript ([#9058](https://github.com/streamlit/streamlit/issues/9058)). v1 updates the live document, same as the page title.
 - **The rest of a social card.** `og:title`, `og:image`, `og:url`, Twitter card tags, and `<link rel="canonical">`. `page_icon` stays the favicon; it is a poor preview image.
 - **Arbitrary `<meta>` tags**, including Google Search Console verification ([#16634](https://github.com/streamlit/streamlit/issues/16634)).
