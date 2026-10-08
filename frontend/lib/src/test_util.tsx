@@ -184,13 +184,13 @@ export function render(
 export function mockWindowLocation(hostname: string): void {
   // Mock window.location by creating a new object
   // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
-  // @ts-expect-error - jsdom Location is required, so tests delete it first
+  // @ts-expect-error - location is required, so delete is a type error
   delete window.location
 
   const hasScheme = /^https?:\/\//.test(hostname)
   const origin = hasScheme ? new URL(hostname).origin : `https://${hostname}`
 
-  // @ts-expect-error - tests replace the read-only location with a partial
+  // @ts-expect-error - location setter accepts string, not a partial Location
   window.location = {
     assign: vi.fn(),
     hostname: hasScheme ? new URL(hostname).hostname : hostname,

@@ -587,7 +587,8 @@ const setHeadingFontSizes = (
 
       // If valid configured value, overwrite the default heading font size
       if (convertedSize) {
-        // @ts-expect-error - computed h1-h6 keys are not an index signature on font sizes
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font sizes have no index signature
         headingFontSizesOverrides[headingFontSizeKey] = convertedSize
       }
     })
@@ -666,7 +667,8 @@ const setFontWeights = (
           inSidebar
         )
       ) {
-        // @ts-expect-error - computed h1-h6 keys are not an index signature on font weights
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font weights have no index signature
         fontWeightOverrides[headingFontWeightKey] = weight
       }
     })

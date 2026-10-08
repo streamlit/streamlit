@@ -148,12 +148,12 @@ export function assignDividerColor(
     if (element.type === "heading" && divider) {
       if (divider === "auto") {
         const colorKey = autoColorKeys[dividerIndex]
-        // @ts-expect-error - heading.divider is not undefined at this point
+        // @ts-expect-error - colorKey is a string, and heading is not narrowed
         element.heading.divider = autoColorMap[colorKey]
         dividerIndex += 1
         if (dividerIndex === autoColorKeys.length) dividerIndex = 0
       } else if (allColorKeys.includes(divider)) {
-        // @ts-expect-error - named divider colors are not an index signature
+        // @ts-expect-error - divider is a string, and heading is not narrowed
         element.heading.divider = allColorMap[divider]
       }
     }

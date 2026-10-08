@@ -86,8 +86,8 @@ const drawMissingPlaceholder = (
         baseFontFull: `${theme.baseFontStyle} ${theme.fontFamily}`,
         markerFontFull: `${theme.markerFontStyle} ${theme.fontFamily}`,
       },
-      // The following props are just added for technical reasons:
-      // @ts-expect-error - placeholder spriteManager is unused by the missing-cell draw
+      // drawTextCell only reads rect, ctx, and theme.
+      // @ts-expect-error - {} is not a SpriteManager
       spriteManager: {},
       hyperWrapping: false,
     },

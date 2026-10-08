@@ -838,9 +838,9 @@ export class App extends PureComponent<Props, State> {
     _prevProps: Readonly<Props>,
     prevState: Readonly<State>
   ): void {
-    // @ts-expect-error - prerenderReady is a host global missing from Window
+    // @ts-expect-error - prerenderReady flag is missing from Window
     if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
-      // @ts-expect-error - prerenderReady is a host global missing from Window
+      // @ts-expect-error - prerenderReady flag is missing from Window
       window.prerenderReady = true
     }
     if (this.state.scriptRunState !== prevState.scriptRunState) {
