@@ -1863,8 +1863,16 @@ def test_audio_input_records_one_wav() -> None:
     assert at.text[0].value == "name=clip.wav"
     assert at.text[2].value == "bytes=b'RIFF'"
 
-    at.audio_input(key="mic").upload("other.WAV", b"more").run()
+    recorder = at.audio_input(key="mic")
+    committed = recorder.value
+    assert committed is not None
+    assert committed.getvalue() == b"RIFF"
+    recorder.upload("first.wav", b"one")
+    recorder.upload("other.WAV", b"more", mime_type="Audio/WAV")
+    assert recorder.value is committed
+    recorder.run()
     assert at.audio_input(key="mic").value.name == "other.WAV"
+    assert at.audio_input(key="mic").value.type == "audio/wav"
     assert at.audio_input(key="mic").value.getvalue() == b"more"
     assert at.session_state["changes"] == 2
 
@@ -1897,9 +1905,10 @@ def test_audio_input_records_one_wav() -> None:
             [("a.wav", b"a", "audio/wav"), ("b.wav", b"b", "audio/wav")],
             "list is not accepted",
         ),
-        (b"raw-bytes", "one recording"),
+        (("clip.wav", "RIFF", "audio/wav"), "Got tuple"),
+        (b"raw-bytes", "Got bytes"),
     ],
-    ids=["wrong_extension", "wrong_mime", "multiple_files", "raw_bytes"],
+    ids=["wrong_extension", "wrong_mime", "multiple_files", "str_content", "raw_bytes"],
 )
 def test_audio_input_rejects_invalid_recordings(value: Any, match: str) -> None:
     """Invalid recordings raise AppTestError and leave the widget empty."""
@@ -1916,7 +1925,7 @@ def test_audio_input_rejects_invalid_recordings(value: Any, match: str) -> None:
 
 
 def test_audio_input_disabled_rejects_update() -> None:
-    """A disabled microphone cannot be recorded or cleared."""
+    """A disabled audio_input widget cannot accept a recording or be cleared."""
 
     at = AppTest.from_string(
         "import streamlit as st\nst.audio_input('Mic', disabled=True, key='mic')\n"

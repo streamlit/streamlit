@@ -1540,10 +1540,14 @@ def _parse_audio_input_file(file: object) -> tuple[str, bytes, str]:
         # Normalize case-variants such as "Audio/WAV" to the MIME type the
         # browser widget reports.
         return filename, bytes(content), _AUDIO_INPUT_MIME
+    if isinstance(file, list):
+        raise AppTestError(
+            "st.audio_input records one recording. A list is not accepted."
+        )
     raise AppTestError(
         "st.audio_input records one recording. "
-        "Pass one (filename, content, mime_type) tuple, or None to clear. "
-        "A list is not accepted."
+        "Pass one (filename, content, mime_type) tuple whose content is bytes, "
+        f"or None to clear. Got {type(file).__name__}."
     )
 
 
@@ -1556,8 +1560,9 @@ class AudioInput(Widget):
     Unlike ``FileUploader``, this widget does not accept a list or append
     files.
 
-    ``sample_rate`` is the sample rate passed to ``st.audio_input``, or
-    ``None`` if the browser default is used.
+    ``sample_rate`` is the value passed to ``st.audio_input``.
+    The widget default is ``16000``. ``None`` means the script passed
+    ``sample_rate=None``, so the browser chooses the rate.
 
     Example
     -------
