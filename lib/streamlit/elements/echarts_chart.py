@@ -704,8 +704,8 @@ class EChartsMixin:
             (``12.5``, integers). A magnitude below 1 keeps up to six
             significant digits. Below ``0.0001``, numbers use scientific
             notation so a non-zero value does not round to 0. Text longer than
-            18 characters drops its fraction digits when the grouped integer
-            still fits (``12,345,678,901``). Otherwise it uses compact
+            18 characters rounds to the grouped integer when that still fits
+            (``12,345,678,901``). Otherwise it uses compact
             notation, or scientific notation when that is still long. To replace
             that formatting, set
             ``tooltip.formatter`` to a string template (for example

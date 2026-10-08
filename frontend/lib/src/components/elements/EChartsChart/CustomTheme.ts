@@ -133,8 +133,8 @@ function formatTooltipNumber(value: number): string {
     return plain
   }
 
-  // A padded fraction can cross the cap while the grouped integer still fits
-  // (``12345678901.12345`` → ``12,345,678,901``, not ``12.35B``).
+  // Round to the nearest grouped integer when the padded text is too long
+  // and the integer form still fits (`12345678901.12345` → `12,345,678,901`).
   if (absolute >= 1) {
     const groupedInteger = groupedIntegerTooltipFormat.format(value)
     if (unsignedTextLength(groupedInteger) <= MAX_TOOLTIP_TEXT_LENGTH) {
