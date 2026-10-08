@@ -49,7 +49,10 @@ def _dump_toml_value(key: str, value: Any) -> str:
     if value is None:
         return ""
 
-    return toml_writer.dumps({key: value})
+    try:
+        return toml_writer.dumps({key: value})
+    except TypeError as ex:
+        raise TypeError(f"Cannot show config option {key!r}: {ex}") from ex
 
 
 def _comment_toml(toml_text: str) -> str:

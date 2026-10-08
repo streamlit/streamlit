@@ -1640,6 +1640,12 @@ def test_show_config_font_faces_stay_under_theme_header(
     assert parsed["theme"]["fontFaces"] == [face]
 
 
+def test_dump_toml_value_names_option_for_unsupported_value() -> None:
+    """An unsupported value names the option ``config show`` cannot print."""
+    with pytest.raises(TypeError, match="Cannot show config option 'fontFaces'"):
+        config_util._dump_toml_value("fontFaces", [{"family": ["sans", "serif"]}])
+
+
 @pytest.mark.parametrize(
     "attribute",
     ["default_val", "value"],

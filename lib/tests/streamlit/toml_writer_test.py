@@ -203,7 +203,7 @@ def test_dumps_rejects_non_string_key() -> None:
 
 def test_dumps_rejects_multiline_value_inside_inline_table() -> None:
     """A list inside a font-face table cannot be written on one line."""
-    with pytest.raises(TypeError, match="multiline"):
+    with pytest.raises(TypeError, match="Key 'family' serializes with a newline"):
         toml_writer.dumps({"fontFaces": [{"family": ["sans", "serif"]}]})
 
 
@@ -213,6 +213,7 @@ def test_dumps_tuple_array_round_trips() -> None:
     assert parsed["weights"] == [800, 700]
 
 
-def test_dumps_nested_scalar_table() -> None:
-    """A dict value is a table, not an inline table."""
-    assert toml_writer.dumps({"general": {"email": ""}}) == '[general]\nemail = ""\n'
+def test_dumps_dict_value_becomes_table_section() -> None:
+    """A dict value is a table section that can hold a scalar and an array."""
+    rendered = toml_writer.dumps({"server": {"port": 8501, "folderWatchList": ["."]}})
+    assert rendered == ('[server]\nport = 8501\nfolderWatchList = [\n    ".",\n]\n')

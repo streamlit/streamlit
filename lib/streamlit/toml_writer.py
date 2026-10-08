@@ -29,9 +29,7 @@ from typing import TYPE_CHECKING, Any, Final
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-# Short escapes for characters a basic string cannot contain raw.
-# Leave tab unescaped; TOML allows a raw tab. Write other C0 controls and DEL
-# as ``\u00XX``.
+# Short escapes TOML defines for basic strings.
 _COMPACT_ESCAPES: Final[dict[str, str]] = {
     "\b": "\\b",
     "\n": "\\n",
@@ -131,12 +129,11 @@ def _format_inline_table(table: dict[Any, Any]) -> str:
     parts: list[str] = []
     for key, value in table.items():
         rendered = _format_value(value)
-        # TOML inline tables must be a single line. Reject a value whose
-        # serialization contains a newline, such as a nested array.
+        # TOML inline tables must be a single line.
         if "\n" in rendered:
             raise TypeError(
-                "Inline tables cannot contain multiline values. "
-                f"Key {key!r} is a list or other multiline value."
+                "Inline tables must fit on one line. "
+                f"Key {key!r} serializes with a newline."
             )
         parts.append(f"{_format_key(key)} = {rendered}")
     return "{ " + ", ".join(parts) + " }"
@@ -151,6 +148,12 @@ def _format_key(key: object) -> str:
 
 
 def _format_string(value: str) -> str:
+    r"""Return ``value`` as a TOML basic string.
+
+    Quotes, backslashes, and ``\b``, ``\n``, ``\f``, and ``\r`` use their
+    short escapes. Tab stays raw. Other C0 controls, DEL, and Unicode line
+    separators become ``\uXXXX`` so a config-show comment stays on one line.
+    """
     parts = ['"']
     for char in value:
         replacement = _COMPACT_ESCAPES.get(char)
