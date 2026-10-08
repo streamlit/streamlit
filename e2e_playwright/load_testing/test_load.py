@@ -34,6 +34,7 @@ import sys
 import time
 from dataclasses import dataclass
 from multiprocessing import Pool
+from pathlib import Path
 from typing import TYPE_CHECKING, Final
 from unittest.mock import MagicMock
 
@@ -58,7 +59,6 @@ from e2e_playwright.load_testing.worker import run_worker_session
 if TYPE_CHECKING:
     import subprocess
     from collections.abc import Generator
-    from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -204,6 +204,32 @@ def test_unhealthy_server_failure_keeps_last_log_and_lists_each_attempt(
     assert "log-for-attempt-0" not in message
     assert not logs[0].exists()
     assert logs[1].exists()
+
+
+def test_start_load_test_server_unlinks_log_if_spawn_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed Popen does not leave the mkstemp log file behind."""
+    created: list[Path] = []
+    real_mkstemp = load_conftest.tempfile.mkstemp
+
+    def _tracking_mkstemp(*args: object, **kwargs: object) -> tuple[int, str]:
+        fd, name = real_mkstemp(*args, **kwargs)
+        created.append(Path(name))
+        return fd, name
+
+    monkeypatch.setattr(load_conftest.tempfile, "mkstemp", _tracking_mkstemp)
+    monkeypatch.setattr(
+        load_conftest.subprocess,
+        "Popen",
+        MagicMock(side_effect=OSError("process limit")),
+    )
+
+    with pytest.raises(OSError, match="process limit"):
+        load_conftest.start_load_test_server(12345, tmp_path / "app.py")
+
+    assert created
+    assert not created[0].exists()
 
 
 def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:

@@ -225,14 +225,18 @@ def start_load_test_server(
         suffix=".log",
     )
     log_path = Path(log_name)
-    with os.fdopen(fd, "w", encoding="utf-8") as log_file:
-        process = subprocess.Popen(
-            args,
-            env=env,
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as log_file:
+            process = subprocess.Popen(
+                args,
+                env=env,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+    except Exception:
+        _unlink_server_log(log_path)
+        raise
     return process, log_path
 
 
