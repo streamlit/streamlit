@@ -153,7 +153,7 @@ export function assignDividerColor(
         dividerIndex += 1
         if (dividerIndex === autoColorKeys.length) dividerIndex = 0
       } else if (allColorKeys.includes(divider)) {
-        // @ts-expect-error
+        // @ts-expect-error - named divider colors are not an index signature
         element.heading.divider = allColorMap[divider]
       }
     }
