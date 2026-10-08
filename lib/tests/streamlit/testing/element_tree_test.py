@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import numpy as np
@@ -1861,14 +1861,6 @@ def test_pagination_set_value_selects_page() -> None:
     at.pagination(key="pager").set_value(5).run()
     assert at.session_state["changes"] == 2
 
-    with pytest.raises(AppTestError, match=r"between 1 and 5"):
-        at.pagination(key="pager").set_value(6)
-    with pytest.raises(AppTestError, match=r"between 1 and 5"):
-        at.pagination(key="pager").select(0)
-    with pytest.raises(AppTestError, match=r"between 1 and 5"):
-        at.pagination(key="pager").set_value(True)
-    assert at.pagination(key="pager").value == 5
-
     with pytest.raises(
         AppTestError,
         match=(
@@ -1878,7 +1870,28 @@ def test_pagination_set_value_selects_page() -> None:
     ):
         at.pagination(key="pager").click()
 
-    assert repr(at.pagination(key="pager")).startswith("Pagination(")
+    pager = at.pagination(key="pager")
+    pager_repr = repr(pager)
+    assert pager_repr.startswith("Pagination(")
+    assert "num_pages=5" in pager_repr
+    assert "default=1" in pager_repr
+    assert pager.num_pages == 5
+    assert pager.default == 1
+
+
+@pytest.mark.parametrize("page", [6, 0, True, 2.0])
+def test_pagination_rejects_invalid_page(page: Any) -> None:
+    """Out-of-range pages, bools, and non-ints raise AppTestError."""
+
+    def script():
+        import streamlit as st
+
+        st.pagination(5, key="pager")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=r"between 1 and 5"):
+        at.pagination(key="pager").set_value(page)
+    assert at.pagination(key="pager").value == 1
 
 
 def test_pagination_invalid_session_state_restores_default() -> None:

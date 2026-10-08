@@ -1957,16 +1957,20 @@ class Pagination(Widget):
 
     proto: PaginationProto = field(repr=False)
     form_id: str
+    num_pages: int
+    default: int
 
     def __init__(self, proto: PaginationProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "pagination"
+        self.num_pages = proto.num_pages
+        self.default = proto.default
 
     def set_value(self, v: int) -> Pagination:
         """Set the current page (1-indexed)."""
         self._assert_can_interact()
-        num_pages = int(self.proto.num_pages)
+        num_pages = self.num_pages
         # bool is a subclass of int, but True/False are not page numbers.
         if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= num_pages:
             key_part = f" (key={self.key!r})" if self.key else ""
@@ -1984,13 +1988,15 @@ class Pagination(Widget):
     def _widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        # Copy only a real int so a bad session-state value cannot break the run:
-        # - A missing key, bool, or other non-int stays unset. deserialize(None)
-        #   then restores the declared default. A bool in int_value would
-        #   become 0 or 1.
-        # - Ints outside protobuf sint64 stay unset for the same reason.
-        # - Other out-of-range ints are still sent so PaginationSerde restores
-        #   that same default.
+        # Send only a real int so a bad session-state value cannot break the run
+        # before st.pagination restores its default:
+        # - Leave a missing key, bool, or other non-int unset. deserialize(None)
+        #   returns the declared default. Writing a bool into int_value would turn
+        #   it into 0 or 1.
+        # - Leave ints outside protobuf sint64 unset. Assigning them raises
+        #   ValueError.
+        # - Still send other out-of-range ints. PaginationSerde maps them to that
+        #   same default.
         try:
             value = self.value
         except KeyError:
