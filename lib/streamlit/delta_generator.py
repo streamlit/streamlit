@@ -653,11 +653,9 @@ class DeltaGenerator(
         block_type = block_proto.WhichOneof("type")
 
         if dg._root_container is None or dg._cursor is None:
-            # Return a properly-typed DeltaGenerator even in bare mode
-            # so that DeltaGenerator subclasses (e.g., GridContainer)
-            # can still have their methods called. Always construct a
-            # fresh instance: reusing the caller lets a nested grid
-            # overwrite the parent's declared columns.
+            # In bare mode, still return a fresh dg_type instance so
+            # subclass methods (for example GridContainer.cell()) work
+            # and a nested container does not share state with its parent.
             if dg_type is not None:
                 return cast(
                     "DeltaGenerator",

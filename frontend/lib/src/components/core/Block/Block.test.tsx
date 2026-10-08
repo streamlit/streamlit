@@ -16,7 +16,7 @@
 
 import type { ReactElement } from "react"
 
-import { screen, within } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import type * as ReactAriaComponents from "react-aria-components"
 
 import {
@@ -41,6 +41,7 @@ import { mockEllipsizedLabels, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
+import { gridCellJustifyContent } from "./styled-components"
 
 // SelectionIndicator uses SharedElementTransition which calls getAnimations() in an
 // async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
@@ -1105,6 +1106,19 @@ describe("GridContainer Component", () => {
     )
   }
 
+  it("reuses one justify object per alignment", () => {
+    const { VerticalAlignment } = BlockProto.GridContainer
+    expect(gridCellJustifyContent(VerticalAlignment.CENTER)).toBe(
+      gridCellJustifyContent(VerticalAlignment.CENTER)
+    )
+    expect(gridCellJustifyContent(VerticalAlignment.BOTTOM)).toBe(
+      gridCellJustifyContent(VerticalAlignment.BOTTOM)
+    )
+    expect(gridCellJustifyContent(VerticalAlignment.TOP)).toBe(
+      gridCellJustifyContent(VerticalAlignment.TOP)
+    )
+  })
+
   it("should render a grid container", () => {
     const block = makeGridBlock()
     renderWithContexts(makeGridNodeRendererComponent(block))
@@ -1378,7 +1392,14 @@ describe("GridContainer Component", () => {
       [makeTextElement("Revenue"), makeTextElement("chart", true)],
       new BlockProto({
         allowEmpty: true,
-        vertical: {},
+        flexContainer: {
+          direction: BlockProto.FlexContainer.Direction.VERTICAL,
+          wrap: false,
+          border: false,
+          justify: BlockProto.FlexContainer.Justify.JUSTIFY_START,
+          align: BlockProto.FlexContainer.Align.ALIGN_START,
+          gapConfig: { gapSize: streamlit.GapSize.SMALL },
+        },
         gridCell: {},
       })
     )
@@ -1411,6 +1432,79 @@ describe("GridContainer Component", () => {
       container.textContent?.includes("Revenue")
     )
     expect(label).not.toHaveStyle({ flex: "1 1 0%" })
+  })
+
+  function mockMeasuredHeights(): () => void {
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const height = this.dataset.testid === "stGridCellContent" ? 400 : 120
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          bottom: height,
+          right: 200,
+          width: 200,
+          height,
+          toJSON: () => ({}),
+        }
+      })
+    return () => spy.mockRestore()
+  }
+
+  function renderFixedHeightCell(children: AppNode[]): void {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    renderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock(
+          {
+            cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED,
+            cellHeightConfig: { pixelHeight: 240 },
+          },
+          [cell]
+        )
+      )
+    )
+  }
+
+  it("makes a text-only scrolling cell keyboard reachable", async () => {
+    const restore = mockMeasuredHeights()
+    try {
+      renderFixedHeightCell([makeTextElement("A long note")])
+      const body = screen.getByTestId("stGridCellBody")
+      await waitFor(() => {
+        expect(body).toHaveAttribute("tabindex", "0")
+      })
+      expect(body).toHaveAttribute("role", "region")
+      expect(body).toHaveAttribute("aria-label", "Scrollable cell")
+    } finally {
+      restore()
+    }
+  })
+
+  it("does not add a tab stop when a scrolling cell already has a widget", async () => {
+    const restore = mockMeasuredHeights()
+    try {
+      renderFixedHeightCell([makeButton("Edit")])
+      const body = screen.getByTestId("stGridCellBody")
+      await waitFor(() => {
+        expect(body).toHaveAttribute("data-test-scroll", "true")
+      })
+      expect(body).not.toHaveAttribute("tabindex")
+      expect(await screen.findByRole("button", { name: "Edit" })).toBeVisible()
+    } finally {
+      restore()
+    }
   })
 
   it("keeps a grid.cell() block content-sized when the row height is content", () => {

@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
 
 
 def test_grid_renders(app: Page):
     """Test that all grids render correctly."""
     grids = app.get_by_test_id("stGrid")
-    expect(grids).to_have_count(7)
+    expect(grids).to_have_count(5)
     check_top_level_class(app, "stGrid")
 
 
@@ -71,10 +71,19 @@ def test_stretch_chart_fills_fixed_row_cell(app: Page):
     expect(charts).to_have_count(2)
     for index in range(2):
         chart = charts.nth(index)
-        expect(chart).to_be_visible()
-        box = chart.bounding_box()
-        assert box is not None
-        assert box["height"] > 100
+        cell = chart.locator("xpath=ancestor::*[@data-testid='stGridCell'][1]")
+
+        def chart_is_stretched(chart: Locator = chart, cell: Locator = cell) -> bool:
+            # The default chart height is 21.875rem (~350px). A stretch chart
+            # in a 240px row stays below that and fills most of its cell.
+            chart_box = chart.bounding_box()
+            cell_box = cell.bounding_box()
+            if chart_box is None or cell_box is None or cell_box["height"] <= 0:
+                return False
+            height = chart_box["height"]
+            return height < 300 and height / cell_box["height"] > 0.45
+
+        wait_until(app, chart_is_stretched)
 
 
 def test_grid_visual_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction):

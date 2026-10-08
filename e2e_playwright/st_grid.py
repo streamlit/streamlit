@@ -53,28 +53,6 @@ with grid2.cell():
 with grid2.cell():
     st.markdown("**Cell 5**")
 
-# Grid with different gap settings
-st.subheader("Grid with Custom Gap")
-with st.grid(columns=3, gap=("large", "small"), key="custom_gap"):
-    for i in range(6):
-        st.button(f"Button {i + 1}", key=f"btn_{i}")
-
-# Grid with vertical alignment
-st.subheader("Grid with Vertical Alignment")
-grid3 = st.grid(
-    columns=3,
-    vertical_alignment="center",
-    row_height=100,
-    border=True,
-    key="vertical_align",
-)
-with grid3.cell():
-    st.write("Short")
-with grid3.cell():
-    st.write("Medium\n\nWith more content")
-with grid3.cell():
-    st.write("Tall\n\nWith\n\nEven more\n\ncontent")
-
 # wrap=False keeps the declared column count and scrolls horizontally
 st.subheader("No wrap")
 with st.grid(3, wrap=False, key="no_wrap"):

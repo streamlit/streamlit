@@ -564,18 +564,37 @@ export const StyledGridContentMeasure = styled.div<{
   }
 })
 
+type GridCellJustify = {
+  fallback: CSSProperties["justifyContent"]
+  safe?: string
+}
+
+// Stable references. FlexContextProvider memoizes on fillJustify, so a new
+// object on every column-count change would re-render every cell.
+const GRID_CELL_JUSTIFY_TOP: GridCellJustify = Object.freeze({
+  fallback: "flex-start",
+})
+const GRID_CELL_JUSTIFY_CENTER: GridCellJustify = Object.freeze({
+  fallback: "center",
+  safe: "safe center",
+})
+const GRID_CELL_JUSTIFY_BOTTOM: GridCellJustify = Object.freeze({
+  fallback: "flex-end",
+  safe: "safe flex-end",
+})
+
 export function gridCellJustifyContent(
   verticalAlignment: BlockProto.GridContainer.VerticalAlignment
-): { fallback: CSSProperties["justifyContent"]; safe?: string } {
+): GridCellJustify {
   const { VerticalAlignment } = BlockProto.GridContainer
   switch (verticalAlignment) {
     case VerticalAlignment.CENTER:
-      return { fallback: "center", safe: "safe center" }
+      return GRID_CELL_JUSTIFY_CENTER
     case VerticalAlignment.BOTTOM:
-      return { fallback: "flex-end", safe: "safe flex-end" }
+      return GRID_CELL_JUSTIFY_BOTTOM
     case VerticalAlignment.TOP:
     default:
-      return { fallback: "flex-start" }
+      return GRID_CELL_JUSTIFY_TOP
   }
 }
 

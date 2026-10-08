@@ -22,7 +22,7 @@ import {
   resolveDefaultGridContentBoxPx,
   resolveGridColumnCount,
   resolveMinColumnWidthPx,
-  shouldScrollGridCell,
+  shouldEnableOverflowScroll,
 } from "./gridUtils"
 
 describe("cssLengthToPx", () => {
@@ -216,17 +216,19 @@ describe("computeGridTemplateColumns", () => {
   })
 })
 
-describe("shouldScrollGridCell", () => {
-  it("does not scroll when the cell has no definite height", () => {
-    expect(shouldScrollGridCell(400, 0)).toBe(false)
+describe("shouldEnableOverflowScroll", () => {
+  it("does not scroll when the box has no definite height", () => {
+    expect(shouldEnableOverflowScroll(400, 0)).toBe(false)
   })
 
-  it("does not scroll when in-flow content fits", () => {
-    expect(shouldScrollGridCell(180, 200)).toBe(false)
-    expect(shouldScrollGridCell(200, 200)).toBe(false)
+  it("does not scroll when in-flow content fits, including one pixel of slack", () => {
+    expect(shouldEnableOverflowScroll(180, 200)).toBe(false)
+    expect(shouldEnableOverflowScroll(200, 200)).toBe(false)
+    expect(shouldEnableOverflowScroll(201, 200)).toBe(false)
   })
 
-  it("scrolls when in-flow content exceeds the cell", () => {
-    expect(shouldScrollGridCell(240, 200)).toBe(true)
+  it("scrolls when in-flow content exceeds the box", () => {
+    expect(shouldEnableOverflowScroll(202, 200)).toBe(true)
+    expect(shouldEnableOverflowScroll(240, 200)).toBe(true)
   })
 })

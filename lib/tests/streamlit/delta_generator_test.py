@@ -290,38 +290,47 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         assert inner is not outer
         assert inner._parent is outer
 
-    def test_status_and_nested_grid_without_script_context(self):
-        """Bare execution must not raise, and a nested grid must not mutate its parent."""
+    def _without_script_context(self):
         add_script_run_ctx(threading.current_thread(), None)
-        try:
+        self.addCleanup(
+            add_script_run_ctx, threading.current_thread(), self.script_run_ctx
+        )
+
+    def test_status_without_script_context_does_not_raise(self):
+        """Bare `with st.status` must not raise, including when the body does."""
+        self._without_script_context()
+        with st.status("label"):
+            pass
+
+        with pytest.raises(RuntimeError, match="from body"):
             with st.status("label"):
-                pass
+                raise RuntimeError("from body")
 
-            with pytest.raises(RuntimeError, match="from body"):
-                with st.status("label"):
-                    raise RuntimeError("from body")
+    def test_nested_grid_without_script_context_keeps_parent_columns(self):
+        """A nested bare-mode grid must not overwrite the parent's column count."""
+        self._without_script_context()
+        outer = st.grid(4)
+        with outer:
+            inner = st.grid(2)
+        assert inner is not outer
+        assert outer._declared_columns == 4
+        assert inner._declared_columns == 2
 
-            outer = st.grid(4)
-            with outer:
-                inner = st.grid(2)
-            assert inner is not outer
-            assert outer._declared_columns == 4
-            assert inner._declared_columns == 2
+    def test_dialog_open_close_without_script_context_does_not_raise(self):
+        """Dialog open/close must not enqueue when there is no session."""
+        from streamlit.elements.lib.dialog import Dialog
 
-            from streamlit.elements.lib.dialog import Dialog
-
-            dialog = Dialog(
-                root_container=None,
-                cursor=None,
-                parent=None,
-                block_type="dialog",
-            )
-            dialog._current_proto = Block_pb2.Block()
-            dialog._delta_path = []
-            dialog.open()
-            dialog.close()
-        finally:
-            add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
+        self._without_script_context()
+        dialog = Dialog(
+            root_container=None,
+            cursor=None,
+            parent=None,
+            block_type="dialog",
+        )
+        dialog._current_proto = Block_pb2.Block()
+        dialog._delta_path = []
+        dialog.open()
+        dialog.close()
 
     @parameterized.expand([(RootContainer.MAIN,), (RootContainer.SIDEBAR,)])
     def test_enqueue(self, container):

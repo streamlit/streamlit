@@ -234,7 +234,7 @@ message Block {
     // Number of columns. 0 means auto mode (columns determined by min_column_width_px).
     int32 max_columns = 1;
 
-    // Minimum column width in pixels. Used for auto mode or to set minimum width per column.
+    // Minimum column width in pixels. 0 means "auto": the frontend uses the theme's default column width.
     uint32 min_column_width_px = 2;
 
     // Gap configuration for row and column gaps.

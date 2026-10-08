@@ -761,7 +761,7 @@ class LayoutsMixin:
         key: Key | None = None,
         dense: bool = False,
     ) -> GridContainer:
-        r"""Insert a responsive CSS Grid layout container.
+        r"""Insert a responsive grid container.
 
         Inserts a grid for repeated cards, metric walls, galleries, and
         dashboard panels. Direct children become cells and reflow with the
@@ -783,7 +783,10 @@ class LayoutsMixin:
             - An integer from 1 to 24: Maximum column count. With
               ``wrap=True`` (default), the grid wraps to fewer columns
               when cells would fall below ``min_column_width``. With
-              ``wrap=False``, this count is kept at every width.
+              ``wrap=False``, this count is kept at every width. For
+              example, ``st.grid(4)`` shows three columns on the default
+              centered layout because four would be narrower than
+              ``min_column_width``.
 
         min_column_width : "auto" or int
             The minimum width of each column. This can be one of the
@@ -853,7 +856,9 @@ class LayoutsMixin:
             - ``"content"`` (default): Each row is as tall as its
               tallest cell.
             - A positive integer: Every row is that many pixels.
-              Content that is taller scrolls inside the cell.
+              Content that is taller scrolls inside the cell. Content
+              does not stretch automatically; pass ``height="stretch"``
+              to a chart or dataframe to fill the cell.
 
         width : "stretch" or int
             The width of the grid. This can be one of the following:

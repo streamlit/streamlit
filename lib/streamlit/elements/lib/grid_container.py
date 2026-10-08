@@ -83,8 +83,9 @@ class GridContainer(DeltaGenerator):
             - ``"all"``: The cell spans every column on its own row.
 
         row_span : int
-            Number of rows this cell should span. Defaults to 1.
-            Must be a positive integer.
+            The number of rows the cell spans. Defaults to ``1``.
+            Must be a positive integer. With ``row_height="content"``,
+            the rows it covers grow to fit this cell.
 
         Returns
         -------

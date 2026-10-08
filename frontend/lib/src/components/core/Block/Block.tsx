@@ -68,7 +68,7 @@ import {
   resolveDefaultGridContentBoxPx,
   resolveGridColumnCount,
   resolveMinColumnWidthPx,
-  shouldScrollGridCell,
+  shouldEnableOverflowScroll,
 } from "./gridUtils"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
@@ -311,7 +311,11 @@ interface GridContainerProps extends BaseBlockProps {
 }
 
 const GRID_OBSERVED_PROPERTIES: DOMRectKeys[] = ["width"]
-const GRID_CELL_OBSERVED_PROPERTIES: DOMRectKeys[] = ["height"]
+const HEIGHT_OBSERVED_PROPERTIES: DOMRectKeys[] = ["height"]
+// Descendants only. The scroll body itself is not included, so giving it
+// tabIndex={0} does not count as an existing tab stop.
+const FOCUSABLE_DESCENDANT =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 interface GridCellProps {
   constrainOverflow: boolean
@@ -341,16 +345,25 @@ const GridCell = ({
   children,
 }: GridCellProps): ReactElement => {
   const { values: bodyHeights, elementRef: bodyRef } =
-    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES, [
+    useResizeObserver<HTMLDivElement>(HEIGHT_OBSERVED_PROPERTIES, [
       constrainOverflow,
     ])
   const { values: contentHeights, elementRef: contentRef } =
-    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES, [
+    useResizeObserver<HTMLDivElement>(HEIGHT_OBSERVED_PROPERTIES, [
       constrainOverflow,
     ])
   const scroll =
     constrainOverflow &&
-    shouldScrollGridCell(contentHeights[0] ?? 0, bodyHeights[0] ?? 0)
+    shouldEnableOverflowScroll(contentHeights[0] ?? 0, bodyHeights[0] ?? 0)
+  // A text-only scrollport is not in the tab order. Widgets already inside
+  // the cell are, so do not add a second stop in that case.
+  const [keyboardScrollTarget, setKeyboardScrollTarget] = useState(false)
+  useLayoutEffect(() => {
+    const body = bodyRef.current
+    const expose =
+      scroll && !!body && body.querySelector(FOCUSABLE_DESCENDANT) === null
+    setKeyboardScrollTarget(current => (current === expose ? current : expose))
+  }, [bodyRef, scroll, children])
 
   return (
     <StyledGridCell
@@ -368,11 +381,15 @@ const GridCell = ({
         $passthrough={!constrainOverflow}
         data-testid="stGridCellBody"
         data-test-scroll={String(scroll)}
+        tabIndex={keyboardScrollTarget ? 0 : undefined}
+        role={keyboardScrollTarget ? "region" : undefined}
+        aria-label={keyboardScrollTarget ? "Scrollable cell" : undefined}
       >
         <StyledGridCellContent
           ref={constrainOverflow ? contentRef : undefined}
           verticalAlignment={verticalAlignment}
           $passthrough={!constrainOverflow}
+          data-testid="stGridCellContent"
         >
           {children}
         </StyledGridCellContent>
@@ -393,12 +410,12 @@ const OverflowAwareGridPort = ({
   children: ReactNode
 }): ReactElement => {
   const { values: portHeights, elementRef: portRef } =
-    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES, [bounded])
+    useResizeObserver<HTMLDivElement>(HEIGHT_OBSERVED_PROPERTIES, [bounded])
   const { values: contentHeights, elementRef: contentRef } =
-    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES, [bounded])
+    useResizeObserver<HTMLDivElement>(HEIGHT_OBSERVED_PROPERTIES, [bounded])
   const scroll =
     bounded &&
-    shouldScrollGridCell(contentHeights[0] ?? 0, portHeights[0] ?? 0)
+    shouldEnableOverflowScroll(contentHeights[0] ?? 0, portHeights[0] ?? 0)
 
   return (
     <StyledGridScrollBody
