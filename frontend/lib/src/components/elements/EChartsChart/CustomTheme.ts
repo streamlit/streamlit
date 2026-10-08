@@ -36,6 +36,112 @@ export const STREAMLIT_THEME = "streamlit"
 export type EChartsOptionObject = Record<string, unknown>
 
 /**
+ * Longest thousands-separated tooltip number, not counting a leading minus.
+ *
+ * Four fraction digits already shorten ordinary values. Only huge magnitudes
+ * that are still longer switch to compact notation.
+ */
+const MAX_TOOLTIP_TEXT_LENGTH = 18
+
+const TOOLTIP_FRACTION_DIGITS = 4
+
+const TOOLTIP_SIGNIFICANT_DIGITS = 6
+
+function formatTooltipItem(value: unknown): string {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? formatTooltipNumber(value) : "-"
+  }
+  if (typeof value === "string") {
+    // A blank string is a missing value, same as null.
+    return value === "" ? "-" : value
+  }
+  if (typeof value === "boolean" || typeof value === "bigint") {
+    return String(value)
+  }
+  if (value instanceof Date) {
+    return formatTooltipDate(value)
+  }
+  return "-"
+}
+
+/** Format a tooltip date in local time. Treat an invalid date as missing. */
+function formatTooltipDate(value: Date): string {
+  if (Number.isNaN(value.getTime())) {
+    return "-"
+  }
+  const pad = (part: number): string => String(part).padStart(2, "0")
+  const date = `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
+  const time = `${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`
+  return `${date} ${time}`
+}
+
+/**
+ * Fraction digits for an ordinary tooltip number.
+ *
+ * When rounding to four digits changes the value, keep the trailing zero
+ * (``76.2380``). Exact shorter values stay short (``12.5``, integers).
+ */
+function tooltipFractionDigitOptions(value: number): Intl.NumberFormatOptions {
+  const rounded = Number(value.toFixed(TOOLTIP_FRACTION_DIGITS))
+  return {
+    minimumFractionDigits: rounded === value ? 0 : TOOLTIP_FRACTION_DIGITS,
+    maximumFractionDigits: TOOLTIP_FRACTION_DIGITS,
+  }
+}
+
+function formatTooltipNumber(value: number): string {
+  if (Object.is(value, -0)) {
+    return "0"
+  }
+  const absolute = Math.abs(value)
+  // Four fraction digits would round these non-zero values to 0.
+  if (absolute !== 0 && absolute < 10 ** -TOOLTIP_FRACTION_DIGITS) {
+    return new Intl.NumberFormat("en-US", {
+      notation: "scientific",
+      maximumSignificantDigits: TOOLTIP_SIGNIFICANT_DIGITS,
+    }).format(value)
+  }
+
+  let digitOptions: Intl.NumberFormatOptions
+  if (absolute >= 1) {
+    digitOptions = tooltipFractionDigitOptions(value)
+  } else {
+    // Four decimal places would clip a small fraction (0.000123456 → 0.0001).
+    digitOptions = { maximumSignificantDigits: TOOLTIP_SIGNIFICANT_DIGITS }
+  }
+  const plain = new Intl.NumberFormat("en-US", {
+    ...digitOptions,
+    useGrouping: true,
+  }).format(value)
+  const unsignedLength = plain.startsWith("-")
+    ? plain.length - 1
+    : plain.length
+  if (unsignedLength <= MAX_TOOLTIP_TEXT_LENGTH) {
+    return plain
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    notation: "compact",
+    // Significant digits, so the suffix form stays short (`1.235T`).
+    maximumSignificantDigits: TOOLTIP_FRACTION_DIGITS,
+  }).format(value)
+}
+
+/**
+ * Tooltip ``valueFormatter`` for the Streamlit theme.
+ *
+ * Returns plain text that ECharts escapes: one string, or one string per
+ * entry for multi-value points such as candlesticks. An option
+ * ``tooltip.formatter`` or ``tooltip.valueFormatter`` replaces this.
+ */
+export function formatEChartsTooltipValue(value: unknown): string | string[] {
+  if (Array.isArray(value)) {
+    return value.map(item => formatTooltipItem(item))
+  }
+  return formatTooltipItem(value)
+}
+
+/**
  * Build the per-axis theming defaults shared by all axis types
  * (``categoryAxis``/``valueAxis``/``logAxis``/``timeAxis`` as well as the
  * non-cartesian axes ``angleAxis``/``radiusAxis``/``parallelAxis``/
@@ -63,6 +169,15 @@ function buildAxisDefaults(
       color: labelColor,
       fontFamily: theme.genericFonts.bodyFont,
       fontSize,
+      // Keep the line box at the font size. A taller box lifts the glyphs off
+      // the tick and into the series.
+      lineHeight: fontSize,
+      // ECharts' default margin is a fixed 8px. Scale the gap with the base font.
+      margin: convertRemToPx(theme.spacing.sm),
+      // Stroke with the page color so a series or gridline crossing a label
+      // (for example labels inside the plot) drops out around the glyphs.
+      textBorderColor: theme.colors.bgColor,
+      textBorderWidth: 2,
     },
     nameTextStyle: {
       color: labelColor,
@@ -196,7 +311,12 @@ export function buildStreamlitEChartsTheme(
         color: colors.bodyText,
         fontFamily: genericFonts.bodyFont,
         fontSize: bodyFontSize,
+        // ECharts paints tooltip values at weight 900 when fontWeight is unset.
+        // Use the theme's normal weight so values match the series name.
+        fontWeight: theme.fontWeights.normal,
       },
+      // Plain text so ECharts escapes it. Do not inject an HTML formatter.
+      valueFormatter: formatEChartsTooltipValue,
     },
     categoryAxis: axisDefaults,
     valueAxis: axisDefaults,
@@ -1006,7 +1126,8 @@ function buildDefaultGrid(
  * ``series[0].itemStyle.color`` or a top-level ``color``) always survive. For
  * security, it never injects a tooltip/label ``formatter`` and never changes
  * ``tooltip.renderMode`` — ECharts' default escaping of tooltip/label values is
- * relied upon.
+ * relied upon. The theme ``valueFormatter`` shortens tooltip numbers and
+ * returns plain text that ECharts escapes.
  *
  * Timeline specs nest the chart under ``baseOption``, which is where ECharts
  * reads ``aria`` and ``grid`` from, so the defaults are filled in there instead.

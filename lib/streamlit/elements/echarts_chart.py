@@ -697,7 +697,14 @@ class EChartsMixin:
             The ``"streamlit"`` theme can be partially customized through the
             configuration options ``theme.chartCategoricalColors`` and
             ``theme.chartSequentialColors``. Font configuration options are
-            also applied.
+            also applied. Tooltips use that font at the theme's normal weight.
+            Tooltip numbers of 1 or greater show at most four fraction digits,
+            and keep those digits when rounding changes the value (``76.2380``).
+            Exact shorter values stay short (``12.5``). Numbers from 0 up to 1
+            keep up to six significant digits. Very small numbers use scientific
+            notation, and very long ones use compact notation. Set
+            ``tooltip.formatter`` or ``tooltip.valueFormatter`` to replace that
+            formatting.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this

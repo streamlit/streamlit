@@ -24,6 +24,7 @@ import {
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
   type EChartsOptionObject,
+  formatEChartsTooltipValue,
   insideDataZoomConsumesWheelEvent,
   optionHasInsideDataZoom,
   STREAMLIT_THEME,
@@ -68,12 +69,24 @@ describe("buildStreamlitEChartsTheme", () => {
     const tooltip = echartsTheme.tooltip as Record<string, unknown>
     expect(tooltip.backgroundColor).toBe(theme.colors.bgColor)
     expect(tooltip.borderColor).toBe(theme.colors.borderColor)
+    const tooltipText = tooltip.textStyle as Record<string, unknown>
+    expect(tooltipText.fontFamily).toBe(theme.genericFonts.bodyFont)
+    expect(tooltipText.fontSize).toBe(convertRemToPx(theme.fontSizes.twoSm))
+    // ECharts paints tooltip values at weight 900 when fontWeight is unset.
+    expect(tooltipText.fontWeight).toBe(theme.fontWeights.normal)
+    expect(tooltip.valueFormatter).toBe(formatEChartsTooltipValue)
+    expect(tooltip.formatter).toBeUndefined()
 
     const categoryAxis = echartsTheme.categoryAxis as Record<
       string,
       Record<string, unknown>
     >
-    expect(categoryAxis.axisLabel.color).toBe(getGray70(theme))
+    const axisLabel = categoryAxis.axisLabel
+    expect(axisLabel.color).toBe(getGray70(theme))
+    expect(axisLabel.lineHeight).toBe(convertRemToPx(theme.fontSizes.twoSm))
+    expect(axisLabel.margin).toBe(convertRemToPx(theme.spacing.sm))
+    expect(axisLabel.textBorderColor).toBe(theme.colors.bgColor)
+    expect(axisLabel.textBorderWidth).toBe(2)
   })
 
   it("seeds the continuous color scale from the sequential palette", () => {
@@ -293,6 +306,66 @@ describe("buildStreamlitEChartsTheme", () => {
     // segments (so an explicit user color array replaces it wholesale).
     const axisLine = gauge.axisLine as Record<string, Record<string, unknown>>
     expect(axisLine.lineStyle.color).toEqual([[1, getGray30(theme)]])
+  })
+})
+
+describe("formatEChartsTooltipValue", () => {
+  it.each([
+    [76.23801738559538, "76.2380"],
+    [49.19783483864203, "49.1978"],
+    [9999999, "9,999,999"],
+    [-12.5, "-12.5"],
+    [-0, "0"],
+  ])("formats %s as %s", (value, expected) => {
+    expect(formatEChartsTooltipValue(value)).toBe(expected)
+  })
+
+  it.each([
+    [0.123456789, "0.123457"],
+    [0.000123456, "0.000123456"],
+    [0.0001, "0.0001"],
+    [9.999e-5, "9.999E-5"],
+  ])("formats small %s as %s", (value, expected) => {
+    expect(formatEChartsTooltipValue(value)).toBe(expected)
+  })
+
+  it.each([
+    [1e-8, "1E-8"],
+    // Grouped form is longer than the tooltip length cap.
+    [1e15, "1000T"],
+  ])("formats extreme %s as %s", (value, expected) => {
+    expect(formatEChartsTooltipValue(value)).toBe(expected)
+  })
+
+  it.each([
+    ["2026", "2026"],
+    ["76.23801738559538", "76.23801738559538"],
+  ])("leaves the string %s unchanged", (value, expected) => {
+    expect(formatEChartsTooltipValue(value)).toBe(expected)
+  })
+
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+    ["an empty string", ""],
+    ["NaN", Number.NaN],
+    ["Infinity", Number.POSITIVE_INFINITY],
+    ["an invalid date", new Date(Number.NaN)],
+  ])("renders %s as a dash", (_label, value) => {
+    expect(formatEChartsTooltipValue(value)).toBe("-")
+  })
+
+  it("formats each entry of a multi-value point", () => {
+    expect(formatEChartsTooltipValue([10, 76.23801738559538])).toEqual([
+      "10",
+      "76.2380",
+    ])
+  })
+
+  it("formats a date as a local timestamp", () => {
+    expect(formatEChartsTooltipValue(new Date(2026, 9, 1, 3, 4, 5))).toBe(
+      "2026-10-01 03:04:05"
+    )
   })
 })
 
@@ -874,7 +947,8 @@ describe("applyStreamlitOptionDefaults", () => {
     }
     const result = applyDefaults(option, STREAMLIT_THEME)
 
-    // The tooltip is left entirely untouched: no formatter, no renderMode.
+    // Leave the option tooltip untouched. Shortening is a theme valueFormatter
+    // that returns plain text (ECharts escapes it), not an HTML formatter here.
     expect(result.tooltip).toBe(option.tooltip)
     expect(result.tooltip).toEqual({ trigger: "axis" })
     const tooltip = result.tooltip as Record<string, unknown>
