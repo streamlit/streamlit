@@ -54,8 +54,8 @@ Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for
 For more control over card layout, use `st.grid`:
 
 ```python
-# Grid with equal-height cells and borders
-grid = st.grid(4, wrap=False, border=True, row_height="equal", gap="medium")
+# Uniform cards use a pixel row height. Borders sit inside the cell.
+grid = st.grid(4, border=True, row_height=160, gap="medium")
 with grid.cell():
     st.metric("Revenue", "$1.2M", "-7%")
 with grid.cell():

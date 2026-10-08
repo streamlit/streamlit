@@ -93,7 +93,7 @@ metrics = [
     ("Conversion", "12.4%", "+1.1%"),
     ("Retention", "96%", "-0.4%"),
 ]
-grid = st.grid(4, wrap=False, border=True, row_height="equal")
+grid = st.grid(4, border=True)
 for label, value, delta in metrics:
     with grid.cell():
         st.metric(label, value, delta)
@@ -135,7 +135,7 @@ grid.cell().dataframe(df, height=220)
 - `wrap` — `True` (default) may decrease the column count; `False` keeps it and scrolls
 - `gap` — Scalar like `st.columns`, or `(row_gap, column_gap)`
 - `border` — Show borders around cells
-- `row_height` — `"content"` (default), `"equal"`, or fixed pixels
+- `row_height` — `"content"` (default) or fixed pixels. Use a pixel height for uniform cards.
 - `height` — `"content"` (default, page scrolls), `"stretch"`, or pixels
 - `vertical_alignment` — `"top"` (default), `"center"`, `"bottom"`
 

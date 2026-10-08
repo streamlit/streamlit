@@ -1130,7 +1130,23 @@ describe("GridContainer Component", () => {
     renderWithContexts(makeGridNodeRendererComponent(block))
 
     const gridContainer = screen.getByTestId("stGrid")
-    // Unmeasured first paint uses contentMaxWidth (736px): (736+16)/(200+16) = 3
+    // Unmeasured first paint uses the padded content box (704px):
+    // (704+16)/(200+16) = 3
+    expect(gridContainer).toHaveStyle(
+      "grid-template-columns: repeat(3, minmax(0, 1fr))"
+    )
+    expect(gridContainer).toHaveAttribute("data-test-column-count", "3")
+  })
+
+  it("uses the padded content box rather than raw contentMaxWidth", () => {
+    const block = makeGridBlock({
+      maxColumns: 0,
+      minColumnWidthPx: 170,
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    // 736px would fit 4 columns; 704px fits 3.
     expect(gridContainer).toHaveStyle(
       "grid-template-columns: repeat(3, minmax(0, 1fr))"
     )
@@ -1194,31 +1210,6 @@ describe("GridContainer Component", () => {
     expect(screen.getByTestId("stGrid")).toHaveStyle("height: auto")
   })
 
-  it("fills the bounded box with equal-height rows", () => {
-    const block = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [],
-      new BlockProto({
-        allowEmpty: true,
-        heightConfig: { pixelHeight: 400 },
-        gridContainer: {
-          maxColumns: 2,
-          minColumnWidthPx: 220,
-          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
-          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
-          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
-          showCellBorder: false,
-          cellHeightMode: BlockProto.GridContainer.CellHeightMode.EQUAL,
-        },
-      })
-    )
-    renderWithContexts(makeGridNodeRendererComponent(block))
-
-    expect(screen.queryByTestId("stGridScrollBody")).not.toBeInTheDocument()
-    expect(screen.getByTestId("stGrid")).toHaveStyle("height: 100%")
-    expect(screen.getByTestId("stGrid")).not.toHaveStyle("overflow-y: auto")
-  })
-
   it("does not clip a pixel-height grid until in-flow tracks overflow", () => {
     const block = new BlockNode(
       FAKE_SCRIPT_HASH,
@@ -1243,6 +1234,31 @@ describe("GridContainer Component", () => {
     expect(scrollBody).toHaveStyle("height: 100%")
     expect(scrollBody).toHaveAttribute("data-test-scroll", "false")
     expect(screen.getByTestId("stGrid")).not.toHaveStyle("overflow-y: auto")
+  })
+
+  it("scrolls a bounded grid when reserved equal mode is set", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { pixelHeight: 400 },
+        gridContainer: {
+          maxColumns: 2,
+          minColumnWidthPx: 220,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          showCellBorder: false,
+          cellHeightMode: BlockProto.GridContainer.CellHeightMode.EQUAL,
+        },
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle("height: 100%")
+    expect(screen.getByTestId("stGrid")).toHaveStyle("height: auto")
+    expect(screen.getByTestId("stGrid")).toHaveStyle("grid-auto-rows: auto")
   })
 
   it("keeps content-height grids auto-sized", () => {
@@ -1350,9 +1366,9 @@ describe("GridContainer Component", () => {
       "grid-auto-rows: auto;",
     ],
     [
-      "auto rows: minmax 1fr for equal mode",
+      "auto rows: auto for reserved equal mode",
       { cellHeightMode: BlockProto.GridContainer.CellHeightMode.EQUAL },
-      "grid-auto-rows: minmax(0, 1fr);",
+      "grid-auto-rows: auto;",
     ],
     [
       "auto rows: fixed px for fixed mode",
@@ -1410,6 +1426,92 @@ describe("GridContainer Component", () => {
 
     expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
     expect(screen.getAllByTestId("stElementContainer")).toHaveLength(1)
+  })
+
+  it("places each child of a transparent wrapper in its own cell", () => {
+    const fragment = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("First card"), text("Second card")],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const block = makeGridBlock({}, [fragment])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(2)
+    expect(cells[0]).toHaveTextContent("First card")
+    expect(cells[1]).toHaveTextContent("Second card")
+  })
+
+  it("keeps grid.cell output inside a transparent wrapper as one cell", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("Grouped"), text("Together")],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    const fragment = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [cell],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const block = makeGridBlock({}, [fragment])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(1)
+    expect(cells[0]).toHaveTextContent("Grouped")
+    expect(cells[0]).toHaveTextContent("Together")
+  })
+
+  it("flattens nested transparent wrappers into cells", () => {
+    const inner = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("Inner")],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const outer = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("Outer"), inner],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const block = makeGridBlock({}, [outer])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(2)
+    expect(cells[0]).toHaveTextContent("Outer")
+    expect(cells[1]).toHaveTextContent("Inner")
+  })
+
+  it("does not create a cell for an empty transparent wrapper", () => {
+    const fragment = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const block = makeGridBlock({}, [fragment, text("Kept")])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
+    expect(screen.getByText("Kept")).toBeVisible()
+  })
+
+  it("keeps a non-transparent block as one cell", () => {
+    const group = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("A"), text("B")],
+      new BlockProto({ allowEmpty: true, vertical: {} })
+    )
+    const block = makeGridBlock({}, [group])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
+    expect(screen.getByTestId("stGridCell")).toHaveTextContent("A")
+    expect(screen.getByTestId("stGridCell")).toHaveTextContent("B")
   })
 
   it("does not create a cell for an empty transient child", () => {

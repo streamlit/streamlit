@@ -411,7 +411,6 @@ export interface StyledGridContainerBlockProps {
   cellHeightMode: BlockProto.GridContainer.CellHeightMode
   cellHeightPx?: number
   $dense?: boolean
-  $fillHeight?: boolean
   /**
    * When false, skip wrap=False overflow on this element. Bounded-height
    * content/fixed grids apply overflow on StyledGridScrollBody instead.
@@ -431,39 +430,26 @@ export const StyledGridContainerBlock =
       cellHeightMode,
       cellHeightPx,
       $dense,
-      $fillHeight,
       $applyOverflow = true,
     }) => {
       const rowGapPx = translateGapWidth(rowGap, theme)
       const columnGapPx = translateGapWidth(columnGap, theme)
 
-      // Determine grid-auto-rows based on cell height mode
-      let gridAutoRows: string
-      const { CellHeightMode } = BlockProto.GridContainer
-      switch (cellHeightMode) {
-        case CellHeightMode.EQUAL:
-          // minmax(0, 1fr) lets bounded equal rows shrink below content
-          // so the inner cell scrollport can activate. Plain 1fr keeps a
-          // min-content floor and the grid grows past a pixel/stretch height.
-          gridAutoRows = "minmax(0, 1fr)"
-          break
-        case CellHeightMode.FIXED:
-          gridAutoRows = cellHeightPx ? `${cellHeightPx}px` : "auto"
-          break
-        case CellHeightMode.CONTENT:
-        default:
-          gridAutoRows = "auto"
-          break
-      }
+      // Pixel row_height is a fixed track. Content, and the reserved EQUAL
+      // value, size each row to its tallest cell.
+      const gridAutoRows =
+        cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED &&
+        cellHeightPx
+          ? `${cellHeightPx}px`
+          : "auto"
 
       return {
         display: "grid",
         width: "100%",
         maxWidth: "100%",
-        // Equal rows need a definite height so minmax(0, 1fr) shares the
-        // bounded box. Content/fixed tracks stay auto inside the overflow
-        // port so they can grow and be measured.
-        ...($fillHeight ? { height: "100%", flex: 1 } : { height: "auto" }),
+        // Tracks stay auto inside a bounded grid so the overflow port can
+        // measure them and scroll only when they exceed the box.
+        height: "auto",
         minWidth: "1rem",
         minHeight: 0,
         gap: `${rowGapPx} ${columnGapPx}`,

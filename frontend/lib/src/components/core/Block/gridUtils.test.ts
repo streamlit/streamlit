@@ -19,6 +19,7 @@ import {
   computeGridTemplateColumns,
   cssLengthToPx,
   GRID_AUTO_COLUMN_CAP,
+  resolveDefaultGridContentBoxPx,
   resolveGridColumnCount,
   resolveMinColumnWidthPx,
   shouldScrollGridCell,
@@ -74,13 +75,35 @@ describe("resolveGridColumnCount", () => {
     ).toBe(GRID_AUTO_COLUMN_CAP)
   })
 
-  it("wraps st.grid(4) to 3 columns at the default 736px content width", () => {
+  it("wraps st.grid(4) to 3 columns at the default 704px content box", () => {
     expect(
       resolveGridColumnCount({
         ...autoFloor,
-        availableWidthPx: 736,
+        availableWidthPx: 704,
         maxColumns: 4,
         wrap: true,
+      })
+    ).toBe(3)
+  })
+
+  it("fits one more column in raw contentMaxWidth than in the padded box", () => {
+    const narrowFloor = {
+      minColumnWidthPx: 170,
+      columnGapPx: 16,
+      maxColumns: 0,
+      wrap: true,
+      fallbackWidthPx: 0,
+    }
+    expect(
+      resolveGridColumnCount({
+        ...narrowFloor,
+        availableWidthPx: 736,
+      })
+    ).toBe(4)
+    expect(
+      resolveGridColumnCount({
+        ...narrowFloor,
+        availableWidthPx: 704,
       })
     ).toBe(3)
   })
@@ -102,13 +125,17 @@ describe("resolveGridColumnCount", () => {
     ).toBe(3)
   })
 
-  it("uses fallback width when unmeasured so first paint matches content width", () => {
+  it("uses the padded content box when unmeasured", () => {
     expect(
       resolveGridColumnCount({
         ...autoFloor,
         availableWidthPx: undefined,
         maxColumns: 4,
         wrap: true,
+        fallbackWidthPx: resolveDefaultGridContentBoxPx({
+          contentMaxWidthPx: 736,
+          horizontalPaddingPx: 16,
+        }),
       })
     ).toBe(3)
   })
@@ -146,6 +173,17 @@ describe("resolveGridColumnCount", () => {
         fallbackWidthPx: 736,
       })
     ).toBe(5)
+  })
+})
+
+describe("resolveDefaultGridContentBoxPx", () => {
+  it("subtracts horizontal padding from contentMaxWidth", () => {
+    expect(
+      resolveDefaultGridContentBoxPx({
+        contentMaxWidthPx: cssLengthToPx("736px", 16),
+        horizontalPaddingPx: cssLengthToPx("1rem", 16),
+      })
+    ).toBe(704)
   })
 })
 

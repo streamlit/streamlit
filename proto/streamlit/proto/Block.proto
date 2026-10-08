@@ -252,7 +252,12 @@ message Block {
     // Whether to show a border around each cell.
     bool show_cell_border = 6;
 
-    // Cell height mode.
+    // How rows are sized.
+    // CONTENT: each row is as tall as its tallest cell.
+    // FIXED: every row is cell_height_config pixels.
+    // EQUAL is reserved for a follow-up that sizes every row to the tallest
+    // cell while height is "content". st.grid does not accept it, and the
+    // frontend renders EQUAL as CONTENT.
     enum CellHeightMode {
       CONTENT = 0;
       EQUAL = 1;

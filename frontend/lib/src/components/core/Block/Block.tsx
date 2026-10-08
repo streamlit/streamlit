@@ -25,7 +25,7 @@ import {
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { BlockNode, ElementNode } from "~lib/AppNode"
+import { type AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
@@ -64,6 +64,7 @@ import {
 import {
   clampColumnSpan,
   cssLengthToPx,
+  resolveDefaultGridContentBoxPx,
   resolveGridColumnCount,
   resolveMinColumnWidthPx,
   shouldScrollGridCell,
@@ -424,6 +425,30 @@ const OverflowAwareGridPort = ({
 }
 
 /**
+ * Direct children of a layout-transparent wrapper become grid cells.
+ *
+ * A fragment that writes into a grid does so through one transparent block.
+ * That block has no DOM node, so each of its children is a cell. `grid.cell()`
+ * inside the fragment stays one cell. Nested transparent wrappers flatten too.
+ */
+function collectGridCellSources(
+  nodes: AppNode[],
+  keyPrefix = ""
+): { node: AppNode; sourceKey: string }[] {
+  return nodes.flatMap((node, index) => {
+    const sourceKey = keyPrefix === "" ? `${index}` : `${keyPrefix}.${index}`
+    if (
+      node instanceof BlockNode &&
+      node.deltaBlock.transparent &&
+      !node.deltaBlock.gridCell
+    ) {
+      return collectGridCellSources(node.children ?? [], sourceKey)
+    }
+    return [{ node, sourceKey }]
+  })
+}
+
+/**
  * Renders a CSS Grid container with its children wrapped in grid cells.
  */
 const GridContainer = (props: GridContainerProps): ReactElement => {
@@ -482,12 +507,24 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     theme.fontSizes.baseFontSize
   )
   const pixelWidth = node.deltaBlock.widthConfig?.pixelWidth
+  // Unmeasured first paint uses the padded content box (704px at a 16px
+  // root), not raw contentMaxWidth, so the column count matches the width
+  // the resize observer will report.
   const fallbackWidthPx =
     (notNullOrUndefined(pixelWidth) && pixelWidth > 0
       ? pixelWidth
       : undefined) ??
     parentContext?.parentWidth ??
-    cssLengthToPx(theme.sizes.contentMaxWidth, theme.fontSizes.baseFontSize)
+    resolveDefaultGridContentBoxPx({
+      contentMaxWidthPx: cssLengthToPx(
+        theme.sizes.contentMaxWidth,
+        theme.fontSizes.baseFontSize
+      ),
+      horizontalPaddingPx: cssLengthToPx(
+        theme.spacing.lg,
+        theme.fontSizes.baseFontSize
+      ),
+    })
   const columnCount = resolveGridColumnCount({
     availableWidthPx: measuredWidth,
     minColumnWidthPx,
@@ -513,54 +550,56 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       componentRegistry,
     })
 
-    return (node.children ?? []).flatMap((childNode, sourceIndex) => {
-      // Get grid cell config from BlockNode children
-      let columnSpan: number | undefined
-      let columnSpanAll = false
-      let rowSpan: number | undefined
-      let nodeId: string | undefined
+    return collectGridCellSources(node.children ?? []).flatMap(
+      ({ node: childNode, sourceKey }) => {
+        // Get grid cell config from BlockNode children
+        let columnSpan: number | undefined
+        let columnSpanAll = false
+        let rowSpan: number | undefined
+        let nodeId: string | undefined
 
-      if (childNode instanceof BlockNode) {
-        nodeId = childNode.deltaBlock.id || undefined
-        if (childNode.deltaBlock.gridCell) {
-          const gridCell = childNode.deltaBlock.gridCell
-          if (gridCell.columnSpanAll) {
-            columnSpanAll = true
-          } else if (gridCell.columnSpan && gridCell.columnSpan > 1) {
-            columnSpan = gridCell.columnSpan
+        if (childNode instanceof BlockNode) {
+          nodeId = childNode.deltaBlock.id || undefined
+          if (childNode.deltaBlock.gridCell) {
+            const gridCell = childNode.deltaBlock.gridCell
+            if (gridCell.columnSpanAll) {
+              columnSpanAll = true
+            } else if (gridCell.columnSpan && gridCell.columnSpan > 1) {
+              columnSpan = gridCell.columnSpan
+            }
+            if (gridCell.rowSpan && gridCell.rowSpan > 1) {
+              rowSpan = gridCell.rowSpan
+            }
           }
-          if (gridCell.rowSpan && gridCell.rowSpan > 1) {
-            rowSpan = gridCell.rowSpan
-          }
+        } else if (childNode instanceof ElementNode) {
+          nodeId = getElementId(childNode.element)
         }
-      } else if (childNode instanceof ElementNode) {
-        nodeId = getElementId(childNode.element)
-      }
 
-      // Render the child element using the return value from accept()
-      // instead of indexing into reactElements, since the visitor may
-      // push 0, 1, or multiple elements per node (e.g., transient nodes).
-      const childElement = childNode.accept(visitor)
-      // Transient nodes (e.g. a cleared spinner) can return [] — that is not
-      // null, but it must not become an empty bordered grid cell.
-      if (
-        isNullOrUndefined(childElement) ||
-        (Array.isArray(childElement) && childElement.length === 0)
-      ) {
-        return []
-      }
+        // Render the child element using the return value from accept()
+        // instead of indexing into reactElements, since the visitor may
+        // push 0, 1, or multiple elements per node (e.g., transient nodes).
+        const childElement = childNode.accept(visitor)
+        // Transient nodes (e.g. a cleared spinner) can return [] — that is not
+        // null, but it must not become an empty bordered grid cell.
+        if (
+          isNullOrUndefined(childElement) ||
+          (Array.isArray(childElement) && childElement.length === 0)
+        ) {
+          return []
+        }
 
-      return [
-        {
-          element: childElement,
-          nodeId,
-          sourceIndex,
-          columnSpan,
-          columnSpanAll,
-          rowSpan,
-        },
-      ]
-    })
+        return [
+          {
+            element: childElement,
+            nodeId,
+            sourceKey,
+            columnSpan,
+            columnSpanAll,
+            rowSpan,
+          },
+        ]
+      }
+    )
   }, [
     node,
     widgetsDisabled,
@@ -578,19 +617,17 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     heightConfig?.remHeight
   )
   const constrainOverflow =
-    cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED ||
-    (cellHeightMode === BlockProto.GridContainer.CellHeightMode.EQUAL &&
-      gridHasBoundedHeight)
+    cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED
 
   // Wrap each child in a grid cell with span information.
   // Use nodeId for stable React keys so width-driven template updates do not
-  // remount cells. Fall back to the source child index so filtering a
-  // duplicate widget does not shift later cell() keys.
+  // remount cells. Fall back to the source path so filtering a duplicate
+  // widget does not shift later cell() keys.
   const wrappedChildren = useMemo(
     () =>
       childrenWithCells.map(child => (
         <GridCell
-          key={child.nodeId ?? `grid-child-${child.sourceIndex}`}
+          key={child.nodeId ?? `grid-child-${child.sourceKey}`}
           constrainOverflow={constrainOverflow}
           verticalAlignment={verticalAlignment}
           showBorder={showCellBorder}
@@ -621,9 +658,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     ]
   )
 
-  const useOverflowPort =
-    gridHasBoundedHeight &&
-    cellHeightMode !== BlockProto.GridContainer.CellHeightMode.EQUAL
+  const useOverflowPort = gridHasBoundedHeight
 
   const grid = (
     <StyledGridContainerBlock
@@ -632,7 +667,6 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       minColumnWidthPx={minColumnWidthPx}
       $wrap={wrap}
       $applyOverflow={!useOverflowPort}
-      $fillHeight={gridHasBoundedHeight && !useOverflowPort}
       rowGap={rowGap}
       columnGap={columnGap}
       cellHeightMode={cellHeightMode}

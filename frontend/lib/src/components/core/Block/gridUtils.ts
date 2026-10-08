@@ -61,7 +61,8 @@ export function resolveMinColumnWidthPx({
  *
  * `maxColumns === 0` is `columns="auto"`. When `wrap` is false, `N` is the
  * declared count. When the container is unmeasured, `fallbackWidthPx` is used
- * so first paint matches the eventual layout (parent width or content max).
+ * so first paint matches the eventual layout (a known parent width, or the
+ * padded default content box).
  */
 export function resolveGridColumnCount({
   availableWidthPx,
@@ -97,6 +98,23 @@ export function resolveGridColumnCount({
     return Math.min(maxColumns, n)
   }
   return Math.min(cap, n)
+}
+
+/**
+ * Width to use before the grid's resize observer reports a size.
+ *
+ * The default app content box is `contentMaxWidth` minus the block
+ * container's horizontal padding (`spacing.lg` on each side). At a 16px
+ * root that is 704px, which is what a top-level grid measures.
+ */
+export function resolveDefaultGridContentBoxPx({
+  contentMaxWidthPx,
+  horizontalPaddingPx,
+}: {
+  contentMaxWidthPx: number
+  horizontalPaddingPx: number
+}): number {
+  return Math.max(0, contentMaxWidthPx - 2 * horizontalPaddingPx)
 }
 
 /** Clamp an integer column span to the resolved track count. */

@@ -68,9 +68,8 @@ if TYPE_CHECKING:
     assert_type(grid(border=True), GridContainer)
     assert_type(grid(border=False), GridContainer)
 
-    # row_height accepts literals or int
+    # row_height accepts "content" or int
     assert_type(grid(row_height="content"), GridContainer)
-    assert_type(grid(row_height="equal"), GridContainer)
     assert_type(grid(row_height=200), GridContainer)
 
     # width accepts "stretch" or int

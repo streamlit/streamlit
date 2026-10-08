@@ -754,7 +754,7 @@ class LayoutsMixin:
         gap: Gap | tuple[Gap | None, Gap | None] | list[Gap | None] | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
-        row_height: Literal["content", "equal"] | int = "content",
+        row_height: Literal["content"] | int = "content",
         width: WidthWithoutContent = "stretch",
         height: Height = "content",
         key: Key | None = None,
@@ -837,13 +837,13 @@ class LayoutsMixin:
             ``False`` (default), no border is shown. If this is ``True``,
             a border is shown around each cell.
 
-        row_height : "content", "equal", or int
-            Height of each row.
+        row_height : "content" or int
+            The height of each row. This can be one of the following:
 
             - ``"content"`` (default): Each row is as tall as its
               tallest cell.
-            - ``"equal"``: Every row has the same height.
             - A positive integer: Every row is that many pixels.
+              Content that is taller scrolls inside the cell.
 
         width : "stretch" or int
             The width of the grid. This can be one of the following:
@@ -903,7 +903,7 @@ class LayoutsMixin:
         ...     ("Conversion", "12.4%", "+1.1%"),
         ...     ("Retention", "96%", "-0.4%"),
         ... ]
-        >>> grid = st.grid(4, wrap=False, border=True, row_height="equal")
+        >>> grid = st.grid(4, border=True)
         >>> for label, value, delta in metrics:
         ...     with grid.cell():
         ...         st.metric(label, value, delta)
@@ -1022,24 +1022,24 @@ class LayoutsMixin:
                 detail=f"Got {vertical_alignment!r}.",
             )
 
-        if isinstance(row_height, str) and row_height in {"content", "equal"}:
-            validated_row_height: Literal["content", "equal"] | int = row_height
+        if isinstance(row_height, str) and row_height == "content":
+            validated_row_height: Literal["content"] | int = row_height
         elif isinstance(row_height, str):
             raise StreamlitValueError(
                 "row_height",
-                ['"content"', '"equal"', "a positive integer"],
+                ['"content"', "a positive integer"],
                 detail=f"Got {row_height!r}.",
             )
         elif not is_int(row_height):
             raise StreamlitInvalidParameterTypeError(
                 "row_height",
                 type(row_height).__name__,
-                ["int", '"content"', '"equal"'],
+                ["int", '"content"'],
             )
         elif row_height < 1:
             raise StreamlitValueError(
                 "row_height",
-                ['"content"', '"equal"', "a positive integer"],
+                ['"content"', "a positive integer"],
                 detail=f"Got {row_height!r}.",
             )
         else:
@@ -1079,10 +1079,6 @@ class LayoutsMixin:
         if validated_row_height == "content":
             grid_container.cell_height_mode = (
                 BlockProto.GridContainer.CellHeightMode.CONTENT
-            )
-        elif validated_row_height == "equal":
-            grid_container.cell_height_mode = (
-                BlockProto.GridContainer.CellHeightMode.EQUAL
             )
         else:
             grid_container.cell_height_mode = (

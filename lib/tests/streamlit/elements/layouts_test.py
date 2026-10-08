@@ -2909,20 +2909,15 @@ class GridTest(DeltaGeneratorTestCase):
 
         assert grid_block.add_block.grid_container.show_cell_border
 
-    @parameterized.expand(
-        [
-            ("content", BlockProto.GridContainer.CellHeightMode.CONTENT),
-            ("equal", BlockProto.GridContainer.CellHeightMode.EQUAL),
-        ]
-    )
-    def test_grid_row_height_mode(
-        self, row_height: str, expected: BlockProto.GridContainer.CellHeightMode
-    ):
-        """Test grid with different row height modes."""
-        st.grid(row_height=row_height)
+    def test_grid_row_height_content(self):
+        """Explicit content row height keeps rows sized to their cells."""
+        st.grid(row_height="content")
         grid_block = self.get_delta_from_queue()
 
-        assert grid_block.add_block.grid_container.cell_height_mode == expected
+        assert (
+            grid_block.add_block.grid_container.cell_height_mode
+            == BlockProto.GridContainer.CellHeightMode.CONTENT
+        )
 
     def test_grid_fixed_row_height(self):
         """Test grid with fixed row height in pixels."""
@@ -2942,6 +2937,7 @@ class GridTest(DeltaGeneratorTestCase):
             (-1,),
             (0,),
             ("invalid",),
+            ("equal",),
             (None,),
             ([],),
         ]

@@ -24,7 +24,7 @@ with st.grid(key="auto_sizing"):
 
 # Grid with fixed columns and border
 st.subheader("Fixed Columns with Border")
-grid = st.grid(columns=3, border=True, row_height="equal", key="bordered")
+grid = st.grid(columns=3, border=True, key="bordered")
 for i in range(6):
     with grid.cell():
         st.markdown(f"**Cell {i + 1}**")
