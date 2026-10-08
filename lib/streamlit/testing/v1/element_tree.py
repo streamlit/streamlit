@@ -1537,12 +1537,13 @@ def _parse_audio_input_file(file: object) -> tuple[str, bytes, str]:
                 f"st.audio_input recordings use MIME type {_AUDIO_INPUT_MIME!r}. "
                 f"Got {mime_type!r}."
             )
-        # Store the canonical type. "Audio/WAV" matches the check but is not
-        # the MIME the browser widget reports.
+        # Normalize case-variants such as "Audio/WAV" to the MIME type the
+        # browser widget reports.
         return filename, bytes(content), _AUDIO_INPUT_MIME
     raise AppTestError(
         "st.audio_input records one recording. "
-        "Pass (filename, content, mime_type) or None to clear."
+        "Pass one (filename, content, mime_type) tuple, or None to clear. "
+        "A list is not accepted."
     )
 
 
@@ -1551,7 +1552,12 @@ class AudioInput(Widget):
     r"""A representation of ``st.audio_input``.
 
     The recording is one WAV file, ``(filename, content, mime_type)``, with
-    MIME type ``audio/wav``.
+    MIME type ``audio/wav``. ``.upload()`` replaces any staged recording.
+    Unlike ``FileUploader``, this widget does not accept a list or append
+    files.
+
+    ``sample_rate`` is the sample rate passed to ``st.audio_input``, or
+    ``None`` if the browser default is used.
 
     Example
     -------
@@ -1629,7 +1635,8 @@ class AudioInput(Widget):
         content
             The file content as bytes.
         mime_type
-            The MIME type. Defaults to ``audio/wav``.
+            MIME type of the recording. Defaults to ``audio/wav``. Any other
+            value raises ``AppTestError``.
 
         Returns
         -------

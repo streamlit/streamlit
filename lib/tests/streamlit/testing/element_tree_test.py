@@ -1895,7 +1895,7 @@ def test_audio_input_records_one_wav() -> None:
         (("clip.wav", b"hi", "text/plain"), "audio/wav"),
         (
             [("a.wav", b"a", "audio/wav"), ("b.wav", b"b", "audio/wav")],
-            "one recording",
+            "list is not accepted",
         ),
         (b"raw-bytes", "one recording"),
     ],
@@ -1928,7 +1928,10 @@ def test_audio_input_disabled_rejects_update() -> None:
 
 
 def test_audio_input_form_applies_only_on_submit() -> None:
-    """Form recordings stay local until submit; clear_on_submit drops them next submit."""
+    """A form recording stays uncommitted until submit.
+
+    ``clear_on_submit`` clears it on the next submit.
+    """
 
     def script() -> None:
         import streamlit as st
