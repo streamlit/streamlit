@@ -15,7 +15,7 @@
 """Serialize the TOML documents Streamlit writes.
 
 The credentials file and each ``streamlit config show`` assignment use
-strings, booleans, numbers, arrays, and tables. ``streamlit config show``
+strings, booleans, integers, floats, arrays, and tables. ``streamlit config show``
 prints the ``[theme]`` header itself, so a font-face array is one inline-table
 assignment and stays under that header. Dates and other TOML types raise
 ``TypeError``.
@@ -51,7 +51,7 @@ _UNICODE_LINE_SEPARATORS: Final = frozenset({0x85, 0x2028, 0x2029})
 def dumps(document: dict[str, Any]) -> str:
     """Return ``document`` as TOML text.
 
-    Supports strings, booleans, numbers, lists, tuples, and dicts. A non-empty
+    Supports strings, booleans, integers, floats, lists, tuples, and dicts. A non-empty
     result ends with a newline. An empty document is ``""``.
 
     Raises
@@ -124,7 +124,7 @@ def _format_array(items: list[Any] | tuple[Any, ...], *, nest_level: int) -> str
 
 
 def _format_inline_table(table: dict[Any, Any]) -> str:
-    """Serialize a dict nested inside an array, such as one font face."""
+    """Serialize a dict as a TOML inline table."""
     if not table:
         return "{}"
 
