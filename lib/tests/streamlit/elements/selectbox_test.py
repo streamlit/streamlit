@@ -1320,3 +1320,81 @@ def test_selectbox_resends_label_when_format_func_reads_session_state(
     at = at.run()
     assert at.selectbox(key="picker").value == "E"
     assert at.selectbox(key="picker").proto.set_value is False
+
+
+def test_selectbox_does_not_rewrite_typed_text_equal_to_an_option(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Typed text that equals an option value stays typed.
+
+    options ["a"] display as "Item A". Typing "a" deserializes as the string
+    "a"; pushing format_func's "Item A" would replace what the user typed.
+    """
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        # The browser sends typed text verbatim. set_value would replace it.
+        ws = WidgetState(id=self.id)
+        if self.proto.set_value and self.proto.raw_value:
+            ws.string_value = self.proto.raw_value
+            return ws
+        if self.value is not None:
+            ws.string_value = str(self.value)
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        st.selectbox(
+            "Pick one",
+            ["a"],
+            format_func=lambda _option: "Item A",
+            index=None,
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").set_value("a").run()
+    picker = at.selectbox(key="picker")
+    assert picker.value == "a"
+    assert picker.proto.set_value is False
+
+    at = at.run()
+    picker = at.selectbox(key="picker")
+    assert picker.value == "a"
+    assert picker.proto.set_value is False
+
+
+def test_selectbox_resends_label_for_option_equal_to_typed_text() -> None:
+    """Selecting the option "a" still refreshes when its label changes.
+
+    The same string is typed text in the test above. Provenance is which
+    browser string was deserialized, not equality with the option.
+    """
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+        st.selectbox(
+            "Pick one",
+            ["a"],
+            format_func=lambda option: f"Item {option} ({count})",
+            index=None,
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").select("a").run()
+    assert at.selectbox(key="picker").value == "a"
+
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.selectbox(key="picker")
+    assert picker.value == "a"
+    assert picker.proto.set_value is True
+    assert picker.proto.raw_value == "Item a (3)"

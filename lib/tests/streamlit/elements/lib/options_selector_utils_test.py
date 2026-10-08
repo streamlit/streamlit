@@ -14,6 +14,7 @@
 
 import enum
 import unittest
+from copy import deepcopy
 from typing import Any, cast
 
 import numpy as np
@@ -23,11 +24,13 @@ from parameterized import parameterized
 
 from streamlit.elements.lib.options_selector_utils import (
     _coerce_enum,
+    _values_equal,
     check_and_convert_to_indices,
     convert_to_sequence_and_check_comparable,
     create_mappings,
     get_default_indices,
     index_,
+    is_option_value,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
     resolve_value_against_options,
@@ -1108,3 +1111,136 @@ class TestResolveValueAgainstOptions:
         )
         assert value is None
         assert reset is True
+
+
+class _NoEq:  # noqa: B903
+    """Option with no ``__eq__``. A deepcopy compares unequal."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class _EqRaises:
+    """``__eq__`` always raises. Comparisons must be treated as unequal."""
+
+    __hash__ = None
+
+    def __eq__(self, _other: object) -> bool:
+        raise RuntimeError("boom")
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "equal_option",
+        "deepcopy_without_eq",
+        "typed_text_formats_to_label",
+        "missing_label",
+        "eq_raises",
+        "shared_label_earlier_option",
+    ],
+)
+def test_is_option_value(case: str) -> None:
+    """Lock each branch of option-vs-typed-text detection."""
+    if case == "equal_option":
+        assert (
+            is_option_value(
+                "a",
+                "Item A",
+                ["a"],
+                {"Item A": 0},
+                formatted_options=["Item A"],
+                from_formatted_label=True,
+            )
+            is True
+        )
+        return
+
+    if case == "deepcopy_without_eq":
+        original = _NoEq("a")
+        copied = deepcopy(original)
+        assert copied is not original
+        assert (
+            is_option_value(
+                copied,
+                "Box",
+                [original],
+                {"Box": 0},
+                formatted_options=["Box"],
+                from_formatted_label=True,
+            )
+            is True
+        )
+        return
+
+    if case == "typed_text_formats_to_label":
+        # "a" equals the option, and "Item A" is that option's label. The
+        # browser string was typed, so this is not a selection.
+        assert (
+            is_option_value(
+                "a",
+                "Item A",
+                ["a"],
+                {"Item A": 0},
+                formatted_options=["Item A"],
+                from_formatted_label=False,
+            )
+            is False
+        )
+        return
+
+    if case == "missing_label":
+        assert (
+            is_option_value(
+                "a",
+                "Missing",
+                ["a"],
+                {"Item A": 0},
+                formatted_options=["Item A"],
+                from_formatted_label=True,
+            )
+            is False
+        )
+        return
+
+    if case == "eq_raises":
+        option = _EqRaises()
+        assert _values_equal(option, option) is False
+        # A non-string is still the option. The scan must not be required.
+        assert (
+            is_option_value(
+                option,
+                "Boom",
+                [option],
+                {"Boom": 0},
+                formatted_options=["Boom"],
+                from_formatted_label=True,
+            )
+            is True
+        )
+        return
+
+    # Shared label: the index keeps the last option ("B"). The selection is "A".
+    assert case == "shared_label_earlier_option"
+    assert (
+        is_option_value(
+            "A",
+            "Choice",
+            ["A", "B"],
+            {"Choice": 1},
+            formatted_options=["Choice", "Choice"],
+            from_formatted_label=True,
+        )
+        is True
+    )
+    assert (
+        is_option_value(
+            "A",
+            "Choice",
+            ["A", "B"],
+            {"Choice": 1},
+            formatted_options=["Choice", "Choice"],
+            from_formatted_label=False,
+        )
+        is False
+    )

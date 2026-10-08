@@ -349,31 +349,41 @@ def is_option_value(
     serialized_label: str | None,
     options: Sequence[Any],
     formatted_option_to_option_index: dict[str, int],
-    format_func: Callable[[Any], str],
+    *,
+    formatted_options: Sequence[str],
+    from_formatted_label: bool | None,
 ) -> bool:
     """Return whether `value` is a real option, not text the user typed.
 
-    ``format_func`` can map typed text onto an existing option label. That text
-    must not be refreshed as if it were the option. Duplicate labels keep only
-    the last option in the index, while multiselect deserializes the first
-    match, so every option with this label is checked. Custom options are
+    ``from_formatted_label`` is whether deserialization matched the browser
+    string to a formatted option. Equality is not that proof: with
+    ``accept_new_options``, typed text can equal an option's value, and
+    ``format_func`` can map that text onto an option label. ``None`` means the
+    caller has no provenance and equality is the only signal.
+
+    Duplicate labels keep only the last option in the index, while multiselect
+    deserializes the first match, so every option with this label is checked
+    against the labels ``create_mappings`` already computed. Custom options are
     deepcopied and may not compare equal; typed text is a string, so a
-    non-string value is still the option.
+    non-string value is still the option and is not scanned again.
     """
-    if serialized_label is None:
+    if from_formatted_label is False or serialized_label is None:
         return False
     option_index = formatted_option_to_option_index.get(serialized_label)
     if option_index is None:
         return False
+    # Typed text is a string. Skip the per-option scan for everything else:
+    # a deepcopy without ``__eq__`` would otherwise walk the whole list.
+    if not isinstance(value, str):
+        return True
     if _values_equal(options[option_index], value):
         return True
     # Duplicate labels: the map keeps the last option. An earlier option can
-    # still be the selection.
-    for option in options:
-        if format_func(option) == serialized_label and _values_equal(option, value):
+    # still be the selection. Compare the labels already computed for this run.
+    for option, label in zip(options, formatted_options, strict=False):
+        if label == serialized_label and _values_equal(option, value):
             return True
-    # A deepcopied custom option compares unequal. Typed text is a string.
-    return not isinstance(value, str)
+    return False
 
 
 def _values_equal(left: Any, right: Any) -> bool:

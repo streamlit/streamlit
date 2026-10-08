@@ -41,12 +41,14 @@ def test_selection_survives_format_func_label_changes(app: Page):
     expect_prefixed_markdown(app, "selectbox value:", "E")
 
     multiselect = get_multiselect(app, "multiselect with changing labels")
-    multiselect.locator("input").click()
+    # Select one option at a time. The first click schedules a rerun; on WebKit
+    # that rerun can close the listbox before the next click or Escape.
     for option in ["F (0)", "D (0)"]:
+        multiselect.locator("input").click()
         app.get_by_role("option", name=option, exact=True).click()
         expect(multiselect.locator(f'span[title="{option}"]')).to_be_visible()
-    app.keyboard.press("Escape")
-    wait_for_app_run(app)
+        app.keyboard.press("Escape")
+        wait_for_app_run(app)
     expect_prefixed_markdown(app, "multiselect value:", "['F', 'D']")
 
     select_radio_option(app, "E (0)", label="radio with changing labels")

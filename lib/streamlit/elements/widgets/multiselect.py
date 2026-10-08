@@ -96,6 +96,8 @@ class MultiSelectSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_options_indices: list[int]
     format_func: Callable[[Any], str]
+    # Set by deserialize: one flag per browser string, True when it was a label.
+    formatted_label_match: list[bool]
 
     def __init__(
         self,
@@ -137,6 +139,7 @@ class MultiSelectSerde(Generic[T]):
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_options_indices = default_options_indices or []
         self.format_func = format_func
+        self.formatted_label_match = []
 
     def serialize(self, value: list[T | str] | list[T]) -> list[str]:
         converted_value = convert_anything_to_list(value)
@@ -168,15 +171,23 @@ class MultiSelectSerde(Generic[T]):
 
     def deserialize(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
         if ui_value is None:
+            # Defaults are not a browser selection.
+            self.formatted_label_match = []
             return [self.options[i] for i in self.default_options_indices]
 
         values: list[T | str] = []
+        # One flag per incoming string. Equality with an option cannot tell a
+        # selection from typed text that happens to equal that option's value.
+        matched_labels: list[bool] = []
         for v in ui_value:
             try:
                 option_index = self.formatted_options.index(v)
                 values.append(self.options[option_index])
+                matched_labels.append(True)
             except ValueError:  # noqa: PERF203
                 values.append(v)
+                matched_labels.append(False)
+        self.formatted_label_match = matched_labels
         return values
 
 
@@ -882,32 +893,61 @@ class MultiSelectMixin:
             )
 
         serialized_values = serde.serialize(current_values)
-        # The frontend tracks each selection by the label it was sent. Push new
-        # labels when format_func changes them, or a later rerun drops the
-        # selection (gh-17175). Skip the push when any selected value is typed
-        # text (accept_new_options). That text can format onto an option label,
-        # and pushing would replace what the user typed.
-        labels_changed = (
-            widget_state.incoming_serialized_values is not None
-            and widget_state.incoming_serialized_values != serialized_values
-            and len(current_values) == len(serialized_values)
-            and all(
-                is_option_value(
+        # The frontend tracks each selection by the label it was sent. Push the
+        # new label for a real option when format_func changes it, and keep the
+        # browser's own string for typed text (gh-17175). Skipping the whole
+        # refresh would leave the real options on stale labels. A later rerun
+        # can then drop them.
+        incoming_values = widget_state.incoming_serialized_values
+        label_matches = widget_state.incoming_formatted_label_matches
+        refreshed_labels: list[str] | None = None
+        if (
+            incoming_values is not None
+            and len(incoming_values) == len(current_values)
+            and incoming_values != serialized_values
+        ):
+            if label_matches is None or len(label_matches) != len(current_values):
+                per_value_match: list[bool | None] = [None] * len(current_values)
+            else:
+                per_value_match = list(label_matches)
+            merged_labels: list[str] = []
+            for value, new_label, old_label, matched in zip(
+                current_values,
+                serialized_values,
+                incoming_values,
+                per_value_match,
+                strict=False,
+            ):
+                if is_option_value(
                     value,
-                    label,
+                    new_label,
                     indexable_options,
                     formatted_option_to_option_index,
-                    format_func,
-                )
-                for value, label in zip(current_values, serialized_values, strict=False)
-            )
+                    formatted_options=formatted_options,
+                    from_formatted_label=matched,
+                ):
+                    merged_labels.append(new_label)
+                else:
+                    merged_labels.append(old_label)
+            if merged_labels != incoming_values:
+                refreshed_labels = merged_labels
+        # A programmatic change still sends the serialized values. The merged
+        # list is only for a label refresh that must not rewrite typed text.
+        labels_changed = (
+            refreshed_labels is not None
+            and not value_needs_reset
+            and not widget_state.value_changed
         )
         should_set_value = (
             value_needs_reset or widget_state.value_changed or labels_changed
         )
 
         if should_set_value:
-            proto.raw_values[:] = serialized_values
+            proto.raw_values[:] = (
+                refreshed_labels
+                if labels_changed and refreshed_labels is not None
+                else serialized_values
+            )
             proto.set_value = True
 
         layout_config = create_layout_config(width=width)

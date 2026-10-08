@@ -1210,21 +1210,25 @@ def test_multiselect_resends_new_labels_when_format_func_output_changes():
 
 
 @pytest.mark.parametrize(
-    "selection",
+    ("selection", "pushed_labels"),
     [
-        pytest.param(["custom"], id="typed_text"),
-        pytest.param(["D", "custom"], id="option_and_typed_text"),
+        pytest.param(["custom"], None, id="typed_text"),
+        pytest.param(
+            ["D", "custom"],
+            ["D (3)", "custom"],
+            id="option_and_typed_text",
+        ),
     ],
 )
 def test_multiselect_label_change_does_not_rewrite_user_entered_values(
     monkeypatch: pytest.MonkeyPatch,
     selection: list[str],
+    pushed_labels: list[str] | None,
 ) -> None:
     """User-entered text is not rewritten when option labels change.
 
-    When typed text is mixed with a real option, the refresh is skipped for
-    the whole selection so format_func is not applied to the typed string.
-    A later browser rerun may then drop the real option; that is not asserted.
+    A real option mixed with typed text still gets its new label. The typed
+    string is left as the browser sent it.
     """
 
     def frontend_widget_state(self: Multiselect) -> WidgetState:
@@ -1260,7 +1264,11 @@ def test_multiselect_label_change_does_not_rewrite_user_entered_values(
 
     picker = at.multiselect(key="picker")
     assert picker.value == selection
-    assert picker.proto.set_value is False
+    if pushed_labels is None:
+        assert picker.proto.set_value is False
+    else:
+        assert picker.proto.set_value is True
+        assert list(picker.proto.raw_values) == pushed_labels
 
 
 def test_multiselect_resends_shared_label_for_earlier_option():
@@ -1331,3 +1339,103 @@ def test_multiselect_does_not_rewrite_typed_text_that_formats_to_an_option(
     picker = at.multiselect(key="picker")
     assert picker.value == ["1"]
     assert picker.proto.set_value is False
+
+
+def _browser_sends_raw_strings(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Send each value as text. A formatted label is only what the server pushed."""
+
+    def frontend_widget_state(self: Multiselect) -> WidgetState:
+        ws = WidgetState(id=self.id)
+        if self.proto.set_value and list(self.proto.raw_values):
+            ws.string_array_value.data[:] = self.proto.raw_values
+            return ws
+        for value in self.value:
+            ws.string_array_value.data.append(str(value))
+        return ws
+
+    monkeypatch.setattr(Multiselect, "_widget_state", property(frontend_widget_state))
+
+
+def test_multiselect_does_not_rewrite_typed_text_equal_to_an_option(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Typed text "a" stays typed when the option "a" is labeled "Item A"."""
+    _browser_sends_raw_strings(monkeypatch)
+
+    def script():
+        import streamlit as st
+
+        st.multiselect(
+            "Pick some",
+            ["a"],
+            format_func=lambda _option: "Item A",
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.multiselect(key="picker").set_value(["a"]).run()
+    picker = at.multiselect(key="picker")
+    assert picker.value == ["a"]
+    assert picker.proto.set_value is False
+
+    at = at.run()
+    picker = at.multiselect(key="picker")
+    assert picker.value == ["a"]
+    assert picker.proto.set_value is False
+
+
+def test_multiselect_does_not_replace_typed_text_when_labels_are_shared(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Typing "A" is not the option labeled "Choice", even though "A" is an option.
+
+    Both options share the label "Choice", so the index points at "B". Matching
+    "A" by value would push "Choice" and replace the typed text.
+    """
+    _browser_sends_raw_strings(monkeypatch)
+
+    def script():
+        import streamlit as st
+
+        st.multiselect(
+            "Pick some",
+            ["A", "B"],
+            format_func=lambda _option: "Choice",
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.multiselect(key="picker").set_value(["A"]).run()
+    picker = at.multiselect(key="picker")
+    assert picker.value == ["A"]
+    assert picker.proto.set_value is False
+
+
+def test_multiselect_resends_label_for_option_equal_to_typed_text() -> None:
+    """Selecting option "a" still refreshes when its label changes."""
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+        st.multiselect(
+            "Pick some",
+            ["a", "b"],
+            format_func=lambda option: f"Item {option} ({count})",
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.multiselect(key="picker").set_value(["a"]).run()
+    assert at.multiselect(key="picker").value == ["a"]
+
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.multiselect(key="picker")
+    assert picker.value == ["a"]
+    assert picker.proto.set_value is True
+    assert list(picker.proto.raw_values) == ["Item a (3)"]

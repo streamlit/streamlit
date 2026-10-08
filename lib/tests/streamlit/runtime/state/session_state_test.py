@@ -261,11 +261,14 @@ class WStateTests(unittest.TestCase):
         proto.id = "widget_id_1"
         proto.string_value = "old label"
         self.wstates.set_widget_from_proto(proto)
+        self.wstates.frontend_string_matched_option["widget_id_1"] = True
 
         self.wstates.set_from_value("widget_id_1", "deserialized")
 
         assert "widget_id_1" not in self.wstates.frontend_string_values
         assert "widget_id_1" not in self.wstates.frontend_string_array_values
+        assert "widget_id_1" not in self.wstates.frontend_string_matched_option
+        assert "widget_id_1" not in self.wstates.frontend_string_array_matched_option
 
     def test_non_string_proto_forgets_browser_label(self):
         """A non-string proto does not keep a previous browser label."""
@@ -273,6 +276,7 @@ class WStateTests(unittest.TestCase):
         proto.id = "widget_id_1"
         proto.string_value = "old label"
         self.wstates.set_widget_from_proto(proto)
+        self.wstates.frontend_string_matched_option["widget_id_1"] = True
 
         replacement = WidgetStateProto()
         replacement.id = "widget_id_1"
@@ -281,17 +285,22 @@ class WStateTests(unittest.TestCase):
 
         assert "widget_id_1" not in self.wstates.frontend_string_values
         assert "widget_id_1" not in self.wstates.frontend_string_array_values
+        assert "widget_id_1" not in self.wstates.frontend_string_matched_option
+        assert "widget_id_1" not in self.wstates.frontend_string_array_matched_option
 
     def test_del_forgets_browser_label(self):
         proto = WidgetStateProto()
         proto.id = "widget_id_1"
         proto.string_value = "old label"
         self.wstates.set_widget_from_proto(proto)
+        self.wstates.frontend_string_matched_option["widget_id_1"] = False
 
         del self.wstates["widget_id_1"]
 
         assert "widget_id_1" not in self.wstates.frontend_string_values
         assert "widget_id_1" not in self.wstates.frontend_string_array_values
+        assert "widget_id_1" not in self.wstates.frontend_string_matched_option
+        assert "widget_id_1" not in self.wstates.frontend_string_array_matched_option
 
     def test_remove_stale_widgets_forgets_browser_labels(self):
         """Replacing states skips __delitem__, so the prune drops leftover labels."""
@@ -304,11 +313,15 @@ class WStateTests(unittest.TestCase):
         dropped.id = "widget_id_2"
         dropped.string_array_value.data[:] = ["gone"]
         self.wstates.set_widget_from_proto(dropped)
+        self.wstates.frontend_string_matched_option["widget_id_1"] = True
+        self.wstates.frontend_string_array_matched_option["widget_id_2"] = [False]
 
         self.wstates.remove_stale_widgets({"widget_id_1"}, None)
 
         assert self.wstates.frontend_string_values == {"widget_id_1": "kept"}
         assert self.wstates.frontend_string_array_values == {}
+        assert self.wstates.frontend_string_matched_option == {"widget_id_1": True}
+        assert self.wstates.frontend_string_array_matched_option == {}
 
     def test_get_serialized_nonexistent_id(self):
         assert self.wstates.get_serialized("nonexistent_id") is None
@@ -5934,6 +5947,8 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
 
         assert result.value == "user_value"
         assert result.incoming_serialized_value is None
+        assert result.incoming_formatted_label_match is None
+        assert result.incoming_formatted_label_matches is None
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6058,6 +6073,95 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
 
         assert result.incoming_serialized_value is None
 
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_deserialization_records_formatted_label_match(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A serde can record whether each browser string was a formatted label.
+
+        Equality with an option is not that fact: typed text can equal the
+        option's value. The flag is what register_widget hands to selectbox
+        and multiselect.
+        """
+
+        class LabelMatchSerde:
+            def __init__(self) -> None:
+                self.formatted_label_match: bool | list[bool] = False
+
+            def deserialize_string(self, raw: str | None) -> str:
+                matched = raw == "Item A"
+                self.formatted_label_match = matched
+                if raw is None:
+                    return ""
+                return "a" if matched else raw
+
+            def deserialize_array(self, raw: list[str] | None) -> list[str]:
+                if not raw:
+                    self.formatted_label_match = []
+                    return []
+                matches: list[bool] = []
+                values: list[str] = []
+                for item in raw:
+                    matched = item == "Item A"
+                    matches.append(matched)
+                    values.append("a" if matched else item)
+                self.formatted_label_match = matches
+                return values
+
+        widget_state = self.session_state._new_widget_state
+        string_id = "$$ID-hash-cb"
+        string_serde = LabelMatchSerde()
+        string_metadata = WidgetMetadata(
+            id=string_id,
+            deserializer=string_serde.deserialize_string,
+            serializer=lambda value: value,
+            value_type="string_value",
+        )
+        typed = WidgetStateProto()
+        typed.id = string_id
+        typed.string_value = "a"
+        widget_state.set_widget_from_proto(typed)
+        widget_state.set_widget_metadata(string_metadata)
+        assert widget_state[string_id] == "a"
+
+        typed_result = self.session_state.register_widget(
+            string_metadata, user_key="cb"
+        )
+        assert typed_result.incoming_serialized_value == "a"
+        assert typed_result.incoming_formatted_label_match is False
+
+        selected = WidgetStateProto()
+        selected.id = string_id
+        selected.string_value = "Item A"
+        widget_state.set_widget_from_proto(selected)
+        assert widget_state[string_id] == "a"
+        selected_result = self.session_state.register_widget(
+            string_metadata, user_key="cb"
+        )
+        assert selected_result.incoming_formatted_label_match is True
+
+        array_id = "$$ID-hash-array"
+        array_serde = LabelMatchSerde()
+        array_metadata = WidgetMetadata(
+            id=array_id,
+            deserializer=array_serde.deserialize_array,
+            serializer=lambda value: value,
+            value_type="string_array_value",
+        )
+        array_proto = WidgetStateProto()
+        array_proto.id = array_id
+        array_proto.string_array_value.data[:] = ["Item A", "typed"]
+        widget_state.set_widget_from_proto(array_proto)
+        widget_state.set_widget_metadata(array_metadata)
+        assert widget_state[array_id] == ["a", "typed"]
+        array_result = self.session_state.register_widget(
+            array_metadata, user_key="multi"
+        )
+        assert array_result.incoming_formatted_label_matches == [True, False]
+
     def test_compact_state_forgets_browser_label(self) -> None:
         """Compaction clears widget state through ``WStates.clear``."""
         widget_id = "$$ID-hash-cb"
@@ -6087,10 +6191,21 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
             )
         )
 
+        self.session_state._new_widget_state.frontend_string_matched_option[
+            widget_id
+        ] = True
+        self.session_state._new_widget_state.frontend_string_array_matched_option[
+            array_id
+        ] = [True]
         self.session_state._compact_state()
 
         assert self.session_state._new_widget_state.frontend_string_values == {}
         assert self.session_state._new_widget_state.frontend_string_array_values == {}
+        assert self.session_state._new_widget_state.frontend_string_matched_option == {}
+        assert (
+            self.session_state._new_widget_state.frontend_string_array_matched_option
+            == {}
+        )
 
 
 class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):

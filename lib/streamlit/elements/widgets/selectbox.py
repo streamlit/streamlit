@@ -86,6 +86,8 @@ class SelectboxSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
     format_func: Callable[[Any], str]
+    # Set by deserialize: True when the browser string was a formatted option.
+    formatted_label_match: bool
 
     def __init__(
         self,
@@ -127,6 +129,7 @@ class SelectboxSerde(Generic[T]):
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
         self.format_func = format_func
+        self.formatted_label_match = False
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
@@ -163,6 +166,8 @@ class SelectboxSerde(Generic[T]):
         # Check if the option is pointing to a generic option type T,
         # otherwise return the option itself.
         if ui_value is None:
+            # Defaults are not a browser selection.
+            self.formatted_label_match = False
             return (
                 self.options[self.default_option_index]
                 if self.default_option_index is not None and len(self.options) > 0
@@ -170,6 +175,9 @@ class SelectboxSerde(Generic[T]):
             )
 
         option_index = self.formatted_option_to_option_index.get(ui_value)
+        # Record provenance for the caller. A later equality check cannot tell
+        # a selected option from typed text that happens to equal its value.
+        self.formatted_label_match = option_index is not None
         return self.options[option_index] if option_index is not None else ui_value
 
 
@@ -817,18 +825,20 @@ class SelectboxMixin:
         # The frontend tracks the selection by the label it was sent. Push the
         # new label when format_func changes it for a real option, or a later
         # rerun clears the widget (gh-17175). Typed text stays as entered, even
-        # when format_func maps it onto another option's label.
+        # when it equals an option's value or format_func maps it onto a label.
+        # Compare the wire label first so an unchanged rerun skips the scan.
         labels_changed = (
             serialized_value is not None
             and widget_state.incoming_serialized_value is not None
+            and widget_state.incoming_serialized_value != serialized_value
             and is_option_value(
                 current_value,
                 serialized_value,
                 opt,
                 formatted_option_to_option_index,
-                format_func,
+                formatted_options=formatted_options,
+                from_formatted_label=widget_state.incoming_formatted_label_match,
             )
-            and widget_state.incoming_serialized_value != serialized_value
         )
         should_set_value = (
             value_needs_reset or widget_state.value_changed or labels_changed

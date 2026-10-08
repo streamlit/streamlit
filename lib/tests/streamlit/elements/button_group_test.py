@@ -1930,9 +1930,8 @@ class TestDynamicFormatFuncVisualSelection:
         catb = at.button_group("catb")
         # The return value is preserved ...
         assert catb.value == "D"
-        # ... and the backend re-pushes the fresh label so the pill stays
-        # selected instead of silently deselecting. deserialize dropped the
-        # stale "D (2)" label; this is the one push for that mismatch.
+        # ... and the backend pushes the fresh label once, because the browser
+        # still holds "D (2)".
         assert catb.proto.set_value is True
         assert list(catb.proto.raw_values) == ["D (3)"]
 
