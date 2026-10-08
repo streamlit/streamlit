@@ -147,6 +147,38 @@ export function shouldEnableOverflowScroll(
 }
 
 /**
+ * Outer width of `wrap=False` tracks, including the gaps between them.
+ * This is the width at which the grid starts scrolling horizontally.
+ */
+export function gridTracksMinWidthPx(
+  columnCount: number,
+  minColumnWidthPx: number,
+  columnGapPx: number
+): number {
+  return (
+    columnCount * minColumnWidthPx + Math.max(columnCount - 1, 0) * columnGapPx
+  )
+}
+
+/**
+ * Whether a `wrap=False` grid should be a horizontal scrollport.
+ *
+ * `overflow-x: auto` coerces `overflow-y: visible` to `auto`, which clips
+ * chart and dataframe toolbars. Only turn the scrollport on once the
+ * tracks are wider than the box. One pixel of slack matches the vertical
+ * overflow check.
+ */
+export function shouldScrollHorizontally(
+  wrap: boolean,
+  tracksMinWidthPx: number,
+  availableWidthPx: number
+): boolean {
+  return (
+    !wrap && availableWidthPx > 0 && tracksMinWidthPx > availableWidthPx + 1
+  )
+}
+
+/**
  * Explicit `repeat(N, …)` template so unused last-row tracks still reserve
  * width (unlike CSS `auto-fit`).
  */

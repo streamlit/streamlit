@@ -85,7 +85,9 @@ class GridContainer(DeltaGenerator):
         row_span : int
             The number of rows the cell spans. Defaults to ``1``.
             Must be a positive integer. With ``row_height="content"``,
-            the rows it covers grow to fit this cell.
+            the rows it covers grow to fit this cell. With a pixel
+            ``row_height``, the cell covers that many row tracks plus
+            the gaps between them.
 
         Returns
         -------

@@ -26,10 +26,16 @@ import {
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { type AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import {
+  type AppNode,
+  BlockNode,
+  ElementNode,
+  TransientNode,
+} from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
+  type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import {
@@ -65,10 +71,12 @@ import {
 import {
   clampColumnSpan,
   cssLengthToPx,
+  gridTracksMinWidthPx,
   resolveDefaultGridContentBoxPx,
   resolveGridColumnCount,
   resolveMinColumnWidthPx,
   shouldEnableOverflowScroll,
+  shouldScrollHorizontally,
 } from "./gridUtils"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
@@ -200,6 +208,21 @@ interface FlexBoxContainerProps extends BaseBlockProps {
   node: BlockNode
 }
 
+/**
+ * A definite-height grid cell's `grid.cell()` block must fill the cell.
+ * The layout wrapper and the inner flex block both use this, so stretch
+ * children do not collapse when one of them forgets the check.
+ */
+function shouldFillGridCell(
+  deltaBlock: BlockProto,
+  flexContext: IFlexContext | null
+): boolean {
+  return (
+    notNullOrUndefined(deltaBlock.gridCell) &&
+    Boolean(flexContext?.fillAvailableHeight)
+  )
+}
+
 export const FlexBoxContainer = (
   props: FlexBoxContainerProps
 ): ReactElement => {
@@ -226,9 +249,7 @@ export const FlexBoxContainer = (
   // own, so without this it stays content-sized and stretch children
   // resolve against 0. Content rows leave the block content-sized so
   // vertical_alignment can still move it.
-  const fillGridCell =
-    notNullOrUndefined(props.node.deltaBlock.gridCell) &&
-    Boolean(parentContext?.fillAvailableHeight)
+  const fillGridCell = shouldFillGridCell(props.node.deltaBlock, parentContext)
 
   const styles: StyledFlexContainerBlockProps = {
     gap:
@@ -317,6 +338,29 @@ const HEIGHT_OBSERVED_PROPERTIES: DOMRectKeys[] = ["height"]
 const FOCUSABLE_DESCENDANT =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
+/**
+ * `tabIndex={0}` on a scrollport that has no focusable descendant, so
+ * keyboard users can scroll text-only overflow. No `role="region"`: every
+ * cell would otherwise be a landmark with the same name. Widgets inside
+ * the scrollport stay the tab stops; this does not add a second one.
+ */
+function useExposeScrollTarget(
+  active: boolean,
+  elementRef: { readonly current: HTMLElement | null },
+  dependency: unknown
+): boolean {
+  const [exposed, setExposed] = useState(false)
+  useLayoutEffect(() => {
+    const element = elementRef.current
+    const next =
+      active &&
+      !!element &&
+      element.querySelector(FOCUSABLE_DESCENDANT) === null
+    setExposed(current => (current === next ? current : next))
+  }, [active, elementRef, dependency])
+  return exposed
+}
+
 interface GridCellProps {
   constrainOverflow: boolean
   verticalAlignment: BlockProto.GridContainer.VerticalAlignment
@@ -357,13 +401,7 @@ const GridCell = ({
     shouldEnableOverflowScroll(contentHeights[0] ?? 0, bodyHeights[0] ?? 0)
   // A text-only scrollport is not in the tab order. Widgets already inside
   // the cell are, so do not add a second stop in that case.
-  const [keyboardScrollTarget, setKeyboardScrollTarget] = useState(false)
-  useLayoutEffect(() => {
-    const body = bodyRef.current
-    const expose =
-      scroll && !!body && body.querySelector(FOCUSABLE_DESCENDANT) === null
-    setKeyboardScrollTarget(current => (current === expose ? current : expose))
-  }, [bodyRef, scroll, children])
+  const keyboardScrollTarget = useExposeScrollTarget(scroll, bodyRef, children)
 
   return (
     <StyledGridCell
@@ -382,8 +420,6 @@ const GridCell = ({
         data-testid="stGridCellBody"
         data-test-scroll={String(scroll)}
         tabIndex={keyboardScrollTarget ? 0 : undefined}
-        role={keyboardScrollTarget ? "region" : undefined}
-        aria-label={keyboardScrollTarget ? "Scrollable cell" : undefined}
       >
         <StyledGridCellContent
           ref={constrainOverflow ? contentRef : undefined}
@@ -401,11 +437,13 @@ const GridCell = ({
 const OverflowAwareGridPort = ({
   bounded,
   wrap,
+  horizontalScroll,
   trackMinWidthPx,
   children,
 }: {
   bounded: boolean
   wrap: boolean
+  horizontalScroll: boolean
   trackMinWidthPx?: number
   children: ReactNode
 }): ReactElement => {
@@ -416,15 +454,21 @@ const OverflowAwareGridPort = ({
   const scroll =
     bounded &&
     shouldEnableOverflowScroll(contentHeights[0] ?? 0, portHeights[0] ?? 0)
+  const keyboardScrollTarget = useExposeScrollTarget(
+    bounded && (scroll || horizontalScroll),
+    portRef,
+    children
+  )
 
   return (
     <StyledGridScrollBody
       ref={bounded ? portRef : undefined}
       $scroll={scroll}
-      $wrap={wrap}
+      $horizontalScroll={horizontalScroll}
       $bounded={bounded}
       data-testid="stGridScrollBody"
       data-test-scroll={String(scroll)}
+      tabIndex={keyboardScrollTarget ? 0 : undefined}
     >
       <StyledGridContentMeasure
         ref={bounded ? contentRef : undefined}
@@ -605,16 +649,20 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
 
     return collectGridCellSources(node.children ?? []).flatMap(
       ({ node: childNode, sourceKey }) => {
-        // Get grid cell config from BlockNode children
+        // A spinner wraps the anchor in a TransientNode, which has no id of
+        // its own. Key and span come from the anchor so the cell stays
+        // mounted when the spinner appears or clears.
         let columnSpan: number | undefined
         let columnSpanAll = false
         let rowSpan: number | undefined
         let nodeId: string | undefined
+        const layoutNode =
+          childNode instanceof TransientNode ? childNode.anchor : childNode
 
-        if (childNode instanceof BlockNode) {
-          nodeId = childNode.deltaBlock.id || undefined
-          if (childNode.deltaBlock.gridCell) {
-            const gridCell = childNode.deltaBlock.gridCell
+        if (layoutNode instanceof BlockNode) {
+          nodeId = layoutNode.deltaBlock.id || undefined
+          if (layoutNode.deltaBlock.gridCell) {
+            const gridCell = layoutNode.deltaBlock.gridCell
             if (gridCell.columnSpanAll) {
               columnSpanAll = true
             } else if (gridCell.columnSpan && gridCell.columnSpan > 1) {
@@ -624,8 +672,8 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
               rowSpan = gridCell.rowSpan
             }
           }
-        } else if (childNode instanceof ElementNode) {
-          nodeId = getElementId(childNode.element)
+        } else if (layoutNode instanceof ElementNode) {
+          nodeId = getElementId(layoutNode.element)
         }
 
         // Render the child element using the return value from accept()
@@ -665,6 +713,31 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
 
   const constrainOverflow =
     cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED
+
+  // wrap=False tracks will not shrink below this floor. The scrollport's
+  // content box must be at least that wide, or overflow-x clips the columns.
+  // Only become a scrollport once the tracks are wider than the box.
+  // overflow-x: auto would otherwise coerce overflow-y and clip toolbars
+  // even when every column fits.
+  const tracksMinWidthPx = gridTracksMinWidthPx(
+    columnCount,
+    minColumnWidthPx,
+    columnGapPx
+  )
+  const horizontalScroll = shouldScrollHorizontally(
+    wrap,
+    tracksMinWidthPx,
+    measuredWidth !== undefined && measuredWidth > 0
+      ? measuredWidth
+      : fallbackWidthPx
+  )
+  const trackMinWidthPx =
+    gridHasBoundedHeight && horizontalScroll ? tracksMinWidthPx : undefined
+  const gridKeyboardScrollTarget = useExposeScrollTarget(
+    !gridHasBoundedHeight && horizontalScroll,
+    elementRef,
+    childrenWithCells
+  )
 
   // Wrap each child in a grid cell with span information.
   // Use nodeId for stable React keys so width-driven template updates do not
@@ -711,20 +784,13 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     ]
   )
 
-  // wrap=False tracks will not shrink below this floor. The scrollport's
-  // content box must be at least that wide, or overflow-x clips the columns.
-  const trackMinWidthPx =
-    gridHasBoundedHeight && !wrap
-      ? columnCount * minColumnWidthPx +
-        Math.max(columnCount - 1, 0) * columnGapPx
-      : undefined
-
   // Always render the port so switching height does not remount the grid.
   // Content height styles the port as `display: contents`.
   return (
     <OverflowAwareGridPort
       bounded={gridHasBoundedHeight}
       wrap={wrap}
+      horizontalScroll={horizontalScroll}
       trackMinWidthPx={trackMinWidthPx}
     >
       <StyledGridContainerBlock
@@ -732,7 +798,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
         columnCount={columnCount}
         minColumnWidthPx={minColumnWidthPx}
         $wrap={wrap}
-        $applyOverflow={!gridHasBoundedHeight}
+        $horizontalScroll={!gridHasBoundedHeight && horizontalScroll}
         rowGap={rowGap}
         columnGap={columnGap}
         cellHeightMode={cellHeightMode}
@@ -744,6 +810,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
         data-testid="stGrid"
         data-test-column-count={columnCount}
         data-test-wrap={String(wrap)}
+        tabIndex={gridKeyboardScrollTarget ? 0 : undefined}
       >
         {wrappedChildren}
       </StyledGridContainerBlock>
@@ -795,9 +862,7 @@ export const BlockNodeRenderer = (
   // grid.cell() is wrapped in stLayoutWrapper. In a definite-height row that
   // wrapper must fill the cell; otherwise its default flex (0 1 auto) and
   // height: auto collapse stretch children to 0.
-  const fillGridCell =
-    notNullOrUndefined(node.deltaBlock.gridCell) &&
-    Boolean(flexContext?.fillAvailableHeight)
+  const fillGridCell = shouldFillGridCell(node.deltaBlock, flexContext)
   const wrapperStyles = fillGridCell
     ? { ...styles, height: "100%", flex: "1 1 auto", minHeight: 0 }
     : styles

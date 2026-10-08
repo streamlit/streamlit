@@ -1199,6 +1199,55 @@ describe("GridContainer Component", () => {
     expect(gridContainer).toHaveAttribute("data-test-wrap", "false")
   })
 
+  it("does not scroll a no-wrap grid whose tracks fit", () => {
+    const block = makeGridBlock({
+      maxColumns: 2,
+      minColumnWidthPx: 100,
+      wrap: false,
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).not.toHaveStyle("overflow-x: auto")
+    expect(gridContainer).not.toHaveStyle("padding-block: 0.2rem")
+  })
+
+  it("makes a text-only overflowing no-wrap grid keyboard scrollable", async () => {
+    const block = makeGridBlock(
+      {
+        maxColumns: 4,
+        minColumnWidthPx: 200,
+        wrap: false,
+      },
+      [makeTextElement("Note")]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    await waitFor(() => {
+      expect(gridContainer).toHaveAttribute("tabindex", "0")
+    })
+    expect(gridContainer).not.toHaveAttribute("role")
+  })
+
+  it("does not add a tab stop on a no-wrap grid that already has a widget", async () => {
+    const block = makeGridBlock(
+      {
+        maxColumns: 4,
+        minColumnWidthPx: 200,
+        wrap: false,
+      },
+      [makeButton("Edit")]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    await waitFor(() => {
+      expect(gridContainer).toHaveStyle("overflow-x: auto")
+    })
+    expect(gridContainer).not.toHaveAttribute("tabindex")
+  })
+
   it("fills the layout wrapper when the grid has a bounded height", () => {
     const block = new BlockNode(
       FAKE_SCRIPT_HASH,
@@ -1485,8 +1534,8 @@ describe("GridContainer Component", () => {
       await waitFor(() => {
         expect(body).toHaveAttribute("tabindex", "0")
       })
-      expect(body).toHaveAttribute("role", "region")
-      expect(body).toHaveAttribute("aria-label", "Scrollable cell")
+      expect(body).not.toHaveAttribute("role")
+      expect(body).not.toHaveAttribute("aria-label")
     } finally {
       restore()
     }
@@ -1856,6 +1905,46 @@ describe("GridContainer Component", () => {
     renderWithContexts(makeGridNodeRendererComponent(block))
 
     expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
+  })
+
+  it("keeps a direct widget cell mounted when a spinner wraps it", () => {
+    const widget = textInput("Name", "grid-spinner-widget")
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(makeGridBlock({}, [widget]))
+    )
+    const cell = screen.getByTestId("stGridCell")
+
+    rerenderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock({}, [
+          new TransientNode(FAKE_SCRIPT_HASH, widget, [text("Loading")]),
+        ])
+      )
+    )
+
+    expect(screen.getByTestId("stGridCell")).toBe(cell)
+    expect(screen.getByText("Loading")).toBeVisible()
+    expect(within(cell).getByTestId("stSkeleton")).toBeVisible()
+  })
+
+  it("keeps column span when a spinner wraps the cell", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("Featured")],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: { columnSpanAll: true },
+      })
+    )
+    const block = makeGridBlock({ maxColumns: 4 }, [
+      new TransientNode(FAKE_SCRIPT_HASH, cell, [text("Loading")]),
+    ])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGridCell")).toHaveStyle("grid-column: 1/-1")
+    expect(screen.getByText("Featured")).toBeVisible()
+    expect(screen.getByText("Loading")).toBeVisible()
   })
 
   it("uses the grid pixel width for first-paint column count", () => {

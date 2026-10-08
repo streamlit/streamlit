@@ -421,7 +421,7 @@ def validate_wrap(wrap: bool) -> None:
         raise StreamlitValueError("wrap", ["True", "False"])
 
 
-def validate_bool_arg(value: object, parameter: str) -> None:
+def validate_bool_arg(parameter: str, value: object) -> None:
     """Reject non-bool values before they reach protobuf.
 
     A ``bool`` annotation does not stop callers from passing ``None`` or a

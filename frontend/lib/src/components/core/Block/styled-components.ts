@@ -433,10 +433,12 @@ export interface StyledGridContainerBlockProps {
   cellHeightPx?: number
   $dense?: boolean
   /**
-   * When false, skip wrap=False overflow on this element. Bounded-height
-   * content/fixed grids apply overflow on StyledGridScrollBody instead.
+   * When true, this element is the horizontal scrollport. Bounded-height
+   * grids apply that overflow on StyledGridScrollBody instead. Only set
+   * once tracks are wider than the box: overflow-x: auto coerces
+   * overflow-y: visible to auto and clips hover toolbars.
    */
-  $applyOverflow?: boolean
+  $horizontalScroll?: boolean
 }
 
 export const StyledGridContainerBlock =
@@ -451,7 +453,7 @@ export const StyledGridContainerBlock =
       cellHeightMode,
       cellHeightPx,
       $dense,
-      $applyOverflow = true,
+      $horizontalScroll = false,
     }) => {
       const rowGapPx = translateGapWidth(rowGap, theme)
       const columnGapPx = translateGapWidth(columnGap, theme)
@@ -480,21 +482,17 @@ export const StyledGridContainerBlock =
           wrap: $wrap,
         }),
         gridAutoRows,
-        // wrap=False keeps the declared track count and scrolls locally.
-        // overflow-y stays visible so the x-axis scrollport does not become
-        // a vertical clip for hover toolbars (browsers may still coerce it).
-        // Bounded-height grids move overflow onto StyledGridScrollBody so
-        // this one-axis rule is not applied twice.
-        ...(!$wrap &&
-          $applyOverflow && {
-            overflowX: "auto" as const,
-            overflowY: "visible" as const,
-            // One-axis overflow can coerce the other axis, which would clip
-            // child focus rings. Cancel the extra padding with a negative
-            // margin so the outer layout is unchanged.
-            paddingBlock: theme.sizes.focusRingWidth,
-            marginBlock: `-${theme.sizes.focusRingWidth}`,
-          }),
+        // wrap=False keeps the declared track count and scrolls locally,
+        // but only once the tracks are wider than this box.
+        ...($horizontalScroll && {
+          overflowX: "auto" as const,
+          overflowY: "visible" as const,
+          // One-axis overflow can coerce the other axis, which would clip
+          // child focus rings. Cancel the extra padding with a negative
+          // margin so the outer layout is unchanged.
+          paddingBlock: theme.sizes.focusRingWidth,
+          marginBlock: `-${theme.sizes.focusRingWidth}`,
+        }),
         // Dense packing mode fills gaps by reordering items
         ...($dense && { gridAutoFlow: "dense" }),
       }
@@ -508,9 +506,9 @@ export const StyledGridContainerBlock =
  */
 export const StyledGridScrollBody = styled.div<{
   $scroll: boolean
-  $wrap: boolean
+  $horizontalScroll: boolean
   $bounded: boolean
-}>(({ theme, $scroll, $wrap, $bounded }) => {
+}>(({ theme, $scroll, $horizontalScroll, $bounded }) => {
   // Content-height grids keep this node so a later pixel/stretch height
   // does not remount the grid. `display: contents` leaves layout unchanged.
   if (!$bounded) {
@@ -528,10 +526,10 @@ export const StyledGridScrollBody = styled.div<{
     maxHeight: "100%",
     ...($scroll && {
       overflowY: "auto" as const,
-      overflowX: $wrap ? ("clip" as const) : ("auto" as const),
+      overflowX: $horizontalScroll ? ("auto" as const) : ("clip" as const),
     }),
-    ...(!$wrap &&
-      !$scroll && {
+    ...(!$scroll &&
+      $horizontalScroll && {
         overflowX: "auto" as const,
         overflowY: "visible" as const,
         paddingBlock: theme.sizes.focusRingWidth,

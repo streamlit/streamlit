@@ -789,14 +789,16 @@ class LayoutsMixin:
               ``min_column_width``.
 
         min_column_width : "auto" or int
-            The minimum width of each column. This can be one of the
-            following:
+            The preferred outer width of each column, used as the wrapping
+            threshold. This can be one of the following:
 
             - ``"auto"`` (default): Streamlit uses a theme-based width of
               about 200 pixels. Cell border and padding sit inside that
               width and do not increase it. With ``wrap=True``, this is
               a wrapping threshold: once one column remains, that column
-              uses the container width and may be narrower.
+              uses the container width and may be narrower. With
+              ``wrap=False``, cells shrink to this width and the grid
+              then scrolls horizontally.
             - An integer specifying the minimum width in pixels: With
               ``wrap=True``, this is a wrapping threshold. The grid drops
               a column before cells would become narrower than this
@@ -857,8 +859,10 @@ class LayoutsMixin:
               tallest cell.
             - A positive integer: Every row is that many pixels.
               Content that is taller scrolls inside the cell. Content
-              does not stretch automatically; pass ``height="stretch"``
-              to a chart or dataframe to fill the cell.
+              does not stretch automatically. Inside ``grid.cell()``,
+              pass ``height="stretch"`` to a chart or dataframe to fill
+              the cell. Direct children of the grid do not stretch that
+              way.
 
         width : "stretch" or int
             The width of the grid. This can be one of the following:
@@ -958,8 +962,8 @@ class LayoutsMixin:
 
         """
         validate_wrap(wrap)
-        validate_bool_arg(border, "border")
-        validate_bool_arg(dense, "dense")
+        validate_bool_arg("border", border)
+        validate_bool_arg("dense", dense)
 
         if isinstance(columns, str) and columns == "auto":
             validated_columns: Literal["auto"] | int = "auto"

@@ -234,7 +234,9 @@ message Block {
     // Number of columns. 0 means auto mode (columns determined by min_column_width_px).
     int32 max_columns = 1;
 
-    // Minimum column width in pixels. 0 means "auto": the frontend uses the theme's default column width.
+    // Minimum column width in pixels. 0 means "auto": the frontend uses
+    // theme.sizes.gridMinColumnWidth (12.5rem, about 200px) as the wrap
+    // threshold. With wrap=false, tracks do not shrink below it.
     uint32 min_column_width_px = 2;
 
     // Gap configuration for row and column gaps.

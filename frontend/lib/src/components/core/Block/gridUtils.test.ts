@@ -19,10 +19,12 @@ import {
   computeGridTemplateColumns,
   cssLengthToPx,
   GRID_AUTO_COLUMN_CAP,
+  gridTracksMinWidthPx,
   resolveDefaultGridContentBoxPx,
   resolveGridColumnCount,
   resolveMinColumnWidthPx,
   shouldEnableOverflowScroll,
+  shouldScrollHorizontally,
 } from "./gridUtils"
 
 describe("cssLengthToPx", () => {
@@ -213,6 +215,20 @@ describe("computeGridTemplateColumns", () => {
         wrap: false,
       })
     ).toBe("repeat(4, minmax(200px, 1fr))")
+  })
+})
+
+describe("shouldScrollHorizontally", () => {
+  it("does not scroll a wrapping grid or a no-wrap grid whose tracks fit", () => {
+    expect(shouldScrollHorizontally(true, 848, 400)).toBe(false)
+    expect(shouldScrollHorizontally(false, 216, 704)).toBe(false)
+    expect(shouldScrollHorizontally(false, 705, 704)).toBe(false)
+    expect(shouldScrollHorizontally(false, 848, 0)).toBe(false)
+  })
+
+  it("scrolls a no-wrap grid once tracks exceed the box", () => {
+    expect(gridTracksMinWidthPx(4, 200, 16)).toBe(848)
+    expect(shouldScrollHorizontally(false, 848, 704)).toBe(true)
   })
 })
 
