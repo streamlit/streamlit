@@ -890,7 +890,8 @@ Two consequences of that framing are easy to get wrong:
   behind `data.url`, not truncating it.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
   a Deck.gl layer, and an agent should not be mining coordinates out of layer JSON, so a
-  map's `data` is the table the author passed, described like a dataframe's — columns,
+  map's `data` is the columns it plots from the author's table, which is all its browser
+  receives, described like a dataframe's — columns,
   preview, `complete`, and `url` — and the generated specification is left out.
 
 The preview cap is a row count rather than a byte budget, set high enough — 100 rows —
