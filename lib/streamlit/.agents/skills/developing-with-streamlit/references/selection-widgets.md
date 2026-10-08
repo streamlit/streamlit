@@ -69,12 +69,13 @@ countries = st.multiselect(
 
 ## Feedback (ratings)
 
-Use `st.feedback` for thumbs, faces, or star ratings instead of building one from buttons or `st.segmented_control`. It returns `None` until the user picks, then an integer where higher is more positive:
+Use `st.feedback` for thumbs, faces, or star ratings instead of building one from buttons or `st.segmented_control`. It returns an integer while an option is selected (including a `default` before any click) and `None` otherwise. Higher is more positive:
 
 - `"thumbs"`: `1` is thumbs-up and `0` is thumbs-down, even though thumbs-up is shown first.
-- `"faces"` and `"stars"`: `0` (least satisfied) to `4` (most satisfied), so the star count is the value plus one.
+- `"faces"`: `0` (least satisfied) through `4` (most satisfied).
+- `"stars"`: `0` through `4`. The displayed star count is the value plus one.
 
-Test with `is not None`: `0` is a real selection, so `if rating:` hides it.
+Check `rating is not None`, not `if rating`: `0` is a real selection, so a truthiness check skips it.
 
 ```python
 rating = st.feedback("stars")
