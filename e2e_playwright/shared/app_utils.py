@@ -413,6 +413,9 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
         Pass 3 parts for a single-date field, 6 for a range field (start +
         end segments), e.g.
         ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field.
+        Each part must match the rendered segment text exactly (zero-padded
+        months/days and a 4-digit year for current callers), because the
+        helper waits with ``to_have_text(part)`` before the next keystroke.
 
     commit : bool
         If True (default), press Escape after typing to close the popover and
@@ -422,7 +425,11 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
     """
     spinbuttons = date_input_field.get_by_role("spinbutton")
     for i, part in enumerate(parts):
-        spinbuttons.nth(i).press_sequentially(part)
+        target = spinbuttons.nth(i)
+        target.press_sequentially(part)
+        # Wait for React Aria to paint the digits before the next segment or
+        # Escape. Otherwise close/blur can run before the last bound exists.
+        expect(target).to_have_text(part)
     if commit:
         date_input_field.page.keyboard.press("Escape")
 
