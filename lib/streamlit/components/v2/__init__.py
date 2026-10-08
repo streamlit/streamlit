@@ -104,6 +104,35 @@ def _register_component(
     return component_key
 
 
+def _ensure_component_on_active_runtime(
+    component_key: str,
+    html: str | None,
+    css: str | None,
+    js: str | None,
+) -> None:
+    """Register this callable's definition on the active runtime when that runtime has none.
+
+    Importing a component can register it on a different manager than the one
+    running the script. A resolved definition already stored here is left as is.
+    With no script-run context or no runtime, return without creating a manager.
+    """
+    from streamlit.runtime import Runtime
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        get_script_run_ctx,
+    )
+
+    if get_script_run_ctx() is None or not Runtime.exists():
+        return
+
+    manager = Runtime.instance().bidi_component_registry
+    manager.ensure_definition_if_missing_or_placeholder(
+        component_key=component_key,
+        html=html,
+        css=css,
+        js=js,
+    )
+
+
 def _create_component_callable(
     name: str,
     *,
@@ -192,6 +221,8 @@ def _create_component_callable(
                 "(`st.components.v2.component(..., isolate_styles=...)`).",
                 show_in_browser=False,
             )
+
+        _ensure_component_on_active_runtime(component_key, html, css, js)
 
         return st._bidi_component(
             component_key,

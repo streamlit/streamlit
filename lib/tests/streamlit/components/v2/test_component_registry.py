@@ -1049,3 +1049,50 @@ def test_register_overwrites_real_definition_with_warning() -> None:
 
         # Verify warning WAS logged
         mock_logger.warning.assert_called_once()
+
+
+def test_register_if_missing_or_placeholder_stores_missing_name() -> None:
+    """A missing name is stored and the call returns True."""
+    reg = BidiComponentRegistry()
+    definition = BidiComponentDefinition(
+        name="missing_component",
+        html="<p>new</p>",
+    )
+
+    wrote = reg.register_if_missing_or_placeholder(definition)
+
+    assert wrote is True
+    assert reg.get(definition.name) == definition
+
+
+def test_register_if_missing_or_placeholder_replaces_placeholder_without_warning() -> (
+    None
+):
+    """A placeholder is replaced and no warning is logged."""
+    reg = BidiComponentRegistry()
+    name = "placeholder_component"
+    reg.register(BidiComponentDefinition(name=name))
+    real_def = BidiComponentDefinition(name=name, html="<div>Content</div>")
+
+    with patch("streamlit.components.v2.component_registry._LOGGER") as mock_logger:
+        wrote = reg.register_if_missing_or_placeholder(real_def)
+
+    assert wrote is True
+    assert reg.get(name) == real_def
+    mock_logger.warning.assert_not_called()
+
+
+def test_register_if_missing_or_placeholder_leaves_real_definition() -> None:
+    """A resolved definition with different HTML is left unchanged."""
+    reg = BidiComponentRegistry()
+    name = "kept_component"
+    existing = BidiComponentDefinition(name=name, html="<p>kept</p>")
+    reg.register(existing)
+    incoming = BidiComponentDefinition(name=name, html="<p>other</p>")
+
+    with patch("streamlit.components.v2.component_registry._LOGGER") as mock_logger:
+        wrote = reg.register_if_missing_or_placeholder(incoming)
+
+    assert wrote is False
+    assert reg.get(name) is existing
+    mock_logger.warning.assert_not_called()

@@ -363,6 +363,32 @@ class BidiComponentRegistry:
             self._components[name] = definition
             _LOGGER.debug("Registered component %s", name)
 
+    def register_if_missing_or_placeholder(
+        self, definition: BidiComponentDefinition
+    ) -> bool:
+        """Store a definition when its name is missing or still a placeholder.
+
+        An existing resolved definition stays unchanged. Replacing a
+        placeholder does not log a warning.
+
+        Parameters
+        ----------
+        definition : BidiComponentDefinition
+            The component definition to store when the registry has no resolved
+            entry for that name.
+
+        Returns
+        -------
+        bool
+            True when this call stored the definition.
+        """
+        with self._lock:
+            existing = self._components.get(definition.name)
+            if existing is not None and not existing.is_placeholder:
+                return False
+            self._components[definition.name] = definition
+            return True
+
     def get(self, name: str) -> BidiComponentDefinition | None:
         """Return a component definition by name, or ``None`` if not found.
 
