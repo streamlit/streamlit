@@ -95,9 +95,6 @@ class BidiComponentDefinition:
     # and are independent of the on-disk absolute file path stored in css/js.
     css_asset_relative_path: str | None = None
     js_asset_relative_path: str | None = None
-    # Set only for a name-only entry from manifest discovery. An explicit
-    # component() call with no HTML, CSS, or JS is empty too, but it is a
-    # resolved registration and must not be replaced on mount.
     is_manifest_discovery: bool = False
 
     def __post_init__(self) -> None:
@@ -328,8 +325,9 @@ class BidiComponentRegistry:
                         "css_asset_relative_path"
                     ),
                     js_asset_relative_path=comp_def_data.get("js_asset_relative_path"),
-                    # Name-only discoveries are filled in later by component().
-                    # A definition that already has content is a real entry.
+                    # Mount replaces a name-only discovery with the captured
+                    # definition. An entry that already has HTML, CSS, or JS
+                    # stays as registered.
                     is_manifest_discovery=(html is None and css is None and js is None),
                 )
                 self._components[comp_name] = definition

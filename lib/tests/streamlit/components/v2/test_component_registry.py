@@ -552,7 +552,7 @@ def test_mount_without_script_run_or_runtime_does_not_create_a_manager() -> None
         patch(
             "streamlit.runtime.scriptrunner_utils.script_run_context.get_script_run_ctx",
             return_value=None,
-        ),
+        ) as mock_ctx,
         patch("streamlit.runtime.Runtime.exists", return_value=False),
         patch(
             "streamlit.runtime.Runtime.instance",
@@ -565,6 +565,7 @@ def test_mount_without_script_run_or_runtime_does_not_create_a_manager() -> None
 
     mock_init.assert_not_called()
     mock_mount.assert_called_once()
+    mock_ctx.assert_called_once_with(suppress_warning=True)
 
 
 def test_register_from_manifest_basic(temp_manager_setup) -> None:

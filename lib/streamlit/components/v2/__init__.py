@@ -125,7 +125,8 @@ def _ensure_component_on_active_runtime(
         get_script_run_ctx,
     )
 
-    if get_script_run_ctx() is None or not Runtime.exists():
+    # Suppress the missing-context warning here. The mount that follows logs it.
+    if get_script_run_ctx(suppress_warning=True) is None or not Runtime.exists():
         return
 
     manager = Runtime.instance().bidi_component_registry
