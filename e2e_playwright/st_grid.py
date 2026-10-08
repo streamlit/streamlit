@@ -53,9 +53,11 @@ with grid2.cell():
 with grid2.cell():
     st.markdown("**Cell 5**")
 
-# wrap=False keeps the declared column count and scrolls horizontally
+# wrap=False keeps the declared column count. 280px is wider than the
+# default content box once three columns and their gaps are laid out, so
+# this grid scrolls instead of wrapping.
 st.subheader("No wrap")
-with st.grid(3, wrap=False, key="no_wrap"):
+with st.grid(3, min_column_width=280, wrap=False, key="no_wrap"):
     for i in range(3):
         st.button(f"No wrap {i + 1}", key=f"no_wrap_btn_{i}")
 
