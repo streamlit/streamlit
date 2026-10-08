@@ -476,6 +476,92 @@ def config_show(**kwargs: Any) -> None:
     _config.show_config()
 
 
+# SUBCOMMAND cloud
+
+_DEPLOY_URL: Final = "https://share.streamlit.io/deploy"
+
+
+@main.group("cloud")
+def cloud() -> None:
+    """Manage Streamlit Community Cloud deployments."""
+
+
+@cloud.command("deploy")
+@click.argument("target", default="streamlit_app.py", envvar="STREAMLIT_RUN_TARGET")
+def cloud_deploy(target: str) -> None:
+    """Open the browser to deploy to Streamlit Community Cloud.
+
+    If the current directory (or TARGET) is inside a GitHub repository,
+    the deploy page will be pre-filled with the repository, branch, and
+    main script information.
+
+    TARGET can be:
+    - A path to a Python file (default: streamlit_app.py)
+    - A path to a directory containing streamlit_app.py
+    """
+    from urllib.parse import urlencode
+
+    from streamlit import cli_util
+    from streamlit.git_util import GitRepo
+
+    path = Path(target)
+
+    # Determine the script path and whether we have a specific script to prefill
+    has_specific_script = False
+    if path.is_dir():
+        script_path = path / "streamlit_app.py"
+        if script_path.exists():
+            has_specific_script = True
+        else:
+            # No streamlit_app.py found, use directory for git info
+            # but don't prefill mainModule so user can specify it on Cloud page
+            script_path = path
+    else:
+        # User specified a file path
+        if not path.exists():
+            raise click.ClickException(
+                f"File does not exist: {path}\n"
+                "Specify your main script with: streamlit cloud deploy <your_script.py>"
+            )
+        has_specific_script = True
+        script_path = path
+
+    script_path = script_path.resolve()
+
+    # Try to get git repository information
+    repo = GitRepo(str(script_path))
+    repo_info = repo.get_repo_info()
+
+    if repo_info:
+        repository, branch, module = repo_info
+        # Remove .git suffix if present (matching DeployDialog behavior)
+        repository = repository.removesuffix(".git")
+
+        params: dict[str, str] = {
+            "repository": repository,
+            "branch": branch,
+        }
+        # Only include mainModule if we have a specific script file
+        if has_specific_script:
+            params["mainModule"] = module
+
+        deploy_url = f"{_DEPLOY_URL}?{urlencode(params)}"
+
+        click.echo("Opening Streamlit Community Cloud deploy page...")
+        click.echo(f"  Repository: {repository}")
+        click.echo(f"  Branch: {branch}")
+        if has_specific_script:
+            click.echo(f"  Main script: {module}")
+        else:
+            click.echo("  Main script: (not specified - please select on Cloud page)")
+
+        cli_util.open_browser(deploy_url)
+    else:
+        raise click.ClickException(
+            "Deploying to Community Cloud requires the code to be pushed to GitHub."
+        )
+
+
 # SUBCOMMAND activate
 
 
