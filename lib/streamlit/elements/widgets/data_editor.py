@@ -71,6 +71,7 @@ from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
+    OnChangeMode,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -793,7 +794,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -816,7 +817,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -839,7 +840,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -862,7 +863,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -885,7 +886,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -908,7 +909,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -1091,8 +1092,30 @@ class DataEditorMixin:
                 specific rows when the data is reordered. Omit ``key`` to reset
                 all edits whenever the data changes.
 
-        on_change : callable
-            An optional callback invoked when this data_editor's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the data editor should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the data editor. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a cell edit (Enter, Tab, or leaving the cell),
+              pastes, adds a row, deletes a row, or clears cell contents.
+              Typing in the open cell editor does not commit until the edit
+              is applied.
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits an edit. The data editor still updates in the UI. The
+              new value is available on the next rerun triggered by something
+              else, such as another widget interaction. Ignored commits are
+              held in the browser and are lost if the page is refreshed
+              before that rerun. Inside ``st.form``, this has no effect: the
+              form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -1224,9 +1247,9 @@ class DataEditorMixin:
         import pyarrow as pa
 
         key = to_key(key)
-        on_change = validate_on_change_mode(
+        on_change_callback = validate_on_change_mode(
             on_change,
-            supported_modes=(),
+            supported_modes=("rerun", "ignore"),
         )
 
         validate_width(width, allow_content=True)
@@ -1240,7 +1263,7 @@ class DataEditorMixin:
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None,
             writes_allowed=False,
         )
@@ -1502,9 +1525,12 @@ class DataEditorMixin:
 
         serde = DataEditorSerde()
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            proto.ignore_rerun = True
+
         widget_state = register_widget(
             proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
