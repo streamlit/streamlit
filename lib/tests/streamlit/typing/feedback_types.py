@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Literal, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 if TYPE_CHECKING:

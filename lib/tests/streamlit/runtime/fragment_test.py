@@ -674,7 +674,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 def test_has_lock() -> None:
     """MemoryFragmentStorage should expose a threading.Lock for concurrent register/clear."""
     storage = MemoryFragmentStorage()
-    # threading.Lock is a class in Python 3.13+ and a factory function in 3.10-3.12,
+    # threading.Lock is a class in Python 3.13+ and a factory function in 3.11-3.12,
     # so we compare against type(threading.Lock()) for portability across both.
     assert isinstance(storage._lock, type(threading.Lock()))
 

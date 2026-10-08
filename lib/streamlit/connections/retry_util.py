@@ -88,7 +88,7 @@ def retry(
             while True:
                 try:
                     return func(*args, **kwargs)
-                except Exception as exc:  # noqa: PERF203 — retry loop must catch per-iteration
+                except Exception as exc:
                     # The predicate rejected this exception: re-raise it
                     # immediately with no wait or `after` callback.
                     if not retry_on_exception(exc):
