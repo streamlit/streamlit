@@ -1777,23 +1777,21 @@ def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
 def test_inspectable_elements_reject_unsupported_interactions() -> None:
     """Inspectable-only nodes reject set_value/click with AppTestError.
 
-    ``st.pagination`` is inspectable (key and current page) but has no typed
-    wrapper. Its proto field ``set_value: bool`` must not leak through
-    ``Element.__getattr__`` as a callable. Typed ``Markdown`` is covered too.
+    ``st.audio_input`` is still an ``UnknownElement``. Typed ``Markdown`` is
+    covered too. ``Element.__getattr__`` must not leak a proto field named
+    ``set_value`` (pagination's proto field is a bool) as a callable.
     """
 
     def script():
         import streamlit as st
 
-        st.pagination(5, key="pager")
+        st.audio_input("Mic", key="mic")
         st.markdown("hi")
 
     at = AppTest.from_function(script).run()
-    node = at.get("pagination")[0]
+    node = at.get("audio_input")[0]
     assert isinstance(node, UnknownElement)
-    assert node.key == "pager"
-    assert node.value == 1
-    assert node.proto.set_value is False
+    assert node.key == "mic"
 
     inspectable_guidance = (
         "AppTest can inspect this element but does not implement "
@@ -1801,21 +1799,143 @@ def test_inspectable_elements_reject_unsupported_interactions() -> None:
         "has a key, or use a Playwright e2e test."
     )
     with pytest.raises(AppTestError) as set_value_info:
-        node.set_value(2)
+        node.set_value(b"wav")
     assert str(set_value_info.value) == (
-        "set_value() is not supported for pagination (key='pager'). "
+        "set_value() is not supported for audio_input (key='mic'). "
         f"{inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as click_info:
         node.click()
     assert str(click_info.value) == (
-        f"click() is not supported for pagination (key='pager'). {inspectable_guidance}"
+        f"click() is not supported for audio_input (key='mic'). {inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as markdown_info:
         at.markdown[0].set_value("nope")
     assert str(markdown_info.value) == (
         f"set_value() is not supported for markdown. {inspectable_guidance}"
     )
+
+
+def test_pagination_set_value_selects_page() -> None:
+    """``st.pagination`` is a typed widget: page changes apply on ``.run()``."""
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("changes", 0)
+
+        def on_change() -> None:
+            st.session_state.changes += 1
+
+        page = st.pagination(5, key="pager", on_change=on_change)
+        st.pagination(3, default=2, key="other")
+        st.sidebar.pagination(4, key="side")
+        st.text(f"page={page}")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    pager = at.pagination(key="pager")
+    assert pager.value == 1
+    assert pager.key == "pager"
+    assert at.pagination(key="other").value == 2
+    assert at.sidebar.pagination(key="side").value == 1
+    assert at.session_state["pager"] == 1
+    assert at.get("pagination")[0].value == 1
+
+    at = pager.select(3).run()
+    assert at.pagination(key="pager").value == 3
+    assert at.session_state["pager"] == 3
+    assert at.session_state["changes"] == 1
+    assert at.text[0].value == "page=3"
+
+    at = at.pagination(key="pager").set_value(5).run()
+    assert at.pagination(key="pager").value == 5
+    assert at.session_state["changes"] == 2
+
+    at.pagination(key="pager").set_value(5).run()
+    assert at.session_state["changes"] == 2
+
+    with pytest.raises(AppTestError, match=r"between 1 and 5"):
+        at.pagination(key="pager").set_value(6)
+    with pytest.raises(AppTestError, match=r"between 1 and 5"):
+        at.pagination(key="pager").select(0)
+    with pytest.raises(AppTestError, match=r"between 1 and 5"):
+        at.pagination(key="pager").set_value(True)  # type: ignore[arg-type]
+    assert at.pagination(key="pager").value == 5
+
+    with pytest.raises(
+        AppTestError,
+        match=(
+            r"click\(\) is not supported for pagination \(key='pager'\)\. "
+            r"Use set_value\(\) or one of this widget's typed interaction methods\."
+        ),
+    ):
+        at.pagination(key="pager").click()
+
+    repr(at.pagination(key="pager"))
+
+
+def test_pagination_disabled_rejects_update() -> None:
+    """A disabled pagination widget cannot change pages."""
+
+    def script():
+        import streamlit as st
+
+        st.pagination(5, disabled=True, key="pager")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match="disabled"):
+        at.pagination(key="pager").set_value(2)
+    with pytest.raises(AppTestError, match="disabled"):
+        at.pagination(key="pager").select(2)
+    at = at.run()
+    assert at.pagination(key="pager").value == 1
+
+
+def test_pagination_in_form_applies_on_submit() -> None:
+    """Form pagination stays uncommitted until that form's submit button runs."""
+
+    def script():
+        import streamlit as st
+
+        with st.form("pages"):
+            page = st.pagination(5, key="pager")
+            st.form_submit_button("Go")
+        st.text(f"page={page}")
+
+    at = AppTest.from_function(script).run()
+    at.pagination(key="pager").set_value(4)
+    assert at.pagination(key="pager").value == 4
+    at = at.run()
+    assert at.pagination(key="pager").value == 1
+    assert at.text[0].value == "page=1"
+
+    at.pagination(key="pager").set_value(4)
+    at = at.form_submit_button[0].click().run()
+    assert at.pagination(key="pager").value == 4
+    assert at.text[0].value == "page=4"
+
+
+def test_pagination_form_clear_on_submit_resets_to_default() -> None:
+    """The next submit after clear_on_submit restores the declared default page."""
+
+    def script():
+        import streamlit as st
+
+        with st.form("pages", clear_on_submit=True):
+            page = st.pagination(5, default=2, key="pager")
+            st.form_submit_button("Go")
+        st.text(f"page={page}")
+
+    at = AppTest.from_function(script).run()
+    assert at.pagination(key="pager").value == 2
+    at.pagination(key="pager").set_value(4)
+    at = at.form_submit_button[0].click().run()
+    assert at.text[0].value == "page=4"
+
+    at = at.form_submit_button[0].click().run()
+    assert at.pagination(key="pager").value == 2
+    assert at.text[0].value == "page=2"
 
 
 def test_typed_widget_without_click_raises_app_test_error() -> None:
