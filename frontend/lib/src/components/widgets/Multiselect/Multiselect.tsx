@@ -311,6 +311,14 @@ const Multiselect: FC<Props> = props => {
 
   const displayOptionsRef = useRef(displayOptions)
   displayOptionsRef.current = displayOptions
+  // Filtering unmounts the hovered row without onHoverEnd. Clear so a later
+  // filter that brings the row back does not treat it as still hovered.
+  if (
+    notNullOrUndefined(hoveredKey) &&
+    !displayOptions.some(o => o.id === hoveredKey)
+  ) {
+    setHoveredKey(null)
+  }
   // Hovered row when it is still listed; otherwise the first visible row.
   const enterTargetKey = useMemo((): string | null => {
     if (
@@ -550,10 +558,11 @@ const Multiselect: FC<Props> = props => {
           setHoveredKey(option.id)
         }}
         onHoverEnd={() => {
-          // Only skip when clearing hover changes the Enter target. Hovering
-          // the first row then leaving leaves enterTargetKey unchanged, so
-          // the sync effect would not run and a sticky skip would swallow
-          // the next keystroke or reopen sync.
+          // Keep arrow focus when the pointer leaves a row. Skip the Enter-
+          // target sync only when clearing hover changes that target (not the
+          // first row). Leaving the first row does not change the target, so
+          // the effect would not run and a sticky skip would swallow the next
+          // sync.
           const firstId = displayOptionsRef.current[0]?.id
           if (
             hoveredKeyRef.current === option.id &&

@@ -65,11 +65,10 @@ export function useSyncComboBoxEnterTargetFocus(
     let rafId = 0
     const startedAt = performance.now()
 
-    // True when the user has arrowed to a row this hook did not write.
-    // React Aria clears focusedKey on each query change, so null is not a
-    // user move. The last auto-synced key is not a user move either: hover
-    // may replace it.
-    const anotherRowIsFocused = (): boolean => {
+    // True when focusedKey is a listed row this hook did not write, so a retry
+    // must leave it alone. Null is React Aria clearing focus on a query change.
+    // The last key this hook wrote is not a user move.
+    const userMovedOffEnterTarget = (): boolean => {
       const current = stateRef.current
       if (!current) return false
       const focused = current.selectionManager.focusedKey
@@ -104,8 +103,8 @@ export function useSyncComboBoxEnterTargetFocus(
     const applyEnterTargetFocus = (): boolean => {
       const current = stateRef.current
       if (!current) return false
-      // Read first: once the user has arrowed elsewhere, do not overwrite.
-      if (anotherRowIsFocused()) return true
+      // Read first: once focus sits on a row this hook did not write, stop.
+      if (userMovedOffEnterTarget()) return true
       // SelectionManager.setFocusedKey no-ops when the key is missing from the
       // collection, so it is safe to call before Virtualizer registers items.
       current.selectionManager.setFocusedKey(enterTargetKey)
@@ -117,10 +116,12 @@ export function useSyncComboBoxEnterTargetFocus(
     }
 
     // Always schedule one more frame so this hook runs after ComboBox clears
-    // focusedKey. Keep retrying until the Enter target stays focused, the user
-    // has arrowed away, or the retry window ends. Do not list `state` as a
-    // dependency: every focus update would restart the effect and pull arrow
-    // navigation back to the Enter target.
+    // focusedKey. Retry until:
+    // - the Enter target stays focused;
+    // - focus sits on a row this hook did not write; or
+    // - the retry window ends.
+    // `state` stays out of the dependency list: focus updates replace that
+    // object and would pull arrow navigation back to the Enter target.
     const schedule = (): void => {
       rafId = requestAnimationFrame(() => {
         if (cancelled) return

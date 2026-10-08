@@ -492,7 +492,7 @@ frontend-tests:
 .PHONY: frontend-knip
 # Run Knip unused-export and unused-dependency analysis.
 frontend-knip:
-	cd frontend/ ; ./node_modules/.bin/knip
+	cd frontend/ ; yarn knip
 
 .PHONY: frontend-typesync
 # Check for unsynced frontend types.
@@ -705,7 +705,7 @@ check:
 		if [ -n "$$FE_TESTS" ] && [ "$$FAST_CHECK" != "true" ]; then \
 			echo "=== Frontend: tests (vitest) ===" && \
 			echo "Running: $$FE_TESTS" && \
-			cd frontend && ./node_modules/.bin/vitest run $$FE_TESTS; \
+			cd frontend && yarn vitest run $$FE_TESTS; \
 		fi \
 	) > "$$FE_OUT" 2>&1 & FE_PID=$$!; \
 	E2E_PID=""; \
@@ -816,7 +816,7 @@ autofix:
 	make frontend-init
 	make frontend-format
 	cd frontend/ ; yarn lint:fix || true  # Continue on unfixable errors
-	cd frontend/ ; ./node_modules/.bin/knip --fix --allow-remove-files || true  # Continue on unfixable errors
+	cd frontend/ ; yarn knip --fix --allow-remove-files || true  # Continue on unfixable errors
 	# Dedupe yarn.lock
 	cd frontend ; yarn dedupe
 	# Other fixes:

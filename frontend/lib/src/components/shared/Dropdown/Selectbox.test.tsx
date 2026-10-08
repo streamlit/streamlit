@@ -346,9 +346,9 @@ describe("Selectbox widget", () => {
     expect(props.onChange).not.toHaveBeenCalled()
   })
 
-  it("navigates from the creatable Add row with ArrowUp, not ArrowDown", async () => {
-    // Non-exact queries focus "Add: …" (last row). The list does not wrap, so
-    // ArrowDown stays on Add and ArrowUp reaches matching options.
+  it("ArrowDown from the creatable Add row focuses the first match", async () => {
+    // Non-exact queries focus "Add: …" (last row). ArrowDown must reach the
+    // first match so ArrowDown+Enter selects it; bare Enter still creates.
     const user = userEvent.setup()
     props = getProps({
       value: undefined,
@@ -378,9 +378,35 @@ describe("Selectbox widget", () => {
     await waitFor(() => {
       const activeId = input.getAttribute("aria-activedescendant")
       expect(document.getElementById(activeId as string)).toHaveTextContent(
-        /Add: ap/i
+        "apple"
       )
     })
+
+    await user.keyboard("{Enter}")
+    expect(props.onChange).toHaveBeenCalledWith("apple")
+  })
+
+  it("navigates from the creatable Add row with ArrowUp to the last match", async () => {
+    const user = userEvent.setup()
+    props = getProps({
+      value: undefined,
+      options: ["apple", "apricot"],
+      acceptNewOptions: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.type(input, "ap")
+    await waitFor(
+      () => {
+        const activeId = input.getAttribute("aria-activedescendant")
+        expect(document.getElementById(activeId as string)).toHaveTextContent(
+          /Add: ap/i
+        )
+      },
+      { timeout: 3000 }
+    )
 
     await user.keyboard("{ArrowUp}")
     await waitFor(() => {

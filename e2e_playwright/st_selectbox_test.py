@@ -629,16 +629,15 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     selectbox_input.click()
     expect(selectbox_input).to_be_focused()
 
-    # ArrowDown is the backup open when click alone does not open the menu in CI
-    # (matching select_selectbox_option). It may also move focus off the first
-    # option when the Enter-target sync has already settled.
+    # Backup open when click alone does not open the menu in CI. If the
+    # Enter-target sync has already focused the first option, this ArrowDown
+    # moves to the second option; wait for data-focused on the first row below.
     selectbox_input.press("ArrowDown")
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
     # Re-anchor on the first option so the one-ArrowDown contract is stable.
-    # Extra ArrowUps are no-ops once focus is already on the first row.
     for _ in range(3):
         selectbox_input.press("ArrowUp")
     expect(options.first).to_have_attribute("data-focused", "true")
@@ -654,8 +653,9 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     # toHaveValue("")).
     expect(selectbox_input).to_have_value("")
 
-    # Keyboard navigation still selects: one ArrowDown moves from the already-
-    # focused first option to "No", then Enter commits it.
+    # Wait until the Enter-target sync has focused the first option, then one
+    # ArrowDown moves to "No" and Enter commits it.
+    expect(options.first).to_have_attribute("data-focused", "true")
     selectbox_input.press("ArrowDown")
     selectbox_input.press("Enter")
     expect_markdown(app, "value 23: No")

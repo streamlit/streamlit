@@ -301,6 +301,45 @@ describe("Multiselect widget", () => {
     )
   })
 
+  it("does not restore a filtered-away hover after clearing the query", async () => {
+    // onHoverEnd does not fire when filtering unmounts the row. Hover must be
+    // cleared so bringing the row back does not treat it as still hovered.
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.hover(screen.getByRole("option", { name: "banana" }))
+    await user.type(input, "ap")
+    expect(screen.queryByRole("option", { name: "banana" })).toBeNull()
+    await user.clear(input)
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "banana" })).toBeVisible()
+    })
+    await user.keyboard("{Enter}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["apple"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+      props.element.id,
+      ["banana"],
+      expect.anything()
+    )
+  })
+
   it("sets aria-activedescendant on the Enter target while typing", async () => {
     // RAC focusedKey stays synced so assistive tech knows what Enter will commit.
     const user = userEvent.setup()
