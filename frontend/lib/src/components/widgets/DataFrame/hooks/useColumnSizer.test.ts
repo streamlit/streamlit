@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridColumn, SizedGridColumn } from "@glideapps/glide-data-grid"
+import type { GridColumn, SizedGridColumn } from "@glideapps/glide-data-grid"
 import { act, renderHook } from "@testing-library/react"
 
 import useColumnSizer from "./useColumnSizer"

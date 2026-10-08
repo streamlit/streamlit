@@ -20,7 +20,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import type { VegaLiteChartElement } from "./arrowUtils"
 import { resolveNamedColorsInSpec } from "./colorUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 
@@ -227,7 +227,11 @@ const generateSpec = (
   containerHeight?: number,
   alt: string = ""
 ): VegaLiteSpec => {
-  const spec = JSON.parse(inputSpec)
+  const spec = JSON.parse(inputSpec) as VegaLiteSpec & {
+    title?: string | { text?: string; limit?: number }
+    padding?: { bottom?: number }
+    config?: object
+  }
 
   // Author `alt` wins over any top-level description already in the spec JSON.
   if (alt) {
@@ -263,17 +267,16 @@ const generateSpec = (
   sanitizeUsermetaEmbedOptions(spec)
 
   if (spec.title) {
-    if (typeof spec.title === "string") {
-      spec.title = { text: spec.title }
-    }
-
-    spec.title.limit =
+    const title =
+      typeof spec.title === "string" ? { text: spec.title } : spec.title
+    title.limit =
       // Preserve existing limit if it exists,
-      spec.title.limit ??
+      title.limit ??
       // Otherwise, calculate the width - 40px to give some padding, especially
       // for the ... menu button. If the width is less than 40px, we set it to
       // 0 to avoid negative values.
       Math.max(containerWidth - 40, 0)
+    spec.title = title
   }
 
   // Only apply a container-derived height when we have a positive measurement.

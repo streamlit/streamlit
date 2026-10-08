@@ -15,7 +15,7 @@
  */
 
 import {
-  ReactElement,
+  type ReactElement,
   useCallback,
   useLayoutEffect,
   useRef,
@@ -23,7 +23,7 @@ import {
 } from "react"
 
 import { Close } from "@emotion-icons/material-rounded"
-import { type QueuedToast } from "react-aria-components/Toast"
+import type { QueuedToast } from "react-aria-components/Toast"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
@@ -37,7 +37,7 @@ import {
   StyledToastWrapper,
   StyledViewButton,
 } from "./styled-components"
-import { type StreamlitToastContent } from "./toastQueue"
+import type { StreamlitToastContent } from "./toastQueue"
 
 export function StreamlitToastItem({
   toast,

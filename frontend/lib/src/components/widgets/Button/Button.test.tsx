@@ -22,14 +22,14 @@ import { Button as ButtonProto } from "@streamlit/protobuf"
 
 import {
   FlexContext,
-  IFlexContext,
+  type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Button, { Props } from "./Button"
+import Button, { type Props } from "./Button"
 
 vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
@@ -52,7 +52,7 @@ const getProps = (
     ...elementProps,
   }),
   disabled: false,
-  // @ts-expect-error
+  // @ts-expect-error - constructor expects a props object, not a callback
   widgetMgr: new WidgetStateManager(sendBackMsg),
   ...widgetProps,
 })
@@ -200,6 +200,7 @@ describe("Button widget", () => {
   })
 
   describe("wrap", () => {
+    const layout = mockEllipsizedLabels()
     const horizontalContext: IFlexContext = {
       direction: Direction.HORIZONTAL,
       isInHorizontalLayout: true,
@@ -234,6 +235,24 @@ describe("Button widget", () => {
         <FlexContext.Provider value={horizontalContext}>
           <Button {...getProps({ wrap: true, label: "A very long label" })} />
         </FlexContext.Provider>
+      )
+      expect(screen.queryByTitle("A very long label")).not.toBeInTheDocument()
+    })
+
+    it("does not set a title inside a horizontal layout when the label fits", () => {
+      layout.setWidths(100, 100)
+      render(
+        <FlexContext.Provider value={horizontalContext}>
+          <Button {...getProps({ label: "Short label" })} />
+        </FlexContext.Provider>
+      )
+      expect(screen.queryByTitle("Short label")).not.toBeInTheDocument()
+    })
+
+    it("does not set a title when wrap is false but the label fits", () => {
+      layout.setWidths(100, 100)
+      render(
+        <Button {...getProps({ wrap: false, label: "A very long label" })} />
       )
       expect(screen.queryByTitle("A very long label")).not.toBeInTheDocument()
     })

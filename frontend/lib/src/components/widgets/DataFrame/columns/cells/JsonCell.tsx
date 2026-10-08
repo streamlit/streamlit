@@ -20,7 +20,7 @@ import {
   drawTextCell,
   GridCellKind,
   type ProvideEditorCallback,
-  TextCell,
+  type TextCell,
 } from "@glideapps/glide-data-grid"
 
 import { toJsonString } from "~lib/components/widgets/DataFrame/columns/utils"

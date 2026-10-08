@@ -99,10 +99,15 @@ def setup_viewport_and_verify_title(
 
 
 def verify_sidebar_state(app: Page, expected_expanded: bool) -> None:
-    """Verify sidebar exists and has expected expanded state."""
+    """Verify the sidebar is attached and matches ``expected_expanded``.
+
+    ``data-collapsed`` is the inverse (``"false"`` when the sidebar is expanded).
+    """
     sidebar = app.get_by_test_id("stSidebar")
     expect(sidebar).to_be_attached()
-    expect(sidebar).to_have_attribute("aria-expanded", str(expected_expanded).lower())
+    expect(sidebar).to_have_attribute(
+        "data-collapsed", str(not expected_expanded).lower()
+    )
 
 
 def verify_sidebar_content_visibility(app: Page, should_be_visible: bool) -> None:
@@ -124,7 +129,7 @@ def verify_expand_button_visible(app: Page) -> None:
 def wait_for_sidebar_animation(app: Page, *, expanded: bool) -> None:
     """Wait for the sidebar CSS transform transition (300ms) to finish.
 
-    aria-expanded flips immediately on click, but the sidebar still slides via
+    data-collapsed flips immediately on click, but the sidebar still slides via
     transform. Snapshotting mid-transition causes pixel flakiness (especially
     on webkit), so wait until the transform reaches its final state and stops
     changing before screenshots.

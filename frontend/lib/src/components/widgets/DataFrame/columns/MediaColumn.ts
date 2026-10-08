@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
-import { MediaCell, MediaType } from "./cells/MediaCell"
-import { BaseColumn, BaseColumnProps, toSafeString } from "./utils"
+import type { MediaCell, MediaType } from "./cells/MediaCell"
+import { type BaseColumn, type BaseColumnProps, toSafeString } from "./utils"
 
 const MEDIA_ICONS: Record<MediaType, string> = {
   audio: ":material/audio_file:",

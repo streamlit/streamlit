@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { FC, PropsWithChildren, useCallback, useRef } from "react"
+import { type FC, type PropsWithChildren, useCallback, useRef } from "react"
 
 import { createPortal } from "react-dom"
 

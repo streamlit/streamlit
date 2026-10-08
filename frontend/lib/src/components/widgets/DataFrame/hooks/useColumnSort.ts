@@ -16,16 +16,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { DataEditorProps, GridCell } from "@glideapps/glide-data-grid"
+import type { DataEditorProps, GridCell } from "@glideapps/glide-data-grid"
 import { useColumnSort as useGlideColumnSort } from "@glideapps/glide-data-grid-source"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   toGlideColumn,
 } from "~lib/components/widgets/DataFrame/columns"
 
 import {
-  ActiveColumnSort,
+  type ActiveColumnSort,
   applySortIndicator,
   getNextColumnSort,
   isServerSortableColumn,

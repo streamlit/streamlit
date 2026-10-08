@@ -43,6 +43,17 @@ export const StyledMapContainer = styled.div(({ theme }) => ({
   inset: 0,
   borderRadius: theme.radii.default,
   overflow: "hidden",
+  // deck.gl positions tooltips relative to `.deck-widgets-root`, so the root
+  // must overlay the canvas without intercepting pointer events. Omit
+  // `!important` so deck.gl's inline styles take precedence once a release
+  // sets them.
+  // TODO: Remove once @deck.gl/react includes
+  // https://github.com/visgl/deck.gl/pull/10724.
+  ".deck-widgets-root": {
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "none",
+  },
 }))
 
 export const StyledNavigationControlContainer = styled.div(({ theme }) => ({

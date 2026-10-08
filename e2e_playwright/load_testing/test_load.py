@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import multiprocessing
 import socket
-import subprocess
 import sys
 import time
 from dataclasses import dataclass
@@ -43,8 +42,8 @@ from e2e_playwright.conftest import is_port_available
 from e2e_playwright.load_testing.conftest import (
     ResultsCollector,
     get_scenario_path,
-    start_load_test_server,
-    wait_for_server,
+    start_healthy_load_test_server,
+    terminate_process,
 )
 from e2e_playwright.load_testing.metrics_collector import (
     MetricsCollector,
@@ -53,6 +52,7 @@ from e2e_playwright.load_testing.metrics_collector import (
 from e2e_playwright.load_testing.worker import run_worker_session
 
 if TYPE_CHECKING:
+    import subprocess
     from collections.abc import Generator
 
 
@@ -96,16 +96,6 @@ def test_port_availability_check_rejects_active_client_port() -> None:
             with connection:
                 client_port = client.getsockname()[1]
                 assert not is_port_available(client_port, "localhost")
-
-
-def _terminate_process(process: subprocess.Popen[str], timeout: int = 10) -> None:
-    """Terminate a process, falling back to kill if it doesn't respond."""
-    process.terminate()
-    try:
-        process.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait()
 
 
 def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:
@@ -173,23 +163,21 @@ def _run_concurrent_load_test(
 
 @pytest.fixture
 def scenario_server(
-    load_test_port: int,
     request: pytest.FixtureRequest,
 ) -> Generator[tuple[subprocess.Popen[str], str, int], None, None]:
     """Start a Streamlit server for the current scenario."""
     scenario_name = request.param
     scenario_path = get_scenario_path(scenario_name)
-    process = start_load_test_server(load_test_port, scenario_path)
-
-    if not wait_for_server(load_test_port):
-        _terminate_process(process)
-        pytest.fail(f"Server failed to start on port {load_test_port}")
+    try:
+        process, port = start_healthy_load_test_server(scenario_path)
+    except RuntimeError as exc:
+        pytest.fail(str(exc))
 
     # Note: Direct localhost URL construction is intentional here. Load tests manage
     # their own server lifecycle outside the standard e2e fixtures (app_base_url, etc.)
-    yield process, f"http://localhost:{load_test_port}", process.pid
+    yield process, f"http://localhost:{port}", process.pid
 
-    _terminate_process(process)
+    terminate_process(process)
 
 
 @pytest.mark.only_browser("chromium")

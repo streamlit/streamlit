@@ -14,16 +14,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Literal, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import streamlit as st
     from streamlit.commands.navigation import navigation
     from streamlit.navigation.page import Page, StreamlitPage
+
+    # Public `st.navigation` must resolve to the command, not the
+    # `streamlit.navigation` package.
+    assert_type(st.navigation(["page1.py"]), Page)
+    assert_type(st.navigation(["page1.py"], position="sidebar", expanded=True), Page)
 
     # Test basic list input
     assert_type(navigation(["page1.py"]), Page)

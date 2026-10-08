@@ -16,7 +16,7 @@
 
 import { kebabCase } from "lodash-es"
 
-import {
+import type {
   StreamlitTheme,
   StreamlitThemeCssProperties,
 } from "@streamlit/component-v2-lib"
@@ -134,6 +134,7 @@ export const extractComponentsV2Theme = (
     dataframeBorderColor: theme.colors.dataframeBorderColor,
     dataframeHeaderBackgroundColor:
       theme.colors.dataframeHeaderBackgroundColor,
+    dataframeHeaderTextColor: theme.colors.dataframeHeaderTextColor,
     codeBackgroundColor: theme.colors.codeBackgroundColor,
     font: theme.genericFonts.bodyFont,
     chartCategoricalColors: theme.colors.chartCategoricalColors,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useEffect, useMemo, useRef } from "react"
+import { type FC, memo, useEffect, useMemo, useRef } from "react"
 
 import dompurify, { SANITIZE_HTML_BASE_OPTIONS } from "./dompurifyHooks"
 import HtmlContainer from "./HtmlContainer"

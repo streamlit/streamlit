@@ -16,7 +16,7 @@
 
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
-import { WindowDimensions } from "./useWindowDimensions"
+import type { WindowDimensions } from "./useWindowDimensions"
 
 import { WindowDimensionsContext } from "."
 

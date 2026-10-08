@@ -26,15 +26,15 @@ import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_NAME,
   darkTheme,
-  IMenuItem,
+  type IMenuItem,
   lightTheme,
   mockSessionInfo,
-  ThemeConfig,
+  type ThemeConfig,
 } from "@streamlit/lib"
 import { render, renderWithContexts } from "@streamlit/lib/testing"
 import { Config } from "@streamlit/protobuf"
 
-import MainMenu, { formatDisplayVersion, Props } from "./MainMenu"
+import MainMenu, { formatDisplayVersion, type Props } from "./MainMenu"
 import { getMenuLabels, openMenu } from "./mainMenuTestHelpers"
 
 // Mock ScreenCastRecorder for browser support tests

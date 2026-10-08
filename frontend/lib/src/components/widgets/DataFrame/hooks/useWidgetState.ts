@@ -15,21 +15,24 @@
  */
 
 import {
-  MutableRefObject,
+  type MutableRefObject,
   useCallback,
   useEffect,
   useRef,
   useState,
 } from "react"
 
-import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
+import {
+  CompactSelection,
+  type GridSelection,
+} from "@glideapps/glide-data-grid"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import EditingState, { getColumnName } from "./EditingState"
 

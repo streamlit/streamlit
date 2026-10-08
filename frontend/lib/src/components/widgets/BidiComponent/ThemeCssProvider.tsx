@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, PropsWithChildren, useMemo } from "react"
+import { type FC, type PropsWithChildren, useMemo } from "react"
 
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { StyledThemeCssProvider } from "~lib/components/widgets/BidiComponent/styled-components"

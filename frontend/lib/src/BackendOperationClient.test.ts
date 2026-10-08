@@ -15,7 +15,7 @@
  */
 
 import {
-  BackendOperationRequest,
+  type BackendOperationRequest,
   BackendOperationResponse,
 } from "@streamlit/protobuf"
 

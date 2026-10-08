@@ -21,7 +21,7 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # We fix ruff to a version to be in sync with pyproject.toml:
-    rev: v0.16.8
+    rev: v0.16.10
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -31,7 +31,7 @@ repos:
       - id: ruff-format
         types_or: [python, pyi]
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.12.15
+    rev: 0.12.21
     hooks:
       - id: uv-lock
         files: ^(pyproject\.toml|lib/pyproject\.toml|uv\.lock)$
@@ -59,19 +59,16 @@ repos:
         pass_filenames: true
       - id: oxfmt-yaml
         name: Oxfmt-yaml
-        # Keep these paths repo-root relative: with `yarn --cwd frontend exec`,
-        # oxfmt resolves file arguments from repo root and rejects paths
-        # containing `..`.
-        entry: yarn --cwd frontend exec oxfmt --config frontend/.oxfmtrc.json ".github/**/*.{yml,yaml}"
+        # Run oxfmt from the repo root so --config and the globs resolve
+        # relative to it (oxfmt rejects paths containing "..").
+        entry: frontend/node_modules/.bin/oxfmt --config frontend/.oxfmtrc.json ".github/**/*.{yml,yaml}"
         files: ^.github/.*\.(yml|yaml)$
         language: system
         pass_filenames: false
       - id: oxfmt-vscode-devcontainer-json
         name: Oxfmt VSCode/devcontainer JSON
-        # Keep these paths repo-root relative: with `yarn --cwd frontend exec`,
-        # oxfmt resolves file arguments from repo root and rejects paths
-        # containing `..`.
-        entry: yarn --cwd frontend exec oxfmt --config frontend/.oxfmtrc.json ".vscode/*.json" ".devcontainer/*.json"
+        # Same repo-root invocation as oxfmt-yaml. See that hook for why.
+        entry: frontend/node_modules/.bin/oxfmt --config frontend/.oxfmtrc.json ".vscode/*.json" ".devcontainer/*.json"
         files: ^(.vscode/.*\.json|\.devcontainer/.*\.json)$
         language: system
         pass_filenames: false

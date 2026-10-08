@@ -241,3 +241,26 @@ st.date_input(
     min_value=date(2024, 8, 3),
     max_value=date(2025, 2, 3),
 )
+
+# --- on_change="ignore" date input ---
+# Run counter so test_date_input_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_date = st.date_input(
+    "Ignore change date input",
+    value=date(2025, 1, 15),
+    min_value=date(2024, 1, 1),
+    max_value=date(2026, 12, 31),
+    key="ignore_date",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore date value:", ignore_date)
+
+# Sidebar keeps Apply out from under the calendar overlay so a type-then-click
+# can blur-commit the dirty field and rerun in one action.
+if st.sidebar.button("Apply ignore date", key="apply_ignore_date"):
+    st.write("Applied ignore date value:", ignore_date)

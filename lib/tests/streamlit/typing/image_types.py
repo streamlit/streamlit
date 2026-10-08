@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -82,6 +80,15 @@ if TYPE_CHECKING:
     assert_type(image("image.png", link="/my_page"), DeltaGenerator)
     assert_type(image("image.png", link=None), DeltaGenerator)
 
+    # Image with alt parameter
+    assert_type(image("image.png", alt="Sunrise over a ridge"), DeltaGenerator)
+    assert_type(image("image.png", alt=""), DeltaGenerator)
+    assert_type(image("image.png", alt=None), DeltaGenerator)
+    assert_type(
+        image(["img1.png", "img2.png"], alt=["One", None]),
+        DeltaGenerator,
+    )
+
     # Image with all parameters combined
     assert_type(
         image(
@@ -93,6 +100,7 @@ if TYPE_CHECKING:
             output_format="auto",
             use_container_width=None,
             link="https://streamlit.io",
+            alt="Full example photo",
         ),
         DeltaGenerator,
     )

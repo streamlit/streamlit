@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-import { StreamlitThemeCssProperties } from "@streamlit/component-v2-lib"
+import type { StreamlitThemeCssProperties } from "@streamlit/component-v2-lib"
 
 type StyledThemeCssProviderProps = {
   cssCustomProperties: StreamlitThemeCssProperties

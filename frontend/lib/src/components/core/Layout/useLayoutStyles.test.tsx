@@ -1,4 +1,4 @@
-import { ReactNode } from "react"
+import type { ReactNode } from "react"
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
@@ -24,9 +24,9 @@ import { FlexContextProvider } from "./FlexContext"
 import {
   extractLayoutSubElement,
   useLayoutStyles,
-  UseLayoutStylesShape,
+  type UseLayoutStylesShape,
 } from "./useLayoutStyles"
-import { Direction, MinFlexElementWidth } from "./utils"
+import { Direction, type MinFlexElementWidth } from "./utils"
 
 function withFlexContextProvider(
   direction: Direction,

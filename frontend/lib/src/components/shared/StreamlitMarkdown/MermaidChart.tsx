@@ -132,10 +132,28 @@ function extractAccessibilityInfo(source: string): {
 }
 
 /**
- * Generates accessible alt text for a mermaid diagram.
- * Prefers user-provided accTitle/accDescr directives, falls back to diagram type.
+ * Streamlit-authored accessible name from st.mermaid_chart(alt=...).
+ * Uses a %% comment so every Mermaid grammar ignores it (unlike accTitle).
+ * Value must be on the same line as the marker (do not let whitespace cross
+ * newlines, or an empty %% stAlt: would capture the next source line).
  */
-function getAltText(source: string): string {
+function extractStreamlitAlt(source: string): string | undefined {
+  const match = /^\s*%%\s*stAlt\s*:[^\S\n]*(.+)$/m.exec(source)
+  return match ? match[1].trim() : undefined
+}
+
+/**
+ * Author-provided accessible name for toolbar chrome.
+ * Prefers Streamlit's %% stAlt: marker, then Mermaid accTitle/accDescr.
+ * Omits the type-derived fallback so unlabeled diagrams keep generic
+ * Fullscreen / Download labels.
+ */
+function getAuthorProvidedAltText(source: string): string | undefined {
+  const streamlitAlt = extractStreamlitAlt(source)
+  if (streamlitAlt) {
+    return streamlitAlt
+  }
+
   const { title, description } = extractAccessibilityInfo(source)
 
   if (title && description) {
@@ -147,8 +165,18 @@ function getAltText(source: string): string {
   if (description) {
     return description
   }
+  return undefined
+}
 
-  return `Mermaid ${getDiagramTypeFromSource(source)}`
+/**
+ * Accessible alt text for the diagram image: the author-provided name, else a
+ * type-derived fallback.
+ */
+function getAltText(source: string): string {
+  return (
+    getAuthorProvidedAltText(source) ??
+    `Mermaid ${getDiagramTypeFromSource(source)}`
+  )
 }
 
 /**
@@ -666,6 +694,8 @@ const MermaidChart = memo(function MermaidChart({
     )
   }
 
+  const labelContext = getAuthorProvidedAltText(source)
+
   // Render the SVG via an <img> tag with blob URL.
   return (
     <ErrorBoundary>
@@ -679,16 +709,21 @@ const MermaidChart = memo(function MermaidChart({
           isFullScreen={isFullScreen}
           onExpand={expand}
           onCollapse={collapse}
+          labelContext={labelContext}
         >
           <ToolbarAction
             label="Download as PNG"
             icon={FileDownload}
             onClick={handleDownloadPng}
+            labelContext={labelContext}
           />
           <ToolbarAction
             label={copyLabel}
             icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySource}
+            // Skip context while on the transient copied label so the name
+            // stays "Copied" rather than "Copied: {context}".
+            labelContext={isCopied ? undefined : labelContext}
           />
         </Toolbar>
         <StyledMermaidContainer

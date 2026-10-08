@@ -18,7 +18,7 @@ import { act } from "react"
 
 import {
   render,
-  RenderResult,
+  type RenderResult,
   screen,
   waitFor,
   within,
@@ -27,7 +27,7 @@ import userEvent, {
   PointerEventsCheckLevel,
 } from "@testing-library/user-event"
 import { cloneDeep } from "lodash-es"
-import { type Mock, type MockInstance } from "vitest"
+import type { Mock, MockInstance } from "vitest"
 
 import {
   getMenuLabels,
@@ -37,12 +37,12 @@ import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   ConnectionManager,
   ConnectionState,
-  ErrorDetails,
+  type ErrorDetails,
   mockEndpoints,
 } from "@streamlit/connection"
 import {
   BackendOperationClient,
-  CachedTheme,
+  type CachedTheme,
   CONNECTION_CLOSED_MESSAGE,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
@@ -74,11 +74,11 @@ import {
   type AutoRerun,
   Config,
   CustomThemeConfig,
-  Delta,
-  Element,
+  type Delta,
+  type Element,
   Exception,
   ForwardMsg,
-  ForwardMsgMetadata,
+  type ForwardMsgMetadata,
   type Logo,
   Navigation,
   type NewSession,
@@ -87,12 +87,12 @@ import {
   type PageNotFound,
   type ParentMessage,
   SessionEvent,
-  SessionStatus,
+  type SessionStatus,
   type StopAutoRerun,
   TextInput,
 } from "@streamlit/protobuf"
 
-import { App, LOG, Props } from "./App"
+import { App, LOG, type Props } from "./App"
 import { SKILLS_NUDGE_SNOOZED_AT_KEY } from "./components/SkillsNudgeToast/skillsNudge"
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 
@@ -187,18 +187,20 @@ vi.mock("@streamlit/connection", async () => {
   }
 })
 
+// Type each mock from the already-imported class. `typeof import()` is
+// forbidden by `consistent-type-imports` (`disallowTypeAnnotations`), and
+// app tests cannot `import type * as` from `~lib/*`.
 vi.mock("~lib/SessionInfo", async () => {
-  const actualModule =
-    await vi.importActual<typeof import("~lib/SessionInfo")>(
-      "~lib/SessionInfo"
-    )
+  const actualModule = await vi.importActual<{
+    SessionInfo: typeof SessionInfo
+  }>("~lib/SessionInfo")
 
   const MockedClass = vi.fn().mockImplementation(function (this: SessionInfo) {
     return new actualModule.SessionInfo()
   })
 
   // Preserve the static helper while allowing it to be spied on in tests.
-  // @ts-expect-error
+  // @ts-expect-error - mock constructor has no SessionInfo statics
   MockedClass.propsFromNewSessionMessage = vi
     .fn()
     .mockImplementation(actualModule.SessionInfo.propsFromNewSessionMessage)
@@ -210,9 +212,9 @@ vi.mock("~lib/SessionInfo", async () => {
 })
 
 vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("~lib/hostComm/HostCommunicationManager")
-  >("~lib/hostComm/HostCommunicationManager")
+  const actualModule = await vi.importActual<{
+    default: typeof HostCommunicationManager
+  }>("~lib/hostComm/HostCommunicationManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: HostCommunicationManager,
@@ -233,9 +235,9 @@ vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
 })
 
 vi.mock("~lib/WidgetStateManager", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("~lib/WidgetStateManager")
-  >("~lib/WidgetStateManager")
+  const actualModule = await vi.importActual<{
+    WidgetStateManager: typeof WidgetStateManager
+  }>("~lib/WidgetStateManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: WidgetStateManager,
@@ -255,9 +257,9 @@ vi.mock("~lib/WidgetStateManager", async () => {
 })
 
 vi.mock("@streamlit/app/src/MetricsManager", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("@streamlit/app/src/MetricsManager")
-  >("@streamlit/app/src/MetricsManager")
+  const actualModule = await vi.importActual<{
+    MetricsManager: typeof MetricsManager
+  }>("@streamlit/app/src/MetricsManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: MetricsManager,
@@ -276,9 +278,9 @@ vi.mock("@streamlit/app/src/MetricsManager", async () => {
 })
 
 vi.mock("~lib/FileUploadClient", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("~lib/FileUploadClient")
-  >("~lib/FileUploadClient")
+  const actualModule = await vi.importActual<{
+    FileUploadClient: typeof FileUploadClient
+  }>("~lib/FileUploadClient")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: FileUploadClient,
@@ -415,7 +417,7 @@ function getStoredValue<T>(
 function getMockConnectionManager(isConnected = false): ConnectionManager {
   const connectionManager =
     getStoredValue<ConnectionManager>(ConnectionManager)
-  // @ts-expect-error
+  // @ts-expect-error - isConnected is not typed as a vitest mock
   connectionManager.isConnected.mockImplementation(() => isConnected)
 
   return connectionManager
@@ -456,7 +458,7 @@ function sendForwardMessage(
 ): void {
   act(() => {
     const fwMessage = new ForwardMsg()
-    // @ts-expect-error
+    // @ts-expect-error - message union is not assignable to the indexed ForwardMsg field
     fwMessage[type] = cloneDeep(message)
     if (metadata) {
       fwMessage.metadata = metadata
@@ -493,7 +495,7 @@ function advanceUserEventTimers(delay: number): void {
 
 describe("App", () => {
   beforeEach(() => {
-    // @ts-expect-error
+    // @ts-expect-error - prerenderReady is missing from Window
     window.prerenderReady = false
     vi.clearAllMocks()
   })
@@ -573,9 +575,9 @@ describe("App", () => {
 
       // A HACK to mock `window.location.reload`.
       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
-      // @ts-expect-error
+      // @ts-expect-error - location is required, so delete is a type error
       delete window.location
-      // @ts-expect-error
+      // @ts-expect-error - partial Location is not assignable to string & Location
       window.location = { reload: vi.fn() }
 
       // Ensure SessionInfo is initialized
@@ -605,9 +607,9 @@ describe("App", () => {
 
       // A HACK to mock `window.location.reload`.
       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
-      // @ts-expect-error
+      // @ts-expect-error - location is required, so delete is a type error
       delete window.location
-      // @ts-expect-error
+      // @ts-expect-error - partial Location is not assignable to string & Location
       window.location = { reload: vi.fn() }
 
       // Ensure SessionInfo is initialized
@@ -652,7 +654,7 @@ describe("App", () => {
 
       globalThis.__mockStreamlitConfig = {}
 
-      // @ts-expect-error
+      // @ts-expect-error - PACKAGE_METADATA is a declared const
       PACKAGE_METADATA = {
         version: "tbd",
       }
@@ -663,12 +665,12 @@ describe("App", () => {
 
       // A HACK to mock `window.location.reload`.
       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
-      // @ts-expect-error
+      // @ts-expect-error - location is required, so delete is a type error
       delete window.location
-      // @ts-expect-error
+      // @ts-expect-error - partial Location is not assignable to string & Location
       window.location = { reload: vi.fn() }
 
-      // @ts-expect-error
+      // @ts-expect-error - PACKAGE_METADATA is a declared const
       PACKAGE_METADATA = {
         version: "oldStreamlitVersion",
       }
@@ -693,12 +695,12 @@ describe("App", () => {
 
       // A HACK to mock `window.location.reload`.
       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
-      // @ts-expect-error
+      // @ts-expect-error - location is required, so delete is a type error
       delete window.location
-      // @ts-expect-error
+      // @ts-expect-error - partial Location is not assignable to string & Location
       window.location = { reload: vi.fn() }
 
-      // @ts-expect-error
+      // @ts-expect-error - PACKAGE_METADATA is a declared const
       PACKAGE_METADATA = {
         version: "oldStreamlitVersion",
       }
@@ -899,7 +901,7 @@ describe("App", () => {
 
       expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
 
-      // @ts-expect-error
+      // @ts-expect-error - addThemes is not typed as a vitest mock
       expect(props.theme.addThemes.mock.calls[1][0]).toEqual([])
     })
 
@@ -910,7 +912,7 @@ describe("App", () => {
       // First, send a custom theme to establish it
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
-      // @ts-expect-error
+      // @ts-expect-error - addThemes is not typed as a vitest mock
       props.theme.addThemes.mockClear()
 
       // Then send null to remove the custom theme
@@ -922,7 +924,7 @@ describe("App", () => {
       // Should call addThemes with empty array to remove custom themes
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
 
-      // @ts-expect-error
+      // @ts-expect-error - addThemes is not typed as a vitest mock
       expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
     })
 
@@ -933,7 +935,7 @@ describe("App", () => {
       // Send Forward message with custom theme
       sendForwardMessage("newSession", NEW_SESSION_JSON)
       expect(props.theme.setTheme).toHaveBeenCalled()
-      // @ts-expect-error
+      // @ts-expect-error - setTheme is not typed as a vitest mock
       props.theme.setTheme.mockClear()
 
       sendForwardMessage("newSession", {
@@ -943,7 +945,7 @@ describe("App", () => {
 
       expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
 
-      // @ts-expect-error
+      // @ts-expect-error - addThemes is not typed as a vitest mock
       expect(props.theme.addThemes.mock.calls[1][0]).toEqual([])
 
       expect(props.theme.setTheme).not.toHaveBeenCalled()
@@ -965,11 +967,11 @@ describe("App", () => {
         customTheme: null,
       })
       expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
-      // @ts-expect-error
+      // @ts-expect-error - addThemes is not typed as a vitest mock
       expect(props.theme.addThemes.mock.calls[1][0]).toEqual([])
 
       expect(props.theme.setTheme).toHaveBeenCalledTimes(2)
-      // @ts-expect-error
+      // @ts-expect-error - setTheme is not typed as a vitest mock
       expect(props.theme.setTheme.mock.calls[1][0]).toEqual(
         getHostSpecifiedTheme()
       )
@@ -1008,9 +1010,9 @@ describe("App", () => {
       expect(props.theme.addThemes).toHaveBeenCalled()
       expect(props.theme.setTheme).toHaveBeenCalled()
 
-      // @ts-expect-error
+      // @ts-expect-error - addThemes is not typed as a vitest mock
       props.theme.addThemes.mockClear()
-      // @ts-expect-error
+      // @ts-expect-error - setTheme is not typed as a vitest mock
       props.theme.setTheme.mockClear()
 
       // Send Forward message with same custom theme
@@ -1037,7 +1039,7 @@ describe("App", () => {
 
       // Should call addThemes to clear custom themes
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
-      // @ts-expect-error
+      // @ts-expect-error - addThemes is not typed as a vitest mock
       expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
     })
 
@@ -1131,7 +1133,7 @@ describe("App", () => {
     it("performs one-time initialization", () => {
       renderApp(getProps())
 
-      // @ts-expect-error
+      // @ts-expect-error - SessionInfo is not typed as a vitest mock
       const sessionInfo = SessionInfo.mock.results[0].value
 
       const setCurrentSpy = vi.spyOn(sessionInfo, "setCurrent")
@@ -1150,7 +1152,7 @@ describe("App", () => {
     it("performs one-time initialization only once", () => {
       renderApp(getProps())
 
-      // @ts-expect-error
+      // @ts-expect-error - SessionInfo is not typed as a vitest mock
       const sessionInfo = SessionInfo.mock.results[0].value
 
       const setCurrentSpy = vi.spyOn(sessionInfo, "setCurrent")
@@ -1172,7 +1174,7 @@ describe("App", () => {
     it("performs one-time initialization after a new session is received", () => {
       renderApp(getProps())
 
-      // @ts-expect-error
+      // @ts-expect-error - SessionInfo is not typed as a vitest mock
       const sessionInfo = SessionInfo.mock.results[0].value
 
       const setCurrentSpy = vi.spyOn(sessionInfo, "setCurrent")
@@ -1221,7 +1223,7 @@ describe("App", () => {
         getMockConnectionManagerProp("connectionStateChanged")(
           ConnectionState.CONNECTING
         )
-        // @ts-expect-error
+        // @ts-expect-error - prerenderReady is missing from Window
         expect(window.prerenderReady).toBe(false)
 
         getMockConnectionManagerProp("connectionStateChanged")(
@@ -1234,7 +1236,7 @@ describe("App", () => {
         scriptIsRunning: true,
       })
 
-      // @ts-expect-error
+      // @ts-expect-error - prerenderReady is missing from Window
       expect(window.prerenderReady).toBe(false)
 
       sendForwardMessage("sessionStatusChanged", {
@@ -1242,7 +1244,7 @@ describe("App", () => {
         scriptIsRunning: false,
       })
 
-      // @ts-expect-error
+      // @ts-expect-error - prerenderReady is missing from Window
       expect(window.prerenderReady).toBe(true)
 
       // window.prerenderReady is set to true after first run
@@ -1250,7 +1252,7 @@ describe("App", () => {
         runOnSave: false,
         scriptIsRunning: true,
       })
-      // @ts-expect-error
+      // @ts-expect-error - prerenderReady is missing from Window
       expect(window.prerenderReady).toBe(true)
     })
 
@@ -1712,11 +1714,11 @@ describe("App", () => {
       })
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .pageScriptHash
       ).toBe("top_hash")
-      // @ts-expect-error
+      // @ts-expect-error - sendMessage is not typed as a vitest mock
       connectionManager.sendMessage.mockClear()
 
       window.history.back()
@@ -1725,7 +1727,7 @@ describe("App", () => {
       })
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .pageScriptHash
       ).toBe("sub_hash")
@@ -1766,7 +1768,7 @@ describe("App", () => {
       })
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .pageScriptHash
       ).toBe("top_hash")
@@ -1785,7 +1787,7 @@ describe("App", () => {
       })
 
       const connectionManager = getMockConnectionManager()
-      // @ts-expect-error
+      // @ts-expect-error - sendMessage is not typed as a vitest mock
       connectionManager.sendMessage.mockClear()
 
       // Navigate to page2
@@ -1798,7 +1800,7 @@ describe("App", () => {
         pageScriptHash: "sub_hash",
       })
 
-      // @ts-expect-error
+      // @ts-expect-error - sendMessage is not typed as a vitest mock
       connectionManager.sendMessage.mockClear()
 
       // Simulate user clicking browser back button to main page with query params.
@@ -1815,7 +1817,7 @@ describe("App", () => {
 
       // Verify the query params from the URL are preserved in the rerun message
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("mykey=myvalue")
     })
@@ -1841,9 +1843,9 @@ describe("App", () => {
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
         HostCommunicationManager
       )
-      // @ts-expect-error
+      // @ts-expect-error - sendMessage is not typed as a vitest mock
       connectionManager.sendMessage.mockClear()
-      // @ts-expect-error
+      // @ts-expect-error - sendMessageToHost is not typed as a vitest mock
       hostCommunicationMgr.sendMessageToHost.mockClear()
 
       // Simulate browser back/forward changing URL query params on same page.
@@ -1861,11 +1863,11 @@ describe("App", () => {
         queryParams: "?fresh=newvalue",
       })
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("fresh=newvalue")
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .pageScriptHash
       ).toBe("top_hash")
@@ -1891,9 +1893,9 @@ describe("App", () => {
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
         HostCommunicationManager
       )
-      // @ts-expect-error
+      // @ts-expect-error - sendMessage is not typed as a vitest mock
       connectionManager.sendMessage.mockClear()
-      // @ts-expect-error
+      // @ts-expect-error - sendMessageToHost is not typed as a vitest mock
       hostCommunicationMgr.sendMessageToHost.mockClear()
 
       window.history.pushState({}, "", "/?fresh=newvalue#section")
@@ -1910,7 +1912,7 @@ describe("App", () => {
         queryParams: "?fresh=newvalue",
       })
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("fresh=newvalue")
     })
@@ -1924,7 +1926,7 @@ describe("App", () => {
       })
 
       const connectionManager = getMockConnectionManager()
-      // @ts-expect-error
+      // @ts-expect-error - sendMessage is not typed as a vitest mock
       connectionManager.sendMessage.mockClear()
 
       window.history.pushState({}, "", "/?mock_element_id=mock-element-03")
@@ -1937,16 +1939,16 @@ describe("App", () => {
       })
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("mock_element_id=mock-element-03")
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .pageScriptHash
       ).toBe("spa_hash")
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .isHistoryNavigation
       ).toBe(true)
@@ -1963,7 +1965,7 @@ describe("App", () => {
       const connectionManager = getMockConnectionManager()
       const widgetStateManager =
         getStoredValue<WidgetStateManager>(WidgetStateManager)
-      // @ts-expect-error
+      // @ts-expect-error - sendMessage is not typed as a vitest mock
       connectionManager.sendMessage.mockClear()
 
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
@@ -1973,7 +1975,7 @@ describe("App", () => {
       })
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .isHistoryNavigation
       ).toBeFalsy()
@@ -2202,7 +2204,7 @@ describe("App", () => {
         expect(connectionManager.sendMessage).toHaveBeenCalled()
       })
 
-      // @ts-expect-error
+      // @ts-expect-error - sendMessage is not typed as a vitest mock
       connectionManager.sendMessage.mockClear()
       const widgetStateManager =
         getStoredValue<WidgetStateManager>(WidgetStateManager)
@@ -2264,7 +2266,7 @@ describe("App", () => {
         expect(connectionManager.sendMessage).toHaveBeenCalled()
       })
 
-      // @ts-expect-error
+      // @ts-expect-error - sendMessage is not typed as a vitest mock
       connectionManager.sendMessage.mockClear()
 
       window.history.pushState({}, "", "/?second=1")
@@ -2359,7 +2361,7 @@ describe("App", () => {
           expect(connectionManager.sendMessage).toHaveBeenCalled()
         })
 
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mockClear()
 
         // A run_every flush after the history BackMsg must not end replaceState.
@@ -2418,7 +2420,7 @@ describe("App", () => {
           expect(connectionManager.sendMessage).toHaveBeenCalled()
         })
 
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mockClear()
         const widgetStateManager =
           getStoredValue<WidgetStateManager>(WidgetStateManager)
@@ -2428,7 +2430,7 @@ describe("App", () => {
           expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
         })
 
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mockClear()
 
         sendForwardMessage("autoRerun", {
@@ -2493,7 +2495,7 @@ describe("App", () => {
           pageScriptHash: "spa_hash",
         })
 
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mockClear()
 
         sendForwardMessage("autoRerun", {
@@ -2573,7 +2575,7 @@ describe("App", () => {
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .pageScriptHash
       ).toBe("some_other_page_hash")
@@ -2595,7 +2597,7 @@ describe("App", () => {
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .cachedMessageHashes
       ).toEqual(["hash1", "hash2"])
@@ -2613,11 +2615,11 @@ describe("App", () => {
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.fragmentId
       ).toBe(undefined)
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[1][0].rerunScript.fragmentId
       ).toBe("myFragmentId")
     })
@@ -2632,7 +2634,7 @@ describe("App", () => {
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .pageScriptHash
       ).toBe("")
@@ -2649,7 +2651,7 @@ describe("App", () => {
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.pageName
       ).toBe("foo")
     })
@@ -2670,7 +2672,7 @@ describe("App", () => {
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.pageName
       ).toBe("baz")
     })
@@ -2687,7 +2689,7 @@ describe("App", () => {
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.pageName
       ).toBe("")
     })
@@ -2704,7 +2706,7 @@ describe("App", () => {
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.pageName
       ).toBe("baz")
     })
@@ -2761,7 +2763,7 @@ describe("App", () => {
       await user.click(navLinks[1])
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript
           .pageScriptHash
       ).toBe("subpage_hash")
@@ -2770,7 +2772,7 @@ describe("App", () => {
       // (like foo=bar) are cleared. Only embed params and bound widget params
       // are preserved.
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("")
 
@@ -4051,9 +4053,9 @@ describe("App", () => {
       renderApp(getProps())
 
       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
-      // @ts-expect-error
+      // @ts-expect-error - location is required, so delete is a type error
       delete window.location
-      // @ts-expect-error
+      // @ts-expect-error - partial Location is not assignable to string & Location
       window.location = {}
 
       sendForwardMessage("authRedirect", { url: "https://example.com" })
@@ -4064,9 +4066,9 @@ describe("App", () => {
     it("sends a message to the host when in child frame", () => {
       renderApp(getProps())
       // A HACK to mock a condition in `isInChildFrame` util function.
-      // @ts-expect-error
+      // @ts-expect-error - parent is required, so delete is a type error
       delete window.parent
-      // @ts-expect-error
+      // @ts-expect-error - parent is typed as Window, not a partial
       window.parent = { postMessage: vi.fn() }
 
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -4553,7 +4555,7 @@ describe("App", () => {
       })
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].toJSON()
       ).toStrictEqual({
         rerunScript: {
@@ -4795,7 +4797,7 @@ describe("App", () => {
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].toJSON()
       ).toStrictEqual({
         fileUrlsRequest: {
@@ -5480,7 +5482,7 @@ describe("App", () => {
 
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].toJSON()
       ).toStrictEqual({
         stopScript: true,
@@ -5502,7 +5504,7 @@ describe("App", () => {
 
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].toJSON()
       ).toStrictEqual({
         rerunScript: {
@@ -5538,7 +5540,7 @@ describe("App", () => {
 
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].toJSON()
       ).toStrictEqual({
         clearCache: true,
@@ -5571,7 +5573,7 @@ describe("App", () => {
 
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].toJSON()
       ).toStrictEqual({
         appHeartbeat: true,
@@ -5751,7 +5753,7 @@ describe("App", () => {
         scriptRunState: ScriptRunState.RUNNING,
       })
 
-      // @ts-expect-error
+      // @ts-expect-error - sendMessageToHost is not typed as a vitest mock
       hostCommunicationMgr.sendMessageToHost.mockClear()
 
       // Send a status of script to is running again
@@ -5777,7 +5779,7 @@ describe("App", () => {
 
       expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].toJSON()
       ).toStrictEqual({
         rerunScript: {
@@ -5818,7 +5820,7 @@ describe("App", () => {
       // ensure that all calls came from the autoRerun by checking the fragment id
       for (let i = 0; i < times; i++) {
         expect(
-          // @ts-expect-error
+          // @ts-expect-error - sendMessage is not typed as a vitest mock
           connectionManager.sendMessage.mock.calls[i][0].rerunScript
         ).toEqual(
           expect.objectContaining({
@@ -6071,9 +6073,9 @@ describe("App", () => {
         queryString: "stale=oldvalue",
       })
 
-      // @ts-expect-error
+      // @ts-expect-error - sendMessage is not typed as a vitest mock
       connectionManager.sendMessage.mockClear()
-      // @ts-expect-error
+      // @ts-expect-error - sendMessageToHost is not typed as a vitest mock
       hostCommunicationMgr.sendMessageToHost.mockClear()
 
       fireWindowPostMessage({
@@ -6086,7 +6088,7 @@ describe("App", () => {
       })
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("fresh=newvalue")
 
@@ -6364,7 +6366,7 @@ describe("App", () => {
       await user.click(navLinks[1])
 
       expect(
-        // @ts-expect-error
+        // @ts-expect-error - sendMessage is not typed as a vitest mock
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe(embedParams)
 
@@ -6487,7 +6489,7 @@ describe("App", () => {
       })
 
       expect(window.history.pushState).not.toHaveBeenCalled()
-      // @ts-expect-error
+      // @ts-expect-error - pushState is not typed as a vitest mock
       window.history.pushState.mockClear()
 
       // When accessing a different page, a new history for that page is pushed.
@@ -6507,7 +6509,7 @@ describe("App", () => {
         "",
         "/page2"
       )
-      // @ts-expect-error
+      // @ts-expect-error - pushState is not typed as a vitest mock
       window.history.pushState.mockClear()
     })
 
@@ -6544,7 +6546,7 @@ describe("App", () => {
       })
 
       expect(window.history.pushState).toHaveBeenLastCalledWith({}, "", "/")
-      // @ts-expect-error
+      // @ts-expect-error - pushState is not typed as a vitest mock
       window.history.pushState.mockClear()
 
       // When running the same, e.g. clicking the "rerun" button,
@@ -6561,7 +6563,7 @@ describe("App", () => {
         sections: [],
       })
       expect(window.history.pushState).not.toHaveBeenCalled()
-      // @ts-expect-error
+      // @ts-expect-error - pushState is not typed as a vitest mock
       window.history.pushState.mockClear()
 
       // When accessing a different page, a new history for that page is pushed.
@@ -6581,7 +6583,7 @@ describe("App", () => {
         "",
         "/page2"
       )
-      // @ts-expect-error
+      // @ts-expect-error - pushState is not typed as a vitest mock
       window.history.pushState.mockClear()
     })
   })
@@ -7189,7 +7191,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
         const logSpy = vi.spyOn(LOG, "error")
 
         // Mock isConnected to return false
-        // @ts-expect-error
+        // @ts-expect-error - isConnected is not typed as a vitest mock
         connectionManager.isConnected.mockReturnValue(false)
 
         // Set connectionManager to null to simulate disconnected state

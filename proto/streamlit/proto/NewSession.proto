@@ -215,6 +215,7 @@ message CustomThemeConfig {
   optional string code_text_color = 59;
   optional string code_background_color = 25;
   optional string dataframe_header_background_color = 31;
+  optional string dataframe_header_text_color = 66;
   repeated string chart_categorical_colors = 33;
   repeated string chart_sequential_colors = 36;
   repeated string chart_diverging_colors = 62;
@@ -256,7 +257,7 @@ message CustomThemeConfig {
   optional CustomThemeConfig dark = 61;
 
   reserved 5, 7, 8, 9, 16, 17;
-  // Next ID: 66
+  // Next ID: 67
 }
 
 message FontFace {

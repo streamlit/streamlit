@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-import { Dispatch, SetStateAction, useCallback, useMemo } from "react"
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useMemo,
+} from "react"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 
 import { updateColumnConfigTypeProps } from "./columnConfigUtils"
-import { ColumnConfigProps } from "./useColumnLoader"
+import type { ColumnConfigProps } from "./useColumnLoader"
 
 type ColumnPinningReturn = {
   // The number of columns to freeze.

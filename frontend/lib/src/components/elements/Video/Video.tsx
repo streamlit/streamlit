@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useMemo, useRef } from "react"
+import { memo, type ReactElement, useEffect, useMemo, useRef } from "react"
 
 import { getLogger } from "loglevel"
 
 import { type SubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
 
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
 import { StyledVideo, StyledVideoIframe } from "./styled-components"
 

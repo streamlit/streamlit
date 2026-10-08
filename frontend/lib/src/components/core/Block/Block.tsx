@@ -16,7 +16,7 @@
 
 import {
   type JSX,
-  ReactElement,
+  type ReactElement,
   type ReactNode,
   useContext,
   useMemo,
@@ -24,7 +24,7 @@ import {
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { BlockNode } from "~lib/AppNode"
+import type { BlockNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
@@ -37,7 +37,7 @@ import {
 import {
   Direction,
   getDirectionOfBlock,
-  MinFlexElementWidth,
+  type MinFlexElementWidth,
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
@@ -54,13 +54,14 @@ import { notNullOrUndefined } from "~lib/util/utils"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
   StyledColumn,
+  StyledDialogContentEndPad,
   StyledFlexContainerBlock,
-  StyledFlexContainerBlockProps,
+  type StyledFlexContainerBlockProps,
   StyledLayoutWrapper,
 } from "./styled-components"
 import {
   assignDividerColor,
-  BaseBlockProps,
+  type BaseBlockProps,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
   getBorderBackwardsCompatible,
@@ -120,6 +121,8 @@ interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
   isRoot?: boolean
+  /** Extra in-flow space after the last widget. Used by side-drawer dialogs. */
+  padContentEnd?: boolean
 }
 
 export const ContainerContentsWrapper = (
@@ -154,6 +157,12 @@ export const ContainerContentsWrapper = (
         data-testid={getClassnamePrefix(Direction.VERTICAL)}
       >
         <ChildRenderer {...props} />
+        {props.padContentEnd && (
+          <StyledDialogContentEndPad
+            aria-hidden="true"
+            data-testid="stDialogContentEndPad"
+          />
+        )}
       </StyledFlexContainerBlock>
     </FlexContextProvider>
   )
@@ -369,14 +378,23 @@ export const BlockNodeRenderer = (
       return null
     }
 
+    const dialog = node.deltaBlock.dialog as BlockProto.Dialog
+    const isDrawer =
+      dialog.position === BlockProto.Dialog.DialogPosition.LEFT ||
+      dialog.position === BlockProto.Dialog.DialogPosition.RIGHT
     return (
       <Dialog
-        element={node.deltaBlock.dialog as BlockProto.Dialog}
+        element={dialog}
         deltaMsgReceivedAt={node.deltaMsgReceivedAt}
         widgetMgr={props.widgetMgr}
         fragmentId={node.fragmentId}
       >
-        {child}
+        <ContainerContentsWrapper
+          {...childProps}
+          disableFullscreenMode={disableFullscreenMode}
+          height="100%"
+          padContentEnd={isDrawer}
+        />
       </Dialog>
     )
   }

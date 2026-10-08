@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { CSSProperties } from "react"
+import type { CSSProperties } from "react"
 
-import { MinFlexElementWidth } from "~lib/components/core/Layout/utils"
+import type { MinFlexElementWidth } from "~lib/components/core/Layout/utils"
 
 /**
  * Defines the minimum width behavior for elements in flex layouts.

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC } from "react"
+import type { FC } from "react"
 
 import { render, screen } from "@testing-library/react"
 

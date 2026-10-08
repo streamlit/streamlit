@@ -34,5 +34,10 @@ message Feedback {
   optional uint32 value = 6;
   bool set_value = 7;
 
-  // next id: 8
+  // Set by on_change="ignore": do not schedule a rerun; buffer the value until
+  // the next rerun. Inside a form, this flag has no effect because the form
+  // batches values until submit.
+  bool ignore_rerun = 8;
+
+  // next id: 9
 }

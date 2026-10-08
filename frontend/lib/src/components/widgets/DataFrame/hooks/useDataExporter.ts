@@ -16,11 +16,11 @@
 
 import { useCallback } from "react"
 
-import { DataEditorProps } from "@glideapps/glide-data-grid"
+import type { DataEditorProps } from "@glideapps/glide-data-grid"
 import { getLogger } from "loglevel"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   toSafeString,
 } from "~lib/components/widgets/DataFrame/columns"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
@@ -84,15 +84,18 @@ type DataExporterReturn = {
  * column headers and rows constructed from the cell values obtained through `getCellContent`.
  * The function handles encoding and CSV formatting, concluding by closing the writable stream.
  *
- * @param {WritableStreamDefaultWriter} writable - Target stream for CSV data.
- * @param {DataEditorProps["getCellContent"]} getCellContent - The cell content getter compatible with glide-data-grid.
- * @param {BaseColumn[]} columns - The columns of the table.
- * @param {number} numRows - The number of rows of the current state.
+ * @param writable - CSV sink used by both the File System Access writer and the in-memory fallback.
+ * @param getCellContent - Reads a cell through glide-data-grid.
+ * @param columns - Table columns to export.
+ * @param numRows - Number of rows in the current table state.
  *
- * @returns {Promise<void>} Promise that resolves when the CSV has been fully written.
+ * @returns Resolves after all CSV data has been written.
  */
 async function writeCsv(
-  writable: WritableStreamDefaultWriter,
+  writable: {
+    write: (chunk: Uint8Array) => Promise<unknown>
+    close: () => Promise<unknown>
+  },
   getCellContent: DataEditorProps["getCellContent"],
   columns: BaseColumn[],
   numRows: number
@@ -147,17 +150,16 @@ function useDataExporter(
       // in all of the common browser, but might cause some trouble in
       // less common browsers. To not crash the whole app, we just lazy import
       // this here.
-      const nativeFileSystemAdapter =
-        await import("native-file-system-adapter")
-      const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
+      const { showSaveFilePicker } = await import("native-file-system-adapter")
+      const fileHandle = await showSaveFilePicker({
         suggestedName,
         types: [{ accept: { "text/csv": [".csv"] } }],
         excludeAcceptAllOption: false,
       })
 
-      const writer = await fileHandle.createWritable()
+      const stream = await fileHandle.createWritable()
 
-      await writeCsv(writer, getCellContent, columns, numRows)
+      await writeCsv(stream, getCellContent, columns, numRows)
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         // The user has canceled the save dialog. Do nothing.
@@ -172,7 +174,7 @@ function useDataExporter(
         // Simulated WritableStream that builds CSV content in-memory for the Blob fallback method
         let csvContent = ""
 
-        const inMemoryWriter = new WritableStream({
+        const inMemoryWriter = new WritableStream<Uint8Array>({
           write: chunk => {
             csvContent += new TextDecoder("utf-8").decode(chunk)
           },

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect } from "react"
+import { memo, type ReactElement, useCallback, useEffect } from "react"
 
 import {
   DynamicIcon,
@@ -56,7 +56,7 @@ function ButtonActionMenu({
   onSelectAction,
   onCloseMenu,
 }: ButtonActionMenuProps): ReactElement {
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open: true,
     placement: "bottom-end",
     offsetPx: COLUMN_MENU_OFFSET,
@@ -66,8 +66,8 @@ function ButtonActionMenu({
   const { panelRef, setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: true,
     onClose: onCloseMenu,
-    floatingSetFn: refs.setFloating,
-    referenceSetFn: refs.setReference,
+    floatingSetFn: setFloating,
+    referenceSetFn: setReference,
   })
 
   // Close menu on any scroll in the document (fixed positioning would misalign

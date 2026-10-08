@@ -185,3 +185,25 @@ st.datetime_input(
     min_value=datetime(2024, 8, 3, 0, 0),
     max_value=datetime(2025, 2, 3, 23, 59),
 )
+
+# --- on_change="ignore" datetime input ---
+# Run counter so test_datetime_input_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_datetime = st.datetime_input(
+    "Ignore change datetime input",
+    value=BASE_DATETIME,
+    key="ignore_datetime",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore datetime value:", ignore_datetime)
+
+# The Apply button lives in the sidebar so the open calendar popover can't cover
+# it. Clicking it right after typing closes the popover, which commits the typed
+# value, and then reruns the app in a single click.
+if st.sidebar.button("Apply ignore datetime", key="apply_ignore_datetime"):
+    st.write("Applied ignore datetime value:", ignore_datetime)

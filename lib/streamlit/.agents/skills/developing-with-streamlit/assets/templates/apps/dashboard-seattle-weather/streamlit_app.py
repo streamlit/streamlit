@@ -195,7 +195,8 @@ with cols[0].container(border=True, height="stretch"):
                 alt.Tooltip("year(date):N", title="Year"),
             ],
         )
-        .configure_legend(orient="bottom")
+        .configure_legend(orient="bottom"),
+        alt="Daily high and low temperatures by year",
     )
 
 with cols[1].container(border=True, height="stretch"):
@@ -208,7 +209,8 @@ with cols[1].container(border=True, height="stretch"):
             alt.Theta("count()"),
             alt.Color("weather:N"),
         )
-        .configure_legend(orient="bottom")
+        .configure_legend(orient="bottom"),
+        alt="Share of days by weather type",
     )
 
 
@@ -227,7 +229,7 @@ with cols[0].container(border=True, height="stretch"):
         index="month_day", columns="year", values="wind", aggfunc="mean"
     ).sort_index()
 
-    st.line_chart(wind_pivot, height=300)
+    st.line_chart(wind_pivot, height=300, alt="Average wind speed by day of year")
 
 with cols[1].container(border=True, height="stretch"):
     "### :material/water_drop: Precipitation"
@@ -245,7 +247,8 @@ with cols[1].container(border=True, height="stretch"):
                 alt.Tooltip("year(date):N", title="Year"),
             ],
         )
-        .configure_legend(orient="bottom")
+        .configure_legend(orient="bottom"),
+        alt="Monthly precipitation totals by year",
     )
 
 cols = st.columns(2)
@@ -261,10 +264,11 @@ with cols[0].container(border=True, height="stretch"):
             alt.Y("count():Q", title="days", stack="normalize"),
             alt.Color("weather:N"),
         )
-        .configure_legend(orient="bottom")
+        .configure_legend(orient="bottom"),
+        alt="Monthly mix of weather types",
     )
 
 with cols[1].container(border=True, height="stretch"):
     "### :material/table: Raw data"
 
-    st.dataframe(df, hide_index=True)
+    st.dataframe(df, hide_index=True, alt="Seattle weather observations")

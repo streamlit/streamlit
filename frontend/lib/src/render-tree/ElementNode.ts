@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
+import type { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
 
-import { AppNode } from "./AppNode.interface"
+import type { AppNode } from "./AppNode.interface"
 import { TransientNode } from "./TransientNode"
-import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
 

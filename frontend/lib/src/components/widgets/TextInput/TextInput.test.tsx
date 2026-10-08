@@ -25,7 +25,7 @@ import {
 } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { getLogger } from "loglevel"
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import {
   LabelVisibility as LabelVisibilityProto,
@@ -36,7 +36,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import TextInput, { Props } from "./TextInput"
+import TextInput, { type Props } from "./TextInput"
 
 const getProps = (
   elementProps: Partial<TextInputProto> = {},

@@ -32,9 +32,11 @@ import { buildHttpUri } from "@streamlit/utils"
 
 import { DefaultStreamlitEndpoints } from "./DefaultStreamlitEndpoints"
 
-// Mock the dynamic import to return the same axios instance we're using for testing
+// Mock the dynamic import to return the same axios instance we're using for testing.
+// Type only axios's default export: a namespace import is blocked by the
+// no-restricted-imports CancelToken restriction.
 vi.mock("axios", async importOriginal => {
-  const actual = await importOriginal<typeof import("axios")>()
+  const actual = await importOriginal<{ default: typeof axios }>()
   return {
     ...actual,
     default: actual.default,
@@ -592,7 +594,7 @@ describe("DefaultStreamlitEndpoints", () => {
       })
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
-      // @ts-expect-error
+      // @ts-expect-error - csrfRequest is private
       await endpoints.csrfRequest(url, {})
 
       expect(mockRequest).toHaveBeenCalledWith({
@@ -610,10 +612,87 @@ describe("DefaultStreamlitEndpoints", () => {
       })
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
-      // @ts-expect-error
+      // @ts-expect-error - csrfRequest is private
       await endpoints.csrfRequest(url, {})
 
       expect(mockRequest).toHaveBeenCalledWith({
+        url,
+      })
+    })
+
+    it("merges xsrf token with existing AxiosHeaders", async () => {
+      const endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: true,
+        sendClientError: vi.fn(),
+      })
+
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
+      // @ts-expect-error - csrfRequest is private
+      await endpoints.csrfRequest(url, {
+        headers: new AxiosHeaders({
+          Authorization: "Bearer token",
+        }),
+      })
+
+      expect(mockRequest).toHaveBeenCalledWith({
+        headers: {
+          "X-Xsrftoken": "mockXsrfCookie",
+          Authorization: "Bearer token",
+        },
+        withCredentials: true,
+        url,
+      })
+    })
+
+    it("preserves non-string header values when merging xsrf token", async () => {
+      const endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: true,
+        sendClientError: vi.fn(),
+      })
+
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
+      // @ts-expect-error - csrfRequest is private
+      await endpoints.csrfRequest(url, {
+        headers: {
+          Authorization: "Bearer token",
+          "X-Retry-Count": 2,
+          Accept: ["application/json", "text/plain"],
+        },
+      })
+
+      expect(mockRequest).toHaveBeenCalledWith({
+        headers: {
+          "X-Xsrftoken": "mockXsrfCookie",
+          Authorization: "Bearer token",
+          "X-Retry-Count": 2,
+          Accept: ["application/json", "text/plain"],
+        },
+        withCredentials: true,
+        url,
+      })
+    })
+
+    it("preserves false AxiosHeaders sentinels when merging xsrf token", async () => {
+      const endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: true,
+        sendClientError: vi.fn(),
+      })
+
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
+      // @ts-expect-error - csrfRequest is private
+      await endpoints.csrfRequest(url, {
+        headers: new AxiosHeaders({ "Content-Type": false }),
+      })
+
+      expect(mockRequest).toHaveBeenCalledWith({
+        headers: {
+          "X-Xsrftoken": "mockXsrfCookie",
+          "Content-Type": false,
+        },
+        withCredentials: true,
         url,
       })
     })

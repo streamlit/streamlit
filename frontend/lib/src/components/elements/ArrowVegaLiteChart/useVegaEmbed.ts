@@ -14,24 +14,30 @@
  * limitations under the License.
  */
 
-import { RefObject, useCallback, useEffect, useRef, useState } from "react"
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { getLogger } from "loglevel"
-import { truthy, View as VegaView } from "vega"
-import embed, { VisualizationSpec } from "vega-embed"
+import { truthy, type View as VegaView } from "vega"
+import embed, { type VisualizationSpec } from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import { Quiver } from "~lib/dataframes/Quiver"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { Quiver } from "~lib/dataframes/Quiver"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   getDataArray,
   getDataArrays,
   getDataSets,
   getInlineData,
-  VegaLiteChartElement,
-  WrappedNamedDataset,
+  type VegaLiteChartElement,
+  type WrappedNamedDataset,
 } from "./arrowUtils"
 import { bindVegaRangeProgress } from "./styled-components"
 import { useVegaLiteSelections } from "./useVegaLiteSelections"

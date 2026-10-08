@@ -17,7 +17,6 @@
 - Use the Receive an Object, Return an Object (RORO) pattern.
 - Ensure functions have explicit return types.
 - **Omit trivially inferred types**: Do not add type annotations when TypeScript can trivially infer them (e.g., `const count = 0` not `const count: number = 0`). Add explicit types only when they improve clarity or are required.
-- **Prefer optional chaining**: Use optional chaining (`?.`) instead of `&&` chains for property access. This is enforced by the `@typescript-eslint/prefer-optional-chain` rule.
 - **Protobuf message types**: Use `Type.$Properties` for plain objects instead of generated `IType` aliases; use the message class for constructed or decoded instances. Alias as `Type as TypeProto` only when the generated name collides with a local or DOM name.
 - **Prefer JSDoc over regular comments**: When documenting functions, types, interfaces, classes, or their members, use JSDoc (`/** ... */`) instead of regular comments (`//` or `/* */`). JSDoc enables IDE tooltips, auto-completion hints, and better documentation generation.
 - **No barrel files**: Do not create `index.ts`/`index.tsx` barrel files that only re-export from sibling modules. Import directly from the source file instead (e.g., `import Foo from "./Foo/Foo"` not `import Foo from "./Foo"`). The only exceptions are package entry points (`app/src/index.tsx`, `lib/src/index.ts`, `connection/src/index.ts`, `utils/src/index.ts`) and `component-v2-lib/src/index.ts` (shipped as an npm library). Files named `index.ts` that contain actual logic (e.g., `DataFrame/columns/index.ts`, `WindowDimensions/index.ts`, emotion theme files) are fine — the rule applies only to files whose sole purpose is re-exporting.
@@ -28,7 +27,7 @@
 - Follow the [Rules of React](https://react.dev/reference/rules): pure components and hooks, immutable props and state, and call hooks at the top level of React functions.
 - Write performant frontend code.
 - Ensure referential stability by leveraging React Hooks.
-- Name refs with a `Ref` suffix: Variables assigned from `useRef(...)` must end with `Ref`. This is enforced by eslint.
+- Name refs with a `Ref` suffix: Variables assigned from `useRef(...)` must end with `Ref`.
   - ✅ `const inputRef = useRef<HTMLInputElement>(null)`
   - ❌ `const input = useRef<HTMLInputElement>(null)`
 - **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).

@@ -22,10 +22,11 @@ import { streamlit } from "@streamlit/protobuf"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import * as UseFloatingOverlay from "~lib/hooks/useFloatingOverlay"
 import { render } from "~lib/test_util"
+import { lightTheme } from "~lib/theme/themeConfigs"
 import * as MobileUtil from "~lib/util/isMobile"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import Selectbox, { getInsertedText, Props } from "./Selectbox"
+import Selectbox, { getInsertedText, type Props } from "./Selectbox"
 
 vi.mock("~lib/WidgetStateManager")
 
@@ -176,6 +177,25 @@ describe("Selectbox widget", () => {
     })
     render(<Selectbox {...props} />)
     expect(screen.getByRole("combobox")).toBeDisabled()
+  })
+
+  it("disables the clear button when the selectbox is disabled and has a value", async () => {
+    const user = userEvent.setup()
+    props = getProps({
+      clearable: true,
+      value: "a",
+      disabled: true,
+    })
+    render(<Selectbox {...props} />)
+
+    const clearButton = screen.getByRole("button", { name: "Clear value" })
+    expect(clearButton).toHaveAttribute("data-disabled")
+    expect(clearButton).toHaveStyle(
+      `color: ${lightTheme.emotion.colors.fadedText40}`
+    )
+
+    await user.click(clearButton)
+    expect(props.onChange).not.toHaveBeenCalled()
   })
 
   it("does not open the dropdown when disabled and clicked", async () => {

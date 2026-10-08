@@ -193,6 +193,17 @@ describe("ScreenCastRecorder.isSupportedBrowser", () => {
     })
     expect(ScreenCastRecorder.isSupportedBrowser()).toBe(false)
   })
+
+  it("returns false when getUserMedia is present but not callable", () => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getDisplayMedia: getDisplayMediaMock,
+        getUserMedia: {},
+      },
+    })
+    expect(ScreenCastRecorder.isSupportedBrowser()).toBe(false)
+  })
 })
 
 describe("ScreenCastRecorder lifecycle", () => {

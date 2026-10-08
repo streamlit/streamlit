@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { memo, PropsWithChildren } from "react"
+import { memo, type PropsWithChildren } from "react"
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface MaybeProps extends PropsWithChildren<{

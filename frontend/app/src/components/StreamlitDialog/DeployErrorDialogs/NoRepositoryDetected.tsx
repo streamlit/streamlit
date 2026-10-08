@@ -17,7 +17,7 @@
 import { STREAMLIT_COMMUNITY_CLOUD_DOCS_URL } from "@streamlit/app/src/urls"
 
 import { StyledParagraph } from "./styled-components"
-import { IDeployErrorDialog } from "./types"
+import type { IDeployErrorDialog } from "./types"
 
 function NoRepositoryDetected(): IDeployErrorDialog {
   return {

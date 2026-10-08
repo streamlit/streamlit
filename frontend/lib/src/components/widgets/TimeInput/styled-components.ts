@@ -18,7 +18,10 @@ import styled from "@emotion/styled"
 import { getLuminance } from "color2k"
 import { DateInput, DateSegment, TimeField } from "react-aria-components"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getSecondaryIconButtonColorStyles,
+} from "~lib/components/shared/Base/styled-components"
 
 /** Outermost wrapper for layout. */
 export const StyledTimeFieldContainer = styled.div({
@@ -125,17 +128,18 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   justifyContent: "center",
   background: "none",
   border: "none",
+  // Round the button so the focus ring follows its shape, matching the Multiselect clear button.
+  borderRadius: theme.radii.default,
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
   marginRight: theme.spacing.sm,
-  color: theme.colors.grayTextColor,
   flexShrink: 0,
-  "&:hover": {
-    color: theme.colors.bodyText,
+  ...getSecondaryIconButtonColorStyles(theme),
+  "&:focus": {
+    outline: "none",
   },
   "&:focus-visible": {
-    outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-    borderRadius: theme.radii.sm,
+    boxShadow: theme.shadows.focusRing,
   },
 }))
 

@@ -15,9 +15,9 @@
  */
 
 import {
-  ChangeEvent,
-  ClipboardEvent,
-  KeyboardEvent,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type KeyboardEvent,
   memo,
   useCallback,
   useContext,
@@ -45,7 +45,7 @@ import {
   type ChatInputValue,
   FileUploaderState as FileUploaderStateProto,
   type FileURLs,
-  streamlit,
+  type streamlit,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
@@ -57,12 +57,12 @@ import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import UploadedFileChips from "~lib/components/shared/UploadedFile/UploadedFileChips"
-import {
+import type {
   UploadedStatus,
   UploadFileInfo,
 } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { getAccept } from "~lib/components/widgets/FileUploader/utils"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
@@ -76,7 +76,7 @@ import {
   chatInputAcceptFileProtoValueToEnum,
   isNullOrUndefined,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
 import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
@@ -352,7 +352,7 @@ function ChatInput({
         // Fire-and-forget deletion - errors are not critical to user flow
         uploadClient
           .deleteFile(file.status.fileUrls.deleteUrl)
-          .catch(error => {
+          .catch((error: unknown) => {
             // Log deletion errors for observability, but don't block the user
             // File may already be deleted or server unavailable
             LOG.error("Failed to delete file from server:", error)
@@ -561,7 +561,7 @@ function ChatInput({
         setFiles(prevFiles => updateFile(id, fileInfo, prevFiles))
       },
       uploadClient,
-      element,
+      element: { id: element.id, formId: "" },
       onUploadProgress: (e: AxiosProgressEvent, fileId: number) => {
         setFiles(prevFiles => {
           const file = getFile(fileId, prevFiles)
@@ -764,10 +764,7 @@ function ChatInput({
         // 2. Upload audio file with progress tracking
         uploadAbortControllerRef.current = new AbortController()
         await uploadClient.uploadFile(
-          {
-            formId: "",
-            ...element,
-          },
+          { id: element.id, formId: "" },
           fileUrls.uploadUrl as string,
           audioFile,
           () => {

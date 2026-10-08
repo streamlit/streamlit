@@ -16,7 +16,7 @@
 
 import { groupBy } from "lodash-es"
 
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 interface NavigationSections {

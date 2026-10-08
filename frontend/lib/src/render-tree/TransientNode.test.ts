@@ -16,7 +16,7 @@
 
 import { text } from "~lib/render-tree/test-utils"
 import { TransientNode } from "~lib/render-tree/TransientNode"
-import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import {
   DebugVisitor,
   MAX_HASH_LENGTH,

@@ -14,24 +14,25 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import { screen, within } from "@testing-library/react"
+import type * as ReactAriaComponents from "react-aria-components"
 
 import {
   Block as BlockProto,
   Button as ButtonProto,
-  Element,
+  type Element,
   ForwardMsgMetadata,
   streamlit,
 } from "@streamlit/protobuf"
 
-import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import { type AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { text } from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { renderWithContexts } from "~lib/test_util"
+import { mockEllipsizedLabels, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
@@ -40,7 +41,7 @@ import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
 // async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
 // Mocking it here prevents the animation machinery from running in unit tests.
 vi.mock("react-aria-components", async importOriginal => {
-  const actual = await importOriginal<typeof import("react-aria-components")>()
+  const actual = await importOriginal<typeof ReactAriaComponents>()
   return { ...actual, SelectionIndicator: () => null }
 })
 
@@ -122,9 +123,9 @@ function makeVerticalBlockComponent(node: BlockNode): ReactElement {
       scriptRunId={""}
       scriptRunState={ScriptRunState.NOT_RUNNING}
       widgetsDisabled={false}
-      // @ts-expect-error
+      // @ts-expect-error - widgetMgr is required
       widgetMgr={undefined}
-      // @ts-expect-error
+      // @ts-expect-error - uploadClient is required
       uploadClient={undefined}
     />
   )
@@ -197,9 +198,9 @@ describe("FlexBoxContainer Block Component", () => {
           scriptRunId={""}
           scriptRunState={ScriptRunState.NOT_RUNNING}
           widgetsDisabled={false}
-          // @ts-expect-error
+          // @ts-expect-error - widgetMgr is required
           widgetMgr={undefined}
-          // @ts-expect-error
+          // @ts-expect-error - uploadClient is required
           uploadClient={undefined}
         />
       )
@@ -455,7 +456,7 @@ describe("BlockNodeRenderer CSS key class placement", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -529,7 +530,7 @@ describe("BlockNodeRenderer step blocks", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -585,7 +586,7 @@ describe("BlockNodeRenderer step blocks", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -627,7 +628,7 @@ describe("BlockNodeRenderer transparent blocks", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -698,6 +699,7 @@ describe("BlockNodeRenderer transparent blocks", () => {
 })
 
 describe("BlockNodeRenderer direct column wrapping context", () => {
+  mockEllipsizedLabels()
   const label = "Regenerate the complete quarterly report now"
 
   async function renderColumnChildren(children: AppNode[]): Promise<void> {
@@ -760,7 +762,7 @@ describe("BlockNodeRenderer container types", () => {
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
         endpoints={endpoints}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -846,6 +848,30 @@ describe("BlockNodeRenderer container types", () => {
 
     expect(screen.getByTestId("stDialog")).toBeVisible()
     expect(screen.getByText("dialog body")).toBeVisible()
+    expect(
+      screen.queryByTestId("stDialogContentEndPad")
+    ).not.toBeInTheDocument()
+  })
+
+  it("pads the end of a left drawer dialog", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("drawer body")], {
+          dialog: {
+            title: "My drawer",
+            isOpen: true,
+            dismissible: true,
+            width: BlockProto.Dialog.DialogWidth.LARGE,
+            position: BlockProto.Dialog.DialogPosition.LEFT,
+          },
+        })
+      )
+    )
+
+    expect(screen.getByText("drawer body")).toBeVisible()
+    expect(screen.getByTestId("stDialogContentEndPad")).toHaveStyle({
+      height: "2rem",
+    })
   })
 
   it("hides a leftover dialog from a previous full-app run", () => {

@@ -505,7 +505,7 @@ describe("useSelectionHandler hook", () => {
     // Process a new cell selection:
     act(() => {
       const { processSelectionChange } = result.current
-      // @ts-expect-error
+      // @ts-expect-error - selection fixture omits GridSelection range fields
       processSelectionChange?.(newGridSelection)
     })
 
@@ -553,7 +553,7 @@ describe("useSelectionHandler hook", () => {
     // Process a new cell selection:
     act(() => {
       const { processSelectionChange } = result.current
-      // @ts-expect-error
+      // @ts-expect-error - selection fixture omits GridSelection range fields
       processSelectionChange?.(newGridSelection)
     })
 

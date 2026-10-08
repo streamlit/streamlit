@@ -20,7 +20,7 @@ import userEvent from "@testing-library/user-event"
 import { render } from "~lib/test_util"
 
 import SkillsInstallCallout, {
-  SkillsInstallCalloutProps,
+  type SkillsInstallCalloutProps,
 } from "./SkillsInstallCallout"
 
 const getProps = (

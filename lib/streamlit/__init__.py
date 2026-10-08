@@ -61,7 +61,7 @@ _os.environ["MPLBACKEND"] = "Agg"
 from streamlit import logger as _logger
 from streamlit import config as _config
 from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
-from typing import cast as _cast
+from typing import Final as _Final, cast as _cast
 
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
@@ -158,8 +158,12 @@ import streamlit.typing as _typing
 
 from streamlit.commands.echo import echo as echo
 from streamlit.commands.logo import logo as logo
-from streamlit.commands.navigation import navigation as navigation
 from streamlit.navigation.page import Page as Page
+from streamlit.commands.navigation import navigation as _navigation
+
+# Declare the command so type checkers resolve `st.navigation` to this callable,
+# not the `streamlit.navigation` package of the same name.
+navigation: _Final = _navigation
 
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
@@ -325,14 +329,50 @@ import streamlit.components.v2  # noqa: F401
 # ``st.*`` names stay type errors. mypy only honors the unaliased
 # ``TYPE_CHECKING`` name here; an alias made unknown names type-check as
 # valid. Deleting it afterward keeps it off the public ``st`` surface.
+from types import ModuleType as _ModuleType
 from typing import TYPE_CHECKING
+
+
+class _MissingStreamlitAttributeMessage:
+    """Lazy ``AttributeError`` argument for a missing top-level ``st.*`` name.
+
+    ``hasattr``, ``getattr`` with a default, and ``from streamlit import``
+    catch this error without formatting it. The suggestion text is built
+    only when ``str()`` runs, so those lookups do not import
+    ``streamlit.command_suggestions`` or ``difflib``.
+    """
+
+    def __init__(self, name: str, module: _ModuleType) -> None:
+        self._name = name
+        self._module = module
+
+    def __str__(self) -> str:
+        try:
+            # Import the submodule directly so a failed load hits the fallback
+            # below. ``from streamlit import`` looks the name up first and
+            # re-enters ``__getattr__``.
+            import streamlit.command_suggestions as command_suggestions  # noqa: PLR0402
+
+            return command_suggestions.missing_streamlit_attribute_message(
+                self._name, self._module
+            )
+        except Exception:  # pragma: no cover - defensive
+            return f"module 'streamlit' has no attribute '{self._name}'"
+
 
 if not TYPE_CHECKING:
 
     def __getattr__(name: str) -> object:
-        from streamlit.command_suggestions import raise_missing_streamlit_attribute
+        import sys
 
-        raise_missing_streamlit_attribute(name)
+        module = sys.modules[__name__]
+        # Telemetry records AttributeError.name and .obj as
+        # AttributeError:<attribute> instead of parsing the message.
+        raise AttributeError(
+            _MissingStreamlitAttributeMessage(name, module),
+            name=name,
+            obj=module,
+        )
 
 
 # Drop TYPE_CHECKING so it is not a public ``st`` name.

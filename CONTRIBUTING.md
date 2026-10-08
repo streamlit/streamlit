@@ -167,23 +167,10 @@ $ brew install gh
 $ brew install ripgrep
 ```
 
-**Installing Node JS and yarn**
+**Installing nvm**
 
 We recommend that you [manage your nodejs installation with nvm](https://github.com/nvm-sh/nvm#install--update-script).
-After following the instructions linked above to install `nvm`, use the following command to install the latest supported node version
-
-```bash
-# Install node
-nvm install node
-```
-
-**Note:** Node has added Corepack which is a manager of package managers 🥳. It supports yarn! You can enable it by running the following:
-
-```bash
-corepack enable
-```
-
-You may need to `brew install corepack` depending on how you installed node.
+Install `nvm` now using those instructions. In step 2 ("Grab the code") you will install the Node version pinned in `.nvmrc` and enable Corepack (Yarn ships via Corepack).
 
 #### Ubuntu
 
@@ -192,11 +179,9 @@ You may need to `brew install corepack` depending on how you installed node.
 $ sudo apt-get update
 $ sudo apt-get install -y sudo make build-essential curl git rsync unzip protobuf-compiler
 
-# Set frontend dependencies:
+# Install nvm (Node version from .nvmrc is installed after cloning)
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install node
-$ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -214,11 +199,9 @@ $ sudo apt-get install -y ripgrep
 # Install some essentials
 $ sudo dnf install -y make gcc-c++ curl git rsync unzip protobuf-compiler
 
-# Set frontend dependencies:
+# Install nvm (Node version from .nvmrc is installed after cloning)
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ source ~/.bashrc
-$ nvm install node
-$ corepack enable
 
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -250,6 +233,18 @@ git remote add remote https://github.com/streamlit/streamlit.git
 git checkout develop
 git checkout -b ${BRANCH_NAME}
 ```
+
+From the repo root, install the Node version pinned in `.nvmrc` and enable Corepack:
+
+```bash
+nvm install
+corepack enable
+
+# Re-activate the pinned version in new shells with `nvm use`,
+# or make it your default with `nvm alias default $(cat .nvmrc)`.
+```
+
+On macOS you may need to `brew install corepack` depending on how you installed Node.
 
 ### 3. Create a new Python environment
 
@@ -366,10 +361,13 @@ You should always write unit tests and end-to-end tests! This is true for new fe
   uv run pytest lib/tests/streamlit/the_test_name.py -k test_that_something_works
   ```
 
-- Some tests require you to set up credentials to connect to Snowflake and install [the `snowflake-snowpark-python` package](https://pypi.org/project/snowflake-snowpark-python/). Information on how the Snowflake environment is set up is in our [test utils](./lib/tests/testutil.py) including environment variables to be set. They are skipped by default when running tests. To enable them and disable all others, pass the `--require-integration` flag to `pytest`.
+- Integration tests need the `integration` dependency group (Snowflake, Polars, Pydantic, and others). Some also need Snowflake credentials described in [test utils](./lib/tests/testutil.py). They are skipped by default.
+
+  Install the integration environment, then run `make python-integration-tests`. Do not use a bare `uv run pytest --require-integration`: a default `uv run` re-syncs to the `dev` group and drops integration-only packages.
 
   ```bash
-  uv run pytest --require-integration
+  PYTHON_DEPENDENCY_GROUP=integration make python-init
+  make python-integration-tests
   ```
 
 #### JS unit tests
@@ -528,7 +526,9 @@ Drop the leading major version to convert: Python `protobuf` 6.33.6
 corresponds to `protoc` 33.6, and any `protoc` at or below that is fine.
 CI's 26.1 is an example of an older compiler that still works with the
 current lockfile. If generation already works, keep that compiler; do not
-replace a working install just to match CI.
+replace a working install just to match CI. When changing that CI version,
+update `PROTOC_SHA256` in `.github/actions/make_init/action.yml` to the
+`sha256sum` of the `linux-x86_64` zip.
 
 - Too old (`Error: protoc version X is < 3.20`): install a newer compiler from
   the [official installation instructions](https://protobuf.dev/installation/),

@@ -15,9 +15,9 @@
  */
 
 import {
-  ContextType,
-  KeyboardEvent,
-  ReactElement,
+  type ContextType,
+  type KeyboardEvent,
+  type ReactElement,
   useCallback,
   useContext,
   useRef,
@@ -27,8 +27,8 @@ import {
 import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
 import { ArrowBack, ArrowForward } from "@emotion-icons/material-rounded"
 import {
-  CalendarDate,
-  DateValue,
+  type CalendarDate,
+  type DateValue,
   endOfMonth,
   startOfMonth,
   toCalendar,
@@ -40,7 +40,7 @@ import {
   CalendarStateContext,
   CalendarYearPicker,
   Heading,
-  Key,
+  type Key,
   RangeCalendarStateContext,
 } from "react-aria-components"
 
@@ -154,7 +154,7 @@ function HeaderPickerSelect({
       >
         {selectedLabel}
         <StyledCalendarHeaderSelectChevron>
-          <KeyboardArrowDown size={theme.iconSizes.base} />
+          <KeyboardArrowDown size={theme.iconSizes.base} aria-hidden="true" />
         </StyledCalendarHeaderSelectChevron>
       </StyledCalendarHeaderSelectTrigger>
       <StyledDropdownPopover

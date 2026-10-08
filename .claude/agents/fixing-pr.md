@@ -26,11 +26,13 @@ Automates the PR maintenance loop: wait for CI, fix failures, address review com
 ```
 - [ ] 1. Detect PR for current branch
 - [ ] 2. Wait for CI workflows to complete
-- [ ] 3. Fix CI failures
-- [ ] 4. Address PR review comments
-- [ ] 5. Validate changes locally
-- [ ] 6. Push changes
-- [ ] 7. Repeat until CI passes
+- [ ] 3. Merge snapshot update PRs targeting this PR
+- [ ] 4. Fix CI failures
+- [ ] 5. Address PR review comments
+- [ ] 6. Validate changes locally
+- [ ] 7. Push changes
+- [ ] 8. Request a final AI review if this iteration addressed one
+- [ ] 9. Repeat until CI passes
 ```
 
 ### 1. Detect PR
@@ -45,7 +47,11 @@ Poll CI status every 3 minutes until all workflows finish:
 - Sleep 180 seconds between checks
 - Continue when both return empty results
 
-### 3. Fix CI failures
+### 3. Merge snapshot update PRs
+
+Squash-merge open snapshot-autofix PRs that target this branch (`snapshots/<pr-number>-<run-id>`), without waiting for their checks. After a merge, pull that commit and return to step 2. If one conflicts, skip it and continue.
+
+### 4. Fix CI failures
 
 Check for failures with `gh pr checks` and `gh run list --status failure`.
 
@@ -54,15 +60,15 @@ Check for failures with `gh pr checks` and `gh run list --status failure`.
 **Fix strategy:**
 
 - **Code-fixable issues** (lint, types, tests): Apply fixes directly
-- **Snapshot mismatches**: Do NOT fix manually. Apply label instead:
+- **Snapshot mismatches**: Do NOT fix manually. Apply the label, then return to step 2 and let step 3 merge the snapshot PR once it exists. Do not push again in this iteration, or the snapshot workflow is cancelled before it opens that PR:
   ```
   gh pr edit --add-label "update-snapshots"
   ```
 - **PR Labels workflow failure**: Ignore - this is a policy check, not a code issue
 
-**If no failures:** Proceed to step 4.
+**If no failures:** Proceed to step 5.
 
-### 4. Address PR review comments
+### 5. Address PR review comments
 
 Run the /addressing-pr-review-comments skill to handle feedback from reviewers and bots.
 
@@ -75,15 +81,25 @@ For each review comment:
 
 **Exception:** Don't auto-address review comments that require significant product, design, architecture decisions, or significant refactorings. Instead, reply on the comment thread pointing this out and mention that it will need human input.
 
-### 5. Validate changes locally
+### 6. Validate changes locally
 
 Run the /checking-changes skill (uses `make check`) to validate the changes. Wait for completion, then fix any issues found before proceeding. Don't run other checks besides `make check` in this step.
 
-### 6. Push changes
+### 7. Push changes
 
 If there are uncommitted changes, commit with a descriptive message and push.
 
-### 7. Repeat until CI passes
+### 8. Request a final AI review if this iteration addressed one
+
+If this iteration pushed commits that address the previous review, and the PR is blocked by `do-not-merge`, add `ai-final-review` after that push. Skip this when the label is already present, or when this iteration did not push review fixes.
+
+```bash
+gh pr edit --add-label "ai-final-review"
+```
+
+Then return to step 2 so that review runs on the new commits.
+
+### 9. Repeat until CI passes
 
 Return to step 2 and wait for CI to complete again.
 
@@ -98,7 +114,8 @@ Return to step 2 and wait for CI to complete again.
 - **Minimal fixes**: Smallest change that resolves the issue
 - **Don't skip tests**: Never disable tests to "fix" CI
 - **Verify locally**: Always run `make check` before pushing
-- **Snapshot mismatches**: Always use `update-snapshots` label, never fix manually
+- **Snapshot mismatches**: Always use the `update-snapshots` label, never fix snapshot files manually. Merge the snapshot PR the workflow opens against this branch. Skip a conflicting snapshot PR and continue.
+- **Blocked PRs**: After pushing review fixes, add `ai-final-review` when `do-not-merge` is present and `ai-final-review` is not
 - **Limit iterations**: Stop after 5 fix-push-wait cycles to avoid infinite loops
 
 ## Error handling
@@ -109,5 +126,5 @@ Return to step 2 and wait for CI to complete again.
 | Auth failed | Stop and report to user — interactive auth not available in autonomous mode |
 | CI stuck | If CI hasn't completed after 30 minutes, stop and report to user |
 | Unfixable failure | Report to user and stop |
-| Merge conflicts | Stop and inform user |
+| Merge conflicts | Stop and inform user. A conflicting snapshot PR is the exception: skip it and continue |
 | Rate limited | Check `gh api rate_limit` for reset time, wait until resolved, then retry |

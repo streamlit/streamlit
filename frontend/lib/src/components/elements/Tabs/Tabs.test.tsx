@@ -16,6 +16,7 @@
 
 import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import type * as ReactAriaComponents from "react-aria-components"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
@@ -23,7 +24,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 // async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
 // Mocking it here prevents the animation machinery from running in unit tests.
 vi.mock("react-aria-components", async importOriginal => {
-  const actual = await importOriginal<typeof import("react-aria-components")>()
+  const actual = await importOriginal<typeof ReactAriaComponents>()
   return { ...actual, SelectionIndicator: () => null }
 })
 
@@ -31,7 +32,7 @@ import { BlockNode } from "~lib/AppNode"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Tabs, { TabProps } from "./Tabs"
+import Tabs, { type TabProps } from "./Tabs"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 

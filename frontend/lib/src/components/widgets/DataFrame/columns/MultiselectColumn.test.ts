@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
+import type { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, List, Utf8 } from "apache-arrow"
 import { transparentize } from "color2k"
 
@@ -27,7 +27,7 @@ import MultiselectColumn, {
   type MultiselectColumnParams,
   prepareOptions,
 } from "./MultiselectColumn"
-import { BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
+import { type BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
 
 const MOCK_MULTISELECT_COLUMN_PROPS: BaseColumnProps = {
   id: "1",

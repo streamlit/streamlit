@@ -130,7 +130,7 @@ def highlight_first(value: float) -> str:
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st.table(df.style.map(highlight_first))  # type: ignore[arg-type] # ty: ignore[no-matching-overload]
+st.table(df.style.map(highlight_first))  # type: ignore[arg-type] # ty: ignore[invalid-argument-type]
 
 st.subheader("Pandas Styler: Background and font styling")
 
@@ -146,15 +146,15 @@ def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[call-overload] # ty: ignore[invalid-argument-type]
+styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[arg-type] # ty: ignore[invalid-argument-type]
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
-styled_df.apply(
+styled_df.apply(  # type: ignore[call-overload] # ty: ignore[no-matching-overload]
     highlight_max, props="color:white;background-color:rgb(255, 0, 0)", axis=0
 )
 
-styled_df.apply(
+styled_df.apply(  # type: ignore[call-overload] # ty: ignore[no-matching-overload]
     highlight_max, props="color:white;background-color:hsl(273, 98%, 60%);", axis=1
 ).apply(highlight_max, props="color:white;background-color:purple", axis=None)
 
@@ -312,11 +312,20 @@ large_df = pd.DataFrame(
 
 st.subheader("Fixed dimensions with custom index (scrollable)")
 indexed_df = large_df.set_index(large_df.columns[0])
-st.table(indexed_df, width=400, height=200)
+# The author alt lands on <table>; the scroll wrapper keeps its separate
+# "Scrollable table" region label.
+with st.container(key="table_with_alt"):
+    st.table(
+        indexed_df,
+        width=400,
+        height=200,
+        alt="Scrollable sample grid with custom row index",
+    )
 
 st.subheader("Content width sizing")
 small_df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
-st.table(small_df, width="content")
+with st.container(key="table_without_alt"):
+    st.table(small_df, width="content")
 
 st.header("Hide Index and Hide Header Parameters")
 

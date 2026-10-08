@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, useMemo } from "react"
+import { type FC, useMemo } from "react"
 
 import type { ElementNode } from "~lib/AppNode"
 import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
@@ -25,7 +25,7 @@ import {
 } from "~lib/components/core/Layout/useLayoutStyles"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
-import { ElementContainerConfig } from "./ElementContainerConfig"
+import type { ElementContainerConfig } from "./ElementContainerConfig"
 
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<

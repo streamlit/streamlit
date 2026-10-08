@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { MutableRefObject, useCallback } from "react"
+import { type MutableRefObject, useCallback } from "react"
 
-import {
+import type {
   DataEditorProps,
   EditableGridCell,
   GridCell,
@@ -27,13 +27,13 @@ import {
 import { getLogger } from "loglevel"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   isErrorCell,
   valuesEqual,
 } from "~lib/components/widgets/DataFrame/columns"
 import { notNullOrUndefined } from "~lib/util/utils"
 
-import EditingState from "./EditingState"
+import type EditingState from "./EditingState"
 
 /**
  * Create return type for useDataEditor hook based on the DataEditorProps.

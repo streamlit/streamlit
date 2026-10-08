@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CSSProperties, useMemo } from "react"
+import { type CSSProperties, useMemo } from "react"
 
 type StWidthHeightArgs = {
   container: {

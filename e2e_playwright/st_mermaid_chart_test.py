@@ -19,15 +19,16 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
+from e2e_playwright.shared.app_utils import get_element_by_key
 
 
 def test_mermaid_charts_render(app: Page):
     """Test that all mermaid chart types render correctly."""
     mermaid_charts = app.get_by_test_id("stMermaidChart")
-    expect(mermaid_charts).to_have_count(9)
+    expect(mermaid_charts).to_have_count(10)
 
     # Check that each chart contains an img element with blob URL (rendered mermaid)
-    for i in range(9):
+    for i in range(10):
         img = mermaid_charts.nth(i).locator("img")
         expect(img).to_be_visible()
         expect(img).to_have_attribute("src", re.compile(r"^blob:"))
@@ -42,8 +43,8 @@ def test_chart_sizing(app: Page):
     """
     mermaid_charts = app.get_by_test_id("stMermaidChart")
 
-    # The "Content width" chart (second to last) must render at a visible,
-    # non-zero size rather than collapsing to 0x0.
+    # The "Content width" chart must render at a visible, non-zero size
+    # rather than collapsing to 0x0.
     content_img = mermaid_charts.nth(7).locator("img")
     expect(content_img).to_be_visible()
     content_box = content_img.bounding_box()
@@ -51,7 +52,7 @@ def test_chart_sizing(app: Page):
     assert content_box["width"] > 50, content_box
     assert content_box["height"] > 20, content_box
 
-    # The tall chart (last) must not be clamped to a short strip: its height
+    # The "Tall diagram" chart must not be clamped to a short strip: its height
     # should clearly exceed the previous 25rem (~400px) inline max-height.
     tall_img = mermaid_charts.nth(8).locator("img")
     expect(tall_img).to_be_visible()
@@ -132,3 +133,34 @@ def test_toolbar_download_png(app: Page):
 
     download_button = toolbar.get_by_role("button", name="Download as PNG")
     download_button.click()
+
+
+def test_mermaid_chart_accessible_names(app: Page):
+    """Verify authored and fallback accessible names across Mermaid grammars."""
+    labeled = get_element_by_key(app, "mermaid_with_alt").get_by_test_id(
+        "stMermaidChart"
+    )
+    expect(labeled.locator("img")).to_have_accessible_name(
+        "Decision flow from start to cancel"
+    )
+
+    unlabeled = get_element_by_key(app, "mermaid_without_alt").get_by_test_id(
+        "stMermaidChart"
+    )
+    expect(unlabeled.locator("img")).to_have_accessible_name("Mermaid flowchart")
+
+    # Non-flowchart grammars: sequence and mindmap (accTitle-unsafe) both work.
+    sequence = get_element_by_key(app, "mermaid_sequence_with_alt").get_by_test_id(
+        "stMermaidChart"
+    )
+    expect(sequence.locator("img")).to_have_accessible_name(
+        "User to app to server API handshake"
+    )
+
+    mindmap = get_element_by_key(app, "mermaid_mindmap_with_alt").get_by_test_id(
+        "stMermaidChart"
+    )
+    expect(mindmap.locator("img")).to_be_visible()
+    expect(mindmap.locator("img")).to_have_accessible_name(
+        "Streamlit element and widget taxonomy"
+    )

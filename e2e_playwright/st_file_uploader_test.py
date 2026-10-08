@@ -34,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-NUM_FILE_UPLOADERS = 21
+NUM_FILE_UPLOADERS = 22
 
 
 def create_temp_directory_with_files(
@@ -1062,3 +1062,88 @@ def test_file_uploader_extension_deduplication(app: Page):
     # Should NOT show the alternate forms
     expect(multiple_paired_instructions).not_to_contain_text("JPEG")
     expect(multiple_paired_instructions).not_to_contain_text("TIFF")
+
+
+def test_file_uploader_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore file value:", "None")
+
+    ignore_uploader = get_element_by_key(app, "ignore_file")
+
+    file_name1 = "file1.txt"
+    file_content1 = b"file1content"
+    file_name2 = "file2.txt"
+    file_content2 = b"file2content"
+
+    with app.expect_file_chooser() as fc_info:
+        ignore_uploader.get_by_test_id("stFileUploaderDropzone").click()
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[
+            FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1)
+        ]
+    )
+
+    expect(ignore_uploader.get_by_test_id("stFileChipName")).to_have_text(
+        file_name1, use_inner_text=True
+    )
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(ignore_uploader.get_by_test_id("stFileChipName")).to_have_text(
+        file_name1, use_inner_text=True
+    )
+    expect_prefixed_markdown(app, "Ignore file value:", "None")
+
+    app.get_by_role("button", name="Apply ignore file", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore file value: file1.txt", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore file value: file1.txt", exact=True)
+    ).to_be_visible()
+
+    with app.expect_file_chooser() as fc_info:
+        ignore_uploader.get_by_test_id("stFileUploaderDropzone").click()
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[
+            FilePayload(name=file_name2, mimeType="text/plain", buffer=file_content2)
+        ]
+    )
+
+    expect(ignore_uploader.get_by_test_id("stFileChipName")).to_have_text(
+        file_name2, use_inner_text=True
+    )
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 3", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore file value: file1.txt", exact=True)).to_be_visible()
+
+    app.get_by_role("button", name="Apply ignore file", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Ignore file value: file2.txt", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore file value: file2.txt", exact=True)
+    ).to_be_visible()
+
+    ignore_uploader.get_by_test_id("stFileChipDeleteBtn").click()
+    expect(ignore_uploader.get_by_test_id("stFileChip")).not_to_be_visible()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore file value: file2.txt", exact=True)).to_be_visible()
+
+    app.get_by_role("button", name="Apply ignore file", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Ignore file value: None", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore file value: None", exact=True)
+    ).to_be_visible()

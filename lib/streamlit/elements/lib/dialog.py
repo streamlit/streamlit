@@ -14,13 +14,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Literal, Self, TypeAlias, cast
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitInvalidLayoutContextError
+from streamlit.errors import StreamlitInvalidLayoutContextError, StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -37,6 +35,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.state import WidgetCallback
 
 DialogWidth: TypeAlias = Literal["small", "large", "medium"]
+DialogPosition: TypeAlias = Literal["left", "center", "right"]
 
 
 def _process_dialog_width_input(
@@ -52,6 +51,24 @@ def _process_dialog_width_input(
         return BlockProto.Dialog.DialogWidth.MEDIUM
 
     return BlockProto.Dialog.DialogWidth.SMALL
+
+
+def _process_dialog_position_input(
+    position: DialogPosition,
+) -> BlockProto.Dialog.DialogPosition.ValueType:
+    """Map a user-facing position literal to the DialogPosition proto enum.
+
+    Invalid values raise StreamlitValueError. Unlike width, which falls back
+    to SMALL, an unrecognized position does not default to center.
+    """
+    if position == "left":
+        return BlockProto.Dialog.DialogPosition.LEFT
+    if position == "right":
+        return BlockProto.Dialog.DialogPosition.RIGHT
+    if position == "center":
+        return BlockProto.Dialog.DialogPosition.CENTER
+
+    raise StreamlitValueError("position", ["'left'", "'center'", "'right'"])
 
 
 def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
@@ -85,8 +102,9 @@ class Dialog(DeltaGenerator):
         parent: DeltaGenerator,
         title: str,
         *,
-        dismissible: bool = True,
         width: DialogWidth = "small",
+        position: DialogPosition = "center",
+        dismissible: bool = True,
         icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
@@ -101,6 +119,7 @@ class Dialog(DeltaGenerator):
         block_proto.dialog.title = title
         block_proto.dialog.dismissible = dismissible
         block_proto.dialog.width = _process_dialog_width_input(width)
+        block_proto.dialog.position = _process_dialog_position_input(position)
         block_proto.dialog.icon = validate_icon_or_emoji(icon)
 
         # Compute a stable identity for the dialog based on its attributes.
@@ -117,6 +136,7 @@ class Dialog(DeltaGenerator):
             title=title,
             dismissible=dismissible,
             width=width,
+            position=position,
             icon=icon,
             on_dismiss=str(on_dismiss) if not callable(on_dismiss) else "callback",
         )

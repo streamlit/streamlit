@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 
 /**
  * Maximum number of loaded chunks to retain. Older chunks are evicted in

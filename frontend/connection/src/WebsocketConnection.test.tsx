@@ -25,7 +25,7 @@ vi.mock("@streamlit/utils", async () => {
   }
 })
 
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
 import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
@@ -41,8 +41,8 @@ import {
 } from "./constants"
 import { doInitPings, PingCancelledError } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
-import { ErrorDetails, OnRetry } from "./types"
-import { Args, WebsocketConnection } from "./WebsocketConnection"
+import type { ErrorDetails, OnRetry } from "./types"
+import { type Args, WebsocketConnection } from "./WebsocketConnection"
 
 const expectedFirstReconnectDelayMs =
   RECONNECT_MINIMUM_RETRY_PERIOD_MS +
@@ -360,6 +360,52 @@ describe("doInitPings", () => {
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_ORIGINS_CONFIG
     )
+  })
+
+  it("retries with the thrown message when onHostConfigResp throws a non-FetchError", async () => {
+    const hostConfigFailure = "invalid host config"
+    // Two URIs per try; keep throwing through the sendClientError threshold.
+    const throwsBeforeSuccess =
+      MAX_RETRIES_BEFORE_CLIENT_ERROR * MOCK_PING_DATA.uri.length
+    let hostConfigCalls = 0
+    const setAllowedOrigins = vi.fn().mockImplementation(() => {
+      hostConfigCalls += 1
+      if (hostConfigCalls <= throwsBeforeSuccess) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- pin String(error) retry text
+        throw hostConfigFailure
+      }
+    })
+
+    globalThis.fetch = createFetchMock()
+
+    const retryCallback = createTimerAdvancingRetryCallback(
+      MOCK_PING_DATA.retryCallback
+    )
+    const sendClientErrorSpy = vi.fn()
+
+    const { promise } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      retryCallback,
+      sendClientErrorSpy,
+      setAllowedOrigins
+    )
+
+    await vi.runAllTimersAsync()
+    await promise
+
+    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ message: hostConfigFailure }),
+      expect.anything()
+    )
+    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
+      MAX_RETRIES_BEFORE_CLIENT_ERROR,
+      expect.objectContaining({ message: hostConfigFailure }),
+      expect.anything()
+    )
+    expect(sendClientErrorSpy).not.toHaveBeenCalled()
   })
 
   it("calls retry with the corresponding error message if there was an error", async () => {
@@ -1108,9 +1154,9 @@ describe("WebsocketConnection", () => {
   afterEach(async () => {
     globalThis.fetch = originalFetch
 
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     if (client.websocket) {
-      // @ts-expect-error
+      // @ts-expect-error - websocket is private
       client.websocket.close()
     }
     client.disconnect()
@@ -1125,9 +1171,9 @@ describe("WebsocketConnection", () => {
   it("disconnect closes connection and sets state to DISCONNECTED_FOREVER", () => {
     client.disconnect()
 
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.DISCONNECTED_FOREVER)
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     expect(client.websocket).toBe(undefined)
   })
 
@@ -1135,7 +1181,7 @@ describe("WebsocketConnection", () => {
     // @ts-expect-error - accessing private property for testing
     client.state = ConnectionState.CONNECTED
     client.reconnect()
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
   })
 
@@ -1290,7 +1336,7 @@ describe("WebsocketConnection", () => {
     // @ts-expect-error - accessing private property for testing
     client.state = ConnectionState.PINGING_SERVER
     client.reconnect()
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
   })
 
@@ -1463,7 +1509,7 @@ describe("WebsocketConnection", () => {
 
   it("increments message cache run count", () => {
     const incrementRunCountSpy = vi.spyOn(
-      // @ts-expect-error
+      // @ts-expect-error - cache is private
       client.cache,
       "incrementRunCount"
     )
@@ -1479,7 +1525,7 @@ describe("WebsocketConnection", () => {
   it("gets cached message hashes from cache", () => {
     const getCachedMessageHashesSpy = vi
       .spyOn(
-        // @ts-expect-error
+        // @ts-expect-error - cache is private
         client.cache,
         "getCachedMessageHashes"
       )
@@ -1496,7 +1542,7 @@ describe("WebsocketConnection", () => {
     await vi.runAllTimersAsync()
     await server.connected
 
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     const sendSpy = vi.spyOn(client.websocket, "send")
 
     const TEST_BACK_MSG = {}
@@ -1565,7 +1611,7 @@ describe("WebsocketConnection", () => {
 
   describe("getBaseUriParts", () => {
     it("returns correct base uri parts when ConnectionState == Connected", () => {
-      // @ts-expect-error
+      // @ts-expect-error - state is private
       client.state = ConnectionState.CONNECTED
 
       expect(client.getBaseUriParts()).toEqual(
@@ -1655,9 +1701,9 @@ describe("WebsocketConnection auth token handling", () => {
     const ws = new WebsocketConnection(createMockArgs({ resetHostAuthToken }))
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
@@ -1677,9 +1723,9 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
@@ -1694,9 +1740,9 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     // "lastSessionId" should be the WebSocket's session token
@@ -1717,10 +1763,10 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
 
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
@@ -1988,5 +2034,139 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
     ).toHaveBeenCalledWith(ConnectionState.DISCONNECTED_FOREVER, undefined)
 
     // The test passing without errors verifies the fix works correctly
+  })
+})
+
+describe("WebsocketConnection unexpected frames", () => {
+  type SocketListener = (event: MessageEvent) => void
+
+  class MockWebSocket {
+    public url: string
+    public protocols?: string | string[]
+    public binaryType = "blob"
+    public readyState = 0
+    public readonly listeners = new Map<string, SocketListener[]>()
+
+    constructor(url: string, protocols?: string | string[]) {
+      this.url = url
+      this.protocols = protocols
+    }
+
+    public addEventListener(type: string, listener: SocketListener): void {
+      const existing = this.listeners.get(type) ?? []
+      existing.push(listener)
+      this.listeners.set(type, existing)
+    }
+
+    public dispatchMessage(data: unknown): void {
+      for (const listener of this.listeners.get("message") ?? []) {
+        listener({ data } as MessageEvent)
+      }
+    }
+
+    public close(): void {
+      this.readyState = 3
+    }
+
+    public send(_data: unknown): void {
+      // No-op: these tests only dispatch inbound frames
+    }
+  }
+
+  let originalWebSocket: typeof WebSocket
+  let lastSocket: MockWebSocket | undefined
+  let pingServerSpy: MockInstance
+
+  function createMockWebSocket(
+    url: string,
+    protocols?: string | string[]
+  ): MockWebSocket {
+    const socket = new MockWebSocket(url, protocols)
+    lastSocket = socket
+    return socket
+  }
+
+  beforeEach(() => {
+    originalWebSocket = globalThis.WebSocket
+    lastSocket = undefined
+    globalThis.WebSocket = createMockWebSocket as unknown as typeof WebSocket
+
+    pingServerSpy = vi
+      .spyOn(
+        WebsocketConnection.prototype as unknown as Record<
+          string,
+          () => Promise<void>
+        >,
+        "pingServer"
+      )
+      .mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    globalThis.WebSocket = originalWebSocket
+    pingServerSpy.mockRestore()
+  })
+
+  async function connectClient(): Promise<{
+    ws: WebsocketConnection
+    socket: MockWebSocket
+    args: Args
+  }> {
+    const args = createMockArgs()
+    const ws = new WebsocketConnection(args)
+    // @ts-expect-error - private state for test
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - private connectToWebSocket for test
+    await ws.connectToWebSocket()
+    if (!lastSocket) {
+      throw new Error("Expected MockWebSocket to be constructed")
+    }
+    return { ws, socket: lastSocket, args }
+  }
+
+  function spyHandleMessage(ws: WebsocketConnection): MockInstance {
+    return vi.spyOn(
+      ws as unknown as {
+        handleMessage: (data: ArrayBuffer) => Promise<void>
+      },
+      "handleMessage"
+    )
+  }
+
+  it("treats a non-ArrayBuffer frame as a fatal protocol mismatch", async () => {
+    const { ws, socket, args } = await connectClient()
+    const handleMessage = spyHandleMessage(ws)
+
+    socket.dispatchMessage("proxy-keepalive")
+
+    expect(handleMessage).not.toHaveBeenCalled()
+    expect(args.sendClientError).toHaveBeenCalledWith(
+      "Websocket connection fatal error encountered",
+      expect.stringContaining("Unexpected Websocket message type"),
+      "Websocket Connection"
+    )
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      expect.objectContaining({
+        message: expect.stringContaining("Unexpected Websocket message type"),
+      })
+    )
+    ws.disconnect()
+  })
+
+  it("forwards ArrayBuffer frames to handleMessage", async () => {
+    const { ws, socket, args } = await connectClient()
+    const handleMessage = spyHandleMessage(ws).mockResolvedValue(undefined)
+    const payload = new ArrayBuffer(8)
+
+    socket.dispatchMessage(payload)
+
+    expect(handleMessage).toHaveBeenCalledWith(payload)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    expect(args.onConnectionStateChange).not.toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      expect.anything()
+    )
+    ws.disconnect()
   })
 })

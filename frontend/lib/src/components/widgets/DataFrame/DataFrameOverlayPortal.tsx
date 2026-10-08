@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import { FloatingPortal, type FloatingPortalProps } from "@floating-ui/react"
 

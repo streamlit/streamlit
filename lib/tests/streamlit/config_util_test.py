@@ -21,6 +21,7 @@ import os
 import re
 import tempfile
 import textwrap
+import tomllib
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -323,6 +324,59 @@ class ConfigUtilTest(unittest.TestCase):
         lines = output.split("\n")
 
         assert "# This is a hidden option." not in lines
+
+    @patch("click.secho")
+    def test_show_config_comments_unset_none_and_multiline_list(self, patched_echo):
+        """Unset None and multiline list defaults stay commented out."""
+        config_options = {
+            "server.missing": ConfigOption(
+                key="server.missing",
+                description="An unset option.",
+                default_val=None,
+            ),
+            "server.origins": ConfigOption(
+                key="server.origins",
+                description="Allowed origins.",
+                default_val=["https://example.com", "https://streamlit.io"],
+            ),
+        }
+        config_util.show_config({"server": "Server settings."}, config_options)
+
+        [(args, _)] = patched_echo.call_args_list
+        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+
+        # The banner comment is indented, so parse from the section header.
+        server_output = "[server]" + output.split("[server]", 1)[1]
+        parsed = tomllib.loads(server_output)
+        assert "missing" not in parsed["server"]
+        assert "origins" not in parsed["server"]
+        lines = output.split("\n")
+        assert "# missing =" in lines
+
+        default_start = lines.index("# Default: [")
+        default_block = lines[default_start : default_start + 4]
+        assert default_block == [
+            "# Default: [",
+            '#     "https://example.com",',
+            '#     "https://streamlit.io",',
+            "# ]",
+        ]
+
+        start = lines.index("# origins = [")
+        commented_list = lines[start : start + 4]
+        assert commented_list == [
+            "# origins = [",
+            '#     "https://example.com",',
+            '#     "https://streamlit.io",',
+            "# ]",
+        ]
+        round_trip = tomllib.loads(
+            "[server]\n" + "\n".join(line.removeprefix("# ") for line in commented_list)
+        )
+        assert round_trip["server"]["origins"] == [
+            "https://example.com",
+            "https://streamlit.io",
+        ]
 
     @patch("click.secho")
     def test_correctly_handles_show_error_details(self, patched_echo):
@@ -973,16 +1027,6 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         ]
         assert len(filtered_theme["theme"]["sidebar"]["chartSequentialColors"]) == 10
         assert len(filtered_theme["theme"]["sidebar"]["chartDivergingColors"]) == 10
-
-    def test_load_theme_file_missing_toml(self):
-        """Test _load_theme_file when toml module is missing."""
-
-        # Mock the import toml statement to raise ImportError
-        with patch.dict("sys.modules", {"toml": None}):
-            with pytest.raises(StreamlitAPIException) as cm:
-                config_util._load_theme_file("theme.toml", self.config_template)
-
-            assert "toml' package is required" in str(cm.value)
 
     def test_load_theme_file_local_success(self):
         """Test loading theme file from local path successfully."""

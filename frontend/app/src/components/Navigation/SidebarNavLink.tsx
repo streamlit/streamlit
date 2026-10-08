@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { MouseEvent, ReactElement } from "react"
+import type { MouseEvent, ReactElement } from "react"
 
 import {
   DynamicIcon,

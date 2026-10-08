@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
+import { Block as BlockProto, type streamlit } from "@streamlit/protobuf"
 
 import {
   Direction,

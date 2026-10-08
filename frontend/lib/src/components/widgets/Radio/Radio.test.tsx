@@ -22,7 +22,7 @@ import { Radio as RadioProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Radio, { Props } from "./Radio"
+import Radio, { type Props } from "./Radio"
 
 const getProps = (
   elementProps: Partial<RadioProto> = {},
@@ -106,7 +106,7 @@ describe("Radio widget", () => {
     const radioOptions = screen.getAllByRole("radio")
     expect(radioOptions).toHaveLength(3)
 
-    // @ts-expect-error
+    // @ts-expect-error - default can be null, which is not an array index
     const checked = radioOptions[props.element.default]
     expect(checked).toBeChecked()
   })
@@ -215,7 +215,7 @@ describe("Radio widget", () => {
     })
 
     // Our widget should be reset, and the widgetMgr should be updated
-    // @ts-expect-error
+    // @ts-expect-error - default can be null, which is not an array index
     const defaultValue = radioOptions[props.element.default]
     expect(defaultValue).toBeChecked()
 

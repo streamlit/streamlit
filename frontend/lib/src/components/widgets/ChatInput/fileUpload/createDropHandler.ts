@@ -17,13 +17,14 @@
 import { zip } from "lodash-es"
 import { ErrorCode as FileErrorCode } from "react-dropzone"
 
-import {
+import type {
   ChatInput as ChatInputProto,
   FileURLs as FileURLsProto,
 } from "@streamlit/protobuf"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
+import { ensureError } from "~lib/util/ErrorHandling"
 import { type FileRejection, getRejectedFileInfo } from "~lib/util/FileHelper"
 
 import { validateFileType } from "./fileUploadUtils"
@@ -173,7 +174,7 @@ export const createDropHandler =
         )
         return
       })
-      .catch((errorMessage: string) => {
+      .catch((error: unknown) => {
         addFiles(
           acceptedFiles.map(f => {
             return new UploadFileInfo(
@@ -182,7 +183,8 @@ export const createDropHandler =
               getNextLocalFileId(),
               {
                 type: "error",
-                errorMessage,
+                // fetchFileURLs rejects with the backend error string
+                errorMessage: ensureError(error).message,
               },
               f
             )

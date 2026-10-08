@@ -544,6 +544,68 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element.echarts_chart
         assert el.id == ""
 
+    def test_echarts_chart_alt(self):
+        """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
+        st.echarts_chart(_BASIC_SPEC, alt="Bar chart of categories")
+        el = self.get_delta_from_queue().new_element.echarts_chart
+        assert el.HasField("alt")
+        assert el.alt == "Bar chart of categories"
+        assert "aria" not in json.loads(el.spec)
+
+        st.echarts_chart(_BASIC_SPEC)
+        assert not self.get_delta_from_queue().new_element.echarts_chart.HasField("alt")
+
+        st.echarts_chart(_BASIC_SPEC, alt=None)
+        assert not self.get_delta_from_queue().new_element.echarts_chart.HasField("alt")
+
+        st.echarts_chart(_BASIC_SPEC, alt="  ")
+        assert not self.get_delta_from_queue().new_element.echarts_chart.HasField("alt")
+
+    def test_echarts_chart_alt_strips_whitespace(self):
+        """Leading and trailing whitespace is stripped from alt."""
+        st.echarts_chart(_BASIC_SPEC, alt="  Bar chart of categories  ")
+        el = self.get_delta_from_queue().new_element.echarts_chart
+        assert el.HasField("alt")
+        assert el.alt == "Bar chart of categories"
+
+    def test_echarts_chart_alt_overrides_author_description(self):
+        """alt wins over an author aria.label.description and logs the override."""
+        spec = {
+            **_BASIC_SPEC,
+            "aria": {"label": {"description": "Author description"}},
+        }
+        with patch("streamlit.elements.echarts_chart._LOGGER.warning") as mock_warning:
+            st.echarts_chart(spec, alt="Streamlit alt")
+            mock_warning.assert_called_once()
+            assert mock_warning.call_args.kwargs.get("stack_info") is True
+
+        el = self.get_delta_from_queue().new_element.echarts_chart
+        assert el.alt == "Streamlit alt"
+        # Author description stays in the wire JSON; override is frontend-only.
+        assert (
+            json.loads(el.spec)["aria"]["label"]["description"] == "Author description"
+        )
+
+    def test_echarts_chart_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Chart of "A < B" & sales <script>alert(1)</script>'
+        st.echarts_chart(_BASIC_SPEC, alt=adversarial)
+        el = self.get_delta_from_queue().new_element.echarts_chart
+        assert el.HasField("alt")
+        assert el.alt == adversarial
+
+    def test_display_only_key_id_stable_when_alt_changes(self):
+        """A keyed chart keeps its ID when only alt changes."""
+        st.echarts_chart(_BASIC_SPEC, key="stable_alt", alt="First name")
+        id_a = self.get_delta_from_queue().new_element.echarts_chart.id
+
+        self.script_run_ctx.shared.reset()
+        self.clear_queue()
+
+        st.echarts_chart(_BASIC_SPEC, key="stable_alt", alt="Second name")
+        id_b = self.get_delta_from_queue().new_element.echarts_chart.id
+        assert id_a == id_b
+
     def test_id_for_display_only_with_key(self):
         """A key gives a display-only chart an ID (for st-key-* and identity)."""
         st.echarts_chart(_BASIC_SPEC, key="styled_chart")

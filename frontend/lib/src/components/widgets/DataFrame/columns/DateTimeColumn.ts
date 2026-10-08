@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-import { DatePickerType } from "@glideapps/glide-data-grid-cells"
-import moment, { Moment } from "moment-timezone"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import type { DatePickerType } from "@glideapps/glide-data-grid-cells"
+import moment, { type Moment } from "moment-timezone"
 
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
 import { formatMoment } from "~lib/util/formatMoment"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   mergeColumnParameters,
   toSafeDate,

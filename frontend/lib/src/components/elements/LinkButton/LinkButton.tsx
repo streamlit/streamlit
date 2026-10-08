@@ -14,9 +14,15 @@
  * limitations under the License.
  */
 
-import { memo, MouseEvent, ReactElement, useCallback, useRef } from "react"
+import {
+  memo,
+  type MouseEvent,
+  type ReactElement,
+  useCallback,
+  useRef,
+} from "react"
 
-import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
+import type { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
 import { Box } from "~lib/components/shared/Base/styled-components"
 import {
@@ -29,7 +35,7 @@ import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosi
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import BaseLinkButton from "./BaseLinkButton"
 

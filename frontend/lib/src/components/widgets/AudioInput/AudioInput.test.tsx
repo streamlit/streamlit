@@ -27,9 +27,9 @@ import type {
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { FormClearHelper } from "src/components/widgets/Form/FormClearHelper"
+import type { FormClearHelper } from "src/components/widgets/Form/FormClearHelper"
 
-import AudioInput, { Props } from "./AudioInput"
+import AudioInput, { type Props } from "./AudioInput"
 
 const useWaveformControllerMock = vi.fn()
 const uploadFilesMock = vi.fn()
@@ -217,6 +217,37 @@ describe("AudioInput Recording Journey", () => {
 
     // Verify blob URL created
     expect(global.URL.createObjectURL).toHaveBeenCalledWith(testBlob)
+  })
+
+  it("composes rendered label plain text into Download toolbar aria-label", async () => {
+    const props = createProps(
+      { label: "Record your **answer**" },
+      { uploadClient: mockUploadClient, widgetMgr: mockWidgetMgr }
+    )
+    render(<AudioInput {...props} />)
+
+    const testBlob = new Blob(["test audio"], { type: "audio/wav" })
+    act(() => {
+      void latestEvents?.onRecordReady?.(testBlob)
+    })
+    act(() => {
+      void latestEvents?.onApprove?.(testBlob)
+    })
+
+    await waitFor(() => {
+      expect(uploadFilesMock).toHaveBeenCalled()
+    })
+
+    expect(
+      await screen.findByRole("button", {
+        name: /^Download as WAV: Record your answer$/,
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: /Download as WAV: Record your \*\*answer\*\*/,
+      })
+    ).not.toBeInTheDocument()
   })
 
   it("handles recording cancellation", async () => {

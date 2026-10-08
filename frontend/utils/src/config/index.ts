@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type CustomThemeConfig } from "@streamlit/protobuf"
+import type { CustomThemeConfig } from "@streamlit/protobuf"
 
 /**
  * The lib config contains various configurations that the host platform can

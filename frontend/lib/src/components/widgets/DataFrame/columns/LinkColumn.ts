@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind, UriCell } from "@glideapps/glide-data-grid"
+import {
+  type GridCell,
+  GridCellKind,
+  type UriCell,
+} from "@glideapps/glide-data-grid"
 
 import {
   isMaterialIcon,
@@ -24,12 +28,25 @@ import { genericFonts } from "~lib/theme/primitives/typography"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   getLinkDisplayValueFromRegex,
   toSafeString,
 } from "./utils"
+
+/**
+ * Keep `:material/open_in_new:` visible in narrow cells by using its
+ * single-character Material Symbols codepoint. Glide truncates canvas text
+ * to `cellWidth / 4` characters before `fillText`, which slices this
+ * 11-character ligature name in columns narrower than ~44px.
+ *
+ * `OPEN_IN_NEW_CODEPOINT` is U+E89E from the upstream `.codepoints` file
+ * that `scripts/update_material_icon_font_and_names.py` downloads alongside
+ * the font. Other material icons in narrow cells: #17094.
+ */
+const OPEN_IN_NEW_ICON = "open_in_new"
+const OPEN_IN_NEW_CODEPOINT = "\uE89E"
 
 export interface LinkColumnParams {
   /**
@@ -79,9 +96,11 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
       configuredDisplayText.startsWith(":material/") &&
       isMaterialIcon(configuredDisplayText)
     ) {
-      // We need to only use the icon name in the display text so
-      // that the icon font can correctly resolve the icon.
-      configuredDisplayText = parseIconPackEntry(configuredDisplayText).icon
+      // Use the ligature name so the icon font can resolve the glyph, except
+      // for open_in_new, which uses a codepoint so Glide cannot truncate it.
+      const iconName = parseIconPackEntry(configuredDisplayText).icon
+      configuredDisplayText =
+        iconName === OPEN_IN_NEW_ICON ? OPEN_IN_NEW_CODEPOINT : iconName
       usesDisplayIcon = true
     } else if (
       configuredDisplayText.includes("(") &&

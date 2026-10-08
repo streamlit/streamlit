@@ -33,7 +33,7 @@ from streamlit.git_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Generator, Sequence
     from pathlib import Path
 
 _REQUIRES_GIT = pytest.mark.skipif(
@@ -53,7 +53,7 @@ def _mock_git_repo(
     untracked_files: bytes = b"",
     diff_paths: bytes = b"",
     rev_list: bytes | None = b"",
-) -> Iterator[GitRepo]:
+) -> Generator[GitRepo, None, None]:
     """Yield a GitRepo backed by exact, canned Git command responses."""
     responses: dict[tuple[str, ...], bytes | None] = {
         ("--version",): git_version,

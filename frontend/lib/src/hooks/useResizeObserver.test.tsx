@@ -15,9 +15,9 @@
  */
 
 import {
-  DependencyList,
-  MutableRefObject,
-  ReactElement,
+  type DependencyList,
+  type MutableRefObject,
+  type ReactElement,
   useCallback,
 } from "react"
 
@@ -25,7 +25,7 @@ import { act, screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import { DOMRectKeys, useResizeObserver } from "./useResizeObserver"
+import { type DOMRectKeys, useResizeObserver } from "./useResizeObserver"
 
 const mockDisconnect = vi.fn()
 const mockObserve = vi.fn()

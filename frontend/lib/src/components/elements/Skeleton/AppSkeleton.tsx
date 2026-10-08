@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useState } from "react"
+import { type FC, memo, useState } from "react"
 
 import useTimeout from "~lib/hooks/useTimeout"
 

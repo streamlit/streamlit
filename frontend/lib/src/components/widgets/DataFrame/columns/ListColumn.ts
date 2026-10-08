@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import type { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   arrayToCopyValue,
   arrayValuesEqual,
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   isEditableArrayValue,
   toSafeArray,
 } from "./utils"

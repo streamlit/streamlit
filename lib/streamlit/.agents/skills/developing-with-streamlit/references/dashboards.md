@@ -11,7 +11,7 @@ Use `border=True` to create visual cards. Supported on `st.container`, `st.metri
 # Container card
 with st.container(border=True):
     st.subheader("Sales Overview")
-    st.line_chart(sales_data)
+    st.line_chart(sales_data, alt="Sales over time")
 
 # Metric card
 st.metric("Revenue", "$1.2M", "+12%", border=True)
@@ -30,12 +30,12 @@ Add context to cards with headers or bold text:
 # With subheader
 with st.container(border=True):
     st.subheader("Monthly Trends")
-    st.line_chart(data)
+    st.line_chart(data, alt="Monthly trends over time")
 
 # With bold label
 with st.container(border=True):
     st.markdown("**Top Products**")
-    st.dataframe(top_products)
+    st.dataframe(top_products, alt="Top products")
 ```
 
 ## KPI rows
@@ -102,17 +102,17 @@ col1, col2 = st.columns(2)
 with col1:
     with st.container(border=True):
         st.subheader("Revenue by Region")
-        st.bar_chart(region_data, x="region", y="revenue")
+        st.bar_chart(region_data, x="region", y="revenue", alt="Revenue by region")
 
 with col2:
     with st.container(border=True):
         st.subheader("Monthly Trend")
-        st.line_chart(monthly_data, x="month", y="value")
+        st.line_chart(monthly_data, x="month", y="value", alt="Monthly trend")
 
 # Data table
 with st.container(border=True):
     st.subheader("Recent Orders")
-    st.dataframe(orders_df, hide_index=True)
+    st.dataframe(orders_df, hide_index=True, alt="Recent orders")
 ```
 
 ## Smooth loading with parallel fragments + skeletons
@@ -134,7 +134,7 @@ def revenue_card():
         st.subheader("Revenue by Region")
         with st.skeleton(height=260):
             data = load_revenue()
-            st.bar_chart(data, x="region", y="revenue")
+            st.bar_chart(data, x="region", y="revenue", alt="Revenue by region")
 
 
 @st.fragment(parallel=True)
@@ -143,7 +143,7 @@ def orders_card():
         st.subheader("Recent Orders")
         with st.skeleton(height=260):
             data = load_orders()
-            st.dataframe(data, hide_index=True)
+            st.dataframe(data, hide_index=True, alt="Recent orders")
 
 
 col1, col2 = st.columns(2)

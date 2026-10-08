@@ -452,6 +452,34 @@ describe("format", () => {
     ).toEqual("5")
   })
 
+  it("period column with missing freq in extension metadata returns raw duration", () => {
+    const meta = new Map<string, string>([
+      ["ARROW:extension:name", "pandas.period"],
+      ["ARROW:extension:metadata", JSON.stringify({})],
+    ])
+    expect(
+      format(BigInt(5), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("p", new Int64(), true, meta),
+        pandasType: PERIOD_DAY_PANDAS_TYPE,
+      })
+    ).toEqual("5")
+  })
+
+  it("period column with non-string freq returns raw duration", () => {
+    const meta = new Map<string, string>([
+      ["ARROW:extension:name", "pandas.period"],
+      ["ARROW:extension:metadata", JSON.stringify({ freq: 1 })],
+    ])
+    expect(
+      format(BigInt(5), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("p", new Int64(), true, meta),
+        pandasType: PERIOD_DAY_PANDAS_TYPE,
+      })
+    ).toEqual("5")
+  })
+
   it("non-finite float falls through to string coercion", () => {
     const floatType = {
       type: DataFrameCellType.DATA,
@@ -514,6 +542,65 @@ describe("format", () => {
     )
     warnSpy.mockRestore()
   })
+
+  it.each([
+    {
+      label: "metadata is missing",
+      metadata: new Map<string, string>([
+        ["ARROW:extension:name", "pandas.interval"],
+      ]),
+      warning: "Arrow interval extension metadata is missing",
+    },
+    {
+      label: "closed is null",
+      metadata: new Map<string, string>([
+        ["ARROW:extension:name", "pandas.interval"],
+        [
+          "ARROW:extension:metadata",
+          JSON.stringify({ subtype: "float64", closed: null }),
+        ],
+      ]),
+      warning:
+        "Arrow interval extension metadata must include string subtype and closed",
+    },
+    {
+      label: "subtype is missing",
+      metadata: new Map<string, string>([
+        ["ARROW:extension:name", "pandas.interval"],
+        ["ARROW:extension:metadata", JSON.stringify({ closed: "right" })],
+      ]),
+      warning:
+        "Arrow interval extension metadata must include string subtype and closed",
+    },
+  ])(
+    "falls back to string coercion when interval $label",
+    ({ metadata, warning }) => {
+      const LOG = getLogger("arrowFormatUtils")
+      const warnSpy = vi.spyOn(LOG, "warn").mockImplementation(() => {})
+
+      const intervalStruct = new Struct([
+        new Field("left", new Float64(), true),
+        new Field("right", new Float64(), true),
+      ])
+      const row = vectorFromArray([{ left: 0, right: 1 }], intervalStruct).get(
+        0
+      )
+      const result = format(row, {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("iv", intervalStruct, true, metadata),
+        pandasType: {
+          field_name: "iv",
+          name: "iv",
+          pandas_type: "object",
+          numpy_type: "interval[float64, float64]",
+          metadata: null,
+        },
+      })
+      expect(result).toBe(String(row))
+      expect(warnSpy).toHaveBeenCalledWith(warning)
+      warnSpy.mockRestore()
+    }
+  )
 })
 
 describe("formatPeriodFromFreq", () => {

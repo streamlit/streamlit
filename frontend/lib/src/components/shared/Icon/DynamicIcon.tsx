@@ -113,6 +113,23 @@ export function isMenuStyleIconLabel(
 }
 
 /**
+ * Accessible name for an icon-only control.
+ * Uses the same `"{name} icon"` wording as the Markdown material-icon plugin.
+ */
+export function getIconAccessibleName(iconValue: string): string {
+  // Name the loading spinner as "Loading"; DynamicIcon renders "spinner" as a glyph, not an icon pack.
+  if (iconValue === "spinner") {
+    return "Loading"
+  }
+  const { pack, icon } = parseIconPackEntry(iconValue)
+  if (pack === "material" && icon) {
+    return `${icon} icon`
+  }
+  // Strip the optional "emoji:" prefix so the name matches what EmojiIcon renders.
+  return (icon || iconValue).replace(/^emoji:/, "")
+}
+
+/**
  *
  * @returns returns an img tag with a yellow filled star icon svg as base64 data
  */
@@ -156,6 +173,7 @@ const DynamicIconDispatcher = ({
             <StyledDynamicIcon {...props}>
               <StyledImageIcon
                 src={getFilledStarIconSrc()}
+                alt=""
                 data-testid={props.testid || "stImageIcon"}
               />
             </StyledDynamicIcon>

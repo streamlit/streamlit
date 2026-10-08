@@ -14,6 +14,9 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
+
 import pytest
 
 import streamlit as st
@@ -193,8 +196,93 @@ def test_private_names_do_not_get_suggestions() -> None:
 
 def test_from_import_missing_name_is_import_error() -> None:
     """``from streamlit import missing`` follows Python's ImportError conversion."""
-    with pytest.raises(ImportError, match="experimental_rerun"):
+    with pytest.raises(ImportError, match="experimental_rerun") as exc_info:
         exec("from streamlit import experimental_rerun")
+    assert "has been removed" not in str(exc_info.value)
+    assert "Did you mean" not in str(exc_info.value)
+
+
+def test_attribute_probe_does_not_import_suggestion_helpers() -> None:
+    """Missing-name lookups must not import suggestion helpers.
+
+    Those imports mutate ``sys.modules`` and break callers that are iterating
+    it. Runs in a fresh interpreter because this file imports
+    ``streamlit.command_suggestions`` at collection time.
+    """
+    script = """
+import sys
+import streamlit as st
+
+before = set(sys.modules)
+# Later difflib diffs are meaningful only when this import did not load it.
+assert "difflib" not in before
+assert hasattr(st, "date") is False
+assert getattr(st, "date", None) is None
+assert hasattr(st, "_not_public") is False
+assert st.button
+added = set(sys.modules) - before
+assert "streamlit.command_suggestions" not in added, sorted(added)
+assert "difflib" not in added, sorted(added)
+
+# Regression for #17298: probing st while iterating sys.modules must not
+# raise RuntimeError. Only probe st so another module's lazy __getattr__
+# cannot fail this check.
+for module in sys.modules.values():
+    if module is st:
+        getattr(module, "date", None)
+
+try:
+    from streamlit import experimental_rerun
+except ImportError as exc:
+    message = str(exc)
+    assert "experimental_rerun" in message, message
+    assert "has been removed" not in message, message
+    assert "Did you mean" not in message, message
+else:
+    raise AssertionError("expected ImportError")
+
+assert "streamlit.command_suggestions" not in sys.modules
+assert "difflib" not in set(sys.modules) - before
+
+try:
+    st.experimental_rerun
+except AttributeError as exc:
+    assert "streamlit.command_suggestions" not in sys.modules
+    assert type(exc) is AttributeError
+    assert exc.name == "experimental_rerun"
+    assert exc.obj is st
+    assert not isinstance(exc.args[0], str)
+    shown = str(exc)
+else:
+    raise AssertionError("expected AttributeError")
+
+assert shown == (
+    "module 'streamlit' has no attribute 'experimental_rerun'. "
+    "st.experimental_rerun has been removed. Use st.rerun instead."
+)
+assert "streamlit.command_suggestions" in sys.modules
+assert "difflib" not in set(sys.modules) - before
+
+try:
+    st.text_inpt
+except AttributeError as exc:
+    typo = str(exc)
+else:
+    raise AssertionError("expected AttributeError")
+
+assert typo == (
+    "module 'streamlit' has no attribute 'text_inpt'. "
+    "Did you mean st.text_input?"
+)
+assert "difflib" in sys.modules
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_suggest_streamlit_commands_is_conservative() -> None:

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { TransientNode } from "./TransientNode"
-import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+import type { TransientNode } from "./TransientNode"
+import type { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 
 /**
  * The Generic ID of the script run this node was generated in.

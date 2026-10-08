@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { useCallback } from "react"
+
 import {
   autoUpdate,
   flip,
@@ -22,6 +24,7 @@ import {
   offset,
   type OpenChangeReason,
   type Placement,
+  type ReferenceType,
   shift,
   type ShiftOptions,
   size,
@@ -51,14 +54,25 @@ interface UseFloatingOverlayOptions {
 export const SHIFT_VIEWPORT_PADDING = 8
 const EMPTY_MIDDLEWARE: Middleware[] = []
 
+type UseFloatingReturn = ReturnType<typeof useFloating>
+
+type UseFloatingOverlayReturn = UseFloatingReturn & {
+  setFloating: (node: HTMLElement | null) => void
+  setReference: (node: ReferenceType | null) => void
+}
+
 /**
  * Shared Floating UI positioning hook for overlay components (Popover,
  * Selectbox, MenuButton). Provides scroll-tracking via autoUpdate and
  * viewport-aware repositioning via flip/shift middleware.
+ *
+ * Pass `setFloating` and `setReference` as callback refs. Floating UI types
+ * `refs.setFloating` and `refs.setReference` as methods, so passing them
+ * unbound fails `@typescript-eslint/unbound-method`.
  */
 export function useFloatingOverlay(
   options: UseFloatingOverlayOptions
-): ReturnType<typeof useFloating> {
+): UseFloatingOverlayReturn {
   const {
     open,
     onOpenChange,
@@ -91,7 +105,7 @@ export function useFloatingOverlay(
     ...extraMiddleware,
   ]
 
-  return useFloating({
+  const floating = useFloating({
     open,
     onOpenChange,
     placement,
@@ -99,4 +113,23 @@ export function useFloatingOverlay(
     whileElementsMounted: autoUpdate,
     middleware: middleware.filter(Boolean),
   })
+
+  const setFloating = useCallback(
+    (node: HTMLElement | null) => {
+      floating.refs.setFloating(node)
+    },
+    [floating.refs]
+  )
+  const setReference = useCallback(
+    (node: ReferenceType | null) => {
+      floating.refs.setReference(node)
+    },
+    [floating.refs]
+  )
+
+  return {
+    ...floating,
+    setFloating,
+    setReference,
+  }
 }

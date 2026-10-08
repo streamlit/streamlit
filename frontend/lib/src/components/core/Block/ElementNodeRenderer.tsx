@@ -14,63 +14,63 @@
  * limitations under the License.
  */
 
-import { lazy, ReactElement, useContext } from "react"
+import { lazy, type ReactElement, useContext } from "react"
 
 import {
-  Alert as AlertProto,
-  AudioInput as AudioInputProto,
-  Audio as AudioProto,
-  BidiComponent as BidiComponentProto,
-  ButtonGroup as ButtonGroupProto,
-  Button as ButtonProto,
-  CameraInput as CameraInputProto,
-  ChatInput as ChatInputProto,
-  Checkbox as CheckboxProto,
-  Code as CodeProto,
-  ColorPicker as ColorPickerProto,
-  ComponentInstance as ComponentInstanceProto,
-  Dataframe as DataframeProto,
-  DateInput as DateInputProto,
-  DateTimeInput as DateTimeInputProto,
-  DeckGlJsonChart as DeckGlJsonChartProto,
-  DownloadButton as DownloadButtonProto,
-  EChartsChart as EChartsChartProto,
-  Exception as ExceptionProto,
-  Feedback as FeedbackProto,
-  FileUploader as FileUploaderProto,
-  GraphVizChart as GraphVizChartProto,
-  Heading as HeadingProto,
-  Help as HelpProto,
-  Html as HtmlProto,
-  IFrame as IFrameProto,
-  ImageList as ImageListProto,
-  Json as JsonProto,
-  LinkButton as LinkButtonProto,
-  Markdown as MarkdownProto,
-  MenuButton as MenuButtonProto,
-  Metric as MetricProto,
-  MultiSelect as MultiSelectProto,
-  NumberInput as NumberInputProto,
-  PageLink as PageLinkProto,
-  Pagination as PaginationProto,
-  PlotlyChart as PlotlyChartProto,
-  Progress as ProgressProto,
-  Radio as RadioProto,
-  Selectbox as SelectboxProto,
+  type Alert as AlertProto,
+  type AudioInput as AudioInputProto,
+  type Audio as AudioProto,
+  type BidiComponent as BidiComponentProto,
+  type ButtonGroup as ButtonGroupProto,
+  type Button as ButtonProto,
+  type CameraInput as CameraInputProto,
+  type ChatInput as ChatInputProto,
+  type Checkbox as CheckboxProto,
+  type Code as CodeProto,
+  type ColorPicker as ColorPickerProto,
+  type ComponentInstance as ComponentInstanceProto,
+  type Dataframe as DataframeProto,
+  type DateInput as DateInputProto,
+  type DateTimeInput as DateTimeInputProto,
+  type DeckGlJsonChart as DeckGlJsonChartProto,
+  type DownloadButton as DownloadButtonProto,
+  type EChartsChart as EChartsChartProto,
+  type Exception as ExceptionProto,
+  type Feedback as FeedbackProto,
+  type FileUploader as FileUploaderProto,
+  type GraphVizChart as GraphVizChartProto,
+  type Heading as HeadingProto,
+  type Help as HelpProto,
+  type Html as HtmlProto,
+  type IFrame as IFrameProto,
+  type ImageList as ImageListProto,
+  type Json as JsonProto,
+  type LinkButton as LinkButtonProto,
+  type Markdown as MarkdownProto,
+  type MenuButton as MenuButtonProto,
+  type Metric as MetricProto,
+  type MultiSelect as MultiSelectProto,
+  type NumberInput as NumberInputProto,
+  type PageLink as PageLinkProto,
+  type Pagination as PaginationProto,
+  type PlotlyChart as PlotlyChartProto,
+  type Progress as ProgressProto,
+  type Radio as RadioProto,
+  type Selectbox as SelectboxProto,
   Skeleton as SkeletonProto,
-  Slider as SliderProto,
-  Spinner as SpinnerProto,
-  Table as TableProto,
-  TextArea as TextAreaProto,
-  TextInput as TextInputProto,
-  Text as TextProto,
-  TimeInput as TimeInputProto,
-  Toast as ToastProto,
-  VegaLiteChart as VegaLiteChartProto,
-  Video as VideoProto,
+  type Slider as SliderProto,
+  type Spinner as SpinnerProto,
+  type Table as TableProto,
+  type TextArea as TextAreaProto,
+  type TextInput as TextInputProto,
+  type Text as TextProto,
+  type TimeInput as TimeInputProto,
+  type Toast as ToastProto,
+  type VegaLiteChart as VegaLiteChartProto,
+  type Video as VideoProto,
 } from "@streamlit/protobuf"
 
-import { ElementNode } from "~lib/AppNode"
+import type { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import Maybe from "~lib/components/core/Maybe/Maybe"
@@ -84,6 +84,7 @@ import { AppSkeleton } from "~lib/components/elements/Skeleton/AppSkeleton"
 import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
 import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
+import { FormSubmitContent } from "~lib/components/widgets/Form/FormSubmitContent"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 import { ElementContainer } from "./ElementContainer"
@@ -93,7 +94,7 @@ import {
 } from "./ElementContainerConfig"
 import { StyledSpace } from "./styled-components"
 import {
-  BaseBlockProps,
+  type BaseBlockProps,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
@@ -184,11 +185,6 @@ const Feedback = lazy(
 )
 const FileUploader = lazy(
   () => import("~lib/components/widgets/FileUploader/FileUploader")
-)
-const FormSubmitContent = lazy(() =>
-  import("~lib/components/widgets/Form/FormSubmitContent").then(module => ({
-    default: module.FormSubmitContent,
-  }))
 )
 const Multiselect = lazy(
   () => import("~lib/components/widgets/Multiselect/Multiselect")
@@ -803,6 +799,8 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           {buttonProto.isFormSubmitter ? (
+            // Eager so enter-to-submit follows the first-registered submit button.
+            // Lazy + Suspense can mount an enabled secondary button first.
             <FormSubmitContent element={buttonProto} {...widgetProps} />
           ) : (
             <Button element={buttonProto} {...widgetProps} />

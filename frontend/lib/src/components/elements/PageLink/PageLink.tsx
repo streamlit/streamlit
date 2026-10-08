@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useContext } from "react"
+import { memo, type ReactElement, useContext } from "react"
 
-import { PageLink as PageLinkProto } from "@streamlit/protobuf"
+import type { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
 import { NavigationContext } from "~lib/components/core/NavigationContext"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import {
+  DynamicIcon,
+  getIconAccessibleName,
+} from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -93,6 +96,11 @@ function PageLink(props: Readonly<Props>): ReactElement {
 
   const iconPosition = mapProtoIconPosition(element.iconPosition)
   const href = buildHref(element)
+  // Material/emoji icons are aria-hidden; name icon-only links explicitly.
+  const iconOnlyAccessibleName =
+    element.icon && !element.label?.trim()
+      ? getIconAccessibleName(element.icon)
+      : undefined
 
   return (
     <div className="stPageLink" data-testid="stPageLink">
@@ -110,6 +118,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
             target={element.external ? "_blank" : ""}
             rel="noreferrer"
             onClick={handleClick}
+            aria-label={iconOnlyAccessibleName}
           >
             {element.icon && iconPosition === "left" && (
               <DynamicIcon

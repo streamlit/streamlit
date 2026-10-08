@@ -74,6 +74,7 @@ export {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "./components/shared/Base/styled-components"
+export { getToggleTrackColor } from "./components/shared/Checkbox/toggleTrackStyles"
 export {
   default as BaseButton,
   BaseButtonKind,
@@ -93,6 +94,7 @@ export {
   ModalFooter,
   ModalHeader,
 } from "./components/shared/Modal/Modal"
+export { getBareEmbedOverlayToolbarPadding } from "./components/shared/Toolbar/overlayToolbarSpacing"
 export { CircularBuffer } from "./components/shared/Profiler/CircularBuffer"
 export { Profiler } from "./components/shared/Profiler/Profiler"
 export { default as CopyButton } from "./components/shared/CopyButton/CopyButton"

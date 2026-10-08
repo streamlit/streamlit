@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import styled, { CSSObject } from "@emotion/styled"
+import styled, { type CSSObject } from "@emotion/styled"
 import {
   RadioButton as RARadioButton,
   RadioField as RARadioField,

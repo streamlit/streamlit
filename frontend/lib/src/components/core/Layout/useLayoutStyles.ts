@@ -16,13 +16,21 @@
 
 import { useContext, useMemo } from "react"
 
-import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
+import type {
+  Block as BlockProto,
+  Element,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { convertRemToPx } from "~lib/theme/utils"
 import { assertNever } from "~lib/util/assertNever"
 
-import { FlexContext, IFlexContext } from "./FlexContext"
-import { Direction, getTextAlignmentStyle, MinFlexElementWidth } from "./utils"
+import { FlexContext, type IFlexContext } from "./FlexContext"
+import {
+  Direction,
+  getTextAlignmentStyle,
+  type MinFlexElementWidth,
+} from "./utils"
 
 type SubElement = {
   useContainerWidth?: boolean | null

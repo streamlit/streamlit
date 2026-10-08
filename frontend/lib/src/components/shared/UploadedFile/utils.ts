@@ -16,7 +16,7 @@
 
 import { useEffect, useMemo } from "react"
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import {
   Article,
   Code,
