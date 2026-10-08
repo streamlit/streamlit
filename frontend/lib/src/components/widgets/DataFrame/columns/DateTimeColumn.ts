@@ -118,8 +118,10 @@ function BaseDateTimeColumn(
     // TODO(lukasmasuch): But this might not be correct for dates in the past or future
     // since the timezone offset might have changed based on a timezone name.
     try {
-      defaultTimezoneOffset =
-        applyTimezone(moment(), parameters.timezone)?.utcOffset() ?? undefined
+      defaultTimezoneOffset = applyTimezone(
+        moment(),
+        parameters.timezone
+      ).utcOffset()
     } catch {
       // Do nothing
     }

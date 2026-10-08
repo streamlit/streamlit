@@ -109,8 +109,7 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
         bytes,
         data,
         json,
-        // Blank JSON is "no mixed payload", not an empty document.
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string means unset
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank JSON means no mixed payload, not an empty document
         mixedJson: mixed?.json || undefined,
       })
     }, [data, json, arrowData?.data, bytes, mixed?.json, mixed?.arrowBlobs])
