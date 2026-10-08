@@ -35,12 +35,15 @@ import time
 from dataclasses import dataclass
 from multiprocessing import Pool
 from typing import TYPE_CHECKING, Final
+from unittest.mock import MagicMock
 
 import pytest
 
 from e2e_playwright.conftest import is_port_available
+from e2e_playwright.load_testing import conftest as load_conftest
 from e2e_playwright.load_testing.conftest import (
     ResultsCollector,
+    _format_server_startup_failure,
     get_scenario_path,
     start_healthy_load_test_server,
     terminate_process,
@@ -54,6 +57,7 @@ from e2e_playwright.load_testing.worker import run_worker_session
 if TYPE_CHECKING:
     import subprocess
     from collections.abc import Generator
+    from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -96,6 +100,71 @@ def test_port_availability_check_rejects_active_client_port() -> None:
             with connection:
                 client_port = client.getsockname()[1]
                 assert not is_port_available(client_port, "localhost")
+
+
+def test_startup_failure_message_includes_returncode_and_log_tail(
+    tmp_path: Path,
+) -> None:
+    """Startup failure text includes port, returncode, and a truncated log tail."""
+    log_path = tmp_path / "server.log"
+    log_path.write_text(
+        "keep-me-out\n" + "\n".join(f"log-line-{i}" for i in range(100)) + "\n",
+        encoding="utf-8",
+    )
+
+    message = _format_server_startup_failure(12345, 1, log_path)
+
+    assert "port 12345" in message
+    assert "returncode=1" in message
+    assert "log-line-99" in message
+    assert "log-line-20" in message
+    assert "keep-me-out" not in message
+    assert "log-line-19" not in message
+
+
+def test_startup_failure_message_when_process_still_running(tmp_path: Path) -> None:
+    """A hung server is reported as still running rather than a returncode."""
+    log_path = tmp_path / "server.log"
+    log_path.write_text("still starting\n", encoding="utf-8")
+
+    message = _format_server_startup_failure(9999, None, log_path)
+
+    assert "port 9999" in message
+    assert "process was still running" in message
+    assert "still starting" in message
+    assert "returncode=" not in message
+
+
+def test_unhealthy_server_failure_includes_logs_and_returncode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed health check surfaces captured logs and the process returncode."""
+    log_path = tmp_path / "server.log"
+    log_path.write_text(
+        "Address already in use\nPort 30000 is already in use\n",
+        encoding="utf-8",
+    )
+    fake_process = MagicMock()
+    fake_process.poll.return_value = 1
+
+    monkeypatch.setattr(load_conftest, "find_available_port", lambda: 30000)
+    monkeypatch.setattr(
+        load_conftest,
+        "start_load_test_server",
+        lambda *args, **kwargs: (fake_process, log_path),
+    )
+    monkeypatch.setattr(load_conftest, "wait_for_server", lambda *args, **kwargs: False)
+    monkeypatch.setattr(
+        load_conftest, "terminate_process", lambda *args, **kwargs: None
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        start_healthy_load_test_server(tmp_path / "app.py", max_attempts=1)
+
+    message = str(exc_info.value)
+    assert "30000" in message
+    assert "returncode=1" in message
+    assert "Address already in use" in message
 
 
 def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:

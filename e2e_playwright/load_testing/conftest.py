@@ -20,6 +20,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -38,6 +39,7 @@ from e2e_playwright.shared.git_utils import get_git_root
 
 _SCENARIOS_DIR: Final = Path(__file__).parent / "scenarios"
 _LOAD_TEST_SERVER_START_ATTEMPTS: Final = 3
+_SERVER_LOG_TAIL_LINES: Final = 80
 
 
 @dataclass
@@ -186,13 +188,19 @@ def start_load_test_server(
     scenario_path: Path,
     *,
     extra_env: dict[str, str] | None = None,
-) -> subprocess.Popen[str]:
+) -> tuple[subprocess.Popen[str], Path]:
     """Start a Streamlit server for load testing.
 
-    Stderr is redirected to DEVNULL to avoid pipe buffer exhaustion that could
-    deadlock the server process. If startup fails, the server won't produce
-    useful stderr output anyway since it would have crashed before emitting
-    diagnostics. Stdout is also discarded (DEVNULL).
+    Captures stdout and stderr to a file instead of a pipe so a large volume
+    of logs cannot deadlock the server. The log path is returned so a failed
+    health check can include a tail of the output.
+
+    Returns
+    -------
+    process
+        The started Streamlit process.
+    log_path
+        File capturing combined stdout and stderr.
     """
     env = os.environ.copy()
     if extra_env:
@@ -212,12 +220,52 @@ def start_load_test_server(
         "--server.fileWatcherType=none",
     ]
 
-    return subprocess.Popen(
-        args,
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        text=True,
+    fd, log_name = tempfile.mkstemp(
+        prefix=f"load-test-server-{port}-",
+        suffix=".log",
+    )
+    os.close(fd)
+    log_path = Path(log_name)
+    with open(log_path, "w", encoding="utf-8") as log_file:
+        process = subprocess.Popen(
+            args,
+            env=env,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+    return process, log_path
+
+
+def _read_log_tail(log_path: Path, *, max_lines: int = _SERVER_LOG_TAIL_LINES) -> str:
+    """Return the last ``max_lines`` of a server log file."""
+    try:
+        text = log_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return f"(failed to read server log {log_path}: {exc})"
+    if not text.strip():
+        return "(no output captured)"
+    lines = text.splitlines()
+    return "\n".join(lines[-max_lines:])
+
+
+def _format_server_startup_failure(
+    port: int,
+    returncode: int | None,
+    log_path: Path,
+) -> str:
+    """Build a pytest-visible diagnosis for a server that never became healthy."""
+    status = (
+        f"returncode={returncode}"
+        if returncode is not None
+        else "process was still running"
+    )
+    log_tail = _read_log_tail(log_path)
+    return (
+        f"Server failed to start on port {port} ({status})\n"
+        f"--- last {_SERVER_LOG_TAIL_LINES} lines of server stdout/stderr "
+        f"({log_path}) ---\n"
+        f"{log_tail}"
     )
 
 
@@ -264,16 +312,21 @@ def start_healthy_load_test_server(
         If every attempt fails its health check.
     """
     tried_ports: list[int] = []
+    last_failure: str | None = None
     for _ in range(max_attempts):
         port = find_available_port()
         tried_ports.append(port)
-        process = start_load_test_server(port, scenario_path)
+        process, log_path = start_load_test_server(port, scenario_path)
         if wait_for_server(port, process=process):
             return process, port
+        returncode = process.poll()
         terminate_process(process)
+        last_failure = _format_server_startup_failure(port, returncode, log_path)
 
+    detail = f"\n{last_failure}" if last_failure is not None else ""
     raise RuntimeError(
-        f"Server failed to start after {max_attempts} attempts (ports: {tried_ports})"
+        f"Server failed to start after {max_attempts} attempts "
+        f"(ports: {tried_ports}){detail}"
     )
 
 
