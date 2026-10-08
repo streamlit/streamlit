@@ -347,11 +347,12 @@ export default defineConfig([
         "warn",
         { allowExpressions: true },
       ],
-      // Disallow the @ts-ignore directive in favor of the more strict @ts-expect-error.
+      // Ban @ts-ignore: it stays silent after the error is fixed. @ts-expect-error
+      // fails once unused, and must describe the type mismatch it hides.
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {
-          "ts-expect-error": false,
+          "ts-expect-error": "allow-with-description",
           "ts-nocheck": false,
           "ts-check": false,
           "ts-ignore": true,
@@ -526,9 +527,8 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-misused-spread": "error",
       "@typescript-eslint/unbound-method": "error",
-      // Production suppressions must say why they are needed. Tests still use
-      // bare @ts-expect-error heavily; requiring descriptions there is a
-      // separate cleanup. Options replace the base rule, so keep ts-ignore banned.
+      // Suppressions must name the type mismatch. Options replace the base
+      // rule, so keep ts-ignore banned and ts-expect-error described.
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {

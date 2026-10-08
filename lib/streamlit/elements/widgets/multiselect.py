@@ -189,7 +189,7 @@ class MultiSelectSerde(Generic[T]):
                 option_index = self.formatted_options.index(v)
                 values.append(self.options[option_index])
                 matched_labels.append(True)
-            except ValueError:  # noqa: PERF203
+            except ValueError:
                 prior_index = self.prior_label_to_index.get(v)
                 if prior_index is not None and 0 <= prior_index < len(self.options):
                     values.append(self.options[prior_index])

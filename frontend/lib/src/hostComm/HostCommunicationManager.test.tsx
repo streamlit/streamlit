@@ -164,7 +164,7 @@ describe("HostCommunicationManager messaging", () => {
       allowedOrigins: ["https://devel.streamlit.test"],
       useExternalAuthToken: false,
     })
-    // @ts-expect-error
+    // @ts-expect-error - allowedOrigins is private
     expect(hostCommunicationMgr.allowedOrigins).toEqual([
       "https://devel.streamlit.test",
     ])

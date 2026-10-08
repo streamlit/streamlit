@@ -79,6 +79,7 @@ from streamlit.testing.v1.element_tree import (
     Node,
     NumberInput,
     PageLink,
+    Pagination,
     Progress,
     Radio,
     Selectbox,
@@ -1299,6 +1300,21 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.page_link
+
+    @property
+    def pagination(self) -> WidgetList[Pagination]:
+        """Sequence of all ``st.pagination`` widgets.
+
+        Returns
+        -------
+        WidgetList of Pagination
+            Sequence of all ``st.pagination`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.pagination[0]`` for the first widget or
+            ``at.pagination(key="my_key")`` for a widget with a given key.
+            ``set_value`` and ``select`` choose a page (1-indexed).
+        """
+        return self._tree.pagination
 
     @property
     def progress(self) -> ElementList[Progress]:

@@ -78,7 +78,7 @@ describe("Streamlit", () => {
       },
       "*",
     ])
-    // @ts-expect-error
+    // @ts-expect-error - scrollHeight is readonly
     delete document.body.scrollHeight
   })
 

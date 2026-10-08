@@ -23,9 +23,7 @@ function so every check stays reachable. Import the commands from
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NoReturn
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, NoReturn, assert_type
 
 if TYPE_CHECKING:
     from pathlib import Path

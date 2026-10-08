@@ -44,7 +44,7 @@ const getProps = (
     ...elementProps,
   }),
   disabled: false,
-  // @ts-expect-error
+  // @ts-expect-error - constructor expects a props object, not a callback
   widgetMgr: new WidgetStateManager(sendBackMsg),
   ...widgetProps,
 })

@@ -1147,7 +1147,7 @@ class DataframeUtilTest(unittest.TestCase):
             OPT1 = 1
             OPT2 = 2
 
-        class StrOpt(str, enum.Enum):
+        class StrOpt(str, enum.Enum):  # noqa: UP042
             OPT1 = "a"
             OPT2 = "b"
 

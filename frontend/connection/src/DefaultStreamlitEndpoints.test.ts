@@ -594,7 +594,7 @@ describe("DefaultStreamlitEndpoints", () => {
       })
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
-      // @ts-expect-error
+      // @ts-expect-error - csrfRequest is private
       await endpoints.csrfRequest(url, {})
 
       expect(mockRequest).toHaveBeenCalledWith({
@@ -612,7 +612,7 @@ describe("DefaultStreamlitEndpoints", () => {
       })
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
-      // @ts-expect-error
+      // @ts-expect-error - csrfRequest is private
       await endpoints.csrfRequest(url, {})
 
       expect(mockRequest).toHaveBeenCalledWith({
@@ -628,7 +628,7 @@ describe("DefaultStreamlitEndpoints", () => {
       })
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
-      // @ts-expect-error
+      // @ts-expect-error - csrfRequest is private
       await endpoints.csrfRequest(url, {
         headers: new AxiosHeaders({
           Authorization: "Bearer token",
@@ -653,7 +653,7 @@ describe("DefaultStreamlitEndpoints", () => {
       })
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
-      // @ts-expect-error
+      // @ts-expect-error - csrfRequest is private
       await endpoints.csrfRequest(url, {
         headers: {
           Authorization: "Bearer token",
@@ -682,7 +682,7 @@ describe("DefaultStreamlitEndpoints", () => {
       })
 
       const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
-      // @ts-expect-error
+      // @ts-expect-error - csrfRequest is private
       await endpoints.csrfRequest(url, {
         headers: new AxiosHeaders({ "Content-Type": false }),
       })

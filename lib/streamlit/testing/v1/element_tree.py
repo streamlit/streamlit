@@ -31,13 +31,12 @@ from typing import (
     Final,
     Generic,
     NoReturn,
+    Self,
     TypeAlias,
     TypeVar,
     cast,
     overload,
 )
-
-from typing_extensions import Self
 
 from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
@@ -91,6 +90,7 @@ if TYPE_CHECKING:
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
     from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
+    from streamlit.proto.Pagination_pb2 import Pagination as PaginationProto
     from streamlit.proto.Progress_pb2 import Progress as ProgressProto
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
@@ -1942,6 +1942,83 @@ class NumberInput(Widget):
 
 
 @dataclass(repr=False)
+class Pagination(Widget):
+    """A representation of ``st.pagination``.
+
+    ``.value`` is the current page (1-indexed). ``set_value`` and ``select``
+    choose a page and raise ``AppTestError`` if:
+
+    - the widget is disabled
+    - the page is not an int from 1 through ``num_pages`` (``bool`` is invalid)
+    """
+
+    _value: int | InitialValue
+
+    proto: PaginationProto = field(repr=False)
+    form_id: str
+    num_pages: int
+    default: int
+
+    def __init__(self, proto: PaginationProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = InitialValue()
+        self.type = "pagination"
+        self.num_pages = proto.num_pages
+        self.default = proto.default
+
+    def set_value(self, v: int) -> Pagination:
+        """Set the current page (1-indexed)."""
+        self._assert_can_interact()
+        num_pages = self.num_pages
+        # bool is a subclass of int, but True/False are not page numbers.
+        if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= num_pages:
+            key_part = f" (key={self.key!r})" if self.key else ""
+            raise AppTestError(
+                f"Cannot set pagination{key_part} to {v!r}. "
+                f"Page must be an int between 1 and {num_pages}."
+            )
+        return super().set_value(v)
+
+    def select(self, page: int) -> Pagination:
+        """Select ``page`` as if the user clicked that page button."""
+        return self.set_value(page)
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        # Send only a real int so a bad session-state value cannot break the run
+        # before st.pagination restores its default:
+        # - Leave a missing key, bool, or other non-int unset. deserialize(None)
+        #   returns the declared default. Writing a bool into int_value would turn
+        #   it into 0 or 1.
+        # - Leave ints outside protobuf sint64 unset. Assigning them raises
+        #   ValueError.
+        # - Still send other out-of-range ints. PaginationSerde maps them to that
+        #   same default.
+        try:
+            value = self.value
+        except KeyError:
+            value = None
+        if isinstance(value, int) and not isinstance(value, bool):
+            try:
+                ws.int_value = value
+            except ValueError:
+                # Outside protobuf sint64; leave the oneof unset.
+                pass
+        return ws
+
+    @property
+    def value(self) -> int:
+        """The current page, starting at 1."""
+        if not isinstance(self._value, InitialValue):
+            return self._value
+        state = self.root.session_state
+        assert state
+        return cast("int", state[self.id])
+
+
+@dataclass(repr=False)
 class Radio(Widget, Generic[T]):
     """A representation of ``st.radio``."""
 
@@ -2786,6 +2863,10 @@ class Block:
         return ElementList(self.get("page_link"))  # type: ignore
 
     @property
+    def pagination(self) -> WidgetList[Pagination]:
+        return WidgetList(self.get("pagination"))  # type: ignore
+
+    @property
     def progress(self) -> ElementList[Progress]:
         return ElementList(self.get("progress"))  # type: ignore
 
@@ -3146,6 +3227,7 @@ def _unset_value_marker(node: Widget) -> tuple[str, Any]:
             DateTimeInput,
             Feedback,
             NumberInput,
+            Pagination,
             Radio,
             Selectbox,
             TextArea,
@@ -3447,6 +3529,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = NumberInput(elt.number_input, root=root)
             elif ty == "page_link":
                 new_node = PageLink(elt.page_link, root=root)
+            elif ty == "pagination":
+                new_node = Pagination(elt.pagination, root=root)
             elif ty == "progress":
                 new_node = Progress(elt.progress, root=root)
             elif ty == "radio":
