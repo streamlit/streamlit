@@ -275,3 +275,33 @@ elif test_mode == "error_container":
 
     fragment_with_error()
     fragment_success()
+
+
+# Test 11: Live fragments finish after rerunning during a shared cold cache miss
+elif test_mode == "cache_wait_rerun":
+    st.button("Rerun while cache is cold")
+
+    @st.cache_data(show_spinner=False)
+    def get_shared_value() -> str:
+        st.write("Cold cache compute started")
+        time.sleep(3)
+        return "shared cached value"
+
+    @st.fragment(parallel=True)
+    def cache_fragment_a() -> None:
+        st.write("Cache fragment A started")
+        st.write(f"Cache fragment A: {get_shared_value()}")
+
+    @st.fragment(parallel=True)
+    def cache_fragment_b() -> None:
+        st.write("Cache fragment B started")
+        st.write(f"Cache fragment B: {get_shared_value()}")
+
+    @st.fragment(parallel=True)
+    def cache_fragment_c() -> None:
+        st.write("Cache fragment C started")
+        st.write(f"Cache fragment C: {get_shared_value()}")
+
+    cache_fragment_a()
+    cache_fragment_b()
+    cache_fragment_c()

@@ -17,6 +17,7 @@ from __future__ import annotations
 import threading
 import unittest
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 
@@ -34,6 +35,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
     add_script_run_ctx,
     enqueue_message,
+    get_run_yield_check,
 )
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.runtime.state import SafeSessionState, SessionState
@@ -401,6 +403,41 @@ class ScriptRunContextTest(unittest.TestCase):
         assert ctx.parallel_coordinator is not None
         ctx.parallel_coordinator._yield_check()
         assert calls == [1]
+
+    def test_get_run_yield_check_returns_latest_reset_callback(self):
+        """The helper returns the yield check from the most recent reset."""
+        ctx = _create_script_run_context(lambda _msg: None)
+
+        def first_callback() -> None:
+            pass
+
+        def second_callback() -> None:
+            pass
+
+        add_script_run_ctx(ctx=ctx)
+
+        ctx.reset(yield_check=first_callback)
+        assert get_run_yield_check() is first_callback
+
+        ctx.reset(yield_check=second_callback)
+        assert get_run_yield_check() is second_callback
+
+    def test_get_run_yield_check_returns_none_off_thread_without_warning(self):
+        """The helper quietly returns None on a thread without a run context."""
+        result: list[Callable[[], None] | None] = []
+
+        with patch(
+            "streamlit.runtime.scriptrunner_utils.script_run_context._LOGGER.warning"
+        ) as warning:
+            thread = threading.Thread(
+                target=lambda: result.append(get_run_yield_check())
+            )
+            thread.start()
+            thread.join(timeout=1)
+
+        assert not thread.is_alive()
+        assert result == [None]
+        warning.assert_not_called()
 
     def test_add_script_run_ctx_propagates_thread_state_to_child(self):
         """Child threads observe the parent's ``FragmentThreadState``

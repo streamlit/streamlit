@@ -37,6 +37,7 @@ from streamlit.runtime.caching import (
     cache_data_api,
     cache_resource,
     cache_resource_api,
+    cache_utils,
     clear_session_data_cache,
     clear_session_resource_cache,
 )
@@ -59,6 +60,7 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.scriptrunner_utils import script_run_context
+from streamlit.runtime.scriptrunner_utils.exceptions import StopException
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -1253,6 +1255,238 @@ class CommonCacheThreadingTest(unittest.TestCase):
             assert foo() == 42
 
         call_on_threads(call_foo, num_threads=self.NUM_THREADS, timeout=0.5)
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_contended_wait_can_be_interrupted(self, _, cache_decorator):
+        """An abandoned waiter exits without interrupting the cache owner."""
+        compute_started = threading.Event()
+        release_compute = threading.Event()
+        yield_checked = threading.Event()
+        call_count = 0
+        owner_results: list[int] = []
+        waiter_exceptions: list[BaseException] = []
+
+        @cache_decorator(show_spinner=False)
+        def get_value() -> int:
+            nonlocal call_count
+            call_count += 1
+            compute_started.set()
+            assert release_compute.wait(timeout=5)
+            return 42
+
+        owner = threading.Thread(target=lambda: owner_results.append(get_value()))
+        add_script_run_ctx(owner, create_mock_script_run_ctx())
+        owner.start()
+        assert compute_started.wait(timeout=1)
+
+        def cancel_wait() -> None:
+            yield_checked.set()
+            raise StopException()
+
+        waiter_ctx = create_mock_script_run_ctx()
+        waiter_ctx.reset(yield_check=cancel_wait)
+
+        def wait_for_value() -> None:
+            try:
+                get_value()
+            except BaseException as ex:
+                waiter_exceptions.append(ex)
+
+        waiter = threading.Thread(target=wait_for_value)
+        add_script_run_ctx(waiter, waiter_ctx)
+        try:
+            with patch.object(cache_utils, "_COMPUTE_LOCK_POLL_SECONDS", 0.01):
+                waiter.start()
+                assert yield_checked.wait(timeout=1)
+                waiter.join(timeout=0.5)
+                assert not waiter.is_alive()
+        finally:
+            release_compute.set()
+            owner.join(timeout=1)
+            waiter.join(timeout=1)
+
+        assert not owner.is_alive()
+        assert owner_results == [42]
+        assert len(waiter_exceptions) == 1
+        assert isinstance(waiter_exceptions[0], StopException)
+        assert get_value() == 42
+        assert call_count == 1
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_contended_live_waiter_returns_owner_value(self, _, cache_decorator):
+        """A live waiter returns the value computed by the cache owner."""
+        compute_started = threading.Event()
+        release_compute = threading.Event()
+        yield_checked = threading.Event()
+        waiter_results: list[int] = []
+
+        @cache_decorator(show_spinner=False)
+        def get_value() -> int:
+            compute_started.set()
+            assert release_compute.wait(timeout=5)
+            return 42
+
+        owner = threading.Thread(target=get_value)
+        add_script_run_ctx(owner, create_mock_script_run_ctx())
+        owner.start()
+        assert compute_started.wait(timeout=1)
+
+        waiter_ctx = create_mock_script_run_ctx()
+        waiter_ctx.reset(yield_check=yield_checked.set)
+        waiter = threading.Thread(target=lambda: waiter_results.append(get_value()))
+        add_script_run_ctx(waiter, waiter_ctx)
+        try:
+            with patch.object(cache_utils, "_COMPUTE_LOCK_POLL_SECONDS", 0.01):
+                waiter.start()
+                assert yield_checked.wait(timeout=1)
+                assert waiter.is_alive()
+                release_compute.set()
+                waiter.join(timeout=1)
+        finally:
+            release_compute.set()
+            owner.join(timeout=1)
+            waiter.join(timeout=1)
+
+        assert not owner.is_alive()
+        assert not waiter.is_alive()
+        assert waiter_results == [42]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_nested_cache_wait_is_not_interrupted(self, _, cache_decorator):
+        """A nested cached call remains protected from run interruption."""
+        inner_compute_started = threading.Event()
+        outer_compute_started = threading.Event()
+        release_inner_compute = threading.Event()
+        yield_checked = threading.Event()
+        outer_results: list[int] = []
+        outer_exceptions: list[BaseException] = []
+
+        @cache_decorator(show_spinner=False)
+        def inner() -> int:
+            inner_compute_started.set()
+            assert release_inner_compute.wait(timeout=5)
+            return 42
+
+        @cache_decorator(show_spinner=False)
+        def outer() -> int:
+            outer_compute_started.set()
+            return inner()
+
+        inner_owner = threading.Thread(target=inner)
+        add_script_run_ctx(inner_owner, create_mock_script_run_ctx())
+        inner_owner.start()
+        assert inner_compute_started.wait(timeout=1)
+
+        def interrupt_if_called() -> None:
+            yield_checked.set()
+            raise StopException()
+
+        outer_ctx = create_mock_script_run_ctx()
+        outer_ctx.reset(yield_check=interrupt_if_called)
+
+        def call_outer() -> None:
+            try:
+                outer_results.append(outer())
+            except BaseException as ex:
+                outer_exceptions.append(ex)
+
+        outer_waiter = threading.Thread(target=call_outer)
+        add_script_run_ctx(outer_waiter, outer_ctx)
+        try:
+            with patch.object(cache_utils, "_COMPUTE_LOCK_POLL_SECONDS", 0.01):
+                outer_waiter.start()
+                assert outer_compute_started.wait(timeout=1)
+                time.sleep(0.05)
+                assert outer_waiter.is_alive()
+                assert not yield_checked.is_set()
+                release_inner_compute.set()
+                outer_waiter.join(timeout=1)
+        finally:
+            release_inner_compute.set()
+            inner_owner.join(timeout=1)
+            outer_waiter.join(timeout=1)
+
+        assert not inner_owner.is_alive()
+        assert not outer_waiter.is_alive()
+        assert outer_exceptions == []
+        assert outer_results == [42]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_uncontended_miss_does_not_resolve_yield_check(self, _, cache_decorator):
+        """An uncontended miss does not look up or call the run yield check."""
+        callback = MagicMock()
+        results: list[int] = []
+
+        @cache_decorator(show_spinner=False)
+        def get_value() -> int:
+            return 42
+
+        ctx = create_mock_script_run_ctx()
+        ctx.reset(yield_check=callback)
+        worker = threading.Thread(target=lambda: results.append(get_value()))
+        add_script_run_ctx(worker, ctx)
+
+        with patch.object(cache_utils, "get_run_yield_check") as get_yield_check:
+            worker.start()
+            worker.join(timeout=1)
+
+        assert not worker.is_alive()
+        assert results == [42]
+        get_yield_check.assert_not_called()
+        callback.assert_not_called()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_contended_wait_without_script_context_is_not_interrupted(
+        self, _, cache_decorator
+    ):
+        """A waiter without a script context keeps waiting for the owner."""
+        compute_started = threading.Event()
+        waiter_started = threading.Event()
+        release_compute = threading.Event()
+        waiter_results: list[int] = []
+
+        @cache_decorator(show_spinner=False)
+        def get_value() -> int:
+            compute_started.set()
+            assert release_compute.wait(timeout=5)
+            return 42
+
+        owner = threading.Thread(target=get_value)
+        add_script_run_ctx(owner, create_mock_script_run_ctx())
+        owner.start()
+        assert compute_started.wait(timeout=1)
+
+        def wait_for_value() -> None:
+            waiter_started.set()
+            waiter_results.append(get_value())
+
+        waiter = threading.Thread(target=wait_for_value)
+        try:
+            with patch.object(cache_utils, "_COMPUTE_LOCK_POLL_SECONDS", 0.01):
+                waiter.start()
+                assert waiter_started.wait(timeout=1)
+                time.sleep(0.05)
+                assert waiter.is_alive()
+                release_compute.set()
+                waiter.join(timeout=1)
+        finally:
+            release_compute.set()
+            owner.join(timeout=1)
+            waiter.join(timeout=1)
+
+        assert not owner.is_alive()
+        assert not waiter.is_alive()
+        assert waiter_results == [42]
 
     @parameterized.expand(
         [

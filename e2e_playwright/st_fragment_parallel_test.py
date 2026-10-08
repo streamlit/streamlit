@@ -234,6 +234,31 @@ def test_parallel_st_rerun_restarts_app(page: Page, app_base_url: str) -> None:
     expect(page.get_by_text("Run count: 3", exact=True)).to_be_visible()
 
 
+def test_cold_shared_cache_waiters_finish_after_full_rerun(
+    page: Page, app_base_url: str
+) -> None:
+    """Live fragments receive a cold cached value after abandoning an earlier run."""
+    page.goto(build_app_url(app_base_url, query="test=cache_wait_rerun"))
+
+    expect(page.get_by_text("Cold cache compute started", exact=True)).to_be_visible(
+        timeout=5000
+    )
+    for label in ("A", "B", "C"):
+        expect(
+            page.get_by_text(f"Cache fragment {label} started", exact=True)
+        ).to_be_visible()
+        expect(
+            page.get_by_text(f"Cache fragment {label}: shared cached value", exact=True)
+        ).to_have_count(0)
+
+    click_button(page, "Rerun while cache is cold")
+
+    for label in ("A", "B", "C"):
+        expect(
+            page.get_by_text(f"Cache fragment {label}: shared cached value", exact=True)
+        ).to_be_visible()
+
+
 def test_widget_interaction_after_parallel_load(page: Page, app_base_url: str) -> None:
     """Button click after initial parallel load triggers sequential fragment rerun.
 
