@@ -35,18 +35,9 @@ export const STREAMLIT_THEME = "streamlit"
  */
 export type EChartsOptionObject = Record<string, unknown>
 
-/**
- * Longest grouped tooltip number (excluding a leading minus) before switching
- * to compact notation. Compact text that is still longer switches to
- * scientific notation.
- */
-const MAX_TOOLTIP_TEXT_LENGTH = 18
-
 const TOOLTIP_FRACTION_DIGITS = 4
 
 const TOOLTIP_SIGNIFICANT_DIGITS = 6
-
-const TOOLTIP_COMPACT_SIGNIFICANT_DIGITS = 4
 
 // Reused across tooltip updates. The digit options are a fixed set, so a
 // hover should not construct a new formatter for every series value.
@@ -70,16 +61,6 @@ const paddedTooltipFormat = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: TOOLTIP_FRACTION_DIGITS,
   maximumFractionDigits: TOOLTIP_FRACTION_DIGITS,
   useGrouping: true,
-})
-
-const groupedIntegerTooltipFormat = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 0,
-  useGrouping: true,
-})
-
-const compactTooltipFormat = new Intl.NumberFormat("en-US", {
-  notation: "compact",
-  maximumSignificantDigits: TOOLTIP_COMPACT_SIGNIFICANT_DIGITS,
 })
 
 function formatTooltipItem(value: unknown): string {
@@ -117,41 +98,16 @@ function formatTooltipNumber(value: number): string {
     return "0"
   }
   const absolute = Math.abs(value)
-  // Values below 0.0001 use scientific notation instead of a four-decimal
-  // representation.
+  // Values below 0.0001 use scientific notation instead of rounding to zero.
   if (absolute !== 0 && absolute < 10 ** -TOOLTIP_FRACTION_DIGITS) {
     return scientificTooltipFormat.format(value)
   }
-
   // Four decimal places would clip a small fraction (0.000123456 → 0.0001).
-  const plainFormat =
+  const format =
     absolute >= 1
       ? selectOrdinaryTooltipFormat(value)
       : significantTooltipFormat
-  const plain = plainFormat.format(value)
-  if (unsignedTextLength(plain) <= MAX_TOOLTIP_TEXT_LENGTH) {
-    return plain
-  }
-
-  // Round to the nearest grouped integer when the padded text is too long
-  // and the integer form still fits (`12345678901.12345` → `12,345,678,901`).
-  if (absolute >= 1) {
-    const groupedInteger = groupedIntegerTooltipFormat.format(value)
-    if (unsignedTextLength(groupedInteger) <= MAX_TOOLTIP_TEXT_LENGTH) {
-      return groupedInteger
-    }
-  }
-
-  // Grouped compact text can still exceed the cap (`1e27` → `1,000,…T`).
-  const compact = compactTooltipFormat.format(value)
-  if (unsignedTextLength(compact) <= MAX_TOOLTIP_TEXT_LENGTH) {
-    return compact
-  }
-  return scientificTooltipFormat.format(value)
-}
-
-function unsignedTextLength(text: string): number {
-  return text.startsWith("-") ? text.length - 1 : text.length
+  return format.format(value)
 }
 
 /**
@@ -197,11 +153,6 @@ function buildAxisDefaults(
       color: labelColor,
       fontFamily: theme.genericFonts.bodyFont,
       fontSize,
-      // Keep the line box at the font size. A taller box lifts the glyphs off
-      // the tick and into the series. ``withAxisLabelLineHeight`` matches an
-      // author ``fontSize``, and clears this pin when the label uses ``rich``
-      // text so a larger segment is not laid out in this smaller box.
-      lineHeight: fontSize,
       // ECharts' default margin is a fixed 8px. Scale the gap with the base font.
       margin: convertRemToPx(theme.spacing.sm),
       // Paint a page-colored stroke around the glyphs so a series or gridline
@@ -1142,104 +1093,16 @@ function buildDefaultGrid(
   return grid
 }
 
-/** Axis option keys whose theme ``axisLabel.lineHeight`` is the theme font size. */
-const THEMED_AXIS_KEYS = [
-  "xAxis",
-  "yAxis",
-  "angleAxis",
-  "radiusAxis",
-  "parallelAxis",
-  "singleAxis",
-] as const
-
-/**
- * Adjust ``axisLabel.lineHeight`` after the theme pin.
- *
- * The theme pins ``lineHeight`` to the theme font size. ECharts keeps that
- * value when an author sets only ``fontSize``, so a larger multiline label
- * uses the smaller spacing and its lines overlap. Rich text inherits the
- * same pin: zrender prefers the parent line box over a segment's own size,
- * and an absent key still inherits the theme. An author ``lineHeight`` is
- * left alone.
- */
-function withAxisLabelLineHeight(
-  option: EChartsOptionObject
-): EChartsOptionObject {
-  let next: EChartsOptionObject | undefined
-  for (const key of THEMED_AXIS_KEYS) {
-    if (!(key in option)) {
-      continue
-    }
-    const updated = alignAxisLabelLineHeight(option[key])
-    if (updated === option[key]) {
-      continue
-    }
-    next = next ?? { ...option }
-    next[key] = updated
-  }
-  return next ?? option
-}
-
-function alignAxisLabelLineHeight(value: unknown): unknown {
-  if (isPlainObject(value)) {
-    return alignAxisRecord(value as Record<string, unknown>)
-  }
-  if (!Array.isArray(value)) {
-    return value
-  }
-  let changed = false
-  const axes = value.map((item: unknown) => {
-    if (!isPlainObject(item)) {
-      return item
-    }
-    const aligned = alignAxisRecord(item as Record<string, unknown>)
-    if (aligned !== item) {
-      changed = true
-    }
-    return aligned
-  })
-  return changed ? axes : value
-}
-
-function alignAxisRecord(
-  axis: Record<string, unknown>
-): Record<string, unknown> {
-  const axisLabel = axis.axisLabel
-  if (!isPlainObject(axisLabel)) {
-    return axis
-  }
-  const label = axisLabel as Record<string, unknown>
-  if (label.lineHeight !== undefined) {
-    return axis
-  }
-  // Null is an explicit override. zrender treats it as unset and sizes each
-  // rich segment from its own font, padding, or height.
-  if (isPlainObject(label.rich)) {
-    return {
-      ...axis,
-      axisLabel: { ...label, lineHeight: null },
-    }
-  }
-  if (typeof label.fontSize !== "number") {
-    return axis
-  }
-  return {
-    ...axis,
-    axisLabel: { ...label, lineHeight: label.fontSize },
-  }
-}
-
 /**
  * Non-destructively fill a small number of option-level gaps that the init
  * theme cannot cover (``aria.enabled``, title size/weight/padding, the
- * ``grid`` layout, stacking of bottom-anchored chart controls, and axis-label
- * line height when the author sets ``fontSize``).
+ * ``grid`` layout, and stacking of bottom-anchored chart controls).
  *
  * ``aria.enabled`` is filled regardless of the theme: ``theme=None`` opts out of
  * Streamlit's *visual* styling, and dropping the screen-reader description along
  * with it would make an accessibility regression a side effect of a styling
- * choice. Title size, ``grid``, control stacking, and axis-label line height
- * are purely visual, so they only run under ``theme="streamlit"``.
+ * choice. Title size, ``grid``, and control stacking are purely visual, so they
+ * only run under ``theme="streamlit"``.
  *
  * Only keys the user has not set are written, so explicit user values (e.g.
  * ``series[0].itemStyle.color`` or a top-level ``color``) always survive. For
@@ -1317,7 +1180,7 @@ function fillOptionDefaults(
     }
   }
 
-  return withAxisLabelLineHeight(laidOut)
+  return laidOut
 }
 
 /**

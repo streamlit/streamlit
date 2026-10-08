@@ -83,7 +83,6 @@ describe("buildStreamlitEChartsTheme", () => {
     >
     const axisLabel = categoryAxis.axisLabel
     expect(axisLabel.color).toBe(getGray70(theme))
-    expect(axisLabel.lineHeight).toBe(convertRemToPx(theme.fontSizes.twoSm))
     expect(axisLabel.margin).toBe(convertRemToPx(theme.spacing.sm))
     expect(axisLabel.textBorderColor).toBe(theme.colors.bgColor)
     expect(axisLabel.textBorderWidth).toBe(2)
@@ -325,19 +324,17 @@ describe("formatEChartsTooltipValue", () => {
     [0.000123456, "0.000123456"],
     [0.0001, "0.0001"],
     [9.999e-5, "9.999E-5"],
+    [1e-8, "1E-8"],
   ])("formats small %s as %s", (value, expected) => {
     expect(formatEChartsTooltipValue(value)).toBe(expected)
   })
 
   it.each([
-    [1e-8, "1E-8"],
-    // Grouped form is longer than the tooltip length cap.
-    [1e15, "1000T"],
-    [12345678901.12345, "12,345,678,901"],
-    // Compact form is still longer than the cap.
-    [1e27, "1E27"],
-    [-1e27, "-1E27"],
-  ])("formats extreme %s as %s", (value, expected) => {
+    [1e15, "1,000,000,000,000,000"],
+    [12345678901.12345, "12,345,678,901.1235"],
+    [1e27, "1,000,000,000,000,000,000,000,000,000"],
+    [-1e27, "-1,000,000,000,000,000,000,000,000,000"],
+  ])("formats large %s as %s", (value, expected) => {
     expect(formatEChartsTooltipValue(value)).toBe(expected)
   })
 
@@ -958,62 +955,6 @@ describe("applyStreamlitOptionDefaults", () => {
     const series = result.series as Array<Record<string, unknown>>
     const data = series[0].data as Array<Record<string, unknown>>
     expect(data[0].name).toBe("<img src=x onerror=alert(1)>")
-  })
-
-  it("matches axis label line height to an author font size", () => {
-    const result = applyDefaults({
-      xAxis: { axisLabel: { fontSize: 28 } },
-      yAxis: [
-        { axisLabel: { fontSize: 20, lineHeight: 24 } },
-        { axisLabel: { color: "red" } },
-      ],
-      angleAxis: { axisLabel: { fontSize: 16 } },
-      series: [],
-    })
-
-    const xAxis = result.xAxis as { axisLabel: { lineHeight: number } }
-    expect(xAxis.axisLabel.lineHeight).toBe(28)
-    const yAxes = result.yAxis as Array<{
-      axisLabel: { lineHeight?: number }
-    }>
-    // An author line height wins over the theme font size.
-    expect(yAxes[0].axisLabel.lineHeight).toBe(24)
-    // No author font size: leave line height to the theme.
-    expect(yAxes[1].axisLabel.lineHeight).toBeUndefined()
-    const angleAxis = result.angleAxis as { axisLabel: { lineHeight: number } }
-    expect(angleAxis.axisLabel.lineHeight).toBe(16)
-  })
-
-  it("clears the theme line height when an axis label uses rich text", () => {
-    const result = applyDefaults({
-      xAxis: {
-        axisLabel: {
-          rich: { name: { fontSize: 28 } },
-        },
-      },
-      yAxis: {
-        axisLabel: {
-          rich: { name: { fontSize: 28 } },
-          lineHeight: 32,
-        },
-      },
-      series: [],
-    })
-
-    const xAxis = result.xAxis as { axisLabel: { lineHeight: number | null } }
-    expect(xAxis.axisLabel.lineHeight).toBeNull()
-    const yAxis = result.yAxis as { axisLabel: { lineHeight: number } }
-    expect(yAxis.axisLabel.lineHeight).toBe(32)
-  })
-
-  it("does not rewrite axis label line height when theme is not streamlit", () => {
-    const option = {
-      xAxis: { axisLabel: { fontSize: 28 } },
-      series: [],
-    }
-    const result = applyDefaults(option, "")
-
-    expect(result.xAxis).toBe(option.xAxis)
   })
 })
 
