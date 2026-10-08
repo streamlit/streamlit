@@ -245,11 +245,12 @@ class BidiComponentManager:
         css: str | None,
         js: str | None,
     ) -> None:
-        """Register the API definition when the stored entry is missing or a placeholder.
+        """Register captured HTML, CSS, and JS for a missing or discovered name.
 
-        A resolved definition stays unchanged. This method records the original
-        css and js only when it stores the definition, so an already resolved
-        definition keeps its own inputs.
+        A definition the script already registered stays unchanged, including
+        an explicit empty ``component()`` call. This method records the
+        original ``css`` and ``js`` only when it stores the definition, so an
+        already registered definition keeps its own inputs.
 
         Parameters
         ----------
@@ -264,7 +265,7 @@ class BidiComponentManager:
             ``component()``.
         """
         existing = self.get(component_key)
-        if existing is not None and not existing.is_placeholder:
+        if existing is not None and not existing.is_manifest_discovery:
             return
 
         # Resolve paths before the registry lock so file reads do not hold it.

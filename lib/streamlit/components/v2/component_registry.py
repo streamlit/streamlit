@@ -75,6 +75,11 @@ class BidiComponentDefinition:
     js_asset_relative_path : str or None, optional
         Asset-dir-relative URL path to use when serving the JS file. If not
         provided, the filename from ``js`` is used when ``js`` is file-backed.
+    is_manifest_discovery : bool
+        Whether manifest discovery created this entry. Only
+        ``register_components_from_definitions`` sets this, and only for a
+        name-only placeholder. An explicit ``component()`` call with no HTML,
+        CSS, or JS leaves it ``False``.
     """
 
     name: str
@@ -90,6 +95,10 @@ class BidiComponentDefinition:
     # and are independent of the on-disk absolute file path stored in css/js.
     css_asset_relative_path: str | None = None
     js_asset_relative_path: str | None = None
+    # Set only for a name-only entry from manifest discovery. An explicit
+    # component() call with no HTML, CSS, or JS is empty too, but it is a
+    # resolved registration and must not be replaced on mount.
+    is_manifest_discovery: bool = False
 
     def __post_init__(self) -> None:
         # Keep track of source paths for content loaded from files
@@ -166,11 +175,11 @@ class BidiComponentDefinition:
 
     @property
     def is_placeholder(self) -> bool:
-        """Whether this definition is a placeholder (no content).
+        """Whether this definition has no HTML, CSS, or JS.
 
-        Placeholders are typically created during the manifest scanning phase
-        when we discover a component's existence but haven't yet loaded its
-        content via the public API.
+        Manifest discovery and an explicit ``component()`` call with no
+        content both look like this. ``is_manifest_discovery`` marks only the
+        discovery case.
         """
         return self.html is None and self.css is None and self.js is None
 
@@ -307,15 +316,21 @@ class BidiComponentRegistry:
                         f"Component definition for key '{comp_name}' is missing required 'name' field"
                     )
 
+                html = comp_def_data.get("html")
+                css = comp_def_data.get("css")
+                js = comp_def_data.get("js")
                 definition = BidiComponentDefinition(
                     name=name,
-                    js=comp_def_data.get("js"),
-                    css=comp_def_data.get("css"),
-                    html=comp_def_data.get("html"),
+                    js=js,
+                    css=css,
+                    html=html,
                     css_asset_relative_path=comp_def_data.get(
                         "css_asset_relative_path"
                     ),
                     js_asset_relative_path=comp_def_data.get("js_asset_relative_path"),
+                    # Name-only discoveries are filled in later by component().
+                    # A definition that already has content is a real entry.
+                    is_manifest_discovery=(html is None and css is None and js is None),
                 )
                 self._components[comp_name] = definition
                 _LOGGER.debug(
@@ -366,10 +381,12 @@ class BidiComponentRegistry:
     def register_if_missing_or_placeholder(
         self, definition: BidiComponentDefinition
     ) -> bool:
-        """Store a definition when its name is missing or still a placeholder.
+        """Store a definition when its name is missing or a manifest placeholder.
 
-        An existing resolved definition stays unchanged. Replacing a
-        placeholder does not log a warning.
+        Leave a definition the script already registered, including an explicit
+        empty ``component()`` call. Do not log a warning when replacing a
+        manifest placeholder; ``register()`` warns only when it overwrites a
+        resolved definition.
 
         Parameters
         ----------
@@ -384,7 +401,7 @@ class BidiComponentRegistry:
         """
         with self._lock:
             existing = self._components.get(definition.name)
-            if existing is not None and not existing.is_placeholder:
+            if existing is not None and not existing.is_manifest_discovery:
                 return False
             self._components[definition.name] = definition
             return True

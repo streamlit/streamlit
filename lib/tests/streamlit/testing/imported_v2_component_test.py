@@ -439,18 +439,63 @@ def test_file_backed_import_outside_runtime_still_raises_then_apptest_works(
     _assert_file_backed_proto(at)
 
 
+def test_explicit_empty_registration_survives_imported_mount(tmp_path: Path) -> None:
+    """An explicit empty ``component()`` call is not replaced by an imported mount."""
+    module_name = "ccv2_empty_reg_mod"
+    callable_name = "greeting"
+    component_name = "empty_reg_greeting"
+    _write_component_module(
+        tmp_path,
+        module_name,
+        callable_name=callable_name,
+        component_name=component_name,
+        html="<p>old</p>",
+    )
+    script_path = tmp_path / "empty_reg_app.py"
+    script_path.write_text(
+        textwrap.dedent(
+            f"""\
+            from {module_name} import {callable_name}
+            import streamlit as st
+
+            st.components.v2.component({component_name!r})
+            {callable_name}(key="g")
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    with _module_on_path(tmp_path, module_name):
+        at = AppTest.from_file(script_path).run()
+
+    assert not at.exception, at.exception[0].value
+    proto = at.get("bidi_component")[0].proto
+    assert proto.html_content == ""
+    assert proto.css_content == ""
+    assert proto.js_content == ""
+    manager = at._bidi_component_manager
+    assert manager is not None
+    stored = manager.get(component_name)
+    assert stored is not None
+    assert stored.html is None
+    assert not stored.is_manifest_discovery
+
+
 def test_st_pdf_renders_on_a_second_apptest() -> None:
-    """st.pdf keeps its HTML and asset paths on a later AppTest."""
+    """st.pdf keeps the same HTML and asset paths on a later AppTest."""
 
     def script() -> None:
         import streamlit as st
 
         st.pdf("https://example.com/doc.pdf", key="p")
 
-    for _ in range(2):
-        at = AppTest.from_function(script).run()
-        assert not at.exception, at.exception[0].value
-        proto = at.get("bidi_component")[0].proto
-        assert proto.html_content
-        assert proto.css_source_path
-        assert proto.js_source_path
+    first = AppTest.from_function(script).run()
+    second = AppTest.from_function(script).run()
+    assert not first.exception, first.exception[0].value
+    assert not second.exception, second.exception[0].value
+    first_proto = first.get("bidi_component")[0].proto
+    second_proto = second.get("bidi_component")[0].proto
+    assert first_proto.html_content
+    assert second_proto.html_content == first_proto.html_content
+    assert second_proto.css_source_path == first_proto.css_source_path
+    assert second_proto.js_source_path == first_proto.js_source_path

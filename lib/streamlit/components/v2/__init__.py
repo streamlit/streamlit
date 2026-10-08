@@ -110,11 +110,15 @@ def _ensure_component_on_active_runtime(
     css: str | None,
     js: str | None,
 ) -> None:
-    """Register this callable's definition on the active runtime when that runtime has none.
+    """Register captured HTML, CSS, and JS on the active runtime if needed.
 
-    Importing a component can register it on a different manager than the one
-    running the script. A resolved definition already stored here is left as is.
-    With no script-run context or no runtime, return without creating a manager.
+    Do this when that name is missing or still a manifest placeholder.
+    ``component()`` runs when the module is imported, which can be a different
+    manager than the runtime executing the script. AppTest creates a new
+    runtime per instance. Leave a definition the script already registered,
+    including an explicit empty ``component()`` call. Return immediately when
+    there is no script run or runtime, so this path does not create a
+    throwaway manager.
     """
     from streamlit.runtime import Runtime
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
