@@ -216,7 +216,7 @@ st.markdown(
 
 | Value | Collections and multi-item controls | Single-label controls | Text |
 | --- | --- | --- | --- |
-| `None` (default for controls) | Multi-item controls use auto: `False` inside a horizontal container or when directly placed in a column, and `True` in any other layout. Not used by layout containers or text. | Auto: behaves like `False` inside a horizontal container or when directly placed in a column, and `True` in any other layout. | Not used. |
+| `None` (default for controls) | Multi-item controls use auto: `False` inside a horizontal container, when directly placed in a column, or when directly placed in a grid cell, and `True` in any other layout. Not used by layout containers or text. | Auto: behaves like `False` inside a horizontal container, when directly placed in a column, or when directly placed in a grid cell, and `True` in any other layout. | Not used. |
 | `True` (default for `st.container` / `st.columns` / text) | Items move to additional rows when they cannot fit (or, for `st.columns`, stack at the responsive breakpoint). | The label can wrap and increase the control height. | The text wraps onto additional lines (today's behavior). |
 | `False` | Items remain in one row and the element scrolls horizontally if needed. | The control keeps its standard height and ellipsizes an overflowing label. | The text stays on one line and ellipsizes. Markdown is limited to inline formatting and cannot be combined with `unsafe_allow_html=True`. |
 
@@ -237,8 +237,13 @@ message, or popover body — resets it. Explicit `wrap=True` or `wrap=False` alw
 | Directly in an `st.columns` column | `False` |
 | Directly in an `st.grid` cell | `False` |
 | Behind a transparent block directly in a column | `False` |
+| Behind a transparent block directly in a grid cell | `False` |
 | Inside a nested horizontal container in a column | `False` (horizontal rule) |
 | Inside a nested vertical container, expander, tab, form, or popover body in a column | `True` |
+
+The nested-container rows apply to grid cells unchanged: a nested horizontal container
+inside a cell resolves `wrap=None` to `False`; a nested vertical container, expander, tab,
+form, or popover body inside a cell resolves to `True`.
 
 A form is a real nested layout, and `st.form_submit_button` must be inside a form.
 Therefore a submit button cannot be a direct column child and continues to wrap under
@@ -269,8 +274,8 @@ titles inside columns would change existing apps. Opt into one-line text only wi
 
 ### What `wrap` controls
 
-The controlled content differs by command, but the promise is always the same: it stays
-in one row when `wrap=False`.
+The controlled content differs by command, but the promise is always the same: the content
+this command controls stays in one row when `wrap=False`.
 
 | Command | Content controlled by `wrap` | Overflow behavior with `wrap=False` |
 | --- | --- | --- |
@@ -297,7 +302,8 @@ columns in one row but does not change a long input-widget label inside a column
 
 When `wrap=False` on a collection:
 
-- The collection uses one horizontal row.
+- The collection uses one horizontal row of the content this command controls (for
+  `st.grid`, that is the column tracks, not the cells).
 - Overflow is contained by that command, never by the full app page.
 - Native horizontal scrolling is enabled only when the items cannot shrink enough to fit.
 - Touch, trackpad, mouse shift-wheel, and keyboard scrolling continue to use browser-native
@@ -754,11 +760,13 @@ treatment.
   actually ellipsized, and no `help` is set; is omitted when the label fits or when
   `help` is present (so `help` takes precedence); and uses plain text for Markdown labels.
 - Add tests that the auto default (`wrap=None`) resolves to no-wrap inside a horizontal
-  container and for direct column children, while resolving to wrapping in other layouts.
+  container, for direct column children, and for direct grid-cell children, while resolving
+  to wrapping in other layouts.
   Include transparent-block preservation, nested real-container reset, explicit-value
   precedence, the form-submit exception, and responsive column stacking. Verify that
   `st.container` and `st.columns` keep their fixed `wrap=True` default (today's wrapping
-  and stacking) regardless of the surrounding layout.
+  and stacking) regardless of the surrounding layout, and that `st.grid` (when implemented)
+  keeps `wrap=True` for wrapping of column tracks.
 - Add checkbox and toggle tests for ellipsis, fixed indicators, help icons, label
   visibility, and accessible names.
 - Add text-command tests for `wrap=False` ellipsis, label-mode markdown (inline only;
@@ -774,9 +782,10 @@ treatment.
   contexts.
 - Verify protobuf messages with an absent `wrap` field resolve via the auto default for
   controls — wrapping in ordinary vertical layouts and staying single-row inside
-  horizontal containers or when directly placed in a column — while `st.container`,
-  `st.columns`, and text commands keep today's wrapping via their fixed `wrap=True`
-  default. An absent text `wrap` field must wrap, not ellipsize.
+  horizontal containers or when directly placed in a column or grid cell — while
+  `st.container`, `st.columns`, and text commands keep today's wrapping via their fixed
+  `wrap=True` default. An absent text `wrap` field must wrap, not ellipsize. An absent
+  `st.grid` `wrap` field (when implemented) wraps column tracks.
 
 ## Checklist
 
