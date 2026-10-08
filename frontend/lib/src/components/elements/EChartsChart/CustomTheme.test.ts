@@ -333,6 +333,7 @@ describe("formatEChartsTooltipValue", () => {
     [1e-8, "1E-8"],
     // Grouped form is longer than the tooltip length cap.
     [1e15, "1000T"],
+    [12345678901.12345, "12,345,678,901"],
     // Compact form is still longer than the cap.
     [1e27, "1E27"],
     [-1e27, "-1E27"],
@@ -351,9 +352,10 @@ describe("formatEChartsTooltipValue", () => {
     ["null", null],
     ["undefined", undefined],
     ["an empty string", ""],
+    ["blank text", "  "],
     ["NaN", Number.NaN],
     ["Infinity", Number.POSITIVE_INFINITY],
-    ["a date", new Date(2026, 9, 1, 3, 4, 5)],
+    ["a non-JSON Date", new Date(2026, 9, 1, 3, 4, 5)],
   ])("renders %s as a dash", (_label, value) => {
     expect(formatEChartsTooltipValue(value)).toBe("-")
   })

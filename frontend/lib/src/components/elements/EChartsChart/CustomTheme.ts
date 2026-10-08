@@ -72,6 +72,11 @@ const paddedTooltipFormat = new Intl.NumberFormat("en-US", {
   useGrouping: true,
 })
 
+const groupedIntegerTooltipFormat = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0,
+  useGrouping: true,
+})
+
 const compactTooltipFormat = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumSignificantDigits: TOOLTIP_COMPACT_SIGNIFICANT_DIGITS,
@@ -82,8 +87,9 @@ function formatTooltipItem(value: unknown): string {
     return Number.isFinite(value) ? formatTooltipNumber(value) : "-"
   }
   if (typeof value === "string") {
-    // A blank string is a missing value, same as null.
-    return value === "" ? "-" : value
+    // Blank text is missing. Other strings, including numeric ones, pass
+    // through so an id or year is not grouped.
+    return value.trim() === "" ? "-" : value
   }
   // The chart spec is JSON, so tooltip values are numbers, strings, booleans,
   // or missing. Other types (including Date and bigint) do not arrive here.
@@ -94,13 +100,14 @@ function formatTooltipItem(value: unknown): string {
 }
 
 /**
- * Formatter for tooltip numbers of magnitude 1 or greater.
+ * Choose the formatter for tooltip numbers of magnitude 1 or greater.
  *
  * Pad to four fraction digits only when rounding changed the value, so
  * readers can tell it was rounded (``76.2380``). Exact shorter values stay
- * short (``12.5``, integers).
+ * short (``12.5``, integers). Binary float noise such as ``1.1 + 2.2`` also
+ * fails that equality check, so those values pad (``3.3000``).
  */
-function ordinaryTooltipFormat(value: number): Intl.NumberFormat {
+function selectOrdinaryTooltipFormat(value: number): Intl.NumberFormat {
   const rounded = Number(value.toFixed(TOOLTIP_FRACTION_DIGITS))
   return rounded === value ? shortTooltipFormat : paddedTooltipFormat
 }
@@ -110,17 +117,29 @@ function formatTooltipNumber(value: number): string {
     return "0"
   }
   const absolute = Math.abs(value)
-  // Four fraction digits would round these non-zero values to 0.
+  // Values below 0.0001 use scientific notation instead of a four-decimal
+  // representation.
   if (absolute !== 0 && absolute < 10 ** -TOOLTIP_FRACTION_DIGITS) {
     return scientificTooltipFormat.format(value)
   }
 
   // Four decimal places would clip a small fraction (0.000123456 → 0.0001).
   const plainFormat =
-    absolute >= 1 ? ordinaryTooltipFormat(value) : significantTooltipFormat
+    absolute >= 1
+      ? selectOrdinaryTooltipFormat(value)
+      : significantTooltipFormat
   const plain = plainFormat.format(value)
   if (unsignedTextLength(plain) <= MAX_TOOLTIP_TEXT_LENGTH) {
     return plain
+  }
+
+  // A padded fraction can cross the cap while the grouped integer still fits
+  // (``12345678901.12345`` → ``12,345,678,901``, not ``12.35B``).
+  if (absolute >= 1) {
+    const groupedInteger = groupedIntegerTooltipFormat.format(value)
+    if (unsignedTextLength(groupedInteger) <= MAX_TOOLTIP_TEXT_LENGTH) {
+      return groupedInteger
+    }
   }
 
   // Grouped compact text can still exceed the cap (`1e27` → `1,000,…T`).
