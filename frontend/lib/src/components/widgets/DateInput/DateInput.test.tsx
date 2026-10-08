@@ -2577,6 +2577,29 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(screen.getByTestId("after")).toHaveFocus()
   })
 
+  it("exposes every segment on pointerdown for React Aria padding clicks", () => {
+    render(<DateInput {...getProps({ format: "YYYY/MM/DD" })} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    const group = within(region).getByRole("group")
+
+    expect(year.tabIndex).toBe(0)
+    expect(month.tabIndex).toBe(-1)
+    expect(day.tabIndex).toBe(-1)
+
+    // Capture-phase expose must run before the group's bubble press handler
+    // (`focusLast` walks `{ tabbable: true }`), so padding/separator clicks can
+    // see every segment. Assert the mid-event state on bubble.
+    const tabsAtBubble: number[] = []
+    group.addEventListener("pointerdown", () => {
+      tabsAtBubble.push(year.tabIndex, month.tabIndex, day.tabIndex)
+    })
+
+    fireEvent.pointerDown(group, { pointerType: "mouse", button: 0 })
+    expect(tabsAtBubble).toEqual([0, 0, 0])
+  })
+
   it("Tabs start → end → calendar in range mode", async () => {
     const user = userEvent.setup()
     render(

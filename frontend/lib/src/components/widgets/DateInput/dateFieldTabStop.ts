@@ -22,6 +22,26 @@ function isDisabledSegment(segment: HTMLElement): boolean {
   return segment.getAttribute("aria-disabled") === "true"
 }
 
+function getEditableSegments(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
+  ).filter(segment => !isDisabledSegment(segment))
+}
+
+/**
+ * Temporarily makes every enabled segment tabbable so React Aria's field
+ * press handler (`focusLast`, `{ tabbable: true }`) can see separators and
+ * padding clicks as nearest-segment targets. Call from pointerdown capture
+ * before that handler runs; `focusin` collapses back to one Tab stop.
+ */
+export function exposeEnabledSegmentsForPointer(container: HTMLElement): void {
+  for (const segment of getEditableSegments(container)) {
+    if (segment.tabIndex !== 0) {
+      segment.tabIndex = 0
+    }
+  }
+}
+
 /**
  * Leaves one segment tabbable (`tabIndex` 0) and sets the others to -1.
  * `preferred` wins when it is an enabled segment of the field; otherwise the
@@ -58,24 +78,15 @@ export function applyDateFieldSingleTabStop(
       ? preferred
       : null
 
+  // After the disabled early-return, at least one enabled segment exists.
   const tabbable =
     enabledPreferred ??
     segments.find(s => s.tabIndex === 0 && !isDisabledSegment(s)) ??
-    segments.find(s => !isDisabledSegment(s)) ??
-    null
-
-  if (!tabbable) {
-    for (const segment of segments) {
-      if (segment.tabIndex !== -1) {
-        segment.tabIndex = -1
-      }
-    }
-    return null
-  }
+    segments.find(s => !isDisabledSegment(s))!
 
   for (const segment of segments) {
     const next = segment === tabbable ? 0 : -1
-    // Skip no-op writes so MutationObserver watchers do not loop.
+    // Skip no-op writes so MutationObserver watchers converge without looping.
     if (segment.tabIndex !== next) {
       segment.tabIndex = next
     }
@@ -102,16 +113,9 @@ export function useDateFieldSingleTabStop(): (
     if (!node) return
 
     let lastTabbable: HTMLElement | null = null
-    let applying = false
 
     const apply = (preferred: HTMLElement | null = lastTabbable): void => {
-      if (applying) return
-      applying = true
-      try {
-        lastTabbable = applyDateFieldSingleTabStop(node, preferred)
-      } finally {
-        applying = false
-      }
+      lastTabbable = applyDateFieldSingleTabStop(node, preferred)
     }
 
     apply(null)
@@ -122,6 +126,14 @@ export function useDateFieldSingleTabStop(): (
       if (!target.matches(SEGMENT_SELECTOR)) return
       apply(target)
     }
+
+    // React Aria's group press uses a tabbable walker. Briefly expose every
+    // enabled segment so padding/separator clicks focus the nearest one.
+    // Listen on the DateField group when present so group padding is covered.
+    const onPointerDownCapture = (): void => {
+      exposeEnabledSegmentsForPointer(node)
+    }
+    const pressRoot = node.closest<HTMLElement>('[role="group"]') ?? node
 
     // Re-apply when segments remount or their tabindex changes (for example, isDisabled).
     const observer = new MutationObserver(() => {
@@ -135,9 +147,11 @@ export function useDateFieldSingleTabStop(): (
     })
 
     node.addEventListener("focusin", onFocusIn)
+    pressRoot.addEventListener("pointerdown", onPointerDownCapture, true)
     cleanupRef.current = () => {
       observer.disconnect()
       node.removeEventListener("focusin", onFocusIn)
+      pressRoot.removeEventListener("pointerdown", onPointerDownCapture, true)
     }
   }, [])
 }

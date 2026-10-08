@@ -952,6 +952,14 @@ def test_range_date_tabs_start_end_then_calendar(app: Page):
     expect(segments.nth(4)).to_have_attribute("tabindex", "-1")
 
     start_first.click()
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+    app.keyboard.press("Tab")
+    expect(end_first).to_be_focused()
+    expect(calendar).to_be_visible()
+    app.keyboard.press("Shift+Tab")
+    expect(start_first).to_be_focused()
+    expect(calendar).to_be_visible()
     app.keyboard.press("Tab")
     expect(end_first).to_be_focused()
     app.keyboard.press("Tab")
@@ -965,7 +973,6 @@ def test_disabled_date_field_is_not_a_tab_stop(app: Page):
     segments = date_input.get_by_test_id("stDateInputField").get_by_role("spinbutton")
     expect(segments).to_have_count(6)
     for i in range(6):
-        expect(segments.nth(i)).not_to_have_attribute("tabindex", "0")
         expect(segments.nth(i)).to_have_attribute("tabindex", "-1")
 
 

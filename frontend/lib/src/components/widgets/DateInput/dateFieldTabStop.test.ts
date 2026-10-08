@@ -16,7 +16,10 @@
 
 import { describe, expect, it } from "vitest"
 
-import { applyDateFieldSingleTabStop } from "./dateFieldTabStop"
+import {
+  applyDateFieldSingleTabStop,
+  exposeEnabledSegmentsForPointer,
+} from "./dateFieldTabStop"
 
 function makeSegment(type: string, tabIndex = 0): HTMLElement {
   const el = document.createElement("span")
@@ -87,5 +90,23 @@ describe("applyDateFieldSingleTabStop", () => {
     expect(year.tabIndex).toBe(-1)
     expect(month.tabIndex).toBe(0)
     expect(day.tabIndex).toBe(-1)
+  })
+
+  it("exposes every enabled segment for pointer focus", () => {
+    const container = document.createElement("div")
+    const year = makeSegment("year")
+    const month = makeSegment("month", -1)
+    const day = makeSegment("day", -1)
+    const disabled = makeSegment("hour", -1)
+    disabled.setAttribute("aria-disabled", "true")
+    container.append(year, month, day, disabled)
+
+    applyDateFieldSingleTabStop(container)
+    exposeEnabledSegmentsForPointer(container)
+
+    expect(year.tabIndex).toBe(0)
+    expect(month.tabIndex).toBe(0)
+    expect(day.tabIndex).toBe(0)
+    expect(disabled.tabIndex).toBe(-1)
   })
 })

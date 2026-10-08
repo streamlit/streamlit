@@ -117,9 +117,10 @@ export function handlePassivePreviewFieldTab(
   )
   if (!fromSegment) return false
 
-  // Shift+Tab from the first segment cannot land on another field segment, so
-  // close synchronously (a deferred leave is only needed when focus may stay
-  // inside the widget, e.g. range start → end).
+  // Shift+Tab from the first segment always leaves the widget, so close now.
+  // Any other Tab can stay inside (range start → end, or Shift+Tab onto the
+  // start field) or leave (Shift+Tab from a later segment of a single field).
+  // Wait one frame and close only if focus left.
   if (
     e.shiftKey &&
     (target === segments[0] || segments[0]?.contains(target))
@@ -128,8 +129,7 @@ export function handlePassivePreviewFieldTab(
     return true
   }
 
-  // Forward Tab (and Shift+Tab from later segments): wait one frame so range
-  // start→end stays open, while last-field → calendar/outside can settle.
+  // Deferred path for the cases above that may stay inside the widget.
   leave.beforeFocusSettles?.()
   requestAnimationFrame(() => {
     const active = document.activeElement
