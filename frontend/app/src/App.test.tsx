@@ -577,7 +577,7 @@ describe("App", () => {
       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
       // @ts-expect-error - location is required, so delete is a type error
       delete window.location
-      // @ts-expect-error - location setter accepts string, not a partial Location
+      // @ts-expect-error - partial Location is not assignable to string & Location
       window.location = { reload: vi.fn() }
 
       // Ensure SessionInfo is initialized
@@ -609,7 +609,7 @@ describe("App", () => {
       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
       // @ts-expect-error - location is required, so delete is a type error
       delete window.location
-      // @ts-expect-error - location setter accepts string, not a partial Location
+      // @ts-expect-error - partial Location is not assignable to string & Location
       window.location = { reload: vi.fn() }
 
       // Ensure SessionInfo is initialized
@@ -667,7 +667,7 @@ describe("App", () => {
       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
       // @ts-expect-error - location is required, so delete is a type error
       delete window.location
-      // @ts-expect-error - location setter accepts string, not a partial Location
+      // @ts-expect-error - partial Location is not assignable to string & Location
       window.location = { reload: vi.fn() }
 
       // @ts-expect-error - PACKAGE_METADATA is a declared const
@@ -697,7 +697,7 @@ describe("App", () => {
       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
       // @ts-expect-error - location is required, so delete is a type error
       delete window.location
-      // @ts-expect-error - location setter accepts string, not a partial Location
+      // @ts-expect-error - partial Location is not assignable to string & Location
       window.location = { reload: vi.fn() }
 
       // @ts-expect-error - PACKAGE_METADATA is a declared const
@@ -4055,7 +4055,7 @@ describe("App", () => {
       // NOTE: The mocking must be done after mounting, but before `handleMessage` is called.
       // @ts-expect-error - location is required, so delete is a type error
       delete window.location
-      // @ts-expect-error - location setter accepts string, not a partial Location
+      // @ts-expect-error - partial Location is not assignable to string & Location
       window.location = {}
 
       sendForwardMessage("authRedirect", { url: "https://example.com" })
