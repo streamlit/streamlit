@@ -103,7 +103,7 @@ Calls that omit `page_description` leave a value set earlier in the same run, sa
 
 Published text is plain. `page_description` is used as written. `Page.help` is reduced to text first (Markdown markers removed, link text kept) when it is the description that fills a meta tag, an accessible description, or the snapshot.
 
-The tooltip matches `st.page_link`: hover the item itself, no question-mark icon, the same hover delay as `st.page_link` (500ms today), and immediate open on keyboard focus. On touch there is no popup; the link still exposes the plain-text sentence as its accessible description. Keyboard focus announces that sentence once.
+The tooltip matches `st.page_link`: hover the item itself, no question-mark icon, and immediate open on keyboard focus. The hover delay is the button help delay (`HELP_TOOLTIP_HOVER_DELAY_MS`, 500ms), the same delay `st.page_link` already uses, rather than the 200ms shared tooltip default. On touch there is no popup; the link still exposes the plain-text sentence as its accessible description. Keyboard focus announces that sentence once.
 
 The description is not shown as body text. A visible subtitle remains `st.markdown` or `st.caption`. It does not fill `menu_items["About"]`, the browser-tab title, or the nav label.
 
