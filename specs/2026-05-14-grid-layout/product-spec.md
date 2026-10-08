@@ -376,10 +376,12 @@ empty last-row tracks (leftover items stretch) and cannot clamp `span N`. The MV
 
 Before that observer has a width, first paint uses the same formula against an estimate
 of the grid's own width, so the track count does not jump. The estimate is the parent
-block's last known content box: `contentMaxWidth` minus that block's horizontal padding.
-At the default layout that is 704px, and `st.grid(4)` paints 3 columns, with or without
-`border`. If no parent width is known yet, use that same default content box. Cells must
-not remount when `N` changes (`frontend/AGENTS.md`: keep element identity stable across
+block's last known content box: `contentMaxWidth` minus `2 * theme.spacing.lg` (padding
+on each side). At the default layout that is `736px - 32px = 704px`, and `st.grid(4)`
+paints 3 columns, with or without `border`. `st.grid(4)` is also 3 columns on the raw
+`736px` width; other floors can differ, so do not estimate from `contentMaxWidth`
+alone. If no parent width is known yet, use that same 704px content box. Cells must not
+remount when `N` changes (`frontend/AGENTS.md`: keep element identity stable across
 width-driven template updates).
 
 `st.grid("auto")` fits as many columns as the container allows, with no user-facing max.
@@ -755,7 +757,7 @@ where the demand is:
    height, and then the rows split that box. They do not grow to the tallest cell. Those
    are two different behaviors, and the common one is a silent no-op. Pixel `row_height`
    is enough for uniform cards until the measurement exists. Stretch children must not
-   feed it, and after the first paint `"equal"` must not fall back to `"content"`.
+   feed that measurement, and the first paint must not flash content-sized rows.
 7. **Aspect-ratio rows**, only if card/image/chart aspect-ratio is not enough. A
    grid-level ratio is awkward with arbitrary vertical content or row spans.
 8. **CSS subgrid**, so panels in one column align with panels in the next. `st.card`
@@ -832,5 +834,7 @@ cell; `height="stretch"` on the grid does nothing at page top.
 | Metrics collected | ✅ Add `gather_metrics("grid")`; optionally track coarse non-content options such as `columns` mode, `wrap`, `border`, `dense`, and `height` / `row_height` mode. Height modes tell us whether the dashboard use case is being adopted. |
 | Any security/legal impact? | None expected. Layout-only feature; no new content execution path. |
 | Any docs changes needed? | ✅ Add API docs and update layout guide/examples. |
-| Accessibility verified? | Before ship: keyboard and screen-reader order on a spanning grid under both `dense` settings (WCAG 2.1 SC 1.3.2 and SC 2.4.3). No ARIA `grid`/`row`/`gridcell`. Integer `row_height` overflow is keyboard-scrollable. See [Accessibility](#accessibility). |
+| Accessibility verified? | Before ship: keyboard and screen-reader order on a spanning grid under both `dense` settings (WCAG 2.1 SC 1.3.2 and SC 2.4.3). `dense` stays opt-in (`False` by default) and ships only with that check. No ARIA `grid`/`row`/`gridcell`. Integer `row_height` overflow is keyboard-scrollable. See [Accessibility](#accessibility). |
+| First-paint column count | Estimate the grid width as `contentMaxWidth` minus `2 * theme.spacing.lg` (704px at the default layout), not the raw 736px content max width. `st.grid(4)` is 3 columns either way; other floors can paint one count and then jump. See [Responsive placement](#responsive-placement). |
+| Fragment cells | A fragment that writes through a layout-transparent wrapper contributes one cell per child. `grid.cell()` inside the fragment keeps that output in one cell. See [Nesting and fragments](#nesting-and-fragments). |
 | Depends on other work? | `st.card` is planned as a separate spec and is not a blocker. Plotly ignoring `height="stretch"` is a known chart gap, not a grid ship gate. This PR adds `st.grid` to the wrap spec's command table (`wrap=False` keeps column tracks in one row, not cells) and a grid-cell row to its `wrap=None` table (resolves to `False`, like a column). |
