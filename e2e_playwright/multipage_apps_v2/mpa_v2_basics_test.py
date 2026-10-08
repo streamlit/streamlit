@@ -432,6 +432,14 @@ def test_switch_page_by_st_page(app: Page):
     expect(page_heading(app)).to_contain_text("Page 9")
 
 
+def test_switch_page_by_path_registered_on_next_run(app: Page):
+    """A path can target a page enabled by state during the current run."""
+
+    click_button(app, "Log in to gated page")
+
+    expect(page_heading(app)).to_contain_text("Gated Page")
+
+
 def test_removes_query_params_with_st_switch_page(app: Page, app_base_url: str):
     """Test that query params are removed when navigating via st.switch_page."""
 

@@ -38,6 +38,7 @@ page3 = st.Page("page_3.py", title="**Different** Title")
 page4 = st.Page("🦒_page_4.py")
 page5 = st.Page(Path("page_5.py"), icon=":material/settings:")
 page6 = st.Page("page_6_slow_page.py", title="*slow* page")
+gated_page = st.Page("gated_page.py")
 
 
 def page_7():
@@ -142,6 +143,8 @@ else:
         "Section 5": [page10, page11, page12],
         "Section 6": [page13, page14],
     }
+    if st.session_state.get("logged_in"):
+        pages_config["Section 7"] = [gated_page]
 
 pg = st.navigation(
     pages_config,
@@ -157,6 +160,10 @@ if st.button("Navigate with query params"):
 
 if st.button("page 9"):
     st.switch_page(page9)
+
+if st.button("Log in to gated page"):
+    st.session_state.logged_in = True
+    st.switch_page("gated_page.py")
 
 
 def switch_to_page_5() -> None:

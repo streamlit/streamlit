@@ -34,6 +34,7 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.navigation.page import Page
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import RerunData, RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
@@ -698,8 +699,80 @@ def test_st_switch_page_string_path_unknown_page_raises(
     ctx = _make_pages_lookup_ctx("/some/path/pages/page_1.py")
     patched_get_script_run_ctx.return_value = ctx
 
-    with pytest.raises(StreamlitPageNotFoundError, match=r"Could not find page"):
+    with (
+        patch.object(PagesManager, "uses_pages_directory", False),
+        pytest.raises(StreamlitPageNotFoundError) as exc_info,
+    ):
         switch_page("missing.py")
+
+    expected = StreamlitPageNotFoundError(
+        page="missing.py",
+        main_script_directory="/some/path",
+        uses_pages_directory=False,
+    )
+    assert str(exc_info.value) == str(expected)
+    ctx.script_requests.request_rerun.assert_not_called()
+
+
+@patch("streamlit.commands.execution_control._create_page")
+@patch("streamlit.commands.execution_control.normalize_path_join")
+@patch(
+    "streamlit.commands.execution_control.get_main_script_directory",
+    return_value="/some/path",
+)
+@patch("os.path.realpath", side_effect=lambda p: p)
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_allows_existing_unregistered_navigation_page(
+    patched_get_script_run_ctx,
+    _patched_realpath,
+    _patched_get_main_script_directory,
+    patched_normalize_path_join,
+    patched_create_page,
+):
+    """An existing file can target a page registered on the next rerun."""
+    patched_normalize_path_join.return_value = "/some/path/gated.py"
+    patched_create_page.return_value._script_hash = "gated_hash"
+    ctx = _make_pages_lookup_ctx("/some/path/login.py")
+    patched_get_script_run_ctx.return_value = ctx
+
+    with (
+        patch.object(PagesManager, "uses_pages_directory", False),
+        patch("pathlib.Path.is_file", return_value=True),
+    ):
+        switch_page("gated.py")
+
+    patched_create_page.assert_called_once_with("/some/path/gated.py")
+    rerun_arg = ctx.script_requests.request_rerun.call_args.args[0]
+    assert rerun_arg.page_script_hash == "gated_hash"
+
+
+@patch("streamlit.commands.execution_control.normalize_path_join")
+@patch(
+    "streamlit.commands.execution_control.get_main_script_directory",
+    return_value="/some/path",
+)
+@patch("os.path.realpath", side_effect=lambda p: p)
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_rejects_unregistered_file_with_pages_directory(
+    patched_get_script_run_ctx,
+    _patched_realpath,
+    _patched_get_main_script_directory,
+    patched_normalize_path_join,
+):
+    """The pages-directory convention only allows its registered files."""
+    patched_normalize_path_join.return_value = "/some/path/other.py"
+    ctx = _make_pages_lookup_ctx("/some/path/pages/page_1.py")
+    patched_get_script_run_ctx.return_value = ctx
+
+    with (
+        patch.object(PagesManager, "uses_pages_directory", True),
+        patch("pathlib.Path.is_file", return_value=True),
+        pytest.raises(
+            StreamlitPageNotFoundError,
+            match=r"Only the entrypoint file and files in the `pages/` directory",
+        ),
+    ):
+        switch_page("other.py")
 
     ctx.script_requests.request_rerun.assert_not_called()
 

@@ -868,6 +868,33 @@ def test_switch_page_respects_custom_url_path(tmp_path: Path) -> None:
     assert at.text[0].value == "other page"
 
 
+def test_st_switch_page_to_page_registered_on_next_run(tmp_path: Path) -> None:
+    """A string path can target a page enabled by state during the current run."""
+    (tmp_path / "gated.py").write_text(
+        'import streamlit as st\nst.text("gated page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "def login():\n"
+        "    if st.button('Log in'):\n"
+        "        st.session_state.logged_in = True\n"
+        "        st.switch_page('gated.py')\n"
+        "pages = [st.Page(login, title='Log in')]\n"
+        "if st.session_state.get('logged_in'):\n"
+        "    pages.append(st.Page('gated.py'))\n"
+        "st.navigation(pages).run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.button[0].label == "Log in"
+
+    at.button[0].click().run()
+
+    assert not at.exception
+    assert at.text[0].value == "gated page"
+
+
 def test_switch_page_prefers_filename_url_for_duplicate_script(
     tmp_path: Path,
 ) -> None:

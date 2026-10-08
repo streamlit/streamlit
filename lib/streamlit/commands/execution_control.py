@@ -33,6 +33,7 @@ from streamlit.errors import (
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import (
     Page,
+    _create_page,
     _raise_if_unsafe_page_path,
     _validate_registered_page,
 )
@@ -381,7 +382,10 @@ def switch_page(  # type: ignore[misc]
 
         - Path to a Python file: The path can be a string or ``pathlib.Path``
           object. It can be absolute or relative to the entrypoint file. The
-          Python file must be the source of a page in ``st.navigation``.
+          Python file must be the source of a page in ``st.navigation`` when
+          the switched-to app run begins. This lets you switch to a page that
+          becomes available after updating Session State. If that page uses a
+          custom ``url_path``, pass its ``Page`` object instead.
 
           If you are using the ``pages/`` directory instead of
           ``st.navigation``, the Python file must be your entrypoint file or
@@ -489,14 +493,16 @@ def switch_page(  # type: ignore[misc]
 
         matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
 
-        if len(matched_pages) == 0:
+        if matched_pages:
+            page_script_hash = matched_pages[0]["page_script_hash"]
+        elif not PagesManager.uses_pages_directory and Path(requested_page).is_file():
+            page_script_hash = _create_page(requested_page)._script_hash
+        else:
             raise StreamlitPageNotFoundError(
                 page=page,
                 main_script_directory=main_script_directory,
                 uses_pages_directory=bool(PagesManager.uses_pages_directory),
             )
-
-        page_script_hash = matched_pages[0]["page_script_hash"]
 
     # Reset query params (with exception of embed) and optionally apply overrides.
     with ctx.session_state.query_params() as qp:
