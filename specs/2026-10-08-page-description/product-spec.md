@@ -84,7 +84,9 @@ def set_page_config(
 
 **One resolved description per full run of the running page.**
 
-A fragment rerun, including `run_every`, does not re-execute `st.set_page_config` and sends no new page config. The description already published for this page stays, including across a fragment interaction. Resolution runs on a full script run only.
+A fragment rerun executes only the fragment body. `st.set_page_config` written outside the fragment does not run again, so it sends no new page config. The description published by the last full run stays, including the nav tooltip, until the next full run.
+
+A fragment can call `st.set_page_config` inside its body. That call enqueues `page_config_changed` today, including on a `@st.fragment(run_every=...)` tick. On a fragment rerun, ignore `page_description`. Do not apply it, and do not clear the sentence the last full run published. Applying it would republish the description on every interval. When the fragment body does not call `st.set_page_config`, the published description stays as well. Other `set_page_config` arguments keep their current behavior.
 
 | Source | When it wins |
 |--------|----------------|
@@ -93,6 +95,8 @@ A fragment rerun, including `run_every`, does not re-execute `st.set_page_config
 | Nothing | When the running page has neither a non-blank `page_description` nor a `Page.help`. Single-page and `pages/` apps reach this row unless they set `page_description`. |
 
 On a full rerun of the same page, recompute from this run. A conditional description from the previous full rerun does not carry forward when this run passes no non-blank value.
+
+`st.navigation` runs the entrypoint on every page, so a `page_description` there is part of this full run and wins over every page's `Page.help` for the running page's meta tags and nav tooltip. The other nav items keep their own `help`. That is last-wins, not a fallback under `Page.help`. An app-wide sentence belongs on `st.App`, which is out of scope.
 
 Calls that omit `page_description`, and calls that pass `None`, `""`, or a whitespace-only string, leave a value set earlier in the same full run. Blank means empty after dedent and strip, so a whitespace-only string does not publish a meta tag. A later non-blank string replaces the description. A later blank value does not clear it and does not suppress `Page.help`. There is no way to publish an empty description while `Page.help` is set.
 
@@ -110,29 +114,30 @@ Navigating to another page drops the previous page's override once that new page
   - A fresh session with no author description leaves a host-injected `description` and `og:description` in place. Resolving to none does not delete tags Streamlit did not write.
   - When the running page has an author description, Streamlit replaces those two tags and owns them for the rest of the session.
   - Later in that session, when the running page resolves to none, Streamlit removes the tags it wrote. The original host tags stay gone. Streamlit does not put back HTML it did not save, and a page with no description must not keep the previous page's sentence.
-- The built-in nav item (sidebar, top nav, and the overflow menu), as a tooltip. `Page.help` is rendered as Markdown. A `page_description` override is shown as plain text. The running page's tooltip follows that resolved sentence, so the nav, the meta tags, and the snapshot stay one sentence. Leaving the tooltip on `Page.help` alone would show a different sentence on the open page, and a `pages/` app would have no nav tooltip at all.
-- The nav link's accessible description, as plain text.
-- The agent snapshot ([#16843](https://github.com/streamlit/streamlit/pull/16843)). `page.help` stays the dedented Markdown. The open page's current-page record carries the resolved plain sentence, including a `page_description` override. Each `pages` entry carries that page's reduced `Page.help`, including the open page, so the override does not rewrite the list. Omit the field when the reduced string is empty. An agent can choose a page without running it. This spec does not define the agent endpoint; it supplies the sentence that snapshot was missing. Wiring the sentence into the snapshot waits on that PR. Meta tags and tooltips can ship without it.
+- The built-in nav item (sidebar, top nav, and the overflow menu), as a tooltip. The tooltip uses the winning source in its original form: Markdown `Page.help` when that wins, and the literal `page_description` string when that wins. The open page does not show the stripped sentence while the other items stay formatted. A `pages/` app has a nav tooltip only when that page passes `page_description`.
+- The nav link's accessible description, as the plain reduction of that same winning source.
+- The agent snapshot ([#16843](https://github.com/streamlit/streamlit/pull/16843)). `Page.help` on the Python object stays the dedented Markdown, and a `page_description` override does not change it. The snapshot stores only the reduced plain sentence, under `description`, next to `title` and `icon`. The current page's `description` is the resolved sentence, so it includes a `page_description` override. Each `pages` entry's `description` is that page's reduced `Page.help`, including the open page, so the override does not rewrite the list. Omit `description` when the reduced string is empty. The snapshot does not keep the Markdown. An agent can choose a page without running it. Wiring the field into the snapshot waits on that PR. Meta tags and tooltips can ship without it.
 
-Published text is one plain string, shared by the meta tags, the accessible description, and the snapshot's plain fields. The snapshot does not keep a richer copy, and it does not keep link destinations. `page_description` is used as written, after the whitespace normalization below. `Page.help` is reduced first. The reducer runs on the backend: the snapshot and the plain text for pages that are not running are produced there, and nothing in Python or TypeScript reduces Markdown to plain text today.
+The plain string is the text a reader sees in the tooltip, not a fixed list of directives. Meta tags, the accessible description, and `description` in the snapshot all use that string. The reducer runs on the backend, because the snapshot and the plain text for pages that are not running are produced there. `plainTextWithBlockGaps` in `frontend/lib/src/util/plainText.ts` reads text from rendered DOM for label tooltips and is not a source reducer to copy.
 
-- CommonMark markers are removed. Link text is kept and the URL is dropped, so `See the [billing docs](https://example.com)` becomes `See the billing docs`.
-- `:material/...:`, image Markdown, and emoji shortcodes are dropped. The backend has no emoji-shortcode table (`streamlit.emojis` holds emoji characters; `page_icon` shortcodes are resolved on the frontend), so a shortcode is not turned into a character.
-- Color and badge directives keep their inner text, so `:red[refunds]` becomes `refunds`.
+- Unwrap every Streamlit directive to its inner text, including attribute blocks. `:small[Excludes refunds]`, `:red[refunds]`, `:color[refunds]{foreground="red"}`, `:color-background[...]`, and `:shimmer[...]` all keep the inner text and drop the directive and its attributes.
+- Link labels are kept and URLs are dropped, so `See the [billing docs](https://example.com)` becomes `See the billing docs`.
+- Images, `:material/...:`, `:streamlit:`, and emoji shortcodes are dropped rather than turned into characters. The backend has no emoji-shortcode table.
+- LaTeX delimiters are dropped and the formula source is kept, so `$E=mc^2$` becomes `E=mc^2`.
 
 If reduction removes the whole string (`help=":material/info:"`, `help="![logo](logo.png)"`), that is no author description. Replacing a host `description` or `og:description` with an empty attribute would clear a tag this session has not taken ownership of yet.
 
 Before the string is written into a meta attribute or an accessible description, strip the ends and collapse internal line breaks and runs of whitespace into a single space. A triple-quoted `page_description` must not put newlines into the attribute. Blank, empty after dedent and strip, is decided before this normalization and means the call did not set a description. Escaping into the attribute happens after the reduction and the collapse.
 
-The tooltip matches `st.page_link` in what the user sees: hover the item itself, no question-mark icon, and immediate open on keyboard focus. The hover delay is 500ms, the same delay `st.page_link` and button help already use, rather than the 200ms shared tooltip default. On touch there is no popup. The link exposes the plain-text sentence as its accessible description all the time, including below the small breakpoint, and that sentence is announced once.
+The nav tooltip matches `st.page_link` in what a pointer user sees: hover the item itself, no question-mark icon, and immediate open on keyboard focus. The hover delay is 500ms, the same delay `st.page_link` and button help already use, rather than the 200ms shared tooltip default. On touch there is no popup. The nav link exposes the plain-text sentence as its accessible description all the time, including below the small breakpoint, and that sentence is announced once.
 
-Today's button tooltip does not do that. Below the small breakpoint it renders the trigger with no tooltip, and it points `aria-describedby` at the tooltip only while that tooltip is open, so a touch user never gets the sentence. The nav item cannot be a straight copy of that wrapper. A permanent accessible description plus `aria-describedby` on the open tooltip would announce the sentence twice.
+That permanent description is only on the built-in nav item. `st.page_link` keeps today's `BaseButtonTooltip`: below the small breakpoint it renders the trigger with no tooltip, and it points `aria-describedby` at the tooltip only while that tooltip is open. Inheriting `Page.help` changes the tooltip text, not that behavior. Changing `BaseButtonTooltip` would change every button, popover, and badge. The nav item cannot be a straight copy of that wrapper. A permanent accessible description plus `aria-describedby` on the open tooltip would announce the sentence twice.
 
 The description is not shown as body text. A visible subtitle remains `st.markdown` or `st.caption`. It does not fill `menu_items["About"]`, the browser-tab title, or the nav label.
 
 **Nav tooltips for pages that are not running** come only from `Page.help`. They are available as soon as `st.navigation` declares the pages, without executing those pages. `page_description` changes the tooltip of the running page only. An external-URL `st.Page` can still set `help`; that tooltip is on its nav item and is never the document description, because the external page is not this document.
 
-**`st.page_link`.** The link's `help` is the tooltip for that link and nothing else. Omitted `help` uses the target page's `Page.help` when the argument is a `Page` or a path to a registered page. That path case is wider than icon inheritance. `st.page_link` copies `icon` only from a `Page` object, not from a script path, so the page registry has to store `Page.help` for the path lookup. Several `st.Page` objects can share one script when their `url_path` values differ. `st.page_link("revenue.py")` already selects the first registered page with that `script_path`, and inherited `help` comes from that same page, so the label and the tooltip stay together. Icon inheritance from a script path stays a separate difference. An external URL string infers nothing. `help=""` shows no tooltip even when the page has one, same as `icon=""`. An instructional string passed to `st.page_link` stays on that link and is not the document description.
+**`st.page_link`.** The link's `help` is the tooltip for that link and nothing else. Omitted `help` uses the target page's `Page.help` when the argument is a `Page` or a path to a registered page. That path case is wider than icon inheritance. `st.page_link` copies `icon` only from a `Page` object, not from a script path, so the page registry has to store `Page.help` for the path lookup. Several `st.Page` objects can share one script when their `url_path` values differ. `st.page_link("revenue.py")` already selects the first registered page with that `script_path`, and inherited `help` comes from that same page, so the label and the tooltip stay together. Icon inheritance from a script path stays a separate difference. An external URL string infers nothing. `help=""` shows no tooltip even when the page has one, same as `icon=""`. An instructional string passed to `st.page_link` stays on that link and is not the document description. Inherited `help` is always `Page.help`, never the running page's `page_description`. A `st.page_link` to the open page can therefore show a different sentence from that page's nav tooltip. That split is intentional.
 
 **`pages/` directory and single-page apps.** There is no `st.Page`, so `page_description` is the only input. Nav entries for `pages/` scripts that are not running have no tooltip, because those scripts have not run.
 
@@ -164,6 +169,15 @@ costs = st.Page(
     help="Operating costs by team, in EUR.",
 )
 
+st.navigation([revenue, costs]).run()
+```
+
+A `page_description` on the entrypoint applies to whichever page is running, because the entrypoint runs on every page:
+
+```python
+st.set_page_config(
+    page_description="Finance apps. Net revenue excludes refunds.",
+)
 st.navigation([revenue, costs]).run()
 ```
 
@@ -220,7 +234,7 @@ Adopt **Option 1**. The tooltip is `help` because that is the established parame
 
 - **`title` and `description` on `st.App`.** Static app identity, including a site name in `<title>` and `og:site_name`, and a description available before the script runs. The agent spec's static app descriptor depends on this ([#16843](https://github.com/streamlit/streamlit/pull/16843)). Tracked on [#16878](https://github.com/streamlit/streamlit/issues/16878). Page-level text in the snapshot does not wait on it.
 - **Description in the initial HTML** for clients that do not run JavaScript ([#9058](https://github.com/streamlit/streamlit/issues/9058)). v1 updates the live document, same as the page title. Most link-preview crawlers are in this group.
-- **A document-level accessible description.** Screen readers do not announce `<meta name="description">`. v1 exposes the sentence on the nav link and on `st.page_link`. A visible subtitle stays `st.caption` or `st.markdown`.
+- **A document-level accessible description.** Screen readers do not announce `<meta name="description">`. v1 exposes the sentence on the built-in nav link. `st.page_link` keeps today's tooltip. A visible subtitle stays `st.caption` or `st.markdown`.
 - **The rest of a social card.** `og:title`, `og:image`, `og:url`, Twitter card tags, and `<link rel="canonical">`. `page_icon` stays the favicon; it is a poor preview image.
 - **A host message for embedded apps.** `SET_PAGE_DESCRIPTION`, and whether `SET_APP_PAGES` carries each page's `help`, so Community Cloud and SiS can put the description on the top-level document. v1 only writes the tags in the app iframe.
 - **Arbitrary `<meta>` tags**, including Google Search Console verification ([#16634](https://github.com/streamlit/streamlit/issues/16634)).
@@ -234,7 +248,7 @@ Adopt **Option 1**. The tooltip is `help` because that is the established parame
 |------|---------------|
 | Works on SiS, Cloud, etc? | ✅ Tooltip and accessible description use the existing nav inside the app iframe. Meta tags update that iframe document only. Community Cloud and SiS do not receive them on the top-level page in v1, because there is no host message. A host-injected description in the iframe stays until the app sets one. |
 | No breaking API changes | ✅ Keyword-only additions. Existing `st.Page` and `st.set_page_config` calls are unchanged. A new `*` before `page_description` does not move the current positional parameters. |
-| No new dependencies | ✅ `to_help_str` dedents the stored string, and the tooltip reuses the help Markdown renderer. Reducing Markdown to plain text is new work in the backend, with no new package: emoji shortcodes are dropped rather than resolved. The nav item is not a straight copy of the page-link tooltip wrapper, because that wrapper hides the sentence on touch. |
+| No new dependencies | ✅ `to_help_str` dedents the stored string, and the tooltip reuses the help Markdown renderer. The plain-text reducer is new backend work, with no new package. `plainTextWithBlockGaps` reads rendered DOM and is not that reducer. The nav item is not a straight copy of the page-link tooltip wrapper, because that wrapper hides the sentence on touch. |
 | Metrics collected | ✅ Both commands are already wrapped with `@gather_metrics`. String arguments record length, not content, so the description text is not sent. |
 | Any security/legal impact? | Author-controlled Markdown in the tooltip uses the existing help renderer. Meta content is the plain text, escaped into the attribute. No new execution path. |
 | Any docs changes needed? | ✅ `st.Page` and `st.set_page_config` API pages, plus a short mention in the multipage-apps guide that `help` is the nav sentence and `page_description` overrides it for the open page. The `st.Page` docs warn that `help` is published as the page description, not only a hover string. |
