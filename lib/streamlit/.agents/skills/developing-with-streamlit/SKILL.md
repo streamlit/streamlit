@@ -117,7 +117,9 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Prefer Vega-based charts (`st.altair_chart`, `st.line_chart`, `st.area_chart`, `st.scatter_chart`, `st.bar_chart`, `st.vega_lite_chart`) over `st.pyplot` and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart.
 - Prefer `st.segmented_control` over `st.radio(..., horizontal=True)`.
 - Use `st.pills` for a multiselect with a small number of options that fit on one line.
-- Initialize `st.session_state` in one clear place, avoid module-level mutable state for per-user data, and set widget `key` values when widgets repeat, parameters change dynamically, or code needs programmatic access.
+- Initialize `st.session_state` in one clear place and avoid module-level mutable state for per-user data.
+- Set widget `key` values that are unique during a run when widgets repeat, parameters change dynamically, or code needs programmatic access. In loops, include a stable data ID in the key.
+- Identical unkeyed `st.plotly_chart` calls collide across tabs and columns because auto-generated IDs ignore layout context. Pass a distinct `key` for each Plotly chart.
 - Keep page files as direct scripts; do not wrap page bodies in functions. Move shared business logic into modules.
 
 ### Reference routing table

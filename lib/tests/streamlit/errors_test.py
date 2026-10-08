@@ -335,6 +335,51 @@ def test_value_error_with_detail() -> None:
     assert exc.exec_kwargs["detail"] == "Connection class Foo has an invalid scope."
 
 
+@pytest.mark.parametrize("user_key", ["shared", "my-key", "the key"])
+def test_duplicate_element_key_message_is_unique_during_a_run(user_key: str) -> None:
+    """Duplicate widget keys are unique during a run and not scoped by type or container."""
+    exc = errors.StreamlitDuplicateElementKey(user_key)
+    message = str(exc)
+
+    assert f"key='{user_key}'" in message
+    assert "single run" in message
+    assert "element type" in message
+    assert "container" in message
+    assert "unique key" in message
+    assert "Form keys" not in message
+    assert "Fragment keys" not in message
+    assert isinstance(exc, errors.DuplicateWidgetID)
+    assert not isinstance(exc, errors.LocalizableStreamlitException)
+    # Keys stay in the displayed message only, never in telemetry suffixes.
+    assert exc.error_id is None
+
+
+def test_duplicate_form_key_message_describes_form_namespace() -> None:
+    """Duplicate form keys describe the form namespace, not widget uniqueness."""
+    message = str(errors.StreamlitDuplicateElementKey("foo", scope="form"))
+
+    assert "key='foo'" in message
+    assert "multiple forms" in message
+    assert "Form keys" in message
+    assert "separate namespace" in message
+    assert "give each form" in message
+    assert "single run" not in message
+    assert "element type" not in message
+
+
+def test_duplicate_fragment_key_message_describes_fragment_namespace() -> None:
+    """Duplicate fragment keys describe the fragment namespace, not widget uniqueness."""
+    message = str(errors.StreamlitDuplicateElementKey("shared_key", scope="fragment"))
+
+    assert "key='shared_key'" in message
+    assert "fragment definitions" in message
+    assert "Fragment keys" in message
+    assert "separate namespace" in message
+    assert "give each fragment definition" in message
+    assert "single run" not in message
+    assert "element type" not in message
+
+
 @pytest.mark.parametrize("key", ["my_key", "my-key", "the key"])
 def test_widget_already_instantiated_error_message(key: str) -> None:
     """Messages use bracket access and tell the caller how to assign safely."""

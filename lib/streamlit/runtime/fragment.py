@@ -659,7 +659,7 @@ def _fragment(
                 f"{get_object_name(non_optional_func)}{additional_hash_info}"
             )
             if not ctx.shared.register_fragment_user_key(key, fragment_definition_id):
-                raise StreamlitDuplicateElementKey(key)
+                raise StreamlitDuplicateElementKey(key, scope="fragment")
 
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.
@@ -932,8 +932,9 @@ def fragment(
         together. An ``int`` key is normalized to its string representation.
 
         A fragment key must be unique among the fragments that render in a
-        single run, just like a widget ``key``. The names ``"app"`` and
-        ``"fragment"`` are reserved and cannot be used as fragment keys.
+        single run. Fragment keys are a separate namespace from widget keys,
+        so a fragment and a widget can use the same name. The names ``"app"``
+        and ``"fragment"`` are reserved and cannot be used as fragment keys.
 
     Examples
     --------

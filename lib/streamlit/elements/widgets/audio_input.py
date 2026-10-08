@@ -143,8 +143,10 @@ class AudioInputMixin:
             An optional string or integer to use as the unique key for
             the widget. If this is ``None`` (default), a key will be
             generated for the widget based on the values of the other
-            parameters. No two widgets may have the same key. Assigning
-            a key stabilizes the widget's identity and preserves its
+            parameters. No two elements may have the same key in a single
+            run, even if they are different element types or in different
+            containers.
+            Assigning a key stabilizes the widget's identity and preserves its
             state across reruns even when other parameters change.
 
             A key lets you access the widget's value via
