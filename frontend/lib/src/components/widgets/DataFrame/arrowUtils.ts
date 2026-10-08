@@ -33,6 +33,7 @@ import {
   convertTimestampToSeconds,
   convertTimeToDate,
   format as formatArrowCell,
+  getArrowTimeUnit,
 } from "~lib/dataframes/arrowFormatUtils"
 import {
   type ArrowType,
@@ -528,7 +529,7 @@ export function getCellFromArrow(
       cellTemplate = column.getCell(
         convertTimestampToSeconds(
           arrowCell.content,
-          arrowCell.field?.type?.unit ?? TimeUnit.NANOSECOND
+          getArrowTimeUnit(arrowCell.field, TimeUnit.NANOSECOND)
         )
       )
     } else {

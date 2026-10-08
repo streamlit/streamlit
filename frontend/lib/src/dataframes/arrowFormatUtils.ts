@@ -95,7 +95,7 @@ const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
  * both real Arrow instances (including a duplicate apache-arrow copy)
  * and duck-typed fixtures stay `no-unsafe-argument` clean.
  */
-function getArrowTimeUnit(
+export function getArrowTimeUnit(
   field: Field | undefined,
   fallback: TimeUnit
 ): TimeUnit {

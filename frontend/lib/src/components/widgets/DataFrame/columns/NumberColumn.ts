@@ -26,6 +26,7 @@ import {
   formatDurationClockFromSeconds,
   formatDurationFromSeconds,
   formatLocalizedDurationFromSeconds,
+  getArrowTimeUnit,
 } from "~lib/dataframes/arrowFormatUtils"
 import {
   isDurationType,
@@ -125,7 +126,7 @@ export interface NumberColumnParams {
 function NumberColumn(props: BaseColumnProps): BaseColumn {
   const isDuration = isDurationType(props.arrowType)
   const durationFractionalSecondDigits = getDurationFractionalSecondDigits(
-    props.arrowType.arrowField.type.unit
+    getArrowTimeUnit(props.arrowType.arrowField, TimeUnit.NANOSECOND)
   )
   const parameters = mergeColumnParameters<NumberColumnParams>(
     // Default parameters:
