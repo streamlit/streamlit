@@ -16,6 +16,8 @@
 
 import { useCallback, useRef } from "react"
 
+import useTimeout from "~lib/hooks/useTimeout"
+
 import { SEGMENT_SELECTOR } from "./dateInputUtils"
 
 function isDisabledSegment(segment: HTMLElement): boolean {
@@ -31,8 +33,10 @@ function getEditableSegments(container: HTMLElement): HTMLElement[] {
 /**
  * Temporarily makes every enabled segment tabbable so React Aria's field
  * press handler (`focusLast`, `{ tabbable: true }`) can see separators and
- * padding clicks as nearest-segment targets. Call from pointerdown capture
- * before that handler runs; `focusin` collapses back to one Tab stop.
+ * padding clicks as targets. Call from pointerdown capture before that
+ * handler runs. The hook suppresses MutationObserver re-apply until the
+ * press settles so mouse `onPressStart` and touch/pen `onPress` still see
+ * every segment.
  */
 export function exposeEnabledSegmentsForPointer(container: HTMLElement): void {
   for (const segment of getEditableSegments(container)) {
@@ -78,7 +82,8 @@ export function applyDateFieldSingleTabStop(
       ? preferred
       : null
 
-  // After the disabled early-return, at least one enabled segment exists.
+  // `find` is optional for the type checker. The disabled early-return
+  // already guaranteed an enabled segment.
   const tabbable =
     enabledPreferred ??
     segments.find(s => s.tabIndex === 0 && !isDisabledSegment(s)) ??
@@ -109,52 +114,114 @@ export function useDateFieldSingleTabStop(): (
   node: HTMLElement | null
 ) => void {
   const cleanupRef = useRef<(() => void) | null>(null)
+  const nodeRef = useRef<HTMLElement | null>(null)
+  const lastTabbableRef = useRef<HTMLElement | null>(null)
+  // While true, skip MutationObserver re-apply so pointer exposure survives
+  // the microtask that runs between capture pointerdown and usePress.
+  const suppressApplyRef = useRef(false)
+  const endPressRef = useRef<(() => void) | null>(null)
 
-  return useCallback((node: HTMLElement | null) => {
-    cleanupRef.current?.()
-    cleanupRef.current = null
+  const collapseAfterPointer = useCallback((): void => {
+    suppressApplyRef.current = false
+    const node = nodeRef.current
     if (!node) return
-
-    let lastTabbable: HTMLElement | null = null
-
-    const apply = (preferred: HTMLElement | null = lastTabbable): void => {
-      lastTabbable = applyDateFieldSingleTabStop(node, preferred)
-    }
-
-    apply(null)
-
-    const onFocusIn = (e: FocusEvent): void => {
-      const target = e.target
-      if (!(target instanceof HTMLElement)) return
-      if (!target.matches(SEGMENT_SELECTOR)) return
-      apply(target)
-    }
-
-    // React Aria's group press uses a tabbable walker. Briefly expose every
-    // enabled segment so padding/separator clicks focus the nearest one.
-    // Listen on the DateField group when present so group padding is covered.
-    const onPointerDownCapture = (): void => {
-      exposeEnabledSegmentsForPointer(node)
-    }
-    const pressRoot = node.closest<HTMLElement>('[role="group"]') ?? node
-
-    // Re-apply when segments remount or their tabindex changes (for example, isDisabled).
-    const observer = new MutationObserver(() => {
-      apply(lastTabbable)
-    })
-    observer.observe(node, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ["tabindex"],
-    })
-
-    node.addEventListener("focusin", onFocusIn)
-    pressRoot.addEventListener("pointerdown", onPointerDownCapture, true)
-    cleanupRef.current = () => {
-      observer.disconnect()
-      node.removeEventListener("focusin", onFocusIn)
-      pressRoot.removeEventListener("pointerdown", onPointerDownCapture, true)
-    }
+    const active = document.activeElement
+    const preferred =
+      active instanceof HTMLElement &&
+      node.contains(active) &&
+      active.matches(SEGMENT_SELECTOR)
+        ? active
+        : lastTabbableRef.current
+    lastTabbableRef.current = applyDateFieldSingleTabStop(node, preferred)
   }, [])
+
+  // Macrotask: touch/pen call focusLast from onPress on click, which runs
+  // after pointerup in the same turn. A microtask from pointerup would
+  // collapse before that click.
+  const { clear: clearSettle, restart: scheduleCollapse } = useTimeout(
+    collapseAfterPointer,
+    0,
+    { autoStart: false }
+  )
+
+  return useCallback(
+    (node: HTMLElement | null) => {
+      cleanupRef.current?.()
+      cleanupRef.current = null
+      nodeRef.current = node
+      if (!node) return
+
+      const apply = (
+        preferred: HTMLElement | null = lastTabbableRef.current
+      ): void => {
+        if (suppressApplyRef.current) return
+        lastTabbableRef.current = applyDateFieldSingleTabStop(node, preferred)
+      }
+
+      apply(null)
+
+      const clearEndPress = (): void => {
+        if (!endPressRef.current) return
+        window.removeEventListener("pointerup", endPressRef.current, true)
+        window.removeEventListener("pointercancel", endPressRef.current, true)
+        endPressRef.current = null
+      }
+
+      const onFocusIn = (e: FocusEvent): void => {
+        const target = e.target
+        if (!(target instanceof HTMLElement)) return
+        if (!target.matches(SEGMENT_SELECTOR)) return
+        // Focus settled on a segment — collapse even if a press is in flight.
+        suppressApplyRef.current = false
+        clearSettle()
+        clearEndPress()
+        apply(target)
+      }
+
+      // Capture on this group runs before usePress, so padding clicks are included.
+      const onPointerDownCapture = (e: PointerEvent): void => {
+        // Ignore non-primary mouse buttons. Touch/pen and some test dispatches
+        // omit `button` or report 0; only `button > 0` is a definite secondary.
+        if (e.button > 0) return
+        suppressApplyRef.current = true
+        clearSettle()
+        clearEndPress()
+        exposeEnabledSegmentsForPointer(node)
+
+        endPressRef.current = (): void => {
+          clearEndPress()
+          scheduleCollapse()
+        }
+        window.addEventListener("pointerup", endPressRef.current, true)
+        window.addEventListener("pointercancel", endPressRef.current, true)
+      }
+      const pressRoot = node.closest<HTMLElement>('[role="group"]') ?? node
+
+      // Re-apply when segments remount or their tabindex changes (for example, isDisabled).
+      const observer = new MutationObserver(() => {
+        apply(lastTabbableRef.current)
+      })
+      observer.observe(node, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ["tabindex"],
+      })
+
+      node.addEventListener("focusin", onFocusIn)
+      pressRoot.addEventListener("pointerdown", onPointerDownCapture, true)
+      cleanupRef.current = () => {
+        observer.disconnect()
+        node.removeEventListener("focusin", onFocusIn)
+        pressRoot.removeEventListener(
+          "pointerdown",
+          onPointerDownCapture,
+          true
+        )
+        clearEndPress()
+        clearSettle()
+      }
+    },
+    [clearSettle, scheduleCollapse]
+  )
 }

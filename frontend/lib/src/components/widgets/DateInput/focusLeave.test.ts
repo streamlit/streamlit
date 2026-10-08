@@ -122,8 +122,8 @@ describe("focusLeave helpers", () => {
     expect(leave.immediate).toHaveBeenCalledOnce()
     leave.immediate.mockClear()
 
-    // Tab from any segment (not only the last) uses the settle path — range
-    // start→end stays inside; last field → calendar/outside is detected after rAF.
+    // Tab from a non-first segment waits one frame. Range start → end stays
+    // open; leaving the widget closes.
     expect(
       handlePassivePreviewFieldTab(
         { key: "Tab", shiftKey: false, target: first },

@@ -129,7 +129,6 @@ export function handlePassivePreviewFieldTab(
     return true
   }
 
-  // Deferred path for the cases above that may stay inside the widget.
   leave.beforeFocusSettles?.()
   requestAnimationFrame(() => {
     const active = document.activeElement

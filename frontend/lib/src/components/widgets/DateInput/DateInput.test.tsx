@@ -2577,7 +2577,7 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(screen.getByTestId("after")).toHaveFocus()
   })
 
-  it("exposes every segment on pointerdown for React Aria padding clicks", () => {
+  it("keeps every enabled segment exposed through MutationObserver until pointer settles", async () => {
     render(<DateInput {...getProps({ format: "YYYY/MM/DD" })} />)
 
     const region = screen.getByTestId("stDateInput")
@@ -2588,20 +2588,27 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(month.tabIndex).toBe(-1)
     expect(day.tabIndex).toBe(-1)
 
-    // Capture-phase expose must run before the group's bubble press handler
-    // (`focusLast` walks `{ tabbable: true }`), so padding/separator clicks can
-    // see every segment. Assert the mid-event state on bubble.
-    const tabsAtBubble: number[] = []
-    group.addEventListener("pointerdown", () => {
-      tabsAtBubble.push(year.tabIndex, month.tabIndex, day.tabIndex)
-    })
-
-    // userEvent.click is async and can hang on the group in JSDOM; we only need
-    // the synchronous pointerdown path that triggers our capture listener.
+    // Capture-phase expose must run before usePress. In a real browser the
+    // MutationObserver microtask runs between capture and bubble; without
+    // suppressApply that would collapse back to one stop before focusLast.
     /* eslint-disable testing-library/prefer-user-event */
     fireEvent.pointerDown(group, { pointerType: "mouse", button: 0 })
     /* eslint-enable testing-library/prefer-user-event */
-    expect(tabsAtBubble).toEqual([0, 0, 0])
+    await Promise.resolve()
+    expect([year.tabIndex, month.tabIndex, day.tabIndex]).toEqual([0, 0, 0])
+
+    /* eslint-disable testing-library/prefer-user-event */
+    fireEvent.pointerUp(group, { pointerType: "mouse", button: 0 })
+    /* eslint-enable testing-library/prefer-user-event */
+    await act(async () => {
+      await new Promise<void>(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+    const tabStops = [year, month, day].filter(
+      segment => segment.tabIndex === 0
+    )
+    expect(tabStops).toHaveLength(1)
   })
 
   it("Tabs start → end → calendar in range mode", async () => {
