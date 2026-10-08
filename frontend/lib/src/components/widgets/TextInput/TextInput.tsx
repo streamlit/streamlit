@@ -44,6 +44,7 @@ import {
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -82,7 +83,6 @@ import {
   INVALID_TEXT_INPUT_MESSAGE,
   isRequiredEmptyText,
   passesTextInputValidation,
-  REQUIRED_FIELD_MESSAGE,
 } from "./validation"
 
 export interface Props {
@@ -344,14 +344,12 @@ function TextInput({
   // drop the stored flag when the mask would hide it, so required off→on
   // or a programmatic fill-then-clear does not resurrect the error
   // without a new user commit/submit.
-  const requiredError =
-    element.required && hasRequiredError && isRequiredEmptyText(uiValue)
-      ? REQUIRED_FIELD_MESSAGE
-      : null
-  if (
-    hasRequiredError &&
-    (!element.required || !isRequiredEmptyText(uiValue))
-  ) {
+  const requiredError = requiredFieldError(
+    element.required,
+    hasRequiredError,
+    isRequiredEmptyText(uiValue)
+  )
+  if (hasRequiredError && requiredError === null) {
     setHasRequiredError(false)
   }
   const validateDisplayed = hasValidationConfig
