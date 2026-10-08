@@ -209,3 +209,13 @@ else:
         kwargs={"param": "initial audio input kwarg param"},
     )
     st.write("Initial audio input value:", bool(dyn_val))
+
+ignore_audio = st.audio_input(
+    "Ignore change audio input",
+    key="ignore_audio",
+    on_change="ignore",
+)
+st.write("Ignore audio value:", ignore_audio is not None)
+
+if st.button("Apply ignore audio", key="apply_ignore_audio"):
+    st.write("Applied ignore audio value:", ignore_audio is not None)

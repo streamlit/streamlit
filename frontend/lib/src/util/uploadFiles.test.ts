@@ -63,6 +63,7 @@ describe("uploadFiles", () => {
     expect(result.failedUploads).toHaveLength(1)
     expect(result.failedUploads[0].file).toBe(file)
     expect(result.failedUploads[0].error.message).toBe("Network error")
+    expect(widgetMgr.setFileUploaderStateValue).not.toHaveBeenCalled()
   })
 
   it("records failed uploads when file URL is missing uploadUrl", async () => {
@@ -176,5 +177,51 @@ describe("uploadFiles", () => {
     expect(result.successfulUploads).toHaveLength(0)
     expect(result.failedUploads).toHaveLength(1)
     expect(result.failedUploads[0].error.message).toBe("Upload failed")
+  })
+
+  it.each([
+    {
+      description: "omits triggerRerun when the caller does not pass it",
+      triggerRerun: undefined,
+      expectedOptions: {
+        formId: "",
+        fragmentId: undefined,
+        fromUser: true,
+      },
+    },
+    {
+      description: "passes triggerRerun: false when the caller sets it",
+      triggerRerun: false,
+      expectedOptions: {
+        formId: "",
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      },
+    },
+  ])("$description", async ({ triggerRerun, expectedOptions }) => {
+    const { uploadClient, widgetMgr, widgetInfo } = createMocks()
+    const file = createMockFile("test.txt")
+
+    vi.mocked(uploadClient.fetchFileURLs).mockResolvedValue([
+      { fileId: "file-1", uploadUrl: "upload-url", deleteUrl: "delete-url" },
+    ])
+    vi.mocked(uploadClient.uploadFile).mockResolvedValue(undefined)
+
+    await uploadFiles({
+      files: [file],
+      uploadClient,
+      widgetMgr,
+      widgetInfo,
+      ...(triggerRerun === false ? { triggerRerun } : {}),
+    })
+
+    expect(
+      widgetMgr.setFileUploaderStateValue
+    ).toHaveBeenCalledExactlyOnceWith(
+      "widget-1",
+      expect.anything(),
+      expectedOptions
+    )
   })
 })
