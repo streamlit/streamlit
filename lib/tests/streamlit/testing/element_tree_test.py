@@ -1773,11 +1773,18 @@ def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
     assert nodes[1].value == "Section"
     assert nodes[2].value == "unused format"
 
+    # Slider proto has ``set_value: bool``. Without the Element.__getattr__
+    # guard that field would be returned as a non-callable.
+    with pytest.raises(
+        AppTestError, match=r"set_value\(\) is not supported for slider"
+    ):
+        nodes[3].set_value(1)
+
 
 def test_inspectable_elements_reject_unsupported_interactions() -> None:
     """Inspectable-only nodes reject set_value and click with AppTestError.
 
-    ``st.audio_input`` has no typed wrapper yet. Typed ``Markdown`` is covered
+    ``st.audio_input`` is an untyped element. Typed ``Markdown`` is covered
     too.
     """
 
@@ -1859,7 +1866,7 @@ def test_pagination_set_value_selects_page() -> None:
     with pytest.raises(AppTestError, match=r"between 1 and 5"):
         at.pagination(key="pager").select(0)
     with pytest.raises(AppTestError, match=r"between 1 and 5"):
-        at.pagination(key="pager").set_value(True)  # type: ignore[arg-type]
+        at.pagination(key="pager").set_value(True)
     assert at.pagination(key="pager").value == 5
 
     with pytest.raises(
@@ -1871,7 +1878,44 @@ def test_pagination_set_value_selects_page() -> None:
     ):
         at.pagination(key="pager").click()
 
-    repr(at.pagination(key="pager"))
+    assert repr(at.pagination(key="pager")).startswith("Pagination(")
+
+
+def test_pagination_invalid_session_state_restores_default() -> None:
+    """A non-page in session state runs and lands on the declared default."""
+
+    def script():
+        import streamlit as st
+
+        page = st.pagination(5, default=2, key="pager")
+        st.text(f"page={page}")
+
+    at = AppTest.from_function(script).run()
+    assert at.pagination(key="pager").value == 2
+
+    at.session_state["pager"] = 4
+    at = at.run()
+    assert at.pagination(key="pager").value == 4
+
+    at.session_state["pager"] = "nope"
+    at = at.run()
+    assert not at.exception
+    assert at.pagination(key="pager").value == 2
+    assert at.text[0].value == "page=2"
+
+    at.session_state["pager"] = True
+    at = at.run()
+    assert not at.exception
+    assert at.pagination(key="pager").value == 2
+    assert at.session_state["pager"] == 2
+
+    at.session_state["pager"] = 4
+    at = at.run()
+    del at.session_state["pager"]
+    at = at.run()
+    assert not at.exception
+    assert at.pagination(key="pager").value == 2
+    assert at.session_state["pager"] == 2
 
 
 def test_pagination_disabled_rejects_update() -> None:

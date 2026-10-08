@@ -1984,7 +1984,18 @@ class Pagination(Widget):
     def _widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        ws.int_value = self.value
+        # ``set_value`` rejects bad pages, but session-state assignment and
+        # deletion do not. Copy only a real int. A missing key, bool, or other
+        # type would raise before the script runs, or a bool would become page
+        # 1. Leaving the oneof unset makes deserialize(None) restore the
+        # declared default. Out-of-range ints still go on the wire so
+        # PaginationSerde can clamp them.
+        try:
+            value = self.value
+        except KeyError:
+            value = None
+        if isinstance(value, int) and not isinstance(value, bool):
+            ws.int_value = value
         return ws
 
     @property
