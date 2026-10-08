@@ -104,6 +104,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Toast_pb2 import Toast as ToastProto
     from streamlit.proto.WidthConfig_pb2 import WidthConfig
     from streamlit.runtime.state.safe_session_state import SafeSessionState
+    from streamlit.runtime.uploaded_file_manager import UploadedFile
     from streamlit.testing.v1.app_test import AppTest
     from streamlit.typing import ChatInputValue
 
@@ -1509,7 +1510,7 @@ class Feedback(Widget):
         return super().set_value(v)
 
 
-_AUDIO_INPUT_MIME = "audio/wav"
+_AUDIO_INPUT_MIME: Final = "audio/wav"
 
 
 def _parse_audio_input_file(file: object) -> tuple[str, bytes, str]:
@@ -1533,10 +1534,12 @@ def _parse_audio_input_file(file: object) -> tuple[str, bytes, str]:
             )
         if mime_type.lower() != _AUDIO_INPUT_MIME:
             raise AppTestError(
-                "st.audio_input recordings use MIME type 'audio/wav'. "
+                f"st.audio_input recordings use MIME type {_AUDIO_INPUT_MIME!r}. "
                 f"Got {mime_type!r}."
             )
-        return filename, bytes(content), mime_type
+        # Store the canonical type. "Audio/WAV" matches the check but is not
+        # the MIME the browser widget reports.
+        return filename, bytes(content), _AUDIO_INPUT_MIME
     raise AppTestError(
         "st.audio_input records one recording. "
         "Pass (filename, content, mime_type) or None to clear."
@@ -1579,6 +1582,8 @@ class AudioInput(Widget):
         super().__init__(proto, root)
         self._files = InitialValue()
         self.type = "audio_input"
+        # None means the script passed sample_rate=None. An unset proto
+        # field reads as 0, which is not that signal.
         self.sample_rate = proto.sample_rate if proto.HasField("sample_rate") else None
 
     def set_value(  # ty: ignore[invalid-method-override]
@@ -1641,9 +1646,7 @@ class AudioInput(Widget):
         AudioInput
             The AudioInput instance for method chaining.
         """
-        self._assert_can_interact()
-        self._files = None
-        return self
+        return self.set_value(None)
 
     def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
         """Return the recording to register, if any.
@@ -1701,7 +1704,7 @@ class AudioInput(Widget):
         return ws
 
     @property
-    def value(self) -> Any:
+    def value(self) -> UploadedFile | None:
         """The current recording.
 
         Returns the ``UploadedFile`` or ``None`` committed by the last
@@ -1710,7 +1713,7 @@ class AudioInput(Widget):
         """
         state = self.root.session_state
         assert state
-        return state[self.id]
+        return cast("UploadedFile | None", state[self.id])
 
 
 @dataclass(repr=False)

@@ -1899,9 +1899,10 @@ def test_audio_input_records_one_wav() -> None:
         ),
         (b"raw-bytes", "one recording"),
     ],
+    ids=["wrong_extension", "wrong_mime", "multiple_files", "raw_bytes"],
 )
 def test_audio_input_rejects_invalid_recordings(value: Any, match: str) -> None:
-    """Non-WAV input and multiple files raise AppTestError before the script runs."""
+    """Invalid recordings raise AppTestError and leave the widget empty."""
 
     def script():
         import streamlit as st
