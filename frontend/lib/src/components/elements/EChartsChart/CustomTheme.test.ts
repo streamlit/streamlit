@@ -982,6 +982,28 @@ describe("applyStreamlitOptionDefaults", () => {
     expect(angleAxis.axisLabel.lineHeight).toBe(16)
   })
 
+  it("clears the theme line height when an axis label uses rich text", () => {
+    const result = applyDefaults({
+      xAxis: {
+        axisLabel: {
+          rich: { name: { fontSize: 28 } },
+        },
+      },
+      yAxis: {
+        axisLabel: {
+          rich: { name: { fontSize: 28 } },
+          lineHeight: 32,
+        },
+      },
+      series: [],
+    })
+
+    const xAxis = result.xAxis as { axisLabel: { lineHeight: number | null } }
+    expect(xAxis.axisLabel.lineHeight).toBeNull()
+    const yAxis = result.yAxis as { axisLabel: { lineHeight: number } }
+    expect(yAxis.axisLabel.lineHeight).toBe(32)
+  })
+
   it("does not rewrite axis label line height when theme is not streamlit", () => {
     const option = {
       xAxis: { axisLabel: { fontSize: 28 } },

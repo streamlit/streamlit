@@ -179,9 +179,9 @@ function buildAxisDefaults(
       fontFamily: theme.genericFonts.bodyFont,
       fontSize,
       // Keep the line box at the font size. A taller box lifts the glyphs off
-      // the tick and into the series. An author ``fontSize`` is matched in
-      // ``withAxisLabelLineHeight`` so a larger multiline label does not keep
-      // this smaller spacing.
+      // the tick and into the series. ``withAxisLabelLineHeight`` matches an
+      // author ``fontSize``, and clears this pin when the label uses ``rich``
+      // text so a larger segment is not laid out in this smaller box.
       lineHeight: fontSize,
       // ECharts' default margin is a fixed 8px. Scale the gap with the base font.
       margin: convertRemToPx(theme.spacing.sm),
@@ -1134,12 +1134,14 @@ const THEMED_AXIS_KEYS = [
 ] as const
 
 /**
- * Match ``axisLabel.lineHeight`` to an author ``fontSize``.
+ * Adjust ``axisLabel.lineHeight`` after the theme pin.
  *
  * The theme pins ``lineHeight`` to the theme font size. ECharts keeps that
  * value when an author sets only ``fontSize``, so a larger multiline label
- * uses the smaller spacing and its lines overlap. An author ``lineHeight``
- * is left alone.
+ * uses the smaller spacing and its lines overlap. Rich text inherits the
+ * same pin: zrender prefers the parent line box over a segment's own size,
+ * and an absent key still inherits the theme. An author ``lineHeight`` is
+ * left alone.
  */
 function withAxisLabelLineHeight(
   option: EChartsOptionObject
@@ -1188,7 +1190,18 @@ function alignAxisRecord(
     return axis
   }
   const label = axisLabel as Record<string, unknown>
-  if (typeof label.fontSize !== "number" || label.lineHeight !== undefined) {
+  if (label.lineHeight !== undefined) {
+    return axis
+  }
+  // Null is an explicit override. zrender treats it as unset and sizes each
+  // rich segment from its own font, padding, or height.
+  if (isPlainObject(label.rich)) {
+    return {
+      ...axis,
+      axisLabel: { ...label, lineHeight: null },
+    }
+  }
+  if (typeof label.fontSize !== "number") {
     return axis
   }
   return {
