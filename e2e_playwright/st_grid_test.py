@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class, get_element_b
 def test_grid_renders(app: Page):
     """Test that all grids render correctly."""
     grids = app.get_by_test_id("stGrid")
-    expect(grids).to_have_count(6)
+    expect(grids).to_have_count(7)
     check_top_level_class(app, "stGrid")
 
 
@@ -60,6 +60,23 @@ def test_grid_wrap_false_keeps_declared_columns(app: Page):
     expect(no_wrap_grid).to_have_css("overflow-x", "auto")
     # Must not collapse to wrapping auto-fit behavior.
     expect(no_wrap_grid).not_to_have_attribute("data-test-wrap", "true")
+
+
+def test_stretch_chart_fills_fixed_row_cell(app: Page):
+    """height=stretch inside grid.cell() fills a pixel row.
+
+    Covers both ``with grid.cell()`` and the chained ``grid.cell().bar_chart``
+    form. A content-sized cell block collapses these charts to 0px.
+    """
+    grid = get_element_by_key(app, "stretch_cell")
+    charts = grid.get_by_test_id("stVegaLiteChart")
+    expect(charts).to_have_count(2)
+    for index in range(2):
+        chart = charts.nth(index)
+        expect(chart).to_be_visible()
+        box = chart.bounding_box()
+        assert box is not None
+        assert box["height"] > 100
 
 
 def test_grid_visual_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction):

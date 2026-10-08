@@ -19,6 +19,7 @@ from typing import Final, Literal, TypeAlias, cast
 
 from streamlit.errors import (
     StreamlitInvalidHeightError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
     StreamlitValueOutOfRangeError,
@@ -418,6 +419,20 @@ def validate_wrap(wrap: bool) -> None:
     """Validate a strictly boolean ``wrap``, i.e. one with no auto/``None`` mode."""
     if not isinstance(wrap, bool):
         raise StreamlitValueError("wrap", ["True", "False"])
+
+
+def validate_bool_arg(value: object, parameter: str) -> None:
+    """Reject non-bool values before they reach protobuf.
+
+    A ``bool`` annotation does not stop callers from passing ``None`` or a
+    string, and protobuf then raises a native ``TypeError``.
+    """
+    if not isinstance(value, bool):
+        raise StreamlitInvalidParameterTypeError(
+            parameter,
+            type(value).__name__,
+            ["bool"],
+        )
 
 
 map_to_flex_terminology = {

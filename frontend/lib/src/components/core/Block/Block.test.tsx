@@ -1325,6 +1325,139 @@ describe("GridContainer Component", () => {
     )
   })
 
+  function makeTextElement(body: string, stretch = false): ElementNode {
+    const element = {
+      type: "text",
+      text: { body },
+      ...(stretch ? { heightConfig: { useStretch: true } } : {}),
+    } as unknown as Element
+
+    return new ElementNode(
+      element,
+      ForwardMsgMetadata.create(),
+      "",
+      FAKE_SCRIPT_HASH
+    )
+  }
+
+  it("fills a grid.cell() block in a definite-height row so stretch children grow", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [makeTextElement("Revenue"), makeTextElement("chart", true)],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    const block = makeGridBlock(
+      {
+        cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED,
+        verticalAlignment: BlockProto.GridContainer.VerticalAlignment.CENTER,
+        cellHeightConfig: { pixelHeight: 240 },
+      },
+      [cell]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridCell = screen.getByTestId("stGridCell")
+    expect(within(gridCell).getByTestId("stLayoutWrapper")).toHaveStyle({
+      height: "100%",
+      flex: "1 1 auto",
+    })
+    expect(within(gridCell).getByTestId("stVerticalBlock")).toHaveStyle({
+      height: "100%",
+      justifyContent: "safe center",
+    })
+
+    const containers = within(gridCell).getAllByTestId("stElementContainer")
+    const stretch = containers.find(container =>
+      container.textContent?.includes("chart")
+    )
+    expect(stretch).toHaveStyle({ flex: "1 1 0%", height: "100%" })
+    const label = containers.find(container =>
+      container.textContent?.includes("Revenue")
+    )
+    expect(label).not.toHaveStyle({ flex: "1 1 0%" })
+  })
+
+  it("keeps a grid.cell() block content-sized when the row height is content", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [makeTextElement("Short")],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    const block = makeGridBlock(
+      {
+        cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+        verticalAlignment: BlockProto.GridContainer.VerticalAlignment.CENTER,
+      },
+      [cell]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridCell = screen.getByTestId("stGridCell")
+    expect(within(gridCell).getByTestId("stLayoutWrapper")).toHaveStyle({
+      height: "auto",
+    })
+    expect(within(gridCell).getByTestId("stVerticalBlock")).not.toHaveStyle({
+      height: "100%",
+    })
+    expect(screen.queryByTestId("stGridCellBody")).not.toBeInTheDocument()
+  })
+
+  it("leaves a direct stretch child on height 100% without flex-grow", () => {
+    const block = makeGridBlock(
+      { cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED },
+      [makeTextElement("direct", true)]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const container = within(screen.getByTestId("stGridCell")).getByTestId(
+      "stElementContainer"
+    )
+    expect(container).toHaveStyle({ height: "100%" })
+    expect(container).not.toHaveStyle({ flex: "1 1 0%" })
+    expect(
+      within(screen.getByTestId("stGridCell")).queryByTestId("stLayoutWrapper")
+    ).not.toBeInTheDocument()
+  })
+
+  it("resolves columns from the laid-out width instead of the 704px fallback", () => {
+    const rect = {
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      bottom: 40,
+      right: 260,
+      width: 260,
+      height: 40,
+      toJSON: () => ({}),
+    } as DOMRect
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue(rect)
+    try {
+      const block = makeGridBlock({
+        maxColumns: 0,
+        minColumnWidthPx: 200,
+      })
+      renderWithContexts(makeGridNodeRendererComponent(block))
+      // (260 + 16) / (200 + 16) = 1 column, not the 704px fallback's 3.
+      expect(screen.getByTestId("stGrid")).toHaveAttribute(
+        "data-test-column-count",
+        "1"
+      )
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
   it("does not add a cell scrollport in content-height mode", () => {
     const cell = new BlockNode(
       FAKE_SCRIPT_HASH,

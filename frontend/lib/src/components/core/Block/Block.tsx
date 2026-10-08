@@ -20,7 +20,9 @@ import {
   type ReactNode,
   type Ref,
   useContext,
+  useLayoutEffect,
   useMemo,
+  useState,
 } from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
@@ -71,6 +73,7 @@ import {
 } from "./gridUtils"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
+  gridCellJustifyContent,
   StyledColumn,
   StyledDialogContentEndPad,
   StyledFlexContainerBlock,
@@ -220,7 +223,15 @@ export const FlexBoxContainer = (
   // don't fit, instead of wrapping.
   const enableHorizontalScroll = direction === Direction.HORIZONTAL && !wrap
 
-  const styles = {
+  // A pixel row is definite height. The cell block has no height of its
+  // own, so without this it stays content-sized and stretch children
+  // resolve against 0. Content rows leave the block content-sized so
+  // vertical_alignment can still move it.
+  const fillGridCell =
+    notNullOrUndefined(props.node.deltaBlock.gridCell) &&
+    Boolean(parentContext?.fillAvailableHeight)
+
+  const styles: StyledFlexContainerBlockProps = {
     gap:
       // This is backwards compatible with old proto messages since previously
       // the gap size was defaulted to small.
@@ -233,11 +244,13 @@ export const FlexBoxContainer = (
     overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
     // We need the height on the container for scrolling.
-    height: layout_styles.height,
+    height: fillGridCell ? "100%" : layout_styles.height,
+    minHeight: fillGridCell ? 0 : undefined,
     // Flex properties are set on the LayoutWrapper.
     flex: "1",
     align: props.node.deltaBlock.flexContainer?.align,
     justify: props.node.deltaBlock.flexContainer?.justify,
+    $fillJustify: fillGridCell ? parentContext?.fillJustify : undefined,
   }
 
   const userKey = getKeyFromId(props.node.deltaBlock.id)
@@ -267,6 +280,10 @@ export const FlexBoxContainer = (
         notNullOrUndefined(props.node.deltaBlock.column) ||
         notNullOrUndefined(props.node.deltaBlock.gridCell)
       }
+      // Stretch children of this cell take leftover space. Do not copy
+      // fillAvailableHeight: nested containers must not fill the cell
+      // unless they ask for stretch.
+      verticalStretchGrows={fillGridCell}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -479,7 +496,32 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
 
   const { values: observedWidths, elementRef } =
     useResizeObserver<HTMLDivElement>(GRID_OBSERVED_PROPERTIES)
-  const measuredWidth = observedWidths[0]
+  const observedWidth = observedWidths[0]
+  // The resize observer reports after paint, so a nested grid (sidebar,
+  // column) would flash the 704px fallback for a frame. Read the laid-out
+  // width before paint. A width of 0 is jsdom or a hidden tab.
+  const [layoutWidthPx, setLayoutWidthPx] = useState<number | undefined>()
+  useLayoutEffect(() => {
+    const element = elementRef.current
+    if (!element) {
+      return
+    }
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Width is needed before the first paint.
+    const width = element.getBoundingClientRect().width
+    if (width > 0) {
+      setLayoutWidthPx(previous =>
+        previous !== undefined && Math.abs(previous - width) < 0.5
+          ? previous
+          : width
+      )
+    }
+    // elementRef is stable, so this runs once before paint. Later resizes
+    // come from the resize observer.
+  }, [elementRef])
+  const measuredWidth =
+    observedWidth !== undefined && observedWidth > 0
+      ? observedWidth
+      : layoutWidthPx
 
   // Extract grid configuration with defaults
   const maxColumns = gridConfig?.maxColumns ?? 0
@@ -648,6 +690,12 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
           <FlexContextProvider
             direction={Direction.VERTICAL}
             isDirectlyInColumn
+            fillAvailableHeight={constrainOverflow}
+            fillJustify={
+              constrainOverflow
+                ? gridCellJustifyContent(verticalAlignment)
+                : undefined
+            }
             parentContext={parentContext}
           >
             {child.element}
@@ -747,6 +795,16 @@ export const BlockNodeRenderer = (
     subElement: extractLayoutSubElement(node.deltaBlock),
     minStretchBehavior,
   })
+
+  // grid.cell() is wrapped in stLayoutWrapper. In a definite-height row that
+  // wrapper must fill the cell; otherwise its default flex (0 1 auto) and
+  // height: auto collapse stretch children to 0.
+  const fillGridCell =
+    notNullOrUndefined(node.deltaBlock.gridCell) &&
+    Boolean(flexContext?.fillAvailableHeight)
+  const wrapperStyles = fillGridCell
+    ? { ...styles, height: "100%", flex: "1 1 auto", minHeight: 0 }
+    : styles
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return null
@@ -977,7 +1035,7 @@ export const BlockNodeRenderer = (
         className={convertKeyToClassName(
           keyClassOnWrapper ? userKey : undefined
         )}
-        {...styles}
+        {...wrapperStyles}
       >
         {containerElement}
       </StyledLayoutWrapper>

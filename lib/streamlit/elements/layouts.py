@@ -35,6 +35,7 @@ from streamlit.elements.lib.layout_utils import (
     get_justify,
     get_width_config,
     is_int,
+    validate_bool_arg,
     validate_height,
     validate_horizontal_alignment,
     validate_uint32_max,
@@ -943,6 +944,8 @@ class LayoutsMixin:
 
         """
         validate_wrap(wrap)
+        validate_bool_arg(border, "border")
+        validate_bool_arg(dense, "dense")
 
         if isinstance(columns, str) and columns == "auto":
             validated_columns: Literal["auto"] | int = "auto"

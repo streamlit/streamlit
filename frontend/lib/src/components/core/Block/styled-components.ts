@@ -76,6 +76,7 @@ interface StyledElementContainerProps {
   overflow: React.CSSProperties["overflow"]
   flex?: React.CSSProperties["flex"]
   minWidth?: React.CSSProperties["minWidth"]
+  minHeight?: React.CSSProperties["minHeight"]
   textAlign?: React.CSSProperties["textAlign"]
 }
 
@@ -97,6 +98,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     overflow,
     flex,
     minWidth,
+    minHeight,
     textAlign,
   }) => ({
     width,
@@ -107,6 +109,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     // in horizontal layouts. Particularly when an element uses the full screen wrapper.
     // Some components support zero width (e.g. iframe).
     minWidth: width === "0px" ? 0 : (minWidth ?? "1rem"),
+    minHeight,
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
@@ -292,6 +295,13 @@ export interface StyledFlexContainerBlockProps {
    * (from `overflow`) instead of the `overflow` shorthand.
    */
   overflowX?: React.CSSProperties["overflowX"]
+  minHeight?: React.CSSProperties["minHeight"]
+  /**
+   * Replaces the proto justify when a `grid.cell()` block fills a
+   * definite-height row. `safe` is a second declaration so an unknown
+   * keyword does not drop the fallback.
+   */
+  $fillJustify?: { fallback: CSSProperties["justifyContent"]; safe?: string }
 }
 
 export const StyledFlexContainerBlock =
@@ -308,6 +318,8 @@ export const StyledFlexContainerBlock =
       justify,
       overflow,
       overflowX,
+      minHeight,
+      $fillJustify,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -324,7 +336,8 @@ export const StyledFlexContainerBlock =
         flexDirection: direction,
         flex,
         alignItems: getAlignItems(align),
-        justifyContent: getJustifyContent(justify),
+        justifyContent: $fillJustify?.fallback ?? getJustifyContent(justify),
+        minHeight,
         flexWrap: $wrap ? "wrap" : "nowrap",
         ...(border && {
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
@@ -365,13 +378,20 @@ export const StyledFlexContainerBlock =
             },
           }),
       }
-    }
+    },
+    // Unknown `safe` must not drop the fallback alignment.
+    ({ $fillJustify }) =>
+      $fillJustify?.safe &&
+      css`
+        justify-content: ${$fillJustify.safe};
+      `
   )
 
 interface StyledLayoutWrapperProps {
   width?: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex?: React.CSSProperties["flex"]
+  minHeight?: React.CSSProperties["minHeight"]
 }
 
 /**
@@ -389,7 +409,7 @@ export const StyledDialogContentEndPad = styled.div(({ theme }) => ({
 }))
 
 export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
-  ({ width, height, flex }) => ({
+  ({ width, height, flex, minHeight }) => ({
     display: "flex",
     // This shouldn't matter since this is a wrapper and should only have one child.
     // However, adding it here to be explicit.
@@ -399,6 +419,7 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     minWidth: "1rem",
     height,
     flex,
+    minHeight,
   })
 )
 
@@ -527,9 +548,9 @@ export const StyledGridContentMeasure = styled.div<{
   flexShrink: 0,
 }))
 
-function gridCellJustifyContent(
+export function gridCellJustifyContent(
   verticalAlignment: BlockProto.GridContainer.VerticalAlignment
-): { fallback: string; safe?: string } {
+): { fallback: CSSProperties["justifyContent"]; safe?: string } {
   const { VerticalAlignment } = BlockProto.GridContainer
   switch (verticalAlignment) {
     case VerticalAlignment.CENTER:

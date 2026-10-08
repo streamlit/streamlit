@@ -3005,6 +3005,19 @@ class GridTest(DeltaGeneratorTestCase):
         st.grid(dense=True)
         assert self.get_delta_from_queue().add_block.grid_container.dense
 
+    @parameterized.expand(
+        [
+            ("border", "yes"),
+            ("border", None),
+            ("dense", "yes"),
+            ("dense", None),
+        ]
+    )
+    def test_grid_non_bool_border_and_dense(self, parameter: str, value: object):
+        """Non-bool border/dense raise a Streamlit type error, not protobuf's."""
+        with pytest.raises(StreamlitInvalidParameterTypeError, match=parameter):
+            st.grid(**{parameter: value})
+
     def test_grid_context_manager(self):
         """Test that grid works as a context manager."""
         with st.grid():

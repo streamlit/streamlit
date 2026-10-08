@@ -80,3 +80,11 @@ st.subheader("No wrap")
 with st.grid(3, wrap=False, key="no_wrap"):
     for i in range(3):
         st.button(f"No wrap {i + 1}", key=f"no_wrap_btn_{i}")
+
+# Pixel rows give grid.cell() a definite height, so stretch charts fill it.
+st.subheader("Stretch inside a fixed-height cell")
+stretch_grid = st.grid(2, row_height=240, border=True, key="stretch_cell")
+with stretch_grid.cell():
+    st.subheader("Revenue")
+    st.line_chart({"a": [1, 3, 2], "b": [2, 1, 4]}, height="stretch")
+stretch_grid.cell().bar_chart({"a": [1, 3, 2]}, height="stretch")
