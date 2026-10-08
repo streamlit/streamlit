@@ -37,7 +37,7 @@ vi.mock("react", async () => ({
 describe("useIsOverflowing", () => {
   it("sets state to true if the element is overflowing", () => {
     const ref = { current: { scrollHeight: 1, clientHeight: 0 } }
-    // @ts-expect-error
+    // @ts-expect-error - fixture current is not an HTMLElement
     useIsOverflowing(ref)
 
     const setIsOverflowing = stateSetters.pop()
@@ -46,7 +46,7 @@ describe("useIsOverflowing", () => {
 
   it("sets state to false if the element is not overflowing", () => {
     const ref = { current: { scrollHeight: 1, clientHeight: 1 } }
-    // @ts-expect-error
+    // @ts-expect-error - fixture current is not an HTMLElement
     useIsOverflowing(ref)
 
     const setIsOverflowing = stateSetters.pop()

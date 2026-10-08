@@ -123,9 +123,9 @@ function makeVerticalBlockComponent(node: BlockNode): ReactElement {
       scriptRunId={""}
       scriptRunState={ScriptRunState.NOT_RUNNING}
       widgetsDisabled={false}
-      // @ts-expect-error
+      // @ts-expect-error - widgetMgr is required
       widgetMgr={undefined}
-      // @ts-expect-error
+      // @ts-expect-error - uploadClient is required
       uploadClient={undefined}
     />
   )
@@ -198,9 +198,9 @@ describe("FlexBoxContainer Block Component", () => {
           scriptRunId={""}
           scriptRunState={ScriptRunState.NOT_RUNNING}
           widgetsDisabled={false}
-          // @ts-expect-error
+          // @ts-expect-error - widgetMgr is required
           widgetMgr={undefined}
-          // @ts-expect-error
+          // @ts-expect-error - uploadClient is required
           uploadClient={undefined}
         />
       )
@@ -456,7 +456,7 @@ describe("BlockNodeRenderer CSS key class placement", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -530,7 +530,7 @@ describe("BlockNodeRenderer step blocks", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -586,7 +586,7 @@ describe("BlockNodeRenderer step blocks", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -628,7 +628,7 @@ describe("BlockNodeRenderer transparent blocks", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -762,7 +762,7 @@ describe("BlockNodeRenderer container types", () => {
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
         endpoints={endpoints}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )

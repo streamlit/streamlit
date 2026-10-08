@@ -190,7 +190,7 @@ describe("FormSubmitButton", () => {
     )
 
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
-    // @ts-expect-error
+    // @ts-expect-error - submitButtons.get may be undefined
     expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(props.element)
 
     const { unmount: unmountView2 } = renderWithContexts(
@@ -198,7 +198,7 @@ describe("FormSubmitButton", () => {
     )
 
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(2)
-    // @ts-expect-error
+    // @ts-expect-error - submitButtons.get may be undefined
     expect(formsData.submitButtons.get("mockFormId")[1]).toEqual(
       props2.element
     )
@@ -206,7 +206,7 @@ describe("FormSubmitButton", () => {
     unmountView1()
 
     expect(formsData.submitButtons.get("mockFormId")?.length).toBe(1)
-    // @ts-expect-error
+    // @ts-expect-error - submitButtons.get may be undefined
     expect(formsData.submitButtons.get("mockFormId")[0]).toEqual(
       props2.element
     )
