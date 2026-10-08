@@ -63,6 +63,7 @@ import {
   calculateMaxBreakpoint,
   clampSidebarWidth,
   getSidebarWidthLimits,
+  SIDEBAR_ELEMENT_ID,
 } from "./utils"
 
 export interface SidebarProps {
@@ -264,7 +265,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     <Resizable
       className="stSidebar"
       data-testid="stSidebar"
-      aria-expanded={!isCollapsed}
+      aria-label="Sidebar"
+      data-collapsed={isCollapsed ? "true" : "false"}
       enable={{
         top: false,
         right: true,
@@ -291,8 +293,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       }}
       as={StyledSidebar}
       onResizeStop={onResizeStop}
-      // Props part of StyledSidebar, but not Resizable component
-      // @ts-expect-error
+      // Resizable's types omit these StyledSidebar props (id, isCollapsed,
+      // sidebarWidth, windowInnerWidth), but it forwards extra props to the `as`
+      // component. The id is the target of the collapse/expand aria-controls.
+      // @ts-expect-error - Resizable types omit StyledSidebar props it still forwards
+      id={SIDEBAR_ELEMENT_ID}
       isCollapsed={isCollapsed}
       sidebarWidth={sidebarWidth}
       windowInnerWidth={innerWidth}
@@ -306,7 +311,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
           {renderLogoContent()}
-          {(!isSidebarLocked || isMobileViewport) && (
+          {/* Unmount while collapsed. The sidebar stays mounted offscreen, so on
+              small viewports (where this button stays visible) it would be a
+              focusable duplicate of the header expand button. */}
+          {(!isSidebarLocked || isMobileViewport) && !isCollapsed && (
             <StyledCollapseSidebarButton
               showSidebarCollapse={showSidebarCollapse}
               data-testid="stSidebarCollapseButton"
@@ -315,6 +323,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                 kind={BaseButtonKind.HEADER_NO_PADDING}
                 onClick={toggleCollapse}
                 aria-label="Collapse sidebar"
+                aria-expanded={!isCollapsed}
+                aria-controls={SIDEBAR_ELEMENT_ID}
               >
                 <DynamicIcon
                   size="xl"

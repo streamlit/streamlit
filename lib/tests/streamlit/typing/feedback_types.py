@@ -44,3 +44,6 @@ if TYPE_CHECKING:
         ),
         Literal[0, 1, 2, 3, 4] | None,
     )
+    assert_type(feedback("thumbs", on_change=None), Literal[0, 1] | None)
+    assert_type(feedback("thumbs", on_change="rerun"), Literal[0, 1] | None)
+    assert_type(feedback("thumbs", on_change="ignore"), Literal[0, 1] | None)

@@ -84,6 +84,12 @@ in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "in_cached_function", default=False
 )
 
+# True while execution_control enqueues its internal st.empty() yield point,
+# so the fragment-callback element warning ignores that write.
+_fragment_callback_warning_suppressed: contextvars.ContextVar[bool] = (
+    contextvars.ContextVar("fragment_callback_warning_suppressed", default=False)
+)
+
 
 @dataclass(frozen=True)
 class FragmentThreadState:
@@ -195,6 +201,21 @@ class ThreadState:
             yield
         finally:
             _thread_state.reset(token)
+
+
+def is_fragment_callback_warning_suppressed() -> bool:
+    """Whether the fragment-callback element warning is suppressed for this write."""
+    return _fragment_callback_warning_suppressed.get()
+
+
+@contextlib.contextmanager
+def suppress_fragment_callback_warning() -> Generator[None, None, None]:
+    """Suppress the fragment-callback element warning within this block."""
+    token = _fragment_callback_warning_suppressed.set(True)
+    try:
+        yield
+    finally:
+        _fragment_callback_warning_suppressed.reset(token)
 
 
 @dataclass

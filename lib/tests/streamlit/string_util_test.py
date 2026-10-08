@@ -29,11 +29,11 @@ from streamlit import string_util
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
 
 
 @contextmanager
-def _without_modules(*module_names: str) -> Iterator[None]:
+def _without_modules(*module_names: str) -> Generator[None, None, None]:
     """Temporarily remove modules from ``sys.modules`` to detect unexpected imports."""
     saved = {name: sys.modules.pop(name, None) for name in module_names}
     try:
