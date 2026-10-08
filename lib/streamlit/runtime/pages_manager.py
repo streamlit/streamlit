@@ -47,6 +47,7 @@ class PagesManager:
         self._script_cache = script_cache
         self._intended_page_script_hash: PageHash | None = None
         self._intended_page_name: PageName | None = None
+        self._intended_page_script_path: ScriptPath | None = None
         self._current_page_script_hash: PageHash = ""
         self._pages: dict[PageHash, PageInfo] | None = None
         # A relic of v1 of Multipage apps, we performed special handling
@@ -86,6 +87,10 @@ class PagesManager:
     def intended_page_script_hash(self) -> PageHash | None:
         return self._intended_page_script_hash
 
+    @property
+    def intended_page_script_path(self) -> ScriptPath | None:
+        return self._intended_page_script_path
+
     def set_current_page_script_hash(self, page_script_hash: PageHash) -> None:
         self._current_page_script_hash = page_script_hash
 
@@ -96,13 +101,17 @@ class PagesManager:
         }
 
     def set_script_intent(
-        self, page_script_hash: PageHash, page_name: PageName
+        self,
+        page_script_hash: PageHash,
+        page_name: PageName,
+        page_script_path: ScriptPath = "",
     ) -> None:
         # Not lock-protected: attribute assignment is atomic in both GIL and
         # free-threaded CPython, and intent is always set before script
         # execution begins (not concurrently with set_pages_and_resolve).
         self._intended_page_script_hash = page_script_hash
         self._intended_page_name = page_name
+        self._intended_page_script_path = page_script_path
 
     def get_initial_active_script(self, page_script_hash: PageHash) -> PageInfo | None:
         return {
@@ -180,11 +189,20 @@ class PagesManager:
 
         if self.intended_page_script_hash:
             # If a page hash is specified, we assume a page should exist.
-            # Return the matching page or fall back to the default page hash.
-            return self._pages.get(
-                self.intended_page_script_hash,
-                self._pages.get(fallback_page_hash, None),
-            )
+            # A script path marks an internal page-switch request whose source
+            # must match the page registered during this run.
+            page = self._pages.get(self.intended_page_script_hash)
+            if self.intended_page_script_path:
+                if (
+                    page is None
+                    or page.get("script_path") != self.intended_page_script_path
+                ):
+                    return None
+                return page
+
+            # Browser navigation does not include a script path and preserves
+            # the existing fallback-to-default behavior for unknown hashes.
+            return page or self._pages.get(fallback_page_hash, None)
         if self.intended_page_name:
             # If a user navigates directly to a non-main page of an app,
             # the page name can identify the page script to run.

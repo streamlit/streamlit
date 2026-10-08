@@ -742,8 +742,10 @@ def test_st_switch_page_allows_existing_unregistered_navigation_page(
         switch_page("gated.py")
 
     patched_create_page.assert_called_once_with("/some/path/gated.py")
+    ctx.script_requests.request_rerun.assert_called_once()
     rerun_arg = ctx.script_requests.request_rerun.call_args.args[0]
     assert rerun_arg.page_script_hash == "gated_hash"
+    assert rerun_arg.page_script_path == "/some/path/gated.py"
 
 
 @patch("streamlit.commands.execution_control.normalize_path_join")

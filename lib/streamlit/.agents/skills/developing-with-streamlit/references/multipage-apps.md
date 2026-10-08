@@ -200,6 +200,34 @@ Common conditions for showing/hiding pages:
 - Environment variables or secrets
 - Time-based access (e.g., beta features)
 
+When an interaction unlocks a page, update Session State before switching to
+it. The page doesn't need to be in the current navigation config, but the next
+run must include it:
+
+```python
+import streamlit as st
+
+dashboard_page = st.Page(
+    "app_pages/dashboard.py", title="Dashboard", url_path="dashboard"
+)
+
+
+def log_in():
+    if st.button("Log in"):
+        st.session_state.logged_in = True
+        st.switch_page(dashboard_page)
+
+
+pages = [st.Page(log_in, title="Log in")]
+if st.session_state.get("logged_in"):
+    pages.append(dashboard_page)
+
+st.navigation(pages).run()
+```
+
+Pass the `Page` object when the destination has a custom `url_path`. Otherwise,
+you can pass its file path.
+
 ## Imports from pages
 
 When importing from page files in `app_pages/`, always import from the root directory perspective:

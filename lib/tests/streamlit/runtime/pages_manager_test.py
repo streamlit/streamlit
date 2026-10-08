@@ -45,6 +45,58 @@ class PagesManagerTest(unittest.TestCase):
         )
         assert page_script is None
 
+    def test_set_pages_and_resolve_matching_script_path(self) -> None:
+        """Resolve a page when its hash and expected script path both match."""
+        self.pages_manager.set_script_intent("page_hash", "", "/app/pages/settings.py")
+        page_script = self.pages_manager.set_pages_and_resolve(
+            {
+                "page_hash": {
+                    "page_script_hash": "page_hash",
+                    "script_path": "/app/pages/settings.py",
+                }
+            },
+            fallback_page_hash="fallback",
+        )
+
+        assert page_script is not None
+        assert page_script["page_script_hash"] == "page_hash"
+
+    def test_set_pages_and_resolve_rejects_mismatched_script_path(self) -> None:
+        """Do not resolve a different source that shares the intended hash."""
+        self.pages_manager.set_script_intent("page_hash", "", "/app/pages/settings.py")
+        page_script = self.pages_manager.set_pages_and_resolve(
+            {
+                "page_hash": {
+                    "page_script_hash": "page_hash",
+                    "script_path": "",
+                },
+                "fallback": {
+                    "page_script_hash": "fallback",
+                    "script_path": "/app/home.py",
+                },
+            },
+            fallback_page_hash="fallback",
+        )
+
+        assert page_script is None
+
+    def test_set_pages_and_resolve_does_not_fallback_for_expected_path(self) -> None:
+        """A missing path-targeted page must not silently resolve the default."""
+        self.pages_manager.set_script_intent(
+            "missing_hash", "", "/app/pages/missing.py"
+        )
+        page_script = self.pages_manager.set_pages_and_resolve(
+            {
+                "fallback": {
+                    "page_script_hash": "fallback",
+                    "script_path": "/app/home.py",
+                }
+            },
+            fallback_page_hash="fallback",
+        )
+
+        assert page_script is None
+
     def test_set_pages_and_resolve_valid_name(self) -> None:
         """Ensure the page script is provided with valid page name specified."""
         self.pages_manager.set_script_intent("", "page_name")

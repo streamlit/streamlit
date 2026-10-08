@@ -53,6 +53,8 @@ class RerunData:
     widget_states: WidgetStates | None = None
     page_script_hash: str = ""
     page_name: str = ""
+    # Expected source for an internal page switch. Empty for browser navigation.
+    page_script_path: str = ""
 
     # A single fragment_id to append to fragment_id_queue.
     fragment_id: str | None = None
@@ -408,6 +410,7 @@ class ScriptRequests:
                 widget_states=coalesced_states,
                 page_script_hash=new_data.page_script_hash,
                 page_name=new_data.page_name,
+                page_script_path=new_data.page_script_path,
                 fragment_id_queue=fragment_id_queue,
                 cached_message_hashes=new_data.cached_message_hashes,
                 is_fragment_scoped_rerun=is_fragment_scoped_rerun,

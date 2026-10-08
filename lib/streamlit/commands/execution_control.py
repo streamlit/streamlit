@@ -469,6 +469,7 @@ def switch_page(  # type: ignore[misc]
         raise NoSessionContext()
 
     page_script_hash = ""
+    page_script_path = ""
     if isinstance(page, Page):
         if page.is_external:
             raise StreamlitAPIException(
@@ -489,19 +490,21 @@ def switch_page(  # type: ignore[misc]
         requested_page = os.path.realpath(
             normalize_path_join(main_script_directory, page)
         )
+        page_script_path = requested_page
         all_app_pages = ctx.pages_manager.get_pages().values()
 
         matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
+        uses_pages_directory = bool(PagesManager.uses_pages_directory)
 
         if matched_pages:
             page_script_hash = matched_pages[0]["page_script_hash"]
-        elif not PagesManager.uses_pages_directory and Path(requested_page).is_file():
+        elif not uses_pages_directory and Path(requested_page).is_file():
             page_script_hash = _create_page(requested_page)._script_hash
         else:
             raise StreamlitPageNotFoundError(
                 page=page,
                 main_script_directory=main_script_directory,
-                uses_pages_directory=bool(PagesManager.uses_pages_directory),
+                uses_pages_directory=uses_pages_directory,
             )
 
     # Reset query params (with exception of embed) and optionally apply overrides.
@@ -518,6 +521,7 @@ def switch_page(  # type: ignore[misc]
         RerunData(
             query_string=ctx.query_string,
             page_script_hash=page_script_hash,
+            page_script_path=page_script_path,
             cached_message_hashes=ctx.cached_message_hashes,
             context_info=ctx.context_info,
         )
