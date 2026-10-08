@@ -224,9 +224,8 @@ def start_load_test_server(
         prefix=f"load-test-server-{port}-",
         suffix=".log",
     )
-    os.close(fd)
     log_path = Path(log_name)
-    with open(log_path, "w", encoding="utf-8") as log_file:
+    with os.fdopen(fd, "w", encoding="utf-8") as log_file:
         process = subprocess.Popen(
             args,
             env=env,
@@ -238,7 +237,7 @@ def start_load_test_server(
 
 
 def _read_log_tail(log_path: Path, *, max_lines: int = _SERVER_LOG_TAIL_LINES) -> str:
-    """Return the last ``max_lines`` of a server log file."""
+    """Return the last ``max_lines`` lines from a server log file."""
     try:
         text = log_path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
@@ -249,22 +248,33 @@ def _read_log_tail(log_path: Path, *, max_lines: int = _SERVER_LOG_TAIL_LINES) -
     return "\n".join(lines[-max_lines:])
 
 
+def _server_process_status(returncode: int | None) -> str:
+    """Describe a child process as a returncode or as still running."""
+    if returncode is not None:
+        return f"returncode={returncode}"
+    return "process was still running"
+
+
+def _unlink_server_log(log_path: Path) -> None:
+    """Remove a captured server log, ignoring missing files."""
+    try:
+        log_path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 def _format_server_startup_failure(
     port: int,
     returncode: int | None,
     log_path: Path,
 ) -> str:
-    """Build a pytest-visible diagnosis for a server that never became healthy."""
-    status = (
-        f"returncode={returncode}"
-        if returncode is not None
-        else "process was still running"
-    )
+    """Build the failure message for a server that never became healthy."""
+    status = _server_process_status(returncode)
     log_tail = _read_log_tail(log_path)
     return (
         f"Server failed to start on port {port} ({status})\n"
-        f"--- last {_SERVER_LOG_TAIL_LINES} lines of server stdout/stderr "
-        f"({log_path}) ---\n"
+        f"--- server stdout/stderr tail "
+        f"(up to {_SERVER_LOG_TAIL_LINES} lines, {log_path}) ---\n"
         f"{log_tail}"
     )
 
@@ -301,10 +311,11 @@ def start_healthy_load_test_server(
     scenario_path: Path,
     *,
     max_attempts: int = _LOAD_TEST_SERVER_START_ATTEMPTS,
-) -> tuple[subprocess.Popen[str], int]:
+) -> tuple[subprocess.Popen[str], int, Path]:
     """Start a load-test server, retrying on a new port if health never comes up.
 
-    Returns the process and the port that became healthy.
+    Returns the process, the port that became healthy, and the log file path.
+    The caller should unlink the log after terminating the process.
 
     Raises
     ------
@@ -312,18 +323,29 @@ def start_healthy_load_test_server(
         If every attempt fails its health check.
     """
     tried_ports: list[int] = []
+    attempt_statuses: list[str] = []
     last_failure: str | None = None
-    for _ in range(max_attempts):
+    for attempt_index in range(max_attempts):
         port = find_available_port()
         tried_ports.append(port)
         process, log_path = start_load_test_server(port, scenario_path)
         if wait_for_server(port, process=process):
-            return process, port
+            return process, port, log_path
         returncode = process.poll()
         terminate_process(process)
-        last_failure = _format_server_startup_failure(port, returncode, log_path)
+        attempt_statuses.append(
+            f"Attempt {attempt_index + 1}: port {port} "
+            f"({_server_process_status(returncode)})"
+        )
+        if attempt_index == max_attempts - 1:
+            last_failure = _format_server_startup_failure(port, returncode, log_path)
+        else:
+            _unlink_server_log(log_path)
 
-    detail = f"\n{last_failure}" if last_failure is not None else ""
+    status_block = "\n".join(attempt_statuses)
+    detail = f"\n{status_block}"
+    if last_failure is not None:
+        detail = f"{detail}\n{last_failure}"
     raise RuntimeError(
         f"Server failed to start after {max_attempts} attempts "
         f"(ports: {tried_ports}){detail}"

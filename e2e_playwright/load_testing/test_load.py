@@ -44,6 +44,7 @@ from e2e_playwright.load_testing import conftest as load_conftest
 from e2e_playwright.load_testing.conftest import (
     ResultsCollector,
     _format_server_startup_failure,
+    _unlink_server_log,
     get_scenario_path,
     start_healthy_load_test_server,
     terminate_process,
@@ -116,6 +117,7 @@ def test_startup_failure_message_includes_returncode_and_log_tail(
 
     assert "port 12345" in message
     assert "returncode=1" in message
+    assert "up to 80 lines" in message
     assert "log-line-99" in message
     assert "log-line-20" in message
     assert "keep-me-out" not in message
@@ -163,8 +165,45 @@ def test_unhealthy_server_failure_includes_logs_and_returncode(
 
     message = str(exc_info.value)
     assert "30000" in message
+    assert "Attempt 1: port 30000 (returncode=1)" in message
     assert "returncode=1" in message
     assert "Address already in use" in message
+    assert log_path.exists()
+
+
+def test_unhealthy_server_failure_keeps_last_log_and_lists_each_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Earlier failed logs are unlinked; the error lists every attempt."""
+    logs: list[Path] = []
+
+    def _start_fake_server(*_args: object, **_kwargs: object) -> tuple[MagicMock, Path]:
+        log_path = tmp_path / f"server-{len(logs)}.log"
+        log_path.write_text(f"log-for-attempt-{len(logs)}\n", encoding="utf-8")
+        fake_process = MagicMock()
+        fake_process.poll.return_value = 1 if len(logs) == 0 else None
+        logs.append(log_path)
+        return fake_process, log_path
+
+    monkeypatch.setattr(
+        load_conftest, "find_available_port", MagicMock(side_effect=[30000, 30001])
+    )
+    monkeypatch.setattr(load_conftest, "start_load_test_server", _start_fake_server)
+    monkeypatch.setattr(load_conftest, "wait_for_server", lambda *args, **kwargs: False)
+    monkeypatch.setattr(
+        load_conftest, "terminate_process", lambda *args, **kwargs: None
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        start_healthy_load_test_server(tmp_path / "app.py", max_attempts=2)
+
+    message = str(exc_info.value)
+    assert "Attempt 1: port 30000 (returncode=1)" in message
+    assert "Attempt 2: port 30001 (process was still running)" in message
+    assert "log-for-attempt-1" in message
+    assert "log-for-attempt-0" not in message
+    assert not logs[0].exists()
+    assert logs[1].exists()
 
 
 def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:
@@ -238,7 +277,7 @@ def scenario_server(
     scenario_name = request.param
     scenario_path = get_scenario_path(scenario_name)
     try:
-        process, port = start_healthy_load_test_server(scenario_path)
+        process, port, log_path = start_healthy_load_test_server(scenario_path)
     except RuntimeError as exc:
         pytest.fail(str(exc))
 
@@ -246,7 +285,10 @@ def scenario_server(
     # their own server lifecycle outside the standard e2e fixtures (app_base_url, etc.)
     yield process, f"http://localhost:{port}", process.pid
 
-    terminate_process(process)
+    try:
+        terminate_process(process)
+    finally:
+        _unlink_server_log(log_path)
 
 
 @pytest.mark.only_browser("chromium")
