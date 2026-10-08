@@ -94,25 +94,25 @@ class ScriptRequestsTest(unittest.TestCase):
         # The resulting RerunData should have null widget_states
         assert RerunData(widget_states=None) == reqs._rerun_data
 
-    def test_rerun_coalesce_preserves_newer_page_script_path(self):
+    def test_rerun_coalesce_preserves_newer_expected_page_script_path(self):
         """The newer page request controls its expected script source."""
         reqs = ScriptRequests()
         reqs.request_rerun(
             RerunData(
                 page_script_hash="old_hash",
-                page_script_path="/app/pages/old.py",
+                expected_page_script_path="/app/pages/old.py",
             )
         )
 
         reqs.request_rerun(
             RerunData(
                 page_script_hash="new_hash",
-                page_script_path="/app/pages/new.py",
+                expected_page_script_path="/app/pages/new.py",
             )
         )
 
         assert reqs._rerun_data.page_script_hash == "new_hash"
-        assert reqs._rerun_data.page_script_path == "/app/pages/new.py"
+        assert reqs._rerun_data.expected_page_script_path == "/app/pages/new.py"
 
     def test_rerun_coalesce_widgets_and_widgets(self):
         """Coalesce two non-null-WidgetStates rerun requests."""

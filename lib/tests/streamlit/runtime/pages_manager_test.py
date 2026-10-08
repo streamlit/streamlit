@@ -64,21 +64,25 @@ class PagesManagerTest(unittest.TestCase):
     def test_set_pages_and_resolve_rejects_mismatched_script_path(self) -> None:
         """Do not resolve a different source that shares the intended hash."""
         self.pages_manager.set_script_intent("page_hash", "", "/app/pages/settings.py")
-        page_script = self.pages_manager.set_pages_and_resolve(
-            {
-                "page_hash": {
-                    "page_script_hash": "page_hash",
-                    "script_path": "",
+        with self.assertLogs(
+            "streamlit.runtime.pages_manager", level="WARNING"
+        ) as logs:
+            page_script = self.pages_manager.set_pages_and_resolve(
+                {
+                    "page_hash": {
+                        "page_script_hash": "page_hash",
+                        "script_path": "",
+                    },
+                    "fallback": {
+                        "page_script_hash": "fallback",
+                        "script_path": "/app/home.py",
+                    },
                 },
-                "fallback": {
-                    "page_script_hash": "fallback",
-                    "script_path": "/app/home.py",
-                },
-            },
-            fallback_page_hash="fallback",
-        )
+                fallback_page_hash="fallback",
+            )
 
         assert page_script is None
+        assert "/app/pages/settings.py" in logs.output[0]
 
     def test_set_pages_and_resolve_does_not_fallback_for_expected_path(self) -> None:
         """A missing path-targeted page must not silently resolve the default."""
@@ -144,6 +148,14 @@ class PagesManagerTest(unittest.TestCase):
         pages = self.pages_manager.get_pages()
         pages["hash2"] = {"page_script_hash": "hash2", "script_path": "/path2"}
         assert "hash2" not in self.pages_manager.get_pages()
+
+    def test_pages_registered_tracks_navigation_registry(self) -> None:
+        """Report whether st.navigation has registered pages."""
+        assert not self.pages_manager.pages_registered
+
+        self.pages_manager.set_pages_and_resolve({})
+
+        assert self.pages_manager.pages_registered
 
     def test_get_pages_snapshot_isolation(self) -> None:
         """Ensure get_pages() returns an isolated copy unaffected by later updates.

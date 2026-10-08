@@ -207,15 +207,13 @@ run must include it:
 ```python
 import streamlit as st
 
-dashboard_page = st.Page(
-    "app_pages/dashboard.py", title="Dashboard", url_path="dashboard"
-)
+dashboard_page = st.Page("app_pages/dashboard.py", title="Dashboard")
 
 
 def log_in():
     if st.button("Log in"):
         st.session_state.logged_in = True
-        st.switch_page(dashboard_page)
+        st.switch_page("app_pages/dashboard.py")
 
 
 pages = [st.Page(log_in, title="Log in")]

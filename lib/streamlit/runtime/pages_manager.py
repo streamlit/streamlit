@@ -18,11 +18,14 @@ import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from streamlit import logger
 from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.source_util import PageHash, PageInfo, PageName, ScriptPath
+
+_LOGGER = logger.get_logger(__name__)
 
 
 class PagesManager:
@@ -47,7 +50,7 @@ class PagesManager:
         self._script_cache = script_cache
         self._intended_page_script_hash: PageHash | None = None
         self._intended_page_name: PageName | None = None
-        self._intended_page_script_path: ScriptPath | None = None
+        self._expected_page_script_path: ScriptPath | None = None
         self._current_page_script_hash: PageHash = ""
         self._pages: dict[PageHash, PageInfo] | None = None
         # A relic of v1 of Multipage apps, we performed special handling
@@ -88,8 +91,14 @@ class PagesManager:
         return self._intended_page_script_hash
 
     @property
-    def intended_page_script_path(self) -> ScriptPath | None:
-        return self._intended_page_script_path
+    def expected_page_script_path(self) -> ScriptPath | None:
+        return self._expected_page_script_path
+
+    @property
+    def pages_registered(self) -> bool:
+        """Whether ``st.navigation`` has registered pages in this session."""
+        with self._lock:
+            return self._pages is not None
 
     def set_current_page_script_hash(self, page_script_hash: PageHash) -> None:
         self._current_page_script_hash = page_script_hash
@@ -104,14 +113,14 @@ class PagesManager:
         self,
         page_script_hash: PageHash,
         page_name: PageName,
-        page_script_path: ScriptPath = "",
+        expected_page_script_path: ScriptPath = "",
     ) -> None:
         # Not lock-protected: attribute assignment is atomic in both GIL and
         # free-threaded CPython, and intent is always set before script
         # execution begins (not concurrently with set_pages_and_resolve).
         self._intended_page_script_hash = page_script_hash
         self._intended_page_name = page_name
-        self._intended_page_script_path = page_script_path
+        self._expected_page_script_path = expected_page_script_path
 
     def get_initial_active_script(self, page_script_hash: PageHash) -> PageInfo | None:
         return {
@@ -188,20 +197,25 @@ class PagesManager:
             return None
 
         if self.intended_page_script_hash:
-            # If a page hash is specified, we assume a page should exist.
-            # A script path marks an internal page-switch request whose source
-            # must match the page registered during this run.
+            # switch_page records a source path with the hash. Run that page only
+            # when this run registers the same file under that hash. Otherwise the
+            # hash belongs to a different page, and navigation reports page-not-found.
+            # Browser navigation and Page-object switches leave the path empty,
+            # and an unknown hash still falls back to the default page.
             page = self._pages.get(self.intended_page_script_hash)
-            if self.intended_page_script_path:
+            if self.expected_page_script_path:
                 if (
                     page is None
-                    or page.get("script_path") != self.intended_page_script_path
+                    or page.get("script_path") != self.expected_page_script_path
                 ):
+                    _LOGGER.warning(
+                        "st.switch_page target %s was not registered by "
+                        "st.navigation on the next run",
+                        self.expected_page_script_path,
+                    )
                     return None
                 return page
 
-            # Browser navigation does not include a script path and preserves
-            # the existing fallback-to-default behavior for unknown hashes.
             return page or self._pages.get(fallback_page_hash, None)
         if self.intended_page_name:
             # If a user navigates directly to a non-main page of an app,

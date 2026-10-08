@@ -573,6 +573,7 @@ def _make_pages_lookup_ctx(resolved_script_path: str) -> MagicMock:
     ctx.cached_message_hashes = MagicMock()
     ctx.context_info = {}
     ctx.main_script_path = "/some/path/your_app.py"
+    ctx.pages_manager.pages_registered = True
     ctx.pages_manager.get_pages.return_value = {
         "hash_1": {
             "script_path": resolved_script_path,
@@ -745,7 +746,48 @@ def test_st_switch_page_allows_existing_unregistered_navigation_page(
     ctx.script_requests.request_rerun.assert_called_once()
     rerun_arg = ctx.script_requests.request_rerun.call_args.args[0]
     assert rerun_arg.page_script_hash == "gated_hash"
-    assert rerun_arg.page_script_path == "/some/path/gated.py"
+    assert rerun_arg.expected_page_script_path == "/some/path/gated.py"
+
+
+@pytest.mark.parametrize(
+    ("target", "pages_registered"),
+    [
+        pytest.param("helper.py", False, id="single-script-app"),
+        pytest.param("README.md", True, id="non-python-file"),
+    ],
+)
+@patch("streamlit.commands.execution_control._create_page")
+@patch("streamlit.commands.execution_control.normalize_path_join")
+@patch(
+    "streamlit.commands.execution_control.get_main_script_directory",
+    return_value="/some/path",
+)
+@patch("os.path.realpath", side_effect=lambda p: p)
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_rejects_invalid_unregistered_file(
+    patched_get_script_run_ctx,
+    _patched_realpath,
+    _patched_get_main_script_directory,
+    patched_normalize_path_join,
+    patched_create_page,
+    target,
+    pages_registered,
+):
+    """Only Python files in an existing st.navigation app can be deferred."""
+    requested_page = f"/some/path/{target}"
+    patched_normalize_path_join.return_value = requested_page
+    ctx = _make_pages_lookup_ctx("/some/path/login.py")
+    ctx.pages_manager.pages_registered = pages_registered
+    patched_get_script_run_ctx.return_value = ctx
+
+    with (
+        patch("pathlib.Path.is_file", return_value=True),
+        pytest.raises(StreamlitPageNotFoundError),
+    ):
+        switch_page(target)
+
+    patched_create_page.assert_not_called()
+    ctx.script_requests.request_rerun.assert_not_called()
 
 
 @patch("streamlit.commands.execution_control.normalize_path_join")

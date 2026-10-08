@@ -438,6 +438,7 @@ def test_switch_page_by_path_registered_on_next_run(app: Page):
     click_button(app, "Log in to gated page")
 
     expect(page_heading(app)).to_contain_text("Gated Page")
+    expect(app.get_by_text("Page not found")).not_to_be_attached()
 
 
 def test_removes_query_params_with_st_switch_page(app: Page, app_base_url: str):

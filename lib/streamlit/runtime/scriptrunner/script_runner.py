@@ -642,7 +642,7 @@ class ScriptRunner:
             self._pages_manager.set_script_intent(
                 rerun_data.page_script_hash,
                 rerun_data.page_name,
-                rerun_data.page_script_path,
+                rerun_data.expected_page_script_path,
             )
             active_script = self._pages_manager.get_initial_active_script(
                 rerun_data.page_script_hash

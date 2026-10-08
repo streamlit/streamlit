@@ -382,10 +382,13 @@ def switch_page(  # type: ignore[misc]
 
         - Path to a Python file: The path can be a string or ``pathlib.Path``
           object. It can be absolute or relative to the entrypoint file. The
-          Python file must be the source of a page in ``st.navigation`` when
-          the switched-to app run begins. This lets you switch to a page that
-          becomes available after updating Session State. If that page uses a
-          custom ``url_path``, pass its ``Page`` object instead.
+          Python file must be the source of a page in ``st.navigation`` on the
+          next app run. This lets you switch to a page that you add to the
+          navigation by updating Session State before calling
+          ``st.switch_page``. If the page isn't registered on that run,
+          Streamlit shows a "Page not found" message and runs the default page.
+          If the page uses a custom ``url_path``, pass its ``Page`` object
+          instead.
 
           If you are using the ``pages/`` directory instead of
           ``st.navigation``, the Python file must be your entrypoint file or
@@ -469,7 +472,7 @@ def switch_page(  # type: ignore[misc]
         raise NoSessionContext()
 
     page_script_hash = ""
-    page_script_path = ""
+    expected_page_script_path = ""
     if isinstance(page, Page):
         if page.is_external:
             raise StreamlitAPIException(
@@ -490,15 +493,21 @@ def switch_page(  # type: ignore[misc]
         requested_page = os.path.realpath(
             normalize_path_join(main_script_directory, page)
         )
-        page_script_path = requested_page
+        expected_page_script_path = requested_page
         all_app_pages = ctx.pages_manager.get_pages().values()
 
         matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
         uses_pages_directory = bool(PagesManager.uses_pages_directory)
+        requested_path = Path(requested_page)
 
         if matched_pages:
             page_script_hash = matched_pages[0]["page_script_hash"]
-        elif not uses_pages_directory and Path(requested_page).is_file():
+        elif (
+            not uses_pages_directory
+            and ctx.pages_manager.pages_registered
+            and requested_path.suffix == ".py"
+            and requested_path.is_file()
+        ):
             page_script_hash = _create_page(requested_page)._script_hash
         else:
             raise StreamlitPageNotFoundError(
@@ -521,7 +530,7 @@ def switch_page(  # type: ignore[misc]
         RerunData(
             query_string=ctx.query_string,
             page_script_hash=page_script_hash,
-            page_script_path=page_script_path,
+            expected_page_script_path=expected_page_script_path,
             cached_message_hashes=ctx.cached_message_hashes,
             context_info=ctx.context_info,
         )
