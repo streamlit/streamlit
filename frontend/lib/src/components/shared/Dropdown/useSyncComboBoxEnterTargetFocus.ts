@@ -65,10 +65,10 @@ export function useSyncComboBoxEnterTargetFocus(
     let rafId = 0
     const startedAt = performance.now()
 
-    // True when focus is already on some other row that we did not auto-sync.
-    // A null key is not that case: React Aria clears focusedKey on each query
-    // change, and this effect re-applies the Enter target. The last auto-synced
-    // key is also not a user move — hover may replace it.
+    // True when the user has arrowed to a row this hook did not write.
+    // React Aria clears focusedKey on each query change, so null is not a
+    // user move. The last auto-synced key is not a user move either: hover
+    // may replace it.
     const anotherRowIsFocused = (): boolean => {
       const current = stateRef.current
       if (!current) return false
@@ -116,15 +116,11 @@ export function useSyncComboBoxEnterTargetFocus(
       return false
     }
 
-    // ComboBox's effect clears focusedKey after this effect, and setFocusedKey
-    // does nothing until Virtualizer has registered the row. Re-apply on
-    // animation frames until either:
-    // - the Enter target stays focused, or
-    // - the user has arrowed to a different row.
-    // Always queue at least one follow-up frame so we re-apply after ComboBox's
-    // clear-on-inputValue effect. Do not depend on `state`: focus updates
-    // replace that object and would pull arrow navigation back to the Enter
-    // target.
+    // Always schedule one more frame so this hook runs after ComboBox clears
+    // focusedKey. Keep retrying until the Enter target stays focused, the user
+    // has arrowed away, or the retry window ends. Do not list `state` as a
+    // dependency: every focus update would restart the effect and pull arrow
+    // navigation back to the Enter target.
     const schedule = (): void => {
       rafId = requestAnimationFrame(() => {
         if (cancelled) return

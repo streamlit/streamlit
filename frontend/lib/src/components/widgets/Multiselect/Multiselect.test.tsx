@@ -453,6 +453,41 @@ describe("Multiselect widget", () => {
     )
   })
 
+  it("keeps aria-activedescendant after hovering the first row then typing", async () => {
+    // Hover-end on the first row must not leave a sticky skip that swallows
+    // the next Enter-target sync when React Aria clears focusedKey on type.
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    render(<Multiselect {...props} />)
+
+    await user.click(screen.getByRole("button", { name: "Open" }))
+    const input = screen.getByRole("combobox")
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    const apple = screen.getByRole("option", { name: "apple" })
+    await user.hover(apple)
+    await user.unhover(apple)
+    await user.type(input, "ap")
+    await waitFor(
+      () => {
+        const activeId = input.getAttribute("aria-activedescendant")
+        expect(activeId).toBeTruthy()
+        expect(document.getElementById(activeId as string)).toHaveTextContent(
+          "apple"
+        )
+      },
+      { timeout: 3000 }
+    )
+  })
+
   it("filters based on label, not value", async () => {
     const user = userEvent.setup()
     const props = getProps({ default: [] })

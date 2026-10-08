@@ -346,6 +346,51 @@ describe("Selectbox widget", () => {
     expect(props.onChange).not.toHaveBeenCalled()
   })
 
+  it("navigates from the creatable Add row with ArrowUp, not ArrowDown", async () => {
+    // Non-exact queries focus "Add: …" (last row). The list does not wrap, so
+    // ArrowDown stays on Add and ArrowUp reaches matching options.
+    const user = userEvent.setup()
+    props = getProps({
+      value: undefined,
+      options: ["apple", "apricot"],
+      acceptNewOptions: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.type(input, "ap")
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: /Add: ap/i })).toBeVisible()
+    })
+    await waitFor(
+      () => {
+        const activeId = input.getAttribute("aria-activedescendant")
+        expect(activeId).toBeTruthy()
+        expect(document.getElementById(activeId as string)).toHaveTextContent(
+          /Add: ap/i
+        )
+      },
+      { timeout: 3000 }
+    )
+
+    await user.keyboard("{ArrowDown}")
+    await waitFor(() => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        /Add: ap/i
+      )
+    })
+
+    await user.keyboard("{ArrowUp}")
+    await waitFor(() => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        "apricot"
+      )
+    })
+  })
+
   it("keeps ArrowDown focus after typing while the Enter-target sync settles", async () => {
     const user = userEvent.setup()
     props = getProps({

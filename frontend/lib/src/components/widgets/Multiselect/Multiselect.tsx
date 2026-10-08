@@ -275,9 +275,9 @@ const Multiselect: FC<Props> = props => {
   const [hoveredKey, setHoveredKey] = useState<Key | null>(null)
   const hoveredKeyRef = useRef<Key | null>(null)
   hoveredKeyRef.current = hoveredKey
-  // Set from onHoverEnd (runs once) so enterTargetKey falling back to the
-  // first row does not overwrite an ArrowUp/Down selection. Cleared after the
-  // sync effect observes it.
+  // Set in onHoverEnd so pointer-leave does not focus the first row and
+  // overwrite an ArrowUp/Down selection. The sync effect clears the flag
+  // after it sees it (and on menu close).
   const skipEnterTargetFocusSyncRef = useRef(false)
 
   // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
@@ -530,6 +530,9 @@ const Multiselect: FC<Props> = props => {
     if (!open) {
       setInputValue("")
       setHoveredKey(null)
+      // Drop a hover-end skip that never met a sync effect (e.g. hovered the
+      // first row) so reopen still restores aria-activedescendant.
+      skipEnterTargetFocusSyncRef.current = false
     }
   }, [])
 
@@ -547,7 +550,17 @@ const Multiselect: FC<Props> = props => {
           setHoveredKey(option.id)
         }}
         onHoverEnd={() => {
-          skipEnterTargetFocusSyncRef.current = true
+          // Only skip when clearing hover changes the Enter target. Hovering
+          // the first row then leaving leaves enterTargetKey unchanged, so
+          // the sync effect would not run and a sticky skip would swallow
+          // the next keystroke or reopen sync.
+          const firstId = displayOptionsRef.current[0]?.id
+          if (
+            hoveredKeyRef.current === option.id &&
+            String(option.id) !== String(firstId ?? "")
+          ) {
+            skipEnterTargetFocusSyncRef.current = true
+          }
           setHoveredKey(prev => (prev === option.id ? null : prev))
         }}
       >

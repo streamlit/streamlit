@@ -300,6 +300,8 @@ def test_dialog_keeps_tab_focus_with_open_select_menus(app: Page):
     tags_input.press("Tab")
     expect(multiselect_dropdown).not_to_be_visible()
     expect_markdown(dialog, "Tags Value: []")
+    # Tab must move focus past Tags while staying inside the dialog.
+    expect(tags_input).not_to_be_focused()
     expect(dialog.locator(":focus")).to_be_visible()
 
 

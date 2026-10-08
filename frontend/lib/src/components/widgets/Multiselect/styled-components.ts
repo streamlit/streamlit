@@ -289,8 +289,6 @@ export const StyledListBox = styled(ListBox)(({ theme }) => ({
   paddingRight: theme.spacing.none,
   listStyle: "none",
   margin: theme.spacing.none,
-  // Enter-target / keyboard highlight comes from RAC data-focused on the
-  // option (Multiselect keeps focusedKey synced for aria-activedescendant).
 }))
 
 export const StyledEmptyState = styled.span(({ theme }) => ({
@@ -334,6 +332,8 @@ export const StyledListBoxItem = styled(ListBoxItem, {
   color: theme.colors.bodyText,
   outline: "none",
   position: "relative",
+  // data-focused also marks the Enter target, because Multiselect syncs
+  // focusedKey to it for aria-activedescendant.
   "&[data-hovered] [data-item-hl], &[data-focused] [data-item-hl]": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
