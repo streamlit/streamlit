@@ -45,6 +45,7 @@ from streamlit.runtime.scriptrunner import (
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
     ThreadState,
+    suppress_fragment_callback_warning,
 )
 
 if TYPE_CHECKING:
@@ -56,6 +57,16 @@ if TYPE_CHECKING:
 _KEYED_RERUN_ALLOWED_LOCATIONS: frozenset[RunLocation] = frozenset(
     {RunLocation.CALLBACK}
 )
+
+
+def _force_yield_point() -> None:
+    """Enqueue an element so the runner can act on a pending rerun or stop.
+
+    The runner raises before that ForwardMsg is sent, so the placeholder never
+    reaches the browser. Skip the fragment-callback warning for this write.
+    """
+    with suppress_fragment_callback_warning():
+        st.empty()
 
 
 def _is_fragment_scoped(scope: str | Sequence[str]) -> bool:
@@ -96,8 +107,7 @@ def stop() -> NoReturn:  # type: ignore[misc] # ty: ignore[invalid-return-type]
 
     if ctx and ctx.script_requests:
         ctx.script_requests.request_stop()
-        # Force a yield point so the runner can stop
-        st.empty()
+        _force_yield_point()
 
 
 def _new_fragment_id_queue(
@@ -343,7 +353,7 @@ def rerun(  # type: ignore[misc]
         # Body-level calls: queue the request and halt via a yield point so
         # the script runner can inspect it and decide whether to preempt.
         ctx.script_requests.request_rerun(rerun_data)
-        st.empty()
+        _force_yield_point()
 
 
 @gather_metrics("switch_page")
@@ -500,5 +510,4 @@ def switch_page(  # type: ignore[misc]
             context_info=ctx.context_info,
         )
     )
-    # Force a yield point so the runner can do the rerun
-    st.empty()
+    _force_yield_point()
