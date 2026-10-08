@@ -1947,7 +1947,7 @@ class Pagination(Widget):
     """A representation of ``st.pagination``.
 
     ``.value`` is the current page (1-indexed). ``set_value`` and ``select``
-    choose a page. ``AppTestError`` is raised when:
+    choose a page and raise ``AppTestError`` if:
 
     - the widget is disabled
     - the page is not an int from 1 through ``num_pages`` (``bool`` is invalid)
@@ -1984,18 +1984,23 @@ class Pagination(Widget):
     def _widget_state(self) -> WidgetState:
         ws = WidgetState()
         ws.id = self.id
-        # ``set_value`` rejects bad pages, but session-state assignment and
-        # deletion do not. Copy only a real int. A missing key, bool, or other
-        # type would raise before the script runs, or a bool would become page
-        # 1. Leaving the oneof unset makes deserialize(None) restore the
-        # declared default. Out-of-range ints still go on the wire so
-        # PaginationSerde can clamp them.
+        # Copy only a real int so a bad session-state value cannot break the run:
+        # - A missing key, bool, or other non-int stays unset. deserialize(None)
+        #   then restores the declared default. A bool in int_value would
+        #   become 0 or 1.
+        # - Ints outside protobuf sint64 stay unset for the same reason.
+        # - Other out-of-range ints are still sent so PaginationSerde restores
+        #   that same default.
         try:
             value = self.value
         except KeyError:
             value = None
         if isinstance(value, int) and not isinstance(value, bool):
-            ws.int_value = value
+            try:
+                ws.int_value = value
+            except ValueError:
+                # Outside protobuf sint64; leave the oneof unset.
+                pass
         return ws
 
     @property

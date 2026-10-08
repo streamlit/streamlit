@@ -1909,6 +1909,11 @@ def test_pagination_invalid_session_state_restores_default() -> None:
     assert at.pagination(key="pager").value == 2
     assert at.session_state["pager"] == 2
 
+    at.session_state["pager"] = 10**100
+    at = at.run()
+    assert not at.exception
+    assert at.pagination(key="pager").value == 2
+
     at.session_state["pager"] = 4
     at = at.run()
     del at.session_state["pager"]
