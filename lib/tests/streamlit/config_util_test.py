@@ -1604,3 +1604,23 @@ def test_show_config_includes_deprecation_block(patched_echo: MagicMock) -> None
     assert "THIS IS DEPRECATED." in output
     assert "Use server.newOption instead." in output
     assert "This option will be removed on or after 2030-01-01" in output
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    ["default_val", "value"],
+    ids=["default", "value"],
+)
+def test_dump_toml_value_round_trips_config_options(attribute: str) -> None:
+    """Values printed by ``streamlit config show`` parse back as the same type."""
+    for option in config._config_options_template.values():
+        raw = getattr(option, attribute)
+        rendered = config_util._dump_toml_value(option.name, raw)
+        if raw is None:
+            assert rendered == "", option.key
+            continue
+
+        parsed = tomllib.loads(rendered)[option.name]
+        # isinstance() treats bool as int, so compare types directly.
+        assert type(parsed) is type(raw), option.key
+        assert parsed == raw, option.key

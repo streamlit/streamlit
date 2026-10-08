@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
-from streamlit import cli_util, url_util
+from streamlit import cli_util, toml_writer, url_util
 from streamlit.config_option import ConfigOption
 from streamlit.elements.lib.color_util import is_css_color_like
 from streamlit.errors import (
@@ -49,10 +49,7 @@ def _dump_toml_value(key: str, value: Any) -> str:
     if value is None:
         return ""
 
-    # Imported here so a normal script run does not load tomli_w.
-    import tomli_w
-
-    return tomli_w.dumps({key: value})
+    return toml_writer.dumps({key: value})
 
 
 def _comment_toml(toml_text: str) -> str:

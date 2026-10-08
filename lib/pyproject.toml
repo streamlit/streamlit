@@ -82,8 +82,6 @@ dependencies = [
   # See https://github.com/apache/arrow/issues/50471.
   "pyarrow>=10.0.1,!=25.0.0,<26",
   "requests>=2.27,<3",
-  # Writes credentials and `streamlit config show` output. Reading uses stdlib tomllib.
-  "tomli-w>=1.0.0,<2",
   # Starlette requires typing-extensions >= 4.10.
   "typing-extensions>=4.10.0,<5",
   # ASGI web-framework. 0.46.0 is the first version whose `GZipMiddleware`
