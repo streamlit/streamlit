@@ -433,7 +433,7 @@ def test_switch_page_by_st_page(app: Page):
 
 
 def test_switch_page_by_path_registered_on_next_run(app: Page):
-    """A path can target a page enabled by state during the current run."""
+    """A path can target a page that Session State adds on the next run."""
 
     click_button(app, "Log in to gated page")
 

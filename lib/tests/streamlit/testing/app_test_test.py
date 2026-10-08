@@ -869,7 +869,7 @@ def test_switch_page_respects_custom_url_path(tmp_path: Path) -> None:
 
 
 def test_st_switch_page_to_page_registered_on_next_run(tmp_path: Path) -> None:
-    """A string path can target a page enabled by state during the current run."""
+    """A path can target a page that Session State adds on the next run."""
     (tmp_path / "gated.py").write_text(
         'import streamlit as st\nst.text("gated page")\n', encoding="utf-8"
     )

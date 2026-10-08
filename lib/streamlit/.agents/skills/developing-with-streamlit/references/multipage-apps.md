@@ -223,8 +223,8 @@ if st.session_state.get("logged_in"):
 st.navigation(pages).run()
 ```
 
-Pass the `Page` object when the destination has a custom `url_path`. Otherwise,
-you can pass its file path.
+Pass the `Page` object when the destination has a custom `url_path` and is not
+in the current navigation. Otherwise, you can pass its file path.
 
 ## Imports from pages
 

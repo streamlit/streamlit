@@ -198,11 +198,12 @@ class PagesManager:
 
         if self.intended_page_script_hash:
             # A path-based st.switch_page must land on that exact file. Return None
-            # (page-not-found) instead of the default page when this run:
+            # so st.navigation shows "Page not found" and then runs the default
+            # page when this run:
             # - doesn't register any page under the intended hash, or
             # - registers a different source under that hash.
-            # Browser navigation, Page objects, and st.rerun leave the path empty
-            # and keep the default-page fallback.
+            # Browser navigation, Page objects, and st.rerun leave the path empty,
+            # keeping the silent default-page fallback.
             page = self._pages.get(self.intended_page_script_hash)
             if self.expected_page_script_path:
                 if (
@@ -210,9 +211,10 @@ class PagesManager:
                     or page.get("script_path") != self.expected_page_script_path
                 ):
                     _LOGGER.warning(
-                        "Not running st.switch_page target %s because this run's "
-                        "st.navigation registry does not include that file. If the "
-                        "page uses a custom url_path, pass its Page object instead.",
+                        "Streamlit is not running the st.switch_page target %s because "
+                        "this run's st.navigation registry does not include that file. "
+                        "If the page uses a custom url_path, pass its Page object "
+                        "instead.",
                         self.expected_page_script_path,
                     )
                     return None

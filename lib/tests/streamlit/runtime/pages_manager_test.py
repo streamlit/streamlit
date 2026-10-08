@@ -84,7 +84,9 @@ class PagesManagerTest(unittest.TestCase):
         assert page_script is None
         assert "/app/pages/settings.py" in logs.output[0]
 
-    def test_set_pages_and_resolve_does_not_fallback_for_expected_path(self) -> None:
+    def test_set_pages_and_resolve_returns_none_when_expected_path_is_unregistered(
+        self,
+    ) -> None:
         """A missing path-targeted page must not silently resolve the default."""
         self.pages_manager.set_script_intent(
             "missing_hash", "", "/app/pages/missing.py"

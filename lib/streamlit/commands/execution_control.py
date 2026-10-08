@@ -387,16 +387,16 @@ def switch_page(  # type: ignore[misc]
           navigation by updating Session State before calling
           ``st.switch_page``. If the page isn't registered on that run,
           Streamlit shows a "Page not found" message and runs the default page.
-          If the page uses a custom ``url_path``, pass its ``Page`` object
-          instead.
+          If the page isn't in the current navigation and uses a custom
+          ``url_path``, pass its ``Page`` object instead.
 
           If you are using the ``pages/`` directory instead of
           ``st.navigation``, the Python file must be your entrypoint file or
           a file in the ``pages/`` directory.
 
-        - ``Page``: The source of the ``Page`` and its
-          ``url_path`` must match a page defined in ``st.navigation``. The
-          ``Page`` must be internal and can't be defined by a URL.
+        - ``Page``: The source and ``url_path`` must match a page in
+          ``st.navigation`` on the next app run. The ``Page`` must be internal
+          and can't be defined by a URL.
           Use ``st.Page`` to create a ``Page`` object.
 
         To switch to a page defined by a ``callable``, you must use a
@@ -503,8 +503,10 @@ def switch_page(  # type: ignore[misc]
         if matched_pages:
             page_script_hash = matched_pages[0]["page_script_hash"]
         elif (
-            # st.navigation may register this file on the next run after a
-            # Session State change, so PagesManager validates it then.
+            # st.navigation may register this file on the next run after a Session
+            # State change, so PagesManager validates the target then. Only defer
+            # when the app uses st.navigation and has a registry, the target isn't
+            # the entrypoint, and the target is an existing Python file.
             not uses_pages_directory
             and ctx.pages_manager.pages_registered
             and requested_page != os.path.realpath(ctx.main_script_path)
