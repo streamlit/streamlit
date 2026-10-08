@@ -110,7 +110,7 @@ for label, value, delta in metrics:
 # Auto-fit gallery
 with st.grid("auto", min_column_width=72, gap="xsmall"):
     for item in items:
-        st.button(item, key=f"item-{item}", width="stretch")
+        st.button(item, key=f"item-{item}", width="stretch", wrap=True)
 
 # Full-width featured cell
 grid = st.grid("auto", min_column_width=220)
@@ -130,8 +130,8 @@ grid.cell().dataframe(df, height=220)
 ```
 
 **Key parameters:**
-- `columns` — `"auto"` (default) or an integer from 1 to 24 (maximum count when wrapping)
-- `min_column_width` — `"auto"` (default, theme rem token) or a pixel floor
+- `columns` — `"auto"` (default, capped at 24) or an integer from 1 to 24 (maximum count when wrapping)
+- `min_column_width` — `"auto"` (default, theme rem token) or a pixel wrapping threshold. With `wrap=True`, the last remaining column may be narrower. With `wrap=False`, columns stop at this width and the grid scrolls.
 - `wrap` — `True` (default) may decrease the column count; `False` keeps it and scrolls
 - `gap` — Scalar like `st.columns`, or `(row_gap, column_gap)`
 - `border` — Show borders around cells

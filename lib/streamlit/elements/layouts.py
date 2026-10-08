@@ -778,7 +778,8 @@ class LayoutsMixin:
             Number of equal-width columns.
 
             - ``"auto"`` (default): Fit as many columns as the container
-              allows, using ``min_column_width``.
+              allows, using ``min_column_width``. Automatic layouts are
+              also capped at 24 columns.
             - An integer from 1 to 24: Maximum column count. With
               ``wrap=True`` (default), the grid wraps to fewer columns
               when cells would fall below ``min_column_width``. With
@@ -790,12 +791,16 @@ class LayoutsMixin:
 
             - ``"auto"`` (default): Streamlit uses a theme-based width of
               about 200 pixels. Cell border and padding sit inside that
-              width and do not increase it.
-            - An integer specifying the minimum width in pixels: When
-              ``wrap`` is ``True``, the grid drops a column before cells
-              become narrower than this width. When ``wrap`` is
-              ``False``, cells shrink to this width and the grid then
-              scrolls horizontally.
+              width and do not increase it. With ``wrap=True``, this is
+              a wrapping threshold: once one column remains, that column
+              uses the container width and may be narrower.
+            - An integer specifying the minimum width in pixels: With
+              ``wrap=True``, this is a wrapping threshold. The grid drops
+              a column before cells would become narrower than this
+              width. Once one column remains, that column uses the
+              container width and may be narrower. With ``wrap=False``,
+              cells shrink to this width and the grid then scrolls
+              horizontally.
 
         wrap : bool
             Whether the number of columns can decrease as the container
@@ -830,8 +835,12 @@ class LayoutsMixin:
             configuration option.
 
         vertical_alignment : "top", "center", or "bottom"
-            The vertical alignment of a child when its cell is taller than
-            the child. The default is ``"top"``.
+            Vertical alignment of content inside the cell. The cell frame
+            still fills the row. This can be one of the following:
+
+            - ``"top"`` (default): Align content to the top of the cell.
+            - ``"center"``: Center content vertically in the cell.
+            - ``"bottom"``: Align content to the bottom of the cell.
 
         border : bool
             Whether to show a border around each cell. If this is
@@ -879,7 +888,7 @@ class LayoutsMixin:
             CSS class name prefixed with ``st-key-``.
 
         dense : bool
-            Whether spanning cells may leave holes that later cells fill.
+            Whether later cells can backfill holes left by spanning cells.
             If this is ``False`` (default), cells keep source order. If
             this is ``True``, later cells can be placed visually ahead of
             earlier ones to fill gaps, so keyboard and screen-reader

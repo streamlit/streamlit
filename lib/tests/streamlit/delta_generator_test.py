@@ -276,6 +276,53 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         assert result._parent is dg
         assert not isinstance(result._parent, StatusContainer)
 
+    def test_block_bare_mode_nested_same_type_is_a_new_instance(self):
+        """A nested bare-mode block must not reuse the parent instance."""
+        from streamlit.elements.lib.grid_container import GridContainer
+
+        dg = DeltaGenerator(root_container=None)
+        block_proto = Block_pb2.Block()
+        block_proto.grid_container.SetInParent()
+        outer = dg._block(block_proto, dg_type=GridContainer)
+        assert isinstance(outer, GridContainer)
+        inner = outer._block(block_proto, dg_type=GridContainer)
+        assert isinstance(inner, GridContainer)
+        assert inner is not outer
+        assert inner._parent is outer
+
+    def test_status_and_nested_grid_without_script_context(self):
+        """Bare execution must not raise, and a nested grid must not mutate its parent."""
+        add_script_run_ctx(threading.current_thread(), None)
+        try:
+            with st.status("label"):
+                pass
+
+            with pytest.raises(RuntimeError, match="from body"):
+                with st.status("label"):
+                    raise RuntimeError("from body")
+
+            outer = st.grid(4)
+            with outer:
+                inner = st.grid(2)
+            assert inner is not outer
+            assert outer._declared_columns == 4
+            assert inner._declared_columns == 2
+
+            from streamlit.elements.lib.dialog import Dialog
+
+            dialog = Dialog(
+                root_container=None,
+                cursor=None,
+                parent=None,
+                block_type="dialog",
+            )
+            dialog._current_proto = Block_pb2.Block()
+            dialog._delta_path = []
+            dialog.open()
+            dialog.close()
+        finally:
+            add_script_run_ctx(threading.current_thread(), self.script_run_ctx)
+
     @parameterized.expand([(RootContainer.MAIN,), (RootContainer.SIDEBAR,)])
     def test_enqueue(self, container):
         dg = DeltaGenerator(root_container=container)

@@ -25,7 +25,7 @@ containers and text commands do not use this adaptive resolution: `st.container`
 This is a layout control with an adaptive default for interactive controls. Existing
 apps keep their current behavior everywhere except for controls inside horizontal
 containers, where the auto default now favors a single row, and controls directly
-placed in columns, where the same default keeps neighboring controls aligned; layout
+placed in columns or grid cells, where the same default keeps neighboring controls aligned; layout
 containers and text commands keep their current defaults. The initial API covers
 `st.container`, `st.columns`, `st.grid`, `st.multiselect`, `st.pills`, `st.segmented_control`,
 `st.button`, `st.download_button`, `st.link_button`, `st.form_submit_button`,

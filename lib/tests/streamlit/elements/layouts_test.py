@@ -3041,7 +3041,16 @@ class CellTest(DeltaGeneratorTestCase):
         all_deltas = self.get_all_deltas_from_queue()
         assert len(all_deltas) == 2
         assert all_deltas[0].add_block.HasField("grid_container")
-        assert all_deltas[1].add_block.HasField("vertical")
+        cell_block = all_deltas[1].add_block
+        assert cell_block.HasField("flex_container")
+        assert not cell_block.HasField("vertical")
+        assert (
+            cell_block.flex_container.direction
+            == BlockProto.FlexContainer.Direction.VERTICAL
+        )
+        assert cell_block.flex_container.wrap is False
+        assert cell_block.flex_container.gap_config.gap_size == GapSize.SMALL
+        assert cell_block.flex_container.border is False
         # Default 1x1 still sets grid_cell so the frontend can treat the
         # cell as a column-like wrap region.
         assert all_deltas[1].add_block.HasField("grid_cell")
@@ -3099,7 +3108,7 @@ class CellTest(DeltaGeneratorTestCase):
         all_deltas = self.get_all_deltas_from_queue()
         assert len(all_deltas) == 3
         assert all_deltas[0].add_block.HasField("grid_container")
-        assert all_deltas[1].add_block.HasField("vertical")
+        assert all_deltas[1].add_block.HasField("flex_container")
         assert all_deltas[1].add_block.grid_cell.column_span == 2
 
     def test_cell_keyword_only(self):

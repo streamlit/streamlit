@@ -19,7 +19,13 @@ from typing import TYPE_CHECKING, Literal
 from typing_extensions import Self
 
 from streamlit.delta_generator import DeltaGenerator
-from streamlit.elements.lib.layout_utils import is_int, validate_uint32_max
+from streamlit.elements.lib.layout_utils import (
+    get_align,
+    get_gap_config,
+    get_justify,
+    is_int,
+    validate_uint32_max,
+)
 from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
     StreamlitValueError,
@@ -67,8 +73,14 @@ class GridContainer(DeltaGenerator):
         Parameters
         ----------
         column_span : int or "all"
-            Number of columns this cell should span. Defaults to 1.
-            ``"all"`` occupies every column track on its own row.
+            The number of columns the cell spans. This can be one of the
+            following:
+
+            - A positive integer (default is ``1``): The cell spans this
+              many columns. If the grid wraps to fewer columns, the span
+              shrinks to fit. If ``columns`` is an integer, this can't
+              exceed it.
+            - ``"all"``: The cell spans every column on its own row.
 
         row_span : int
             Number of rows this cell should span. Defaults to 1.
@@ -145,7 +157,16 @@ class GridContainer(DeltaGenerator):
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
-        block_proto.vertical.SetInParent()
+        # Match st.container()'s vertical flex container so cells do not
+        # depend on the legacy `vertical` proto.
+        block_proto.flex_container.direction = (
+            BlockProto.FlexContainer.Direction.VERTICAL
+        )
+        block_proto.flex_container.wrap = False
+        block_proto.flex_container.justify = get_justify("top")
+        block_proto.flex_container.align = get_align("left")
+        block_proto.flex_container.gap_config.CopyFrom(get_gap_config("small"))
+        block_proto.flex_container.border = False
         # Always set grid_cell so the frontend treats this block as a
         # column-like wrap region even for the default 1x1 span.
         block_proto.grid_cell.SetInParent()

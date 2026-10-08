@@ -509,27 +509,36 @@ export const StyledGridContainerBlock =
 export const StyledGridScrollBody = styled.div<{
   $scroll: boolean
   $wrap: boolean
-}>(({ theme, $scroll, $wrap }) => ({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "stretch",
-  width: "100%",
-  minHeight: 0,
-  flex: 1,
-  height: "100%",
-  maxHeight: "100%",
-  ...($scroll && {
-    overflowY: "auto" as const,
-    overflowX: $wrap ? ("clip" as const) : ("auto" as const),
-  }),
-  ...(!$wrap &&
-    !$scroll && {
-      overflowX: "auto" as const,
-      overflowY: "visible" as const,
-      paddingBlock: theme.sizes.focusRingWidth,
-      marginBlock: `-${theme.sizes.focusRingWidth}`,
+  $bounded: boolean
+}>(({ theme, $scroll, $wrap, $bounded }) => {
+  // Content-height grids keep this node so a later pixel/stretch height
+  // does not remount the grid. `display: contents` leaves layout unchanged.
+  if (!$bounded) {
+    return { display: "contents" }
+  }
+
+  return {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
+    width: "100%",
+    minHeight: 0,
+    flex: 1,
+    height: "100%",
+    maxHeight: "100%",
+    ...($scroll && {
+      overflowY: "auto" as const,
+      overflowX: $wrap ? ("clip" as const) : ("auto" as const),
     }),
-}))
+    ...(!$wrap &&
+      !$scroll && {
+        overflowX: "auto" as const,
+        overflowY: "visible" as const,
+        paddingBlock: theme.sizes.focusRingWidth,
+        marginBlock: `-${theme.sizes.focusRingWidth}`,
+      }),
+  }
+})
 
 /**
  * Grows with grid tracks so ResizeObserver can detect overflow without
@@ -537,16 +546,23 @@ export const StyledGridScrollBody = styled.div<{
  */
 export const StyledGridContentMeasure = styled.div<{
   $minWidthPx?: number
-}>(({ $minWidthPx }) => ({
-  width: "100%",
-  // A percentage width alone stays inside the scrollport, so wrap=False
-  // tracks never increase scrollWidth. The track floor lets this box grow
-  // past the port; a wider port still stretches it via width: 100%.
-  ...($minWidthPx !== undefined &&
-    $minWidthPx > 0 && { minWidth: `${$minWidthPx}px` }),
-  minHeight: "min-content",
-  flexShrink: 0,
-}))
+  $passthrough?: boolean
+}>(({ $minWidthPx, $passthrough }) => {
+  if ($passthrough) {
+    return { display: "contents" }
+  }
+
+  return {
+    width: "100%",
+    // A percentage width alone stays inside the scrollport, so wrap=False
+    // tracks never increase scrollWidth. The track floor lets this box grow
+    // past the port; a wider port still stretches it via width: 100%.
+    ...($minWidthPx !== undefined &&
+      $minWidthPx > 0 && { minWidth: `${$minWidthPx}px` }),
+    minHeight: "min-content",
+    flexShrink: 0,
+  }
+})
 
 export function gridCellJustifyContent(
   verticalAlignment: BlockProto.GridContainer.VerticalAlignment
@@ -624,8 +640,17 @@ export const StyledGridCell = styled.div<StyledGridCellProps>(
  * exceeds the cell — a permanent scrollport would clip hover toolbars even
  * when nothing scrolls.
  */
-export const StyledGridCellBody = styled.div<{ $scroll: boolean }>(
-  ({ $scroll }) => ({
+export const StyledGridCellBody = styled.div<{
+  $scroll: boolean
+  $passthrough?: boolean
+}>(({ $scroll, $passthrough }) => {
+  // Content rows keep the node so toggling row_height does not remount
+  // cell contents. The box itself stays out of layout.
+  if ($passthrough) {
+    return { display: "contents" }
+  }
+
+  return {
     display: "flex",
     flexDirection: "column",
     alignItems: "stretch",
@@ -635,11 +660,12 @@ export const StyledGridCellBody = styled.div<{ $scroll: boolean }>(
     height: "100%",
     maxHeight: "100%",
     ...($scroll && { overflowY: "auto", overflowX: "clip" }),
-  })
-)
+  }
+})
 
 interface StyledGridCellContentProps {
   verticalAlignment: BlockProto.GridContainer.VerticalAlignment
+  $passthrough?: boolean
 }
 
 /**
@@ -651,7 +677,11 @@ interface StyledGridCellContentProps {
  * would otherwise be a no-op.
  */
 export const StyledGridCellContent = styled.div<StyledGridCellContentProps>(
-  ({ verticalAlignment }) => {
+  ({ verticalAlignment, $passthrough }) => {
+    if ($passthrough) {
+      return { display: "contents" }
+    }
+
     const { fallback, safe } = gridCellJustifyContent(verticalAlignment)
 
     return css(

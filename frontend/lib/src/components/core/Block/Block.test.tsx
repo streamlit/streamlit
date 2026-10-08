@@ -1298,7 +1298,39 @@ describe("GridContainer Component", () => {
     renderWithContexts(makeGridNodeRendererComponent(block))
 
     expect(screen.getByTestId("stGrid")).toHaveStyle("height: auto")
-    expect(screen.queryByTestId("stGridScrollBody")).not.toBeInTheDocument()
+    // The port stays mounted so a later bounded height does not remount
+    // the grid. It does not participate in layout.
+    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+      "display: contents"
+    )
+  })
+
+  it("keeps the grid element mounted when height becomes bounded", () => {
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(makeGridBlock())
+    )
+    const grid = screen.getByTestId("stGrid")
+    const bounded = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { pixelHeight: 400 },
+        gridContainer: {
+          maxColumns: 0,
+          minColumnWidthPx: 220,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          showCellBorder: false,
+          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+        },
+      })
+    )
+    rerenderWithContexts(makeGridNodeRendererComponent(bounded))
+
+    expect(screen.getByTestId("stGrid")).toBe(grid)
+    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle("height: 100%")
   })
 
   it("does not clip cell content until in-flow overflow is measured", () => {
@@ -1407,7 +1439,9 @@ describe("GridContainer Component", () => {
     expect(within(gridCell).getByTestId("stVerticalBlock")).not.toHaveStyle({
       height: "100%",
     })
-    expect(screen.queryByTestId("stGridCellBody")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stGridCellBody")).toHaveStyle(
+      "display: contents"
+    )
   })
 
   it("leaves a direct stretch child on height 100% without flex-grow", () => {
@@ -1474,7 +1508,48 @@ describe("GridContainer Component", () => {
     )
     renderWithContexts(makeGridNodeRendererComponent(block))
 
-    expect(screen.queryByTestId("stGridCellBody")).not.toBeInTheDocument()
+    expect(screen.getByTestId("stGridCellBody")).toHaveStyle(
+      "display: contents"
+    )
+    expect(screen.getByTestId("stGridCellBody")).toHaveAttribute(
+      "data-test-scroll",
+      "false"
+    )
+  })
+
+  it("keeps a cell mounted when row height becomes fixed", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [makeTextElement("Short")],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock(
+          { cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT },
+          [cell]
+        )
+      )
+    )
+    const gridCell = screen.getByTestId("stGridCell")
+    rerenderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock(
+          {
+            cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED,
+            cellHeightConfig: { pixelHeight: 240 },
+          },
+          [cell]
+        )
+      )
+    )
+
+    expect(screen.getByTestId("stGridCell")).toBe(gridCell)
+    expect(screen.getByTestId("stGridCellBody")).toHaveStyle("height: 100%")
   })
 
   it("should span all columns when columnSpanAll is set", () => {

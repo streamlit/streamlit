@@ -655,8 +655,10 @@ class DeltaGenerator(
         if dg._root_container is None or dg._cursor is None:
             # Return a properly-typed DeltaGenerator even in bare mode
             # so that DeltaGenerator subclasses (e.g., GridContainer)
-            # can still have their methods called.
-            if dg_type is not None and not isinstance(dg, dg_type):
+            # can still have their methods called. Always construct a
+            # fresh instance: reusing the caller lets a nested grid
+            # overwrite the parent's declared columns.
+            if dg_type is not None:
                 return cast(
                     "DeltaGenerator",
                     dg_type(

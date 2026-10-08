@@ -323,117 +323,96 @@ interface GridCellProps {
   children: ReactNode
 }
 
-type GridCellShellProps = Omit<GridCellProps, "constrainOverflow">
-
-const GridCellShell = ({
+/**
+ * One CSS Grid item. The cell itself never becomes a scrollport: hover
+ * toolbars sit `position: absolute` above charts and would be clipped even
+ * when in-flow content fits. The inner body stays mounted in both row-height
+ * modes so toggling `row_height` does not remount cell contents. Content
+ * rows use `display: contents` on that body. Definite-height rows fill the
+ * cell and switch to `overflow: auto` only if in-flow content exceeds it.
+ */
+const GridCell = ({
+  constrainOverflow,
   verticalAlignment,
   showBorder,
   columnSpan,
   columnSpanAll,
   rowSpan,
   children,
-}: GridCellShellProps): ReactElement => (
-  <StyledGridCell
-    verticalAlignment={verticalAlignment}
-    showBorder={showBorder}
-    className="stGridCell"
-    data-testid="stGridCell"
-    columnSpan={columnSpan}
-    columnSpanAll={columnSpanAll}
-    rowSpan={rowSpan}
-  >
-    {children}
-  </StyledGridCell>
-)
-
-const OverflowAwareGridCell = ({
-  verticalAlignment,
-  showBorder,
-  columnSpan,
-  columnSpanAll,
-  rowSpan,
-  children,
-}: GridCellShellProps): ReactElement => {
+}: GridCellProps): ReactElement => {
   const { values: bodyHeights, elementRef: bodyRef } =
-    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES, [
+      constrainOverflow,
+    ])
   const { values: contentHeights, elementRef: contentRef } =
-    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
-  const scroll = shouldScrollGridCell(
-    contentHeights[0] ?? 0,
-    bodyHeights[0] ?? 0
-  )
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES, [
+      constrainOverflow,
+    ])
+  const scroll =
+    constrainOverflow &&
+    shouldScrollGridCell(contentHeights[0] ?? 0, bodyHeights[0] ?? 0)
 
   return (
-    <GridCellShell
+    <StyledGridCell
       verticalAlignment={verticalAlignment}
       showBorder={showBorder}
+      className="stGridCell"
+      data-testid="stGridCell"
       columnSpan={columnSpan}
       columnSpanAll={columnSpanAll}
       rowSpan={rowSpan}
     >
       <StyledGridCellBody
-        ref={bodyRef}
+        ref={constrainOverflow ? bodyRef : undefined}
         $scroll={scroll}
+        $passthrough={!constrainOverflow}
         data-testid="stGridCellBody"
         data-test-scroll={String(scroll)}
       >
         <StyledGridCellContent
-          ref={contentRef}
+          ref={constrainOverflow ? contentRef : undefined}
           verticalAlignment={verticalAlignment}
+          $passthrough={!constrainOverflow}
         >
           {children}
         </StyledGridCellContent>
       </StyledGridCellBody>
-    </GridCellShell>
+    </StyledGridCell>
   )
 }
 
-/**
- * One CSS Grid item. The cell itself never becomes a scrollport: hover
- * toolbars sit `position: absolute` above charts and would be clipped even
- * when in-flow content fits. Definite-height rows add an inner body that
- * fills the cell (so stretch children resolve) and only switches to
- * `overflow: auto` if in-flow content actually exceeds the cell.
- */
-const GridCell = ({
-  constrainOverflow,
-  ...shellProps
-}: GridCellProps): ReactElement => {
-  if (!constrainOverflow) {
-    return <GridCellShell {...shellProps} />
-  }
-  return <OverflowAwareGridCell {...shellProps} />
-}
-
 const OverflowAwareGridPort = ({
+  bounded,
   wrap,
   trackMinWidthPx,
   children,
 }: {
+  bounded: boolean
   wrap: boolean
   trackMinWidthPx?: number
   children: ReactNode
 }): ReactElement => {
   const { values: portHeights, elementRef: portRef } =
-    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES, [bounded])
   const { values: contentHeights, elementRef: contentRef } =
-    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES)
-  const scroll = shouldScrollGridCell(
-    contentHeights[0] ?? 0,
-    portHeights[0] ?? 0
-  )
+    useResizeObserver<HTMLDivElement>(GRID_CELL_OBSERVED_PROPERTIES, [bounded])
+  const scroll =
+    bounded &&
+    shouldScrollGridCell(contentHeights[0] ?? 0, portHeights[0] ?? 0)
 
   return (
     <StyledGridScrollBody
-      ref={portRef}
+      ref={bounded ? portRef : undefined}
       $scroll={scroll}
       $wrap={wrap}
+      $bounded={bounded}
       data-testid="stGridScrollBody"
       data-test-scroll={String(scroll)}
     >
       <StyledGridContentMeasure
-        ref={contentRef}
-        $minWidthPx={wrap ? undefined : trackMinWidthPx}
+        ref={bounded ? contentRef : undefined}
+        $passthrough={!bounded}
+        $minWidthPx={!bounded || wrap ? undefined : trackMinWidthPx}
         data-testid="stGridContentMeasure"
       >
         {children}
@@ -481,16 +460,29 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
   } = props
 
   const theme = useEmotionTheme()
-  // Handle cycling of colors for dividers (same as ChildRenderer):
-  assignDividerColor(node, theme)
+  // Width changes re-render this component. Keep the divider walk off that
+  // path; ChildRenderer already memoizes its own traversal. The returned
+  // node is the same object, after divider colors are assigned.
+  const gridNode = useMemo(() => {
+    assignDividerColor(node, theme)
+    return node
+  }, [node, theme])
 
   const parentContext = useContext(FlexContext)
-  const gridConfig = node.deltaBlock.gridContainer
+  const gridConfig = gridNode.deltaBlock.gridContainer
 
   const userKey = getKeyFromId(node.deltaBlock.id)
+  const heightConfig = node.deltaBlock.heightConfig
+  const gridHasBoundedHeight = Boolean(
+    heightConfig?.useStretch ||
+    heightConfig?.pixelHeight ||
+    heightConfig?.remHeight
+  )
 
   const { values: observedWidths, elementRef } =
-    useResizeObserver<HTMLDivElement>(GRID_OBSERVED_PROPERTIES)
+    useResizeObserver<HTMLDivElement>(GRID_OBSERVED_PROPERTIES, [
+      gridHasBoundedHeight,
+    ])
   const observedWidth = observedWidths[0]
   // The resize observer reports after paint, so a nested grid (sidebar,
   // column) would flash the 704px fallback for a frame. Read the laid-out
@@ -510,9 +502,10 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
           : width
       )
     }
-    // elementRef is stable, so this runs once before paint. Later resizes
-    // come from the resize observer.
-  }, [elementRef])
+    // elementRef is stable. Re-measure when the grid gains or loses a
+    // bounded height, which changes the box this width is read from.
+    // Later resizes come from the resize observer.
+  }, [elementRef, gridHasBoundedHeight])
   const measuredWidth =
     observedWidth !== undefined && observedWidth > 0
       ? observedWidth
@@ -653,12 +646,6 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     componentRegistry,
   ])
 
-  const heightConfig = node.deltaBlock.heightConfig
-  const gridHasBoundedHeight = Boolean(
-    heightConfig?.useStretch ||
-    heightConfig?.pixelHeight ||
-    heightConfig?.remHeight
-  )
   const constrainOverflow =
     cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED
 
@@ -707,45 +694,42 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     ]
   )
 
-  const useOverflowPort = gridHasBoundedHeight
-
-  const grid = (
-    <StyledGridContainerBlock
-      ref={elementRef}
-      columnCount={columnCount}
-      minColumnWidthPx={minColumnWidthPx}
-      $wrap={wrap}
-      $applyOverflow={!useOverflowPort}
-      rowGap={rowGap}
-      columnGap={columnGap}
-      cellHeightMode={cellHeightMode}
-      cellHeightPx={cellHeightPx}
-      $dense={dense}
-      className={["stGrid", convertKeyToClassName(userKey)]
-        .filter(Boolean)
-        .join(" ")}
-      data-testid="stGrid"
-      data-test-column-count={columnCount}
-      data-test-wrap={String(wrap)}
-    >
-      {wrappedChildren}
-    </StyledGridContainerBlock>
-  )
-
-  if (!useOverflowPort) {
-    return grid
-  }
-
   // wrap=False tracks will not shrink below this floor. The scrollport's
   // content box must be at least that wide, or overflow-x clips the columns.
-  const trackMinWidthPx = !wrap
-    ? columnCount * minColumnWidthPx +
-      Math.max(columnCount - 1, 0) * columnGapPx
-    : undefined
+  const trackMinWidthPx =
+    gridHasBoundedHeight && !wrap
+      ? columnCount * minColumnWidthPx +
+        Math.max(columnCount - 1, 0) * columnGapPx
+      : undefined
 
+  // Always render the port so switching height does not remount the grid.
+  // Content height styles the port as `display: contents`.
   return (
-    <OverflowAwareGridPort wrap={wrap} trackMinWidthPx={trackMinWidthPx}>
-      {grid}
+    <OverflowAwareGridPort
+      bounded={gridHasBoundedHeight}
+      wrap={wrap}
+      trackMinWidthPx={trackMinWidthPx}
+    >
+      <StyledGridContainerBlock
+        ref={elementRef}
+        columnCount={columnCount}
+        minColumnWidthPx={minColumnWidthPx}
+        $wrap={wrap}
+        $applyOverflow={!gridHasBoundedHeight}
+        rowGap={rowGap}
+        columnGap={columnGap}
+        cellHeightMode={cellHeightMode}
+        cellHeightPx={cellHeightPx}
+        $dense={dense}
+        className={["stGrid", convertKeyToClassName(userKey)]
+          .filter(Boolean)
+          .join(" ")}
+        data-testid="stGrid"
+        data-test-column-count={columnCount}
+        data-test-wrap={String(wrap)}
+      >
+        {wrappedChildren}
+      </StyledGridContainerBlock>
     </OverflowAwareGridPort>
   )
 }
