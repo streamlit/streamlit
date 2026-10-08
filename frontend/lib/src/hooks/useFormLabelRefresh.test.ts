@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { remapFormString, remapFormStrings } from "./useFormLabelRefresh"
+import {
+  claimFormLabelRefresh,
+  remapFormString,
+  remapFormStrings,
+  resetFormLabelRefreshClaims,
+} from "./useFormLabelRefresh"
 
 describe("remapFormString", () => {
   const options = ["D (1)", "E (1)", "F (1)"]
@@ -39,6 +44,27 @@ describe("remapFormString", () => {
   it("does nothing when the option list changed length", () => {
     expect(remapFormString("E (0)", ["E (1)"], previous)).toBeUndefined()
   })
+
+  it("keeps the previous index when a label moves to another option", () => {
+    expect(remapFormString("A", ["B", "A"], ["A", "B"])).toBe("B")
+  })
+
+  it("uses the last duplicate label by default", () => {
+    expect(
+      remapFormString("Choice", ["A new", "B new"], ["Choice", "Choice"])
+    ).toBe("B new")
+  })
+
+  it("uses the first duplicate label when asked", () => {
+    expect(
+      remapFormString(
+        "Choice",
+        ["A new", "B new"],
+        ["Choice", "Choice"],
+        "first"
+      )
+    ).toBe("A new")
+  })
 })
 
 describe("remapFormStrings", () => {
@@ -56,5 +82,32 @@ describe("remapFormStrings", () => {
     expect(
       remapFormStrings(["D (1)"], ["D (1)", "E (1)"], ["D (0)", "E (0)"])
     ).toBeUndefined()
+  })
+
+  it("keeps the first shared label for multiselect", () => {
+    expect(
+      remapFormStrings(
+        ["Choice"],
+        ["A new", "B new"],
+        ["Choice", "Choice"],
+        "first"
+      )
+    ).toEqual(["A new"])
+  })
+})
+
+describe("claimFormLabelRefresh", () => {
+  beforeEach(() => {
+    resetFormLabelRefreshClaims()
+  })
+
+  it("applies one generation once", () => {
+    expect(claimFormLabelRefresh("widget", ["A"], ["B"], false)).toBe(true)
+    expect(claimFormLabelRefresh("widget", ["A"], ["B"], false)).toBe(false)
+  })
+
+  it("lets a server update win and blocks a later remap", () => {
+    expect(claimFormLabelRefresh("widget", ["A"], ["B"], true)).toBe(false)
+    expect(claimFormLabelRefresh("widget", ["A"], ["B"], false)).toBe(false)
   })
 })

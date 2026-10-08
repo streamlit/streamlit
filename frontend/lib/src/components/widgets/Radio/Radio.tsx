@@ -77,11 +77,13 @@ function Radio({
     element
 
   useFormStringLabelRefresh({
+    widgetId: element.id,
     formId: element.formId,
     previousLabels: element.previousLabels,
     options,
     value,
     setValue: setValueWithSource,
+    serverSetValue: Boolean(element.setValue),
   })
 
   const onChange = useCallback(

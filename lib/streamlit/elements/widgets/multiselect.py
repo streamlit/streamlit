@@ -855,6 +855,8 @@ class MultiSelectMixin:
             formatted_options,
             form_id=form_id,
             allow_stale_labels=not accept_new_options,
+            # deserialize() uses the first duplicate label, not the last.
+            first_match=True,
         )
         if previous_labels:
             proto.previous_labels[:] = previous_labels

@@ -19,6 +19,44 @@ import { type Dispatch, type SetStateAction, useEffect } from "react"
 import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined } from "~lib/util/utils"
 
+/** Which duplicate label stands for the option. Multiselect keeps the first. */
+export type FormLabelMatch = "first" | "last"
+
+// One entry per widget. Survives a remount so a rewritten label is not mapped
+// again as if it were still the previous generation.
+const claimedFormLabelKeys = new Map<string, string>()
+
+export function resetFormLabelRefreshClaims(): void {
+  claimedFormLabelKeys.clear()
+}
+
+/**
+ * Return whether this widget should rewrite pending form labels.
+ *
+ * Each label generation is claimed once. A server `setValue` claims the
+ * generation and wins, so a later effect cannot put the old selection back.
+ */
+export function claimFormLabelRefresh(
+  widgetId: string,
+  previousLabels: readonly string[],
+  options: readonly string[],
+  serverSetValue: boolean
+): boolean {
+  if (
+    !widgetId ||
+    previousLabels.length === 0 ||
+    previousLabels.length !== options.length
+  ) {
+    return false
+  }
+  const key = `${previousLabels.join("\0")}\n${options.join("\0")}`
+  if (claimedFormLabelKeys.get(widgetId) === key) {
+    return false
+  }
+  claimedFormLabelKeys.set(widgetId, key)
+  return !serverSetValue
+}
+
 /**
  * Map one pending form label onto the current option list.
  *
@@ -29,7 +67,8 @@ import { isNullOrUndefined } from "~lib/util/utils"
 export function remapFormString(
   value: string | null,
   options: readonly string[],
-  previousLabels: readonly string[]
+  previousLabels: readonly string[],
+  match: FormLabelMatch = "last"
 ): string | undefined {
   if (
     previousLabels.length === 0 ||
@@ -37,11 +76,15 @@ export function remapFormString(
   ) {
     return undefined
   }
-  if (isNullOrUndefined(value) || options.includes(value)) {
+  if (isNullOrUndefined(value)) {
     return undefined
   }
-  // Last index matches the backend label map: duplicate labels keep the last.
-  const index = previousLabels.lastIndexOf(value)
+  // A label that still exists in the new list can belong to a different
+  // option. The previous index is the selection; callers apply this once.
+  const index =
+    match === "first"
+      ? previousLabels.indexOf(value)
+      : previousLabels.lastIndexOf(value)
   if (index < 0) {
     return undefined
   }
@@ -55,7 +98,8 @@ export function remapFormString(
 export function remapFormStrings(
   values: readonly string[],
   options: readonly string[],
-  previousLabels: readonly string[]
+  previousLabels: readonly string[],
+  match: FormLabelMatch = "last"
 ): string[] | undefined {
   if (
     previousLabels.length === 0 ||
@@ -65,7 +109,7 @@ export function remapFormStrings(
   }
   let changed = false
   const next = values.map(value => {
-    const remapped = remapFormString(value, options, previousLabels)
+    const remapped = remapFormString(value, options, previousLabels, match)
     if (remapped === undefined) {
       return value
     }
@@ -83,42 +127,96 @@ export function remapFormStrings(
  * rerun. Outside a form, `previousLabels` is empty and this does nothing.
  */
 export function useFormStringLabelRefresh(args: {
+  widgetId: string
   formId: string
   previousLabels: readonly string[]
   options: readonly string[]
   value: string | null
   setValue: Dispatch<SetStateAction<ValueWithSource<string | null> | null>>
+  // Captured during render. The basic-widget effect clears `element.setValue`
+  // before this effect runs, so reading the proto flag here would be too late.
+  serverSetValue: boolean
+  match?: FormLabelMatch
 }): void {
-  const { formId, previousLabels, options, value, setValue } = args
+  const {
+    widgetId,
+    formId,
+    previousLabels,
+    options,
+    value,
+    setValue,
+    serverSetValue,
+    match = "last",
+  } = args
   useEffect(() => {
     if (!formId) {
       return
     }
-    const next = remapFormString(value, options, previousLabels)
+    if (
+      !claimFormLabelRefresh(widgetId, previousLabels, options, serverSetValue)
+    ) {
+      return
+    }
+    const next = remapFormString(value, options, previousLabels, match)
     if (next === undefined) {
       return
     }
     setValue({ value: next, fromUser: true })
-  }, [formId, previousLabels, options, value, setValue])
+  }, [
+    widgetId,
+    formId,
+    previousLabels,
+    options,
+    value,
+    setValue,
+    serverSetValue,
+    match,
+  ])
 }
 
 /** Array form of {@link useFormStringLabelRefresh}. */
 export function useFormStringArrayLabelRefresh(args: {
+  widgetId: string
   formId: string
   previousLabels: readonly string[]
   options: readonly string[]
   value: readonly string[]
   setValue: Dispatch<SetStateAction<ValueWithSource<string[]> | null>>
+  serverSetValue: boolean
+  match?: FormLabelMatch
 }): void {
-  const { formId, previousLabels, options, value, setValue } = args
+  const {
+    widgetId,
+    formId,
+    previousLabels,
+    options,
+    value,
+    setValue,
+    serverSetValue,
+    match = "last",
+  } = args
   useEffect(() => {
     if (!formId) {
       return
     }
-    const next = remapFormStrings(value, options, previousLabels)
+    if (
+      !claimFormLabelRefresh(widgetId, previousLabels, options, serverSetValue)
+    ) {
+      return
+    }
+    const next = remapFormStrings(value, options, previousLabels, match)
     if (next === undefined) {
       return
     }
     setValue({ value: next, fromUser: true })
-  }, [formId, previousLabels, options, value, setValue])
+  }, [
+    widgetId,
+    formId,
+    previousLabels,
+    options,
+    value,
+    setValue,
+    serverSetValue,
+    match,
+  ])
 }

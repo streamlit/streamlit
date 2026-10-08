@@ -1283,6 +1283,39 @@ def test_apply_formatted_label_memory_resets_when_options_change() -> None:
     assert previous == ()
 
 
+def test_apply_formatted_label_memory_keeps_the_first_duplicate() -> None:
+    """Multiselect resolves a shared label to the first option."""
+    memory: dict[str, Any] = {}
+    apply_formatted_label_memory(
+        memory, "widget", ["A", "B"], ["Choice", "Choice"], first_match=True
+    )
+    prior, previous = apply_formatted_label_memory(
+        memory, "widget", ["A", "B"], ["A new", "B new"], first_match=True
+    )
+    assert previous == ("Choice", "Choice")
+    assert prior["Choice"] == 0
+
+
+def test_apply_formatted_label_memory_keeps_a_full_previous_generation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A long option list still remembers the generation before this one."""
+    monkeypatch.setattr(
+        "streamlit.elements.lib.options_selector_utils._MAX_REMEMBERED_LABELS",
+        2,
+    )
+    memory: dict[str, Any] = {}
+    options = ["A", "B", "C"]
+    apply_formatted_label_memory(memory, "widget", options, ["A0", "B0", "C0"])
+    apply_formatted_label_memory(memory, "widget", options, ["A1", "B1", "C1"])
+    prior, previous = apply_formatted_label_memory(
+        memory, "widget", options, ["A2", "B2", "C2"]
+    )
+    assert previous == ("A1", "B1", "C1")
+    assert prior["A0"] == 0
+    assert prior["C1"] == 2
+
+
 def test_apply_formatted_label_memory_drops_the_oldest_labels(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

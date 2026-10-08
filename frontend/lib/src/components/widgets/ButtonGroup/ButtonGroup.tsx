@@ -203,11 +203,13 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   })
 
   useFormStringArrayLabelRefresh({
+    widgetId: element.id,
     formId: element.formId,
     previousLabels: element.previousLabels,
     options: options.map(option => getOptionBaseContent(option)),
     value,
     setValue: setValueWithSource,
+    serverSetValue: Boolean(element.setValue),
   })
 
   const containerWidth = shouldWidthStretch(widthConfig)

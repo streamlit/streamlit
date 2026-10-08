@@ -231,11 +231,14 @@ const Multiselect: FC<Props> = props => {
   })
 
   useFormStringArrayLabelRefresh({
+    widgetId: element.id,
     formId: element.formId,
     previousLabels: element.previousLabels,
     options: element.options,
     value,
     setValue: setValueWithSource,
+    serverSetValue: Boolean(element.setValue),
+    match: "first",
   })
 
   // Local filter state — filterActive is derived from inputValue to avoid sync issues

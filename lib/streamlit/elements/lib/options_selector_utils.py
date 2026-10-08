@@ -406,6 +406,9 @@ class _FormattedLabelMemory:
     options: tuple[Any, ...]
     last_labels: tuple[str, ...]
     label_to_index: OrderedDict[str, int]
+    # Multiselect deserializes the first duplicate label. Other widgets keep
+    # the last, matching ``create_mappings``.
+    first_match: bool = False
 
 
 def apply_formatted_label_memory(
@@ -413,6 +416,8 @@ def apply_formatted_label_memory(
     widget_id: str,
     options: Sequence[Any],
     formatted_options: Sequence[str],
+    *,
+    first_match: bool = False,
 ) -> tuple[dict[str, int], tuple[str, ...]]:
     """Remember this run's labels and return labels from earlier runs.
 
@@ -427,21 +432,31 @@ def apply_formatted_label_memory(
     current_options = tuple(options)
     current_labels = tuple(formatted_options)
     stored = memory.get(widget_id)
-    if stored is None or not _same_option_sequence(stored.options, current_options):
+    if (
+        stored is None
+        or stored.first_match != first_match
+        or not _same_option_sequence(stored.options, current_options)
+    ):
         memory[widget_id] = _FormattedLabelMemory(
             options=current_options,
             last_labels=current_labels,
-            label_to_index=_label_index(current_labels),
+            label_to_index=_label_index(current_labels, first_match=first_match),
+            first_match=first_match,
         )
         return {}, ()
 
     prior = dict(stored.label_to_index)
     previous_labels = stored.last_labels
     stored.last_labels = current_labels
-    for label, index in _label_index(current_labels).items():
+    for label, index in _label_index(
+        current_labels, first_match=stored.first_match
+    ).items():
         stored.label_to_index[label] = index
         stored.label_to_index.move_to_end(label)
-    while len(stored.label_to_index) > _MAX_REMEMBERED_LABELS:
+    # Keep at least the previous generation. A flat cap drops it when one
+    # option list is already longer than the cap.
+    max_labels = max(_MAX_REMEMBERED_LABELS, 2 * len(current_labels))
+    while len(stored.label_to_index) > max_labels:
         stored.label_to_index.popitem(last=False)
     return prior, previous_labels
 
@@ -453,6 +468,7 @@ def remember_option_labels(
     *,
     form_id: str,
     allow_stale_labels: bool,
+    first_match: bool = False,
 ) -> tuple[dict[str, int], tuple[str, ...]]:
     """Record this run's labels.
 
@@ -462,7 +478,7 @@ def remember_option_labels(
     reused, which is how ``accept_new_options`` keeps typed text.
     """
     prior, previous = get_session_state().note_formatted_labels(
-        widget_id, options, formatted_options
+        widget_id, options, formatted_options, first_match=first_match
     )
     if not allow_stale_labels:
         return {}, ()
@@ -491,10 +507,19 @@ def index_for_option_label(
     return prior_index
 
 
-def _label_index(labels: tuple[str, ...]) -> OrderedDict[str, int]:
-    """Map each label to its index. Duplicate labels keep the last index."""
+def _label_index(
+    labels: tuple[str, ...], *, first_match: bool = False
+) -> OrderedDict[str, int]:
+    """Map each label to its index.
+
+    Duplicate labels keep the last index, unless ``first_match`` is set.
+    Either way the label moves to the end so eviction drops older labels first.
+    """
     index: OrderedDict[str, int] = OrderedDict()
     for position, label in enumerate(labels):
+        if first_match and label in index:
+            index.move_to_end(label)
+            continue
         index[label] = position
         index.move_to_end(label)
     return index

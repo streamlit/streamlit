@@ -40,7 +40,10 @@ import {
   arrayComparator,
   useExecuteWhenChanged,
 } from "~lib/hooks/useExecuteWhenChanged"
-import { remapFormStrings } from "~lib/hooks/useFormLabelRefresh"
+import {
+  claimFormLabelRefresh,
+  remapFormStrings,
+} from "~lib/hooks/useFormLabelRefresh"
 import { formatMoment, type MomentKind } from "~lib/util/formatMoment"
 import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
@@ -187,11 +190,25 @@ function Slider({
     queryParamBinding,
   })
 
+  // Read this during render. The basic-widget effect clears element.setValue
+  // before the effect below runs.
+  const serverSetValue = Boolean(element.setValue)
   // select_slider stores indices in React and labels in the form. After a
   // label change the index is still right, but submit would send the old
-  // label. Rewrite that stored label without moving the thumb.
+  // label. Rewrite that stored label without moving the thumb. A server
+  // setValue wins, and each label generation is rewritten once.
   useEffect(() => {
     if (!isSelectSlider(element) || !element.formId) {
+      return
+    }
+    if (
+      !claimFormLabelRefresh(
+        element.id,
+        element.previousLabels,
+        element.options,
+        serverSetValue
+      )
+    ) {
       return
     }
     const stored = widgetMgr.getStringArrayValue(element)
@@ -207,7 +224,7 @@ function Slider({
       return
     }
     setValueWithSource({ value, fromUser: true })
-  }, [element, value, widgetMgr, setValueWithSource])
+  }, [element, value, widgetMgr, setValueWithSource, serverSetValue])
 
   // We tie the UI to `uiValue` rather than `value` because `value` only
   // updates when the user is done interacting with the slider. If we tied

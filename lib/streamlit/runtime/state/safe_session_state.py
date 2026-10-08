@@ -108,6 +108,8 @@ class SafeSessionState:
         widget_id: str,
         options: Sequence[Any],
         formatted_options: Sequence[str],
+        *,
+        first_match: bool = False,
     ) -> tuple[dict[str, int], tuple[str, ...]]:
         """Remember this run's option labels and return earlier ones.
 
@@ -126,6 +128,7 @@ class SafeSessionState:
                 widget_id,
                 options,
                 formatted_options,
+                first_match=first_match,
             )
 
     def reset_state_value(self, user_key: str, value: Any | None) -> None:
