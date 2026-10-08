@@ -264,8 +264,6 @@ class AppSession:
         self._session_state = SessionState()
         self._user_info = user_info
 
-        self._debug_last_backmsg_id: str | None = None
-
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
         self._backend_operation_dispatcher = self._create_backend_operation_dispatcher()
@@ -425,10 +423,6 @@ class AppSession:
             The message to enqueue
 
         """
-
-        if self._debug_last_backmsg_id:
-            msg.debug_last_backmsg_id = self._debug_last_backmsg_id
-
         self._browser_queue.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
@@ -438,9 +432,6 @@ class AppSession:
         try:
             msg_type = msg.WhichOneof("type")
             if msg_type == "rerun_script":
-                if msg.debug_last_backmsg_id:
-                    self._debug_last_backmsg_id = msg.debug_last_backmsg_id
-
                 self._handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "load_git_info":
                 self._handle_git_information_request()
@@ -840,7 +831,6 @@ class AppSession:
                 status = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
 
             self._enqueue_forward_msg(self._create_script_finished_message(status))
-            self._debug_last_backmsg_id = None
 
             if event in {
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,

@@ -2296,3 +2296,69 @@ def test_multi_serde_serialize_value_matched_by_format_func(
         format_func=lambda x: f"LABEL:{x}",
     )
     assert serde.serialize(values) == expected
+
+
+class PillsOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes set the ignore_rerun proto field."""
+        st.pills("the label", ["a", "b"], on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.pills("the label", ["a", "b"], on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.pills("the label", ["a", "b"], on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.pills("the label", ["a", "b"], on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.button_group
+        assert c.ignore_rerun is True
+
+    @parameterized.expand([("ignore",), ("rerun",)])
+    def test_segmented_control_rejects_on_change_modes(self, mode: str) -> None:
+        """Segmented control rejects on_change mode strings."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=rf'`on_change="{mode}"` is not supported on this widget',
+        ):
+            st.segmented_control(
+                "the label",
+                ["a", "b"],
+                on_change=mode,  # type: ignore[arg-type]
+            )
+
+    def test_on_change_mode_excluded_from_element_id(self) -> None:
+        """Toggling on_change mode must not change the unkeyed element id."""
+        st.pills("same label", ["a", "b"], on_change="rerun")
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.pills("same label", ["a", "b"], on_change="ignore")

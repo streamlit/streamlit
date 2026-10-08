@@ -119,3 +119,37 @@ if TYPE_CHECKING:
         pills("foo", options, selection_mode="multi", wrap=False),
         list[int],
     )
+
+    # Check on_change parameter modes
+    assert_type(pills("foo", options, on_change=None), int | None)
+    assert_type(pills("foo", options, on_change="rerun"), int | None)
+    assert_type(pills("foo", options, on_change="ignore"), int | None)
+    assert_type(pills("foo", options, on_change=lambda: None), int | None)
+    assert_type(
+        pills("foo", options, selection_mode="single", on_change="ignore"),
+        int | None,
+    )
+    assert_type(
+        pills("foo", options, selection_mode="multi", on_change=None),
+        list[int],
+    )
+    assert_type(
+        pills("foo", options, selection_mode="multi", on_change="rerun"),
+        list[int],
+    )
+    assert_type(
+        pills("foo", options, selection_mode="multi", on_change="ignore"),
+        list[int],
+    )
+    assert_type(
+        pills("foo", options, selection_mode="multi", on_change=lambda: None),
+        list[int],
+    )
+    assert_type(
+        pills("foo", options, default=1, required=True, on_change="ignore"),
+        int,
+    )
+    assert_type(
+        pills("foo", options, required=True, on_change="ignore"),
+        int | None,
+    )

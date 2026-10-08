@@ -50,6 +50,11 @@ import {
   DATE_INPUT_HEADER_PICKER_POPOVER_CLASS,
 } from "~lib/components/widgets/DateInput/CalendarPopoverHeader"
 import { getSafeLocale } from "~lib/components/widgets/DateInput/dateInputUtils"
+import {
+  handlePassivePreviewFieldTab,
+  isConcreteOutsideLeave,
+  usePopoverInteractionFlag,
+} from "~lib/components/widgets/DateInput/focusLeave"
 import { ReorderedSegments } from "~lib/components/widgets/DateInput/ReorderedSegments"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
@@ -91,6 +96,10 @@ import {
   StyledTrailingIcons,
   StyledVisuallyHidden,
 } from "./styled-components"
+
+const POPOVER_EXCLUDE_SELECTORS = [
+  `.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`,
+] as const
 
 interface SingleDateTimeInputProps {
   value: CalendarDateTime | null
@@ -204,7 +213,11 @@ function SingleDateTimeInput({
     setPrevValue(value)
     setDisplayValue(value)
     setPendingTime(null)
-    lastCommittedRef.current = undefined
+    // Keep lastCommittedRef when `value` is the commit just sent. A Tab or blur
+    // handler that still sees the previous value would otherwise commit again.
+    if (!dateTimesEqual(value, lastCommittedRef.current ?? null)) {
+      lastCommittedRef.current = undefined
+    }
   }
 
   // Whether focus was inside the field when a form clear remounted it, so the
@@ -274,6 +287,13 @@ function SingleDateTimeInput({
   formCommitRef.current = formCommit
 
   const [isOpen, setIsOpen] = useState(false)
+  const popoverInteractionRef = usePopoverInteractionFlag(
+    isOpen,
+    popoverRef,
+    POPOVER_EXCLUDE_SELECTORS
+  )
+  /** Set when Tab starts leaving so handleBlur does not commit that leave again. */
+  const skipNextBlurCommitRef = useRef(false)
 
   /** The datetime the two controls describe between them when the field itself
    * holds no value: a complete date read from the inline segments, plus a time
@@ -479,7 +499,7 @@ function SingleDateTimeInput({
       restoreFocusFn: restoreFocusToField,
       // Exclude the month/year picker so clicks and Escape inside it do not
       // dismiss the calendar.
-      excludeSelectors: [`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`],
+      excludeSelectors: [...POPOVER_EXCLUDE_SELECTORS],
       excludeEscape: true,
     })
 
@@ -510,7 +530,7 @@ function SingleDateTimeInput({
         onFocusChange(new CalendarDate(date.year, date.month, date.day))
       }
     },
-    [onFocusChange, onValidate]
+    [onFocusChange, onValidate, setPendingTime]
   )
 
   // Calendar date selection: merge the date with whatever time the user has
@@ -533,7 +553,7 @@ function SingleDateTimeInput({
       setIsCalendarActive(true)
       activeOriginRef.current = null
     },
-    [onValidate, resolveGivenTime]
+    [onValidate, resolveGivenTime, setPendingTime]
   )
 
   // Opens the passive preview when focus enters a date/time segment. Focus on
@@ -692,22 +712,39 @@ function SingleDateTimeInput({
       }
 
       if (e.key !== "Tab" || !isOpen) return
-      const wrapper = triggerRef.current
-      if (!wrapper) return
-      const segments = wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
-      const segmentList = Array.from(segments)
-      // The calendar button is out of tab order (tabIndex=-1), so edge-segment
-      // Tab leaves the field.
-      const isLeavingField =
-        (!e.shiftKey && e.target === segmentList.at(-1)) ||
-        (e.shiftKey && e.target === segmentList[0])
-      if (isLeavingField) {
-        // Commit before closing, as the popover's own Tab handler does. Leaving
-        // it to the blur that follows would run the commit after the popover has
-        // unmounted, and a time given only there would be unreadable by then.
+
+      // Commit while mounted (popover-only time); skip the following blur commit.
+      const leaveAndCommit = (): void => {
+        skipNextBlurCommitRef.current = true
         commitOrRevert()
         setIsOpen(false)
+        setIsCalendarActive(false)
       }
+      handlePassivePreviewFieldTab(
+        e,
+        {
+          field: triggerRef.current,
+          calendarButton: calendarButtonRef.current,
+          popover: popoverRef.current,
+          excludeSelectors: POPOVER_EXCLUDE_SELECTORS,
+          segmentSelector: SEGMENT_SELECTOR,
+        },
+        {
+          immediate: leaveAndCommit,
+          beforeFocusSettles: () => {
+            skipNextBlurCommitRef.current = true
+          },
+          focusStayedInside: () => {
+            skipNextBlurCommitRef.current = false
+          },
+          afterFocusSettles: () => {
+            commitOrRevert()
+            setIsOpen(false)
+            setIsCalendarActive(false)
+            skipNextBlurCommitRef.current = false
+          },
+        }
+      )
     },
     [isOpen, displayValue, error, formSubmit, commitOrRevert, applyStepSnap]
   )
@@ -754,16 +791,36 @@ function SingleDateTimeInput({
 
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
+      // Safari fires field blur on popover mousedown before click — not a leave.
+      if (popoverInteractionRef.current) {
+        popoverInteractionRef.current = false
+        // Clear a Tab-armed skip so the next real blur is not dropped.
+        skipNextBlurCommitRef.current = false
+        return
+      }
+      if (skipNextBlurCommitRef.current) {
+        skipNextBlurCommitRef.current = false
+        return
+      }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      if (
-        isOpen &&
-        (!e.relatedTarget || popoverRef.current?.contains(e.relatedTarget))
-      )
+      if (isOpen) {
+        if (
+          isConcreteOutsideLeave(e.relatedTarget, {
+            popover: popoverRef.current,
+            excludeSelectors: POPOVER_EXCLUDE_SELECTORS,
+          })
+        ) {
+          commitOrRevert()
+          setIsOpen(false)
+          setIsCalendarActive(false)
+        }
+        // null / inside popover: next-frame Tab or outside click closes.
         return
+      }
       commitOrRevert()
     },
-    [isOpen, commitOrRevert]
+    [isOpen, commitOrRevert, popoverInteractionRef]
   )
 
   // Calendar value for display: extract date portion from displayValue.
@@ -813,7 +870,7 @@ function SingleDateTimeInput({
       setDisplayValue(merged)
       onValidate(merged)
     },
-    [onValidate]
+    [onValidate, setPendingTime]
   )
 
   const handlePopoverTimeKeyDown = useCallback(
@@ -921,7 +978,6 @@ function SingleDateTimeInput({
             aria-controls={isCalendarActive ? popoverId : undefined}
             data-testid="stDateTimeInputCalendarButton"
             disabled={disabled}
-            tabIndex={-1}
             onMouseDown={e => e.preventDefault()}
           >
             <Icon content={CalendarToday} size="base" />

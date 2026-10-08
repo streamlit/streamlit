@@ -592,8 +592,11 @@ def _make_pages_lookup_ctx(resolved_script_path: str) -> MagicMock:
     [
         pytest.param("pages/page_1.py", id="string_path"),
         pytest.param(Path("pages/page_1.py"), id="path_object"),
+        pytest.param("../shared/page_1.py", id="parent_relative"),
+        pytest.param("C:\\app\\page_1.py", id="windows_drive_absolute"),
     ],
 )
+@patch("streamlit.env_util.IS_WINDOWS", True)
 @patch("streamlit.commands.execution_control.normalize_path_join")
 @patch(
     "streamlit.commands.execution_control.get_main_script_directory",
@@ -608,7 +611,7 @@ def test_st_switch_page_with_path_argument(
     patched_normalize_path_join,
     page_arg,
 ):
-    """``switch_page`` resolves both ``str`` and ``pathlib.Path`` arguments via the pages manager."""
+    """Resolve string and Path arguments, including parent-relative and drive paths."""
     patched_normalize_path_join.return_value = "/some/path/pages/page_1.py"
     ctx = _make_pages_lookup_ctx("/some/path/pages/page_1.py")
     patched_get_script_run_ctx.return_value = ctx
@@ -618,6 +621,63 @@ def test_st_switch_page_with_path_argument(
     ctx.script_requests.request_rerun.assert_called_once()
     rerun_arg = ctx.script_requests.request_rerun.call_args[0][0]
     assert rerun_arg.page_script_hash == "page_1_hash"
+
+
+@pytest.mark.parametrize(
+    "page_arg",
+    [
+        pytest.param("\\\\server\\share\\page.py", id="backslash_unc"),
+        pytest.param("//server/share/page.py", id="forward_slash_unc"),
+        pytest.param("/\\server\\share\\page.py", id="forward_then_backslash_unc"),
+        pytest.param("\\/server/share/page.py", id="backslash_then_forward_unc"),
+        pytest.param("\\\\?\\UNC\\server\\share\\page.py", id="extended_unc"),
+        pytest.param("\\\\?\\C:\\app\\page.py", id="extended_local"),
+        pytest.param("\\\\.\\device\\page.py", id="device_namespace"),
+        pytest.param(Path("\\\\server\\share\\page.py"), id="path_object"),
+    ],
+)
+@patch("streamlit.env_util.IS_WINDOWS", True)
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_rejects_unsafe_windows_paths_before_resolving(
+    patched_get_script_run_ctx: MagicMock, page_arg: str | Path
+) -> None:
+    """``switch_page`` rejects Windows network/device paths before filesystem access."""
+    ctx = _make_pages_lookup_ctx("/some/path/pages/page_1.py")
+    patched_get_script_run_ctx.return_value = ctx
+
+    with (
+        patch("os.path.realpath") as realpath,
+        pytest.raises(StreamlitAPIException, match="Network paths"),
+    ):
+        switch_page(page_arg)
+
+    realpath.assert_not_called()
+    ctx.script_requests.request_rerun.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "page_arg",
+    [
+        pytest.param("page\x00.py", id="string"),
+        pytest.param(Path("page\x00.py"), id="path_object"),
+    ],
+)
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_rejects_null_bytes_before_resolving(
+    patched_get_script_run_ctx: MagicMock, page_arg: str | Path
+) -> None:
+    """``switch_page`` rejects null-byte paths before filesystem access."""
+    patched_get_script_run_ctx.return_value = _make_pages_lookup_ctx(
+        "/some/path/pages/page_1.py"
+    )
+
+    with (
+        patch("os.path.realpath") as realpath,
+        pytest.raises(StreamlitAPIException, match="null bytes"),
+    ):
+        switch_page(page_arg)
+
+    realpath.assert_not_called()
 
 
 @patch("streamlit.commands.execution_control.normalize_path_join")
