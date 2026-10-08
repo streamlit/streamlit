@@ -53,8 +53,8 @@ class RerunData:
     widget_states: WidgetStates | None = None
     page_script_hash: str = ""
     page_name: str = ""
-    # Source file that the target page must match after an st.switch_page path
-    # request. Empty for browser navigation.
+    # File that the target page must come from when st.switch_page was called
+    # with a path. Empty for all other navigation.
     expected_page_script_path: str = ""
 
     # A single fragment_id to append to fragment_id_queue.

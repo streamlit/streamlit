@@ -16,16 +16,16 @@ from __future__ import annotations
 
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
-from streamlit import logger
+from streamlit.logger import get_logger
 from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.source_util import PageHash, PageInfo, PageName, ScriptPath
 
-_LOGGER = logger.get_logger(__name__)
+_LOGGER: Final = get_logger(__name__)
 
 
 class PagesManager:
@@ -197,11 +197,12 @@ class PagesManager:
             return None
 
         if self.intended_page_script_hash:
-            # switch_page records a source path with the hash. Run that page only
-            # when this run registers the same file under that hash. Otherwise the
-            # hash belongs to a different page, and navigation reports page-not-found.
-            # Browser navigation and Page-object switches leave the path empty,
-            # and an unknown hash still falls back to the default page.
+            # A path-based st.switch_page must land on that exact file. Return None
+            # (page-not-found) instead of the default page when this run:
+            # - doesn't register any page under the intended hash, or
+            # - registers a different source under that hash.
+            # Browser navigation, Page objects, and st.rerun leave the path empty
+            # and keep the default-page fallback.
             page = self._pages.get(self.intended_page_script_hash)
             if self.expected_page_script_path:
                 if (
@@ -209,8 +210,9 @@ class PagesManager:
                     or page.get("script_path") != self.expected_page_script_path
                 ):
                     _LOGGER.warning(
-                        "st.switch_page target %s was not registered by "
-                        "st.navigation on the next run",
+                        "Not running st.switch_page target %s because this run's "
+                        "st.navigation registry does not include that file. If the "
+                        "page uses a custom url_path, pass its Page object instead.",
                         self.expected_page_script_path,
                     )
                     return None

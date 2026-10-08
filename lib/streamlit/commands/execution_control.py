@@ -503,8 +503,11 @@ def switch_page(  # type: ignore[misc]
         if matched_pages:
             page_script_hash = matched_pages[0]["page_script_hash"]
         elif (
+            # st.navigation may register this file on the next run after a
+            # Session State change, so PagesManager validates it then.
             not uses_pages_directory
             and ctx.pages_manager.pages_registered
+            and requested_page != os.path.realpath(ctx.main_script_path)
             and requested_path.suffix == ".py"
             and requested_path.is_file()
         ):

@@ -754,6 +754,7 @@ def test_st_switch_page_allows_existing_unregistered_navigation_page(
     [
         pytest.param("helper.py", False, id="single-script-app"),
         pytest.param("README.md", True, id="non-python-file"),
+        pytest.param("your_app.py", True, id="navigation-entrypoint"),
     ],
 )
 @patch("streamlit.commands.execution_control._create_page")
@@ -781,6 +782,7 @@ def test_st_switch_page_rejects_invalid_unregistered_file(
     patched_get_script_run_ctx.return_value = ctx
 
     with (
+        patch.object(PagesManager, "uses_pages_directory", False),
         patch("pathlib.Path.is_file", return_value=True),
         pytest.raises(StreamlitPageNotFoundError),
     ):
