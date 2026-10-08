@@ -69,11 +69,17 @@ message ButtonGroup {
   // containers; wrap otherwise).
   optional bool wrap = 17;
 
+  // Set by on_change="ignore": do not schedule a rerun; buffer the value until
+  // the next rerun. Bound widgets still update the URL when the value is
+  // committed. Inside a form, this flag has no effect because the form batches
+  // values until submit.
+  bool ignore_rerun = 18;
+
   // Formatted labels from the previous run, aligned with `options`, when the
   // option sequence is unchanged. A form holds its selection in the browser
   // until submit, so the frontend rewrites that pending label in place.
-  repeated string previous_labels = 18;
+  repeated string previous_labels = 19;
 
   reserved 7, 9;
-  // next id: 19
+  // next id: 20
 }

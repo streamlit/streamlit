@@ -36,6 +36,27 @@ from streamlit.url_util import is_url
 from streamlit.util import calc_hash
 
 
+def _raise_if_unsafe_page_path(page_path: str, *, error_prefix: str = "") -> None:
+    """Reject page paths that are unsafe to pass to filesystem operations."""
+    if "\x00" in page_path:
+        raise StreamlitAPIException(
+            f"{error_prefix}Page paths must not contain null bytes.",
+            error_id="page-path-contains-null-bytes",
+        )
+
+    # Reject UNC, device-namespace, and extended-prefix paths lexically: resolving
+    # them can make Windows open an SMB connection and leak the server process's
+    # NTLM credentials, or access a Windows device directly. Drive-absolute paths
+    # (for example, "C:\app\page.py") remain allowed by the navigation API contract.
+    if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
+        raise StreamlitAPIException(
+            f"{error_prefix}Network paths and device paths are not supported. "
+            "Use a path relative to the app entrypoint, or a local absolute path "
+            r"such as 'C:\app\page.py'.",
+            error_id="page-network-path-not-supported",
+        )
+
+
 def _sanitize_url_path(title: str) -> str:
     """Sanitize a title string to be used as a URL path.
 
@@ -326,21 +347,9 @@ class Page:
 
         if isinstance(page, (str, Path)):
             page_path = str(page)
-            if "\x00" in page_path:
-                raise StreamlitAPIException(
-                    "Unable to create Page. Page paths must not contain null bytes.",
-                    error_id="page-path-contains-null-bytes",
-                )
-
-            # Reject UNC paths before resolve/is_file can initiate an SMB connection
-            # and disclose the server process's Windows credentials. Absolute and
-            # drive-local paths (e.g. "C:\\...") are intentionally still allowed, as
-            # passing an absolute page path is part of the public st.Page contract.
-            if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
-                raise StreamlitAPIException(
-                    "Unable to create Page. Network paths are not supported.",
-                    error_id="page-network-path-not-supported",
-                )
+            _raise_if_unsafe_page_path(
+                page_path, error_prefix="Unable to create Page. "
+            )
 
         main_path = ctx.pages_manager.main_script_parent
         if isinstance(page, str):

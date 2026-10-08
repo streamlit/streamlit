@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-from difflib import get_close_matches
 from types import ModuleType
-from typing import TYPE_CHECKING, Final, NoReturn
+from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
@@ -86,7 +85,10 @@ def suggest_streamlit_commands(name: str, catalog: Collection[str]) -> tuple[str
     Matches must be at least ``_CLOSE_MATCH_CUTOFF`` similar and differ in
     length by at most one character so suggestions stay typo-like.
     """
-    close_matches = get_close_matches(
+    # Import here so loading this module does not load difflib.
+    import difflib
+
+    close_matches = difflib.get_close_matches(
         name,
         catalog,
         n=_MAX_CLOSE_MATCHES,
@@ -139,26 +141,6 @@ def missing_streamlit_attribute_message(name: str, module: ModuleType) -> str:
         return f"{prefix}. Did you mean {_format_st_names(suggestions)}?"
 
     return prefix
-
-
-def raise_missing_streamlit_attribute(name: str) -> NoReturn:
-    """Raise ``AttributeError`` for a missing top-level ``st.*`` name.
-
-    Sets ``name`` and ``obj`` so uncaught-exception telemetry records
-    ``AttributeError:<attribute>`` instead of parsing the message.
-    """
-    import streamlit as st
-
-    try:
-        message = missing_streamlit_attribute_message(name, st)
-    except Exception:  # pragma: no cover - defensive
-        message = f"module 'streamlit' has no attribute '{name}'"
-
-    raise AttributeError(
-        message,
-        name=name,
-        obj=st,
-    )
 
 
 def _st_name(name: str) -> str:

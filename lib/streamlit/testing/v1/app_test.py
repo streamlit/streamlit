@@ -71,12 +71,14 @@ from streamlit.testing.v1.element_tree import (
     InitialValue,
     Json,
     Latex,
+    LinkButton,
     Markdown,
     MenuButton,
     Metric,
     Multiselect,
     Node,
     NumberInput,
+    PageLink,
     Progress,
     Radio,
     Selectbox,
@@ -296,6 +298,9 @@ class AppTest:
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+        # Page hash at the end of the previous run. A new PagesManager starts at
+        # "", and ScriptRunner treats that mismatch as a page change.
+        self._finished_page_script_hash = ""
         # Pages registered by the most recent run, used to resolve switch_page()
         # against st.navigation hashes (which follow url_path, not filename).
         self._registered_pages: dict[PageHash, PageInfo] = {}
@@ -509,6 +514,7 @@ class AppTest:
         pages_manager = PagesManager(
             self._script_path, script_cache, setup_watcher=False
         )
+        pages_manager.set_current_page_script_hash(self._finished_page_script_hash)
 
         saved_secrets: Secrets = st.secrets
         # Only modify global secrets stuff if we have been given secrets
@@ -530,9 +536,15 @@ class AppTest:
         self._register_uploaded_files(script_runner)
 
         with patch_config_options({"global.appTest": True}):
+            # switch_page() sets _page_hash to the destination. An empty
+            # request stays on the page the previous run finished on. Sending
+            # "" would substitute the main-script hash, which does not match
+            # the url-path hash a multipage app finished on.
+            requested_page_hash = self._page_hash or self._finished_page_script_hash
             self._tree = script_runner.run(
-                widget_state, self.query_params, timeout, self._page_hash
+                widget_state, self.query_params, timeout, requested_page_hash
             )
+            self._finished_page_script_hash = pages_manager.current_page_script_hash
             self._tree._runner = self
             # A failed run that never reaches st.navigation leaves a
             # main-page-only fallback. Keep the last navigation registry in
@@ -1190,6 +1202,21 @@ class AppTest:
         return self._tree.latex
 
     @property
+    def link_button(self) -> ElementList[LinkButton]:
+        """Sequence of all ``st.link_button`` elements.
+
+        Returns
+        -------
+        ElementList of LinkButton
+            Sequence of all ``st.link_button`` elements. Individual elements
+            can be accessed from an ElementList by index (order on the page)
+            or key. For example, ``at.link_button[0]`` for the first element
+            or ``at.link_button(key="docs")`` for an element with a given key.
+            LinkButton is an extension of the Element class.
+        """
+        return self._tree.link_button
+
+    @property
     def markdown(self) -> ElementList[Markdown]:
         """Sequence of all ``st.markdown`` elements.
 
@@ -1258,6 +1285,20 @@ class AppTest:
             ``at.number_input(key="my_key")`` for a widget with a given key.
         """
         return self._tree.number_input
+
+    @property
+    def page_link(self) -> ElementList[PageLink]:
+        """Sequence of all ``st.page_link`` elements.
+
+        Returns
+        -------
+        ElementList of PageLink
+            Sequence of all ``st.page_link`` elements. Individual elements can
+            be accessed from an ElementList by index (order on the page). For
+            example, ``at.page_link[0]`` for the first element. PageLink is an
+            extension of the Element class.
+        """
+        return self._tree.page_link
 
     @property
     def progress(self) -> ElementList[Progress]:
