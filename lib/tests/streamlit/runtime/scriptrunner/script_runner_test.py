@@ -1848,7 +1848,13 @@ class ScriptRunnerTest(unittest.TestCase):
         waiter._session_state["cache_call_started"] = waiter_call_started
 
         owner.start()
-        assert owner_compute_started.wait(timeout=1)
+        try:
+            assert owner_compute_started.wait(timeout=1)
+        except BaseException:
+            release_compute.set()
+            if owner._script_thread is not None:
+                owner._script_thread.join(timeout=1)
+            raise
         return owner, waiter, release_compute, waiter_call_started
 
     def test_stop_ends_cache_waiter_while_owner_keeps_computing(self):

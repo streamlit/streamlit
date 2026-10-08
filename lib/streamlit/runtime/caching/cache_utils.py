@@ -124,8 +124,8 @@ def _hold_compute_lock(lock: threading.Lock) -> Generator[None, None, None]:
     """Acquire a compute lock while allowing a waiting run to stop or rerun."""
     yield_check = None
     if not lock.acquire(blocking=False):
-        # Already inside a cached function. Stopping or rerunning here would
-        # discard that outer computation.
+        # Stopping inside a cached function would discard its outer computation.
+        # A thread without a script run has no stop/rerun callback.
         yield_check = None if in_cached_function.get() else get_run_yield_check()
         if yield_check is None:
             lock.acquire()

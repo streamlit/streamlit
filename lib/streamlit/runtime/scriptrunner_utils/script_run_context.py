@@ -262,8 +262,8 @@ class ScriptRunContext:
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
     parallel_coordinator: ParallelFragmentCoordinator | None = None
-    # The run's execution-control yield point, used by parallel fragment workers
-    # and contended cache waits.
+    # Raises StopException or RerunException when this run should end. Read by
+    # contended cache waits via get_run_yield_check().
     yield_check: Callable[[], None] = lambda: None
 
     def __post_init__(self) -> None:
