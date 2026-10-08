@@ -655,6 +655,15 @@ export default defineConfig([
       "streamlit-custom/enforce-memo": "error",
     },
   },
+  // Widgets only until the rest of the frontend is cleaned. `||` drops
+  // 0, "", and false, which are valid widget values. Keep `||` at call
+  // sites where a blank string is the unset sentinel.
+  {
+    files: ["**/components/widgets/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/prefer-nullish-coalescing": "error",
+    },
+  },
   // Styled components files
   {
     files: ["**/styled-components.ts", "**/styled-components.tsx"],

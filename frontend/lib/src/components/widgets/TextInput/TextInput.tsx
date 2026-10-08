@@ -333,7 +333,8 @@ function TextInput({
   // config. The user-error message is derived from the current
   // `element.validateMessage` so it stays in sync when only the message changes.
   const userError = hasUserError
-    ? element.validateMessage ||
+    ? // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank validation message uses the generated fallback
+      element.validateMessage ||
       (validateRegex
         ? getInvalidTextInputMessage(validateRegex)
         : INVALID_TEXT_INPUT_MESSAGE)

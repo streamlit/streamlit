@@ -50,7 +50,7 @@ const JsonCellEditor: ReturnType<ProvideEditorCallback<JsonCell>> = cell => {
 
   return (
     <JsonViewer
-      jsonValue={cellData.value || cellData.displayValue}
+      jsonValue={cellData.value ?? cellData.displayValue}
       theme={theme}
     />
   )

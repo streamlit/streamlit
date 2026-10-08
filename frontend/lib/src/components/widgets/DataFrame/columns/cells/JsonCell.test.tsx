@@ -210,6 +210,31 @@ describe("JsonCell renderer", () => {
     )
   })
 
+  it("JsonCellEditor keeps an empty-string value instead of the display fallback", () => {
+    const value = {
+      kind: GridCellKind.Custom,
+      data: {
+        kind: "json-cell",
+        value: "",
+        displayValue: '{"fallback":true}',
+      },
+      allowOverlay: true,
+      copyData: "",
+    } as unknown as JsonCell
+
+    render(
+      <JsonCellEditor
+        theme={mockTheme}
+        value={value}
+        onChange={vi.fn()}
+        isHighlighted={false}
+      />
+    )
+
+    expect(screen.getByTestId("json-viewer")).toHaveTextContent(/^$/)
+    expect(screen.getByTestId("json-viewer")).not.toHaveTextContent("fallback")
+  })
+
   it("JsonTextCellEditor renders JsonViewer with text cell data", () => {
     const textCell = {
       kind: GridCellKind.Text,

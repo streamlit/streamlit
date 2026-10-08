@@ -152,7 +152,9 @@ export const extractComponentsV2Theme = (
      * - When showWidgetBorder=false: undefined from theme (fallback to
      *   transparent here)
      * - When showWidgetBorder=true: uses theme's borderColor
+     * A blank color is not paintable, so it uses the same fallback.
      */
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank border color renders as transparent
     widgetBorderColor: theme.colors.widgetBorderColor || "transparent",
 
     redColor: theme.colors.redColor,
