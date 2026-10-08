@@ -18,7 +18,6 @@ import {
   type JSX,
   type ReactElement,
   type ReactNode,
-  type Ref,
   useContext,
   useLayoutEffect,
   useMemo,
@@ -333,12 +332,8 @@ const GridCellShell = ({
   columnSpanAll,
   rowSpan,
   children,
-  cellRef,
-}: GridCellShellProps & {
-  cellRef?: Ref<HTMLDivElement>
-}): ReactElement => (
+}: GridCellShellProps): ReactElement => (
   <StyledGridCell
-    ref={cellRef}
     verticalAlignment={verticalAlignment}
     showBorder={showBorder}
     className="stGridCell"

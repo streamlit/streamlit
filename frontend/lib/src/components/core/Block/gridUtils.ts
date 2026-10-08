@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { convertRemToPx } from "~lib/theme/utils"
+
 /**
  * Cap on auto-resolved column count so a tiny min_column_width cannot explode
  * tracks. Keep in sync with `_GRID_COLUMNS_MAX` in
@@ -30,6 +32,9 @@ export function cssLengthToPx(value: string, rootFontSizePx: number): number {
   }
   if (value.endsWith("px")) {
     return Number.parseFloat(value)
+  }
+  if (value.endsWith("rem")) {
+    return convertRemToPx(value, rootFontSizePx)
   }
   return Number.parseFloat(value) * rootFontSizePx
 }

@@ -58,8 +58,6 @@ def test_grid_wrap_false_keeps_declared_columns(app: Page):
     expect(no_wrap_grid).to_have_attribute("data-test-wrap", "false")
     expect(no_wrap_grid).to_have_attribute("data-test-column-count", "3")
     expect(no_wrap_grid).to_have_css("overflow-x", "auto")
-    # Must not collapse to wrapping auto-fit behavior.
-    expect(no_wrap_grid).not_to_have_attribute("data-test-wrap", "true")
 
 
 def test_stretch_chart_fills_fixed_row_cell(app: Page):
