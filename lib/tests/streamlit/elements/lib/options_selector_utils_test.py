@@ -25,6 +25,7 @@ from parameterized import parameterized
 from streamlit.elements.lib.options_selector_utils import (
     _coerce_enum,
     _values_equal,
+    apply_formatted_label_memory,
     check_and_convert_to_indices,
     convert_to_sequence_and_check_comparable,
     create_mappings,
@@ -1244,3 +1245,58 @@ def test_is_option_value(case: str) -> None:
         )
         is False
     )
+
+
+def test_apply_formatted_label_memory_keeps_older_labels() -> None:
+    """A later run can still see the label from when the user selected."""
+    memory: dict[str, Any] = {}
+    options = ["D", "E"]
+
+    prior, previous = apply_formatted_label_memory(
+        memory, "widget", options, ["D (0)", "E (0)"]
+    )
+    assert prior == {}
+    assert previous == ()
+
+    prior, previous = apply_formatted_label_memory(
+        memory, "widget", options, ["D (1)", "E (1)"]
+    )
+    assert prior == {"D (0)": 0, "E (0)": 1}
+    assert previous == ("D (0)", "E (0)")
+
+    prior, previous = apply_formatted_label_memory(
+        memory, "widget", options, ["D (2)", "E (2)"]
+    )
+    assert prior["E (0)"] == 1
+    assert prior["E (1)"] == 1
+    assert previous == ("D (1)", "E (1)")
+
+
+def test_apply_formatted_label_memory_resets_when_options_change() -> None:
+    memory: dict[str, Any] = {}
+    apply_formatted_label_memory(memory, "widget", ["D", "E"], ["D (0)", "E (0)"])
+
+    prior, previous = apply_formatted_label_memory(
+        memory, "widget", ["X", "Y"], ["X", "Y"]
+    )
+    assert prior == {}
+    assert previous == ()
+
+
+def test_apply_formatted_label_memory_drops_the_oldest_labels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "streamlit.elements.lib.options_selector_utils._MAX_REMEMBERED_LABELS",
+        2,
+    )
+    memory: dict[str, Any] = {}
+    apply_formatted_label_memory(memory, "widget", ["A"], ["A0"])
+    apply_formatted_label_memory(memory, "widget", ["A"], ["A1"])
+    prior, _previous = apply_formatted_label_memory(memory, "widget", ["A"], ["A2"])
+    assert "A0" in prior
+
+    prior, _previous = apply_formatted_label_memory(memory, "widget", ["A"], ["A3"])
+    assert "A0" not in prior
+    assert prior["A1"] == 0
+    assert prior["A2"] == 0

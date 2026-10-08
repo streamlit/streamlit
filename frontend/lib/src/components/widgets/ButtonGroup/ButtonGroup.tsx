@@ -47,6 +47,7 @@ import {
   useBasicWidgetState,
   type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useFormStringArrayLabelRefresh } from "~lib/hooks/useFormLabelRefresh"
 import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -195,6 +196,14 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     fragmentId,
     formClearBehavior: "resetValueOnly",
     queryParamBinding,
+  })
+
+  useFormStringArrayLabelRefresh({
+    formId: element.formId,
+    previousLabels: element.previousLabels,
+    options: options.map(option => getOptionBaseContent(option)),
+    value,
+    setValue: setValueWithSource,
   })
 
   const containerWidth = shouldWidthStretch(widthConfig)

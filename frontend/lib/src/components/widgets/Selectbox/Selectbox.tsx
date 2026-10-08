@@ -23,6 +23,7 @@ import {
   useBasicWidgetState,
   type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useFormStringLabelRefresh } from "~lib/hooks/useFormLabelRefresh"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -114,6 +115,14 @@ const Selectbox: FC<Props> = ({
     fragmentId,
     formClearBehavior: "resetValueOnly",
     queryParamBinding,
+  })
+
+  useFormStringLabelRefresh({
+    formId: element.formId,
+    previousLabels: element.previousLabels,
+    options,
+    value,
+    setValue: setValueWithSource,
   })
 
   const onChange = useCallback(

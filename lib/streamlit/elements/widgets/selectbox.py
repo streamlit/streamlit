@@ -34,8 +34,10 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.options_selector_utils import (
     SelectWidgetFilterMode,
     create_mappings,
+    index_for_option_label,
     is_option_value,
     maybe_coerce_enum,
+    remember_option_labels,
     resolve_value_against_options,
     validate_select_widget_filter_mode,
 )
@@ -97,6 +99,7 @@ class SelectboxSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
+        prior_label_to_index: dict[str, int] | None = None,
     ) -> None:
         """Initialize the SelectboxSerde.
 
@@ -130,6 +133,9 @@ class SelectboxSerde(Generic[T]):
         self.default_option_index = default_option_index
         self.format_func = format_func
         self.formatted_label_match = False
+        # Labels from earlier runs, while the options themselves stayed put.
+        # A form submits the label from the run when the user picked it.
+        self.prior_label_to_index = prior_label_to_index or {}
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
@@ -174,9 +180,15 @@ class SelectboxSerde(Generic[T]):
                 else None
             )
 
-        option_index = self.formatted_option_to_option_index.get(ui_value)
+        option_index = index_for_option_label(
+            ui_value,
+            self.formatted_option_to_option_index,
+            self.prior_label_to_index,
+            len(self.options),
+        )
         # Record provenance for the caller. A later equality check cannot tell
         # a selected option from typed text that happens to equal its value.
+        # An earlier label for the same options is still that option.
         self.formatted_label_match = option_index is not None
         return self.options[option_index] if option_index is not None else ui_value
 
@@ -775,12 +787,25 @@ class SelectboxMixin:
         if isinstance(on_change, str) and on_change == "ignore":
             selectbox_proto.ignore_rerun = True
 
+        # accept_new_options leaves typed text alone. An older label can equal
+        # that text, so those widgets do not reuse it. A form otherwise keeps
+        # the pending selection in the browser until submit.
+        prior_label_to_index, previous_labels = remember_option_labels(
+            element_id,
+            opt,
+            formatted_options,
+            form_id=selectbox_proto.form_id,
+            allow_stale_labels=not accept_new_options,
+        )
+        if previous_labels:
+            selectbox_proto.previous_labels[:] = previous_labels
         serde = SelectboxSerde(
             opt,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_option_index=index,
             format_func=format_func,
+            prior_label_to_index=prior_label_to_index,
         )
         widget_state = register_widget(
             selectbox_proto.id,

@@ -39,6 +39,7 @@ from streamlit.elements.lib.options_selector_utils import (
     get_default_indices,
     is_option_value,
     maybe_coerce_enum_sequence,
+    remember_option_labels,
     validate_and_sync_multiselect_value_with_options,
     validate_select_widget_filter_mode,
 )
@@ -107,6 +108,7 @@ class MultiSelectSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_options_indices: list[int] | None = None,
         format_func: Callable[[Any], str] = str,
+        prior_label_to_index: dict[str, int] | None = None,
     ) -> None:
         """Initialize the MultiSelectSerde.
 
@@ -140,6 +142,7 @@ class MultiSelectSerde(Generic[T]):
         self.default_options_indices = default_options_indices or []
         self.format_func = format_func
         self.formatted_label_match = []
+        self.prior_label_to_index = prior_label_to_index or {}
 
     def serialize(self, value: list[T | str] | list[T]) -> list[str]:
         converted_value = convert_anything_to_list(value)
@@ -181,12 +184,19 @@ class MultiSelectSerde(Generic[T]):
         matched_labels: list[bool] = []
         for v in ui_value:
             try:
+                # First match. The index map keeps the last duplicate label,
+                # and multiselect has always deserialized the first one.
                 option_index = self.formatted_options.index(v)
                 values.append(self.options[option_index])
                 matched_labels.append(True)
             except ValueError:  # noqa: PERF203
-                values.append(v)
-                matched_labels.append(False)
+                prior_index = self.prior_label_to_index.get(v)
+                if prior_index is not None and 0 <= prior_index < len(self.options):
+                    values.append(self.options[prior_index])
+                    matched_labels.append(True)
+                else:
+                    values.append(v)
+                    matched_labels.append(False)
         self.formatted_label_match = matched_labels
         return values
 
@@ -839,12 +849,22 @@ class MultiSelectMixin:
         if isinstance(on_change, str) and on_change == "ignore":
             proto.ignore_rerun = True
 
+        prior_label_to_index, previous_labels = remember_option_labels(
+            element_id,
+            indexable_options,
+            formatted_options,
+            form_id=form_id,
+            allow_stale_labels=not accept_new_options,
+        )
+        if previous_labels:
+            proto.previous_labels[:] = previous_labels
         serde = MultiSelectSerde(
             indexable_options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_options_indices=default_values,
             format_func=format_func,
+            prior_label_to_index=prior_label_to_index,
         )
 
         widget_state = register_widget(

@@ -64,3 +64,15 @@ selected_slider = st.select_slider(
     key="relabeled_slider",
 )
 st.write("select slider value:", selected_slider)
+
+with st.form("pending_form"):
+    pending = st.selectbox(
+        "pending form selectbox",
+        ["D", "E", "F"],
+        format_func=fmt,
+        index=None,
+        key="pending_form_select",
+    )
+    pending_submitted = st.form_submit_button("Submit pending form")
+st.write("pending form value:", pending)
+st.write("pending form submitted:", pending_submitted)

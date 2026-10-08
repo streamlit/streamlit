@@ -1398,3 +1398,120 @@ def test_selectbox_resends_label_for_option_equal_to_typed_text() -> None:
     assert picker.value == "a"
     assert picker.proto.set_value is True
     assert picker.proto.raw_value == "Item a (3)"
+
+
+def _click(at: AppTest, label: str) -> AppTest:
+    for button in at.button:
+        if button.label == label:
+            return button.click().run()
+    raise AssertionError(f"No button labeled {label!r}")
+
+
+def test_pending_form_selectbox_keeps_option_when_labels_change(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Submit still returns the option when the form held an older label.
+
+    The selection stays in the browser until submit, so the server sees the
+    label from the run when the user picked it. The proto also carries that
+    previous list so the control can show the new label before submit.
+    """
+    send_stale = {"on": False}
+    widget_id = {"id": ""}
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        ws = WidgetState(id=self.id)
+        if send_stale["on"] and self.id == widget_id["id"]:
+            ws.string_value = "E (0)"
+            return ws
+        if self.index is not None and len(self.options) > 0:
+            ws.string_value = self.options[self.index]
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        if st.button("Bump"):
+            st.session_state["count"] = st.session_state.get("count", 0) + 1
+
+        def fmt(option: str) -> str:
+            return f"{option} ({st.session_state.get('count', 0)})"
+
+        with st.form("pending"):
+            st.selectbox(
+                "Pending",
+                ["D", "E", "F"],
+                index=None,
+                format_func=fmt,
+                key="pending",
+            )
+            st.form_submit_button("Submit pending")
+
+    at = AppTest.from_function(script).run()
+    widget_id["id"] = at.selectbox(key="pending").id
+    at = _click(at, "Bump")
+
+    pending = at.selectbox(key="pending")
+    assert list(pending.proto.options) == ["D (1)", "E (1)", "F (1)"]
+    assert list(pending.proto.previous_labels) == ["D (0)", "E (0)", "F (0)"]
+    assert pending.value is None
+
+    at = _click(at, "Bump")
+    assert list(at.selectbox(key="pending").proto.previous_labels) == [
+        "D (1)",
+        "E (1)",
+        "F (1)",
+    ]
+
+    send_stale["on"] = True
+    at = _click(at, "Submit pending")
+    pending = at.selectbox(key="pending")
+    assert pending.value == "E"
+    assert pending.proto.set_value is True
+    assert pending.proto.raw_value == "E (2)"
+
+
+def test_pending_form_selectbox_drops_label_when_options_change(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An older label is not applied to a different option sequence."""
+    send_stale = {"on": False}
+    widget_id = {"id": ""}
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        ws = WidgetState(id=self.id)
+        if send_stale["on"] and self.id == widget_id["id"]:
+            ws.string_value = "E (0)"
+            return ws
+        if self.index is not None and len(self.options) > 0:
+            ws.string_value = self.options[self.index]
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        if st.button("Replace"):
+            st.session_state["options"] = ["X", "Y"]
+        options = st.session_state.get("options", ["D", "E"])
+        with st.form("pending"):
+            st.selectbox(
+                "Pending",
+                options,
+                index=None,
+                format_func=lambda option: f"{option} (0)",
+                key="pending",
+            )
+            st.form_submit_button("Submit pending")
+
+    at = AppTest.from_function(script).run()
+    widget_id["id"] = at.selectbox(key="pending").id
+    at = _click(at, "Replace")
+    assert list(at.selectbox(key="pending").proto.previous_labels) == []
+
+    send_stale["on"] = True
+    at = _click(at, "Submit pending")
+    assert at.selectbox(key="pending").value is None

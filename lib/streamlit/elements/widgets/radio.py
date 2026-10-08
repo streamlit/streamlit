@@ -26,7 +26,9 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
+    index_for_option_label,
     maybe_coerce_enum,
+    remember_option_labels,
     validate_and_sync_value_with_options,
 )
 from streamlit.elements.lib.policies import (
@@ -91,12 +93,14 @@ class RadioSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
+        prior_label_to_index: dict[str, int] | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
         self.format_func = format_func
+        self.prior_label_to_index = prior_label_to_index or {}
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
@@ -136,7 +140,12 @@ class RadioSerde(Generic[T]):
                 else None
             )
 
-        option_index = self.formatted_option_to_option_index.get(ui_value)
+        option_index = index_for_option_label(
+            ui_value,
+            self.formatted_option_to_option_index,
+            self.prior_label_to_index,
+            len(self.options),
+        )
         return self.options[option_index] if option_index is not None else ui_value
 
 
@@ -582,12 +591,22 @@ class RadioMixin:
         if isinstance(on_change, str) and on_change == "ignore":
             radio_proto.ignore_rerun = True
 
+        prior_label_to_index, previous_labels = remember_option_labels(
+            element_id,
+            opt,
+            formatted_options,
+            form_id=radio_proto.form_id,
+            allow_stale_labels=True,
+        )
+        if previous_labels:
+            radio_proto.previous_labels[:] = previous_labels
         serde = RadioSerde(
             opt,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_option_index=index,
             format_func=format_func,
+            prior_label_to_index=prior_label_to_index,
         )
 
         widget_state = register_widget(

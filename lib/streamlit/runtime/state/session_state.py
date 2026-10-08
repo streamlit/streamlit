@@ -175,6 +175,11 @@ class WStates(MutableMapping[str, Any]):
     frontend_string_array_matched_option: dict[str, list[bool]] = field(
         default_factory=dict
     )
+    # Earlier formatted labels for a widget, kept while its options stay the
+    # same. A form selection is the label from the run when the user picked
+    # it, and that label is not submitted until later. Values are
+    # ``_FormattedLabelMemory`` from options_selector_utils.
+    formatted_label_memory: dict[str, Any] = field(default_factory=dict)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -277,6 +282,7 @@ class WStates(MutableMapping[str, Any]):
         self.frontend_string_array_matched_option.update(
             other.frontend_string_array_matched_option
         )
+        self.formatted_label_memory.update(other.formatted_label_memory)
 
     def _remember_frontend_wire(self, widget_id: str, proto: WidgetStateProto) -> None:
         """Save a string or string-array payload and drop any other value type."""
@@ -354,6 +360,20 @@ class WStates(MutableMapping[str, Any]):
         ) - set(self.states)
         for widget_id in stale_wire_ids:
             self._forget_frontend_wire(widget_id)
+        # Label history is not a widget value, so compact keeps it. Drop it
+        # with the same staleness rule as widget state: a fragment run must
+        # not forget labels for widgets it did not execute.
+        stale_memory_ids = [
+            widget_id
+            for widget_id in self.formatted_label_memory
+            if _is_stale_widget(
+                self.widget_metadata.get(widget_id),
+                active_widget_ids,
+                fragment_ids_this_run,
+            )
+        ]
+        for widget_id in stale_memory_ids:
+            del self.formatted_label_memory[widget_id]
 
     def get_serialized(self, k: str) -> WidgetStateProto | None:
         """Get the serialized value of the widget with the given id.
@@ -791,6 +811,7 @@ class SessionState:
         self._old_state.clear()
         self._new_session_state.clear()
         self._new_widget_state.clear()
+        self._new_widget_state.formatted_label_memory.clear()
         self._key_id_mapper.clear()
         self._query_param_bound_widget_ids.clear()
         self._persist_tracker.clear()

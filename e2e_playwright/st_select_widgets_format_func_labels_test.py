@@ -19,6 +19,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import rerun_app, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
+    click_form_button,
     expect_prefixed_markdown,
     get_multiselect,
     get_radio,
@@ -91,3 +92,28 @@ def test_selection_survives_format_func_label_changes(app: Page):
     expect(slider.get_by_text("E (0)", exact=True)).to_have_count(0)
     expect(slider.get_by_text("D (0)", exact=True)).to_have_count(0)
     expect(slider.get_by_text("F (0)", exact=True)).to_have_count(0)
+
+
+def test_pending_form_selectbox_keeps_option_when_labels_change(app: Page):
+    """A form selection updates its label before submit and survives submit."""
+    selectbox = get_selectbox(app, "pending form selectbox")
+    selectbox_input = selectbox.locator("input")
+    selectbox_input.click()
+    selectbox_input.press("ArrowDown")
+    dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+    # Filter instead of scrolling a virtualized list. A form selection does
+    # not rerun, so this does not use the helper that waits for an app run.
+    selectbox_input.fill("E (0)")
+    dropdown.get_by_role("option", name="E (0)", exact=True).click()
+    expect(selectbox_input).to_have_value("E (0)")
+    # The form has not been submitted, so the script value is still empty.
+    expect_prefixed_markdown(app, "pending form value:", "None")
+
+    click_button(app, "Bump label count")
+    expect(selectbox_input).to_have_value("E (1)")
+    expect_prefixed_markdown(app, "pending form value:", "None")
+
+    click_form_button(app, "Submit pending form")
+    expect_prefixed_markdown(app, "pending form value:", "E")
+    expect(selectbox_input).to_have_value("E (1)")

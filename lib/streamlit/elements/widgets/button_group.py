@@ -35,8 +35,10 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     get_default_indices,
+    index_for_option_label,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
+    remember_option_labels,
     validate_and_sync_multiselect_value_with_options,
     validate_and_sync_value_with_options,
 )
@@ -113,6 +115,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
         session_state_fallback: T | None = None,
+        prior_label_to_index: dict[str, int] | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
@@ -120,6 +123,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         self.default_option_index = default_option_index
         self.format_func = format_func
         self.session_state_fallback = session_state_fallback
+        self.prior_label_to_index = prior_label_to_index or {}
 
     def serialize(self, v: T | str | None) -> list[str]:
         """Serialize single-select value to a list of strings for wire format."""
@@ -158,8 +162,15 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
 
         string_value = ui_value[0]
 
-        # Look up the option index by formatted string
-        option_index = self.formatted_option_to_option_index.get(string_value)
+        # Look up the option index by formatted string. An earlier label for
+        # the same options is still that option, which is how a form submits
+        # the label from the run when the user picked it.
+        option_index = index_for_option_label(
+            string_value,
+            self.formatted_option_to_option_index,
+            self.prior_label_to_index,
+            len(self.options),
+        )
         if option_index is not None:
             return self.options[option_index]
 
@@ -201,6 +212,7 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         default_option_indices: list[int] | None = None,
         format_func: Callable[[Any], str] = str,
         session_state_fallback: list[T] | None = None,
+        prior_label_to_index: dict[str, int] | None = None,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
@@ -208,6 +220,7 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         self.default_option_indices = default_option_indices or []
         self.format_func = format_func
         self.session_state_fallback = session_state_fallback
+        self.prior_label_to_index = prior_label_to_index or {}
 
     def serialize(self, value: list[T | str] | list[T] | None) -> list[str]:
         """Serialize multi-select values to list of strings for wire format."""
@@ -244,7 +257,12 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
 
         values: list[T | str] = []
         for v in ui_value:
-            option_index = self.formatted_option_to_option_index.get(v)
+            option_index = index_for_option_label(
+                v,
+                self.formatted_option_to_option_index,
+                self.prior_label_to_index,
+                len(self.options),
+            )
             if option_index is not None:
                 values.append(self.options[option_index])
             # Silently drop values not found in the current options mapping.
@@ -1411,6 +1429,22 @@ class ButtonGroupMixin:
 
         if bind == "query-params" and key is not None:
             proto.query_param_key = str(key)
+
+        if string_formatted_options is not None:
+            # The serde was built before this element id existed. Attach the
+            # earlier labels now, before registration deserializes the proto.
+            prior_label_to_index, previous_labels = remember_option_labels(
+                element_id,
+                indexable_options,
+                string_formatted_options,
+                form_id=form_id,
+                allow_stale_labels=True,
+            )
+            serde_obj = getattr(deserializer, "__self__", None)
+            if serde_obj is not None:
+                serde_obj.prior_label_to_index = prior_label_to_index
+            if previous_labels:
+                proto.previous_labels[:] = previous_labels
 
         widget_state = register_widget(
             proto.id,

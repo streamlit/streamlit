@@ -57,7 +57,11 @@ message MultiSelect {
   // committed. Inside a form, this flag has no effect because the form batches
   // values until submit.
   bool ignore_rerun = 19;
-  // Next: 20
+  // Formatted labels from the previous run, aligned with `options`, when the
+  // option sequence is unchanged. A form holds its selection in the browser
+  // until submit, so the frontend rewrites that pending label in place.
+  repeated string previous_labels = 20;
+  // Next: 21
 
   reserved 7;
 }

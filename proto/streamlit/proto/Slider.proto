@@ -66,5 +66,10 @@ message Slider {
   // the next rerun. Bound widgets still update the URL immediately. Ignored
   // inside a form, where the form owns commit timing.
   bool ignore_rerun = 20;
-  // Next: 21
+  // Formatted labels from the previous run, aligned with `options`, when the
+  // option sequence is unchanged. Used by select_slider. A form holds its
+  // selection in the browser until submit, so the frontend rewrites that
+  // pending label in place.
+  repeated string previous_labels = 21;
+  // Next: 22
 }

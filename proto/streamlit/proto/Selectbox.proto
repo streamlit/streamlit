@@ -41,7 +41,11 @@ message Selectbox {
   // committed. Inside a form, this flag has no effect because the form batches
   // values until submit.
   bool ignore_rerun = 16;
-  // Next: 17
+  // Formatted labels from the previous run, aligned with `options`, when the
+  // option sequence is unchanged. A form holds its selection in the browser
+  // until submit, so the frontend rewrites that pending label in place.
+  repeated string previous_labels = 17;
+  // Next: 18
 
   reserved 7;
 }
