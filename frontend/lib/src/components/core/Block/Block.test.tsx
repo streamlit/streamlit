@@ -748,6 +748,7 @@ describe("BlockNodeRenderer direct column wrapping context", () => {
 })
 
 describe("BlockNodeRenderer direct grid cell wrapping context", () => {
+  mockEllipsizedLabels()
   const label = "Regenerate the complete quarterly report now"
 
   function makeGridCellBlock(children: AppNode[]): BlockNode {
@@ -1234,6 +1235,37 @@ describe("GridContainer Component", () => {
     expect(scrollBody).toHaveStyle("height: 100%")
     expect(scrollBody).toHaveAttribute("data-test-scroll", "false")
     expect(screen.getByTestId("stGrid")).not.toHaveStyle("overflow-y: auto")
+  })
+
+  it("lets a bounded no-wrap grid grow to its track floor so the port can scroll", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { pixelHeight: 160 },
+        gridContainer: {
+          maxColumns: 4,
+          minColumnWidthPx: 200,
+          wrap: false,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          showCellBorder: false,
+          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+        },
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    // 4 * 200px tracks + 3 * 1rem gaps. The measure box must be at least
+    // this wide or the scrollport's scrollWidth stays at the port width.
+    expect(screen.getByTestId("stGridContentMeasure")).toHaveStyle(
+      "min-width: 848px"
+    )
+    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+      "overflow-x: auto"
+    )
   })
 
   it("scrolls a bounded grid when reserved equal mode is set", () => {

@@ -514,11 +514,18 @@ export const StyledGridScrollBody = styled.div<{
  * Grows with grid tracks so ResizeObserver can detect overflow without
  * reading scrollHeight.
  */
-export const StyledGridContentMeasure = styled.div({
+export const StyledGridContentMeasure = styled.div<{
+  $minWidthPx?: number
+}>(({ $minWidthPx }) => ({
   width: "100%",
+  // A percentage width alone stays inside the scrollport, so wrap=False
+  // tracks never increase scrollWidth. The track floor lets this box grow
+  // past the port; a wider port still stretches it via width: 100%.
+  ...($minWidthPx !== undefined &&
+    $minWidthPx > 0 && { minWidth: `${$minWidthPx}px` }),
   minHeight: "min-content",
   flexShrink: 0,
-})
+}))
 
 function gridCellJustifyContent(
   verticalAlignment: BlockProto.GridContainer.VerticalAlignment

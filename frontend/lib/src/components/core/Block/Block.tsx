@@ -395,9 +395,11 @@ const GridCell = ({
 
 const OverflowAwareGridPort = ({
   wrap,
+  trackMinWidthPx,
   children,
 }: {
   wrap: boolean
+  trackMinWidthPx?: number
   children: ReactNode
 }): ReactElement => {
   const { values: portHeights, elementRef: portRef } =
@@ -417,7 +419,11 @@ const OverflowAwareGridPort = ({
       data-testid="stGridScrollBody"
       data-test-scroll={String(scroll)}
     >
-      <StyledGridContentMeasure ref={contentRef}>
+      <StyledGridContentMeasure
+        ref={contentRef}
+        $minWidthPx={wrap ? undefined : trackMinWidthPx}
+        data-testid="stGridContentMeasure"
+      >
         {children}
       </StyledGridContentMeasure>
     </StyledGridScrollBody>
@@ -687,7 +693,18 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     return grid
   }
 
-  return <OverflowAwareGridPort wrap={wrap}>{grid}</OverflowAwareGridPort>
+  // wrap=False tracks will not shrink below this floor. The scrollport's
+  // content box must be at least that wide, or overflow-x clips the columns.
+  const trackMinWidthPx = !wrap
+    ? columnCount * minColumnWidthPx +
+      Math.max(columnCount - 1, 0) * columnGapPx
+    : undefined
+
+  return (
+    <OverflowAwareGridPort wrap={wrap} trackMinWidthPx={trackMinWidthPx}>
+      {grid}
+    </OverflowAwareGridPort>
+  )
 }
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {

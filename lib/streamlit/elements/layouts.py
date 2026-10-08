@@ -1024,7 +1024,7 @@ class LayoutsMixin:
 
         if isinstance(row_height, str) and row_height == "content":
             validated_row_height: Literal["content"] | int = row_height
-        elif isinstance(row_height, str):
+        elif isinstance(row_height, str):  # type: ignore[unreachable]
             raise StreamlitValueError(
                 "row_height",
                 ['"content"', "a positive integer"],
