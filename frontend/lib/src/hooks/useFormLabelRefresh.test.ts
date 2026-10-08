@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { releaseInactiveFormLabelRefreshClaims } from "~lib/formLabelRefreshClaims"
+
 import {
   claimFormLabelRefresh,
   remapFormString,
@@ -109,5 +111,20 @@ describe("claimFormLabelRefresh", () => {
   it("lets a server update win and blocks a later remap", () => {
     expect(claimFormLabelRefresh("widget", ["A"], ["B"], true)).toBe(false)
     expect(claimFormLabelRefresh("widget", ["A"], ["B"], false)).toBe(false)
+  })
+
+  it("allows the same generation after the widget leaves the app", () => {
+    expect(
+      claimFormLabelRefresh("widget", ["A", "B"], ["B", "A"], false)
+    ).toBe(true)
+    releaseInactiveFormLabelRefreshClaims(new Set(["widget"]))
+    expect(
+      claimFormLabelRefresh("widget", ["A", "B"], ["B", "A"], false)
+    ).toBe(false)
+
+    releaseInactiveFormLabelRefreshClaims(new Set())
+    expect(
+      claimFormLabelRefresh("widget", ["A", "B"], ["B", "A"], false)
+    ).toBe(true)
   })
 })

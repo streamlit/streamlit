@@ -16,46 +16,17 @@
 
 import { type Dispatch, type SetStateAction, useEffect } from "react"
 
+import {
+  claimFormLabelRefresh,
+  resetFormLabelRefreshClaims,
+} from "~lib/formLabelRefreshClaims"
 import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined } from "~lib/util/utils"
 
+export { claimFormLabelRefresh, resetFormLabelRefreshClaims }
+
 /** Which duplicate label stands for the option. Multiselect keeps the first. */
 export type FormLabelMatch = "first" | "last"
-
-// One entry per widget. Survives a remount so a rewritten label is not mapped
-// again as if it were still the previous generation.
-const claimedFormLabelKeys = new Map<string, string>()
-
-export function resetFormLabelRefreshClaims(): void {
-  claimedFormLabelKeys.clear()
-}
-
-/**
- * Return whether this widget should rewrite pending form labels.
- *
- * Each label generation is claimed once. A server `setValue` claims the
- * generation and wins, so a later effect cannot put the old selection back.
- */
-export function claimFormLabelRefresh(
-  widgetId: string,
-  previousLabels: readonly string[],
-  options: readonly string[],
-  serverSetValue: boolean
-): boolean {
-  if (
-    !widgetId ||
-    previousLabels.length === 0 ||
-    previousLabels.length !== options.length
-  ) {
-    return false
-  }
-  const key = `${previousLabels.join("\0")}\n${options.join("\0")}`
-  if (claimedFormLabelKeys.get(widgetId) === key) {
-    return false
-  }
-  claimedFormLabelKeys.set(widgetId, key)
-  return !serverSetValue
-}
 
 /**
  * Map one pending form label onto the current option list.
