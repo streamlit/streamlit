@@ -47,10 +47,10 @@ from e2e_playwright.load_testing import conftest as load_conftest
 from e2e_playwright.load_testing.conftest import (
     ResultsCollector,
     _format_server_startup_failure,
-    _unlink_server_log,
     get_scenario_path,
     start_healthy_load_test_server,
     terminate_process,
+    unlink_server_log,
 )
 from e2e_playwright.load_testing.metrics_collector import (
     MetricsCollector,
@@ -315,7 +315,7 @@ def scenario_server(
     try:
         terminate_process(process)
     finally:
-        _unlink_server_log(log_path)
+        unlink_server_log(log_path)
 
 
 @pytest.mark.only_browser("chromium")

@@ -203,6 +203,8 @@ def start_load_test_server(
         File capturing combined stdout and stderr.
     """
     env = os.environ.copy()
+    # Hung servers may be SIGKILLed; unbuffered stdout keeps the log tail complete.
+    env["PYTHONUNBUFFERED"] = "1"
     if extra_env:
         env.update(extra_env)
 
@@ -226,6 +228,9 @@ def start_load_test_server(
     )
     log_path = Path(log_name)
     try:
+        # Close the parent's handle after Popen. The child keeps a duplicated
+        # descriptor, so later server output still reaches the file without a
+        # pipe that can fill and deadlock.
         with os.fdopen(fd, "w", encoding="utf-8") as log_file:
             process = subprocess.Popen(
                 args,
@@ -235,7 +240,7 @@ def start_load_test_server(
                 text=True,
             )
     except Exception:
-        _unlink_server_log(log_path)
+        unlink_server_log(log_path)
         raise
     return process, log_path
 
@@ -259,7 +264,7 @@ def _server_process_status(returncode: int | None) -> str:
     return "process was still running"
 
 
-def _unlink_server_log(log_path: Path) -> None:
+def unlink_server_log(log_path: Path) -> None:
     """Remove a captured server log, ignoring missing files."""
     try:
         log_path.unlink(missing_ok=True)
@@ -319,7 +324,7 @@ def start_healthy_load_test_server(
     """Start a load-test server, retrying on a new port if health never comes up.
 
     Returns the process, the port that became healthy, and the log file path.
-    The caller should unlink the log after terminating the process.
+    The caller should call ``unlink_server_log`` after terminating the process.
 
     Raises
     ------
@@ -343,8 +348,9 @@ def start_healthy_load_test_server(
         )
         if attempt_index == max_attempts - 1:
             last_failure = _format_server_startup_failure(port, returncode, log_path)
+            # Leave the final attempt's log on disk so the path in the error stays readable.
         else:
-            _unlink_server_log(log_path)
+            unlink_server_log(log_path)
 
     status_block = "\n".join(attempt_statuses)
     detail = f"\n{status_block}"
