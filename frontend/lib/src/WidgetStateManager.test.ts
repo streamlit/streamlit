@@ -586,7 +586,7 @@ describe("Widget State Manager", () => {
         value: MOCK_FILE_UPLOADER_STATE,
       },
     ])("%s", async ({ setterMethod, value }) => {
-      // @ts-expect-error - dynamic setter is not an index on WidgetStateManager
+      // @ts-expect-error - string cannot index WidgetStateManager
       await widgetMgr[setterMethod](MOCK_WIDGET.id, value, {
         formId: MOCK_WIDGET.formId,
         fragmentId: "myFragmentId",

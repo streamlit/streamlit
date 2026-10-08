@@ -347,8 +347,8 @@ export default defineConfig([
         "warn",
         { allowExpressions: true },
       ],
-      // @ts-ignore hides errors even when the line typechecks.
-      // @ts-expect-error is allowed only when it describes the mismatch.
+      // Ban @ts-ignore: it stays silent after the error is fixed. @ts-expect-error
+      // fails once unused, and must describe the type mismatch it hides.
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {
