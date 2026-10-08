@@ -63,6 +63,7 @@ from streamlit.testing.v1.errors import AppTestError
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
 
+    from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
     from streamlit.proto.Block_pb2 import Block as BlockProto
     from streamlit.proto.Button_pb2 import Button as ButtonProto
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
@@ -1508,6 +1509,210 @@ class Feedback(Widget):
         return super().set_value(v)
 
 
+_AUDIO_INPUT_MIME = "audio/wav"
+
+
+def _parse_audio_input_file(file: object) -> tuple[str, bytes, str]:
+    """Return one ``(filename, content, mime_type)`` WAV recording.
+
+    ``st.audio_input`` records a single ``audio/wav`` file. Sequences and
+    other types are rejected so a test cannot stage a payload the browser
+    widget cannot produce.
+    """
+    if (
+        isinstance(file, tuple)
+        and len(file) == 3
+        and isinstance(file[0], str)
+        and isinstance(file[1], (bytes, bytearray))
+        and isinstance(file[2], str)
+    ):
+        filename, content, mime_type = file
+        if not filename.lower().endswith(".wav"):
+            raise AppTestError(
+                f"st.audio_input only records .wav files. Got filename {filename!r}."
+            )
+        if mime_type.lower() != _AUDIO_INPUT_MIME:
+            raise AppTestError(
+                "st.audio_input recordings use MIME type 'audio/wav'. "
+                f"Got {mime_type!r}."
+            )
+        return filename, bytes(content), mime_type
+    raise AppTestError(
+        "st.audio_input records one recording. "
+        "Pass (filename, content, mime_type) or None to clear."
+    )
+
+
+@dataclass(repr=False)
+class AudioInput(Widget):
+    r"""A representation of ``st.audio_input``.
+
+    The recording is one WAV file, ``(filename, content, mime_type)``, with
+    MIME type ``audio/wav``.
+
+    Example
+    -------
+    >>> at = AppTest.from_string('''
+    ...     import streamlit as st
+    ...     audio = st.audio_input("Record")
+    ...     if audio:
+    ...         st.write(audio.name)
+    ... ''')
+    >>> at.run()
+    >>> at.audio_input[0].set_value(("clip.wav", b"RIFF", "audio/wav"))
+    >>> at.run()
+    >>> at.markdown[0].value
+    'clip.wav'
+    """
+
+    # (file_id, filename, content, mime_type). InitialValue means the test
+    # has not called set_value/upload/clear. None means the recording was cleared.
+    _files: list[tuple[str, str, bytes, str]] | InitialValue | None
+
+    proto: AudioInputProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+    sample_rate: int | None
+
+    def __init__(self, proto: AudioInputProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._files = InitialValue()
+        self.type = "audio_input"
+        self.sample_rate = proto.sample_rate if proto.HasField("sample_rate") else None
+
+    def set_value(  # ty: ignore[invalid-method-override]
+        self,
+        file: tuple[str, bytes, str] | None,
+    ) -> Self:
+        """Set the recording, or ``None`` to clear it.
+
+        Parameters
+        ----------
+        file
+            ``(filename, content, mime_type)`` for one WAV recording.
+            ``filename`` must end in ``.wav`` and ``mime_type`` must be
+            ``audio/wav``. ``None`` clears the recording.
+
+        Returns
+        -------
+        AudioInput
+            The AudioInput instance for method chaining.
+        """
+        from uuid import uuid4
+
+        self._assert_can_interact()
+        if file is None:
+            self._files = None
+            return self
+        filename, content, mime_type = _parse_audio_input_file(file)
+        self._files = [(str(uuid4()), filename, content, mime_type)]
+        return self
+
+    def upload(
+        self,
+        filename: str,
+        content: bytes,
+        mime_type: str = _AUDIO_INPUT_MIME,
+    ) -> Self:
+        """Stage one recording, replacing any recording already staged.
+
+        Parameters
+        ----------
+        filename
+            The file name. Must end in ``.wav``.
+        content
+            The file content as bytes.
+        mime_type
+            The MIME type. Defaults to ``audio/wav``.
+
+        Returns
+        -------
+        AudioInput
+            The AudioInput instance for method chaining.
+        """
+        return self.set_value((filename, content, mime_type))
+
+    def clear(self) -> Self:
+        """Clear the recording.
+
+        Returns
+        -------
+        AudioInput
+            The AudioInput instance for method chaining.
+        """
+        self._assert_can_interact()
+        self._files = None
+        return self
+
+    def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
+        """Return the recording to register, if any.
+
+        When the test has not staged a change, reuse the ``UploadedFile``
+        already in session state so the recording survives later ``run()``
+        calls.
+        """
+        if not isinstance(self._files, InitialValue):
+            return self._files or []
+
+        from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+        state = self.root.session_state
+        if not state:
+            return []
+        try:
+            current_value = state[self.id]
+        except KeyError:
+            return []
+        if not isinstance(current_value, UploadedFile):
+            return []
+        return [
+            (
+                current_value.file_id,
+                current_value.name,
+                current_value.getvalue(),
+                current_value.type,
+            )
+        ]
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget."""
+        from streamlit.proto.Common_pb2 import (
+            FileUploaderState as FileUploaderStateProto,
+        )
+
+        ws = WidgetState()
+        ws.id = self.id
+        files_to_use = self._get_files_to_register()
+        if not files_to_use:
+            return ws
+
+        state_proto = FileUploaderStateProto()
+        for file_id, filename, content, _mime_type in files_to_use:
+            file_info = state_proto.uploaded_file_info.add()
+            file_info.file_id = file_id
+            file_info.name = filename
+            file_info.size = len(content)
+            file_info.file_urls.file_id = file_id
+            file_info.file_urls.upload_url = f"/mock/upload/test session id/{file_id}"
+            file_info.file_urls.delete_url = f"/mock/upload/test session id/{file_id}"
+        ws.file_uploader_state_value.CopyFrom(state_proto)
+        return ws
+
+    @property
+    def value(self) -> Any:
+        """The current recording.
+
+        Returns the ``UploadedFile`` or ``None`` committed by the last
+        ``run()``. A recording staged with ``set_value`` is not visible
+        here until ``run()``.
+        """
+        state = self.root.session_state
+        assert state
+        return state[self.id]
+
+
 @dataclass(repr=False)
 class FileUploader(Widget):
     r"""A representation of ``st.file_uploader``.
@@ -2664,6 +2869,10 @@ class Block:
     # We could implement these using __getattr__ but that would have
     # much worse type information.
     @property
+    def audio_input(self) -> WidgetList[AudioInput]:
+        return WidgetList(self.get("audio_input"))  # type: ignore
+
+    @property
     def button(self) -> WidgetList[Button]:
         return WidgetList(self.get("button"))  # type: ignore
 
@@ -3216,7 +3425,7 @@ def _unset_value_marker(node: Widget) -> tuple[str, Any]:
     Each widget class uses a different "not staged" marker: ``InitialValue``,
     ``None``, or ``False`` for buttons.
     """
-    if isinstance(node, FileUploader):
+    if isinstance(node, (AudioInput, FileUploader)):
         return ("_files", InitialValue())
     if isinstance(node, (Button, DownloadButton)):
         return ("_value", False)
@@ -3487,6 +3696,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Exception(elt.exception, root=root)
             elif ty == "feedback":
                 new_node = Feedback(elt.feedback, root=root)
+            elif ty == "audio_input":
+                new_node = AudioInput(elt.audio_input, root=root)
             elif ty == "file_uploader":
                 new_node = FileUploader(elt.file_uploader, root=root)
             elif ty == "heading":
