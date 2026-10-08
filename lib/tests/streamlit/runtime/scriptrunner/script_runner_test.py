@@ -1830,8 +1830,9 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_no_exceptions(scriptrunner)
         assert len(join_calls) == 1
 
-    def test_stop_interrupts_wait_for_another_runners_cache_compute(self):
-        """Stopping a cache waiter does not interrupt the compute owner."""
+    def _start_cache_compute_owner_and_create_waiter(
+        self,
+    ) -> tuple[TestScriptRunner, TestScriptRunner, threading.Event, threading.Event]:
         st.cache_data.clear()
         Runtime.instance().cache_storage_manager = MemoryCacheStorageManager()
         owner_compute_started = threading.Event()
@@ -1846,10 +1847,17 @@ class ScriptRunnerTest(unittest.TestCase):
         waiter._session_state["release_compute"] = release_compute
         waiter._session_state["cache_call_started"] = waiter_call_started
 
-        try:
-            owner.start()
-            assert owner_compute_started.wait(timeout=1)
+        owner.start()
+        assert owner_compute_started.wait(timeout=1)
+        return owner, waiter, release_compute, waiter_call_started
 
+    def test_stop_ends_cache_waiter_while_owner_keeps_computing(self):
+        """Stopping a cache waiter does not interrupt the compute owner."""
+        owner, waiter, release_compute, waiter_call_started = (
+            self._start_cache_compute_owner_and_create_waiter()
+        )
+
+        try:
             waiter.start()
             assert waiter_call_started.wait(timeout=1)
 
@@ -1870,26 +1878,13 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_no_exceptions(owner)
         self._assert_no_exceptions(waiter)
 
-    def test_rerun_restarts_wait_for_another_runners_cache_compute(self):
+    def test_rerun_restarts_cache_waiter_before_owner_finishes(self):
         """A slow rerun restarts a cache waiter before the owner finishes."""
-        st.cache_data.clear()
-        Runtime.instance().cache_storage_manager = MemoryCacheStorageManager()
-        owner_compute_started = threading.Event()
-        release_compute = threading.Event()
-        waiter_call_started = threading.Event()
-        owner = TestScriptRunner("cancellable_cache_wait.py")
-        waiter = TestScriptRunner("cancellable_cache_wait.py")
-        owner._session_state["compute_started"] = owner_compute_started
-        owner._session_state["release_compute"] = release_compute
-        owner._session_state["cache_call_started"] = threading.Event()
-        waiter._session_state["compute_started"] = threading.Event()
-        waiter._session_state["release_compute"] = release_compute
-        waiter._session_state["cache_call_started"] = waiter_call_started
+        owner, waiter, release_compute, waiter_call_started = (
+            self._start_cache_compute_owner_and_create_waiter()
+        )
 
         try:
-            owner.start()
-            assert owner_compute_started.wait(timeout=1)
-
             waiter.start()
             assert waiter_call_started.wait(timeout=1)
             waiter_call_started.clear()

@@ -122,15 +122,22 @@ _COMPUTE_LOCK_POLL_SECONDS: Final = 0.1
 @contextlib.contextmanager
 def _hold_compute_lock(lock: threading.Lock) -> Generator[None, None, None]:
     """Acquire a compute lock while allowing a waiting run to stop or rerun."""
+    yield_check = None
     if not lock.acquire(blocking=False):
-        # A nested waiter owns its outer compute lock, so interrupting it would
+        # Already inside a cached function. Stopping or rerunning here would
         # discard that outer computation.
         yield_check = None if in_cached_function.get() else get_run_yield_check()
-        while not lock.acquire(timeout=_COMPUTE_LOCK_POLL_SECONDS):
-            if yield_check is not None:
+        if yield_check is None:
+            lock.acquire()
+        else:
+            while not lock.acquire(timeout=_COMPUTE_LOCK_POLL_SECONDS):
                 yield_check()
 
     try:
+        # A stop or rerun may arrive during the timed acquire just before the
+        # lock becomes available.
+        if yield_check is not None:
+            yield_check()
         yield
     finally:
         lock.release()

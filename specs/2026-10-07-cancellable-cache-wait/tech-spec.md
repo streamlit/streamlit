@@ -1,7 +1,7 @@
 ---
 author: sfc-gh-lwilby-1
 created: 2026-10-07
-status: draft
+status: implemented
 ---
 
 # Cancellable cache waits
@@ -16,8 +16,8 @@ call already makes, so an abandoned run stops waiting within 100 ms. The thread 
 the value and the waiters in the run the user can see are unchanged. There is no API change.
 
 The goal is narrow: bound the number of threads a server accumulates under repeated reruns.
-It does not change how fast values arrive or how responsive the app feels, and it is not a
-new way to run work in the background.
+It does not make live cache values arrive faster or provide a new way to run work in the
+background.
 
 ## Problem
 
@@ -114,16 +114,21 @@ _COMPUTE_LOCK_POLL_SECONDS: Final = 0.1
 
 @contextlib.contextmanager
 def _hold_compute_lock(lock: threading.Lock) -> Iterator[None]:
+    yield_check = None
     if not lock.acquire(blocking=False):
         yield_check = (
             None
             if in_cached_function.get()
             else script_run_context.get_run_yield_check()
         )
-        while not lock.acquire(timeout=_COMPUTE_LOCK_POLL_SECONDS):
-            if yield_check is not None:
+        if yield_check is None:
+            lock.acquire()
+        else:
+            while not lock.acquire(timeout=_COMPUTE_LOCK_POLL_SECONDS):
                 yield_check()
     try:
+        if yield_check is not None:
+            yield_check()
         yield
     finally:
         lock.release()

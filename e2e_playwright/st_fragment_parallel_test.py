@@ -237,7 +237,7 @@ def test_parallel_st_rerun_restarts_app(page: Page, app_base_url: str) -> None:
 def test_cold_shared_cache_waiters_finish_after_full_rerun(
     page: Page, app_base_url: str
 ) -> None:
-    """Live fragments receive a cold cached value after abandoning an earlier run."""
+    """Regress that live fragments still receive a value after a cold-cache rerun."""
     page.goto(build_app_url(app_base_url, query="test=cache_wait_rerun"))
 
     expect(page.get_by_text("Cold cache compute started", exact=True)).to_be_visible(

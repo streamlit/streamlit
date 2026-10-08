@@ -23,7 +23,7 @@ import time
 import unittest
 from datetime import timedelta
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 from parameterized import parameterized
@@ -1313,6 +1313,40 @@ class CommonCacheThreadingTest(unittest.TestCase):
         assert isinstance(waiter_exceptions[0], StopException)
         assert get_value() == 42
         assert call_count == 1
+
+    def test_contended_acquire_checks_for_interruption_before_use(self):
+        """A waiter checks for interruption after acquiring a contended lock."""
+        lock = MagicMock()
+        lock.acquire.side_effect = [False, True]
+        yield_check = MagicMock(side_effect=StopException)
+
+        with (
+            patch.object(cache_utils, "get_run_yield_check", return_value=yield_check),
+            pytest.raises(StopException),
+            cache_utils._hold_compute_lock(lock),
+        ):
+            pytest.fail("An interrupted waiter must not use the compute lock")
+
+        assert lock.acquire.call_args_list == [
+            call(blocking=False),
+            call(timeout=cache_utils._COMPUTE_LOCK_POLL_SECONDS),
+        ]
+        yield_check.assert_called_once_with()
+        lock.release.assert_called_once_with()
+
+    def test_contended_acquire_without_yield_check_blocks_once(self):
+        """A waiter without a yield check uses a blocking lock acquisition."""
+        lock = MagicMock()
+        lock.acquire.side_effect = [False, True]
+
+        with (
+            patch.object(cache_utils, "get_run_yield_check", return_value=None),
+            cache_utils._hold_compute_lock(lock),
+        ):
+            pass
+
+        assert lock.acquire.call_args_list == [call(blocking=False), call()]
+        lock.release.assert_called_once_with()
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]

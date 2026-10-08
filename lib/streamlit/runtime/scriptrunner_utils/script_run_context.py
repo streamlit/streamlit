@@ -262,6 +262,8 @@ class ScriptRunContext:
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
     parallel_coordinator: ParallelFragmentCoordinator | None = None
+    # The run's execution-control yield point, used by parallel fragment workers
+    # and contended cache waits.
     yield_check: Callable[[], None] = lambda: None
 
     def __post_init__(self) -> None:
@@ -294,7 +296,7 @@ class ScriptRunContext:
         cached_message_hashes: frozenset[str] | None = None,
         context_info: ContextInfo | None = None,
         is_history_navigation: bool = False,
-        # Checked by fragment workers to cease execution.
+        # Called by fragment workers and contended cache waits to cease execution.
         yield_check: Callable[[], None] = lambda: None,
     ) -> None:
         if threading.get_ident() != self._main_thread_ident:
@@ -513,7 +515,7 @@ def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | Non
 
 
 def get_run_yield_check() -> Callable[[], None] | None:
-    """Return the current thread's run yield check, if it has a run context."""
+    """Return this thread's stop/rerun callback, or None if it has no script run."""
     ctx = get_script_run_ctx(suppress_warning=True)
     return ctx.yield_check if ctx is not None else None
 
