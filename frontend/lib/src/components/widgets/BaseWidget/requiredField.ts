@@ -15,15 +15,21 @@
  */
 
 /**
- * Tooltip / alert copy for a blocked empty commit or failed form submit.
- * Required widgets must use this exact string, including the period.
+ * User-facing message when a required widget is still empty after the user
+ * tries to commit it or a form submit fails. Required widgets share this
+ * exact string, including the period.
  */
 export const REQUIRED_FIELD_MESSAGE = "This field is required."
 
 /**
- * Required error after a blocked empty commit or failed form submit.
- * Returns null when required is off or the field is non-empty so leftover
- * chrome does not survive a keyed remount that changes those conditions.
+ * Returns the required-field message when it should be shown, or `null`
+ * when it should stay hidden.
+ *
+ * The message is shown only when the widget is required, a previous commit
+ * or submit already recorded the error, and the value is still empty.
+ * Callers clear the stored flag when this returns `null`. With a widget
+ * key, `required` is outside widget identity, so the same instance keeps
+ * that flag across reruns.
  */
 export function requiredFieldError(
   required: boolean,
