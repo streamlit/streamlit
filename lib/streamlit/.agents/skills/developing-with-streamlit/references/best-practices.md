@@ -70,7 +70,7 @@ Use `width` instead of deprecated `use_container_width`. Dataframes and most cha
 st.dataframe(df, use_container_width=True)
 st.download_button("Download CSV", df.to_csv(), "orders.csv", use_container_width=True)
 
-# GOOD: Default is stretch; set content width only when needed
+# GOOD: Dataframes stretch by default; set content width only when needed
 st.dataframe(df)
 st.dataframe(df, width="content")
 
