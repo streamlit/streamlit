@@ -1395,6 +1395,101 @@ describe("Widget State Manager", () => {
   })
 })
 
+describe("widgetStatesChanged and submitted forms", () => {
+  const SUBMIT_BUTTON = new ButtonProto({
+    id: "mockSubmitButtonId",
+    formId: MOCK_FORM_WIDGET.formId,
+  })
+  const formUpdate = {
+    formId: MOCK_FORM_WIDGET.formId,
+    fragmentId: undefined,
+    fromUser: true,
+  }
+
+  let widgetStatesChanged: Mock
+  let widgetMgr: WidgetStateManager
+
+  beforeEach(() => {
+    widgetStatesChanged = vi.fn()
+    widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: vi.fn(),
+      formsDataChanged: vi.fn(),
+      widgetStatesChanged,
+    })
+    widgetMgr.addSubmitButton(MOCK_FORM_WIDGET.formId, SUBMIT_BUTTON)
+  })
+
+  it("is notified when a value is written, but not when a trigger fires", () => {
+    void widgetMgr.setTriggerValue(MOCK_WIDGET.id, {
+      fromUser: true,
+      formId: undefined,
+      fragmentId: undefined,
+    })
+    expect(widgetStatesChanged).not.toHaveBeenCalled()
+
+    widgetMgr.setIntValue(MOCK_WIDGET.id, 5, {
+      formId: undefined,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    expect(widgetStatesChanged).toHaveBeenCalledOnce()
+  })
+
+  it("is not notified for a user's pending form edit, only for its submit", () => {
+    widgetMgr.setStringValue(MOCK_FORM_WIDGET.id, "pending", formUpdate)
+    expect(widgetStatesChanged).not.toHaveBeenCalled()
+    expect(widgetMgr.getSubmittedFormIds()).toEqual(new Set())
+
+    widgetMgr.submitForm(MOCK_FORM_WIDGET.formId, undefined)
+
+    expect(widgetStatesChanged).toHaveBeenCalledOnce()
+    expect(widgetMgr.getSubmittedFormIds()).toEqual(
+      new Set([MOCK_FORM_WIDGET.formId])
+    )
+    expect(
+      widgetMgr
+        .getActiveWidgetStates(new Set([MOCK_FORM_WIDGET.id]))
+        .widgets.map(state => state.stringValue)
+    ).toEqual(["pending"])
+  })
+
+  it("is notified for a form widget's value written from code", () => {
+    widgetMgr.setStringValue(MOCK_FORM_WIDGET.id, "default", {
+      ...formUpdate,
+      fromUser: false,
+    })
+
+    expect(widgetStatesChanged).toHaveBeenCalledOnce()
+  })
+
+  it("forgets a submitted form once its submit button leaves the page", () => {
+    widgetMgr.submitForm(MOCK_FORM_WIDGET.formId, undefined)
+
+    widgetMgr.removeInactive(new Set([SUBMIT_BUTTON.id]))
+    expect(widgetMgr.getSubmittedFormIds()).toEqual(
+      new Set([MOCK_FORM_WIDGET.formId])
+    )
+
+    widgetMgr.removeInactive(new Set())
+    expect(widgetMgr.getSubmittedFormIds()).toEqual(new Set())
+  })
+
+  it("does not record a form whose submit a validator blocked", () => {
+    widgetMgr.addFormSubmitValidator(
+      MOCK_FORM_WIDGET.formId,
+      MOCK_FORM_WIDGET.id,
+      () => false
+    )
+
+    expect(widgetMgr.submitForm(MOCK_FORM_WIDGET.formId, undefined)).toBe(
+      false
+    )
+
+    expect(widgetMgr.getSubmittedFormIds()).toEqual(new Set())
+    expect(widgetStatesChanged).not.toHaveBeenCalled()
+  })
+})
+
 describe("WidgetStateDict", () => {
   let widgetStateDict: WidgetStateDict
   const widgetId = "TEST_ID"

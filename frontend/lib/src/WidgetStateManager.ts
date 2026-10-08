@@ -290,6 +290,13 @@ interface Props {
    * is immutable, any changes to it result in a new instance being created.)
    */
   formsDataChanged: (formsData: FormsData) => void
+
+  /**
+   * Callback invoked after a widget value is written or a form is submitted,
+   * for observers of the committed values. Not called for trigger values,
+   * which reset after the run that observes them.
+   */
+  widgetStatesChanged?: () => void
 }
 
 /**
@@ -306,6 +313,11 @@ export class WidgetStateManager {
 
   // External data about all forms.
   private formsData: FormsData
+
+  // Forms the user has submitted, mapped to the submit button they used. An
+  // entry is dropped once that button is no longer on the page, as after a
+  // page change, so another page's form with the same ID starts unsubmitted.
+  private readonly submittedForms = new Map<string, string>()
 
   // A dictionary that maps elementId -> element state keys -> element state values.
   // This is used to store frontend-only state for elements.
@@ -465,9 +477,13 @@ export class WidgetStateManager {
     // changes, and send our widgetStates back to the server.
     this.widgetStates.copyFrom(form.widgetStates)
     form.widgetStates.clear()
+    if (selectedSubmitButton) {
+      this.submittedForms.set(formId, selectedSubmitButton.id)
+    }
 
     this.sendUpdateWidgetsMessage(fragmentId)
     this.syncFormsWithPendingChanges()
+    this.props.widgetStatesChanged?.()
 
     if (selectedSubmitButton) {
       this.deleteWidgetState(selectedSubmitButton.id)
@@ -902,6 +918,11 @@ export class WidgetStateManager {
       // Batch value changes that occur within the same JavaScript macrotask.
       this.scheduleFlush(update.fragmentId)
     }
+    // A user's edit inside a form stays pending until submit, so nothing
+    // committed changed. Mirrors where `createWidgetState` writes it.
+    if (!(isValidFormId(update.formId) && update.fromUser)) {
+      this.props.widgetStatesChanged?.()
+    }
   }
 
   /**
@@ -931,6 +952,11 @@ export class WidgetStateManager {
       undefined,
       isAutoRerun
     )
+  }
+
+  /** The forms the user has submitted while they have been on the page. */
+  public getSubmittedFormIds(): ReadonlySet<string> {
+    return new Set(this.submittedForms.keys())
   }
 
   public getActiveWidgetStates(activeIds: Set<string>): WidgetStates {
@@ -967,6 +993,11 @@ export class WidgetStateManager {
     this.elementStates.forEach((_, elementId) => {
       if (!activeIds.has(elementId)) {
         this.deleteElementState(elementId)
+      }
+    })
+    this.submittedForms.forEach((submitButtonId, formId) => {
+      if (!activeIds.has(submitButtonId)) {
+        this.submittedForms.delete(formId)
       }
     })
   }
@@ -1635,7 +1666,7 @@ export class WidgetStateManager {
  * If the given value cannot be converted to `number` without a loss of
  * precision (which should not be possible!), throw an error instead.
  */
-function requireNumberInt(value: number | Long): number {
+export function requireNumberInt(value: number | Long): number {
   if (typeof value === "number") {
     return value
   }

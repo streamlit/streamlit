@@ -70,6 +70,7 @@ import {
   type StreamlitEndpoints,
 } from "@streamlit/connection"
 import {
+  AgentViewStatePublisher,
   AppRoot,
   BackendOperationClient,
   type CircularBuffer,
@@ -308,6 +309,8 @@ export class App extends PureComponent<Props, State> {
 
   private readonly widgetMgr: WidgetStateManager
 
+  private readonly agentViewState: AgentViewStatePublisher
+
   private readonly hostCommunicationMgr: HostCommunicationManager
 
   private readonly uploadClient: FileUploadClient
@@ -498,6 +501,14 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr = new WidgetStateManager({
       sendRerunBackMsg: this.sendRerunBackMsg,
       formsDataChanged: formsData => this.setState({ formsData }),
+      widgetStatesChanged: () => this.agentViewState.scheduleUpdate(),
+    })
+
+    // Embeds the user's widget values in the page, for an agent that reads it.
+    this.agentViewState = new AgentViewStatePublisher({
+      widgetMgr: this.widgetMgr,
+      getAppRoot: () => this.state.elements,
+      getLocation: this.getAgentViewLocation,
     })
 
     // Sync widget URL changes to App state for page navigation preservation.
@@ -882,6 +893,7 @@ export class App extends PureComponent<Props, State> {
     this.connectionManager?.disconnect()
 
     this.hostCommunicationMgr.closeHostCommunication()
+    this.agentViewState.dispose()
 
     window.removeEventListener("popstate", this.onHistoryChange, false)
   }
@@ -2177,6 +2189,22 @@ export class App extends PureComponent<Props, State> {
       ...blockIds,
     ])
     this.widgetMgr.removeInactive(activeIds)
+    this.agentViewState.scheduleUpdate()
+  }
+
+  /** The current page's `url_path` and query string, for the agent view state. */
+  private readonly getAgentViewLocation = (): {
+    page: string
+    queryString: string
+  } => {
+    const { appPages, currentPageScriptHash } = this.state
+    const currentPage = appPages.find(
+      page => page.pageScriptHash === currentPageScriptHash
+    )
+    return {
+      page: currentPage?.urlPathname ?? "",
+      queryString: window.location.search,
+    }
   }
 
   /**
