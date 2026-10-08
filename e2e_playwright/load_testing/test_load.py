@@ -30,12 +30,14 @@ from __future__ import annotations
 
 import multiprocessing
 import socket
+import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from multiprocessing import Pool
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 from unittest.mock import MagicMock
 
 import pytest
@@ -57,7 +59,6 @@ from e2e_playwright.load_testing.metrics_collector import (
 from e2e_playwright.load_testing.worker import run_worker_session
 
 if TYPE_CHECKING:
-    import subprocess
     from collections.abc import Generator
 
 
@@ -211,16 +212,16 @@ def test_start_load_test_server_unlinks_log_if_spawn_fails(
 ) -> None:
     """A failed Popen does not leave the mkstemp log file behind."""
     created: list[Path] = []
-    real_mkstemp = load_conftest.tempfile.mkstemp
+    real_mkstemp = tempfile.mkstemp
 
-    def _tracking_mkstemp(*args: object, **kwargs: object) -> tuple[int, str]:
+    def _tracking_mkstemp(*args: Any, **kwargs: Any) -> tuple[int, str]:
         fd, name = real_mkstemp(*args, **kwargs)
         created.append(Path(name))
         return fd, name
 
-    monkeypatch.setattr(load_conftest.tempfile, "mkstemp", _tracking_mkstemp)
+    monkeypatch.setattr(tempfile, "mkstemp", _tracking_mkstemp)
     monkeypatch.setattr(
-        load_conftest.subprocess,
+        subprocess,
         "Popen",
         MagicMock(side_effect=OSError("process limit")),
     )
