@@ -2596,7 +2596,11 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
       tabsAtBubble.push(year.tabIndex, month.tabIndex, day.tabIndex)
     })
 
+    // userEvent.click is async and can hang on the group in JSDOM; we only need
+    // the synchronous pointerdown path that triggers our capture listener.
+    /* eslint-disable testing-library/prefer-user-event */
     fireEvent.pointerDown(group, { pointerType: "mouse", button: 0 })
+    /* eslint-enable testing-library/prefer-user-event */
     expect(tabsAtBubble).toEqual([0, 0, 0])
   })
 

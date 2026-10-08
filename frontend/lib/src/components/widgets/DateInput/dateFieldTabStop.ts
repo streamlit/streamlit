@@ -82,7 +82,10 @@ export function applyDateFieldSingleTabStop(
   const tabbable =
     enabledPreferred ??
     segments.find(s => s.tabIndex === 0 && !isDisabledSegment(s)) ??
-    segments.find(s => !isDisabledSegment(s))!
+    segments.find(s => !isDisabledSegment(s))
+  if (!tabbable) {
+    return null
+  }
 
   for (const segment of segments) {
     const next = segment === tabbable ? 0 : -1
