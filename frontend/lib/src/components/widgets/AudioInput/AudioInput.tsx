@@ -180,6 +180,10 @@ const AudioInput: React.FC<Props> = ({
             widgetInfo: { id: widgetId, formId: widgetFormId },
             fragmentId,
             signal: abortController.signal,
+            // on_change="ignore" buffers the value without scheduling a rerun.
+            // WidgetStateManager ignores triggerRerun inside forms (the form owns
+            // commit timing).
+            ...(element.ignoreRerun ? { triggerRerun: false } : {}),
           })
 
           if (abortController.signal.aborted) {
@@ -224,6 +228,7 @@ const AudioInput: React.FC<Props> = ({
       widgetId,
       widgetFormId,
       fragmentId,
+      element.ignoreRerun,
       setDeleteFileUrl,
       setRecordingUrl,
     ]
@@ -317,6 +322,10 @@ const AudioInput: React.FC<Props> = ({
             formId: element.formId,
             fragmentId,
             fromUser: true,
+            // on_change="ignore" buffers the value without scheduling a rerun.
+            // WidgetStateManager ignores triggerRerun inside forms (the form owns
+            // commit timing).
+            ...(element.ignoreRerun ? { triggerRerun: false } : {}),
           }
         )
       }

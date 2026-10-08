@@ -117,6 +117,8 @@ if TYPE_CHECKING:
         UploadedFile | None,
     )
     assert_type(audio_input("Record audio", on_change=None), UploadedFile | None)
+    assert_type(audio_input("Record audio", on_change="rerun"), UploadedFile | None)
+    assert_type(audio_input("Record audio", on_change="ignore"), UploadedFile | None)
 
     # =====================================================================
     # Test with all parameters combined
