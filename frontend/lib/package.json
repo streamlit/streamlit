@@ -167,7 +167,7 @@
     "timezone-mock": "^1.4.3",
     "typesync": "^0.14.3",
     "vite": "^8.3.2",
-    "vite-plugin-dts": "^5.1.1",
+    "vite-plugin-dts": "^5.1.2",
     "vitest": "^5.0.3",
     "vitest-fetch-mock": "^0.4.5"
   },
