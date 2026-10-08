@@ -173,9 +173,9 @@ class ProgressMixin:
             agent_props=agent_spec.element(
                 "progress",
                 # Always a fraction: an int is a percent and a float a fraction,
-                # which JSON cannot tell apart, and the proto's whole percent
-                # would drop the rest of a float.
-                value=value / 100 if isinstance(value, int) else value,
+                # which JSON cannot tell apart. Taken from the proto's whole
+                # percent, which is all the browser receives.
+                value=progress_proto.value / 100,
                 text=text,
             ),
         )

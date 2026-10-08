@@ -89,8 +89,10 @@ worked example, which `work-tmp/check_example.py` compares today.
 The first PR an agent can use, behind the hidden flag: open a session, read any page,
 and run a parameterized report in one call.
 
-- `AgentSessionClient`, buffering the latest full run; `AgentSessionRegistry` with the
-  session cap, idle TTL, and identity binding from `server.trustedUserHeaders`.
+- `AgentSessionClient`, buffering the latest full run and settling when the script
+  runner shuts down rather than after the prototype's 50 ms quiet period;
+  `AgentSessionRegistry` with the session cap, idle TTL, and identity binding from
+  `server.trustedUserHeaders`.
 - `interact` for creating calls and reruns; `page` and `query_params`, including the
   browser's page-change rule, listing widget states with a page change, and the
   unknown-page check after a creating call; the run timeout as a `202` that the same
@@ -106,9 +108,11 @@ and run a parameterized report in one call.
 **Review focus:** security and resource limits (this is the PR for the security review),
 and the runtime integration: `handle_backmsg`, the session manager, settling a run chain.
 
-**Tests:** registry unit tests (cap, TTL, identity mismatch); route tests with
-Starlette's test client for every security rule and error code; concurrent requests on
-one session, exactly one of which runs; a real-protobuf `st.context` test that an
+**Tests:** registry unit tests (cap, TTL, identity mismatch); the cap, the TTL, and a
+timed-out run still going exercised together, since a run outlives the request that
+started it; a chain of `st.rerun()` calls under load settling only after its last run;
+route tests with Starlette's test client for every security rule and error code;
+concurrent requests on one session, exactly one of which runs; a real-protobuf `st.context` test that an
 explicitly sent `0` or `False` is kept and an unset field reads as `None`; e2e for
 create, read, navigate, and a slow app that times out and is collected. Mark the
 routing and identity e2e tests `@pytest.mark.external_test`: a path-stripping proxy,
@@ -130,9 +134,11 @@ cookie not authenticating a call, and the app shell still loading with the new
   value back.
 - The `context` request field (timezone and locale).
 
-**Tests:** unit tests for encoding and rejection per widget type; e2e for a form with two
-submit buttons, a `format_func` round trip, a chat flow, and a widget that appears only
-after another changes.
+**Tests:** unit tests for encoding and rejection per widget type; codec fixtures for
+dates and date ranges, decimals, large integers, non-finite numbers, nulls,
+object-valued options, and options that share a label; e2e for a form with two submit
+buttons, a `format_func` round trip, a chat flow, and a widget that appears only after
+another changes.
 
 ### PR 5: Data over HTTP
 

@@ -160,6 +160,10 @@ finishing and a queued run starting can exceed 50 ms, so the response describes 
 intermediate state while the app keeps running. In the common case it adds 50 ms to
 every interaction for no reason.
 
+This is a correctness fix rather than new API, so the
+[implementation plan](implementation-plan.md) does it in PR 3 instead of shipping the
+prototype's grace period.
+
 ## Build the snapshot's values on the script thread
 
 The snapshot is assembled on the server's event loop after the run settles. Two parts of

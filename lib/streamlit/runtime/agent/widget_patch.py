@@ -383,6 +383,14 @@ def _validate_options(
                 f"{candidate!r} is not one of the options for {key!r}: {listed}"
                 + (f", and {more} more." if more > 0 else "."),
             )
+        if options.count(str(candidate)) > 1:
+            # The runtime would resolve a shared label to one of its options
+            # without saying which, so the caller could not tell what it set.
+            raise AgentRequestError(
+                "invalid_value",
+                f"Several options for {key!r} display as {candidate!r}, so it "
+                "does not identify one.",
+            )
 
     if (
         metadata.max_array_length is not None

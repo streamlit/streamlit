@@ -68,10 +68,9 @@ when the data was last refreshed. That context sits in titles, Markdown, caption
 numbers, written by the person who understands both, and kept current because colleagues
 use it daily.
 
-Almost nothing else in a data stack has that property. A warehouse has schemas without
-definitions. A BI tool has definitions locked inside a proprietary semantic layer. A
-notebook has explanation but no live, trusted surface. A Streamlit app has the data
-access, the transformation, the presentation, and the prose in one file.
+Few places in a data stack combine all of that. A Streamlit app has the data access, the
+transformation, the presentation, and the prose in one file, maintained by the person who
+understands them.
 
 So if an app explains itself, **the app surface is a semantic view over the underlying
 data**, and making that view legible to agents changes what a question costs:
@@ -84,8 +83,10 @@ data**, and making that view legible to agents changes what a question costs:
 > what "net revenue" means in this company. The answer cites the app, page, applied
 > filters, and observation time, so it is inspectable rather than merely plausible.
 
-This is a differentiator a lower-level framework cannot copy by adding an endpoint,
-because it does not hold the semantics in the first place. And it compounds: agents that
+The differentiator is that Streamlit already holds most of the semantics and the execution
+model this needs, so it can offer this across existing apps with little author effort,
+where a lower-level framework would need each author to describe their app. And it
+compounds: agents that
 write apps embed definitions and units, which makes those apps better semantic views,
 which makes agents consuming them more accurate.
 
@@ -195,9 +196,10 @@ agents is the half nobody owns.
    and hands the question to an agent that reads the app through this interface, so
    "which region dropped?" is answered from the app's own numbers and definitions. This
    needs nothing beyond v1, since the agent runs server-side and calls the app's own
-   endpoint. Two caveats: it gets its own session, so it reports rather than changing
-   what the human is looking at; and it does not inherit the asking user's identity
-   unless the deployment maps it, which matters in an app with per-user data access.
+   endpoint. Two caveats: it gets its own session, so it consults the app independently
+   rather than seeing or changing what the human is looking at — not their filters,
+   uploads, or session state; and it does not inherit the asking user's identity unless
+   the deployment maps it, which matters in an app with per-user data access.
 6. **Fall back deliberately.** Detect a browser-only element and hand off to browser
    automation instead of silently returning incomplete output.
 
@@ -259,6 +261,14 @@ that the same request is a new interaction. A different request while the run is
 going gets `session_busy`, where a browser interaction would interrupt the run: replacing
 a run whose result the client may still come back for is where the hard cases are, so v1
 has the client collect it first.
+
+That makes four session states: idle; serving a request; running a timed-out interaction
+that no request is waiting on, which a retry collects and any other request finds busy;
+and holding the finished result of one, which a retry collects and any other request
+discards by starting a new interaction. The guarantee is narrower than retry idempotency:
+it covers a `202` the client received. A lost final response, or a lost response to a
+creating call, leaves nothing to collect, so a retry is a new interaction and can repeat
+its side effects. Retry idempotency in general is the `request_id` of follow-up #4.
 
 It is a 202 rather than a 504 because the request was accepted and its run is still
 going, and because gateways and HTTP client libraries retry 502–504 on their own. A
@@ -591,6 +601,10 @@ Rules:
   source, caches, and `st.session_state` are absent by construction. A password input's
   value is write-only: it can be set and never comes back, since responses get logged and
   kept in a model's context. Markdown, code, and LaTeX stay source strings.
+- **A description publishes nothing the browser does not receive.** Building it from the
+  command's arguments does not make an argument publishable: where the browser gets a
+  rounded or reduced form, the description reports that form, so `st.progress` reports
+  the whole percent the browser shows rather than the author's float.
 - **App text is untrusted content.** Labels, help, captions, page titles, and data can
   carry prompt injection. Nearly every string in the document is app-authored, so rather
   than marking them field by field, the protocol description tells clients to treat all
@@ -735,7 +749,7 @@ because anything else closes it. None of this needs new plumbing:
 A batch is the one thing a browser cannot produce — a person changes one widget at a
 time — so its scope needs a rule of its own. The wire carries one fragment id, so a batch
 confined to one fragment reruns that fragment, and a batch spanning several regions
-reruns the whole app, which runs every fragment and loses nothing. The exception is an
+requests a normal full rerun, as a browser's would. The exception is an
 open dialog. A full rerun does not call the dialog function, so its widgets never
 render: a `Confirm` click sent with an outside filter would never be read, and the
 response would show a closed dialog that looks the same whether the confirm ran or not.
@@ -798,7 +812,7 @@ without introducing a new authorization surface.
 | Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped and its base64 typed arrays expanded into numbers, and chart data under `data` exactly as a dataframe's.                                     |
 | Map                            | `st.map`'s plotted table under `data`, exactly as a dataframe's, without the Deck.gl specification generated from it. `st.pydeck_chart` reports its specification like any chart.                                                                          |
 | Image, audio, video, PDF       | Caption, `alt`, the `format` audio and video take, and the media URL the app already exposed to its own client. `st.image` reports them as the author passed the images: single values for one image, parallel lists for several. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way. |
-| HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML and a URL iframe are fully readable. |
+| HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML is fully readable. A URL iframe reports its `src`; the page it embeds is not observed. |
 | Download                       | Label, `file_name`, `mime` when the author set it, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, and its click — a rerun or the `on_click` callback — is an ordinary trigger, unless `on_click="ignore"` makes it a no-op. Only deferred generation, which carries a file ID instead of a URL, is unsupported. |
 
 Arrow bytes are registered in the existing media-file storage and served from the
@@ -814,9 +828,11 @@ re-resolve it later, because that is all the implementation promises. Media file
 reference-counted against the sessions that render them and collected once nothing does,
 so a URL from an earlier snapshot may already be gone.
 
-**They are protected exactly as the app's other media is.** A file ID is a content hash,
-unguessable without already knowing the content, and it stops resolving once no session
-renders the element. That is the protection every image, video, and eager
+**They are protected exactly as the app's other media is, which is as bearer handles, not
+user authorization.** Anyone holding a URL can fetch the file while it resolves. A file
+ID is a content hash, so it is unguessable only to someone who does not already know the
+content, and it stops resolving once no session renders the element. That is the
+protection every image, video, and eager
 `st.download_button` has today — and a download button already serves arbitrary app data
 this way — so a table behind the same kind of URL is not a new class of exposure and needs
 no scheme of its own. Two properties hold for all media storage and are worth knowing
@@ -844,7 +860,9 @@ being truncated silently.
 
 **`data.complete` is the field a client branches on, and it resolves three ways, never
 none.** Either the data here is everything (`complete: true`), or a `url` serves the rest,
-or an explicit `unavailable` says why the data could not be served. It is not a
+or an explicit `unavailable` says why the data could not be served. A `url` always serves
+all of the element's data, never a chunk, so a client that fetched it has everything the
+element shows. It is not a
 lazy-loading flag: an eagerly sent 5,000-row table is incomplete too, because only its
 first 100 rows are inlined. So every truncated preview gets a URL, however small the table
 is in bytes: whether a client needs one is a question about row count, not payload size.
@@ -858,8 +876,10 @@ Two consequences of that framing are easy to get wrong:
   from having no data contract at all. It does not mean the specification is worth its
   weight: about nine tenths of a small Plotly figure is `layout.template`, the theme, and
   a dashboard page of them reaches hundreds of kilobytes while answering nothing. Report
-  the figure with the theme dropped and name what was dropped, so a trimmed figure is
-  distinguishable from one the app never configured. Plotly writes NumPy arrays as base64
+  the figure with the theme's styling dropped and name what was dropped, so a trimmed
+  figure is distinguishable from one the app never configured. A template can also carry
+  content — an annotation such as "DRAFT", a shape, an image — and that is kept, since
+  removing decoration must not remove meaning. Plotly writes NumPy arrays as base64
   typed arrays (`bdata`), which a model cannot read, so those are expanded into lists of
   numbers: they are exactly the values that make the figure `complete`.
 
@@ -894,6 +914,8 @@ back to a browser rather than mistake it for missing content:
 | Charts that combine several dataframes                                     | A layered or concatenated Altair chart over different dataframes reports its `spec` with `data.unavailable: multiple_datasets` and serves none of them, rather than serve the first and claim `complete`. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
 | `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal. Follow-up #8.    |
+| Validation only the browser performs                                       | `required` and `validate` are reported but not enforced, so an agent can submit an empty required field that a browser would block. A test that relies on them proves less than it appears to. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them server-side. |
+| Options that share a label                                                 | A value whose `format_func` label several options share is refused with `invalid_value` rather than resolved to one of them, so those options cannot be selected. |
 | `bind="query-params"` write-back                                           | Setting a bound widget drops its parameter from `query_params` instead of rewriting it, until the app writes it back. See [Actions in v1](#actions-in-v1); follow-up #8.      |
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
@@ -920,7 +942,7 @@ operators and tests rather than for tuning per app.
 | Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
 | Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 6](#open-questions))                                    |
 | Response size                          | No cap                                                | [Open question 6](#open-questions)                                            |
-| Wait for a follow-up run to start      | 50 ms after a run finishes                            | Fixed ([potential follow-ups](potential-follow-ups.md))                       |
+| Wait for a follow-up run to start      | 50 ms after a run finishes: a quiet-period heuristic, not proof the chain settled | Fixed; replaced by the script runner's shutdown signal in the [implementation plan](implementation-plan.md) |
 | `data.url` lifetime                    | While the element that produced it is still rendered  | Fixed; a fetch-now handle, never persisted                                    |
 | Who may call                           | The WebSocket's Host allow-list; no web page unless its origin is listed | `server.allowedHosts`, `server.corsAllowedOrigins`              |
 | Who the caller is                      | Anonymous                                             | `server.trustedUserHeaders`                                                   |
@@ -1243,11 +1265,14 @@ agent access alone.
   omissions, with its reason. A unit test checks all three for every command, so a new
   command or parameter fails CI until someone decides what an agent sees.
 - JSON encodings are pinned for dates, datetimes, decimals, large integers, non-finite
-  numbers, ranges, and object-valued options.
-- Every advertised interaction matches an equivalent browser session on callback order,
-  resulting widget value, and emitted output, except where
-  [What v1 does not support](#what-v1-does-not-support) says otherwise.
-- Whatever the snapshot reports as a value can be sent straight back.
+  numbers, ranges, nulls, and object-valued options, each with a codec test fixture,
+  including options that share a label.
+- Every advertised interaction runs through Streamlit's production execution path, and
+  conformance tests show it matches an equivalent browser session on callback order,
+  resulting widget value, and emitted output, outside the deviations
+  [What v1 does not support](#what-v1-does-not-support) lists.
+- Whatever the snapshot reports as the value of an element in `actions` can be sent
+  straight back, except a label several options share.
 - A filtered dashboard, a form with two submit buttons, a chat flow, and a multi-turn
   dialog all complete without a browser.
 - Large dataframes produce bounded snapshots and a fetchable `data.url`.

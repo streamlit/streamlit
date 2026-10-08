@@ -1055,11 +1055,12 @@ def schemas() -> dict[str, Any]:
                     "items": {"type": "string"},
                     "description": (
                         "Paths removed from `spec` because they carry no "
-                        "meaning without a browser, currently Plotly's "
-                        "`layout.template`, which is the theme and most of a "
-                        "figure's size. Nothing that holds data is removed. "
-                        "Named so a trimmed figure is distinguishable from one "
-                        "the app never configured."
+                        "meaning without a browser, currently the styling in "
+                        "Plotly's `layout.template`, which is the theme and most "
+                        "of a figure's size. Annotations, shapes, and images a "
+                        "template adds are kept, and nothing that holds data is "
+                        "removed. Named so a trimmed figure is distinguishable "
+                        "from one the app never configured."
                     ),
                 },
             },

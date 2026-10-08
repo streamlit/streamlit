@@ -76,6 +76,10 @@ _DATA_SUMMARY_KEY: Final = "data_summary"
 # widget registered an option list.
 _STRING_WIRE_TYPES: Final = {"string_value", "string_array_value"}
 
+# What a Plotly template can add to a figure's content rather than its styling,
+# such as a "DRAFT" annotation. Kept when the rest of the template is dropped.
+_TEMPLATE_CONTENT: Final = ("annotations", "shapes", "images")
+
 _ROOT_CONTAINER_NAMES: Final = {
     RootContainer.MAIN: "main",
     RootContainer.SIDEBAR: "sidebar",
@@ -671,7 +675,8 @@ def _figure_data(spec: Any) -> dict[str, Any] | None:
     The theme is dropped, because it is weight without meaning for a non-visual
     client: Plotly's `layout.template` is about nine tenths of a small figure.
     Dropping it is named in `spec_omitted`, so a client can tell a trimmed
-    figure from one the app never configured.
+    figure from one the app never configured. A template can also carry
+    content, such as a "DRAFT" annotation, and that is kept.
 
     Nothing else is dropped, at any size. For these charts the specification
     holds the values, so trimming further would remove the only part worth
@@ -689,11 +694,28 @@ def _figure_data(spec: Any) -> dict[str, Any] | None:
         and isinstance(spec.get("layout"), dict)
         and "template" in spec["layout"]
     ):
-        spec = {
-            **spec,
-            "layout": {k: v for k, v in spec["layout"].items() if k != "template"},
+        template = spec["layout"]["template"]
+        template_layout = template.get("layout") if isinstance(template, dict) else None
+        if not isinstance(template_layout, dict):
+            template_layout = {}
+        content = {
+            name: template_layout[name]
+            for name in _TEMPLATE_CONTENT
+            if template_layout.get(name)
         }
-        data["spec_omitted"] = ["layout.template"]
+        layout = {k: v for k, v in spec["layout"].items() if k != "template"}
+        if content:
+            layout["template"] = {"layout": content}
+            data["spec_omitted"] = [
+                f"layout.template.{name}" for name in template if name != "layout"
+            ] + [
+                f"layout.template.layout.{name}"
+                for name in template_layout
+                if name not in content
+            ]
+        else:
+            data["spec_omitted"] = ["layout.template"]
+        spec = {**spec, "layout": layout}
 
     data["spec"] = _expand_typed_arrays(spec)
     data["complete"] = True
