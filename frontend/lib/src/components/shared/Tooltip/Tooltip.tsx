@@ -19,8 +19,8 @@ import {
   type CSSProperties,
   memo,
   type MutableRefObject,
-  ReactElement,
-  ReactNode,
+  type ReactElement,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -260,12 +260,13 @@ function Tooltip({
   // kept for its portal, role="tooltip", and aria-hidden management. Its
   // imperative positioning is overridden via CSS !important (see
   // styled-components.tsx) and Floating UI's floatingStyles applied via style prop.
-  const { refs, floatingStyles, middlewareData } = useFloatingOverlay({
-    open: state.isOpen,
-    placement: FLOATING_UI_PLACEMENT[placement],
-    offsetPx: 10,
-    extraMiddleware: HIDE_MIDDLEWARE,
-  })
+  const { floatingStyles, middlewareData, setFloating, setReference } =
+    useFloatingOverlay({
+      open: state.isOpen,
+      placement: FLOATING_UI_PLACEMENT[placement],
+      offsetPx: 10,
+      extraMiddleware: HIDE_MIDDLEWARE,
+    })
 
   // Close tooltip when trigger scrolls out of view (hide middleware detects this).
   // Guard against zero-size rects (e.g. JSDOM) where referenceHidden is always
@@ -285,10 +286,10 @@ function Tooltip({
   // both the local triggerRef (for referenceHidden check) and Floating UI.
   const setReferenceRef = useCallback(
     (node: Element | null): void => {
-      refs.setReference(node)
+      setReference(node)
       triggerRef.current = node
     },
-    [refs]
+    [setReference]
   )
 
   const tooltipContextValue = useMemo(
@@ -353,7 +354,7 @@ function Tooltip({
             </TriggerArea>
             {!isDisabled ? (
               <StyledTooltip
-                ref={refs.setFloating}
+                ref={setFloating}
                 id={tooltipId}
                 placement={raPlacement}
                 style={floatingStyles}

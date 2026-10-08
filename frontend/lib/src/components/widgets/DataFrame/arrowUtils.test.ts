@@ -16,8 +16,8 @@
 import {
   type CustomCell,
   GridCellKind,
-  NumberCell,
-  TextCell,
+  type NumberCell,
+  type TextCell,
 } from "@glideapps/glide-data-grid"
 import {
   Binary,
@@ -40,11 +40,17 @@ import {
   Utf8,
 } from "apache-arrow"
 
-import { type ArrowData } from "@streamlit/protobuf"
+import type { ArrowData } from "@streamlit/protobuf"
 
-import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
-import { getStyledCell, StyledCell } from "~lib/dataframes/pandasStylerUtils"
-import { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
+import {
+  type ArrowType,
+  DataFrameCellType,
+} from "~lib/dataframes/arrowTypeUtils"
+import {
+  getStyledCell,
+  type StyledCell,
+} from "~lib/dataframes/pandasStylerUtils"
+import { type DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { MULTI } from "~lib/mocks/arrow/multi"
 import { DISPLAY_VALUES, STYLER } from "~lib/mocks/arrow/styler"
@@ -65,10 +71,10 @@ import {
 } from "./arrowUtils"
 import {
   CheckboxColumn,
-  ColumnCreator,
+  type ColumnCreator,
   DateColumn,
   DateTimeColumn,
-  ErrorCell,
+  type ErrorCell,
   getTextCell,
   isErrorCell,
   isMissingValueCell,

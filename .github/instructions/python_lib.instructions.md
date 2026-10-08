@@ -12,9 +12,7 @@ not applicable to scripts and e2e tests.
 ## FIPS Compatibility
 
 - Production code must remain compatible with Python/OpenSSL environments running in FIPS mode.
-- For non-security hashing, use `streamlit.util.create_fast_hasher` (incremental hashing) or `calc_hash` (one-shot string/bytes hashing) instead of calling `hashlib` directly.
-  - Direct use of `hashlib.md5`, `sha1`, `blake2b`, `blake2s`, and `hashlib.new` is banned by lint (ruff `TID251`).
-  - The shared `streamlit.util` helpers are the only sanctioned direct callers, guarded with `# noqa: TID251`.
+- For non-security hashing, use `streamlit.util.create_fast_hasher` (incremental hashing) or `calc_hash` (one-shot string/bytes hashing) instead of calling `hashlib` directly. Those helpers are the only sanctioned non-security `hashlib` callers.
 - FIPS-approved constructors (e.g. `hashlib.sha256`) remain allowed for genuine security needs.
 - Update `lib/tests/streamlit/fips_test.py` when changing hashing behavior.
 
@@ -237,9 +235,9 @@ actually wrong or data is incomplete — see Logging.
   - `StreamlitValueBelowMinError` / `StreamlitValueAboveMaxError` (widget
     `value` vs user-configured `min_value` / `max_value`)
   - `StreamlitInvalidMinMaxError` (`min_value` cannot be greater than
-    `max_value`; `st.slider` also rejects equal bounds, while
-    `st.date_input` / `st.datetime_input` allow a single-day /
-    single-instant range)
+    `max_value`; `st.slider` swaps reversed bounds and raises this only
+    for equal bounds; `st.date_input` / `st.datetime_input` /
+    `st.number_input` reject reversed bounds and allow equal bounds)
   - `StreamlitInvalidURLError(url, protocols)` (`st.logo(link=)`, page-config
     menu items). Pass the allowed schemes, for example `["http", "https"]`.
     `protocols` defaults to `("http", "https", "mailto")`.

@@ -19,7 +19,7 @@ import { screen, waitFor } from "@testing-library/react"
 import {
   Alert as AlertProto,
   Balloons as BalloonsProto,
-  Element,
+  type Element,
   ForwardMsgMetadata,
   Metric as MetricProto,
   Skeleton as SkeletonProto,
@@ -29,7 +29,7 @@ import {
 import { ElementNode } from "~lib/AppNode"
 import {
   FlexContext,
-  IFlexContext,
+  type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
@@ -39,17 +39,21 @@ import { ScriptRunState } from "~lib/ScriptRunState"
 import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { ElementContainer, ElementContainerProps } from "./ElementContainer"
+import type * as ElementContainerModule from "./ElementContainer"
+import {
+  ElementContainer,
+  type ElementContainerProps,
+} from "./ElementContainer"
 import {
   ElementContainerConfig,
   MinStretchWidth,
 } from "./ElementContainerConfig"
 import ElementNodeRenderer, {
-  ElementNodeRendererProps,
+  type ElementNodeRendererProps,
 } from "./ElementNodeRenderer"
 
 vi.mock("./ElementContainer", async importOriginal => {
-  const mod = await importOriginal<typeof import("./ElementContainer")>()
+  const mod = await importOriginal<typeof ElementContainerModule>()
   const { createElement } = await import("react")
   return {
     ...mod,

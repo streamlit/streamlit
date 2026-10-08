@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { keyframes, Keyframes } from "@emotion/react"
+import { keyframes, type Keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 
 const IMAGE_HEIGHT = 150

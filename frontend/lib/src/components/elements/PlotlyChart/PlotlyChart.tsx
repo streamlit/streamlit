@@ -15,9 +15,9 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useMemo,
@@ -38,7 +38,7 @@ import useTimeout from "~lib/hooks/useTimeout"
 import Plot, {
   type Figure as PlotlyFigureType,
 } from "~lib/util/reactPlotlyCompat"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   migratePlotlyMapboxConfig,
@@ -122,7 +122,8 @@ export function PlotlyChart({
       return emptyFigure
     }
 
-    return migratePlotlyMapboxFigure(JSON.parse(element.spec))
+    const spec: unknown = JSON.parse(element.spec)
+    return migratePlotlyMapboxFigure(spec)
     // We want to reload the initialFigureSpec object whenever the element id changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [element.id, element.spec])
@@ -154,15 +155,18 @@ export function PlotlyChart({
 
   const plotlyConfig = useMemo(() => {
     const config = migratePlotlyMapboxConfig(
-      element.config ? JSON.parse(element.config) : {}
+      (element.config ? JSON.parse(element.config) : {}) as Plotly.Config
     )
 
     // Customize the plotly toolbar:
     if (!disableFullscreenMode) {
       // Add a fullscreen button to the plotly toolbar:
+      const fullscreenLabel = isFullScreen ? "Close fullscreen" : "Fullscreen"
       config.modeBarButtonsToAdd = [
         {
-          name: isFullScreen ? "Close fullscreen" : "Fullscreen",
+          name: fullscreenLabel,
+          // ModeBarButton requires title (hover / accessible name); keep it aligned with name.
+          title: fullscreenLabel,
           icon: isFullScreen
             ? FULLSCREEN_COLLAPSE_ICON
             : FULLSCREEN_EXPAND_ICON,
@@ -190,13 +194,13 @@ export function PlotlyChart({
       config.displaylogo = false
     }
 
-    const modeBarButtonsToRemove: string[] = Array.isArray(
-      config.modeBarButtonsToRemove
-    )
+    const modeBarButtonsToRemove: NonNullable<
+      Plotly.Config["modeBarButtonsToRemove"]
+    > = Array.isArray(config.modeBarButtonsToRemove)
       ? [...config.modeBarButtonsToRemove]
       : []
 
-    const removeModeBarButton = (name: string): void => {
+    const removeModeBarButton = (name: Plotly.ModeBarDefaultButtons): void => {
       if (!modeBarButtonsToRemove.includes(name)) {
         modeBarButtonsToRemove.push(name)
       }
@@ -497,11 +501,20 @@ export function PlotlyChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [plotlyFigure.layout?.dragmode])
 
+  // Only name the container when the author provided a non-blank alt.
+  // Blank input is treated as absent: aria-label=" " computes to an empty
+  // accessible name, which is worse than none. role="figure" (not "img")
+  // is required to legally expose aria-label on this otherwise-generic div
+  // without making Plotly's focusable modebar presentational.
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledPlotlyChartContainer
       ref={containerRef}
       className="stPlotlyChart"
       data-testid="stPlotlyChart"
+      role={accessibleName ? "figure" : undefined}
+      aria-label={accessibleName}
     >
       <Plot
         data={plotlyFigure.data}

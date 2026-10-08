@@ -119,3 +119,28 @@ else:
         options="stars",
     )
     st.write("Initial feedback value:", dyn_val)
+
+# --- on_change="ignore" feedback ---
+# Reuse the run counter above so the ignore-mode test can detect an unexpected rerun.
+ignore_feedback = st.feedback(
+    "thumbs",
+    key="ignore_feedback",
+    on_change="ignore",
+)
+st.write("Ignore feedback value:", ignore_feedback)
+
+if st.button("Apply ignore feedback", key="apply_ignore_feedback"):
+    st.write("Applied ignore feedback value:", ignore_feedback)
+
+# Clearing a non-null default must buffer None until the next rerun, rather
+# than falling back to the default when the empty-string wire value arrives.
+ignore_default_feedback = st.feedback(
+    "thumbs",
+    key="ignore_feedback_default",
+    default=1,
+    on_change="ignore",
+)
+st.write("Ignore default feedback value:", ignore_default_feedback)
+
+if st.button("Apply ignore default feedback", key="apply_ignore_default_feedback"):
+    st.write("Applied ignore default feedback value:", ignore_default_feedback)

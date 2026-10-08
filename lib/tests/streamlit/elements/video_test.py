@@ -20,9 +20,11 @@ from tempfile import TemporaryDirectory
 
 import numpy as np
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
 from streamlit.util import calc_hash
@@ -113,6 +115,7 @@ class VideoTest(DeltaGeneratorTestCase):
             loop=True,
             autoplay=True,
             muted=True,
+            alt="A short animated film",
         )
 
         el = self.get_delta_from_queue().new_element
@@ -121,6 +124,8 @@ class VideoTest(DeltaGeneratorTestCase):
         assert el.video.loop
         assert el.video.autoplay
         assert el.video.muted
+        assert el.video.HasField("alt")
+        assert el.video.alt == "A short animated film"
         assert el.video.url.startswith(MEDIA_ENDPOINT)
         assert _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
 
@@ -135,8 +140,64 @@ class VideoTest(DeltaGeneratorTestCase):
         assert not el.video.loop
         assert not el.video.autoplay
         assert not el.video.muted
+        assert not el.video.HasField("alt")
         assert el.video.url.startswith(MEDIA_ENDPOINT)
         assert _calculate_file_id(fake_video_data, "video/mp4") in el.video.url
+
+    def test_st_video_alt_on_youtube_url(self):
+        """alt should be forwarded for YouTube videos, which render an iframe."""
+        st.video("https://www.youtube.com/watch?v=dQw4w9WgXcQ", alt="A music video")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.video.HasField("alt")
+        assert el.video.alt == "A music video"
+        assert el.video.type == VideoProto.Type.YOUTUBE_IFRAME
+
+    @parameterized.expand(
+        [
+            ("",),
+            ("   ",),
+        ]
+    )
+    def test_st_video_empty_alt_is_treated_as_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        fake_video_data = b"\x11\x22\x33\x44\x55\x66"
+        st.video(fake_video_data, alt=blank_alt)
+        el = self.get_delta_from_queue().new_element
+        assert not el.video.HasField("alt")
+
+    def test_st_video_strips_alt_whitespace(self):
+        """Leading and trailing whitespace are stripped before marshalling."""
+        fake_video_data = b"\x11\x22\x33\x44\x55\x66"
+        st.video(fake_video_data, alt="  A short animated film  ")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.video.HasField("alt")
+        assert el.video.alt == "A short animated film"
+
+    def test_st_video_alt_is_included_in_element_id(self):
+        """Changing only alt must change the autoplay element ID.
+
+        Unkeyed media include ``alt`` in the identity hash like other stable
+        kwargs; editing ``alt`` remounts the player and may re-trigger autoplay.
+        """
+        fake_video_data = b"\x11\x22\x33\x44\x55\x66"
+
+        def video_id(**kwargs: object) -> str:
+            # Each call registers its ID, so clear the registry to simulate a
+            # fresh script run instead of tripping the duplicate-ID guard.
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.video(fake_video_data, autoplay=True, **kwargs)
+            return self.get_delta_from_queue().new_element.video.id
+
+        with_alt = video_id(alt="First description")
+        with_other_alt = video_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt != with_other_alt
+
+        # Same alt must keep the same ID (sanity against always-random IDs).
+        assert video_id(alt="First description") == with_alt
 
     def test_st_video_subtitles(self):
         """Test st.video with subtitles."""

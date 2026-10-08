@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import inspect
 import math
 import threading
 from collections.abc import Callable, Sequence
@@ -33,7 +34,7 @@ from typing_extensions import ParamSpec
 
 import streamlit as st
 from streamlit import config
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
@@ -88,6 +89,36 @@ def _equal_validate_funcs(a: ValidateFunc | None, b: ValidateFunc | None) -> boo
 
 def _no_op_release(ignored: Any) -> None:
     """No-op OnRelease function."""
+
+
+def _is_async_callable(func: Callable[..., Any]) -> bool:
+    """Return whether ``func`` is an identifiable coroutine or async-generator callable."""
+    target: Any = func
+    if inspect.iscoroutinefunction(target) or inspect.isasyncgenfunction(target):
+        return True
+    # inspect.iscoroutinefunction only inspects the object itself, so a
+    # callable instance whose __call__ is async has to be detected through
+    # its type.
+    call = type(target).__call__
+    return inspect.iscoroutinefunction(call) or inspect.isasyncgenfunction(call)
+
+
+def _reject_async_lifecycle_callback(
+    callback: Callable[..., Any] | None, *, param_name: str
+) -> None:
+    """Raise if a lifecycle callback is async.
+
+    ``validate`` and ``on_release`` are invoked synchronously, so an async
+    callback never runs: its awaitable is discarded, which reads as a
+    successful validation or a completed release.
+    """
+    if callback is not None and _is_async_callable(callback):
+        raise StreamlitAPIException(
+            f"The `{param_name}` callback of `st.cache_resource` must be a "
+            "synchronous function. Async callbacks are never awaited; call "
+            "the coroutine from a synchronous wrapper instead.",
+            error_id="cache-resource-async-lifecycle-callback",
+        )
 
 
 class ResourceCaches(StatsProvider):
@@ -485,7 +516,8 @@ class CacheResourceAPI:
             its only parameter and it must return a boolean. If ``validate`` returns
             False, the current cached value is discarded, and the decorated function
             is called to compute a new value. This is useful e.g. to check the
-            health of database connections.
+            health of database connections. ``validate`` must be a synchronous
+            function; coroutine functions (``async def``) aren't supported.
 
         hash_funcs : dict or None
             Mapping of types or fully qualified names to hash functions.
@@ -498,6 +530,8 @@ class CacheResourceAPI:
         on_release : callable or None
             A function to call when an entry is removed from the cache.
             The removed item will be provided to the function as an argument.
+            ``on_release`` must be a synchronous function; coroutine functions
+            (``async def``) aren't supported.
 
             This is only useful for caches that remove entries normally.
             Most commonly, this is used session-scoped caches to release
@@ -681,6 +715,9 @@ class CacheResourceAPI:
             refresh_mode,
             time_to_seconds(ttl, coerce_none_to_inf=False),
         )
+
+        _reject_async_lifecycle_callback(validate, param_name="validate")
+        _reject_async_lifecycle_callback(on_release, param_name="on_release")
 
         # Support passing the params via function decorator, e.g.
         # @st.cache_resource(show_spinner=False)

@@ -15,7 +15,7 @@ on:
         description: "Model to use for documentation review"
         required: false
         type: string
-        default: "cursor-grok-4.6-xhigh"
+        default: "grok-4.7-xhigh"
       dry_run:
         description: "Run without creating PR"
         type: boolean
@@ -23,7 +23,7 @@ on:
         default: false
 
 env:
-  MODEL: ${{ inputs.model || 'cursor-grok-4.6-xhigh' }}
+  MODEL: ${{ inputs.model || 'grok-4.7-xhigh' }}
   PR_NUMBER: ${{ inputs.pr_number || '' }}
   RECENT_CHANGES_DAYS: 7
 
@@ -395,11 +395,17 @@ jobs:
             });
             core.setOutput('pr_url', pr.html_url);
 
+            const labels = ['change:docs', 'impact:internal'];
+            // Only PRs targeting develop are marked as bot PRs; this workflow
+            // can also target a source PR's base branch.
+            if (baseBranch === 'develop') {
+              labels.push('bot-pr');
+            }
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
-              labels: ['change:docs', 'impact:internal'],
+              labels,
             });
 
       - name: Write step summary

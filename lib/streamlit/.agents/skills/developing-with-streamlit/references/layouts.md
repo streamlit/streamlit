@@ -9,11 +9,11 @@ How you structure your app affects usability more than you think.
 | `st.container`    | You need a general-purpose group of elements, a bordered section, a horizontal row, custom alignment, fixed height, scrolling, or out-of-order insertion of multiple elements.                                                                                                              |
 | `st.columns`      | You need a simple proportional grid, such as two-column comparisons or up to four KPI cards.                                                                                                                                                                                                |
 | `st.sidebar`      | You need app-level navigation, global filters, settings, or small app metadata that should stay separate from the main content.                                                                                                                                                             |
-| `st.tabs`         | You need multiple peer views of related content, and users should switch between them without leaving the page. All tab content is computed by default; for lazy execution where only the selected tab runs, use `on_change="rerun"` (or a callable) and check each tab's `.open` property. |
+| `st.tabs`         | You need multiple peer views of related content, and users should switch between them without leaving the page. All tab content is computed by default; for lazy execution where only the selected tab runs, use `on_change="rerun"` (or a callable) or `bind="query-params"` (with `key`), then check each tab's `.open` property. |
 | `st.expander`     | You need optional details, advanced settings, explanations, or diagnostic output that should not dominate the main view.                                                                                                                                                                    |
 | `st.status`       | You need to show progress, logs, or multi-step work in a collapsible status block that can update from running to complete or error.                                                                                                                                                        |
 | `st.popover`      | You need compact on-demand controls, filters, or secondary actions without changing page layout.                                                                                                                                                                                            |
-| `@st.dialog`      | You need a focused modal flow, such as confirmation, short editing, or settings that should temporarily interrupt the main page.                                                                                                                                                            |
+| `@st.dialog`      | You need a focused modal flow (dialog or side drawer), such as confirmation, short editing, details, or settings that should temporarily interrupt the main page.                                                                                                                            |
 | `st.form`         | You need to batch multiple widget inputs and rerun only when the user submits.                                                                                                                                                                                                              |
 | `st.empty`        | You need a placeholder that can be filled, replaced, or cleared later, including inserting elements out of order.                                                                                                                                                                           |
 | `st.skeleton`     | You need an animated loading placeholder that reserves space while content loads. Use it standalone like `st.empty` (replace it with content later) or as a context manager like `st.spinner` (auto-clears when the block exits).                                                           |
@@ -199,11 +199,14 @@ if st.button("Delete item"):
     confirm_delete("My Document")
 ```
 
+`position="left"` / `"right"` shows the dialog as a user-resizable full-height modal side drawer. Dismissal and other parameters work the same way.
+
 **When to use dialogs:**
 
 - Confirmation prompts
 - Settings panels
 - Forms that don't need to be always visible
+- Drill-down into details (for example, a `ButtonColumn` click that opens a side drawer to inspect that row)
 
 ## Spacing
 

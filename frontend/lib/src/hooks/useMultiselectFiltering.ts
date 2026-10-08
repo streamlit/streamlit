@@ -16,7 +16,7 @@
 
 import { useMemo } from "react"
 
-import { streamlit } from "@streamlit/protobuf"
+import type { streamlit } from "@streamlit/protobuf"
 
 import {
   filterSelectOptions,

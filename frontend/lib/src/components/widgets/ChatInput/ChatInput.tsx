@@ -15,9 +15,9 @@
  */
 
 import {
-  ChangeEvent,
-  ClipboardEvent,
-  KeyboardEvent,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type KeyboardEvent,
   memo,
   useCallback,
   useContext,
@@ -45,7 +45,7 @@ import {
   type ChatInputValue,
   FileUploaderState as FileUploaderStateProto,
   type FileURLs,
-  streamlit,
+  type streamlit,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
@@ -57,12 +57,12 @@ import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import UploadedFileChips from "~lib/components/shared/UploadedFile/UploadedFileChips"
-import {
+import type {
   UploadedStatus,
   UploadFileInfo,
 } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { getAccept } from "~lib/components/widgets/FileUploader/utils"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
@@ -76,7 +76,7 @@ import {
   chatInputAcceptFileProtoValueToEnum,
   isNullOrUndefined,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
 import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
@@ -240,8 +240,8 @@ function ChatInput({
       const computedStyle = getComputedStyle(textarea)
       fontStringRef.current = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`
 
-      const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0
-      const paddingRight = parseFloat(computedStyle.paddingRight) || 0
+      const paddingLeft = Number.parseFloat(computedStyle.paddingLeft) || 0
+      const paddingRight = Number.parseFloat(computedStyle.paddingRight) || 0
       availableWidthRef.current =
         // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Safe: runs inside ResizeObserver callback or useLayoutEffect after paint
         textarea.clientWidth - paddingLeft - paddingRight
@@ -352,7 +352,7 @@ function ChatInput({
         // Fire-and-forget deletion - errors are not critical to user flow
         uploadClient
           .deleteFile(file.status.fileUrls.deleteUrl)
-          .catch(error => {
+          .catch((error: unknown) => {
             // Log deletion errors for observability, but don't block the user
             // File may already be deleted or server unavailable
             LOG.error("Failed to delete file from server:", error)
@@ -561,7 +561,7 @@ function ChatInput({
         setFiles(prevFiles => updateFile(id, fileInfo, prevFiles))
       },
       uploadClient,
-      element,
+      element: { id: element.id, formId: "" },
       onUploadProgress: (e: AxiosProgressEvent, fileId: number) => {
         setFiles(prevFiles => {
           const file = getFile(fileId, prevFiles)
@@ -744,7 +744,7 @@ function ChatInput({
     // eslint-disable-next-line react-hooks/preserve-manual-memoization -- chatInputRef and uploadAbortControllerRef are refs; setAudioUploading and setRecordingError are stable setters
     async (wav: Blob): Promise<void> => {
       // Convert blob to File
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+      const timestamp = new Date().toISOString().replaceAll(/[:.]/g, "-")
       const audioFile = new File([wav], `audio-${timestamp}.wav`, {
         type: "audio/wav",
       })
@@ -764,10 +764,7 @@ function ChatInput({
         // 2. Upload audio file with progress tracking
         uploadAbortControllerRef.current = new AbortController()
         await uploadClient.uploadFile(
-          {
-            formId: "",
-            ...element,
-          },
+          { id: element.id, formId: "" },
           fileUrls.uploadUrl as string,
           audioFile,
           () => {
@@ -1019,7 +1016,7 @@ function ChatInput({
       return "100%"
     }
     if (heightConfig.pixelHeight && heightConfig.pixelHeight > 0) {
-      const borderWidth = parseInt(theme.sizes.borderWidth, 10) || 1
+      const borderWidth = Number.parseInt(theme.sizes.borderWidth, 10) || 1
       const containerPadding =
         convertRemToPx(theme.spacing.md) * 2 + borderWidth * 2
       const adjustedHeight = Math.max(
@@ -1149,44 +1146,41 @@ function ChatInput({
                     />
                   </StyledInputInstructions>
                 )}
-                {acceptAudio && (
-                  <>
-                    {recordingError ? (
-                      <Tooltip
-                        content={recordingError}
-                        placement={Placement.TOP}
-                        error
-                      >
-                        <StyledSendIconButton
-                          onClick={handleMicClickVoid}
-                          disabled={
-                            disabled || isDisabledDuringRun || audioUploading
-                          }
-                          hasError
-                          data-testid="stChatInputMicButton"
-                          aria-label="Start recording"
-                        >
-                          <Icon
-                            content={ErrorOutline}
-                            size="xl"
-                            color="inherit"
-                          />
-                        </StyledSendIconButton>
-                      </Tooltip>
-                    ) : (
+                {acceptAudio &&
+                  (recordingError ? (
+                    <Tooltip
+                      content={recordingError}
+                      placement={Placement.TOP}
+                      error
+                    >
                       <StyledSendIconButton
                         onClick={handleMicClickVoid}
                         disabled={
                           disabled || isDisabledDuringRun || audioUploading
                         }
+                        hasError
                         data-testid="stChatInputMicButton"
                         aria-label="Start recording"
                       >
-                        <Icon content={MicNone} size="xl" color="inherit" />
+                        <Icon
+                          content={ErrorOutline}
+                          size="xl"
+                          color="inherit"
+                        />
                       </StyledSendIconButton>
-                    )}
-                  </>
-                )}
+                    </Tooltip>
+                  ) : (
+                    <StyledSendIconButton
+                      onClick={handleMicClickVoid}
+                      disabled={
+                        disabled || isDisabledDuringRun || audioUploading
+                      }
+                      data-testid="stChatInputMicButton"
+                      aria-label="Start recording"
+                    >
+                      <Icon content={MicNone} size="xl" color="inherit" />
+                    </StyledSendIconButton>
+                  ))}
                 {renderActionButton()}
               </StyledRightCluster>
             </StyledToolbarRow>
@@ -1258,50 +1252,41 @@ function ChatInput({
                         />
                       </StyledInputInstructions>
                     )}
-                    {acceptAudio && (
-                      <>
-                        {recordingError ? (
-                          <Tooltip
-                            content={recordingError}
-                            placement={Placement.TOP}
-                            error
-                          >
-                            <StyledSendIconButton
-                              onClick={handleMicClickVoid}
-                              disabled={
-                                disabled ||
-                                isDisabledDuringRun ||
-                                audioUploading
-                              }
-                              hasError
-                              data-testid="stChatInputMicButton"
-                              aria-label="Start recording"
-                            >
-                              <Icon
-                                content={ErrorOutline}
-                                size="xl"
-                                color="inherit"
-                              />
-                            </StyledSendIconButton>
-                          </Tooltip>
-                        ) : (
+                    {acceptAudio &&
+                      (recordingError ? (
+                        <Tooltip
+                          content={recordingError}
+                          placement={Placement.TOP}
+                          error
+                        >
                           <StyledSendIconButton
                             onClick={handleMicClickVoid}
                             disabled={
                               disabled || isDisabledDuringRun || audioUploading
                             }
+                            hasError
                             data-testid="stChatInputMicButton"
                             aria-label="Start recording"
                           >
                             <Icon
-                              content={MicNone}
+                              content={ErrorOutline}
                               size="xl"
                               color="inherit"
                             />
                           </StyledSendIconButton>
-                        )}
-                      </>
-                    )}
+                        </Tooltip>
+                      ) : (
+                        <StyledSendIconButton
+                          onClick={handleMicClickVoid}
+                          disabled={
+                            disabled || isDisabledDuringRun || audioUploading
+                          }
+                          data-testid="stChatInputMicButton"
+                          aria-label="Start recording"
+                        >
+                          <Icon content={MicNone} size="xl" color="inherit" />
+                        </StyledSendIconButton>
+                      ))}
                     {renderActionButton()}
                   </>
                 )}

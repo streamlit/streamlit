@@ -25,6 +25,7 @@ from streamlit.elements.lib.layout_utils import (
     validate_height,
     validate_width,
 )
+from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
@@ -269,6 +270,7 @@ class IframeMixin:
         width: int | Literal["stretch", "content"] = "stretch",
         height: int | Literal["stretch", "content"] = "content",
         tab_index: int | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Embed content in an iframe.
 
@@ -338,12 +340,31 @@ class IframeMixin:
             <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex>`_
             documentation on MDN.
 
+        alt : str or None
+            A description of the embed for screen readers and other assistive
+            technologies. Streamlit maps this to the iframe's ``title``
+            attribute, which is the frame's accessible name. If this is
+            ``None`` (default), the title stays ``"st.iframe"``.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+            An iframe must have a title, so empty ``alt`` keeps the
+            ``"st.iframe"`` fallback rather than becoming decorative.
+
+            Describe the embedded content rather than repeating text that is
+            already visible on the page.
+
         Examples
         --------
         Embed an external website:
 
         >>> import streamlit as st
-        >>> st.iframe("https://docs.streamlit.io", height=600)
+        >>> st.iframe(
+        ...     "https://docs.streamlit.io",
+        ...     height=600,
+        ...     alt="Streamlit documentation",
+        ... )
 
         Embed HTML content directly:
 
@@ -400,6 +421,10 @@ class IframeMixin:
         _validate_tab_index(tab_index)
         if tab_index is not None:
             iframe_proto.tab_index = tab_index
+
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            iframe_proto.alt = normalized_alt
 
         # For URLs (not srcdoc), "content" sizing falls back because cross-origin
         # content cannot be measured. Height falls back to 400px, width to stretch.

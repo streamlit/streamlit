@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { ComponentType } from "react"
+import type { ComponentType } from "react"
 
 import styled from "@emotion/styled"
-import { CalendarDate } from "@internationalized/date"
+import type { CalendarDate } from "@internationalized/date"
 import { getLuminance, transparentize } from "color2k"
 import {
   Button,
@@ -25,14 +25,14 @@ import {
   CalendarCell,
   CalendarGrid,
   CalendarHeaderCell,
-  CalendarProps,
+  type CalendarProps,
   DateSegment,
   Group,
   ListBox,
   ListBoxItem,
   Popover,
   RangeCalendar,
-  RangeCalendarProps,
+  type RangeCalendarProps,
   Select,
 } from "react-aria-components"
 
@@ -40,6 +40,7 @@ import {
   getBorderColor,
   getOverlayZIndex,
   getPopoverContainerStyle,
+  getSecondaryIconButtonColorStyles,
 } from "~lib/components/shared/Base/styled-components"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
@@ -62,7 +63,10 @@ export const StyledDateField = styled("div", {
   }),
 }))
 
-/** Outer border wrapper for date/datetime fields. Scrolls in narrow layouts. */
+/**
+ * Outer border wrapper for date and datetime fields. Clips overflow so the
+ * inner scroller, not this border, scrolls horizontally.
+ */
 export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -73,15 +77,18 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   borderStyle: "solid",
   borderColor: getBorderColor(theme.colors, false),
   backgroundColor: theme.colors.secondaryBg,
-  // Scroll horizontally in narrow layouts instead of overflowing the border.
-  // Hidden scrollbar avoids stealing height (same pattern as Tabs/Multiselect).
-  overflowX: "auto" as const,
-  overflowY: "hidden" as const,
-  scrollbarWidth: "none",
-  "&::-webkit-scrollbar": { display: "none" },
+  overflow: "hidden",
   cursor: "text",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.inputWidget,
+  // React Aria's `HiddenDateInput` is visually hidden, but Chromium and Firefox
+  // can still paint `::-webkit-calendar-picker-indicator` inside the field.
+  "& input[type='date'], & input[type='datetime-local']": {
+    appearance: "none",
+    "&::-webkit-calendar-picker-indicator": {
+      display: "none",
+    },
+  },
   "&:focus-within": {
     borderColor: getBorderColor(theme.colors, true),
     outline: "none",
@@ -96,6 +103,24 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
     cursor: "not-allowed",
   },
 }))
+
+/**
+ * Scrolls date and time segments so trailing error and clear controls stay
+ * pinned. Hiding the native scrollbar keeps it from adding height to the field.
+ * The shared overflow fade is omitted because it requires runtime scroll state.
+ */
+export const StyledDateFieldsScroller = styled.div({
+  display: "flex",
+  alignItems: "center",
+  flex: 1,
+  minWidth: 0,
+  overflowX: "auto",
+  overflowY: "hidden",
+  // Prevent a swipe at the row boundary from triggering browser back/forward.
+  overscrollBehaviorX: "contain",
+  scrollbarWidth: "none",
+  "&::-webkit-scrollbar": { display: "none" },
+})
 
 /** Uses RAC `Group` instead of `DateInput` to allow custom segment ordering. */
 export const StyledDateFieldInput = styled(Group, {
@@ -170,7 +195,6 @@ export const StyledErrorIconContainer = styled.div(({ theme }) => ({
 export const StyledTrailingIcons = styled.div({
   display: "flex",
   alignItems: "center",
-  marginLeft: "auto",
   flexShrink: 0,
 })
 
@@ -180,19 +204,27 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   justifyContent: "center",
   background: "none",
   border: "none",
+  // Round the button so the focus ring follows its shape, matching the Multiselect clear button.
+  borderRadius: theme.radii.default,
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
   marginRight: theme.spacing.sm,
-  color: theme.colors.grayTextColor,
   flexShrink: 0,
-  "&:hover": {
-    color: theme.colors.bodyText,
+  ...getSecondaryIconButtonColorStyles(theme),
+  "&:focus": {
+    outline: "none",
   },
   "&:focus-visible": {
-    outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-    borderRadius: theme.radii.sm,
+    boxShadow: theme.shadows.focusRing,
   },
 }))
+
+/**
+ * Calendar toggle button. Same icon-button styles as the clear control
+ * (including disabled); kept as a separate export so calendar and clear stay
+ * distinct components.
+ */
+export const StyledCalendarButton = styled(StyledClearButton)({})
 
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
 const visuallyHiddenStyle = {

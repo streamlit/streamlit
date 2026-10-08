@@ -18,7 +18,7 @@ import { beforeAll, describe, expect, it } from "vitest"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
 
-import { createShadows, ThemeShadows } from "./getShadows"
+import { createShadows, type ThemeShadows } from "./getShadows"
 import { darkTheme } from "./themeConfigs"
 
 // Use mockTheme colors for light theme tests (has white bgColor)
@@ -199,8 +199,8 @@ describe("createShadows", () => {
       const lightShadows = createShadows(lightThemeColors)
       const darkShadows = createShadows(darkThemeColors)
 
-      expect(Object.keys(lightShadows).sort()).toEqual(
-        Object.keys(darkShadows).sort()
+      expect(Object.keys(lightShadows).toSorted()).toEqual(
+        Object.keys(darkShadows).toSorted()
       )
     })
 

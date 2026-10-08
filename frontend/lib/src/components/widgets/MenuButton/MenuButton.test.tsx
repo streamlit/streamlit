@@ -22,11 +22,11 @@ import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { BaseButtonKind } from "~lib/components/shared/BaseButton/styled-components"
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 import { iconSizes } from "~lib/theme/primitives/iconSizes"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import MenuButton, { Props } from "./MenuButton"
+import MenuButton, { type Props } from "./MenuButton"
 
 vi.mock("~lib/WidgetStateManager")
 
@@ -289,6 +289,8 @@ describe("MenuButton widget", () => {
   })
 
   describe("wrap=false", () => {
+    mockEllipsizedLabels()
+
     it("keeps the chevron visible and sets the full label as a native title", () => {
       const props = getProps({ label: "A very long menu label", wrap: false })
       render(<MenuButton {...props} />)
@@ -400,6 +402,25 @@ describe("MenuButton widget", () => {
       await screen.findByTestId("stMenuButtonBody")
 
       expect(screen.getByRole("menu")).toHaveAttribute("aria-label", "Menu")
+    })
+
+    it("restores focus to the trigger after Escape closes the menu", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      render(<MenuButton {...props} />)
+
+      const button = screen.getByTestId("stMenuButtonButton")
+      await user.click(button)
+      await screen.findByTestId("stMenuButtonBody")
+
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stMenuButtonBody")
+        ).not.toBeInTheDocument()
+      })
+      expect(button).toHaveFocus()
     })
   })
 })

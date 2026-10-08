@@ -22,7 +22,7 @@ import {
 } from "@emotion-icons/material-outlined"
 import { FloatingPortal } from "@floating-ui/react"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   convertRemToPx,
   Icon,
@@ -31,7 +31,7 @@ import {
   useFloatingOverlay,
   useOverlayDismissal,
 } from "@streamlit/lib"
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import SidebarNavLink from "./SidebarNavLink"
@@ -73,7 +73,7 @@ const TopNavSection = ({
 
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open,
     placement: "bottom-start",
     offsetPx: convertRemToPx(theme.spacing.twoXS),
@@ -82,8 +82,8 @@ const TopNavSection = ({
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: open,
     onClose: () => setOpen(false),
-    floatingSetFn: refs.setFloating,
-    referenceSetFn: refs.setReference,
+    floatingSetFn: setFloating,
+    referenceSetFn: setReference,
     restoreFocusFn: () => triggerRef.current?.focus(),
   })
 

@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect, useState } from "react"
+import {
+  memo,
+  type ReactElement,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
-import { LabelVisibilityOptions } from "~lib/util/utils"
+import type { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
   StyledRadioButton,
@@ -71,7 +77,7 @@ function Radio({
 
   const handleChange = useCallback(
     (selectedValue: string): void => {
-      const selectedIndex = parseInt(selectedValue, 10)
+      const selectedIndex = Number.parseInt(selectedValue, 10)
       setValue(selectedIndex)
       onChange(selectedIndex)
     },
@@ -138,13 +144,17 @@ function Radio({
               value={index.toString()}
             >
               <StyledRadioButton data-testid="stRadioOption">
-                {({ isSelected, isDisabled }) => (
+                {({ isSelected, isHovered, isDisabled }) => (
                   <StyledRadioRow>
                     <StyledRadioOuter
                       $isSelected={isSelected}
+                      $isHovered={isHovered}
                       $isDisabled={isDisabled}
                     >
-                      <StyledRadioInner $isSelected={isSelected} />
+                      <StyledRadioInner
+                        $isSelected={isSelected}
+                        $isDisabled={isDisabled}
+                      />
                     </StyledRadioOuter>
                     <StreamlitMarkdown
                       source={option}

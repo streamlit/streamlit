@@ -17,10 +17,10 @@ import { getLogger } from "loglevel"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
-import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
+import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
-import { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
+import type { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
 
 const LOG = getLogger("NumberInput")
 
@@ -57,7 +57,7 @@ export const getDecimalPlaces = (step: number): number => {
     if (match) {
       // Account for decimal places in the coefficient (e.g., "2.5" has 1)
       const coefficientDecimals = (match[1]?.split(".")[1] || "").length
-      const exponent = parseInt(match[2], 10)
+      const exponent = Number.parseInt(match[2], 10)
       return coefficientDecimals + exponent
     }
     return 0

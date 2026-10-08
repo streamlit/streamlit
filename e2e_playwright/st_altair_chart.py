@@ -12,12 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+from pathlib import Path
+
 import altair as alt
 import numpy as np
 import pandas as pd
 from vega_datasets import data
 
 import streamlit as st
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 np.random.seed(0)
 
@@ -308,3 +313,56 @@ bindings_chart = (
 )
 with st.container(key="altair_chart_bindings"):
     st.altair_chart(bindings_chart, theme="streamlit", width="content")
+
+# Local GeoJSON assets only — URL data must not fetch a CDN.
+GEOJSON_PATH = STATIC_DIR / "two_polygons.geo.json"
+GEOJSON_URL = "./app/static/two_polygons.geo.json"
+GEO_FORMAT = alt.DataFormat(property="features", type="json")
+
+with st.container(key="altair_geoshape_lookup"):
+    population = pd.DataFrame({"id": [1, 2], "population": [100, 200]})
+    lookup_chart = (
+        alt.Chart(alt.Data(url=GEOJSON_URL, format=GEO_FORMAT))
+        .mark_geoshape()
+        .encode(color="population:Q")
+        .transform_lookup(
+            lookup="id",
+            from_=alt.LookupData(population, "id", list(population.columns)),
+        )
+        .project(type="identity", reflectY=True)
+        .properties(width=400, height=200)
+    )
+    st.altair_chart(lookup_chart, width="content")
+
+with st.container(key="altair_geoshape_inline"):
+    inline_chart = (
+        alt.Chart(
+            alt.InlineData(
+                values=json.loads(GEOJSON_PATH.read_text()),
+                format=GEO_FORMAT,
+            )
+        )
+        .mark_geoshape()
+        .encode(color="properties.name:N")
+        .project(type="identity", reflectY=True)
+        .properties(width=400, height=200)
+    )
+    st.altair_chart(inline_chart, width="content")
+
+# Keep accessible-name cases last because existing E2E assertions use positional
+# chart indexes.
+_a11y_df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+_a11y_chart = alt.Chart(_a11y_df).mark_bar().encode(x="a", y="b")
+
+with st.container(key="altair_alt"):
+    st.altair_chart(_a11y_chart, alt="Bar chart of categories A and B", width="content")
+
+with st.container(key="altair_no_alt"):
+    st.altair_chart(_a11y_chart, width="content")
+
+with st.container(key="altair_alt_overrides_description"):
+    st.altair_chart(
+        _a11y_chart.properties(description="Altair description"),
+        alt="Streamlit alt overrides description",
+        width="content",
+    )

@@ -13,19 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
+import { type Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { AppNode, BlockNode } from "~lib/AppNode"
+import { type AppNode, BlockNode } from "~lib/AppNode"
 import { Direction } from "~lib/components/core/Layout/utils"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { ElementsSetVisitor } from "~lib/render-tree/visitors/ElementsSetVisitor"
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 import { getDividerColors } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isValidElementId } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export function getClassnamePrefix(direction: Direction): string {
   return direction === Direction.HORIZONTAL
@@ -88,6 +88,45 @@ export function isComponentStale(
     !enable ||
     isElementStale(node, scriptRunState, scriptRunId, fragmentIdsThisRun)
   )
+}
+
+/**
+ * Whether a leftover dialog from a previous full-app run should be hidden.
+ *
+ * Stale nodes are only pruned after the script finishes successfully, so a
+ * dialog closed via `st.rerun()` would otherwise stay on screen for the whole
+ * next run (issue #9405).
+ *
+ * Any fragment rerun keeps the dialog: unlike {@link isElementStale}, this
+ * does not check whether the node's `fragmentId` is in `fragmentIdsThisRun`.
+ * Fragment `newSession` still assigns a new `scriptRunId`, so hiding on
+ * mismatch would also close the dialog when an unrelated fragment refreshes.
+ *
+ * `RERUN_REQUESTED` also keeps it. That state is set before we know whether
+ * the next run is a fragment or full-app rerun; hiding here would unmount
+ * the dialog on every widget interaction inside it.
+ *
+ * Not the same as {@link isElementStale}: that function marks every element
+ * stale on `RERUN_REQUESTED`.
+ */
+export function shouldHideStaleDialog(
+  node: AppNode,
+  scriptRunState: ScriptRunState,
+  scriptRunId: string,
+  fragmentIdsThisRun?: Array<string>
+): boolean {
+  if (fragmentIdsThisRun?.length) {
+    return false
+  }
+
+  if (
+    scriptRunState !== ScriptRunState.RUNNING &&
+    scriptRunState !== ScriptRunState.STOP_REQUESTED
+  ) {
+    return false
+  }
+
+  return node.scriptRunId !== scriptRunId
 }
 
 export function assignDividerColor(
@@ -170,7 +209,7 @@ export function convertKeyToClassName(key: string | undefined | null): string {
   if (!key) {
     return ""
   }
-  const className = key.trim().replace(/[^a-zA-Z0-9_-]/g, "-")
+  const className = key.trim().replaceAll(/[^a-zA-Z0-9_-]/g, "-")
   return "st-key-" + className
 }
 

@@ -44,6 +44,7 @@ from streamlit.runtime.fragment import (
     _check_not_parallel_worker,
     _dispatch_parallel_fragment,
     _fragment,
+    _FragmentLifetime,
     _reset_outside_wrappers,
     _run_parallel_fragment,
     fragment,
@@ -85,12 +86,14 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         *,
         parent_fragment_id: str | None = None,
         value: str | None = None,
+        lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
     ) -> None:
         fragment_value = fragment_id if value is None else value
         self._storage.register(
             fragment_id,
             fragment_value,
             parent_fragment_id=parent_fragment_id,
+            lifetime=lifetime,
         )
 
     def _set_fragment_chain(self, *fragment_ids: str) -> None:
@@ -161,6 +164,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         self._storage.clear()
         assert len(self._storage._fragments) == 0
         assert len(self._storage._parent_by_id) == 0
+        assert len(self._storage._lifetime_by_id) == 0
 
     def test_clear_with_new_fragment_ids(self):
         self._set_fragment("some_other_key", value="some_other_fragment")
@@ -283,7 +287,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         removed = self._storage.clear_stale_descendants("outer", frozenset({"outer"}))
 
-        assert set(removed) == {"inner", "leaf"}
+        assert removed == ["inner", "leaf"]
 
     def test_clear_stale_descendants_returns_empty_when_nothing_removed(self):
         """When no descendant is evicted, an empty list is returned."""
@@ -303,6 +307,112 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         assert self._storage.contains("outer")
         assert self._storage.contains("inner")
+
+    def test_clear_stale_descendants_prunes_child_of_reregistered_fragment(self):
+        """A fragment that executed owns cleanup of its missing children."""
+        self._set_fragment_chain("outer", "inner", "leaf")
+
+        removed = self._storage.clear_stale_descendants(
+            "outer", frozenset({"outer", "inner"})
+        )
+
+        assert removed == ["leaf"]
+        assert self._storage.contains("outer")
+        assert self._storage.contains("inner")
+        assert not self._storage.contains("leaf")
+
+    def test_clear_stale_descendants_keeps_full_app_scoped_child(self):
+        """Full-app-scoped descendants survive parent fragment reruns."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset({"outer"}))
+
+        assert removed == []
+        assert self._storage.contains("dialog")
+
+    def test_full_app_clear_removes_dialog_retained_from_removed_parent(self):
+        """Full app cleanup removes a retained dialog whose parent was removed."""
+        self._set_fragment_chain("outer", "inner")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="inner",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset())
+
+        assert removed == ["inner"]
+        assert not self._storage.contains("inner")
+        assert self._storage.contains("dialog")
+        assert self._storage._parent_by_id["dialog"] == "inner"
+
+        self._storage.clear(new_fragment_ids=frozenset({"outer"}))
+
+        assert not self._storage.contains("dialog")
+
+    def test_clear_stale_descendants_preserves_retained_dialog_subtree(self):
+        """An unexecuted retained dialog keeps its previously registered subtree."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+        self._set_fragment("nested", parent_fragment_id="dialog")
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset())
+
+        assert removed == []
+        assert self._storage.contains("dialog")
+        assert self._storage.contains("nested")
+
+    def test_clear_stale_descendants_reconciles_reregistered_dialog_subtree(self):
+        """A retained dialog that executed still owns cleanup of its missing children."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+        self._set_fragment("nested", parent_fragment_id="dialog")
+
+        removed = self._storage.clear_stale_descendants("outer", frozenset({"dialog"}))
+
+        assert removed == ["nested"]
+        assert self._storage.contains("dialog")
+        assert not self._storage.contains("nested")
+
+    def test_dialog_root_cleanup_removes_missing_nested_fragment(self):
+        """A dialog rerun is authoritative for its parent-scoped children."""
+        self._set_fragment(
+            "dialog",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+        self._set_fragment("nested", parent_fragment_id="dialog")
+
+        removed = self._storage.clear_stale_descendants("dialog", frozenset())
+
+        assert removed == ["nested"]
+        assert self._storage.contains("dialog")
+        assert not self._storage.contains("nested")
+
+    def test_full_app_clear_removes_full_app_scoped_child(self):
+        """Full app cleanup removes unregistered full-app-scoped fragments."""
+        self._set_fragment("outer")
+        self._set_fragment(
+            "dialog",
+            parent_fragment_id="outer",
+            lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+        )
+
+        self._storage.clear(new_fragment_ids=frozenset({"outer"}))
+
+        assert not self._storage.contains("dialog")
 
     def test_clear_stale_descendants_preserves_sibling_branch(self):
         """Only siblings missing from this run are removed."""
@@ -482,6 +592,11 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         )
         assert self._storage.contains("a")
         assert self._storage.contains("b")
+
+        removed = self._storage.clear_stale_descendants("a", frozenset({"a"}))
+        assert removed == ["b"]
+        assert self._storage.contains("a")
+        assert not self._storage.contains("b")
 
     def test_contains(self):
         assert self._storage.contains("some_key")

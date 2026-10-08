@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
@@ -196,7 +196,7 @@ function FormattingMenu({
   onChangeFormat,
   onCloseMenu,
   children,
-}: FormattingMenuProps): ReactElement {
+}: FormattingMenuProps): ReactElement | null {
   const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []
 
   const { floatingStyles, setAnchorRef, setFloatingRef } = useHoverSubmenu({
@@ -208,7 +208,7 @@ function FormattingMenu({
   if (formats.length === 0) {
     // If there are no formats available for the column kind,
     // we don't show the formatting menu option.
-    return <></>
+    return null
   }
 
   return (

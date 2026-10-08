@@ -18,14 +18,14 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import * as LibModule from "@streamlit/lib"
-import { mockEndpoints, NavigationContextProps } from "@streamlit/lib"
+import { mockEndpoints, type NavigationContextProps } from "@streamlit/lib"
 import {
   renderWithContexts,
-  RenderWithContextsOptions,
+  type RenderWithContextsOptions,
 } from "@streamlit/lib/testing"
 import { type AppPage, PageConfig } from "@streamlit/protobuf"
 
-import SidebarNav, { Props } from "./SidebarNav"
+import SidebarNav, { type Props } from "./SidebarNav"
 
 vi.mock("~lib/util/Hooks", async () => ({
   __esModule: true,
@@ -125,9 +125,9 @@ const createAppPagesForSections = (sectionPageCounts: {
     for (let i = 0; i < count; i++) {
       const pageName = `${sectionHeader} page ${i + 1}`
       pages.push({
-        pageScriptHash: `hash_${pageName.replace(/ /g, "_")}`,
+        pageScriptHash: `hash_${pageName.replaceAll(" ", "_")}`,
         pageName: pageName,
-        urlPathname: pageName.replace(/ /g, "_"),
+        urlPathname: pageName.replaceAll(" ", "_"),
         sectionHeader: sectionHeader,
         isDefault: pageIndex === 0,
       })

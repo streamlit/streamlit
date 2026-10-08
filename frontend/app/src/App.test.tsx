@@ -18,7 +18,7 @@ import { act } from "react"
 
 import {
   render,
-  RenderResult,
+  type RenderResult,
   screen,
   waitFor,
   within,
@@ -27,7 +27,7 @@ import userEvent, {
   PointerEventsCheckLevel,
 } from "@testing-library/user-event"
 import { cloneDeep } from "lodash-es"
-import { type Mock, type MockInstance } from "vitest"
+import type { Mock, MockInstance } from "vitest"
 
 import {
   getMenuLabels,
@@ -37,12 +37,12 @@ import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   ConnectionManager,
   ConnectionState,
-  ErrorDetails,
+  type ErrorDetails,
   mockEndpoints,
 } from "@streamlit/connection"
 import {
   BackendOperationClient,
-  CachedTheme,
+  type CachedTheme,
   CONNECTION_CLOSED_MESSAGE,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
@@ -74,11 +74,11 @@ import {
   type AutoRerun,
   Config,
   CustomThemeConfig,
-  Delta,
-  Element,
+  type Delta,
+  type Element,
   Exception,
   ForwardMsg,
-  ForwardMsgMetadata,
+  type ForwardMsgMetadata,
   type Logo,
   Navigation,
   type NewSession,
@@ -87,12 +87,12 @@ import {
   type PageNotFound,
   type ParentMessage,
   SessionEvent,
-  SessionStatus,
+  type SessionStatus,
   type StopAutoRerun,
   TextInput,
 } from "@streamlit/protobuf"
 
-import { App, LOG, Props } from "./App"
+import { App, LOG, type Props } from "./App"
 import { SKILLS_NUDGE_SNOOZED_AT_KEY } from "./components/SkillsNudgeToast/skillsNudge"
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 
@@ -187,11 +187,13 @@ vi.mock("@streamlit/connection", async () => {
   }
 })
 
+// Type each mock from the already-imported class. `typeof import()` is
+// forbidden by `consistent-type-imports` (`disallowTypeAnnotations`), and
+// app tests cannot `import type * as` from `~lib/*`.
 vi.mock("~lib/SessionInfo", async () => {
-  const actualModule =
-    await vi.importActual<typeof import("~lib/SessionInfo")>(
-      "~lib/SessionInfo"
-    )
+  const actualModule = await vi.importActual<{
+    SessionInfo: typeof SessionInfo
+  }>("~lib/SessionInfo")
 
   const MockedClass = vi.fn().mockImplementation(function (this: SessionInfo) {
     return new actualModule.SessionInfo()
@@ -210,9 +212,9 @@ vi.mock("~lib/SessionInfo", async () => {
 })
 
 vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("~lib/hostComm/HostCommunicationManager")
-  >("~lib/hostComm/HostCommunicationManager")
+  const actualModule = await vi.importActual<{
+    default: typeof HostCommunicationManager
+  }>("~lib/hostComm/HostCommunicationManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: HostCommunicationManager,
@@ -233,9 +235,9 @@ vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
 })
 
 vi.mock("~lib/WidgetStateManager", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("~lib/WidgetStateManager")
-  >("~lib/WidgetStateManager")
+  const actualModule = await vi.importActual<{
+    WidgetStateManager: typeof WidgetStateManager
+  }>("~lib/WidgetStateManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: WidgetStateManager,
@@ -255,9 +257,9 @@ vi.mock("~lib/WidgetStateManager", async () => {
 })
 
 vi.mock("@streamlit/app/src/MetricsManager", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("@streamlit/app/src/MetricsManager")
-  >("@streamlit/app/src/MetricsManager")
+  const actualModule = await vi.importActual<{
+    MetricsManager: typeof MetricsManager
+  }>("@streamlit/app/src/MetricsManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: MetricsManager,
@@ -276,9 +278,9 @@ vi.mock("@streamlit/app/src/MetricsManager", async () => {
 })
 
 vi.mock("~lib/FileUploadClient", async () => {
-  const actualModule = await vi.importActual<
-    typeof import("~lib/FileUploadClient")
-  >("~lib/FileUploadClient")
+  const actualModule = await vi.importActual<{
+    FileUploadClient: typeof FileUploadClient
+  }>("~lib/FileUploadClient")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: FileUploadClient,
@@ -405,7 +407,11 @@ function getStoredValue<T>(
   Type: unknown
 ): T {
   const mocked = vi.mocked(Type as (...args: unknown[]) => T)
-  return mocked.mock.results[mocked.mock.results.length - 1].value as T
+  const last = mocked.mock.results.at(-1)
+  if (!last) {
+    throw new Error("Expected a mock result")
+  }
+  return last.value as T
 }
 
 function getMockConnectionManager(isConnected = false): ConnectionManager {
@@ -1815,6 +1821,165 @@ describe("App", () => {
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("mykey=myvalue")
     })
+
+    it("uses current URL query params when browser history stays on the same page", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "top_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "top_hash",
+      })
+
+      // Simulate stale query params stored from an earlier server update.
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "stale=oldvalue",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      // @ts-expect-error
+      hostCommunicationMgr.sendMessageToHost.mockClear()
+
+      // Simulate browser back/forward changing URL query params on same page.
+      window.history.pushState({}, "", "/?fresh=newvalue")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: "?fresh=newvalue",
+      })
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("fresh=newvalue")
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .pageScriptHash
+      ).toBe("top_hash")
+    })
+
+    it("uses current URL query params when same-page popstate URL has a fragment", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "top_hash",
+      })
+      sendForwardMessage("navigation", {
+        ...THIS_NAVIGATION_JSON,
+        pageScriptHash: "top_hash",
+      })
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "stale=oldvalue",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      // @ts-expect-error
+      hostCommunicationMgr.sendMessageToHost.mockClear()
+
+      window.history.pushState({}, "", "/?fresh=newvalue#section")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
+        type: "SET_QUERY_PARAM",
+        queryParams: "?fresh=newvalue",
+      })
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("fresh=newvalue")
+    })
+
+    it("reruns same-page history before navigation metadata arrives", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      window.history.pushState({}, "", "/?mock_element_id=mock-element-03")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("mock_element_id=mock-element-03")
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .pageScriptHash
+      ).toBe("spa_hash")
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .isHistoryNavigation
+      ).toBe(true)
+    })
+
+    it("does not set isHistoryNavigation on ordinary widget reruns", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...CURRENT_NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      const connectionManager = getMockConnectionManager()
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+          .isHistoryNavigation
+      ).toBeFalsy()
+    })
   })
 
   describe("App.handlePageConfigChanged", () => {
@@ -1842,15 +2007,18 @@ describe("App", () => {
   // Please see https://github.com/streamlit/streamlit/issues/2887 for more context on this.
   describe("App.handlePageInfoChanged", () => {
     let pushStateSpy: MockInstance
+    let replaceStateSpy: MockInstance
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
 
       pushStateSpy = vi.spyOn(window.history, "pushState")
+      replaceStateSpy = vi.spyOn(window.history, "replaceState")
     })
 
     afterEach(() => {
       pushStateSpy.mockRestore()
+      replaceStateSpy.mockRestore()
       // Reset the value of document.location.pathname.
       window.history.pushState({}, "", "/")
     })
@@ -1955,6 +2123,414 @@ describe("App", () => {
         type: "SET_QUERY_PARAM",
         queryParams: `?${queryString}`,
       })
+    })
+
+    it("uses replaceState during a pending history rerun and pushState afterwards", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith({}, "", "/")
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "second=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith({}, "", "/?second=1")
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?after=1")
+      expect(replaceStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("keeps replaceState for history PageInfo after a superseding widget rerun", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?flying=spaghetti")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+      widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      // PageInfo from the still-in-flight history run (before the widget
+      // run's NewSession) must not pushState.
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "from-history=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?from-history=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      // The superseding run's NewSession ends history replaceState so its
+      // own PageInfo can pushState instead of overwriting the restored entry.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "from-widget=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith({}, "", "/?from-widget=1")
+      expect(replaceStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("keeps replaceState across consecutive history NewSessions", async () => {
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      window.history.pushState({}, "", "/?first=1")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      const connectionManager = getMockConnectionManager()
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      window.history.pushState({}, "", "/?second=1")
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalled()
+      })
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      // First history NewSession must not end replaceState for the second
+      // history run that was already requested.
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+
+      // An interrupt finish from the first run must not drop the epoch for
+      // the still-current second history request.
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      )
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-first-ns=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-first-ns=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        pageScriptHash: "spa_hash",
+      })
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-second-ns=1",
+      })
+
+      expect(replaceStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-second-ns=1"
+      )
+      expect(pushStateSpy).not.toHaveBeenCalled()
+
+      sendForwardMessage(
+        "scriptFinished",
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      )
+
+      pushStateSpy.mockClear()
+      replaceStateSpy.mockClear()
+
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "after-success=1",
+      })
+
+      expect(pushStateSpy).toHaveBeenLastCalledWith(
+        {},
+        "",
+        "/?after-success=1"
+      )
+      expect(replaceStateSpy).not.toHaveBeenCalled()
+    })
+
+    it("keeps replaceState across an auto-rerun after history navigation", async () => {
+      vi.useFakeTimers()
+      try {
+        renderApp(getProps())
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        window.history.pushState({}, "", "/?flying=spaghetti")
+        act(() => {
+          window.dispatchEvent(new PopStateEvent("popstate"))
+        })
+
+        const connectionManager = getMockConnectionManager()
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        // A run_every flush after the history BackMsg must not end replaceState.
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "frag",
+        })
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        pushStateSpy.mockClear()
+        replaceStateSpy.mockClear()
+
+        sendForwardMessage("pageInfoChanged", {
+          queryString: "after-auto=1",
+        })
+
+        expect(replaceStateSpy).toHaveBeenLastCalledWith(
+          {},
+          "",
+          "/?after-auto=1"
+        )
+        expect(pushStateSpy).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("does not re-stick replaceState for auto-rerun after a widget supersedes history", async () => {
+      vi.useFakeTimers()
+      try {
+        renderApp(getProps())
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        window.history.pushState({}, "", "/?flying=spaghetti")
+        act(() => {
+          window.dispatchEvent(new PopStateEvent("popstate"))
+        })
+
+        const connectionManager = getMockConnectionManager()
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+        const widgetStateManager =
+          getStoredValue<WidgetStateManager>(WidgetStateManager)
+        widgetStateManager.sendUpdateWidgetsMessage(undefined)
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "frag",
+        })
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        pushStateSpy.mockClear()
+        replaceStateSpy.mockClear()
+
+        sendForwardMessage("pageInfoChanged", {
+          queryString: "from-widget-auto=1",
+        })
+
+        expect(pushStateSpy).toHaveBeenLastCalledWith(
+          {},
+          "",
+          "/?from-widget-auto=1"
+        )
+        expect(replaceStateSpy).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("does not re-stick replaceState for auto-rerun after history NewSession", async () => {
+      vi.useFakeTimers()
+      try {
+        renderApp(getProps())
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        window.history.pushState({}, "", "/?flying=spaghetti")
+        act(() => {
+          window.dispatchEvent(new PopStateEvent("popstate"))
+        })
+
+        const connectionManager = getMockConnectionManager()
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        // History run has started — a later auto-rerun is a separate interrupt,
+        // not a pending coalesce.
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "frag",
+        })
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        await waitFor(() => {
+          expect(connectionManager.sendMessage).toHaveBeenCalled()
+        })
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "spa_hash",
+        })
+
+        pushStateSpy.mockClear()
+        replaceStateSpy.mockClear()
+
+        sendForwardMessage("pageInfoChanged", {
+          queryString: "from-separate-auto=1",
+        })
+
+        expect(pushStateSpy).toHaveBeenLastCalledWith(
+          {},
+          "",
+          "/?from-separate-auto=1"
+        )
+        expect(replaceStateSpy).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 
@@ -3403,6 +3979,55 @@ describe("App", () => {
           screen.queryByText("Here is some other text")
         ).not.toBeInTheDocument()
       })
+    })
+
+    it("logs a throwing script-finished handler and still runs later handlers", async () => {
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+      try {
+        let appInstance: App | null = null
+
+        render(
+          <RootStyleProvider theme={getDefaultTheme()}>
+            <WindowDimensionsProvider>
+              <App
+                {...getProps()}
+                ref={instance => {
+                  appInstance = instance
+                }}
+              />
+            </WindowDimensionsProvider>
+          </RootStyleProvider>
+        )
+
+        expect(appInstance).not.toBeNull()
+
+        const handlerError = new Error("handler boom")
+        const throwingHandler = vi.fn(() => {
+          throw handlerError
+        })
+        const laterHandler = vi.fn()
+
+        act(() => {
+          appInstance?.addScriptFinishedHandler(throwingHandler)
+          appInstance?.addScriptFinishedHandler(laterHandler)
+        })
+
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
+
+        await waitFor(() => {
+          expect(laterHandler).toHaveBeenCalledTimes(1)
+        })
+        expect(throwingHandler).toHaveBeenCalledTimes(1)
+        expect(logErrorSpy).toHaveBeenCalledWith(
+          "Script finished handler failed",
+          handlerError
+        )
+      } finally {
+        logErrorSpy.mockRestore()
+      }
     })
   })
 
@@ -5435,6 +6060,42 @@ describe("App", () => {
         type: "CUSTOM_PARENT_MESSAGE",
         message: "random string",
       })
+    })
+
+    it("uses host UPDATE_FROM_QUERY_PARAMS for rerun without echoing SET_QUERY_PARAM", async () => {
+      const hostCommunicationMgr = prepareHostCommunicationManager()
+      const connectionManager = getMockConnectionManager(true)
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+      })
+      sendForwardMessage("pageInfoChanged", {
+        queryString: "stale=oldvalue",
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+      // @ts-expect-error
+      hostCommunicationMgr.sendMessageToHost.mockClear()
+
+      fireWindowPostMessage({
+        type: "UPDATE_FROM_QUERY_PARAMS",
+        queryParams: "?fresh=newvalue",
+      })
+
+      await waitFor(() => {
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      })
+
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
+      ).toBe("fresh=newvalue")
+
+      const setQueryParamCalls = (
+        hostCommunicationMgr.sendMessageToHost as Mock
+      ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
+      expect(setQueryParamCalls).toHaveLength(0)
     })
 
     it("properly handles TERMINATE_WEBSOCKET_CONNECTION & RESTART_WEBSOCKET_CONNECTION messages", () => {

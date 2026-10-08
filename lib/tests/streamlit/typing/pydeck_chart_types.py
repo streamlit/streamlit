@@ -147,6 +147,7 @@ if TYPE_CHECKING:
             selection_mode="single-object",
             on_select="ignore",
             key="full_chart",
+            alt="Full chart description",
         ),
         DeltaGenerator,
     )
@@ -164,6 +165,7 @@ if TYPE_CHECKING:
             selection_mode="multi-object",
             on_select="rerun",
             key="selectable_chart",
+            alt="Selectable map description",
         ),
         PydeckState,
     )
@@ -181,9 +183,16 @@ if TYPE_CHECKING:
             selection_mode="single-object",
             on_select=my_callback,
             key="callback_chart",
+            alt="Callback map description",
         ),
         PydeckState,
     )
+
+    assert_type(
+        pydeck_chart(deck, on_select="ignore", alt="Named map"),
+        DeltaGenerator,
+    )
+    assert_type(pydeck_chart(deck, alt=None), DeltaGenerator)
 
     # =====================================================================
     # Invalid usages - should NOT type check
@@ -198,3 +207,4 @@ if TYPE_CHECKING:
 
     # Invalid on_select value
     pydeck_chart(deck, on_select="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+    pydeck_chart(deck, alt=123)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]

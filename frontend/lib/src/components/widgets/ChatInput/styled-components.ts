@@ -15,6 +15,11 @@
  */
 import styled from "@emotion/styled"
 
+import {
+  getSecondaryIconButtonColorStyles,
+  SECONDARY_ICON_DISABLED_SELECTOR,
+} from "~lib/components/shared/Base/styled-components"
+
 export const StyledChatInputContainer = styled.div<{
   isStretchHeight?: boolean
 }>(({ isStretchHeight }) => ({
@@ -181,11 +186,15 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       }
     }
 
-    const getSendIconColor = (): string => {
-      if (hasError) return theme.colors.redTextColor
-      if (disabled) return theme.colors.fadedText40
-      return theme.colors.fadedText60
-    }
+    const secondaryColorStyles = getSecondaryIconButtonColorStyles(
+      theme,
+      hasError
+        ? {
+            restColor: theme.colors.redTextColor,
+            hoverColor: theme.colors.redColor,
+          }
+        : undefined
+    )
 
     return {
       border: "none",
@@ -197,8 +206,8 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       lineHeight: theme.lineHeights.none,
       margin: theme.spacing.none,
       padding: theme.spacing.none,
-      color: getSendIconColor(),
       pointerEvents: "auto",
+      ...secondaryColorStyles,
       "&:focus": {
         outline: "none",
       },
@@ -208,17 +217,19 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       "&:focus-visible": {
         boxShadow: theme.shadows.focusRing,
       },
-      "&:hover": {
-        color: hasError ? theme.colors.redColor : theme.colors.bodyText,
-      },
-      "&:active": {
+      // Match helper hover specificity (`:not([data-disabled])`) and stay below
+      // that rule so source order keeps primary press color on top while hovered.
+      "&:active:not(:disabled):not([data-disabled])": {
         color: theme.colors.primary,
       },
-      "&:disabled, &:disabled:hover, &:disabled:active": {
-        backgroundColor: theme.colors.transparent,
-        borderColor: theme.colors.transparent,
+      // Same key as the helper spread: replaces that disabled rule in place
+      // (object keys do not deep-merge) so fadedText40/not-allowed stay and we
+      // add transparent background/border resets.
+      [SECONDARY_ICON_DISABLED_SELECTOR]: {
         color: theme.colors.fadedText40,
         cursor: "not-allowed",
+        backgroundColor: theme.colors.transparent,
+        borderColor: theme.colors.transparent,
       },
       "& svg": {
         width: theme.iconSizes.lg,

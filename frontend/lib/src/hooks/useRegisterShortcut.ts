@@ -20,7 +20,7 @@
 
 import { useEffect, useMemo } from "react"
 
-import hotkeys, { HotkeysEvent } from "hotkeys-js"
+import hotkeys, { type HotkeysEvent } from "hotkeys-js"
 
 import { isFromMac } from "~lib/util/utils"
 

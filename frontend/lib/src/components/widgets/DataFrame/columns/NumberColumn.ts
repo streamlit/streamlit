@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
+import {
+  type GridCell,
+  GridCellKind,
+  type NumberCell,
+} from "@glideapps/glide-data-grid"
 import { TimeUnit } from "apache-arrow"
 
 import {
@@ -33,8 +37,8 @@ import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   countDecimals,
   getErrorCell,
   mergeColumnParameters,

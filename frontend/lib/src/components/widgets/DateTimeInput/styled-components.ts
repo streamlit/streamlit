@@ -22,6 +22,7 @@ import { DateInput, DateSegment, TimeField } from "react-aria-components"
 // divider + muted-label styling). Changes to DateInput's quick-select will
 // propagate here intentionally.
 export {
+  StyledCalendarButton,
   StyledCalendarCell,
   StyledCalendarGrid,
   StyledCalendarHeaderCell,
@@ -30,6 +31,7 @@ export {
   StyledClearButton,
   StyledDateField,
   StyledDateFieldContainer,
+  StyledDateFieldsScroller,
   StyledDateInputWrapper,
   StyledErrorIconContainer,
   StyledQuickSelectLabel as StyledPopoverTimeLabel,

@@ -329,3 +329,38 @@ def _live_dialog() -> None:
 
 if st.button("Open live dialog"):
     _live_dialog()
+
+st.markdown("Required text inputs:")
+
+if "required_rerun_counter" not in st.session_state:
+    st.session_state.required_rerun_counter = 0
+
+st.session_state.required_rerun_counter += 1
+
+with st.form("required_text_input_form", clear_on_submit=True):
+    st.text_input("Required name", key="required_name", required=True)
+    st.text_input(
+        "Required form email",
+        key="required_email",
+        type="email",
+        required=True,
+    )
+    required_form_submitted = st.form_submit_button("Submit required text input form")
+
+st.write("required form submitted:", required_form_submitted)
+st.write("required name:", st.session_state.get("required_name", ""))
+st.write("required form email:", st.session_state.get("required_email", ""))
+
+required_sql = st.text_input("SQL", key="required_sql", required=True)
+st.write("required sql:", required_sql)
+
+required_email = st.text_input(
+    "Required email", key="required_email_standalone", type="email", required=True
+)
+st.write("required email:", required_email)
+
+required_search = st.text_input(
+    "Required search", key="required_search", type="search", required=True
+)
+st.write("required search:", required_search)
+st.write("Required rerun counter:", st.session_state.required_rerun_counter)

@@ -28,7 +28,7 @@ import {
   lightTheme,
   LocalStore,
   setCachedThemeSelection,
-  ThemeConfig,
+  type ThemeConfig,
 } from "@streamlit/lib"
 
 import { useThemeManager } from "./useThemeManager"

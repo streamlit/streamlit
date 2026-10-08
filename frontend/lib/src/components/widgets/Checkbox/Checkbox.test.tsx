@@ -24,13 +24,13 @@ import {
 
 import {
   FlexContext,
-  IFlexContext,
+  type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Checkbox, { Props } from "./Checkbox"
+import Checkbox, { type Props } from "./Checkbox"
 
 const getProps = (
   elementProps: Partial<CheckboxProto> = {},
@@ -481,6 +481,7 @@ describe("Checkbox query param binding", () => {
 })
 
 describe("Checkbox wrap", () => {
+  mockEllipsizedLabels()
   const LONG_LABEL = "A very long checkbox label that should ellipsize"
 
   // Both checkbox and toggle share the same truncation/title wiring, so the
@@ -615,4 +616,106 @@ describe("Checkbox wrap", () => {
       ).toBeNull()
     }
   )
+})
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setBoolValueSpy = vi.spyOn(props.widgetMgr, "setBoolValue")
+
+    render(<Checkbox {...props} />)
+    setBoolValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("checkbox"))
+
+    expect(setBoolValueSpy).toHaveBeenLastCalledWith(props.element.id, true, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: false }, { widgetMgr })
+    const setBoolValueSpy = vi.spyOn(props.widgetMgr, "setBoolValue")
+
+    render(<Checkbox {...props} />)
+    setBoolValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("checkbox"))
+
+    expect(setBoolValueSpy).toHaveBeenLastCalledWith(props.element.id, true, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+      },
+      { widgetMgr }
+    )
+    const setBoolValueSpy = vi.spyOn(props.widgetMgr, "setBoolValue")
+
+    render(<Checkbox {...props} />)
+    setBoolValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("checkbox"))
+
+    expect(setBoolValueSpy).toHaveBeenLastCalledWith(props.element.id, true, {
+      formId: "testForm",
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
 })

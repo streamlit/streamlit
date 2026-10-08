@@ -15,12 +15,12 @@
  */
 
 import {
-  ClipboardEvent,
-  FocusEvent,
-  KeyboardEvent,
+  type ClipboardEvent,
+  type FocusEvent,
+  type KeyboardEvent,
   memo,
-  MouseEvent,
-  ReactElement,
+  type MouseEvent,
+  type ReactElement,
   useCallback,
   useEffect,
   useId,
@@ -29,10 +29,10 @@ import {
   useState,
 } from "react"
 
-import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { CalendarToday, ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
-import { CalendarDate } from "@internationalized/date"
+import type { CalendarDate } from "@internationalized/date"
 import {
   CalendarGridBody,
   CalendarGridHeader,
@@ -58,14 +58,21 @@ import {
   DATE_INPUT_HEADER_PICKER_POPOVER_CLASS,
 } from "./CalendarPopoverHeader"
 import {
+  applyPartialSegmentToDate,
   datesEqual,
   getSafeLocale,
   isValidSegmentValue,
-  parsePartialSegmentPaste,
-  parsePastedDate,
+  parseDateFieldPaste,
+  SEGMENT_SELECTOR,
 } from "./dateInputUtils"
+import {
+  handlePassivePreviewFieldTab,
+  isConcreteOutsideLeave,
+  usePopoverInteractionFlag,
+} from "./focusLeave"
 import { ReorderedSegments } from "./ReorderedSegments"
 import {
+  StyledCalendarButton,
   StyledCalendarCell,
   StyledCalendarGrid,
   StyledCalendarHeaderCell,
@@ -74,11 +81,16 @@ import {
   StyledClearButton,
   StyledDateField,
   StyledDateFieldContainer,
+  StyledDateFieldsScroller,
   StyledDateInputWrapper,
   StyledErrorIconContainer,
   StyledTrailingIcons,
   StyledVisuallyHidden,
 } from "./styled-components"
+
+const POPOVER_EXCLUDE_SELECTORS = [
+  `.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`,
+] as const
 
 interface SingleDateInputProps {
   value: CalendarDate | null
@@ -141,6 +153,7 @@ function SingleDateInput({
   const popoverDescId = `${id}-calendar-desc`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
+  const calendarButtonRef = useRef<HTMLButtonElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
   // Guards against `handleFocus` reopening the popover it's in the middle
   // of closing — see `restoreFocusToField` below.
@@ -177,6 +190,10 @@ function SingleDateInput({
     setDisplayValue(value)
   }
 
+  // Capture whether the remount must restore focus. By effect time, the
+  // previously focused segment has already been removed.
+  const shouldRestoreFocusRef = useRef(false)
+
   // Form clear: displayValue may have diverged (uncommitted typing) while
   // the widget state stayed at default. The value prop won't change in that
   // case, so watch the resetKey separately.
@@ -184,6 +201,14 @@ function SingleDateInput({
   if (prevResetKey !== formResetKey) {
     setPrevResetKey(formResetKey)
     setDisplayValue(value)
+    activeOriginRef.current = null
+    // Reading the DOM during render is safe here because this write sits inside
+    // the same condition that advances `prevResetKey`: a discarded render
+    // retries against live focus rather than keeping a stale `true`. Strict
+    // Mode's double render sees the same focus.
+    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
+      document.activeElement
+    )
   }
 
   // Ref so the close-detection effect always reads the latest displayValue
@@ -198,6 +223,11 @@ function SingleDateInput({
   onChangeRef.current = onChange
 
   const [isOpen, setIsOpen] = useState(false)
+  const popoverInteractionRef = usePopoverInteractionFlag(
+    isOpen,
+    popoverRef,
+    POPOVER_EXCLUDE_SELECTORS
+  )
 
   const wasOpenRef = useRef(isOpen)
   // `value` is in deps so the effect re-evaluates when the committed value
@@ -242,6 +272,17 @@ function SingleDateInput({
     wasOpenRef.current = isOpen
   }, [isOpen, value, clearable])
 
+  // Restore focus to the first editable segment after the form-reset remount.
+  // Suppress handleFocus while focusin dispatches synchronously so the calendar
+  // does not reopen; clearing the guard after a frame could stall in hidden tabs.
+  useEffect(() => {
+    if (!shouldRestoreFocusRef.current) return
+    shouldRestoreFocusRef.current = false
+    isRestoringFocusRef.current = true
+    triggerRef.current?.querySelector<HTMLElement>(SEGMENT_SELECTOR)?.focus()
+    isRestoringFocusRef.current = false
+  }, [formResetKey])
+
   // When entering active mode, move focus to the focused calendar cell.
   useEffect(() => {
     if (!isCalendarActive || !isOpen) return
@@ -275,24 +316,28 @@ function SingleDateInput({
     }
   }, [isOpen, theme.spacing.twoXS, isInSidebar])
 
-  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
+  const { floatingStyles, setFloating, setReference } =
+    useFloatingOverlay(overlayOptions)
 
-  // Restores focus to the date field after the calendar closes.
-  // In active mode: returns to the segment that was focused before
-  // Alt+ArrowDown. In passive mode: returns to the last segment.
+  // Returns focus to the control that opened the calendar after it closes:
+  // - Calendar button already focused (e.g. Escape after focusing it): leave it.
+  // - Active mode: the element recorded in `activeOriginRef`.
+  // - Passive mode: the last date segment.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
-    if (isCalendarActiveRef.current && activeOriginRef.current) {
-      activeOriginRef.current.focus()
-    } else {
-      const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
-        '[role="spinbutton"]'
-      )
-      const lastSegment = segments?.[segments.length - 1]
-      if (lastSegment) {
-        lastSegment.focus()
+    if (!calendarButtonRef.current?.contains(document.activeElement)) {
+      if (isCalendarActiveRef.current && activeOriginRef.current) {
+        activeOriginRef.current.focus()
       } else {
-        triggerRef.current?.focus()
+        const segments = triggerRef.current?.querySelectorAll<HTMLElement>(
+          '[role="spinbutton"]'
+        )
+        const lastSegment = segments ? Array.from(segments).at(-1) : undefined
+        if (lastSegment) {
+          lastSegment.focus()
+        } else {
+          triggerRef.current?.focus()
+        }
       }
     }
     requestAnimationFrame(() => {
@@ -334,12 +379,12 @@ function SingleDateInput({
           }
         }
       },
-      floatingSetFn: refs.setFloating,
-      referenceSetFn: refs.setReference,
+      floatingSetFn: setFloating,
+      referenceSetFn: setReference,
       restoreFocusFn: restoreFocusToField,
       // Exclude the month/year picker so clicks and Escape inside it do not
       // dismiss the calendar.
-      excludeSelectors: [`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`],
+      excludeSelectors: [...POPOVER_EXCLUDE_SELECTORS],
       excludeEscape: true,
     })
 
@@ -385,24 +430,30 @@ function SingleDateInput({
     [onChange, restoreFocusToField]
   )
 
-  // Wired to onFocus and onClickCapture: clicking an already-focused segment
-  // doesn't re-fire onFocus. Capture phase needed because RAC stops propagation.
-  const handleFocus = useCallback((): void => {
-    if (isRestoringFocusRef.current) return
-    if (!disabled) setIsOpen(true)
-  }, [disabled])
+  // Opens the passive preview when focus enters a date segment. Focus on the
+  // clear or calendar button is ignored so those controls do not reopen it.
+  const handleFocus = useCallback(
+    (e: FocusEvent<HTMLDivElement>): void => {
+      if (isRestoringFocusRef.current) return
+      if (clearButtonRef.current?.contains(e.target)) return
+      if (calendarButtonRef.current?.contains(e.target)) return
+      if (!disabled) setIsOpen(true)
+    },
+    [disabled]
+  )
 
-  // Capture-phase fires before the clear button's own handler; without this
-  // gate, clearing a value would immediately reopen the popover.
+  // Ignore clear and calendar clicks so they do not reopen a passive popover.
+  // This capture handler runs before those buttons' own click handlers.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
       if (clearButtonRef.current?.contains(e.target as Node)) return
+      if (calendarButtonRef.current?.contains(e.target as Node)) return
       // Pointer-only: active mode enters via rAF, so handleFocus can't reset
       // it without breaking Tab cycling inside the calendar.
       setIsCalendarActive(false)
-      handleFocus()
+      if (!isRestoringFocusRef.current && !disabled) setIsOpen(true)
     },
-    [handleFocus]
+    [disabled]
   )
 
   const handleClear = useCallback((): void => {
@@ -410,42 +461,72 @@ function SingleDateInput({
     onChange(null)
   }, [onChange])
 
+  // Toggle the active calendar dialog (React Aria DatePicker pattern: popup
+  // state lives on this button, not the roleless field wrapper).
+  const handleCalendarButtonClick = useCallback(
+    (e: MouseEvent<HTMLButtonElement>): void => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (disabled) return
+      if (isOpen && isCalendarActive) {
+        setIsOpen(false)
+        setIsCalendarActive(false)
+        restoreFocusToField()
+        return
+      }
+      const focusedInField =
+        document.activeElement instanceof HTMLElement &&
+        triggerRef.current?.contains(document.activeElement)
+          ? document.activeElement
+          : undefined
+      // Focus returns here when the dialog closes: the focused field control, or
+      // the calendar button itself (a pointer click doesn't focus it, since
+      // mousedown is prevented).
+      activeOriginRef.current =
+        focusedInField ?? calendarButtonRef.current ?? null
+      if (!isOpen) setIsOpen(true)
+      setIsCalendarActive(true)
+    },
+    [disabled, isOpen, isCalendarActive, restoreFocusToField]
+  )
+
   // Custom paste: DateField's built-in paste uses the locale-derived segment
   // order (en-US), which is out of sync with our reordered segments.
   const handlePaste = useCallback(
     (e: ClipboardEvent<HTMLDivElement>): void => {
       if (disabled) return
       const text = e.clipboardData.getData("text").trim()
+      const target = e.target as HTMLElement
+      const segmentType =
+        target.getAttribute("role") === "spinbutton"
+          ? target.getAttribute("data-type")
+          : null
 
-      const fullDate = parsePastedDate(text, format)
-      if (fullDate) {
-        e.preventDefault()
-        setDisplayValue(fullDate)
-        onChange(fullDate)
+      const parsed = parseDateFieldPaste(text, format, { segmentType })
+      if (!parsed) return
+      e.preventDefault()
+
+      if (parsed.kind === "date") {
+        setDisplayValue(parsed.date)
+        onChange(parsed.date)
         return
       }
 
-      const target = e.target as HTMLElement
-      if (target.getAttribute("role") !== "spinbutton") return
-      const partial = parsePartialSegmentPaste(
-        text,
-        target.getAttribute("data-type")
-      )
-      if (!partial) return
-      e.preventDefault()
-      if (!isValidSegmentValue(partial.segmentType, partial.value)) return
+      if (parsed.kind !== "partial") return // TS narrow; allowRangePaste is unset in single mode
+
+      if (!isValidSegmentValue(parsed.segmentType, parsed.value)) return
 
       const base = displayValue ?? minDate
-      const newDate = base.set({ [partial.segmentType]: partial.value })
-      if (newDate[partial.segmentType] !== partial.value) return
+      const newDate = applyPartialSegmentToDate(base, parsed)
+      if (!newDate) return
       setDisplayValue(newDate)
       onChange(newDate)
     },
     [disabled, format, onChange, displayValue, minDate]
   )
 
-  // Alt+ArrowDown enters active calendar mode; Tab from edge segments
-  // closes the passive popover and lets focus leave the widget naturally.
+  // Passive preview stays open on Tab to the calendar button; closes on leave.
+  // Alt+ArrowDown opens the active calendar.
   const handleFieldKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): void => {
       if (e.altKey && e.key === "ArrowDown") {
@@ -457,17 +538,22 @@ function SingleDateInput({
       }
 
       if (e.key !== "Tab" || !isOpen) return
-      const wrapper = triggerRef.current
-      if (!wrapper) return
-      const segments = wrapper.querySelectorAll<HTMLElement>(
-        '[role="spinbutton"]'
-      )
-      const isLeavingField =
-        (!e.shiftKey && e.target === segments[segments.length - 1]) ||
-        (e.shiftKey && e.target === segments[0])
-      if (isLeavingField) {
+
+      const closePreview = (): void => {
         setIsOpen(false)
+        setIsCalendarActive(false)
       }
+      handlePassivePreviewFieldTab(
+        e,
+        {
+          field: triggerRef.current,
+          calendarButton: calendarButtonRef.current,
+          popover: popoverRef.current,
+          excludeSelectors: POPOVER_EXCLUDE_SELECTORS,
+          segmentSelector: SEGMENT_SELECTOR,
+        },
+        { immediate: closePreview, afterFocusSettles: closePreview }
+      )
     },
     [isOpen]
   )
@@ -520,8 +606,30 @@ function SingleDateInput({
   // concurrent Submit click reads the correct value.
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
+      // Safari fires field blur on popover mousedown before click — not a leave.
+      if (popoverInteractionRef.current) {
+        popoverInteractionRef.current = false
+        return
+      }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
+      // skipCloseCommitRef only when this blur commits (incomplete closes revert).
+      let closedByBlur = false
+      if (isOpen) {
+        if (
+          isConcreteOutsideLeave(e.relatedTarget, {
+            popover: popoverRef.current,
+            excludeSelectors: POPOVER_EXCLUDE_SELECTORS,
+          })
+        ) {
+          closedByBlur = true
+          setIsOpen(false)
+          setIsCalendarActive(false)
+        } else {
+          // null / inside popover: next-frame Tab or outside click closes.
+          return
+        }
+      }
       const segments = triggerRef.current?.querySelectorAll(
         '[role="spinbutton"]'
       )
@@ -537,10 +645,13 @@ function SingleDateInput({
       }
       const pending = displayValueRef.current
       if (datesEqual(pending, value)) return
+      if (closedByBlur) {
+        skipCloseCommitRef.current = true
+      }
       onChangeRef.current(pending)
       formCommit?.(pending)
     },
-    [formCommit, value, clearable]
+    [formCommit, value, clearable, isOpen, popoverInteractionRef]
   )
 
   return (
@@ -548,9 +659,6 @@ function SingleDateInput({
       <StyledDateInputWrapper
         ref={setTriggerRef}
         aria-keyshortcuts="Alt+ArrowDown"
-        aria-haspopup="dialog"
-        aria-expanded={isCalendarActive}
-        aria-controls={isCalendarActive ? popoverId : undefined}
         data-testid="stDateInputField"
         data-disabled={disabled || undefined}
         data-has-error={error ? "" : undefined}
@@ -560,23 +668,28 @@ function SingleDateInput({
         onPaste={handlePaste}
         onKeyDown={handleFieldKeyDown}
       >
-        <I18nProvider locale="en-US">
-          <StyledDateField>
-            <DateField
-              aria-label={label}
-              aria-describedby={error ? errorId : undefined}
-              isInvalid={!!error}
-              value={displayValue}
-              onChange={handleFieldChange}
-              minValue={minDate}
-              maxValue={maxDate}
-              shouldForceLeadingZeros
-              isDisabled={disabled}
-            >
-              <ReorderedSegments format={format} />
-            </DateField>
-          </StyledDateField>
-        </I18nProvider>
+        <StyledDateFieldsScroller data-testid="stDateInputFieldsScroller">
+          <I18nProvider locale="en-US">
+            <StyledDateField>
+              <DateField
+                // Remount on form clear because React Aria retains incomplete
+                // segment text when the controlled value has not changed.
+                key={formResetKey}
+                aria-label={label}
+                aria-describedby={error ? errorId : undefined}
+                isInvalid={!!error}
+                value={displayValue}
+                onChange={handleFieldChange}
+                minValue={minDate}
+                maxValue={maxDate}
+                shouldForceLeadingZeros
+                isDisabled={disabled}
+              >
+                <ReorderedSegments format={format} />
+              </DateField>
+            </StyledDateField>
+          </I18nProvider>
+        </StyledDateFieldsScroller>
         <StyledTrailingIcons>
           {error && (
             <StyledErrorIconContainer data-testid="stDateInputError">
@@ -604,10 +717,24 @@ function SingleDateInput({
               <Icon content={Cancel} size="base" />
             </StyledClearButton>
           )}
+          <StyledCalendarButton
+            ref={calendarButtonRef}
+            type="button"
+            onClick={handleCalendarButtonClick}
+            aria-label="Choose date"
+            aria-haspopup="dialog"
+            aria-expanded={isCalendarActive}
+            aria-controls={isCalendarActive ? popoverId : undefined}
+            data-testid="stDateInputCalendarButton"
+            disabled={disabled}
+            onMouseDown={e => e.preventDefault()}
+          >
+            <Icon content={CalendarToday} size="base" />
+          </StyledCalendarButton>
         </StyledTrailingIcons>
         {error && (
           <StyledVisuallyHidden id={errorId} role="alert">
-            {error.replace(/\*\*/g, "")}
+            {error.replaceAll("**", "")}
           </StyledVisuallyHidden>
         )}
       </StyledDateInputWrapper>

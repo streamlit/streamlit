@@ -23,8 +23,8 @@ import {
   toSafeNumber,
 } from "~lib/components/widgets/DataFrame/columns/utils"
 import { convertTimestampToSeconds } from "~lib/dataframes/arrowFormatUtils"
-import { ArrowType, isDurationType } from "~lib/dataframes/arrowTypeUtils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import { type ArrowType, isDurationType } from "~lib/dataframes/arrowTypeUtils"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 const LOG = getLogger("DataFrameStatistics")
@@ -320,7 +320,7 @@ export function computeNumericStatistics(
   }
 
   // Sort for median and percentiles
-  const sorted = [...values].sort((a, b) => a - b)
+  const sorted = values.toSorted((a, b) => a - b)
 
   const sum = values.reduce((acc, v) => acc + v, 0)
   const mean = sum / count
@@ -441,7 +441,9 @@ export function computeTextStatistics(
   const unique = valueCounts.size
 
   // Sort by count to get top values
-  const sortedEntries = [...valueCounts.entries()].sort((a, b) => b[1] - a[1])
+  const sortedEntries = [...valueCounts.entries()].toSorted(
+    (a, b) => b[1] - a[1]
+  )
 
   const topValues: TopValue[] = sortedEntries
     .slice(0, TOP_VALUES_COUNT)
@@ -507,7 +509,7 @@ export function computeDateTimeStatistics(
     // toSafeDate handles Date objects, bigints, numbers, and strings. It returns
     // null/undefined for empty or unparseable values.
     const date = isNullOrUndefined(v) ? null : toSafeDate(v)
-    const timestamp = notNullOrUndefined(date) ? date.getTime() : NaN
+    const timestamp = notNullOrUndefined(date) ? date.getTime() : Number.NaN
     if (Number.isFinite(timestamp)) {
       timestamps.push(timestamp)
     } else {
@@ -538,7 +540,7 @@ export function computeDateTimeStatistics(
     }
   }
 
-  const sorted = [...timestamps].sort((a, b) => a - b)
+  const sorted = timestamps.toSorted((a, b) => a - b)
   // Compute the mean incrementally to avoid summing into values above
   // Number.MAX_SAFE_INTEGER. Millisecond timestamps (~1.7e12) summed over the
   // sample cap (10k) reach ~1.7e16, which would lose integer precision.

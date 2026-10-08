@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { Draft, produce } from "immer"
+import { type Draft, produce } from "immer"
 import { getLogger } from "loglevel"
 import { type Long, util } from "protobufjs/minimal"
 import queryString from "query-string"
-import { Signal, SignalConnection } from "typed-signals"
+import { Signal, type SignalConnection } from "typed-signals"
 
 import {
   type ArrowTable,
@@ -28,7 +28,7 @@ import {
   SInt64Array,
   StringArray,
   StringTriggerValue,
-  Button as SubmitButtonProto,
+  type Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
 } from "@streamlit/protobuf"
@@ -37,6 +37,7 @@ import { assertNever } from "~lib/util/assertNever"
 import {
   isNullOrUndefined,
   isValidFormId,
+  normalizeQueryString,
   notNullOrUndefined,
 } from "~lib/util/utils"
 
@@ -1464,8 +1465,8 @@ export class WidgetStateManager {
     })
 
     if (value === null) {
-      // Remove the param
-      delete currentParams[paramKey]
+      // Drop this param from the query string; stringify uses skipNull: true.
+      currentParams[paramKey] = null
     } else if (Array.isArray(value)) {
       if (value.length === 0) {
         // Empty array: write as empty string to produce ?key= in URL
@@ -1495,7 +1496,7 @@ export class WidgetStateManager {
       .replaceAll("%20", "+")
 
     // Skip replaceState if the URL wouldn't actually change
-    const currentSearch = window.location.search.replace(/^\?/, "")
+    const currentSearch = normalizeQueryString(window.location.search)
     if (newSearch === currentSearch) {
       return
     }

@@ -15,7 +15,7 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
   type ReactElement,
   useCallback,
@@ -39,7 +39,7 @@ import {
 } from "react-aria-components"
 
 import {
-  MultiSelect as MultiSelectProto,
+  type MultiSelect as MultiSelectProto,
   streamlit,
 } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -50,7 +50,7 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
@@ -73,7 +73,7 @@ import {
   getSelectPlaceholder,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledClearButton,
@@ -130,6 +130,10 @@ const updateWidgetMgrState = (
     formId: element.formId,
     fragmentId,
     fromUser: valueWithSource.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
   })
 }
 
@@ -249,7 +253,7 @@ const Multiselect: FC<Props> = props => {
     ? { boundary: document.documentElement }
     : undefined
 
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open: true,
     placement: "bottom-start",
     offsetPx: convertRemToPx(theme.spacing.twoXS),
@@ -598,7 +602,7 @@ const Multiselect: FC<Props> = props => {
         }
       } else if (e.key === "End") {
         e.preventDefault()
-        const last = tags[tags.length - 1]
+        const last = tags.at(-1)
         if (last && last !== tag) {
           tag.tabIndex = -1
           last.tabIndex = 0
@@ -816,7 +820,7 @@ const Multiselect: FC<Props> = props => {
             focusedKeyRef={focusedKeyRef}
           />
           <StyledTrigger
-            ref={refs.setReference}
+            ref={setReference}
             $maxHeight={maxHeight}
             onClick={handleContainerClick}
           >
@@ -898,7 +902,7 @@ const Multiselect: FC<Props> = props => {
             </StyledOpenButton>
           </StyledTrigger>
           <StyledPopover
-            ref={refs.setFloating}
+            ref={setFloating}
             data-testid="stMultiSelectDropdown"
             placement="bottom left"
             isNonModal

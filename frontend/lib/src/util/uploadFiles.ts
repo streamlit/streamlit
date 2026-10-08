@@ -22,9 +22,9 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { ensureError } from "~lib/util/ErrorHandling"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 type SuccessfulUpload = {
   fileUrl: FileURLs.$Properties

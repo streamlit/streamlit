@@ -16,10 +16,10 @@
 
 import { useEffect } from "react"
 
-import { SignalConnection } from "typed-signals"
+import type { SignalConnection } from "typed-signals"
 
 import { isValidFormId, notNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export class FormClearHelper {
   private formClearListener?: SignalConnection

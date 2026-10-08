@@ -65,6 +65,8 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
   - `lib/streamlit/AGENTS.md` — for any Python library changes (inside `lib/streamlit/`)
   - `lib/streamlit/.agents/skills/AGENTS.md` — for bundled agent skills (inside `lib/streamlit/.agents/skills/`)
   - `proto/streamlit/proto/AGENTS.md` — for protobuf changes (inside `proto/streamlit/proto/`)
+  - `.claude/skills/AGENTS.md` — for skill instructions (`.claude/skills/`, `.cursor/rules/`, `.github/instructions/`)
+  - `.claude/agents/AGENTS.md` — for agent instructions (`.claude/agents/`)
 - Product alignment is explicitly assessed for user-facing changes. Treat a change as user-facing
   when it adds or modifies a public API, configuration option, CLI surface, rendered UI or
   interaction, default, error message, or other externally observable behavior.
@@ -241,3 +243,4 @@ Verdict criteria:
   questions and optional refinements are non-blocking; request changes when a mismatch would
   create material user harm or lasting, unjustified complexity in the public surface.
 - Findings that are covered by inline comments should NOT be repeated in the PR-level review body. The PR-level review covers high-level and cross-cutting concerns only. Inline comments handle line-specific findings.
+- Agent and skill instructions (`.claude/agents/`, `.claude/skills/`, and the generated copies under `.cursor/rules/` and `.github/instructions/`) stay high-level on purpose. Do not ask for shell scripts, command sequences, or step-by-step procedures in those files. Comment only when the goal or a real constraint is missing or wrong.

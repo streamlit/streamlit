@@ -68,10 +68,28 @@ if TYPE_CHECKING:
     assert_type(image("image.png", use_container_width=False), DeltaGenerator)
     assert_type(image("image.png", use_container_width=None), DeltaGenerator)
 
+    # Compatibility keyword still accepted (ignored at runtime)
+    assert_type(image("image.png", use_column_width=True), DeltaGenerator)
+    assert_type(image("image.png", use_column_width=False), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="always"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="auto"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="never"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="foo"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width=None), DeltaGenerator)
+
     # Image with link parameter
     assert_type(image("image.png", link="https://streamlit.io"), DeltaGenerator)
     assert_type(image("image.png", link="/my_page"), DeltaGenerator)
     assert_type(image("image.png", link=None), DeltaGenerator)
+
+    # Image with alt parameter
+    assert_type(image("image.png", alt="Sunrise over a ridge"), DeltaGenerator)
+    assert_type(image("image.png", alt=""), DeltaGenerator)
+    assert_type(image("image.png", alt=None), DeltaGenerator)
+    assert_type(
+        image(["img1.png", "img2.png"], alt=["One", None]),
+        DeltaGenerator,
+    )
 
     # Image with all parameters combined
     assert_type(
@@ -84,6 +102,7 @@ if TYPE_CHECKING:
             output_format="auto",
             use_container_width=None,
             link="https://streamlit.io",
+            alt="Full example photo",
         ),
         DeltaGenerator,
     )
@@ -116,5 +135,5 @@ if TYPE_CHECKING:
         "https://example.com",
     )  # type: ignore[call-arg]
 
-    # Removed deprecated parameter
-    image("image.png", use_column_width=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+    # Unknown keyword still rejected
+    image("image.png", not_a_real_param=True)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]

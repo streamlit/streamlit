@@ -27,7 +27,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
     get_script_run_ctx,
 )
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.state import WidgetCallback
 
 DialogWidth: TypeAlias = Literal["small", "large", "medium"]
+DialogPosition: TypeAlias = Literal["left", "center", "right"]
 
 
 def _process_dialog_width_input(
@@ -52,6 +53,24 @@ def _process_dialog_width_input(
         return BlockProto.Dialog.DialogWidth.MEDIUM
 
     return BlockProto.Dialog.DialogWidth.SMALL
+
+
+def _process_dialog_position_input(
+    position: DialogPosition,
+) -> BlockProto.Dialog.DialogPosition.ValueType:
+    """Map a user-facing position literal to the DialogPosition proto enum.
+
+    Invalid values raise StreamlitValueError. Unlike width, which falls back
+    to SMALL, an unrecognized position does not default to center.
+    """
+    if position == "left":
+        return BlockProto.Dialog.DialogPosition.LEFT
+    if position == "right":
+        return BlockProto.Dialog.DialogPosition.RIGHT
+    if position == "center":
+        return BlockProto.Dialog.DialogPosition.CENTER
+
+    raise StreamlitValueError("position", ["'left'", "'center'", "'right'"])
 
 
 def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
@@ -85,21 +104,24 @@ class Dialog(DeltaGenerator):
         parent: DeltaGenerator,
         title: str,
         *,
-        dismissible: bool = True,
         width: DialogWidth = "small",
+        position: DialogPosition = "center",
+        dismissible: bool = True,
         icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
-        # Validation for on_dismiss parameter
-        if on_dismiss not in {"ignore", "rerun"} and not callable(on_dismiss):
-            raise StreamlitValueError(
-                "on_dismiss", ["'ignore'", "'rerun'", "a callback function"]
-            )
+        on_dismiss_callback = validate_on_change_mode(
+            on_dismiss,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_dismiss",
+        )
 
         block_proto = BlockProto()
         block_proto.dialog.title = title
         block_proto.dialog.dismissible = dismissible
         block_proto.dialog.width = _process_dialog_width_input(width)
+        block_proto.dialog.position = _process_dialog_position_input(position)
         block_proto.dialog.icon = validate_icon_or_emoji(icon)
 
         # Compute a stable identity for the dialog based on its attributes.
@@ -116,6 +138,7 @@ class Dialog(DeltaGenerator):
             title=title,
             dismissible=dismissible,
             width=width,
+            position=position,
             icon=icon,
             on_dismiss=str(on_dismiss) if not callable(on_dismiss) else "callback",
         )
@@ -139,7 +162,7 @@ class Dialog(DeltaGenerator):
 
             register_widget(
                 element_id,
-                on_change_handler=on_dismiss if callable(on_dismiss) else None,
+                on_change_handler=on_dismiss_callback,
                 deserializer=lambda x: x,  # Simple passthrough for trigger values
                 serializer=lambda x: x,  # Simple passthrough for trigger values
                 ctx=ctx,

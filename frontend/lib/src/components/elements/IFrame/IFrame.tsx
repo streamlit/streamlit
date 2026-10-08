@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { memo, ReactElement, useEffect, useRef, useState } from "react"
+import { memo, type ReactElement, useEffect, useRef, useState } from "react"
 
-import { IFrame as IFrameProto, streamlit } from "@streamlit/protobuf"
+import type { IFrame as IFrameProto, streamlit } from "@streamlit/protobuf"
 
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
@@ -225,7 +225,10 @@ function IFrame({
       // eslint-disable-next-line @typescript-eslint/no-deprecated
       scrolling={element.scrolling ? "auto" : "no"}
       sandbox={DEFAULT_IFRAME_SANDBOX_POLICY}
-      title="st.iframe"
+      // An iframe always needs an accessible name (WCAG H64), so fall back to
+      // "st.iframe" whenever `alt` is unset or blank, including deprecated
+      // `components.v1` embeds, which never send `alt`.
+      title={element.alt?.trim() || "st.iframe"}
       tabIndex={element.tabIndex ?? undefined}
       width={contentWidth}
       height={contentHeight}

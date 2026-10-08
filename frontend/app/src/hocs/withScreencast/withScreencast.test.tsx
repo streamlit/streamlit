@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, PureComponent, ReactElement } from "react"
+import { type FC, PureComponent, type ReactElement } from "react"
 
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -22,7 +22,10 @@ import { userEvent } from "@testing-library/user-event"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import { render } from "@streamlit/lib/testing"
 
-import withScreencast, { ScreenCastHOC, Steps } from "./withScreencast"
+import withScreencast, {
+  type ScreenCastHOC,
+  type Steps,
+} from "./withScreencast"
 
 vi.mock("@streamlit/app/src/util/ScreenCastRecorder")
 
@@ -273,7 +276,9 @@ describe("withScreencast HOC", () => {
       // Initialization rejects asynchronously; flush pending microtasks so the
       // resulting state update is wrapped in act().
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
       })
 
       expect(

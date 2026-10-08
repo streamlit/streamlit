@@ -385,6 +385,18 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
         assert el.markdown.body == ":blue-badge[Simple badge]"
         assert not el.markdown.HasField("wrap")
 
+    @parameterized.expand(
+        [
+            ("",),
+            ("   ",),
+        ]
+    )
+    def test_st_badge_empty_or_whitespace_icon(self, icon: str) -> None:
+        """Empty or whitespace icons do not insert a leading space in the badge."""
+        st.badge("Simple badge", icon=icon)
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == ":blue-badge[Simple badge]"
+
     def test_st_badge_with_width(self):
         """Test st.badge with different width types."""
         test_cases = [

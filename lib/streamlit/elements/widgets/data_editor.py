@@ -60,7 +60,12 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversionError
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -70,6 +75,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.type_util import is_list_like, is_type
 from streamlit.util import ReadOnlyAttributeDictionary, calc_hash, create_fast_hasher
@@ -817,6 +823,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> list[T]:
         pass
 
@@ -839,6 +846,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> dict[str, T]:
         pass
 
@@ -861,6 +869,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> set[T]:
         pass
 
@@ -883,6 +892,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> EditableData:
         pass
 
@@ -905,6 +915,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> pd.DataFrame:
         pass
 
@@ -927,6 +938,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -1121,6 +1133,18 @@ class DataEditorMixin:
             leave a cell empty, use an empty string (``""``). Other common
             values are ``"null"``, ``"NaN"`` and ``"-"``.
 
+        alt : str or None
+            A short, plain-text accessible name for the data editor. If this is
+            ``None`` (default), the grid has no element-level accessible name.
+            Cell values remain available through the grid's own accessibility
+            tree.
+
+            An empty or whitespace-only string is treated the same as ``None``.
+
+            Prefer naming what the data is (for example, "Editable customer
+            list") rather than pasting cell contents. This is a short name
+            for findability, not a full text alternative for the table.
+
         Returns
         -------
         pandas.DataFrame, pandas.Series, pyarrow.Table, numpy.ndarray, list, set, tuple, or dict.
@@ -1222,6 +1246,10 @@ class DataEditorMixin:
         import pyarrow as pa
 
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         validate_width(width, allow_content=True)
         validate_height(
@@ -1409,6 +1437,8 @@ class DataEditorMixin:
                 include_row_count=True,
             )
 
+        normalized_alt = normalize_alt(alt)
+
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
@@ -1423,11 +1453,15 @@ class DataEditorMixin:
             num_rows=num_rows,
             row_height=row_height,
             placeholder=placeholder,
+            alt=normalized_alt,
             **signature_kwargs,
         )
 
         proto = DataframeProto()
         proto.id = element_id
+
+        if normalized_alt is not None:
+            proto.alt = normalized_alt
 
         if row_height:
             proto.row_height = row_height

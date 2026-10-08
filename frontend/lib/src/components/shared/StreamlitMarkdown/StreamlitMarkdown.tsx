@@ -16,7 +16,7 @@
 
 import {
   createContext,
-  CSSProperties,
+  type CSSProperties,
   type FC,
   type HTMLProps,
   type JSX,
@@ -36,20 +36,20 @@ import {
 
 import slugify from "@sindresorhus/slugify"
 import { parseToRgba } from "color2k"
-import { type Element, type Root as HastRoot } from "hast"
+import type { Element, Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
 import type { Root as MdastRoot, Text } from "mdast"
 import { findAndReplace } from "mdast-util-find-and-replace"
 import { Link2 as LinkIcon } from "react-feather"
 import ReactMarkdown, {
-  Components,
-  Options as ReactMarkdownProps,
+  type Components,
+  type Options as ReactMarkdownProps,
 } from "react-markdown"
 import remarkDirective from "remark-directive"
 import remarkGfm from "remark-gfm"
 import remarkMathPlugin from "remark-math"
 import remend, { type RemendHandler } from "remend"
-import { PluggableList } from "unified"
+import type { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
 
@@ -62,7 +62,10 @@ import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
+import {
+  MARKDOWN_ELLIPSIS_CLASS,
+  useLabelTitleTooltip,
+} from "~lib/hooks/useLabelTitleTooltip"
 import {
   getMarkdownTextColors,
   getThemeBackgroundColors,
@@ -313,7 +316,7 @@ const HeaderActionElements: FC<HeadingActionElements> = ({
 }) => {
   const theme = useEmotionTheme()
   if (!help && hideAnchor) {
-    return <></>
+    return null
   }
 
   return (
@@ -1367,12 +1370,15 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       //
       // Unordered lists (-, +, *), headings (#), and blockquotes (>)
       // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
-      processed = processed.replace(
+      processed = processed.replaceAll(
         /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
         "$1\\$2"
       )
       // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
-      processed = processed.replace(/^(\s*)(\d+)([.)])(?=\s|$)/gm, "$1$2\\$3")
+      processed = processed.replaceAll(
+        /^(\s*)(\d+)([.)])(?=\s|$)/gm,
+        "$1$2\\$3"
+      )
     }
 
     // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
@@ -1476,6 +1482,7 @@ const StreamlitMarkdown: FC<Props> = ({
       isToast={isToast}
       truncate={truncate}
       style={style}
+      className={truncate ? MARKDOWN_ELLIPSIS_CLASS : undefined}
       data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
     >
       <RenderedMarkdown

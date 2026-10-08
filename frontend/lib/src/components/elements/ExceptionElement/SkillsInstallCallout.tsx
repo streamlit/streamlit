@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useRef,
@@ -144,6 +144,7 @@ function SkillsInstallCallout({
       .then(detail => {
         setSuccessDetail(detail ?? "")
         setStatus("success")
+        return
       })
       .catch((error: unknown) => {
         setStatus("error")

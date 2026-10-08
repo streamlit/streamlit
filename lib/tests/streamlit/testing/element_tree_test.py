@@ -24,6 +24,7 @@ import pytest
 
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.dataframe import lazy_df_source as dataframe_source
+from streamlit.elements.lib.layout_utils import SIZE_TO_REM_MAPPING
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -32,8 +33,19 @@ from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
     AppTestError,
+    BlockList,
+    Help,
+    Html,
+    LinkButton,
+    PageLink,
+    Progress,
+    Space,
     UnknownElement,
+    _form_clear_flags,
     _format_value_for_widget,
+    _has_pending_value,
+    _submitted_form_ids,
+    _use_form_clear_defaults,
     parse_tree_from_messages,
 )
 from streamlit.typing import ChatInputValue
@@ -242,6 +254,385 @@ def test_columns():
     assert at.columns[1].radio[0].value == "a"
 
     repr(at.columns[0])
+
+
+def test_space() -> None:
+    """``st.space`` parses as ``Space``; ``value`` is the reconstructed size."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.space()
+        st.space("stretch")
+        st.space(100)
+        with st.container(key="box"):
+            st.space("large")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    assert at.space.len == 4
+    assert isinstance(at.space[0], Space)
+    expected_sizes: list[str | int] = ["small", "stretch", 100, "large"]
+    assert [s.value for s in at.space] == expected_sizes
+    assert [s.size for s in at.space] == expected_sizes
+    assert list(at.get("space")) == list(at.space)
+    assert at.container("box").space[0].value == "large"
+    assert "size='small'" in repr(at.space[0])
+
+    with pytest.raises(AppTestError, match="set_value"):
+        at.space[0].set_value("large")
+
+
+def test_progress_html_and_help() -> None:
+    """``st.progress``, ``st.html``, and ``st.help`` are inspectable and not interactive.
+
+    Help on a callable must not use the proto signature as ``.value``.
+    """
+
+    def script() -> None:
+        import re
+
+        import streamlit as st
+
+        @st.cache_data
+        def cached_add(a, b, c, d, e, f, g, h):
+            """Cached add."""
+            return a
+
+        def add(a, b, c, d, e, f, g, h):
+            """Add some numbers."""
+            return a
+
+        class Dog:
+            """A typical dog."""
+
+        class Box:
+            """A box."""
+
+            def __init__(self, a, b, c, d, e, f, g, h, i, j):
+                self.a = a
+
+        item = Box(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+        st.progress(40, text="halfway")
+        st.progress(0.25)
+        st.sidebar.progress(10, text="side")
+        st.html("<b>hi</b>")
+        with st.container(key="box"):
+            st.html("<i>nested</i>", unsafe_allow_javascript=True)
+        st.help("Hello")
+        st.help(add)
+        st.help(Dog)
+        st.help(len)
+        st.help(st)
+        st.help(re)
+        st.help(item)
+        st.help(cached_add)
+        st.help("foo(bar)")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+
+    assert at.progress.len == 3
+    assert isinstance(at.progress[0], Progress)
+    assert at.main.progress.len == 2
+    assert at.sidebar.progress.len == 1
+    assert [bar.value for bar in at.main.progress] == [40, 25]
+    assert at.main.progress[0].text == "halfway"
+    assert at.main.progress[1].text == ""
+    assert at.sidebar.progress[0].value == 10
+    assert at.sidebar.progress[0].text == "side"
+    assert list(at.get("progress")) == list(at.progress)
+
+    assert at.html.len == 2
+    assert isinstance(at.html[0], Html)
+    assert at.html[0].value == "<b>hi</b>"
+    assert at.container("box").html[0].value == "<i>nested</i>"
+    assert at.container("box").html[0].unsafe_allow_javascript is True
+    assert list(at.get("html")) == list(at.html)
+
+    assert at.help.len == 9
+    assert isinstance(at.help[0], Help)
+    assert list(at.get("help")) == list(at.help)
+    assert list(at.get("help_info")) == list(at.help)
+    assert {node.type for node in at.help} == {"help_info"}
+
+    hello, add, dog, builtin_len, module, regex_mod, item, cached, quoted = at.help
+    assert hello.value == "'Hello'"
+    assert hello.name == ""
+    assert hello.doc_string.startswith("str(")
+    assert add.name == "add"
+    assert add.value == "add"
+    assert add.doc_string == "Add some numbers."
+    assert "(" in add.proto.value
+    assert dog.name == "Dog"
+    assert dog.value == "Dog"
+    assert dog.doc_string == "A typical dog."
+    assert builtin_len.value == "len"
+    assert builtin_len.proto.value == "builtins.len(obj, /)"
+    assert module.name == "st"
+    assert module.value == "streamlit"
+    assert module.doc_string.startswith("Streamlit.")
+    assert len(module.doc_string) > len(module.value)
+    assert regex_mod.name == "re"
+    assert regex_mod.value == "re"
+    assert regex_mod.proto.value == ""
+    assert len(regex_mod.doc_string) > len(regex_mod.value)
+    assert item.name == "item"
+    assert item.value == "item"
+    assert item.proto.value.endswith("Box(a, b, c, d, e, f, g, h, i, j)")
+    assert cached.name == "cached_add"
+    assert cached.value == "cached_add"
+    assert cached.proto.value.endswith("cached_add(a, b, c, d, e, f, g, h)")
+    assert quoted.value == "'foo(bar)'"
+
+    for node in (at.progress[0], at.html[0], at.help[0]):
+        with pytest.raises(AppTestError, match="set_value"):
+            node.set_value(1)
+        with pytest.raises(AppTestError, match="click"):
+            node.click()
+
+
+def test_link_button_and_page_link_are_read_only() -> None:
+    """``st.link_button`` and ``st.page_link`` are inspectable.
+
+    ``.value`` stays the label, including ``on_click="rerun"`` link buttons
+    and page links whose label is inferred from the page title. ``.click()``
+    and ``.set_value()`` raise ``AppTestError``.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        def home() -> None:
+            st.page_link(pages["other"])
+
+        def other_body() -> None:
+            st.write("other")
+
+        pages = {
+            "home": st.Page(home, title="Home", default=True),
+            "other": st.Page(other_body, title="Other page", url_path="other"),
+        }
+        st.navigation(list(pages.values())).run()
+
+        st.link_button(
+            "Docs",
+            "https://docs.streamlit.io",
+            key="docs",
+            help="Open docs",
+            type="primary",
+        )
+        st.link_button("Home", "https://example.com")
+        st.link_button(
+            "Rerun",
+            "https://example.com/rerun",
+            key="rerun",
+            on_click="rerun",
+        )
+        st.sidebar.link_button("Side", "https://example.com/side", key="side")
+        st.page_link(
+            "https://example.com",
+            label="Example",
+            query_params={"x": "1"},
+        )
+        with st.container(key="box"):
+            st.page_link("https://streamlit.io", label="Streamlit", icon="🎈")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+
+    assert at.link_button.len == 4
+    assert isinstance(at.link_button[0], LinkButton)
+    assert at.main.link_button.len == 3
+    assert at.sidebar.link_button.len == 1
+    docs = at.link_button(key="docs")
+    assert docs.value == "Docs"
+    assert docs.url == "https://docs.streamlit.io"
+    assert docs.help == "Open docs"
+    assert docs.key == "docs"
+    assert at.link_button[1].value == "Home"
+    assert at.link_button[1].key is None
+    assert at.link_button[1].url == "https://example.com"
+    rerun = at.link_button(key="rerun")
+    assert rerun.value == "Rerun"
+    assert rerun.url == "https://example.com/rerun"
+    assert at.sidebar.link_button(key="side").value == "Side"
+    assert list(at.get("link_button")) == list(at.link_button)
+    assert {node.type for node in at.link_button} == {"link_button"}
+
+    assert at.page_link.len == 3
+    assert isinstance(at.page_link[0], PageLink)
+    inferred, example, nested = at.page_link
+    assert inferred.value == "Other page"
+    assert inferred.page == "other"
+    assert inferred.external is False
+    assert inferred.key is None
+    assert example.value == "Example"
+    assert example.page == "https://example.com"
+    assert example.external is True
+    assert example.query_string == "x=1"
+    assert nested.value == "Streamlit"
+    assert nested.icon == "🎈"
+    assert at.container("box").page_link[0].value == "Streamlit"
+    assert list(at.get("page_link")) == list(at.page_link)
+
+    assert repr(docs) == "LinkButton(key='docs')"
+    assert repr(example) == "PageLink()"
+
+    for node, click_hint in (
+        (docs, "Playwright"),
+        (rerun, "on_click"),
+        (example, "switch_page"),
+    ):
+        with pytest.raises(AppTestError, match="set_value"):
+            node.set_value("nope")
+        with pytest.raises(AppTestError, match=click_hint):
+            node.click()
+
+
+def test_help_value_keeps_readable_reprs() -> None:
+    """Parentheses in a readable repr stay on ``Help.value``.
+
+    Parameter lists still use the captured name, including functions whose
+    parameters all have defaults.
+    """
+
+    def script() -> None:
+        import datetime
+        from dataclasses import dataclass
+        from decimal import Decimal
+
+        import numpy as np
+
+        import streamlit as st
+
+        class Point:
+            """A point."""
+
+            def __init__(self, x: int, y: int) -> None:
+                self.x = x
+                self.y = y
+
+            def __repr__(self) -> str:
+                return f"Point({self.x}, {self.y})"
+
+        class Coordinate:
+            """A coordinate whose repr looks like a parameter list."""
+
+            def __init__(self, x: int, y: int) -> None:
+                self.x = x
+                self.y = y
+
+            def __repr__(self) -> str:
+                return "Coordinate(x, y)"
+
+        class RetryBox:
+            """Instance whose constructor has only unannotated defaults."""
+
+            def __init__(self, timeout=5, retries=3):
+                self.timeout = timeout
+                self.retries = retries
+
+        @dataclass
+        class NamedPoint:
+            """A named point."""
+
+            x: int
+            y: int
+
+        def scale(x: int = 1, y: int = 2, z: int = 3) -> int:
+            """Scale."""
+            return x
+
+        def gather(*args: int, **kwargs: str) -> None:
+            """Gather."""
+            return
+
+        def slash(x: str = "\\") -> str:
+            """Keep a trailing backslash default."""
+            return x
+
+        point = Point(1, 2)
+        coord = Coordinate(1, 2)
+        retry = RetryBox()
+        named = NamedPoint(1, 2)
+        moment = datetime.datetime(2020, 1, 2, 3, 4)
+        day = datetime.date(2024, 1, 1)
+        pair = (1, 2)
+        span = range(10)
+        arr = np.arange(1)
+        amount = Decimal("1.5")
+        unbounded = slice(None)
+
+        st.help(point)
+        st.help(coord)
+        st.help(retry)
+        st.help(named)
+        st.help(moment)
+        st.help(day)
+        st.help(pair)
+        st.help(span)
+        st.help(arr)
+        st.help(amount)
+        st.help(unbounded)
+        st.help(scale)
+        st.help(gather)
+        st.help(slash)
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    (
+        point,
+        coord,
+        retry,
+        named,
+        moment,
+        day,
+        pair,
+        span,
+        arr,
+        amount,
+        unbounded,
+        scale,
+        gather,
+        slash,
+    ) = at.help
+    assert point.name == "point"
+    assert point.value == "Point(1, 2)"
+    assert coord.value == "Coordinate(x, y)"
+    # Positional module-qualified signatures use the captured name (`item`).
+    # An instance whose stored text is only unannotated defaults keeps it.
+    assert retry.name == "retry"
+    assert retry.value == retry.proto.value
+    assert retry.proto.value.endswith("RetryBox(timeout=5, retries=3)")
+    assert named.name == "named"
+    assert named.value == "script.<locals>.NamedPoint(x=1, y=2)"
+    assert moment.value == "datetime.datetime(2020, 1, 2, 3, 4)"
+    assert day.value == "datetime.date(2024, 1, 1)"
+    assert pair.value == "(1, 2)"
+    assert span.value == "range(0, 10)"
+    assert arr.name == "arr"
+    assert arr.value == "array([0])"
+    assert amount.value == "Decimal('1.5')"
+    assert unbounded.name == "unbounded"
+    assert unbounded.value == "slice(None, None, None)"
+    assert scale.name == "scale"
+    assert scale.value == "scale"
+    assert "(x: int = 1, y: int = 2, z: int = 3)" in scale.proto.value
+    assert gather.value == "gather"
+    assert "*args: int" in gather.proto.value
+    assert slash.value == "slash"
+    assert "\\\\" in slash.proto.value
+
+
+@pytest.mark.parametrize("size", list(SIZE_TO_REM_MAPPING))
+def test_space_named_size(size: str) -> None:
+    """Every named ``st.space`` size round-trips through ``Space.value``."""
+    at = AppTest.from_string(f"import streamlit as st\nst.space({size!r})").run()
+    assert not at.exception
+    assert at.space[0].value == size
+    assert at.space[0].size == size
 
 
 def test_image():
@@ -1106,11 +1497,11 @@ def test_status():
     assert at.status[2].state == "error"
 
 
-def test_status_state_requires_a_status_container():
-    """An expander with an icon is exposed via at.status but has no state.
+def test_expander_with_icon_is_not_classified_as_status():
+    """An expander with an icon stays in at.expander, not at.status.
 
-    The state comes from the proto rather than being reverse-mapped from the
-    icon, so an icon that happens to match a status icon no longer implies one.
+    Status classification uses expandable.state, not the presence of an icon,
+    so an icon that happens to match a status icon does not imply a status.
     """
 
     def script():
@@ -1119,9 +1510,10 @@ def test_status_state_requires_a_status_container():
         st.expander("expander with a status-like icon", icon=":material/check:")
 
     at = AppTest.from_function(script).run()
-    assert len(at.status) == 1
-    with pytest.raises(ValueError, match="no status state"):
-        _ = at.status[0].state
+    assert len(at.status) == 0
+    assert len(at.expander) == 1
+    assert at.expander[0].label == "expander with a status-like icon"
+    assert at.expander[0].icon == ":material/check:"
 
 
 def test_table():
@@ -2033,6 +2425,24 @@ def test_button_group_multi_select_and_unselect_edge_cases():
     assert at.pills[0].value == ["X"]
 
 
+def test_button_group_multi_set_value_none():
+    """Multi-select pills treat set_value(None) as an empty selection, not a crash."""
+
+    def script():
+        import streamlit as st
+
+        choice = st.pills(
+            "p", options=["a", "b"], selection_mode="multi", default=["a"]
+        )
+        st.text(repr(choice))
+
+    at = AppTest.from_function(script).run()
+    assert at.pills[0].value == ["a"]
+    at.pills[0].set_value(None).run()
+    assert at.pills[0].value == []
+    assert at.text[0].value == "[]"
+
+
 def test_button_group_single_unselect():
     """ButtonGroup (single) clears the value only when it matches."""
 
@@ -2190,6 +2600,512 @@ def test_form_key_and_get_by_key() -> None:
     assert form.key == "form-key"
 
 
+def test_layout_collections_are_callable_by_key() -> None:
+    """Layout collections are BlockLists.
+
+    A keyed expander can be selected with ``at.expander("details")``. Index
+    access is unchanged. A missing key raises ``KeyError``. A block does not
+    appear in its own collection.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.container(key="wrap"):
+            with st.expander("Details", key="details"):
+                st.text("hidden")
+                with st.expander("More", key="more"):
+                    st.text("nested")
+            with st.status("working", state="complete"):
+                st.text("done")
+            with st.chat_message("user"):
+                st.write("hi")
+            left, right = st.columns(2)
+            left.text("L")
+            right.text("R")
+            tab_one, tab_two = st.tabs(["One", "Two"])
+            tab_one.text("t1")
+            tab_two.text("t2")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    assert isinstance(at.expander, BlockList)
+    assert isinstance(at.tabs, BlockList)
+    assert isinstance(at.columns, BlockList)
+    assert isinstance(at.status, BlockList)
+    assert isinstance(at.chat_message, BlockList)
+
+    assert len(at.expander) == 2
+    assert len(at.status) == 1
+    assert at.expander("details").label == "Details"
+    assert at.expander("details").text[0].value == "hidden"
+    assert at.container("wrap").expander("details").key == "details"
+    assert at.expander("more").label == "More"
+    assert len(at.expander("details").expander) == 1
+    assert at.expander("details").expander[0].key == "more"
+    assert at.expander("details").get("expander")[0].key == "more"
+    assert list(at.get("expander")) == list(at.expander)
+    with pytest.raises(KeyError):
+        at.expander("missing")
+
+    assert len(at.columns) == 2
+    assert at.columns[0].text[0].value == "L"
+    assert list(at.get("columns")) == list(at.columns)
+    assert list(at.get("column")) == list(at.columns)
+    with pytest.raises(KeyError):
+        at.columns("missing")
+
+    assert at.tabs[0].label == "One"
+    assert at.tabs[1].text[0].value == "t2"
+    assert list(at.get("tabs")) == list(at.tabs)
+    assert list(at.get("tab")) == list(at.tabs)
+    with pytest.raises(KeyError):
+        at.tabs("missing")
+
+    assert at.status[0].label == "working"
+    assert list(at.get("status")) == list(at.status)
+    with pytest.raises(KeyError):
+        at.status("missing")
+
+    assert at.chat_message[0].name == "user"
+    assert at.chat_message[0].markdown[0].value == "hi"
+    assert list(at.get("chat_message")) == list(at.chat_message)
+    with pytest.raises(KeyError):
+        at.chat_message("missing")
+
+
+def test_tabs_key_lives_on_tab_container() -> None:
+    """``st.tabs(..., key=)`` is on the tab container, not individual panels.
+
+    ``at.tabs`` is the tab panels (like ``at.columns`` vs the columns row),
+    so ``at.tabs("sections")`` cannot find that key. ``get_by_key`` does.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        one, two = st.tabs(["One", "Two"], key="sections")
+        one.text("t1")
+        two.text("t2")
+
+    at = AppTest.from_function(script).run()
+    container = at.get_by_key("sections")
+    assert container.type == "tab_container"
+    assert container.key == "sections"
+    assert list(container.tabs) == list(at.tabs)
+    assert container.tabs[0].label == "One"
+    assert container.tabs[1].text[0].value == "t2"
+    with pytest.raises(KeyError):
+        at.tabs("sections")
+
+
+def test_form_collection_lookup() -> None:
+    """``at.form`` is a BlockList of ``st.form`` blocks, keyed by form ID."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form"):
+            st.text_input("Name")
+            st.form_submit_button("Submit")
+        with st.container(key="wrap"):
+            with st.form("inner-form"):
+                st.text_input("Inner")
+                st.form_submit_button("Go")
+
+    at = AppTest.from_function(script).run()
+    assert isinstance(at.form, type(at.container))
+    assert len(at.form) == 2
+    assert at.form[0].type == "form"
+    assert at.form("name-form").key == "name-form"
+    assert at.form("inner-form").text_input[0].label == "Inner"
+    assert at.container("wrap").form[0].key == "inner-form"
+    assert list(at.get("form")) == list(at.form)
+    assert len(at.form("name-form").form) == 0
+    assert at.form("name-form").get("form") == []
+    with pytest.raises(KeyError):
+        at.form("missing")
+
+
+def test_form_submit_button_filters_regular_buttons() -> None:
+    """``at.form_submit_button`` is the subset of ``at.button`` inside a form.
+
+    Regular ``st.button`` stays in ``at.button`` only. Clicking a form submit
+    button still commits that form.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        st.button("Outside")
+        with st.form("name-form"):
+            name = st.text_input("Name")
+            st.form_submit_button("Save", key="save")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.button) == 2
+    assert len(at.form_submit_button) == 1
+    assert at.form_submit_button[0].label == "Save"
+    assert at.form_submit_button("save").form_id == "name-form"
+    assert list(at.get("form_submit_button")) == list(at.form_submit_button)
+
+    at.text_input[0].set_value("Ada")
+    at.run()
+    assert at.text[0].value == "submitted=''"
+
+    at.text_input[0].set_value("Ada")
+    at.form_submit_button("save").click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+
+def test_form_submit_button_is_scoped_to_block() -> None:
+    """A form's ``form_submit_button`` collection only includes that form."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("form-a"):
+            st.form_submit_button("A", key="save-a")
+        with st.form("form-b"):
+            st.form_submit_button("B", key="save-b")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.form_submit_button) == 2
+    scoped = at.form("form-a").form_submit_button
+    assert len(scoped) == 1
+    assert scoped[0].key == "save-a"
+
+
+def test_form_collections_empty_without_forms() -> None:
+    """Apps with only a regular button have empty form collections."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.button("Go")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.form) == 0
+    assert len(at.form_submit_button) == 0
+    assert len(at.button) == 1
+
+
+def test_form_values_apply_only_on_submit() -> None:
+    """Form widget values stay uncommitted until the submit button is clicked.
+
+    Staged ``.value`` remains visible for inspection but is not sent to the
+    script until that form's submit button is clicked.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form"):
+            name = st.text_input("Name")
+            flagged = st.checkbox("Flag")
+            st.form_submit_button("Submit")
+        st.text(f"submitted={name!r}|{flagged}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "submitted=''|False"
+
+    at.text_input[0].set_value("Ada")
+    at.checkbox[0].check()
+    assert at.text_input[0].value == "Ada"
+    assert at.checkbox[0].value is True
+
+    at = at.run()
+    assert at.text[0].value == "submitted=''|False"
+    assert at.text_input[0].value == ""
+    assert at.checkbox[0].value is False
+
+    at.text_input[0].set_value("Ada")
+    at.checkbox[0].check()
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'|True"
+    assert at.text_input[0].value == "Ada"
+    assert at.checkbox[0].value is True
+
+
+def test_widgets_outside_form_still_apply_without_submit() -> None:
+    """Widgets outside a form commit on any rerun, even if a form is pending."""
+
+    def script() -> None:
+        import streamlit as st
+
+        outside = st.text_input("Outside")
+        with st.form("inside-form"):
+            inside = st.text_input("Inside")
+            st.form_submit_button("Go")
+        st.text(f"outside={outside!r}")
+        st.text(f"inside={inside!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("now")
+    at.text_input[1].set_value("later")
+    at.run()
+    assert at.text[0].value == "outside='now'"
+    assert at.text[1].value == "inside=''"
+
+
+def test_submitting_one_form_does_not_commit_another() -> None:
+    """Each form batches independently; submitting A must not apply B."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("form-a"):
+            a = st.text_input("A")
+            st.form_submit_button("Submit A")
+        with st.form("form-b"):
+            b = st.text_input("B")
+            st.form_submit_button("Submit B")
+        st.text(f"a={a!r}")
+        st.text(f"b={b!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("Ada")
+    at.text_input[1].set_value("Bob")
+    at.button[0].click().run()
+    assert at.text[0].value == "a='Ada'"
+    assert at.text[1].value == "b=''"
+
+
+def test_form_keeps_committed_value_on_unrelated_rerun() -> None:
+    """A non-form rerun keeps the last submitted form values."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form"):
+            name = st.text_input("Name")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("Ada")
+    at.button[0].click().run()
+    at.button[1].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+
+def test_form_clear_on_submit_sends_defaults_on_next_submit() -> None:
+    """clear_on_submit resets form widgets for the next submit, like the frontend."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("name-form", clear_on_submit=True):
+            name = st.text_input("Name")
+            st.form_submit_button("Submit")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    at.text_input[0].set_value("Ada")
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted=''"
+
+
+def test_form_clear_on_submit_selectbox_uses_option_default() -> None:
+    """clear_on_submit must serialize the option value, not proto.default's index."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.selectbox("Choice", ["a", "b"], index=0)
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.selectbox[0].select("b")
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='b'"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='a'"
+
+
+def test_form_clear_on_submit_keeps_explicit_none() -> None:
+    """select_index(None) after a clearing submit is pending, not 'untouched'.
+
+    A selectbox with ``index=0`` snaps ``None`` back to the first option on
+    run, so the script cannot observe the staged clear. Pin that the value
+    is pending (so the cleared-default path is skipped) and that
+    ``get_widget_states()`` does not consume the clear flag. Widgets that
+    allow ``None`` cover the observable case in
+    ``test_form_clear_on_submit_pills_keeps_explicit_none``.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            st.selectbox("Choice", ["a", "b"], index=0)
+            st.form_submit_button("Submit")
+
+    at = AppTest.from_function(script).run()
+    at.selectbox[0].select("b")
+    at.button[0].click().run()
+    cleared = set(at._cleared_form_ids)
+    at._tree.get_widget_states()
+    assert at._cleared_form_ids == cleared
+
+    at.selectbox[0].select_index(None)
+    at.button[0].click()
+    assert _has_pending_value(at.selectbox[0])
+    assert not _use_form_clear_defaults(
+        at.selectbox[0],
+        submitted=_submitted_form_ids(at._tree),
+        cleared=at._cleared_form_ids,
+        form_clears=_form_clear_flags(at._tree),
+    )
+
+
+def test_form_clear_on_submit_follows_current_form_config() -> None:
+    """Stale cleared-form ids must not apply if the form no longer clears."""
+
+    def script() -> None:
+        import streamlit as st
+
+        should_clear = st.checkbox("Clear")
+        with st.form("name-form", clear_on_submit=should_clear):
+            name = st.text_input("Name")
+            st.form_submit_button("Submit")
+        st.text(f"submitted={name!r}")
+
+    at = AppTest.from_function(script).run()
+    at.checkbox[0].check().run()
+    at.text_input[0].set_value("Ada")
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+    at.checkbox[0].uncheck().run()
+    at.button[0].click().run()
+    assert at.text[0].value == "submitted='Ada'"
+
+
+def test_form_file_uploader_applies_only_on_submit() -> None:
+    """Form uploads stay local until submit; clear_on_submit drops them next submit."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("upload-form", clear_on_submit=True):
+            uploaded = st.file_uploader("File")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text("yes" if uploaded is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.file_uploader[0].set_value([("a.txt", b"hi", "text/plain")])
+    at.run()
+    assert at.text[0].value == "no"
+
+    at.file_uploader[0].set_value([("a.txt", b"hi", "text/plain")])
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[1].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
+
+
+def test_form_clear_on_submit_selectbox_format_func() -> None:
+    """Cleared option defaults must not run format_func a second time."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.selectbox("Choice", [1, 2], format_func=lambda x: f"#{x}")
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.selectbox[0].set_value(2)
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=2"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=1"
+
+
+def test_form_clear_on_submit_pills_default_none() -> None:
+    """Pills with default=None must clear on the next submit, not keep the last pick."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.pills("Choice", ["a", "b"])
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.pills[0].select("a")
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='a'"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=None"
+
+
+def test_form_clear_on_submit_pills_keeps_explicit_none() -> None:
+    """set_value(None) after a clearing submit must not fall back to the pills default."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("choice-form", clear_on_submit=True):
+            choice = st.pills("Choice", ["a", "b"], default="a")
+            st.form_submit_button("Submit")
+        st.text(f"choice={choice!r}")
+
+    at = AppTest.from_function(script).run()
+    at.pills[0].select("b")
+    at.button[0].click().run()
+    assert at.text[0].value == "choice='b'"
+
+    at.pills[0].set_value(None)
+    at.button[0].click().run()
+    assert at.text[0].value == "choice=None"
+
+
+def test_form_file_uploader_clear_after_enabling_clear_on_submit() -> None:
+    """First clearing submit still sends committed files; the next submit drops them."""
+
+    def script() -> None:
+        import streamlit as st
+
+        should_clear = st.checkbox("Clear")
+        with st.form("upload-form", clear_on_submit=should_clear):
+            uploaded = st.file_uploader("File")
+            st.form_submit_button("Submit")
+        st.text("yes" if uploaded is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.file_uploader[0].set_value([("a.txt", b"hi", "text/plain")])
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+
+    at.checkbox[0].check().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
+
+
 def test_get_by_key_rejects_ambiguous_key() -> None:
     """A form ID can match a widget key, so get_by_key must reject the clash."""
 
@@ -2223,6 +3139,64 @@ def test_container_excludes_columns_row() -> None:
     assert len(at.container) == 1
     assert at.container[0].key == "filters"
     assert len(at.columns) == 2
+
+
+def test_get_accepts_public_attribute_names() -> None:
+    """``AppTest.get()`` accepts public collection names, not only proto types.
+
+    Testers following the docstring pass attribute names such as
+    ``datetime_input`` and ``pills``. Proto names remain valid.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        st.datetime_input("When", key="when")
+        st.pills("Pills", options=["A", "B"], key="pills")
+        st.segmented_control("Seg", options=["X", "Y"], key="seg")
+        st.help("Hello")
+        st.image("https://example.com/image.png")
+        with st.container(key="filters"):
+            st.text("inside")
+        with st.container(horizontal=True, key="toolbar"):
+            st.text("tools")
+        left, right = st.columns(2)
+        left.text("left")
+        right.text("right")
+        tab_one, tab_two = st.tabs(["One", "Two"])
+        tab_one.text("tab-one")
+        tab_two.text("tab-two")
+
+    at = AppTest.from_function(script).run()
+
+    assert list(at.get("datetime_input")) == list(at.datetime_input)
+    assert list(at.get("date_time_input")) == list(at.datetime_input)
+
+    assert list(at.get("pills")) == list(at.pills)
+    assert list(at.get("segmented_control")) == list(at.segmented_control)
+    assert len(at.get("button_group")) == 2
+    assert at.get("pills")[0].key == "pills"
+    assert at.get("segmented_control")[0].key == "seg"
+
+    assert list(at.get("columns")) == list(at.columns)
+    assert list(at.get("column")) == list(at.columns)
+    assert len(at.get("columns")) == 2
+
+    assert list(at.get("help")) == list(at.help)
+    assert list(at.get("help_info")) == list(at.help)
+    assert len(at.get("help")) == 1
+    assert at.get("help")[0].type == "help_info"
+
+    assert list(at.get("container")) == list(at.container)
+    assert {node.key for node in at.get("container")} == {"filters", "toolbar"}
+
+    assert list(at.get("image")) == list(at.image)
+    assert len(at.get("image")) == 1
+
+    assert list(at.get("tabs")) == list(at.tabs)
+    assert list(at.get("tab")) == list(at.tabs)
+    assert len(at.get("tabs")) == 2
+    assert list(at.get("not_an_element")) == []
 
 
 def test_expander_key_and_get_by_key() -> None:

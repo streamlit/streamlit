@@ -18,23 +18,23 @@ import { waitFor } from "@testing-library/react"
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
 import { type Long, util } from "protobufjs/minimal"
-import { Mock } from "vitest"
+import type { Mock } from "vitest"
 
 import {
   ArrowTable as ArrowTableProto,
   Button as ButtonProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-  WidgetState,
+  type WidgetState,
 } from "@streamlit/protobuf"
 
 import { makeTriggerAggregatorId } from "~lib/components/widgets/BidiComponent/utils/idBuilder"
 
 import {
   createFormsData,
-  FormsData,
+  type FormsData,
   microsToIsoString,
-  WidgetInfo,
+  type WidgetInfo,
   WidgetStateDict,
   WidgetStateManager,
 } from "./WidgetStateManager"
@@ -2248,6 +2248,49 @@ describe("Trigger JSON payloads (aggregated)", () => {
         expect(mockOnQueryParamsChange).toHaveBeenCalledWith("")
       })
 
+      it("clears one bound param without dropping unrelated query keys", () => {
+        const keepWidget = { id: "keep1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "keep1",
+          "other",
+          "string_value",
+          "",
+          false
+        )
+        widgetMgr.setStringValue(keepWidget.id, "1", {
+          formId: keepWidget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        const clearWidget = { id: "number1", formId: "" }
+        widgetMgr.registerQueryParamBinding(
+          "number1",
+          "count",
+          "int_value",
+          0,
+          false
+        )
+        widgetMgr.setIntValue(clearWidget.id, 5, {
+          formId: clearWidget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+        vi.clearAllMocks()
+
+        widgetMgr.setIntValue(clearWidget.id, null, {
+          formId: clearWidget.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        })
+
+        expect(window.history.replaceState).toHaveBeenCalled()
+        const url = (window.history.replaceState as Mock).mock.calls[0][2]
+        expect(url).toContain("other=1")
+        expect(url).not.toContain("count=")
+        expect(mockOnQueryParamsChange).toHaveBeenCalledWith("other=1")
+      })
+
       it("encodes spaces as + in URL, not %20", () => {
         const widget = { id: "widget1", formId: "" }
         widgetMgr.registerQueryParamBinding(
@@ -2345,7 +2388,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           false
         )
 
-        widgetMgr.setDoubleArrayValue(widget.id, [10, NaN, 90], {
+        widgetMgr.setDoubleArrayValue(widget.id, [10, Number.NaN, 90], {
           formId: widget.formId,
           fragmentId: undefined,
           fromUser: true,
@@ -2378,7 +2421,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
 
         // Now set all invalid values - should clear the URL
         mockOnQueryParamsChange.mockClear()
-        widgetMgr.setDoubleArrayValue(widget.id, [NaN, NaN], {
+        widgetMgr.setDoubleArrayValue(widget.id, [Number.NaN, Number.NaN], {
           formId: widget.formId,
           fragmentId: undefined,
           fromUser: true,
@@ -2400,7 +2443,7 @@ describe("Trigger JSON payloads (aggregated)", () => {
           false
         )
 
-        widgetMgr.setDoubleArrayValue(widget.id, [NaN, NaN], {
+        widgetMgr.setDoubleArrayValue(widget.id, [Number.NaN, Number.NaN], {
           formId: widget.formId,
           fragmentId: undefined,
           fromUser: false,

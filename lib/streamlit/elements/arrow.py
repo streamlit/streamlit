@@ -53,7 +53,12 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitIncompatibleParametersError,
@@ -69,7 +74,11 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
 )
-from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+    validate_on_change_mode,
+)
 from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
@@ -638,6 +647,7 @@ class ArrowMixin:
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -658,6 +668,7 @@ class ArrowMixin:
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DataframeState: ...
 
     @gather_metrics("dataframe")
@@ -678,6 +689,7 @@ class ArrowMixin:
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
@@ -934,6 +946,18 @@ class ArrowMixin:
                 supported. Server-side sorting is supported. To use these
                 features, set ``lazy=False``.
 
+        alt : str or None
+            A short, plain-text accessible name for the dataframe. If this is
+            ``None`` (default), the grid has no element-level accessible name.
+            Cell values remain available through the grid's own accessibility
+            tree.
+
+            An empty or whitespace-only string is treated the same as ``None``.
+
+            Prefer naming what the data is (for example, "Top 20 customers by
+            revenue") rather than pasting cell contents. This is a short name
+            for findability, not a full text alternative for the table.
+
         Returns
         -------
         element or DataframeState
@@ -1059,10 +1083,12 @@ class ArrowMixin:
         """
         import pyarrow as pa
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitValueError(
-                "on_select", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
@@ -1080,13 +1106,11 @@ class ArrowMixin:
 
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1137,6 +1161,10 @@ class ArrowMixin:
         column_config_mapping = process_config_mapping(processed_column_config)
 
         proto = DataframeProto()
+
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            proto.alt = normalized_alt
 
         if row_height:
             proto.row_height = row_height
@@ -1290,6 +1318,7 @@ class ArrowMixin:
                 selection_default=selection_default_json,
                 row_height=row_height,
                 placeholder=placeholder,
+                alt=normalized_alt,
             )
 
             serde = DataframeSelectionSerde(
@@ -1299,7 +1328,7 @@ class ArrowMixin:
             )
             widget_state = register_widget(
                 proto.id,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,

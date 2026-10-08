@@ -19,9 +19,9 @@ import { userEvent } from "@testing-library/user-event"
 
 import { Text as TextProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 
-import TextElement, { TextProps } from "./TextElement"
+import TextElement, { type TextProps } from "./TextElement"
 
 const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
   element: TextProto.create({
@@ -31,6 +31,8 @@ const getProps = (elementProps: Partial<TextProto> = {}): TextProps => ({
 })
 
 describe("TextElement element", () => {
+  mockEllipsizedLabels()
+
   it("renders preformatted text as expected", () => {
     const props = getProps()
     render(<TextElement {...props} />)

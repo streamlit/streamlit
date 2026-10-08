@@ -16,11 +16,16 @@
 
 import { CalendarDate, CalendarDateTime, Time } from "@internationalized/date"
 
-import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
+import type { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
-import { parseFormatOrder } from "~lib/components/widgets/DateInput/dateInputUtils"
-import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import {
+  parseFormatOrder,
+  SEGMENT_SELECTOR,
+} from "~lib/components/widgets/DateInput/dateInputUtils"
+import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
+
+export { SEGMENT_SELECTOR }
 
 function pad(value: number, length: number): string {
   return String(Math.abs(value)).padStart(length, "0")
@@ -128,7 +133,7 @@ export function parsePastedDateTime(
   if (isoResult) return isoResult
 
   const { order, separator } = parseFormatOrder(dateFormat)
-  const escapedSep = separator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const escapedSep = separator.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")
   const datePartRe = `(\\d{1,4})${escapedSep}(\\d{1,4})${escapedSep}(\\d{1,4})`
   const timePartRe = `(\\d{1,2}):(\\d{2})`
   const re = new RegExp(`^${datePartRe}[,\\s]+${timePartRe}$`)
@@ -214,10 +219,6 @@ export interface SegmentState {
   isPartiallyTyped: boolean
   isFullyCleared: boolean
 }
-
-/** Editable segments. Matched on `data-type` rather than `role`, which React Aria
- * replaces with `textbox` on iOS. Literals are the separators between segments. */
-export const SEGMENT_SELECTOR = '[data-type]:not([data-type="literal"])'
 
 /** Query the editable segments in a container to determine their placeholder state. */
 export function getSegmentState(container: HTMLElement): SegmentState {
@@ -358,6 +359,10 @@ export function updateWidgetMgrState(
       formId: element.formId,
       fragmentId,
       fromUser: vws.fromUser,
+      // on_change="ignore" buffers the value without scheduling a rerun.
+      // WidgetStateManager ignores triggerRerun inside forms (the form owns
+      // commit timing).
+      ...(element.ignoreRerun ? { triggerRerun: false } : {}),
     })
   }
 

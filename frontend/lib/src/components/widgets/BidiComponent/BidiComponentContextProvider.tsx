@@ -14,21 +14,27 @@
  * limitations under the License.
  */
 
-import { FC, memo, PropsWithChildren, useCallback, useMemo } from "react"
+import {
+  type FC,
+  memo,
+  type PropsWithChildren,
+  useCallback,
+  useMemo,
+} from "react"
 
 import type { BidiComponent as BidiComponentProto } from "@streamlit/protobuf"
 
 import {
   BidiComponentContext,
-  BidiComponentContextShape,
+  type BidiComponentContextShape,
 } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { LOG } from "~lib/components/widgets/BidiComponent/utils/logger"
 import { parseBidiComponentData } from "~lib/components/widgets/BidiComponent/utils/parseBidiComponentData"
 import { extractComponentsV2Theme } from "~lib/components/widgets/BidiComponent/utils/theme"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
+import type { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { ensureError } from "~lib/util/ErrorHandling"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 type BidiComponentContextProviderProps = PropsWithChildren<{
   element: BidiComponentProto
@@ -69,7 +75,7 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
       }
 
       try {
-        return JSON.parse(raw)
+        return JSON.parse(raw) as Record<string, unknown>
       } catch (e) {
         const err = ensureError(e)
         LOG.warn(

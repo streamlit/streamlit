@@ -15,7 +15,7 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
   type ReactElement,
   useCallback,
@@ -57,7 +57,7 @@ import { isMobile } from "~lib/util/isMobile"
 import {
   getSelectPlaceholder,
   isNullOrUndefined,
-  LabelVisibilityOptions,
+  type LabelVisibilityOptions,
 } from "~lib/util/utils"
 
 import {
@@ -255,7 +255,8 @@ const Selectbox: FC<Props> = ({
     }
   }, [theme.spacing.twoXS, isInSidebar])
 
-  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
+  const { floatingStyles, setFloating, setReference } =
+    useFloatingOverlay(overlayOptions)
 
   // Locally committed value (last value sent to Streamlit). Re-synced from
   // propValue when the backend pushes an update (form-clear, session state, etc.).
@@ -634,7 +635,7 @@ const Selectbox: FC<Props> = ({
             openRef={openDropdownRef}
             closeRef={closeDropdownRef}
           />
-          <StyledGroup ref={refs.setReference}>
+          <StyledGroup ref={setReference}>
             <StyledInput
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
@@ -656,6 +657,7 @@ const Selectbox: FC<Props> = ({
               <StyledClearButton
                 aria-label="Clear value"
                 slot={null}
+                isDisabled={selectDisabled}
                 onPress={handleClearValue}
               >
                 <Cancel size={theme.iconSizes.base} aria-hidden="true" />
@@ -669,7 +671,7 @@ const Selectbox: FC<Props> = ({
             </StyledOpenButton>
           </StyledGroup>
           <StyledPopover
-            ref={refs.setFloating}
+            ref={setFloating}
             data-testid="stSelectboxVirtualDropdown"
             placement="bottom left"
             isNonModal

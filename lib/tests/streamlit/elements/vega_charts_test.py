@@ -60,6 +60,40 @@ if TYPE_CHECKING:
 df1 = pd.DataFrame([["A", "B", "C", "D"], [28, 55, 43, 91]], index=["a", "b"]).T
 df2 = pd.DataFrame([["E", "F", "G", "H"], [11, 12, 13, 14]], index=["a", "b"]).T
 autosize_spec = {"autosize": {"type": "fit", "contains": "padding"}}
+_LOOKUP_POPULATION = pd.DataFrame({"id": [1, 2], "population": [100, 200]})
+_TWO_POLYGON_FEATURE_COLLECTION = {
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "id": 1,
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+            },
+            "properties": {"name": "left"},
+        },
+        {
+            "type": "Feature",
+            "id": 2,
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[1, 0], [2, 0], [2, 1], [1, 1], [1, 0]]],
+            },
+            "properties": {"name": "right"},
+        },
+    ],
+}
+
+
+def _spec_feature_collections(spec: dict[str, Any]) -> list[dict[str, Any]]:
+    datasets = spec.get("datasets")
+    assert isinstance(datasets, dict)
+    return [
+        payload
+        for payload in datasets.values()
+        if isinstance(payload, dict) and payload.get("type") == "FeatureCollection"
+    ]
 
 
 def test_vega_lite_serde_returns_typed_state() -> None:
@@ -189,6 +223,70 @@ class AltairChartTest(DeltaGeneratorTestCase):
         assert proto.selection_mode == []
         assert proto.id == ""
         assert proto.form_id == ""
+        assert not proto.HasField("alt")
+
+    def test_altair_chart_alt(self):
+        """Non-empty alt is marshalled; omitted/None/blank leave the field unset."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+
+        st.altair_chart(chart, alt="Bar chart of categories")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "Bar chart of categories"
+        assert "description" not in json.loads(proto.spec)
+
+        st.altair_chart(chart)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        st.altair_chart(chart, alt=None)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    @parameterized.expand(
+        [
+            ("",),
+            ("   ",),
+        ]
+    )
+    def test_altair_chart_empty_alt_is_treated_as_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+        st.altair_chart(chart, alt=blank_alt)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    def test_altair_chart_strips_alt_whitespace(self):
+        """Leading and trailing whitespace are stripped before marshalling."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+        st.altair_chart(chart, alt="  Bar chart of categories  ")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "Bar chart of categories"
+
+    def test_altair_chart_alt_does_not_mutate_spec_description(self):
+        """Author description stays in hashed JSON when alt is also set."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(x="a", y="b")
+            .properties(description="Altair description")
+        )
+        with patch("streamlit.elements.vega_charts._LOGGER.warning") as mock_warning:
+            st.altair_chart(chart, alt="Streamlit alt")
+            mock_warning.assert_called_once()
+            assert mock_warning.call_args.kwargs.get("stack_info") is True
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.alt == "Streamlit alt"
+        assert json.loads(proto.spec)["description"] == "Altair description"
 
     def test_altair_chart_uses_convert_anything_to_df(self):
         """Test that st.altair_chart uses convert_anything_to_df to convert input data."""
@@ -650,6 +748,102 @@ class AltairChartTest(DeltaGeneratorTestCase):
             df,
             check_dtype=False,
         )
+
+    def test_inline_geojson_featurecollection_stays_in_spec_datasets(self) -> None:
+        """Inline FeatureCollection named datasets stay in spec JSON, not Arrow."""
+        chart = (
+            alt.Chart(
+                alt.InlineData(
+                    values=_TWO_POLYGON_FEATURE_COLLECTION,
+                    format=alt.DataFormat(property="features", type="json"),
+                )
+            )
+            .mark_geoshape()
+            .encode(color="properties.name:N")
+        )
+
+        st.altair_chart(chart)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        geo_payloads = _spec_feature_collections(spec)
+        assert len(geo_payloads) == 1
+        assert len(geo_payloads[0]["features"]) == 2
+        assert spec["data"]["format"]["type"] == "json"
+        assert len(proto.datasets) == 0
+
+    def test_lookup_dataframe_still_arrow_serialized_on_proto(self) -> None:
+        """Lookup tables stay on proto.datasets as Arrow, not JSON in the spec."""
+        geo = alt.Data(
+            url="https://example.invalid/map.json",
+            format=alt.DataFormat(property="features", type="json"),
+        )
+        chart = (
+            alt.Chart(geo)
+            .mark_geoshape()
+            .encode(color="population:Q")
+            .transform_lookup(
+                lookup="id",
+                from_=alt.LookupData(
+                    _LOOKUP_POPULATION, "id", list(_LOOKUP_POPULATION.columns)
+                ),
+            )
+        )
+
+        st.altair_chart(chart)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert not spec.get("datasets")
+
+        assert len(proto.datasets) == 1
+        lookup_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        pd.testing.assert_frame_equal(
+            lookup_df[["id", "population"]].reset_index(drop=True),
+            _LOOKUP_POPULATION.reset_index(drop=True),
+            check_dtype=False,
+        )
+
+    def test_inline_geojson_plus_lookup_keeps_geo_in_spec_and_table_on_proto(
+        self,
+    ) -> None:
+        """Mixed geoshape charts keep geometry in spec and the lookup table as Arrow."""
+        chart = (
+            alt.Chart(
+                alt.InlineData(
+                    values=_TWO_POLYGON_FEATURE_COLLECTION,
+                    format=alt.DataFormat(property="features", type="json"),
+                )
+            )
+            .mark_geoshape()
+            .encode(color="population:Q")
+            .transform_lookup(
+                lookup="id",
+                from_=alt.LookupData(
+                    _LOOKUP_POPULATION, "id", list(_LOOKUP_POPULATION.columns)
+                ),
+            )
+        )
+
+        st.altair_chart(chart)
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        geo_payloads = _spec_feature_collections(spec)
+        assert len(geo_payloads) == 1
+        assert len(geo_payloads[0]["features"]) == 2
+        assert not any(
+            isinstance(payload, list) for payload in spec["datasets"].values()
+        )
+
+        assert len(proto.datasets) == 1
+        lookup_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        pd.testing.assert_frame_equal(
+            lookup_df[["id", "population"]].reset_index(drop=True),
+            _LOOKUP_POPULATION.reset_index(drop=True),
+            check_dtype=False,
+        )
+        assert "features" not in lookup_df.columns
 
 
 class AltairChartWidthTest(DeltaGeneratorTestCase):
@@ -1465,6 +1659,79 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.vega_lite_chart
         assert not proto.HasField("data")
         assert json.loads(proto.spec) == merge_dicts(autosize_spec, {"mark": "rect"})
+        assert not proto.HasField("alt")
+
+    def test_vega_lite_chart_alt(self):
+        """Non-empty alt is marshalled; omitted/None/blank leave the field unset."""
+        st.vega_lite_chart({"mark": "rect"}, alt="A rectangle chart")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "A rectangle chart"
+        assert "description" not in json.loads(proto.spec)
+
+        st.vega_lite_chart({"mark": "rect"})
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        st.vega_lite_chart({"mark": "rect"}, alt=None)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    @parameterized.expand(
+        [
+            ("",),
+            ("   ",),
+        ]
+    )
+    def test_vega_lite_chart_empty_alt_is_treated_as_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        st.vega_lite_chart({"mark": "rect"}, alt=blank_alt)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    def test_vega_lite_chart_strips_alt_whitespace(self):
+        """Leading and trailing whitespace are stripped before marshalling."""
+        st.vega_lite_chart({"mark": "rect"}, alt="  A rectangle chart  ")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "A rectangle chart"
+
+    def test_vega_lite_chart_alt_does_not_mutate_spec_description(self):
+        """Author description stays in hashed JSON when alt is also set."""
+        with patch("streamlit.elements.vega_charts._LOGGER.warning") as mock_warning:
+            st.vega_lite_chart(
+                {"mark": "rect", "description": "Spec description"},
+                alt="Streamlit alt",
+            )
+            mock_warning.assert_called_once()
+            assert mock_warning.call_args.kwargs.get("stack_info") is True
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.alt == "Streamlit alt"
+        assert json.loads(proto.spec)["description"] == "Spec description"
+
+    def test_vega_lite_chart_alt_handles_invalid_list_description(self):
+        """An invalid list description does not prevent alt from being applied."""
+        with patch("streamlit.elements.vega_charts._LOGGER.warning") as mock_warning:
+            st.vega_lite_chart(
+                {"mark": "rect", "description": ["not", "a", "string"]},
+                alt="Streamlit alt",
+            )
+            mock_warning.assert_called_once()
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.alt == "Streamlit alt"
+
+    def test_vega_lite_chart_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Chart of "A < B" & sales <script>alert(1)</script>'
+        st.vega_lite_chart({"mark": "rect"}, alt=adversarial)
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == adversarial
 
     def test_spec_in_arg1(self):
         """Test that it can be called with spec as the 1st arg."""
@@ -1554,6 +1821,193 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         assert json.loads(proto.spec) == merge_dicts(
             autosize_spec, {"data": {"name": "foo"}, "mark": "rect"}
         )
+
+    @parameterized.expand(
+        [
+            (
+                "feature_collection",
+                {
+                    "type": "FeatureCollection",
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "geometry": {"type": "Point", "coordinates": [0, 0]},
+                            "properties": {"name": "a"},
+                        }
+                    ],
+                },
+                {"type": "json", "property": "features"},
+            ),
+            (
+                "topology",
+                {
+                    "type": "Topology",
+                    "arcs": [],
+                    "objects": {
+                        "layer": {"type": "GeometryCollection", "geometries": []}
+                    },
+                },
+                {"type": "topojson"},
+            ),
+            (
+                "topology_without_type",
+                {
+                    "arcs": [],
+                    "objects": {
+                        "layer": {"type": "GeometryCollection", "geometries": []}
+                    },
+                },
+                {"type": "topojson"},
+            ),
+            (
+                "feature_list",
+                [
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Point", "coordinates": [0, 0]},
+                        "properties": {},
+                    }
+                ],
+                {"type": "json"},
+            ),
+            (
+                "polygon_geometry",
+                {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+                },
+                {"type": "json"},
+            ),
+        ]
+    )
+    def test_geo_named_dataset_stays_in_vega_lite_spec(
+        self,
+        _case: str,
+        payload: dict[str, Any] | list[dict[str, Any]],
+        format_spec: dict[str, str],
+    ) -> None:
+        """GeoJSON/TopoJSON named datasets stay in spec JSON, not Arrow."""
+        st.vega_lite_chart(
+            {
+                "mark": {"type": "geoshape"},
+                "data": {"name": "geo", "format": format_spec},
+                "datasets": {"geo": payload},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert spec["datasets"]["geo"] == payload
+        assert len(proto.datasets) == 0
+
+    def test_json_format_record_list_still_arrow_serialized(self) -> None:
+        """A JSON-format list of plain records is still Arrow-serialized."""
+        records = [{"x": 1, "y": 2}]
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": records},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        records_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(records_df.columns) >= {"x", "y"}
+
+    def test_json_format_columnar_dict_still_arrow_serialized(self) -> None:
+        """A JSON-format columnar dict is still Arrow-serialized, not kept as JSON."""
+        columnar = {"a": [1, 2], "b": [3, 4]}
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": columnar},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        columns_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(columns_df.columns) >= {"a", "b"}
+
+    def test_geo_type_lookalike_dict_still_arrow_serialized(self) -> None:
+        """A dict with a GeoJSON type name but no geometry members is still Arrow."""
+        lookalike = {"type": "Point", "value": [1, 2]}
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": lookalike},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        lookalike_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(lookalike_df.columns) >= {"type", "value"}
+
+    def test_topojson_lookalike_columnar_dict_still_arrow_serialized(self) -> None:
+        """A columnar dict with arcs/objects columns is still Arrow, not TopoJSON."""
+        lookalike = {"arcs": [1, 2], "objects": ["a", "b"]}
+        st.vega_lite_chart(
+            {
+                "mark": "bar",
+                "data": {"name": "foo", "format": {"type": "json"}},
+                "datasets": {"foo": lookalike},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert "datasets" not in spec
+        assert len(proto.datasets) == 1
+        lookalike_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+        assert set(lookalike_df.columns) >= {"arcs", "objects"}
+
+    def test_top_level_geojson_values_stay_in_spec(self) -> None:
+        """Top-level data.values FeatureCollection stays in spec JSON with format."""
+        st.vega_lite_chart(
+            {
+                "data": {
+                    "values": _TWO_POLYGON_FEATURE_COLLECTION,
+                    "format": {"type": "json", "property": "features"},
+                },
+                "mark": {"type": "geoshape"},
+            }
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        spec = json.loads(proto.spec)
+        assert spec["data"]["values"] == _TWO_POLYGON_FEATURE_COLLECTION
+        assert spec["data"]["format"] == {"type": "json", "property": "features"}
+        assert not proto.HasField("data")
+
+    def test_geojson_hash_rejects_non_json_types(self) -> None:
+        """GeoJSON hashing uses the same JSON serialization as spec transport."""
+        import numpy as np
+
+        from streamlit.elements.vega_charts import _to_arrow_dataset
+
+        payload = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [0, 0]},
+                    "properties": {"n": np.int64(1)},
+                }
+            ],
+        }
+        with pytest.raises(TypeError):
+            _to_arrow_dataset(payload, {})
 
     def test_kwargs_raises_type_error(self):
         """Test that passing unexpected kwargs raises TypeError after kwargs removal."""
@@ -1797,6 +2251,32 @@ ST_CHART_ARGS = [
 
 class BuiltInChartTest(DeltaGeneratorTestCase):
     """Test our built-in chart commands."""
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_built_in_chart_alt(self, chart_command: Callable, _altair_type: str):
+        """A non-empty alt is stored on the proto; omitted, None, and whitespace-only values leave the field unset."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"])
+
+        chart_command(df, alt="Accessible chart name")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "Accessible chart name"
+        assert "description" not in json.loads(proto.spec)
+
+        chart_command(df)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        chart_command(df, alt=None)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        chart_command(df, alt="  ")
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
 
     @parameterized.expand(ST_CHART_ARGS)
     def test_empty_chart(self, chart_command: Callable, altair_type: str):
@@ -3750,6 +4230,82 @@ class VegaUtilitiesTest(unittest.TestCase):
         result = _stabilize_vega_json_spec(input_spec)
         assert result == expected
 
+    def test_stabilize_preserves_geojson_property_tokens(self) -> None:
+        """GeoJSON property keys/values matching param_/view_ tokens are not rewritten."""
+        geo = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [0, 0]},
+                    "properties": {"param_9": "view_9", "name": "a"},
+                }
+            ],
+        }
+        spec = {
+            "mark": {"type": "geoshape"},
+            "data": {"name": "geo"},
+            "datasets": {"geo": geo},
+            "params": [{"name": "param_17", "select": {"type": "point"}}],
+            "layer": [{"mark": {"type": "geoshape"}, "name": "view_33"}],
+        }
+
+        result = json.loads(_stabilize_vega_json_spec(json.dumps(spec)))
+        assert result["datasets"]["geo"] == geo
+        assert result["params"][0]["name"] == "param_1"
+        assert result["layer"][0]["name"] == "view_1"
+
+    def test_stabilize_preserves_topojson_layer_object(self) -> None:
+        """A TopoJSON objects.layer name does not trigger view_ rewrites in the payload."""
+        topo = {
+            "type": "Topology",
+            "arcs": [],
+            "objects": {
+                "layer": {
+                    "type": "GeometryCollection",
+                    "geometries": [
+                        {
+                            "type": "Polygon",
+                            "arcs": [[0]],
+                            "properties": {"view_5": 1},
+                        }
+                    ],
+                }
+            },
+        }
+        spec = {
+            "mark": {"type": "geoshape"},
+            "datasets": {"geo": topo},
+        }
+
+        result = json.loads(_stabilize_vega_json_spec(json.dumps(spec)))
+        assert result["datasets"]["geo"] == topo
+
+    def test_stabilize_preserves_top_level_geo_values(self) -> None:
+        """Top-level GeoJSON data.values tokens are not rewritten."""
+        geo = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [0, 0]},
+                    "properties": {"param_3": 1},
+                }
+            ],
+        }
+        spec = {
+            "mark": {"type": "geoshape"},
+            "data": {
+                "values": geo,
+                "format": {"type": "json", "property": "features"},
+            },
+            "params": [{"name": "param_10", "select": {"type": "point"}}],
+        }
+
+        result = json.loads(_stabilize_vega_json_spec(json.dumps(spec)))
+        assert result["data"]["values"] == geo
+        assert result["params"][0]["name"] == "param_1"
+
 
 class NestedCompositionTest(unittest.TestCase):
     """Test nested composition detection and autosize behavior.
@@ -4286,6 +4842,60 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
             id2 = c2.id
 
             # ID should be stable since key and selection_mode are the same
+            assert id1 == id2
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_selection_id_changes_with_alt_when_unkeyed(self):
+        """Unkeyed selection charts include alt in the element identity hash."""
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        point = alt.selection_point(name="my_selection")
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+
+        def chart_id(**kwargs: object) -> str:
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.altair_chart(chart, on_select="rerun", **kwargs)
+            return self.get_delta_from_queue().new_element.vega_lite_chart.id
+
+        with_alt = chart_id(alt="First description")
+        with_other_alt = chart_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt != with_other_alt
+        assert chart_id(alt="First description") == with_alt
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_selection_id_stable_when_keyed_alt_changes(self):
+        """Keyed selection charts ignore alt for identity (key_as_main_identity)."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            point = alt.selection_point(name="my_selection")
+            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+
+            st.altair_chart(
+                chart,
+                key="keyed_alt_chart",
+                on_select="rerun",
+                alt="First description",
+            )
+            id1 = self.get_delta_from_queue().new_element.vega_lite_chart.id
+
+            st.altair_chart(
+                chart,
+                key="keyed_alt_chart",
+                on_select="rerun",
+                alt="A totally different description",
+            )
+            id2 = self.get_delta_from_queue().new_element.vega_lite_chart.id
+
             assert id1 == id2
 
     @unittest.skipIf(

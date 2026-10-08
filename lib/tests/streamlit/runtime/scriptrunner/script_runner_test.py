@@ -138,6 +138,32 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_control_events(scriptrunner, [ScriptRunnerEvent.SHUTDOWN])
         self._assert_text_deltas(scriptrunner, [])
 
+    def test_script_thread_is_daemon(self) -> None:
+        """The script thread must be a daemon so the process can exit when the
+        user script is stuck in a tight loop with no st.* interrupt points.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        # Stop before the script runs so we don't actually execute it; we only
+        # care about the thread's daemon flag, which is set in start().
+        scriptrunner.request_stop()
+        scriptrunner.start()
+        try:
+            assert scriptrunner._script_thread is not None
+            assert scriptrunner._script_thread.daemon is True
+        finally:
+            scriptrunner.join()
+
+    def test_start_raises_if_already_started(self) -> None:
+        """ScriptRunner.start() may be called only once."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_stop()
+        scriptrunner.start()
+        try:
+            with pytest.raises(RuntimeError, match="already started"):
+                scriptrunner.start()
+        finally:
+            scriptrunner.join()
+
     def test_yield_on_enqueue(self):
         """Make sure we try to handle execution control requests whenever
         our _enqueue_forward_msg function is called.
@@ -1106,6 +1132,59 @@ class ScriptRunnerTest(unittest.TestCase):
 
         patched_call_callbacks.assert_called_once()
 
+    @patch("streamlit.runtime.state.session_state.SessionState.on_script_will_rerun")
+    def test_replay_only_request_prepares_session_state(
+        self, patched_on_script_will_rerun: MagicMock
+    ) -> None:
+        """A replay-only request prepares session state without fresh widget state."""
+        replay = WidgetStates()
+        _create_widget("button", replay).trigger_value = True
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            RerunData(widget_states=None, replay_trigger_states=replay),
+        )
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        patched_on_script_will_rerun.assert_called_once_with(
+            None,
+            replay_trigger_states=replay,
+            replay_trigger_values=None,
+            is_history_navigation=False,
+        )
+
+    @patch(
+        "streamlit.runtime.state.safe_session_state.SafeSessionState.on_script_finished"
+    )
+    @patch("streamlit.runtime.state.session_state.SessionState.on_script_will_rerun")
+    def test_replay_only_preemption_happens_before_script_start(
+        self,
+        patched_on_script_will_rerun: MagicMock,
+        patched_on_script_finished: MagicMock,
+    ) -> None:
+        """Replay-only preemption restarts before the first script execution."""
+        replay = WidgetStates()
+        _create_widget("button", replay).trigger_value = True
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            RerunData(widget_states=None, replay_trigger_states=replay),
+        )
+        patched_on_script_will_rerun.side_effect = lambda *_, **__: (
+            scriptrunner.request_rerun(RerunData())
+        )
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert not scriptrunner.script_thread_exceptions
+        assert [
+            call.kwargs["remove_stale_widgets"]
+            for call in patched_on_script_finished.call_args_list
+            if "remove_stale_widgets" in call.kwargs
+        ] == [False, True]
+        assert scriptrunner.text_deltas() == [text_utf]
+
     @patch("streamlit.elements.exception._exception")
     @patch("streamlit.runtime.state.session_state.SessionState._call_callbacks")
     def test_calls_widget_callbacks_error(
@@ -1504,6 +1583,26 @@ class ScriptRunnerTest(unittest.TestCase):
         Runtime._instance.media_file_mgr.remove_orphaned_files.assert_called_once()
         Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_called_once()
 
+    def test_orphan_cleanup_skipped_when_runtime_missing(self) -> None:
+        """Orphan cleanup is skipped when no Runtime singleton exists.
+
+        Without the gate, ``runtime.get_instance()`` raises ``RuntimeError`` on the
+        script thread, which surfaces as an unhandled thread exception rather than a
+        clean failure.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        Runtime._instance = None
+
+        # has_script_started=True so only the missing-Runtime gate is under test.
+        with patch("streamlit.runtime.get_instance") as mock_get_instance:
+            scriptrunner._on_script_finished(
+                _finished_run_ctx(has_script_started=True),
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                premature_stop=False,
+            )
+
+        mock_get_instance.assert_not_called()
+
     def test_stale_widget_removal_skipped_when_stopped_for_rerun(self):
         """A run stopped for rerun must reset triggers without dropping widgets.
 
@@ -1846,6 +1945,18 @@ class ScriptRunnerTest(unittest.TestCase):
         )
         assert scriptrunner.events == [ScriptRunnerEvent.SHUTDOWN]
         assert scriptrunner._event_loop is None
+
+    def test_missing_event_loop_fails_without_replacement(self) -> None:
+        """ScriptRunner raises when its caller-owned loop has been cleared."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._event_loop = None
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert len(scriptrunner.script_thread_exceptions) == 1
+        assert str(scriptrunner.script_thread_exceptions[0]) == (
+            "ScriptRunner event loop is no longer available"
+        )
 
     def test_event_loop_persists_across_reruns(self):
         """The same loop object is current on every rerun of a session."""

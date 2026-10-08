@@ -24,6 +24,7 @@ from streamlit import util
 if TYPE_CHECKING:
     from collections.abc import Collection
     from datetime import date, time
+    from traceback import StackSummary
 
 
 class Error(Exception):  # pragma: no cover - trivial base class
@@ -165,6 +166,8 @@ class StreamlitAPIWarning(StreamlitAPIException, Warning):
     Note that this should not be "raised", but passed to st.exception
     instead.
     """
+
+    tacked_on_stack: StackSummary | None
 
     def __init__(self, *args: Any) -> None:
         super().__init__(*args)
@@ -338,9 +341,10 @@ class StreamlitValueAboveMaxError(LocalizableStreamlitException):
 class StreamlitInvalidMinMaxError(LocalizableStreamlitException):
     """Raised when ``min_value`` is greater than ``max_value``.
 
-    ``st.slider`` also raises this for equal bounds. ``st.date_input`` and
-    ``st.datetime_input`` treat equal bounds as a valid single-day /
-    single-instant range.
+    - ``st.slider`` swaps reversed bounds and raises this only for equal
+      bounds.
+    - ``st.date_input``, ``st.datetime_input``, and ``st.number_input``
+      reject reversed bounds. Equal bounds stay valid.
     """
 
     def __init__(self, min_value: object, max_value: object) -> None:
@@ -590,12 +594,35 @@ class StreamlitInvalidLayoutContextError(StreamlitAPIException):
     """Raised when a command is used in a disallowed layout, form, or dialog context."""
 
 
+def _markdown_code_span(text: str) -> str:
+    """Wrap ``text`` in a Markdown code span that stays intact if it contains backticks."""
+    fence_len = 1
+    # Pick a fence longer than any backtick run in text so Markdown does not
+    # end the code span early.
+    while "`" * fence_len in text:
+        fence_len += 1
+    fence = "`" * fence_len
+    return f"{fence}{text}{fence}"
+
+
+def _session_state_item(key: str) -> str:
+    """Format ``key`` as bracket access so non-identifier keys stay valid Python.
+
+    The result is already a Markdown code span; interpolate it without adding
+    backticks.
+    """
+    return _markdown_code_span(f"st.session_state[{key!r}]")
+
+
 class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
     """Exception raised when trying to set values where writes are not allowed."""
 
     def __init__(self, key: str) -> None:
         super().__init__(
-            "Values for the widget with `key` '{key}' cannot be set using `st.session_state`.",
+            "{session_state_item} is read-only and cannot be "
+            "assigned through session state. Use a different session state key "
+            "for values you need to set.",
+            session_state_item=_session_state_item(key),
             key=key,
         )
 
@@ -605,8 +632,14 @@ class StreamlitWidgetAlreadyInstantiatedError(LocalizableStreamlitException):
 
     def __init__(self, key: str) -> None:
         super().__init__(
-            "`st.session_state.{key}` cannot be modified after the widget"
-            " with key `{key}` is instantiated.",
+            "{session_state_item} cannot be modified after the widget with "
+            "that key is instantiated. Assign {session_state_item} before "
+            "creating the widget, or update it from an `on_change` or "
+            "`on_click` callback, which runs before the widget is instantiated. "
+            "If this is a read-only session state key (buttons, file and media "
+            "inputs, `st.data_editor`, forms, chart or `ButtonColumn` "
+            "selections), store the value under a different session state key.",
+            session_state_item=_session_state_item(key),
             key=key,
         )
 

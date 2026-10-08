@@ -34,12 +34,12 @@ import {
   WEBSOCKET_TIMEOUT_MS,
 } from "./constants"
 import {
-  AsyncPingRequest,
+  type AsyncPingRequest,
   doInitPings,
   PingCancelledError,
 } from "./DoInitPings"
 import { ForwardMsgCache } from "./ForwardMessageCache"
-import {
+import type {
   ErrorDetails,
   Event,
   IHostConfigProperties,
@@ -116,10 +116,6 @@ export interface Args {
    * asynchronously in the background for error handling and configuration.
    */
   enableBypass?: boolean
-}
-
-interface MessageQueue {
-  [index: number]: ForwardMsg
 }
 
 const LOG = getLogger("WebsocketConnection")
@@ -213,10 +209,10 @@ export class WebsocketConnection {
   private nextMessageIndex = 0
 
   /**
-   * This dictionary stores received messages that we haven't sent out yet
-   * (because we're still decoding previous messages)
+   * Incoming messages that we haven't dispatched yet because earlier
+   * messages are still being decoded. Keyed by transmission order.
    */
-  private readonly messageQueue: MessageQueue = {}
+  private readonly messageQueue = new Map<number, ForwardMsg>()
 
   /**
    * The current state of this object's state machine.
@@ -698,8 +694,17 @@ export class WebsocketConnection {
 
     this.websocket.addEventListener("message", (event: MessageEvent) => {
       if (checkWebsocket()) {
-        this.handleMessage(event.data).catch(reason => {
-          const err = `Failed to process a Websocket message. ${reason}`
+        const payload: unknown = event.data
+        if (!(payload instanceof ArrayBuffer)) {
+          // binaryType is "arraybuffer"; any other frame type is a protocol
+          // mismatch, same as a decode failure.
+          const err = `Unexpected Websocket message type: ${Object.prototype.toString.call(payload)}`
+          LOG.error(err)
+          this.stepFsm("FATAL_ERROR", err)
+          return
+        }
+        this.handleMessage(payload).catch((reason: unknown) => {
+          const err = `Failed to process a Websocket message. ${String(reason)}`
           LOG.error(err)
           this.stepFsm("FATAL_ERROR", err)
         })
@@ -853,21 +858,24 @@ export class WebsocketConnection {
     const encodedMsg = new Uint8Array(data)
     const msg = ForwardMsg.decode(encodedMsg)
 
-    this.messageQueue[messageIndex] = await this.cache.processMessagePayload(
-      msg,
-      encodedMsg
+    this.messageQueue.set(
+      messageIndex,
+      await this.cache.processMessagePayload(msg, encodedMsg)
     )
 
     // Dispatch any pending messages in the queue. This may *not* result
     // in our just-decoded message being dispatched: if there are other
     // messages that were received earlier than this one but are being
     // downloaded, our message won't be sent until they're done.
-    while (this.lastDispatchedMessageIndex + 1 in this.messageQueue) {
+    let queuedMessage = this.messageQueue.get(
+      this.lastDispatchedMessageIndex + 1
+    )
+    while (queuedMessage !== undefined) {
       const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
-      this.args.onMessage(this.messageQueue[dispatchMessageIndex])
-
-      delete this.messageQueue[dispatchMessageIndex]
+      this.args.onMessage(queuedMessage)
+      this.messageQueue.delete(dispatchMessageIndex)
       this.lastDispatchedMessageIndex = dispatchMessageIndex
+      queuedMessage = this.messageQueue.get(dispatchMessageIndex + 1)
     }
   }
 }

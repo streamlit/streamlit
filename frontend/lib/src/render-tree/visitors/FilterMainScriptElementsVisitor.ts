@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { AppNode } from "~lib/render-tree/AppNode.interface"
+import type { AppNode } from "~lib/render-tree/AppNode.interface"
 import { BlockNode } from "~lib/render-tree/BlockNode"
-import { ElementNode } from "~lib/render-tree/ElementNode"
+import type { ElementNode } from "~lib/render-tree/ElementNode"
 import { TransientNode } from "~lib/render-tree/TransientNode"
 
-import { AppNodeVisitor } from "./AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * A visitor that filters out nodes whose activeScriptHash does not match

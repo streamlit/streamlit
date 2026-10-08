@@ -41,8 +41,10 @@ from streamlit.errors import (
     StreamlitInvalidMinMaxError,
     StreamlitInvalidParameterTypeError,
     StreamlitMissingRequiredParameterError,
+    StreamlitValueAssignmentNotAllowedError,
     StreamlitValueError,
     StreamlitValueOutOfRangeError,
+    StreamlitWidgetAlreadyInstantiatedError,
 )
 from streamlit.navigation.page import _create_page
 from streamlit.runtime import metrics_util
@@ -904,6 +906,14 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
             "StreamlitIncompatibleParametersError",
         ),
         (
+            StreamlitWidgetAlreadyInstantiatedError("user_key"),
+            "StreamlitWidgetAlreadyInstantiatedError",
+        ),
+        (
+            StreamlitValueAssignmentNotAllowedError("user_key"),
+            "StreamlitValueAssignmentNotAllowedError",
+        ),
+        (
             StreamlitInvalidLayoutContextError(
                 "Forms cannot be nested in other forms."
             ),
@@ -1013,6 +1023,8 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
         "invalid-min-max",
         "value-out-of-range",
         "incompatible-parameters",
+        "widget-already-instantiated-no-key-suffix",
+        "value-assignment-not-allowed-no-key-suffix",
         "invalid-context-no-command-suffix",
         "streamlit-api-exception-plain",
         "streamlit-api-exception-error-id",

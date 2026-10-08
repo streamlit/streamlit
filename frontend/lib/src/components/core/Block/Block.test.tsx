@@ -14,24 +14,25 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import { screen, within } from "@testing-library/react"
+import type * as ReactAriaComponents from "react-aria-components"
 
 import {
   Block as BlockProto,
   Button as ButtonProto,
-  Element,
+  type Element,
   ForwardMsgMetadata,
   streamlit,
 } from "@streamlit/protobuf"
 
-import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import { type AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { text } from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { renderWithContexts } from "~lib/test_util"
+import { mockEllipsizedLabels, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
@@ -40,7 +41,7 @@ import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
 // async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
 // Mocking it here prevents the animation machinery from running in unit tests.
 vi.mock("react-aria-components", async importOriginal => {
-  const actual = await importOriginal<typeof import("react-aria-components")>()
+  const actual = await importOriginal<typeof ReactAriaComponents>()
   return { ...actual, SelectionIndicator: () => null }
 })
 
@@ -698,6 +699,7 @@ describe("BlockNodeRenderer transparent blocks", () => {
 })
 
 describe("BlockNodeRenderer direct column wrapping context", () => {
+  mockEllipsizedLabels()
   const label = "Regenerate the complete quarterly report now"
 
   async function renderColumnChildren(children: AppNode[]): Promise<void> {
@@ -846,7 +848,118 @@ describe("BlockNodeRenderer container types", () => {
 
     expect(screen.getByTestId("stDialog")).toBeVisible()
     expect(screen.getByText("dialog body")).toBeVisible()
+    expect(
+      screen.queryByTestId("stDialogContentEndPad")
+    ).not.toBeInTheDocument()
   })
+
+  it("pads the end of a left drawer dialog", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("drawer body")], {
+          dialog: {
+            title: "My drawer",
+            isOpen: true,
+            dismissible: true,
+            width: BlockProto.Dialog.DialogWidth.LARGE,
+            position: BlockProto.Dialog.DialogPosition.LEFT,
+          },
+        })
+      )
+    )
+
+    expect(screen.getByText("drawer body")).toBeVisible()
+    expect(screen.getByTestId("stDialogContentEndPad")).toHaveStyle({
+      height: "2rem",
+    })
+  })
+
+  it("hides a leftover dialog from a previous full-app run", () => {
+    const dialogBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("dialog body")],
+      new BlockProto({
+        allowEmpty: true,
+        dialog: {
+          title: "My dialog",
+          isOpen: true,
+          dismissible: true,
+          // id activates on_dismiss; the spy below would fire if this hide
+          // went through Dialog.handleClose instead of unmounting.
+          id: "test-dialog-id",
+          width: BlockProto.Dialog.DialogWidth.LARGE,
+        },
+      }),
+      "previous-run"
+    )
+    const setTriggerValue = vi.spyOn(widgetMgr, "setTriggerValue")
+
+    renderWithContexts(makeBlockNodeComponent(dialogBlock), {
+      scriptRunContext: {
+        scriptRunState: ScriptRunState.RUNNING,
+        scriptRunId: "current-run",
+        fragmentIdsThisRun: [],
+      },
+    })
+
+    expect(screen.queryByTestId("stDialog")).not.toBeInTheDocument()
+    expect(screen.queryByText("dialog body")).not.toBeInTheDocument()
+    expect(setTriggerValue).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      desc: "from the current full-app run while running",
+      nodeScriptRunId: "current-run",
+      fragmentId: undefined,
+      scriptRunState: ScriptRunState.RUNNING,
+      fragmentIdsThisRun: [] as string[],
+    },
+    {
+      desc: "leftover while a rerun is only requested",
+      nodeScriptRunId: "previous-run",
+      fragmentId: undefined,
+      scriptRunState: ScriptRunState.RERUN_REQUESTED,
+      fragmentIdsThisRun: [] as string[],
+    },
+    {
+      desc: "leftover during a fragment run",
+      nodeScriptRunId: "previous-run",
+      fragmentId: "dialog-fragment",
+      scriptRunState: ScriptRunState.RUNNING,
+      fragmentIdsThisRun: ["dialog-fragment"],
+    },
+  ])(
+    "keeps a dialog $desc",
+    ({ nodeScriptRunId, fragmentId, scriptRunState, fragmentIdsThisRun }) => {
+      const dialogBlock = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [text("dialog body")],
+        new BlockProto({
+          allowEmpty: true,
+          dialog: {
+            title: "My dialog",
+            isOpen: true,
+            dismissible: true,
+            width: BlockProto.Dialog.DialogWidth.LARGE,
+          },
+        }),
+        nodeScriptRunId,
+        fragmentId
+      )
+
+      renderWithContexts(makeBlockNodeComponent(dialogBlock), {
+        scriptRunContext: {
+          scriptRunState,
+          scriptRunId: "current-run",
+          fragmentIdsThisRun,
+        },
+      })
+
+      expect(screen.getByTestId("stDialog")).toBeVisible()
+      expect(screen.getByText("dialog body")).toBeVisible()
+    }
+  )
 
   it("renders a tab container", () => {
     const tab = makeVerticalBlock([text("tab body")], {

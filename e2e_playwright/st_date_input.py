@@ -117,6 +117,18 @@ st.date_input(
 st.date_input("Date input 16 (width=200px)", date(1970, 1, 1), width=200)
 st.date_input("Date input 17 (width='stretch')", date(1970, 1, 1), width="stretch")
 
+with st.form("date_form", clear_on_submit=True):
+    single_form_value = st.date_input(
+        "Single date in form", value=None, key="single_date_form_input"
+    )
+    range_form_value = st.date_input(
+        "Range date in form", value=[], key="range_date_form_input"
+    )
+    form_submitted = st.form_submit_button("Submit date form")
+    if form_submitted:
+        st.write("Single date form value:", single_form_value)
+        st.write("Range date form value:", range_form_value)
+
 st.write("""This is a block of text. We can click on it to
          trigger a click outside of the element to submit the value.""")
 
@@ -167,6 +179,14 @@ st.date_input(
     [date(2019, 7, 6), date(2019, 7, 20)],
     width=150,
     key="narrow_range",
+)
+st.date_input(
+    "Narrow clearable bounded",
+    value=None,
+    min_value=date(2020, 1, 1),
+    max_value=date(2020, 12, 31),
+    width=110,
+    key="narrow_clearable_bounded",
 )
 
 if st.toggle("Update date input props"):
@@ -221,3 +241,26 @@ st.date_input(
     min_value=date(2024, 8, 3),
     max_value=date(2025, 2, 3),
 )
+
+# --- on_change="ignore" date input ---
+# Run counter so test_date_input_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_date = st.date_input(
+    "Ignore change date input",
+    value=date(2025, 1, 15),
+    min_value=date(2024, 1, 1),
+    max_value=date(2026, 12, 31),
+    key="ignore_date",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore date value:", ignore_date)
+
+# Sidebar keeps Apply out from under the calendar overlay so a type-then-click
+# can blur-commit the dirty field and rerun in one action.
+if st.sidebar.button("Apply ignore date", key="apply_ignore_date"):
+    st.write("Applied ignore date value:", ignore_date)

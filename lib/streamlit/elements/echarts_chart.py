@@ -35,7 +35,12 @@ from streamlit.elements.lib.layout_utils import (
     validate_height,
     validate_width,
 )
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
@@ -305,6 +310,25 @@ def _iter_series_entries(series: Any) -> Iterator[dict[str, Any]]:
                 yield entry
 
 
+def _author_aria_label_description(option: dict[str, Any]) -> str | None:
+    """Return a non-empty author ``aria.label.description`` if present.
+
+    Walks top-level, timeline, and media option variants. Empty or
+    whitespace-only descriptions are ignored.
+    """
+    for variant in _iter_option_variants(option):
+        aria = variant.get("aria")
+        if not isinstance(aria, dict):
+            continue
+        label = aria.get("label")
+        if not isinstance(label, dict):
+            continue
+        description = label.get("description")
+        if isinstance(description, str) and description.strip():
+            return description
+    return None
+
+
 def _iter_series(option: dict[str, Any]) -> Iterator[dict[str, Any]]:
     """Yield every series config across top-level, timeline, and media variants."""
     for variant in _iter_option_variants(option):
@@ -572,6 +596,7 @@ class EChartsMixin:
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
         renderer: Literal["canvas", "svg"] = "canvas",
+        alt: str | None = None,
     ) -> DeltaGenerator:
         r"""Display an interactive Apache ECharts chart.
 
@@ -691,6 +716,25 @@ class EChartsMixin:
             - ``"svg"``: Produces real DOM nodes that are better for printing,
               sharp scaling, and accessibility.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. Streamlit maps this to ECharts'
+            ``aria.label.description``, which becomes the chart's accessible
+            name. If this is ``None`` (default), ECharts keeps its generated
+            data-derived name when ``aria.enabled`` is on.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            When both ``alt`` and an author ``aria.label.description`` are set,
+            ``alt`` overrides that description for the accessible name. A
+            non-empty ``alt`` also keeps the chart named even if the option
+            sets ``aria.enabled`` to ``False``. Because ECharts already generates
+            a data-derived name, prefer a short, specific description; a vague
+            one can be worse than none. This is a short description of the
+            chart, not a full text alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic bar chart**
@@ -705,7 +749,8 @@ class EChartsMixin:
                    "xAxis": {"type": "category", "data": ["A", "B", "C", "D", "E"]},
                    "yAxis": {"type": "value"},
                    "series": [{"type": "bar", "data": [5, 20, 36, 10, 10]}],
-               }
+               },
+               alt="Bar chart of categories A through E",
            )
 
         .. output::
@@ -807,6 +852,23 @@ class EChartsMixin:
 
         key = to_key(key)
         normalized_option = _normalize_spec(spec)
+        normalized_alt = normalize_alt(alt)
+
+        # Only walk option variants when alt is present; the common path skips it.
+        existing_description = (
+            _author_aria_label_description(normalized_option)
+            if normalized_alt is not None
+            else None
+        )
+        # Authors can also set this on the option; log so they see that alt wins.
+        if existing_description:
+            _LOGGER.warning(
+                "The ECharts option already sets aria.label.description=%r. "
+                "The alt=%r parameter overrides it for the accessible name.",
+                existing_description,
+                normalized_alt,
+                stack_info=True,
+            )
 
         echarts_chart_proto = EChartsChartProto()
         echarts_chart_proto.spec = _serialize_option(normalized_option)
@@ -816,6 +878,10 @@ class EChartsMixin:
             if renderer == "svg"
             else EChartsChartProto.Renderer.CANVAS
         )
+        if normalized_alt is not None:
+            # Carry alt on its own proto field so it is not baked into the
+            # wire spec JSON (applied on the frontend as aria.label.description).
+            echarts_chart_proto.alt = normalized_alt
 
         # The backend only resolves the "content" default; the frontend handles
         # the actual layout.
@@ -837,6 +903,7 @@ class EChartsMixin:
                 # is not one.
                 key_as_main_identity=True,
                 dg=None,
+                alt=normalized_alt,
             )
 
         layout_config = LayoutConfig(width=final_width, height=final_height)

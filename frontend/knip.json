@@ -17,7 +17,7 @@
   ],
   "workspaces": {
     ".": {
-      "entry": ["vitest.setup.ts"]
+      "entry": ["vitest.setup.ts", "vitest-jest-dom.d.ts"]
     }
   }
 }

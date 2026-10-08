@@ -20,8 +20,8 @@ on:
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
   MODEL_INPUT: ${{ github.event.inputs.model || '' }}
-  DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.6-terra-xhigh,claude-opus-5-thinking-medium,cursor-grok-4.6-xhigh' }}
-  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.6-sol-high,claude-opus-5-thinking-high,gemini-3.7-flash-high,cursor-grok-4.6-xhigh"
+  DEFAULT_AI_PR_REVIEW_MODELS: ${{ vars.AI_PR_REVIEW_MODELS || 'gpt-5.6-terra-xhigh,claude-opus-5-5-medium,grok-4.7-xhigh' }}
+  FINAL_AI_PR_REVIEW_MODELS: "gpt-5.6-sol-high,claude-opus-5-5-high,gemini-3.8-flash-high,grok-4.7-xhigh"
 
 jobs:
   # Job 1: Parse model list and check for API key
@@ -240,7 +240,8 @@ jobs:
   # Job 3: Consolidate multiple reviews into one (only runs for multi-model)
   consolidate-reviews:
     needs: [parse-models, ai-pr-review]
-    if: always() && fromJson(needs.parse-models.outputs.model_count) > 1 && needs.parse-models.outputs.has_key == 'true' && needs.ai-pr-review.result != 'skipped'
+    # Default model_count to 0: fromJson() errors on empty input when parse-models is skipped.
+    if: always() && fromJson(needs.parse-models.outputs.model_count || '0') > 1 && needs.parse-models.outputs.has_key == 'true' && needs.ai-pr-review.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:

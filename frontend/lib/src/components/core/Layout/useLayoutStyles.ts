@@ -16,13 +16,21 @@
 
 import { useContext, useMemo } from "react"
 
-import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
+import type {
+  Block as BlockProto,
+  Element,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { convertRemToPx } from "~lib/theme/utils"
 import { assertNever } from "~lib/util/assertNever"
 
-import { FlexContext, IFlexContext } from "./FlexContext"
-import { Direction, getTextAlignmentStyle, MinFlexElementWidth } from "./utils"
+import { FlexContext, type IFlexContext } from "./FlexContext"
+import {
+  Direction,
+  getTextAlignmentStyle,
+  type MinFlexElementWidth,
+} from "./utils"
 
 type SubElement = {
   useContainerWidth?: boolean | null
@@ -92,10 +100,10 @@ export type UseLayoutStylesArgs = {
 }
 
 const isPositiveNumber = (value: unknown): value is number =>
-  typeof value === "number" && value >= 0 && !isNaN(value)
+  typeof value === "number" && value >= 0 && !Number.isNaN(value)
 
 const isNonZeroPositiveNumber = (value: unknown): value is number =>
-  typeof value === "number" && value > 0 && !isNaN(value)
+  typeof value === "number" && value > 0 && !Number.isNaN(value)
 
 enum DimensionType {
   PIXEL = "pixel",

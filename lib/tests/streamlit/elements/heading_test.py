@@ -474,7 +474,9 @@ class StHeadingIconTest(DeltaGeneratorTestCase):
         [
             (st.header, "some header", None, ""),
             (st.header, "some header", "", ""),
+            (st.header, "some header", "   ", ""),
             (st.header, "some header", "🔥", "🔥"),
+            (st.header, "some header", " 🔥 ", "🔥"),
             (
                 st.header,
                 "some header",
@@ -487,7 +489,7 @@ class StHeadingIconTest(DeltaGeneratorTestCase):
         ]
     )
     def test_icon_serializes_to_proto(self, heading_fn, body, icon, expected):
-        """Test that icon values are forwarded (None and "" become empty)."""
+        """Valid icons are stored on the proto; None, empty, and whitespace become empty."""
         heading_fn(body, icon=icon)
         el = self.get_delta_from_queue().new_element
         assert el.heading.icon == expected

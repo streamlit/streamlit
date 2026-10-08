@@ -335,11 +335,74 @@ def test_value_error_with_detail() -> None:
     assert exc.exec_kwargs["detail"] == "Connection class Foo has an invalid scope."
 
 
-def test_widget_already_instantiated_error_message() -> None:
-    """Session-state assignment after widget creation names the key."""
-    exc = errors.StreamlitWidgetAlreadyInstantiatedError("my_key")
-    assert "`st.session_state.my_key`" in str(exc)
-    assert "instantiated" in str(exc)
+@pytest.mark.parametrize("key", ["my_key", "my-key", "the key"])
+def test_widget_already_instantiated_error_message(key: str) -> None:
+    """Messages use bracket access and tell the caller how to assign safely."""
+    exc = errors.StreamlitWidgetAlreadyInstantiatedError(key)
+    message = str(exc)
+    item = f"st.session_state[{key!r}]"
+
+    assert f"`{item}`" in message
+    assert f"st.session_state.{key}" not in message
+    assert "before creating the widget" in message
+    assert "on_change" in message
+    assert "on_click" in message
+    assert "read-only session state key" in message
+    assert "ButtonColumn" in message
+    assert "different session state key" in message
+    assert isinstance(exc, errors.LocalizableStreamlitException)
+    assert exc.exec_kwargs["key"] == key
+    # format_uncaught_exception only suffixes LocalizableStreamlitException when exec_kwargs has parameter.
+    assert "parameter" not in exc.exec_kwargs
+
+
+@pytest.mark.parametrize("key", ["done_btn", "done-btn"])
+def test_value_assignment_not_allowed_error_message(key: str) -> None:
+    """Read-only session state keys tell the caller to use a different key."""
+    exc = errors.StreamlitValueAssignmentNotAllowedError(key)
+    message = str(exc)
+    item = f"st.session_state[{key!r}]"
+
+    assert f"`{item}`" in message
+    assert f"st.session_state.{key}" not in message
+    assert "read-only" in message
+    # Keep the copy generic; this error also covers st.form keys, not only event widgets.
+    assert "event widget" not in message.lower()
+    assert "different session state key" in message
+    assert isinstance(exc, errors.LocalizableStreamlitException)
+    assert exc.exec_kwargs["key"] == key
+    # format_uncaught_exception only suffixes LocalizableStreamlitException when exec_kwargs has parameter.
+    assert "parameter" not in exc.exec_kwargs
+
+
+@pytest.mark.parametrize(
+    ("key", "fence_len"),
+    [
+        ("a`b", 2),
+        ("a``b", 3),
+    ],
+)
+@pytest.mark.parametrize(
+    "exc_cls",
+    [
+        errors.StreamlitValueAssignmentNotAllowedError,
+        errors.StreamlitWidgetAlreadyInstantiatedError,
+    ],
+)
+def test_session_state_error_messages_keep_backticks_in_one_code_span(
+    key: str,
+    fence_len: int,
+    exc_cls: type[
+        errors.StreamlitValueAssignmentNotAllowedError
+        | errors.StreamlitWidgetAlreadyInstantiatedError
+    ],
+) -> None:
+    """Keys containing backticks still render as a single Markdown code span."""
+    item = f"st.session_state[{key!r}]"
+    fence = "`" * fence_len
+    message = str(exc_cls(key))
+
+    assert f"{fence}{item}{fence}" in message
 
 
 def test_default_not_in_options_error_message() -> None:

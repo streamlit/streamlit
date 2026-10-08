@@ -36,6 +36,27 @@ from streamlit.url_util import is_url
 from streamlit.util import calc_hash
 
 
+def _raise_if_unsafe_page_path(page_path: str, *, error_prefix: str = "") -> None:
+    """Reject page paths that are unsafe to pass to filesystem operations."""
+    if "\x00" in page_path:
+        raise StreamlitAPIException(
+            f"{error_prefix}Page paths must not contain null bytes.",
+            error_id="page-path-contains-null-bytes",
+        )
+
+    # Reject UNC, device-namespace, and extended-prefix paths lexically: resolving
+    # them can make Windows open an SMB connection and leak the server process's
+    # NTLM credentials, or access a Windows device directly. Drive-absolute paths
+    # (for example, "C:\app\page.py") remain allowed by the navigation API contract.
+    if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
+        raise StreamlitAPIException(
+            f"{error_prefix}Network paths and device paths are not supported. "
+            "Use a path relative to the app entrypoint, or a local absolute path "
+            r"such as 'C:\app\page.py'.",
+            error_id="page-network-path-not-supported",
+        )
+
+
 def _sanitize_url_path(title: str) -> str:
     """Sanitize a title string to be used as a URL path.
 
@@ -51,6 +72,20 @@ def _sanitize_url_path(title: str) -> str:
     # Replace multiple consecutive underscores with a single one
     path = re.sub(r"_+", "_", path)
     return path
+
+
+def _raise_if_nested_url_path(url_path: str) -> None:
+    """Reject nested URL pathnames until they are supported."""
+    # Browsers would resolve static assets relative to the nested page URL,
+    # so a path like foo/bar would look for assets under /foo/ instead of the app root.
+    if "/" in url_path:
+        raise StreamlitAPIException(
+            f"The `url_path` `{url_path}` cannot include `/`. "
+            "Streamlit does not support nested URL pathnames yet, so use a single "
+            "path segment (e.g. `foo_bar`). To upvote support for nested pathnames, "
+            "see GitHub issue [#8971](https://github.com/streamlit/streamlit/issues/8971).",
+            error_id="page-nested-url-path",
+        )
 
 
 if TYPE_CHECKING:
@@ -111,10 +146,14 @@ class Page:
 
     icon : str or None
         An optional emoji or icon to display next to the page title and label.
-        If ``icon`` is ``None`` (default), no icon is displayed next to the
-        page label in the navigation menu, and a Streamlit icon is displayed
-        next to the title (in the browser tab). If ``icon`` is a string, the
-        following options are valid:
+        If ``icon`` is ``None`` (default) and the page is defined by a file,
+        Streamlit uses a leading emoji in the filename, if present. Otherwise,
+        no icon is displayed next to the page label in the navigation menu,
+        and the default Streamlit icon is displayed next to the title (in the
+        browser tab). Pass ``icon=""`` to show no icon next to the page label
+        and keep the default browser-tab icon, even when the filename contains
+        an emoji. If ``icon`` is a non-empty string, the following options
+        are valid:
 
         - A single-character emoji. For example, you can set ``icon="🚨"``
             or ``icon="🔥"``. Emoji short codes are not supported.
@@ -144,8 +183,10 @@ class Page:
 
         The default page will have a pathname of ``""``, indicating the root
         URL of the app. If you set ``default=True``, ``url_path`` is ignored.
-        ``url_path`` can't include forward slashes; paths can't include
-        subdirectories.
+        ``url_path`` can't include forward slashes because Streamlit doesn't
+        support nested URL pathnames yet. To upvote support for nested
+        pathnames, see GitHub issue
+        `#8971 <https://github.com/streamlit/streamlit/issues/8971>`_.
 
     default : bool
         Whether this page is the default page to be shown when the app is
@@ -283,9 +324,7 @@ class Page:
             self._external_url = page
             self._page: Path | Callable[[], None] | None = None
             self._title: str = title
-            if icon is not None:
-                validate_icon_or_emoji(icon)
-            self._icon: str = icon or ""
+            self._icon: str = validate_icon_or_emoji(icon)
             # For external URLs, use a sanitized version of title as url_path if not provided
             self._url_path: str = (
                 _sanitize_url_path(title) if url_path is None else url_path
@@ -301,32 +340,16 @@ class Page:
                         "`title` that can be converted to a valid URL path."
                     ),
                 )
-            if "/" in self._url_path:
-                raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar).",
-                    error_id="page-nested-url-path",
-                )
+            _raise_if_nested_url_path(self._url_path)
 
             self._can_be_called: bool = False
             return
 
         if isinstance(page, (str, Path)):
             page_path = str(page)
-            if "\x00" in page_path:
-                raise StreamlitAPIException(
-                    "Unable to create Page. Page paths must not contain null bytes.",
-                    error_id="page-path-contains-null-bytes",
-                )
-
-            # Reject UNC paths before resolve/is_file can initiate an SMB connection
-            # and disclose the server process's Windows credentials. Absolute and
-            # drive-local paths (e.g. "C:\\...") are intentionally still allowed, as
-            # passing an absolute page path is part of the public st.Page contract.
-            if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
-                raise StreamlitAPIException(
-                    "Unable to create Page. Network paths are not supported.",
-                    error_id="page-network-path-not-supported",
-                )
+            _raise_if_unsafe_page_path(
+                page_path, error_prefix="Unable to create Page. "
+            )
 
         main_path = ctx.pages_manager.main_script_parent
         if isinstance(page, str):
@@ -358,9 +381,10 @@ class Page:
         self._title = title or inferred_name.replace("_", " ")
 
         if icon is not None:
-            # validate user provided icon.
-            validate_icon_or_emoji(icon)
-        self._icon = icon or inferred_icon
+            # An explicit icon wins, including icon="", which means no icon.
+            self._icon = validate_icon_or_emoji(icon)
+        else:
+            self._icon = validate_icon_or_emoji(inferred_icon)
 
         if self._title.strip() == "":
             raise StreamlitMissingRequiredParameterError(
@@ -379,14 +403,7 @@ class Page:
                 )
 
             self._url_path = stripped_url_path
-            if "/" in self._url_path:
-                raise StreamlitAPIException(
-                    "The URL path cannot contain a nested path (e.g. foo/bar).",
-                    error_id="page-nested-url-path",
-                )
-
-        if self._icon:
-            validate_icon_or_emoji(self._icon)
+            _raise_if_nested_url_path(self._url_path)
 
         # used by st.navigation to ordain a page as runnable
         self._can_be_called = False
