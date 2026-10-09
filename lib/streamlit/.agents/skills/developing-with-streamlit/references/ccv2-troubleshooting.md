@@ -106,6 +106,10 @@ Fix:
 - If you pass `default={"value": ...}`, also pass `on_value_change=lambda: None`.
 - For triggers, don’t expect defaults; triggers are transient and default to `None`.
 
+#### Trigger never fires inside `st.form`
+
+`setTriggerValue` is ignored when the component is inside `st.form`; the browser console logs a warning instead. Inside a form, use `setStateValue` and let the form’s submit button commit it.
+
 ### Keys (Python `key=` vs frontend `key`)
 
 - Python `key=` is the user-visible Streamlit element key.
