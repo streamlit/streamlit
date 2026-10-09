@@ -150,7 +150,7 @@ def test_stretch_chart_default_height_in_horizontal_container(app: Page):
     expect(shrink_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
 
 
-def _wraps_content(locator: Locator) -> bool:
+def _content_fits(locator: Locator) -> bool:
     """Whether the element's content fits without overflowing it."""
     # Allow 1px because scrollHeight and clientHeight round fractional heights
     # differently.
@@ -171,13 +171,19 @@ def test_stretch_charts_fit_containers_with_definite_height(app: Page):
             container: Locator = container, charts: Locator = charts
         ) -> bool:
             heights = [_height(chart) for chart in charts.all()]
-            return _wraps_content(container) and all(
+            return _content_fits(container) and all(
                 height is not None and 0 < height < DEFAULT_CHART_HEIGHT_PX
                 for height in heights
             )
 
         # The container must not scroll because of the chart's default height.
         wait_until(app, _charts_fit)
+
+    # Parameter-binding controls take part of the chart's height instead of
+    # overflowing the container.
+    bindings_card = get_element_by_key(app, "fixed-card-chart-with-bindings")
+    expect(bindings_card.locator("form.vega-bindings")).to_be_visible()
+    wait_until(app, lambda: _content_fits(bindings_card))
 
 
 def test_stretch_blocks_grow_in_fixed_height_parents(app: Page):
@@ -198,7 +204,7 @@ def test_stretch_blocks_grow_in_fixed_height_parents(app: Page):
             block_height = _height(block)
             parent_height = _height(parent)
             return (
-                _wraps_content(block)
+                _content_fits(block)
                 and block_height is not None
                 and parent_height is not None
                 and block_height > parent_height

@@ -16,7 +16,7 @@
 
 import { useMemo } from "react"
 
-import { screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { VegaLiteChart as VegaLiteChartProto } from "@streamlit/protobuf"
@@ -24,12 +24,14 @@ import { VegaLiteChart as VegaLiteChartProto } from "@streamlit/protobuf"
 const vegaEmbedMock = vi.hoisted(() => ({
   exportToPng: vi.fn(),
   isViewReady: false,
+  lastSpec: undefined as { height?: number } | undefined,
 }))
 const mockWriteText = vi.fn()
 
 // Avoid real Vega embedding side-effects in tests
 vi.mock("./useVegaEmbed", () => ({
-  useVegaEmbed: () => {
+  useVegaEmbed: (element: { spec: { height?: number } }) => {
+    vegaEmbedMock.lastSpec = element.spec
     // Satisfy hooks rule by calling a React hook in this mock
     const _memo = useMemo(() => null, [])
     return {
@@ -311,6 +313,64 @@ describe("ArrowVegaLiteChart", () => {
       expect(screen.getByTestId("stVegaLiteChart")).not.toHaveStyle(
         "contain-intrinsic-width: 25rem;"
       )
+    })
+
+    describe("with parameter bindings", () => {
+      const OriginalResizeObserver = globalThis.ResizeObserver
+
+      afterEach(() => {
+        globalThis.ResizeObserver = OriginalResizeObserver
+      })
+
+      it("leaves room for the binding controls in a container-driven height", () => {
+        const observedCallbacks = new Map<Element, ResizeObserverCallback>()
+        globalThis.ResizeObserver = class {
+          private readonly callback: ResizeObserverCallback
+
+          constructor(callback: ResizeObserverCallback) {
+            this.callback = callback
+          }
+
+          observe(target: Element): void {
+            observedCallbacks.set(target, this.callback)
+          }
+
+          unobserve = vi.fn()
+          disconnect = vi.fn()
+        }
+        vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+          elementRef: { current: null },
+          values: [250, 400],
+        })
+
+        const { rerender } = render(
+          <ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />
+        )
+        expect(vegaEmbedMock.lastSpec?.height).toBe(400)
+
+        // Vega appends the bindings form to the chart container with the view.
+        const bindingsForm = document.createElement("form")
+        bindingsForm.className = "vega-bindings"
+        const binding = document.createElement("div")
+        binding.className = "vega-bind"
+        bindingsForm.appendChild(binding)
+        screen.getByTestId("stVegaLiteChart").appendChild(bindingsForm)
+        vegaEmbedMock.isViewReady = true
+        rerender(<ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />)
+
+        const resizeBindings = observedCallbacks.get(bindingsForm)
+        expect(resizeBindings).toBeDefined()
+        act(() => {
+          resizeBindings?.(
+            [
+              { borderBoxSize: [{ blockSize: 68, inlineSize: 250 }] },
+            ] as unknown as ResizeObserverEntry[],
+            {} as ResizeObserver
+          )
+        })
+
+        expect(vegaEmbedMock.lastSpec?.height).toBe(332)
+      })
     })
   })
 

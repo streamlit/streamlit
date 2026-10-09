@@ -153,12 +153,12 @@ const parseSpecObject = (
   }
 }
 
+// Exported for testing
 /**
  * A single-view chart has one width, known before rendering. Facet, repeat,
  * and concat compositions take their width from their children. Layered
  * charts are still a single view.
  */
-// Exported for testing
 export function isSingleViewChart(spec: string | object): boolean {
   const parsedSpec = parseSpecObject(spec)
   return (
@@ -168,12 +168,12 @@ export function isSingleViewChart(spec: string | object): boolean {
   )
 }
 
+// Exported for testing
 /**
  * Get the numeric top-level width of a spec, if it has one. With Streamlit's
  * "fit" autosizing, a single-view chart renders exactly this wide; without a
  * width, it uses the default chart width.
  */
-// Exported for testing
 export function getSpecWidth(spec: string | object): number | undefined {
   const width = parseSpecObject(spec)?.width
   return typeof width === "number" && width > 0 ? width : undefined
@@ -293,10 +293,14 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // A content-width chart with a container-driven height would otherwise
   // collapse to 0×0. Single-view charts know their width from the spec, so
   // size them like a stretch-width chart inside a box of that width.
-  const hasContainedContentWidth =
+  const isContentWidthContained =
     useStretchHeight && !useStretchWidth && isSingleView
   const isSizeContained =
-    useStretchHeight && (useStretchWidth || hasContainedContentWidth)
+    useStretchHeight && (useStretchWidth || isContentWidthContained)
+
+  // Height of Vega's parameter-binding controls, which it renders inside the
+  // chart container below the chart.
+  const [bindingsHeight, setBindingsHeight] = useState(0)
 
   // The dimensions to apply to the chart. Facet charts in fullscreen use
   // fullScreenWidth; outside fullscreen they use natural sizing (0). Non-facet
@@ -307,7 +311,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       ? (fullScreenWidth ?? 0)
       : 0
     : chartContainerWidth
-  const currentHeight =
+  const availableHeight =
     (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0
 
   // Whether each dimension is container-driven (stretch / fullscreen) rather than
@@ -318,8 +322,15 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const forceStretchWidth =
     isFullScreen && !hasNestedComp
       ? true
-      : useStretchWidth || hasContainedContentWidth
+      : useStretchWidth || isContentWidthContained
   const forceStretchHeight = isFullScreen ? true : useStretchHeight
+
+  // A container-driven height has to fit the binding controls too, so the
+  // chart gets the height left above them.
+  const currentHeight =
+    forceStretchHeight && bindingsHeight > 0 && availableHeight > 0
+      ? Math.max(availableHeight - bindingsHeight, 1)
+      : availableHeight
 
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
@@ -395,7 +406,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // For fixed-dimension charts, dimensions are in the spec, so we don't need
   // to wait for container measurements.
   const needsContainerWidth =
-    useStretchWidth || hasContainedContentWidth || isFullScreen
+    useStretchWidth || isContentWidthContained || isFullScreen
   const needsContainerHeight = useStretchHeight || isFullScreen
   const hasValidWidth = !needsContainerWidth || currentWidth > 0
   const hasValidHeight = !needsContainerHeight || currentHeight > 0
@@ -494,6 +505,31 @@ const ArrowVegaLiteChart: FC<Props> = ({
     currentWidth,
     currentHeight,
   ])
+
+  // Vega creates the binding controls with the view, so look for them again
+  // whenever a view becomes ready. Their height depends only on the chart
+  // width, so shrinking the chart to fit them can't feed back into it.
+  useEffect(() => {
+    if (!isViewReady || !forceStretchHeight) {
+      return
+    }
+
+    const bindingsForm = containerRef.current?.querySelector(
+      "form.vega-bindings"
+    )
+    if (!bindingsForm?.querySelector(".vega-bind")) {
+      setBindingsHeight(0)
+      return
+    }
+
+    const observer = new ResizeObserver(entries => {
+      setBindingsHeight(entries[0]?.borderBoxSize[0]?.blockSize ?? 0)
+    })
+    observer.observe(bindingsForm)
+    return () => {
+      observer.disconnect()
+    }
+  }, [isViewReady, forceStretchHeight, containerRef])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
@@ -610,7 +646,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         useContainerWidth={useStretchWidth}
         useContainerHeight={useStretchHeight}
         isSizeContained={isSizeContained}
-        contentWidth={hasContainedContentWidth ? specWidth : undefined}
+        contentWidth={isContentWidthContained ? specWidth : undefined}
         hasFallbackHeight={hasFallbackHeight}
         ref={containerRef}
       />

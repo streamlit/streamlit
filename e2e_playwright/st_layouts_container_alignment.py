@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import altair as alt
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -259,6 +260,22 @@ with st.container(key="fixed-tabs-title-and-chart"):
     with st.tabs(["Revenue tab"], height=300)[0]:
         st.subheader("Revenue")
         st.line_chart(df, x="x", y="y", height="stretch")
+
+# Vega renders parameter-binding controls inside the chart, below the plot.
+bindings_chart = (
+    alt.Chart(df)
+    .mark_line()
+    .encode(x="x", y="y")
+    .add_params(
+        alt.param(
+            name="line_width",
+            value=2,
+            bind=alt.binding_range(min=1, max=5, step=1, name="Line width"),
+        )
+    )
+)
+with st.container(height=300, border=True, key="fixed-card-chart-with-bindings"):
+    st.altair_chart(bindings_chart, height="stretch")
 
 tall_card = st.toggle("Tall card", value=True)
 with st.container(horizontal=True, key="container-horizontal-stretch-chart-shrink"):
