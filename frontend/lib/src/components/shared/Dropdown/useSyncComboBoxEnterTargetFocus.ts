@@ -50,6 +50,12 @@ export function useSyncComboBoxEnterTargetFocus(
   // changes) may replace that auto-synced row; ArrowUp/Down to a different
   // row must not be overwritten.
   const lastSyncedKeyRef = useRef<Key | null>(null)
+  // Multiselect Enter removes the committed option from the list while the
+  // menu stays open. enterTargetKey / inputValue often stay the same, so this
+  // fingerprint restarts the effect when collection membership changes.
+  const collectionKeys = state?.collection
+    ? [...state.collection.getKeys()].join("\0")
+    : ""
 
   useEffect(() => {
     if (!state?.isOpen) {
@@ -67,7 +73,9 @@ export function useSyncComboBoxEnterTargetFocus(
 
     // True when focusedKey is a listed row this hook did not write, so a retry
     // must leave it alone. Null is React Aria clearing focus on a query change.
-    // The last key this hook wrote is not a user move.
+    // The last key this hook wrote is not a user move. A focused key missing
+    // from the collection (e.g. multiselect commit removes that option) is
+    // stale — allow sync so aria-activedescendant can follow the new target.
     const userMovedOffEnterTarget = (): boolean => {
       const current = stateRef.current
       if (!current) return false
@@ -77,6 +85,9 @@ export function useSyncComboBoxEnterTargetFocus(
         isNullOrUndefined(enterTargetKey) ||
         String(focused) === String(enterTargetKey)
       ) {
+        return false
+      }
+      if (!current.collection.getItem(focused)) {
         return false
       }
       const lastSynced = lastSyncedKeyRef.current
@@ -137,5 +148,11 @@ export function useSyncComboBoxEnterTargetFocus(
       cancelled = true
       cancelAnimationFrame(rafId)
     }
-  }, [state?.isOpen, state?.inputValue, enterTargetKey, skipApplyRef])
+  }, [
+    state?.isOpen,
+    state?.inputValue,
+    enterTargetKey,
+    skipApplyRef,
+    collectionKeys,
+  ])
 }

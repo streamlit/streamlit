@@ -420,6 +420,55 @@ describe("Multiselect widget", () => {
     )
   })
 
+  it("resets aria-activedescendant after keyboard-select removes that option", async () => {
+    // Arrow off the synced row, then Enter: the option leaves displayOptions
+    // while the menu stays open. Sync must move activedescendant to the new
+    // Enter target instead of treating the removed key as a lasting user move.
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    await user.keyboard("{ArrowDown}")
+    await waitFor(() => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        "apricot"
+      )
+    })
+    await user.keyboard("{Enter}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["apricot"],
+      expect.anything()
+    )
+    await waitFor(() => {
+      expect(screen.queryByRole("option", { name: "apricot" })).toBeNull()
+    })
+    await waitFor(
+      () => {
+        const activeId = input.getAttribute("aria-activedescendant")
+        expect(activeId).toBeTruthy()
+        expect(document.getElementById(activeId as string)).toHaveTextContent(
+          "apple"
+        )
+      },
+      { timeout: 3000 }
+    )
+  })
+
   it("does not commit a typed filter on Tab", async () => {
     const user = userEvent.setup()
     const props = getProps({
