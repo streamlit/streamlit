@@ -361,11 +361,6 @@ function useWidgetState({
     fragmentId,
   ])
 
-  // on_change="ignore" writes the edit in a microtask instead of waiting for
-  // the debounce, so a click right after the commit still includes it. The
-  // debounce only exists to coalesce reruns, and this mode never reruns. The
-  // microtask also runs after this render (edit reconciliation calls
-  // syncEditState during render) and one microtask covers a multi-row paste.
   const {
     debouncedCallback: debouncedSyncEditState,
     flush: flushEditState,
@@ -373,17 +368,19 @@ function useWidgetState({
   } = useDebouncedCallback(innerSyncEditState, DEBOUNCE_TIME_MS)
 
   const innerSyncEditStateRef = useRef(innerSyncEditState)
+  // Assigned during render (not in an effect) so a microtask queued by
+  // render-time edit reconciliation uses this render's columns and id.
   innerSyncEditStateRef.current = innerSyncEditState
   const ignoreSyncScheduledRef = useRef(false)
-  const ignoreSyncUnmountedRef = useRef(false)
 
-  useEffect(() => {
-    ignoreSyncUnmountedRef.current = false
-    return () => {
-      ignoreSyncUnmountedRef.current = true
-    }
-  }, [])
-
+  /**
+   * Writes the editing state to the widget manager.
+   *
+   * - Default mode: debounced, to coalesce reruns.
+   * - `on_change="ignore"`: written in a microtask, so a button click right
+   *   after the commit still includes the edit. One microtask covers a
+   *   multi-row paste and also runs after render-time reconciliation.
+   */
   const syncEditState = useCallback(() => {
     if (element.ignoreRerun) {
       cancelSyncEditState()
@@ -393,11 +390,8 @@ function useWidgetState({
       ignoreSyncScheduledRef.current = true
       queueMicrotask(() => {
         ignoreSyncScheduledRef.current = false
-        if (ignoreSyncUnmountedRef.current) {
-          // The grid can unmount before this microtask runs. Skip the write
-          // so a removed editor does not publish widget state after it is gone.
-          return
-        }
+        // Not cancelled on unmount. This microtask runs before passive-effect
+        // cleanup, and a same-turn remount hydrates the edit from this write.
         innerSyncEditStateRef.current()
       })
       return

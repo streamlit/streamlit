@@ -560,7 +560,7 @@ def test_data_editor_on_change_ignore(app: Page) -> None:
     fixed_editor = _get_editor(app, "ignore_fixed_editor")
     click_on_cell(fixed_editor, 1, 1, column_width="small")
     fixed_editor.press("Delete")
-    # Pause for the grid to settle. This does not wait for a new script run.
+    # Wait past the edit debounce so an unwanted rerun would bump the run counter.
     wait_for_app_run(app)
     _expect_marker(app, "ignore-runs", initial_runs)
     _expect_marker(app, "ignore-fixed-b0", "10")
@@ -568,14 +568,14 @@ def test_data_editor_on_change_ignore(app: Page) -> None:
     dynamic_editor = _get_editor(app, "ignore_dynamic_editor")
     expect_canvas_to_be_stable(dynamic_editor)
     _click_editor_toolbar_button(dynamic_editor, "Add row")
-    # Pause for the grid to settle. This does not wait for a new script run.
+    # Wait past the edit debounce so an unwanted rerun would bump the run counter.
     wait_for_app_run(app)
     _expect_marker(app, "ignore-runs", initial_runs)
     _expect_marker(app, "ignore-dynamic-result", "2|1,10|2,20")
 
     select_row(dynamic_editor, 1, column_width="small")
     _click_editor_toolbar_button(dynamic_editor, "Delete row(s)")
-    # Pause for the grid to settle. This does not wait for a new script run.
+    # Wait past the edit debounce so an unwanted rerun would bump the run counter.
     wait_for_app_run(app)
     _expect_marker(app, "ignore-runs", initial_runs)
     _expect_marker(app, "ignore-dynamic-result", "2|1,10|2,20")

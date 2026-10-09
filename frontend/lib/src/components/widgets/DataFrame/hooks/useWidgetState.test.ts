@@ -248,6 +248,76 @@ describe("useWidgetState hook", () => {
       // Should not have called setStringValue since state hasn't changed
       expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
     })
+
+    it("writes an ignored edit after unmount without waiting for the debounce", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+      const queued: Array<() => void> = []
+      let captureSync = false
+      const originalQueueMicrotask = globalThis.queueMicrotask.bind(globalThis)
+      const queueMicrotaskSpy = vi
+        .spyOn(globalThis, "queueMicrotask")
+        .mockImplementation(callback => {
+          if (captureSync) {
+            queued.push(callback)
+            return
+          }
+          originalQueueMicrotask(callback)
+        })
+
+      const { result, unmount } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.DYNAMIC,
+            ignoreRerun: true,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 5,
+          originalColumns: columns,
+        })
+      )
+
+      act(() => {
+        result.current.editingState.current.addRow(new Map())
+        result.current.updateNumRows()
+      })
+
+      captureSync = true
+      act(() => {
+        result.current.syncEditState()
+      })
+      captureSync = false
+
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      unmount()
+      expect(queued).toHaveLength(1)
+
+      act(() => {
+        queued[0]()
+      })
+
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
+        "test-id",
+        expect.any(String),
+        expect.objectContaining({
+          fromUser: true,
+          triggerRerun: false,
+        })
+      )
+
+      act(() => {
+        vi.advanceTimersByTime(200)
+      })
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+
+      queueMicrotaskSpy.mockRestore()
+    })
   })
 
   describe("createSyncSelectionState", () => {

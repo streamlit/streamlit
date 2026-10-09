@@ -1086,7 +1086,8 @@ describe("DataFrame widget", () => {
   })
 
   describe("ignoreRerun", () => {
-    // WidgetStateManager reaches sendRerunBackMsg via scheduleFlush → setTimeout(0).
+    // WidgetStateManager sends reruns from a setTimeout(0) flush, so wait one
+    // macrotask before asserting on sendRerunBackMsg.
     async function flushScheduledRerun(): Promise<void> {
       await act(async () => {
         await new Promise(resolve => {
