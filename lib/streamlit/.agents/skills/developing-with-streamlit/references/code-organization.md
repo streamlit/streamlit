@@ -53,12 +53,12 @@ st.metric("Revenue", f"${metrics['revenue']:,.0f}")
 st.dataframe(data)
 ```
 
-## Avoid if __name__ == "__main__"
+## Skip if __name__ == "__main__"
 
-Streamlit apps run the entire file on each interaction. Don't use the main guard in Streamlit files.
+Streamlit runs the whole file as `__main__` on every interaction, so a main guard always passes. It adds nothing and hides the app's top-level flow, so leave it out of Streamlit files.
 
 ```python
-# BAD - don't do this in streamlit_app.py or pages
+# Unnecessary in streamlit_app.py or pages
 if __name__ == "__main__":
     main()
 
