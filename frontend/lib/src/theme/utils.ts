@@ -831,12 +831,12 @@ export const createEmotionTheme = (
     const borderColorLight = transparentize(borderColor, 0.55)
     // Used for tabs border and expander when stale
     conditionalOverrides.colors.borderColorLight = borderColorLight
-    // Set the fallback here for dataframe & table border color
-    conditionalOverrides.colors.dataframeBorderColor = borderColorLight
+    // Match config docs: unset dataframeBorderColor follows borderColor.
+    conditionalOverrides.colors.dataframeBorderColor = borderColor
   }
 
   if (notNullOrUndefined(dataframeBorderColor)) {
-    // If dataframeBorderColor explicitly set, override borderColorLight fallback
+    // If dataframeBorderColor explicitly set, override borderColor fallback
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 

@@ -110,11 +110,12 @@ export function clampSidebarWidth(
 }
 
 /**
- * Alpha increase applied to a visible sidebar border on hover.
+ * Alpha increase applied to a translucent sidebar border on hover.
  *
- * Matches the default theme step from `fadedText10` (alpha 0.2) to
- * `fadedText20` (alpha 0.3). Already-opaque custom `borderColor` values clamp
- * at 1, so their hover feedback is only the wider gradient fade.
+ * Stock light/dark `borderColor` values are opaque, so this bump clamps at 1
+ * and hover feedback is only the wider gradient fade. Translucent custom
+ * `borderColor` values still darken/lighten by this step (historically the
+ * fadedText10 → fadedText20 gap of 0.1).
  */
 const SIDEBAR_RESIZE_HANDLE_HOVER_ALPHA_BUMP = 0.1
 

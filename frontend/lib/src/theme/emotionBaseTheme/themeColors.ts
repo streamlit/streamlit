@@ -54,6 +54,9 @@ const requiredThemeColors = {
   greenTextColor: colors.green90,
   violetTextColor: colors.purple90,
   grayTextColor: transparentize(colors.gray85, 0.4),
+
+  // Stock main + sidebar border (same hex).
+  borderColor: "#DCD8D4",
 }
 
 export type RequiredThemeColors = Record<

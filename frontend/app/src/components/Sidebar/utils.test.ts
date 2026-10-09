@@ -190,15 +190,15 @@ describe("getSidebarResizeHandleHoverBorderColor", () => {
     ["light", lightTheme.emotion.colors.borderColor],
     ["dark", darkTheme.emotion.colors.borderColor],
   ] as const)(
-    "uses the fadedText10 → fadedText20 alpha step for the default %s theme",
+    "clamps at full opacity for the default opaque %s theme borderColor",
     (_name, borderColor) => {
       const [, , , alpha] = parseToRgba(borderColor)
       const [, , , hoverAlpha] = parseToRgba(
         getSidebarResizeHandleHoverBorderColor(borderColor)
       )
 
-      expect(alpha).toBe(0.2)
-      expect(hoverAlpha).toBe(0.3)
+      expect(alpha).toBe(1)
+      expect(hoverAlpha).toBe(1)
     }
   )
 })
