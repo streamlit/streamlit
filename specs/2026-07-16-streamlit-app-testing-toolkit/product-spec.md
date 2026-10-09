@@ -18,6 +18,11 @@ check outlive the session, and is it about the app's logic or its rendered UI?
 | **On-the-fly verification:** during development, nothing committed | `interact` against the running app (_new, [agent interface spec](https://github.com/streamlit/streamlit/pull/16843)_) | A throwaway `streamlit.testing.e2e` script, run once against the running app (_new_) |
 | **Committed tests:** in the repository, run in CI | Plain pytest for logic outside the app script (_exists_); [AppTest](https://docs.streamlit.io/develop/api-reference/app-testing) for the app script itself (_exists, improved_) | `streamlit.testing.e2e` tests (_new_) |
 
+For most apps the left column is enough. The script decides which elements exist, their
+values, and what each interaction computes, while Streamlit's own tests cover how
+built-in elements render. The right column matters when an app brings its own frontend or
+look, such as custom components, custom HTML/CSS, or a custom theme.
+
 The three Streamlit parts behind that table:
 
 1. **On-the-fly verification with `interact`.** The agent interface proposed separately
@@ -271,8 +276,7 @@ the real runtime, and a script edit takes effect on the next interaction, so it 
 re-check without restarting. That already covers the app's entire logic: every widget,
 branch, and computed value, leaving only how the page looks to a browser. It is
 deliberately not a test framework: it has no assertions, isolation, or mocking, its
-sessions share caches with the rest of the server, it is served only when
-`server.enableAgentApi` is on, and nothing it observes is kept.
+sessions share caches with the rest of the server, and nothing it observes is kept.
 
 For the rendered UI, the on-the-fly check is a throwaway script on the E2E API, pointed at
 the running app with `app_fixture(url=...)`, run once, and deleted. It uses the same
@@ -298,7 +302,7 @@ lock the behavior in       plain pytest for logic extracted from the app script
                            an AppTest using the keys the snapshot reported
                            custom UI or support: browser_required: an E2E test
   ↓
-deploy, then smoke-check   interact against the deployed app, where enabled
+deploy, then smoke-check   interact against the deployed app
 ```
 
 For committed tests, the choice in more detail:
