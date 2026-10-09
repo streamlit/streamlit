@@ -15,7 +15,7 @@
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
-from e2e_playwright.shared.app_utils import get_element_by_key
+from e2e_playwright.shared.app_utils import get_element_by_key, get_text_area
 
 CONTAINER_KEYS = [
     "container-horizontal-align-left",
@@ -79,6 +79,15 @@ def test_stretch_height_in_horizontal_container(app: Page):
         chart_and_dataframe.all(),
     )
 
+    # A stretch-height text area fills the row and keeps its pixel width.
+    stretch_text_area = get_text_area(app, "Stretch text area")
+    _expect_heights_match(
+        app,
+        get_element_by_key(app, "stretch-height-input-tallest"),
+        [stretch_text_area],
+    )
+    expect(stretch_text_area).to_have_css("width", "200px")
+
     # Content-height siblings keep their own height.
     content_height = _height(content_card)
     tallest_height = _height(tallest)
@@ -88,7 +97,7 @@ def test_stretch_height_in_horizontal_container(app: Page):
 
 
 def test_checkbox_alignment_in_horizontal_container(app: Page):
-    """Bottom-aligned rows lift checkboxes and toggles to the input field center."""
+    """Bottom-aligned rows use the same 8px checkbox and toggle margin as columns."""
     bottom_row = get_element_by_key(app, "container-horizontal-bottom-checkboxes")
     bottom_checkboxes = bottom_row.get_by_test_id("stCheckbox")
     expect(bottom_checkboxes).to_have_count(2)

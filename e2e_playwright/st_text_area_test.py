@@ -98,7 +98,7 @@ def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         get_text_area(app, "text area 12 (height=75)"), name="st_text_area-height_75"
     )
-    # Expect this to default to the minimum height of 68px
+    # The requested height is clamped to the 68px minimum.
     min_height_text_area = get_text_area(app, "text area 13 (height=60)")
     assert_snapshot(min_height_text_area, name="st_text_area-height_60")
     # The 68px minimum includes the field border, matching other large widgets.

@@ -200,6 +200,12 @@ with st.container(horizontal=True, key="container-horizontal-stretch-height-data
     st.line_chart(df, x="x", y="y", height="stretch")
     st.dataframe(df, height="stretch")
 
+with st.container(horizontal=True, key="container-horizontal-stretch-height-input"):
+    with st.container(border=True, key="stretch-height-input-tallest"):
+        for line in range(6):
+            st.write(f"Line {line}")
+    st.text_area("Stretch text area", height="stretch", width=200)
+
 with st.container(
     horizontal=True,
     vertical_alignment="bottom",
