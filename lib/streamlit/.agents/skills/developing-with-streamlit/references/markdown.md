@@ -31,6 +31,7 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Badge | `:color-badge[text]` | `:green-badge[Success]` | ✓ |
 | Shimmer animation | `:shimmer[text]` | `:shimmer[Loading...]` | ✓ |
 | Small text | `:small[text]` | `:small[footnote]` | ✓ |
+| Typographic symbols | `->` `<-` `<->` `--` `>=` `<=` `~=` (with spaces around them) | `A -> B` renders as A → B | ✓ |
 | LaTeX (inline) | `$formula$` | `$ax^2 + bx + c$` | ✓ |
 | LaTeX (block) | `$$formula$$` | `$$\int_0^1 x^2 dx$$` | ✗ |
 
