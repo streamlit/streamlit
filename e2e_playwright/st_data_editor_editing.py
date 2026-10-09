@@ -47,6 +47,7 @@ def _init_state() -> None:
 
 
 def _cell_marker(value: object) -> str:
+    """Render a numeric cell as an int string, or "" for NaN/None."""
     if isinstance(value, (float, np.floating)):
         if np.isnan(value):
             return ""
@@ -57,6 +58,7 @@ def _cell_marker(value: object) -> str:
 
 
 def _frame_marker(frame: pd.DataFrame) -> str:
+    """Render a frame as "<rows>|<row cells>|..." for compact assertions."""
     row_parts = [
         ",".join(_cell_marker(row[column]) for column in frame.columns)
         for _, row in frame.iterrows()
@@ -206,7 +208,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Stable sources. Edited frames are not written back into these dataframes.
+# These frames are recreated every run and are not written back, so a rerun
+# shows the original values until the editor's pending edits are applied.
 IGNORE_FIXED_DF = pd.DataFrame({"a": [1, 2], "b": [10, 20]})
 IGNORE_DYNAMIC_DF = pd.DataFrame({"a": [1, 2], "b": [10, 20]})
 

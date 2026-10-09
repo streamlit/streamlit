@@ -1100,8 +1100,8 @@ class DataEditorMixin:
             - ``"rerun"`` (default): Streamlit will rerun the app when the
               user commits a cell edit (Enter, Tab, or leaving the cell),
               pastes, adds a row, deletes a row, or clears cell contents.
-              Typing in the open cell editor does not commit until the edit
-              is applied.
+              Typing in an open cell editor does not rerun the app until the
+              edit is committed.
 
             - ``"ignore"``: Streamlit will not rerun the app when the user
               commits an edit. The data editor still updates in the UI. The

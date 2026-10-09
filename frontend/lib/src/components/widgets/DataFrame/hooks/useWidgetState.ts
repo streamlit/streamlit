@@ -361,10 +361,11 @@ function useWidgetState({
     fragmentId,
   ])
 
-  // The debounce coalesces reruns. on_change="ignore" does not rerun, so the
-  // edit is written in a microtask: after the current render (edit
-  // reconciliation calls this during render) and before the next click or
-  // submit. One microtask covers a multi-row paste.
+  // on_change="ignore" writes the edit in a microtask instead of waiting for
+  // the debounce, so a click right after the commit still includes it. The
+  // debounce only exists to coalesce reruns, and this mode never reruns. The
+  // microtask also runs after this render (edit reconciliation calls
+  // syncEditState during render) and one microtask covers a multi-row paste.
   const {
     debouncedCallback: debouncedSyncEditState,
     flush: flushEditState,
@@ -393,6 +394,8 @@ function useWidgetState({
       queueMicrotask(() => {
         ignoreSyncScheduledRef.current = false
         if (ignoreSyncUnmountedRef.current) {
+          // The grid can unmount before this microtask runs. Skip the write
+          // so a removed editor does not publish widget state after it is gone.
           return
         }
         innerSyncEditStateRef.current()
