@@ -222,7 +222,7 @@ def start_load_test_server(
         "--server.fileWatcherType=none",
     ]
 
-    log_file = TemporaryFile("w+", encoding="utf-8")
+    log_file = TemporaryFile("w+", encoding="utf-8", errors="replace")
     try:
         process = subprocess.Popen(
             args,

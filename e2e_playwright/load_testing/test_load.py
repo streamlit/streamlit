@@ -143,6 +143,23 @@ def test_startup_failure_message_when_process_still_running() -> None:
     assert "returncode=" not in message
 
 
+def test_startup_failure_message_replaces_invalid_utf8() -> None:
+    """Non-UTF-8 child output still appears in the failure message."""
+    log_file = TemporaryFile("w+", encoding="utf-8", errors="replace")
+    try:
+        log_file.buffer.write(b"Address already in use\nPort \xff is busy\n")
+        log_file.flush()
+        message = _format_server_startup_failure(12345, 1, log_file)
+    finally:
+        log_file.close()
+
+    assert "port 12345" in message
+    assert "returncode=1" in message
+    assert "Address already in use" in message
+    assert "Port" in message
+    assert "\ufffd" in message
+
+
 def test_unhealthy_server_failure_includes_logs_and_returncode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
