@@ -50,12 +50,18 @@ export function useSyncComboBoxEnterTargetFocus(
   // changes) may replace that auto-synced row; ArrowUp/Down to a different
   // row must not be overwritten.
   const lastSyncedKeyRef = useRef<Key | null>(null)
-  // Multiselect Enter removes the committed option from the list while the
-  // menu stays open. enterTargetKey / inputValue often stay the same, so this
-  // fingerprint restarts the effect when collection membership changes.
-  const collectionKeys = state?.collection
-    ? [...state.collection.getKeys()].join("\0")
-    : ""
+  // Multiselect Enter removes the committed option while the menu stays open.
+  // enterTargetKey / inputValue often stay the same, so restart only when the
+  // current focusedKey is missing from the collection — not on every filter
+  // membership change (that cancelled in-flight retries and could overwrite a
+  // hover-end-preserved row once skipApplyRef was spent).
+  const focusedKey = state?.selectionManager.focusedKey ?? null
+  const focusedKeyAbsent =
+    state?.isOpen &&
+    notNullOrUndefined(focusedKey) &&
+    !state.collection.getItem(focusedKey)
+      ? String(focusedKey)
+      : null
 
   useEffect(() => {
     if (!state?.isOpen) {
@@ -64,6 +70,9 @@ export function useSyncComboBoxEnterTargetFocus(
     }
     if (skipApplyRef?.current) {
       skipApplyRef.current = false
+      // Pointer-leave kept the current focusedKey. Forget our last write so a
+      // later restart does not treat that preserved row as still hook-owned.
+      lastSyncedKeyRef.current = null
       return
     }
 
@@ -153,6 +162,6 @@ export function useSyncComboBoxEnterTargetFocus(
     state?.inputValue,
     enterTargetKey,
     skipApplyRef,
-    collectionKeys,
+    focusedKeyAbsent,
   ])
 }

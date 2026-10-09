@@ -213,8 +213,9 @@ def test_shows_correct_options_via_fuzzy_search(
     expect(options).to_have_count(1)
     expect(options.first).to_have_text("e2e/scripts/st_expander.py")
 
-    # Typing keeps aria-activedescendant on the Enter target (#16841).
-    expect(options.first).to_have_attribute("data-focused", "true")
+    # Typing keeps aria-activedescendant on the Enter target (#16841). Wait for
+    # the sync to land before asserting the focused highlight (webkit can lag
+    # the virtualizer registration of the filtered row).
     expect(selectbox_input).to_have_attribute(
         "aria-activedescendant", re.compile(r".+")
     )
@@ -223,6 +224,7 @@ def test_shows_correct_options_via_fuzzy_search(
     expect(app.locator(f'[id="{active_id}"]')).to_have_text(
         "e2e/scripts/st_expander.py"
     )
+    expect(options.first).to_have_attribute("data-focused", "true")
 
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
