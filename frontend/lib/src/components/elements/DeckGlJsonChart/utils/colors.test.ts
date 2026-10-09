@@ -172,6 +172,54 @@ describe("#getContextualFillColor", () => {
       },
       [255, 0, 0, 255],
     ],
+    [
+      "should preserve an explicit zero alpha from a @@= expression when not selected",
+      {
+        isSelected: false,
+        object,
+        objectInfo: { index: 0 },
+        originalFillFunction: () => "@@=[255, 0, 0, 0]",
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 0],
+    ],
+    [
+      "should boost an explicit zero alpha from a @@= expression when selected",
+      {
+        isSelected: true,
+        object,
+        objectInfo: { index: 0 },
+        originalFillFunction: () => "@@=[255, 0, 0, 0]",
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 255],
+    ],
+    [
+      "should preserve an explicit zero alpha from @@=color when not selected",
+      {
+        isSelected: false,
+        object: { color: [255, 0, 0, 0] },
+        objectInfo: { index: 0 },
+        originalFillFunction: () => "@@=color",
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 0],
+    ],
+    [
+      "should boost an explicit zero alpha from @@=color when selected",
+      {
+        isSelected: true,
+        object: { color: [255, 0, 0, 0] },
+        objectInfo: { index: 0 },
+        originalFillFunction: () => "@@=color",
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 255],
+    ],
   ]
 
   it.each(testCases)("%s", (_description, args, expected) => {

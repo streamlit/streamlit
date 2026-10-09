@@ -656,7 +656,8 @@ export default defineConfig([
     },
   },
   // `||` drops 0, "", and false. Enabled directory-by-directory.
-  // Keep `||` where a blank string or zero is the unset sentinel.
+  // Keep `||` where a blank string or false means unset, and for boolean OR.
+  // Use `??` where 0 is a real value (for example a color channel).
   {
     files: [
       "**/components/widgets/**/*.{ts,tsx}",

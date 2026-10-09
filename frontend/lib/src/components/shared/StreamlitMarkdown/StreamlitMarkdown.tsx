@@ -433,7 +433,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     <HeaderActionElements
       elementId={elementId}
       help={help}
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false and unset both leave the anchor visible outside the sidebar and dialog
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- sidebar and dialog always hide the anchor; false must not force the link to show
       hideAnchor={hideAnchor || isInSidebarOrDialog}
     />
   )
@@ -1244,7 +1244,7 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
       title={title}
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank target still opens in a new tab
       target={target || "_blank"}
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank rel still sets noopener
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank rel still sets noopener noreferrer
       rel={rel || "noopener noreferrer"}
       {...omit(rest, "node")}
     >
