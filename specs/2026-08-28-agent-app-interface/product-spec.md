@@ -1196,9 +1196,10 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
    requests on the connection"
    ([MCP tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)),
    and the specification's own guidance for this shape is the opaque-handle pattern
-   `session_id` already implements. `interact` must never be annotated read-only. Chat
-   clients also need a paging `read_data` tool, because they cannot resolve or parse a
-   `data.url`. The design, including why it is written by hand rather than on the SDK,
+   `session_id` already implements. `interact` must never be annotated read-only. A
+   second, read-only `get_data` tool serves the files a result references, tables as
+   pages of rows, because chat clients cannot resolve or parse a `data.url`. The
+   design, including why it is written by hand rather than on the SDK,
    is in [mcp-support.md](mcp-support.md).
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among

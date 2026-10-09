@@ -178,19 +178,23 @@ Capturing those values on the script thread, at the end of the run that produced
 would leave the event loop only serializing finished data. The natural place is the same
 hook that already decides when a run's stale deltas are dropped.
 
-## Page full tables for MCP chat clients
+## Query large tables on the server
 
-**Today:** a chat client sees a table's 100-row preview and a relative `data.url` it can
-neither resolve nor parse. A paging `read_data` tool, taking the `data.url` as a handle
-the server resolves, would close that. The design is in
-[mcp-support.md](mcp-support.md#follow-up-data-for-chat-clients).
+**Today:** an MCP chat client reads a table beyond its preview through the `get_data`
+tool, a page of rows at a time ([mcp-support.md](mcp-support.md#data-for-chat-clients)).
+That reaches every row, but a table of a hundred thousand rows takes a hundred pages,
+each spent in the model's context, to answer one aggregate question.
 
-**Why not now:** v1 keeps MCP to the one operation the HTTP API has, and the coding
-agents it targets first fetch the Arrow themselves.
+**The fuller version:** let the client run a query over an element's data on the server,
+for example filtering, grouping, and aggregating its Arrow table, and return only the
+result. It moves the question to the data instead of the data to the model, and exposes
+nothing new, since the data is already what the element shows.
 
-**What would make it worth doing:** chat clients analyzing tables larger than the
-preview. The first chat-client feedback named this as its biggest limitation, so it is
-the first candidate.
+**Why not now:** it is a query surface of its own, with a language to choose and bound,
+and paging already reaches every row.
+
+**What would make it worth doing:** agents answering aggregate questions over tables
+too large to page through.
 
 ## Side-load ECharts datasets as Arrow
 

@@ -281,6 +281,9 @@ class AgentSession:
     # An interaction that outlasted the run timeout and whose result nobody has
     # collected yet. Its run keeps going, and a retry waits for it.
     timed_out: _Interaction | None = None
+    # The media files the last snapshot references, which are the only ones
+    # the MCP `get_data` tool serves for this session.
+    media_ids: frozenset[str] = frozenset()
 
 
 class AgentSessionRegistry:
@@ -291,9 +294,12 @@ class AgentSessionRegistry:
     them: a reclaimed session is gone either way.
     """
 
-    def __init__(self, runtime: Runtime) -> None:
+    def __init__(self, runtime: Runtime, *, media_path: str = "/media") -> None:
         self._runtime = runtime
         self._sessions: dict[str, AgentSession] = {}
+        # Where media storage serves files, so a snapshot's media URLs can be
+        # told apart from links an app displays.
+        self.media_path = media_path
 
     def get(self, handle: str, user_info: dict[str, Any]) -> AgentSession:
         self._reclaim_idle()
@@ -420,9 +426,13 @@ async def interact(
     session.busy = True
 
     try:
-        return await _run_interaction(
+        document = await _run_interaction(
             runtime, session, request, is_new_session=is_new_session
         )
+        session.media_ids = snapshot_module.media_file_ids(
+            document, media_path=registry.media_path
+        )
+        return document
     except AgentRequestError as exc:
         # A creating call that fails after the session exists has still run the
         # app, so the session is real and usable. Hand its id back rather than

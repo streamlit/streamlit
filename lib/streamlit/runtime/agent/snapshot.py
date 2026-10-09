@@ -42,6 +42,8 @@ from streamlit.runtime.state.common import user_key_from_element_id
 from streamlit.runtime.state.session_state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from google.protobuf.message import Message
 
     from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -808,15 +810,7 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
     limit = _preview_row_limit()
     try:
         table = pa.RecordBatchStreamReader(arrow_bytes).read_all()
-        # By position rather than by name, so a table with two columns of the
-        # same name keeps both.
-        rows = [
-            [json_encoding.to_json_value(cell) for cell in row]
-            for row in zip(
-                *(column.to_pylist() for column in table.slice(0, limit).columns),
-                strict=True,
-            )
-        ]
+        rows = arrow_rows(table, 0, limit)
     except Exception:
         # Any failure, not just a malformed stream: an element without a
         # summary costs far less than a failed snapshot, or a failed command
@@ -824,17 +818,13 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
         _LOGGER.debug("Could not summarize an Arrow payload.", exc_info=True)
         return None
 
-    # Every column the bytes behind `data.url` carry, under the same names, so
-    # the reported schema is the schema of what a client fetches. That
-    # includes an unnamed, non-range index, which pandas stores as
-    # `__index_level_N__` and `st.dataframe` displays.
-    columns = list(zip(table.schema.names, table.schema.types, strict=True))
+    columns = arrow_columns(table)
     # `complete` is whether `preview.rows` is the whole dataset. It sits at
     # the top of `data` because that is the first question a client asks.
     # `truncated` is the inverse, for readers that look inside `preview`.
     complete = table.num_rows <= limit
     return {
-        "columns": [{"name": name, "type": str(dtype)} for name, dtype in columns],
+        "columns": columns,
         "row_count": table.num_rows,
         "column_count": len(columns),
         "complete": complete,
@@ -847,6 +837,59 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
             "rows": rows,
         },
     }
+
+
+def arrow_columns(table: Any) -> list[dict[str, str]]:
+    """An Arrow table's columns with their types.
+
+    Every column the bytes behind `data.url` carry, under the same names, so
+    the reported schema is the schema of what a client fetches. That includes
+    an unnamed, non-range index, which pandas stores as `__index_level_N__` and
+    `st.dataframe` displays.
+    """
+    return [
+        {"name": name, "type": str(dtype)}
+        for name, dtype in zip(table.schema.names, table.schema.types, strict=True)
+    ]
+
+
+def arrow_rows(table: Any, offset: int, limit: int) -> list[list[Any]]:
+    """Up to ``limit`` rows from ``offset``, as JSON values in column order.
+
+    By position rather than by name, so a table with two columns of the same
+    name keeps both.
+    """
+    return [
+        [json_encoding.to_json_value(cell) for cell in row]
+        for row in zip(
+            *(column.to_pylist() for column in table.slice(offset, limit).columns),
+            strict=True,
+        )
+    ]
+
+
+def media_file_ids(document: dict[str, Any], *, media_path: str) -> frozenset[str]:
+    """The IDs of the media files a snapshot references, before rebasing."""
+    media_prefix = media_path.rstrip("/") + "/"
+    ids: set[str] = set()
+
+    def collect(value: Any) -> Any:
+        for item in value if isinstance(value, list) else [value]:
+            if isinstance(item, str) and item.startswith(media_prefix):
+                ids.add(media_file_id(item))
+        return value
+
+    _map_media_urls(document, collect)
+    return frozenset(ids)
+
+
+def media_file_id(url: str) -> str:
+    """The file ID in a media URL, relative or not, or in a bare ID.
+
+    Media storage names a file ``<id><extension>`` under its endpoint.
+    """
+    name = url.split("?", 1)[0].rstrip("/").rsplit("/", 1)[-1]
+    return name.split(".", 1)[0]
 
 
 def rebase_media_urls(
@@ -873,15 +916,25 @@ def rebase_media_urls(
             return [rebase(item) for item in value]
         return value
 
+    _map_media_urls(document, rebase)
+
+
+def _map_media_urls(document: dict[str, Any], transform: Callable[[Any], Any]) -> None:
+    """Replace every field that can hold a media URL with ``transform(value)``.
+
+    These are ``data.url`` and the ``url``, ``src``, and ``avatar`` props; a
+    value may be a list, as for several images.
+    """
+
     def walk(node: dict[str, Any]) -> None:
         data = node.get("data")
         if isinstance(data, dict) and "url" in data:
-            data["url"] = rebase(data["url"])
+            data["url"] = transform(data["url"])
         props = node.get("props")
         if isinstance(props, dict):
             for name in ("url", "src", "avatar"):
                 if name in props:
-                    props[name] = rebase(props[name])
+                    props[name] = transform(props[name])
         for child in node.get("children") or []:
             walk(child)
 

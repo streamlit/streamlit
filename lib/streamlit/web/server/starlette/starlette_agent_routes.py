@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config
 from streamlit.logger import get_logger
-from streamlit.runtime.agent import mcp
+from streamlit.runtime.agent import data_access, mcp
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.agent.interaction import (
     AgentSessionRegistry,
@@ -212,7 +212,9 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
     from streamlit.url_util import make_url_path
 
     enabled = bool(config.get_option("server.enableAgentApi"))
-    registry = AgentSessionRegistry(runtime) if enabled else None
+    registry = (
+        AgentSessionRegistry(runtime, media_path=_MEDIA_PATH) if enabled else None
+    )
     interact_path = make_url_path(base_url or "", _ROUTE_AGENT_INTERACT)
     schema_path = make_url_path(base_url or "", _ROUTE_AGENT_SCHEMA)
     mcp_path = make_url_path(base_url or "", _ROUTE_AGENT_MCP)
@@ -435,7 +437,26 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             # result says to call again, and the retry collects the run.
             return result, status >= 400
 
-        response = await mcp.handle(message, call_interact)
+        def call_get_data(
+            arguments: dict[str, Any],
+        ) -> tuple[data_access.FileContent | dict[str, Any], bool]:
+            assert registry is not None  # noqa: S101 - guarded by `enabled`
+            try:
+                return data_access.get_data(
+                    runtime,
+                    registry,
+                    arguments,
+                    user_info=_gather_user_info(request.headers),
+                ), False
+            except AgentRequestError as exc:
+                return _error_body(exc.code, exc.message), True
+            except Exception:
+                _LOGGER.exception("Agent API get_data failed")
+                return _error_body(
+                    "internal_error", "The file could not be read."
+                ), True
+
+        response = await mcp.handle(message, call_interact, call_get_data)
         if response is None:
             # Only notifications, which the transport acknowledges without a body.
             return Response(status_code=202)

@@ -113,6 +113,20 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
         404,
         "No page has that `url_path`. The response's `pages` lists the available ones.",
     ),
+    "unknown_file": (
+        404,
+        (
+            "MCP `get_data` only: the session's latest result references no "
+            "file at that URL, or it is no longer stored."
+        ),
+    ),
+    "result_too_large": (
+        413,
+        (
+            "MCP `get_data` only: the file, or the requested page of a table, "
+            "is over the size limit. Request fewer rows."
+        ),
+    ),
     "unknown_session": (
         404,
         (
@@ -418,10 +432,12 @@ _MCP_PATH_ITEM: Final = {
         "summary": "The same interaction, as an MCP server.",
         "description": (
             "The Model Context Protocol over HTTP: send JSON-RPC 2.0 messages "
-            "(`initialize`, `tools/list`, `tools/call`). It offers one tool, "
-            "`interact`, which takes the interact operation's request body as its "
-            "arguments and returns the snapshot both as `structuredContent` and as "
-            "a JSON text block, for clients that only read text. There is no "
+            "(`initialize`, `tools/list`, `tools/call`). Its `interact` tool "
+            "takes the interact operation's request body as its arguments and "
+            "returns the snapshot both as `structuredContent` and as a JSON text "
+            "block, for clients that only read text. Its `get_data` tool reads a "
+            "file a result references, such as the full table behind a "
+            "`data.url`, for clients that cannot fetch the URL. There is no "
             "server-sent stream, so `GET` answers `405`, as the MCP specification "
             "prescribes for a server without one."
         ),

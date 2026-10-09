@@ -35,12 +35,13 @@ same Host allow-list, identity mapping, and session limits.
   and so does an app whose proxy authenticates every request. An app behind `st.login`
   needs a login flow, which is the product spec's open question 2.
 
-## The tool
+## The tools
 
 MCP requires a server's tool list not to change during a connection, and a Streamlit
-app's action space changes after every run. So there is one fixed tool, `interact`, and
-what the app currently allows lives in each result, exactly as `actions` does in a
-snapshot.
+app's action space changes after every run. So there is one fixed tool for acting,
+`interact`, and what the app currently allows lives in each result, exactly as `actions`
+does in a snapshot. A second, read-only tool, `get_data`, reads the files a result
+references; see [Data for chat clients](#data-for-chat-clients).
 
 - **Input:** the agent API request — `session_id`, `widget_state`, `trigger`, `page`,
   `query_params`, `context` — with the same schema, made self-contained: MCP has no
@@ -53,9 +54,8 @@ snapshot.
 
 **Data stays behind `data.url`, as in the HTTP API.** A snapshot inlines up to 100 rows
 per table, which covers most filtered tables, and points at the full Arrow data
-otherwise. Coding agents such as Claude Code, Cursor, and VS Code fetch that URL and read
-it with code. Chat clients are more limited, which is a
-[follow-up](#follow-up-data-for-chat-clients) rather than part of the first version.
+otherwise. Coding agents such as Claude Code, Cursor, and VS Code can fetch that URL and
+read it with code; chat clients read it through `get_data`.
 
 Three details:
 
@@ -107,13 +107,13 @@ The text is the same text the OpenAPI document uses, built from the same definit
 
 ## Written by hand, not with the SDK
 
-The official MCP SDK is not needed. This server is the simplest kind MCP has: one tool,
-no streaming, and nothing the server sends on its own. The endpoint answers four
+The official MCP SDK is not needed. This server is the simplest kind MCP has: two
+tools, no streaming, and nothing the server sends on its own. The endpoint answers four
 messages and rejects the rest:
 
 - `initialize`: the supported protocol version and capabilities (tools only).
-- `tools/list`: the `interact` tool.
-- `tools/call`: runs it through the existing `interact` coroutine.
+- `tools/list`: the `interact` and `get_data` tools.
+- `tools/call`: runs `interact` through the existing coroutine, or reads a file.
 - `ping`.
 
 A notification such as `notifications/initialized` gets `202 Accepted` with no body. A
@@ -149,6 +149,10 @@ Nothing new beyond the agent API's rules, applied to one more route:
   browser caller anything, because the route sends no CORS headers for one to read a
   response with.
 - **No read-only annotation on `interact`**, so clients that confirm writes keep doing so.
+  `get_data` is annotated read-only: it runs no app code.
+- **`get_data` serves only what the session's latest result references**, so it is
+  narrower than the `/media` route, which serves any live file to whoever holds its URL.
+  A session answers only the identity that created it, and that binding carries over.
 
 ## Result size
 
@@ -170,32 +174,44 @@ About 2 days for a prototype-quality endpoint, roughly 320 lines including tests
 | Discovery: an OpenAPI `paths` entry and the `index.html` hint                      | ~20 lines  |
 | Tests, plus a pass with MCP Inspector and one or two real clients                  | ~150 lines |
 
-Not included: OAuth for signed-in apps, result-size budgets, and the data follow-up
-below.
+Not included: OAuth for signed-in apps and result-size budgets. `get_data`, below, is
+about 150 more lines.
 
-## Follow-up: data for chat clients
+## Data for chat clients
 
 Coding agents fetch `data.url` and parse Arrow with code. Chat clients such as ChatGPT
-and Claude.ai are narrower in three ways: the model often does not know the URL it is
-connected to, so a relative `data.url` cannot be resolved; their fetch tools reach only
-public URLs; and they handle text far better than a binary Arrow stream. The gap only
-matters for tables larger than the 100-row preview, so it is worth closing once usage
-shows chat clients hitting it. The first feedback from a chat client doing data-heavy
-analysis named it the biggest limitation. Two ways to close it, simplest first:
+and Claude.ai are narrower: the model often does not know the URL it is connected to, so
+a relative `data.url` cannot be resolved; their fetch tools may refuse a URL the model
+did not see in full; their code sandboxes may have no network; and they read text far
+better than a binary Arrow stream. Two independent reports from chat clients doing
+data-heavy analysis named this the biggest limitation, so the endpoint closes it with a
+second tool:
 
-1. **Serve the same data as text.** A CSV or JSON rendering of a `data.url`, paged, would
-   work for any client whose fetch tool handles text, and for HTTP API clients too,
-   without a new tool. It still leaves the model to resolve the URL.
-2. **A paging `read_data` tool** that takes a table's `data.url` as an opaque handle, with
-   `offset` and `limit`, and returns rows in `columns` order, the shape of
-   `data.preview`, with the next offset. The server resolves the handle, so the model
-   never has to, and absolute URLs, which would be wrong behind a prefix-stripping
-   proxy, are not needed. Serving only URLs from the session's latest snapshot keeps
-   the fetch-now rule. It reaches clients that cannot fetch at all, such as an app
-   reachable only through the MCP connection, and is about 120 lines. MCP resources are
-   the protocol's native way to expose data, but many clients do not show them to the
-   model on their own, and raw Arrow bytes are unreadable to a model without code
-   execution, so a tool returning rows is the more dependable form.
+```text
+get_data(session_id, url, offset=0, limit=1000)
+```
+
+- **Input:** a `data.url` or media URL exactly as a result shows it, or the bare file ID.
+  The server resolves it, so the model never has to, and no absolute URL is needed,
+  which would be wrong behind a prefix-stripping proxy.
+- **Scope:** only files the session's latest result references, which keeps the
+  fetch-now rule and the session's identity binding.
+- **Tables** come back as JSON rows in `columns` order, the shape of `data.preview`, with
+  `row_count` and the `next_offset` of the following page. The snapshot already decodes
+  the Arrow stream to build its preview, so paging reuses that rather than adding a
+  parser. Rows, because a model reads them and cannot read Arrow without code execution.
+- **Other files** come back as themselves, typed by MIME type: images and audio as MCP
+  image and audio content, text and JSON as text, and anything else, such as a PDF, as an
+  embedded resource with its MIME type.
+- **Size:** at most 5 MB per response, refused with `result_too_large` rather than
+  truncated, since a cut-off image or page is useless. A few MB is still beyond what
+  most clients put in a model's context, so paging is what makes a large table
+  readable; a request for fewer rows always fits.
+
+Not done: CSV output, choosing columns, and MCP resources, which are the protocol's
+native way to expose files but which many clients do not show the model. For tables too
+large to page through, the answer is running a query on the server, over the element's
+data, rather than moving the data to the model.
 
 ## Open questions
 
