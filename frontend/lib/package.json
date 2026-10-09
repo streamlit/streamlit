@@ -89,7 +89,7 @@
     "loglevel": "^1.9.2",
     "mapbox-gl": "^1.13.2",
     "marked": "^18.0.14",
-    "mdast-util-find-and-replace": "^3.0.2",
+    "mdast-util-find-and-replace": "^3.0.3",
     "mermaid": "^11.17.2",
     "moment": "^2.31.0",
     "moment-duration-format": "^2.3.2",

@@ -38,7 +38,7 @@ import slugify from "@sindresorhus/slugify"
 import { parseToRgba } from "color2k"
 import type { Element, Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
-import type { Root as MdastRoot, Text } from "mdast"
+import type { Emphasis, Root as MdastRoot, Text } from "mdast"
 import { findAndReplace } from "mdast-util-find-and-replace"
 import { Link2 as LinkIcon } from "react-feather"
 import ReactMarkdown, {
@@ -211,13 +211,15 @@ export interface Props {
 }
 
 /**
- * Type for mdast text nodes that carry hast transformation data.
- * Used by mdast-util-to-hast to convert these placeholder nodes into specific HTML elements.
+ * Inline mdast node that mdast-util-to-hast turns into a specific HTML element
+ * via `data.hName`. This must not be `type: "text"`: mdast-util-find-and-replace
+ * merges adjacent text nodes, which would drop these fields and neighboring copy.
+ * `emphasis` is a phrasing node whose hast handler applies the `data.h*` fields.
  * @see https://github.com/syntax-tree/mdast-util-to-hast#fields-on-nodes
  */
-interface MdastTextWithHastData {
-  type: "text"
-  value: string
+interface MdastInlineHastNode {
+  type: "emphasis"
+  children: Emphasis["children"]
   data: {
     hName: string
     hProperties: Record<string, string>
@@ -986,12 +988,12 @@ function createRemarkUnsupportedDirectivesCleanup(): () => (
 function createRemarkMaterialIcons(theme: EmotionTheme) {
   return () => (tree: MdastRoot) => {
     function replace(
-      fullMatch: string,
+      _fullMatch: string,
       iconName: string
-    ): MdastTextWithHastData {
+    ): MdastInlineHastNode {
       return {
-        type: "text",
-        value: fullMatch,
+        type: "emphasis",
+        children: [],
         data: {
           hName: "span",
           hProperties: {
@@ -1025,7 +1027,7 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
     findAndReplace(tree, [
       [
         /:material_(\w+):/g,
-        replace as (fullMatch: string, iconName: string) => Text,
+        replace as (fullMatch: string, iconName: string) => Emphasis,
       ],
     ])
     return tree
@@ -1037,10 +1039,10 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
  */
 function createRemarkStreamlitLogo() {
   return () => (tree: MdastRoot) => {
-    function replaceStreamlit(): MdastTextWithHastData {
+    function replaceStreamlit(): MdastInlineHastNode {
       return {
-        type: "text",
-        value: "",
+        type: "emphasis",
+        children: [],
         data: {
           hName: "img",
           hProperties: {
@@ -1055,7 +1057,9 @@ function createRemarkStreamlitLogo() {
         },
       }
     }
-    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit as () => Text]])
+    findAndReplace(tree, [
+      [/:streamlit:/g, replaceStreamlit as () => Emphasis],
+    ])
     return tree
   }
 }

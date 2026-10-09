@@ -3618,7 +3618,7 @@ __metadata:
     loglevel: "npm:^1.9.2"
     mapbox-gl: "npm:^1.13.2"
     marked: "npm:^18.0.14"
-    mdast-util-find-and-replace: "npm:^3.0.2"
+    mdast-util-find-and-replace: "npm:^3.0.3"
     mermaid: "npm:^11.17.2"
     moment: "npm:^2.31.0"
     moment-duration-format: "npm:^2.3.2"
@@ -10575,15 +10575,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mdast-util-find-and-replace@npm:^3.0.0, mdast-util-find-and-replace@npm:^3.0.1, mdast-util-find-and-replace@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "mdast-util-find-and-replace@npm:3.0.2"
+"mdast-util-find-and-replace@npm:^3.0.0, mdast-util-find-and-replace@npm:^3.0.1, mdast-util-find-and-replace@npm:^3.0.3":
+  version: 3.0.3
+  resolution: "mdast-util-find-and-replace@npm:3.0.3"
   dependencies:
     "@types/mdast": "npm:^4.0.0"
     escape-string-regexp: "npm:^5.0.0"
     unist-util-is: "npm:^6.0.0"
     unist-util-visit-parents: "npm:^6.0.0"
-  checksum: 10c0/c8417a35605d567772ff5c1aa08363ff3010b0d60c8ea68c53cba09bf25492e3dd261560425c1756535f3b7107f62e7ff3857cdd8fb1e62d1b2cc2ea6e074ca2
+  checksum: 10c0/b653d6122b5919f976565e143f57856abde5aeda0a8a25ea665c5fc0e22be23535f8f02adc7392dbafa3f90f2084f019e1786bcb66cba30922ef17e896e32869
   languageName: node
   linkType: hard
 
