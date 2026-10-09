@@ -203,7 +203,7 @@ def start_load_test_server(
         Combined stdout and stderr. Closing it deletes the temp file.
     """
     env = os.environ.copy()
-    # Hung servers may be SIGKILLed; unbuffered stdout keeps the log tail complete.
+    # Unbuffered stdout keeps the log tail complete if terminate_process SIGKILLs a hung server.
     env["PYTHONUNBUFFERED"] = "1"
     if extra_env:
         env.update(extra_env)
@@ -328,6 +328,7 @@ def start_healthy_load_test_server(
         if wait_for_server(port, process=process):
             return process, port, log_file
         try:
+            # Record status before terminate_process. A SIGKILL would look like a crash and hide a health-check timeout.
             returncode = process.poll()
             terminate_process(process)
             attempt_statuses.append(

@@ -144,7 +144,7 @@ def test_startup_failure_message_when_process_still_running() -> None:
 
 
 def test_startup_failure_message_replaces_invalid_utf8() -> None:
-    """Non-UTF-8 child output still appears in the failure message."""
+    """Invalid UTF-8 in the captured log is replaced so the failure text still includes the port and return code."""
     log_file = TemporaryFile("w+", encoding="utf-8", errors="replace")
     try:
         log_file.buffer.write(b"Address already in use\nPort \xff is busy\n")
