@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.dataframe_util import is_dataframe_like
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.elements.lib.utils import compute_and_register_element_id
@@ -226,7 +227,31 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
         element = Element()
         return_value = marshall_component(dg, element)
 
-        dg._enqueue("component_instance", element.component_instance)
+        # Component JavaScript is never executed server-side, so only the
+        # component's identity and the arguments it was given are visible.
+        # The arguments are nested because their names are the component's
+        # own, not Streamlit's. An empty argument set is omitted, the same
+        # way an unset parameter is.
+        component_args = {
+            name: value
+            for name, value in json_args.items()
+            if name not in {"key", "default"}
+        }
+        component_default = json_args.get("default")
+        dg._enqueue(
+            "component_instance",
+            element.component_instance,
+            agent_props=agent_spec.element(
+                "components.v1.declare_component",
+                key=element.component_instance.id or None,
+                support="browser_required",
+                component_name=self.name,
+                args=agent_spec.Content(component_args) if component_args else None,
+                default=agent_spec.Content(component_default)
+                if component_default is not None
+                else None,
+            ),
+        )
         return return_value
 
     def __eq__(self, other: object) -> bool:

@@ -1242,6 +1242,78 @@ _create_option(
 )
 
 _create_option(
+    "server.enableAgentApi",
+    description="""
+        Enable the agent API, which lets a non-browser client drive the app
+        over HTTP at `/_stcore/agent/v1/interact`.
+
+        The API is off by default. Once on, it is served wherever the app is,
+        with the same Host allow-list as the app's WebSocket, and a caller gets
+        no more access than the app gives a browser. Requests from web pages
+        are refused unless their origin is in `server.corsAllowedOrigins`.
+        Identity comes from `server.trustedUserHeaders`; without it, agent
+        sessions are anonymous.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "server.agentMaxSessions",
+    description="""
+        Maximum number of agent API sessions the server holds at once.
+
+        An agent session outlives the request that created it, so this bounds
+        what a loop of creating calls can hold in memory. When the limit is
+        reached, sessions idle past `server.agentSessionTTL` are reclaimed
+        first, and new sessions are then refused.
+    """,
+    default_val=100,
+    type_=int,
+)
+
+_create_option(
+    "server.agentPreviewRows",
+    description="""
+        Maximum number of rows the agent API inlines in a table's
+        `data.preview`.
+
+        A table with more rows is reported as incomplete, with a URL that
+        serves its full data.
+    """,
+    visibility="hidden",
+    default_val=100,
+    type_=int,
+)
+
+_create_option(
+    "server.agentRunTimeout",
+    description="""
+        Maximum number of seconds an agent API request waits for the app's run
+        chain to settle before returning `run_timed_out`.
+
+        This bounds the wait, not the run: the app keeps running, and a retry
+        of the same request waits for it instead of starting it over. Keep it
+        below the request timeout of the clients you expect; many MCP clients
+        give up after 60 seconds.
+    """,
+    default_val=30,
+    type_=int,
+)
+
+_create_option(
+    "server.agentSessionTTL",
+    description="""
+        TTL in seconds for idle agent API sessions.
+
+        An agent session is reclaimed after this much time without an
+        interaction, so clients do not have to close sessions explicitly.
+    """,
+    default_val=900,
+    type_=int,
+)
+
+_create_option(
     "server.disconnectedSessionTTL",
     description="""
         TTL in seconds for sessions whose websockets have been disconnected.

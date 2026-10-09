@@ -19,6 +19,7 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.policies import maybe_raise_label_warnings
 from streamlit.elements.lib.utils import (
@@ -480,7 +481,32 @@ class MetricMixin:
             allow_content_height=True,
         )
 
-        return self.dg._enqueue("metric", metric_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "metric",
+            metric_proto,
+            layout_config=layout_config,
+            # `value` and `delta` are reported as authored, so a number stays a
+            # number for a caller that has to compute with it. `format` is
+            # applied by the frontend, so it is reported rather than a rendered
+            # string. `delta_color` and `delta_arrow` are likewise as authored
+            # rather than the `direction` and `color` pair they become on the
+            # wire, and only reported with a delta they apply to.
+            agent_props=agent_spec.element(
+                "metric",
+                label=label,
+                value=value,
+                delta=delta,
+                delta_color=delta_color if delta is not None else None,
+                delta_arrow=delta_arrow if delta is not None else None,
+                delta_description=delta_description,
+                help=help,
+                icon=icon,
+                format=format,
+                chart_data=list(metric_proto.chart_data) or None,
+                chart_type=chart_type if metric_proto.chart_data else None,
+                label_visibility=label_visibility,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

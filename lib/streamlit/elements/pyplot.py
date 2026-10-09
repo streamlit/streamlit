@@ -23,6 +23,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.image_utils import marshall_images
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitMissingRequiredParameterError
@@ -227,7 +228,23 @@ class PyplotMixin:
             alt=alt,
             **kwargs,
         )
-        return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "imgs",
+            image_list_proto,
+            layout_config=layout_config,
+            # The figure is a bitmap by the time it is emitted, so it is reported
+            # the way `st.image` is: by the URL a client can fetch it from.
+            agent_props=agent_spec.element(
+                "pyplot",
+                # A figure is always one image.
+                url=image_list_proto.imgs[0].url if image_list_proto.imgs else None,
+                # `""` is kept: it marks the figure as decorative.
+                alt=next(
+                    (img.alt for img in image_list_proto.imgs if img.HasField("alt")),
+                    None,
+                ),
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

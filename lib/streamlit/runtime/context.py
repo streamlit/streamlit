@@ -63,6 +63,39 @@ def _get_client_context() -> ClientContext | None:
     return session_client.client_context
 
 
+@overload
+def _context_info_field(
+    name: Literal["timezone", "locale", "url", "color_scheme"],
+) -> str | None: ...
+
+
+@overload
+def _context_info_field(name: Literal["timezone_offset"]) -> int | None: ...
+
+
+@overload
+def _context_info_field(name: Literal["is_embedded"]) -> bool | None: ...
+
+
+def _context_info_field(
+    name: Literal[
+        "timezone", "locale", "url", "color_scheme", "timezone_offset", "is_embedded"
+    ],
+) -> str | int | bool | None:
+    """A browser-supplied context field, or None when the client did not send it.
+
+    A browser sends every field, but a non-browser client may state only some,
+    and an unset proto field would otherwise read as "" or 0.
+    """
+    ctx = get_script_run_ctx()
+    if ctx is None or ctx.context_info is None:
+        return None
+    if not ctx.context_info.HasField(name):
+        return None
+    value: str | int | bool = getattr(ctx.context_info, name)
+    return value
+
+
 @lru_cache
 def _normalize_header(name: str) -> str:
     """Map a header name to Http-Header-Case.
@@ -287,12 +320,11 @@ class ContextProxy:
         >>> st.write(f"The current theme type is {st.context.theme.type}.")
 
         """
-        ctx = get_script_run_ctx()
-
-        if ctx is None or ctx.context_info is None:
+        color_scheme = _context_info_field("color_scheme")
+        if color_scheme is None:
             return StreamlitTheme({"type": None})
 
-        return StreamlitTheme.from_context_info({"type": ctx.context_info.color_scheme})
+        return StreamlitTheme.from_context_info({"type": color_scheme})
 
     @property
     @gather_metrics("context.timezone")
@@ -317,11 +349,7 @@ class ContextProxy:
         >>> f"The user's local time is {now.astimezone(tz_obj)}"
 
         """
-        ctx = get_script_run_ctx()
-
-        if ctx is None or ctx.context_info is None:
-            return None
-        return ctx.context_info.timezone
+        return _context_info_field("timezone")
 
     @property
     @gather_metrics("context.timezone_offset")
@@ -345,10 +373,7 @@ class ContextProxy:
         >>> f"The user's local time is {now.astimezone(tz_obj)}"
 
         """
-        ctx = get_script_run_ctx()
-        if ctx is None or ctx.context_info is None:
-            return None
-        return ctx.context_info.timezone_offset
+        return _context_info_field("timezone_offset")
 
     @property
     @gather_metrics("context.locale")
@@ -374,10 +399,7 @@ class ContextProxy:
         >>>     st.write("Hello!")
 
         """
-        ctx = get_script_run_ctx()
-        if ctx is None or ctx.context_info is None:
-            return None
-        return ctx.context_info.locale
+        return _context_info_field("locale")
 
     @property
     @gather_metrics("context.url")
@@ -399,11 +421,11 @@ class ContextProxy:
         >>> if st.context.url.startswith("http://localhost"):
         >>>     st.write("You are running the app locally.")
         """
+        url_from_frontend = _context_info_field("url")
         ctx = get_script_run_ctx()
-        if ctx is None or ctx.context_info is None:
+        if url_from_frontend is None or ctx is None:
             return None
 
-        url_from_frontend = ctx.context_info.url
         url_without_page_prefix = maybe_trim_page_path(
             url_from_frontend, ctx.pages_manager
         )
@@ -465,10 +487,7 @@ class ContextProxy:
         >>> if st.context.is_embedded:
         >>>     st.write("You are running the app in an embedded context.")
         """
-        ctx = get_script_run_ctx()
-        if ctx is None or ctx.context_info is None:
-            return None
-        return ctx.context_info.is_embedded
+        return _context_info_field("is_embedded")
 
     @overload
     def __getitem__(self, key: Literal["headers"]) -> StreamlitHeaders: ...

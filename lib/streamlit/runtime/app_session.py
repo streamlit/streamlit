@@ -549,7 +549,13 @@ class AppSession:
                 is_auto_rerun=client_state.is_auto_rerun,
                 is_history_navigation=client_state.is_history_navigation,
                 cached_message_hashes=frozenset(client_state.cached_message_hashes),
-                context_info=client_state.context_info,
+                # A client with no browser context (the agent API) leaves this
+                # unset. An empty proto would report `st.context.timezone` as
+                # "" and `timezone_offset` as 0, which claims UTC rather than
+                # saying the value is unknown.
+                context_info=client_state.context_info
+                if client_state.HasField("context_info")
+                else None,
             )
         else:
             rerun_data = RerunData()

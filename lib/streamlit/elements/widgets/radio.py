@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic, Never, TypeVar, cast, overload
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Width,
@@ -632,6 +633,21 @@ class RadioMixin:
             radio_proto,
             layout_config=layout_config,
             has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "radio",
+                key=element_id,
+                action="value",
+                label=label,
+                # The formatted options a client must send back, not the
+                # author's Python objects.
+                options=formatted_options,
+                captions=list(captions) if captions else None,
+                help=help,
+                horizontal=horizontal,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return current_value
 

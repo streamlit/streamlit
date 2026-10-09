@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     SpaceSize,
@@ -113,7 +114,14 @@ class SpaceMixin:
         # to avoid unintended cross-axis spacing.
         layout_config = LayoutConfig(width=size, height=size)
 
-        return self.dg._enqueue("space", space_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "space",
+            space_proto,
+            layout_config=layout_config,
+            # `size` is spacing, which carries no meaning for a non-visual
+            # client, so the element is reported without props.
+            agent_props=agent_spec.element("space"),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

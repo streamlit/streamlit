@@ -33,6 +33,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec, data_offload
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
@@ -1277,6 +1278,43 @@ class ArrowMixin:
             width=width, height=height if height != "auto" else None
         )
 
+        def describe() -> str | None:
+            """The agent-API description, built once `proto.id` is set.
+
+            Guarded up front because the arguments are not free: reading the
+            Arrow bytes off the proto copies them, which a browser session
+            would pay for nothing. The schema, row counts, and row preview
+            stay out of the description: they are derived facts, read by the
+            snapshot serializer from the payload.
+            """
+            if not agent_spec.is_recording():
+                return None
+            return agent_spec.element(
+                "dataframe",
+                # A display dataframe has no element ID, only the author's key.
+                key=proto.id or key,
+                data_url=data_offload.serve_arrow_over_http(
+                    # Not a lazy table's first chunk: served alone, it would
+                    # pass for the whole table.
+                    proto.arrow_data.data,
+                    coordinates=self.dg._get_delta_path_str(),
+                ),
+                # Selections and button columns cannot be driven through this
+                # interface. A display-only table has nothing to drive, so it
+                # is fully supported.
+                support="read_only_in_v1"
+                if is_selection_activated or button_columns
+                else None,
+                column_config=agent_spec.described_column_config(column_config_mapping),
+                column_order=list(column_order) if column_order else None,
+                hide_index=hide_index,
+                selection_mode=sorted(selection_mode_set) or None,
+                # The text shown for missing values, which the preview reports
+                # as null.
+                placeholder=placeholder,
+                alt=normalized_alt,
+            )
+
         if is_selection_activated:
             # If selection events are activated, we need to register the dataframe
             # element as a widget.
@@ -1349,6 +1387,7 @@ class ArrowMixin:
                     proto,
                     layout_config=layout_config,
                     has_one_shot_effect=True,
+                    agent_props=describe(),
                 )
                 # Eagerly wrap like deserialize so nested selection identity
                 # stays stable on this one-shot programmatic path.
@@ -1360,9 +1399,16 @@ class ArrowMixin:
                     }
                 )
 
-            self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+            self.dg._enqueue(
+                "dataframe",
+                proto,
+                layout_config=layout_config,
+                agent_props=describe(),
+            )
             return DataframeState(widget_state.value)
-        return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "dataframe", proto, layout_config=layout_config, agent_props=describe()
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

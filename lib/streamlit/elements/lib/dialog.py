@@ -14,9 +14,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Self, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, Self, TypeAlias, cast
 
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitInvalidLayoutContextError, StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -51,6 +52,47 @@ def _process_dialog_width_input(
         return BlockProto.Dialog.DialogWidth.MEDIUM
 
     return BlockProto.Dialog.DialogWidth.SMALL
+
+
+def _agent_description(block_proto: BlockProto, is_open: bool) -> dict[str, Any]:
+    """The agent-API props for a dialog, read from its block proto.
+
+    A dialog's body is a fragment, so its contents stay drivable as long as an
+    interaction targets them: that scopes the rerun to the dialog's fragment,
+    which re-renders the body without re-emitting the block. Anything else is a
+    full rerun, which does not re-emit the dialog at all and therefore closes
+    it -- the same rule the browser follows.
+
+    The overlay is only addressable when `on_dismiss` registered a widget for
+    it, which is when `dialog.id` is set. The block's own ID is only what the
+    frontend uses to avoid showing stale content, and nothing is registered
+    under it, so reporting that as a `key` would offer a handle that resolves
+    to nothing -- a client that walks the tree rather than `actions` would try
+    it and get `unknown_key`.
+    """
+    dialog = block_proto.dialog
+    # `width` is left out: geometry means nothing to a non-visual client. A
+    # `position` drawer is a side panel beside the page rather than a modal.
+    description: dict[str, Any] = {
+        "title": dialog.title,
+        "icon": dialog.icon or None,
+        "position": _POSITION_NAMES.get(dialog.position, "center"),
+        "dismissible": dialog.dismissible,
+        "is_open": is_open,
+    }
+    if dialog.id:
+        description["key"] = dialog.id
+        # Firing it is how a client closes the dialog deliberately, rather than
+        # by causing some unrelated full rerun.
+        description["action"] = "trigger"
+    return description
+
+
+_POSITION_NAMES: Final = {
+    BlockProto.Dialog.DialogPosition.CENTER: "center",
+    BlockProto.Dialog.DialogPosition.LEFT: "left",
+    BlockProto.Dialog.DialogPosition.RIGHT: "right",
+}
 
 
 def _process_dialog_position_input(
@@ -167,7 +209,16 @@ class Dialog(DeltaGenerator):
                 value_type="trigger_value",
             )
 
-        dialog = cast("Dialog", parent._block(block_proto=block_proto, dg_type=Dialog))
+        dialog = cast(
+            "Dialog",
+            parent._block(
+                block_proto=block_proto,
+                dg_type=Dialog,
+                agent_props=agent_spec.block(
+                    "dialog", **_agent_description(block_proto, is_open=False)
+                ),
+            ),
+        )
 
         # `_update` re-sends the block proto at this path. Use the path `_block()` wrote
         # to, not the parent cursor, so the update targets the block even if a wrapper
@@ -206,6 +257,14 @@ class Dialog(DeltaGenerator):
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path
         msg.delta.add_block.CopyFrom(self._current_proto)
+        # This message replaces the one sent at the same delta path, so it has
+        # to carry a description too, rebuilt so `is_open` reflects this update
+        # rather than the value the dialog was created with.
+        agent_props = agent_spec.block(
+            "dialog", **_agent_description(self._current_proto, should_open)
+        )
+        if agent_props is not None:
+            msg.metadata.agent_props = agent_props
         msg.delta.add_block.dialog.is_open = should_open
         self._current_proto = msg.delta.add_block
 

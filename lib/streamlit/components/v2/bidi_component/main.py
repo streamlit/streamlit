@@ -37,6 +37,7 @@ from streamlit.dataframe_util import (
     convert_anything_to_arrow_bytes,
     determine_data_format,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -528,6 +529,21 @@ class BidiComponentMixin:
             INTERNAL_COMPONENT_NAME,
             bidi_component_proto,
             layout_config=layout_config,
+            # Component JavaScript is never executed server-side, so what the
+            # component was given is reported and what it renders is not.
+            # Guarded before the call, so a browser session never parses the
+            # payload.
+            agent_props=agent_spec.element(
+                "components.v2.component",
+                key=bidi_component_proto.id or None,
+                support="browser_required",
+                component_name=bidi_component_proto.component_name or None,
+                data=agent_spec.Content(json.loads(bidi_component_proto.json))
+                if bidi_component_proto.json
+                else None,
+            )
+            if agent_spec.is_recording()
+            else None,
         )
 
         state_vals = unwrap_component_state(component_state.value)

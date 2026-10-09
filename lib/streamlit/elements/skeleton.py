@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.deprecation_util import show_deprecation_warning
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     HeightWithoutContent,
     WidthWithoutContent,
@@ -59,7 +60,9 @@ class SkeletonMixin:
             "Please use `st.skeleton` instead.",
             show_once=True,
         )
-        return self.dg._enqueue("skeleton", SkeletonProto())
+        return self.dg._enqueue(
+            "skeleton", SkeletonProto(), agent_props=agent_spec.element("skeleton")
+        )
 
     @gather_metrics("skeleton")
     def skeleton(

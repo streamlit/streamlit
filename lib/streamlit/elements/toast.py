@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.errors import (
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
@@ -171,7 +172,17 @@ class ToastMixin:
                 "duration", ["short", "long", "infinite", "a positive integer"]
             )
 
-        return self.dg._enqueue("toast", toast_proto, has_one_shot_effect=True)
+        return self.dg._enqueue(
+            "toast",
+            toast_proto,
+            has_one_shot_effect=True,
+            agent_props=agent_spec.element(
+                "toast",
+                body=toast_proto.body,
+                icon=toast_proto.icon or None,
+                duration=duration,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

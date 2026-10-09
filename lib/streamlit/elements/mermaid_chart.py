@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Final, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.utils import normalize_alt
 from streamlit.logger import get_logger
 from streamlit.runtime.metrics_util import gather_metrics
@@ -249,6 +250,7 @@ class MermaidChartMixin:
            height: 300px
 
         """
+        authored_body = body
         normalized_alt = normalize_alt(alt)
         if normalized_alt is not None:
             body = _apply_alt_marker(body, normalized_alt)
@@ -259,7 +261,17 @@ class MermaidChartMixin:
         backtick_count = max(4, max_char_sequence(body, "`") + 1)
         backtick_fence = "`" * backtick_count
         mermaid_body = f"{backtick_fence}mermaid\n{body}\n{backtick_fence}"
-        return self.dg._markdown(mermaid_body, width=width)
+        return self.dg._markdown(
+            mermaid_body,
+            width=width,
+            # A mermaid diagram is a fenced markdown block on the wire, so the
+            # description has to name the command and report the author's
+            # diagram definition rather than the fenced body, with the alt
+            # marker kept out of it and reported as the parameter it came from.
+            agent_props=agent_spec.element(
+                "mermaid_chart", body=authored_body, alt=normalized_alt
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

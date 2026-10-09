@@ -32,6 +32,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -818,14 +819,36 @@ class PlotlyMixin:
             )
 
             layout_config = LayoutConfig(width=final_width, height=final_height)
+            if isinstance(selection_mode, str):
+                reported_selection_mode = [selection_mode]
+            else:
+                reported_selection_mode = sorted(set(selection_mode))
             self.dg._enqueue(
-                "plotly_chart", plotly_chart_proto, layout_config=layout_config
+                "plotly_chart",
+                plotly_chart_proto,
+                layout_config=layout_config,
+                agent_props=agent_spec.element(
+                    "plotly_chart",
+                    key=plotly_chart_proto.id,
+                    support="read_only_in_v1",
+                    theme=theme,
+                    selection_mode=reported_selection_mode,
+                    alt=agent_spec.proto_alt(plotly_chart_proto),
+                ),
             )
             return widget_state.value
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
         return self.dg._enqueue(
-            "plotly_chart", plotly_chart_proto, layout_config=layout_config
+            "plotly_chart",
+            plotly_chart_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "plotly_chart",
+                key=key,
+                theme=theme,
+                alt=agent_spec.proto_alt(plotly_chart_proto),
+            ),
         )
 
     @property
