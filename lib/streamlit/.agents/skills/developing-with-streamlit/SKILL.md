@@ -242,7 +242,6 @@ For **performance optimization**, read:
 
 ## Stopping Points
 
-- **Step 2**: If multiple references seem relevant, ask user which aspect to focus on first
 - **Step 4**: Ask before starting the Streamlit app
 
 ## Resources
