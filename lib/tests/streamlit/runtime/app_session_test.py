@@ -3066,6 +3066,36 @@ def test_populate_theme_msg_ignores_invalid_json(
     patched_logger.warning.assert_called_once()
 
 
+@pytest.mark.parametrize(
+    ("config_key", "theme_attr", "invalid_value"),
+    [
+        ("paddingTop", "padding_top", 0),
+        ("paddingBottom", "padding_bottom", 16),
+        ("paddingTop", "padding_top", 1.5),
+        ("paddingBottom", "padding_bottom", True),
+    ],
+    ids=[
+        "padding_top_int",
+        "padding_bottom_int",
+        "padding_top_float",
+        "padding_bottom_bool",
+    ],
+)
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_ignores_non_string_padding(
+    patched_logger: MagicMock,
+    config_key: str,
+    theme_attr: str,
+    invalid_value: object,
+) -> None:
+    """Unquoted TOML numbers for padding options are skipped so session startup survives."""
+    theme = _populate_theme_with_overrides({config_key: invalid_value})
+    assert not theme.HasField(theme_attr)
+    patched_logger.warning.assert_called_once()
+    # Format string, then section, option name, value repr.
+    assert patched_logger.warning.call_args.args[2] == config_key
+
+
 def test_populate_theme_msg_parses_chart_colors_from_json_string() -> None:
     """Chart colors provided as a JSON string (e.g. via env var) are parsed."""
     theme = _populate_theme_with_overrides(

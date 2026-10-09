@@ -204,7 +204,7 @@ paddingTop = "0.5rem"      # Overrides [theme]; inherits if unset
 paddingBottom = "1rem"
 ```
 
-**Main `paddingTop`:** Gap *below* visible header chrome. Streamlit adds header height automatically so content clears the overlay — `"0"` is flush under the header, not the top of the viewport. Embed options leave a configured value as-is (for example `?embed=true&embed_options=show_padding`).
+**Main `paddingTop`:** Gap *below* visible header chrome. Streamlit adds header height automatically so content clears the overlay — `"0"` is flush under the header, not the top of the viewport. Embed options leave a configured value as-is (for example `?embed=true&embed_options=show_padding`). In a bare embed with no header chrome, a very small value (including `"0"`) can clip the first element's overlay toolbar (dataframe/chart); leave the key unset for the built-in compact-embed clearance, or use a small non-zero gap. Print uses the configured value alone (no header reservation), so small values may overlap a printed logo.
 
 **Sidebar `paddingTop`:** Gap before the first sidebar widget. With sidebar page nav, that is nav → first widget; without page nav, header/logo row → first widget.
 

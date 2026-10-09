@@ -2442,8 +2442,13 @@ _create_theme_options(
         height automatically so content clears the overlay. A value of "0"
         places the first widget flush under that chrome (not flush to the top
         of the viewport). Embed options such as show_padding / show_toolbar
-        do not override a configured value. If unset, Streamlit uses its
-        built-in defaults (typically 6rem, or 8rem with top nav).
+        do not override a configured value. In a bare embed with no header
+        chrome, the configured value is used alone — very small values
+        (including "0") can clip the first element's overlay toolbar. Leave
+        this unset for compact embeds that need the default clearance, or use
+        a small non-zero gap. Print uses the configured value with no header
+        reservation. If unset, Streamlit uses its built-in defaults
+        (typically 6rem, or 8rem with top nav).
 
         Sidebar: The same gap under the sidebar's own chrome. With page
         navigation that is nav to first widget (user-content paddingTop);
