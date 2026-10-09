@@ -108,14 +108,15 @@ Use built-in fonts, load from Google Fonts, or define custom fonts from font fil
 
 ```toml
 [theme]
+# Pick one `font` value.
 # Built-in options
 font = "sans-serif"  # or "serif" or "monospace"
 
 # Google Fonts
-font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+# font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
 
 # Font with spaces in name
-font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+# font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
 ```
 
 ### Self-hosting custom fonts
@@ -241,7 +242,7 @@ Use `st.context.theme.type` to adapt your app to the active theme. Useful for:
 
 ```python
 if st.context.theme.type == "dark":
-    # Do something for dark mode
+    st.image("logo-dark.png", alt="Company logo")
 ```
 
 ## Design principles
