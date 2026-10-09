@@ -382,6 +382,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     (node: HTMLElement): void => {
       const textSource = node.querySelector<HTMLElement>(HEADING_TEXT_SELECTOR)
       const anchor =
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank anchor is unset and is generated from the heading text
         propsAnchor || createAnchorFromText(textSource?.textContent ?? null)
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
@@ -432,6 +433,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     <HeaderActionElements
       elementId={elementId}
       help={help}
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false and unset both leave the anchor visible outside the sidebar and dialog
       hideAnchor={hideAnchor || isInSidebarOrDialog}
     />
   )
@@ -622,7 +624,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   children,
   ...props
 }) => {
-  const match = /language-(\w+)/.exec(className || "")
+  const match = /language-(\w+)/.exec(className ?? "")
   const isStreaming = useContext(StreamingContext)
   const truncate = useContext(TruncateContext)
 
@@ -630,7 +632,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
     .replace(/^\n/, "")
     .replace(/\n$/, "")
 
-  const language = match?.[1] || ""
+  const language = match?.[1] ?? ""
 
   // Truncated text stays inline: fenced blocks must not grow into syntax
   // highlighters or mermaid diagrams. Non-truncated labels keep fenced-code
@@ -725,6 +727,7 @@ const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
   // Prefer context (from help parameter) over children (from directive label)
   const contextHelpText = useContext(HelpTextContext)
   const tooltipContent =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank help text falls back to the directive label
     contextHelpText || (typeof children === "string" ? children : "")
 
   return (
@@ -809,9 +812,9 @@ function createRemarkHelpIcon() {
 
       // Handle help icon directive (:help[tooltip content])
       if (nodeName === "help") {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "streamlit-help-icon"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         // Pass the children through so CustomHelpIcon can extract the content
         return
       }
@@ -852,18 +855,18 @@ function createRemarkColoringAndSmall(
 
       // Handle shimmer text directive (:shimmer[])
       if (nodeName === "shimmer") {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         data.hProperties.className = ["stMarkdownShimmer"]
         return
       }
 
       // Handle small text directive (:small[])
       if (nodeName === "small") {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         data.hProperties.style = `font-size: ${theme.fontSizes.sm};`
         return
       }
@@ -874,9 +877,9 @@ function createRemarkColoringAndSmall(
         const validForeground = foreground && isValidCssColor(foreground)
         const validBackground = background && isValidCssColor(background)
 
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
 
         if (validForeground || validBackground) {
           const styles: string[] = []
@@ -923,9 +926,9 @@ function createRemarkColoringAndSmall(
         const bgColor = colorMapping.get(`${color}-background`)
 
         if (textColor && bgColor) {
-          const data = node.data || (node.data = {})
+          const data = (node.data ??= {})
           data.hName = "span"
-          data.hProperties = data.hProperties || {}
+          data.hProperties ??= {}
           data.hProperties.className = ["stMarkdownBadge"]
           data.hProperties.style = `${bgColor}; ${textColor}; font-size: ${theme.fontSizes.sm};`
           return
@@ -934,10 +937,10 @@ function createRemarkColoringAndSmall(
 
       // Handle color directives (:color[] or :color-background[])
       if (colorMapping.has(nodeName)) {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         const style = colorMapping.get(nodeName)
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         data.hProperties.style = style
         // Add class name specific to colored text used for button hover selector
         // to override text color
@@ -1239,7 +1242,9 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
     <a
       href={href}
       title={title}
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank target still opens in a new tab
       target={target || "_blank"}
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank rel still sets noopener
       rel={rel || "noopener noreferrer"}
       {...omit(rest, "node")}
     >

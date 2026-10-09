@@ -95,11 +95,13 @@ const getOriginalColor = ({
       : originalFillFunction
 
   if (Array.isArray(originalColor)) {
+    // Missing channels default to 0. A missing alpha defaults to opaque.
+    // `??` keeps an explicit 0, including a fully transparent alpha.
     return [
-      originalColor[0] || 0,
-      originalColor[1] || 0,
-      originalColor[2] || 0,
-      originalColor[3] || 255,
+      originalColor[0] ?? 0,
+      originalColor[1] ?? 0,
+      originalColor[2] ?? 0,
+      originalColor[3] ?? 255,
     ]
   }
 
@@ -112,10 +114,10 @@ const getOriginalColor = ({
     const evaluated = converted.originalColor(object)
 
     return [
-      evaluated[0] || 0,
-      evaluated[1] || 0,
-      evaluated[2] || 0,
-      evaluated[3] || 255,
+      evaluated[0] ?? 0,
+      evaluated[1] ?? 0,
+      evaluated[2] ?? 0,
+      evaluated[3] ?? 255,
     ]
   }
 
@@ -173,9 +175,9 @@ const getOriginalColorWithAppliedOpacity = ({
       )
 
   return [
-    originalColor[0] || 0,
-    originalColor[1] || 0,
-    originalColor[2] || 0,
+    originalColor[0] ?? 0,
+    originalColor[1] ?? 0,
+    originalColor[2] ?? 0,
     calculatedOpacity,
   ]
 }
@@ -212,7 +214,7 @@ export const getContextualFillColor = ({
         object,
         objectInfo,
         originalFillFunction,
-      }) || selectedColor
+      }) ?? selectedColor
     )
   }
 
@@ -223,6 +225,6 @@ export const getContextualFillColor = ({
       object,
       objectInfo,
       originalFillFunction,
-    }) || unselectedColor
+    }) ?? unselectedColor
   )
 }

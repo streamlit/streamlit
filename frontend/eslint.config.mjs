@@ -655,11 +655,18 @@ export default defineConfig([
       "streamlit-custom/enforce-memo": "error",
     },
   },
-  // Widgets only until the rest of the frontend is cleaned. `||` drops
-  // 0, "", and false, which are valid widget values. Keep `||` at call
-  // sites where a blank string is the unset sentinel.
+  // `||` drops 0, "", and false. Enabled directory-by-directory.
+  // Keep `||` where a blank string or zero is the unset sentinel.
   {
-    files: ["**/components/widgets/**/*.{ts,tsx}"],
+    files: [
+      "**/components/widgets/**/*.{ts,tsx}",
+      "**/components/shared/StreamlitMarkdown/**/*.{ts,tsx}",
+      "**/components/shared/Icon/**/*.{ts,tsx}",
+      "**/theme/utils.ts",
+      "**/theme/utils.test.ts",
+      "**/DeckGlJsonChart/utils/colors.ts",
+      "**/DeckGlJsonChart/utils/colors.test.ts",
+    ],
     rules: {
       "@typescript-eslint/prefer-nullish-coalescing": "error",
     },

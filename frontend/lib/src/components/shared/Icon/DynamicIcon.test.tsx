@@ -100,6 +100,14 @@ describe("Dynamic icon", () => {
     })
   })
 
+  it("inherits color when the material icon color is blank", () => {
+    render(<DynamicIcon iconValue=":material/flag:" color="" />)
+
+    expect(screen.getByTestId("stIconMaterial")).toHaveStyle({
+      color: "inherit",
+    })
+  })
+
   it("sizes the spinner from 1em when size is inherit", () => {
     render(<DynamicIcon iconValue="spinner" size="inherit" />)
 

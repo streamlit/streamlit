@@ -148,6 +148,30 @@ describe("#getContextualFillColor", () => {
       },
       [0, 0, 0, 255],
     ],
+    [
+      "should preserve an explicit zero alpha when not selected",
+      {
+        isSelected: false,
+        object,
+        objectInfo: { index: 0 },
+        originalFillFunction: () => [255, 0, 0, 0],
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 0],
+    ],
+    [
+      "should boost an explicit zero alpha to full opacity when selected",
+      {
+        isSelected: true,
+        object,
+        objectInfo: { index: 0 },
+        originalFillFunction: () => [255, 0, 0, 0],
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 255],
+    ],
   ]
 
   it.each(testCases)("%s", (_description, args, expected) => {
