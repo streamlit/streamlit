@@ -32,6 +32,17 @@ const MAX_SYNC_RETRY_MS = 1000
  * `setFocusedKey` no-ops until Virtualizer has registered the row, so we retry
  * on animation frames for up to {@link MAX_SYNC_RETRY_MS}.
  *
+ * Ownership rules (multiselect Enter prefers focusedKey over hover):
+ * - A key this hook last wrote may be replaced when `enterTargetKey` changes
+ *   (hover after typing).
+ * - A key the user arrowed to must not be overwritten by sync or hover-end
+ *   falling back to the first row (`skipApplyRef`).
+ * - Do not clear `lastSyncedKeyRef` on skip: the preserved row is still
+ *   hook-owned, so a later hover can replace it. Clearing it makes that row
+ *   look like an arrow move and blocks the next hover sync.
+ * - Restart when the focused key leaves the collection (multiselect commit),
+ *   not on every filter membership change.
+ *
  * @param enterTargetKey - Option id Enter will commit, or null when none.
  * @param skipApplyRef - When `.current` is true, leave `focusedKey` alone for
  *   this run and clear the flag (e.g. multiselect hover-end must not fall back
@@ -69,10 +80,11 @@ export function useSyncComboBoxEnterTargetFocus(
       return
     }
     if (skipApplyRef?.current) {
+      // Keep lastSyncedKeyRef: the preserved focusedKey is still the hook's
+      // last write (or an arrow row that already differs from it). Clearing
+      // it would make a hover-synced row look like an arrow move and block
+      // the next hover from updating activedescendant / Enter.
       skipApplyRef.current = false
-      // Pointer-leave kept the current focusedKey. Forget our last write so a
-      // later restart does not treat that preserved row as still hook-owned.
-      lastSyncedKeyRef.current = null
       return
     }
 

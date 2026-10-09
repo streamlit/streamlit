@@ -575,6 +575,62 @@ describe("Multiselect widget", () => {
     )
   })
 
+  it("commits the latest hover after leave then hover another row", async () => {
+    // type → hover apricot → leave → hover apple → Enter must select apple.
+    // Hover-end skip must not make apricot look like an arrow move that blocks
+    // the next hover sync (Enter prefers focusedKey over hover).
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.type(input, "ap")
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    const apricot = screen.getByRole("option", { name: "apricot" })
+    await user.hover(apricot)
+    await waitFor(() => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        "apricot"
+      )
+    })
+    await user.unhover(apricot)
+    await user.hover(screen.getByRole("option", { name: "apple" }))
+    await waitFor(() => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        "apple"
+      )
+    })
+    await user.keyboard("{Enter}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["apple"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+      props.element.id,
+      ["apricot"],
+      expect.anything()
+    )
+  })
+
   it("keeps aria-activedescendant after hovering the first row then typing", async () => {
     // Hover-end on the first row must not leave a sticky skip that swallows
     // the next Enter-target sync when React Aria clears focusedKey on type.
