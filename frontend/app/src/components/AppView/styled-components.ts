@@ -158,18 +158,15 @@ export const StyledAppViewBlockContainer =
       const configuredPaddingTop = theme.paddingTop
 
       if (configuredPaddingTop !== undefined) {
-        // Composition A: configured value = gap under chrome → first widget.
-        // Add headerHeight when a sticky header bar is shown so the content
-        // clears the overlay. Embed URL options (show_padding, show_toolbar)
-        // do not clamp a configured value.
+        // Configured value is the gap below the header. Add headerHeight when
+        // a header is shown so content clears the overlay. Embed options leave
+        // that value as-is; print uses the configured gap alone.
         topPadding = hasHeader
           ? `calc(${theme.sizes.headerHeight} + ${configuredPaddingTop})`
           : configuredPaddingTop
-        // Print: author value alone — no headerHeight reservation (same
-        // exception the spec documents: small values may clip a printed logo).
         printPaddingTop = configuredPaddingTop
       } else {
-        // Unset — today's hardcoded paths (embed gates still apply).
+        // Unset — keep the built-in spacing, including the embed gates.
         if (!embedded) {
           // Non-embedded apps always get 6rem or 8rem
           topPadding = hasTopNav ? "8rem" : "6rem"
@@ -185,8 +182,8 @@ export const StyledAppViewBlockContainer =
         printPaddingTop = littlePadding
       }
 
-      // Bottom padding logic: configured value replaces the aesthetic inset
-      // regardless of showPadding / hasBottom. Unset → today's paths.
+      // Configured value replaces the aesthetic inset regardless of
+      // showPadding / hasBottom. Unset keeps the built-in spacing.
       const bottomPadding =
         theme.paddingBottom !== undefined
           ? theme.paddingBottom

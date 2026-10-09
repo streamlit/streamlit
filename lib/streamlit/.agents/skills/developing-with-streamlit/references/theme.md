@@ -190,22 +190,25 @@ showSidebarBorder = true           # Show divider between sidebar and content
 
 ## Content padding
 
-Control the gap between the Streamlit chrome (header bar, sidebar chrome) and the first author widget. Both values accept `rem`, `px`, or a unitless integer (treated as pixels). Zero (`"0rem"`, `"0px"`, `"0"`) is valid; negative values are ignored.
+Control the gap between Streamlit chrome and the first/last author widgets.
+
+Values must be **quoted strings** in `rem` or `px` (for example `"1rem"`, `"16px"`). A numeric string without a unit is treated as pixels (`"16"` → `16px`; `"1.5"` → `1.5px`). Zero is valid (`"0"`, `"0rem"`, `"0px"`). Bare integers/floats in TOML are ignored. Negatives and other units log a warning and fall back to built-in spacing. Prefer rem so spacing scales with font size. `paddingLeft` and `paddingRight` are not recognized. Different `[theme.light]` and `[theme.dark]` values change page height when the user toggles modes.
 
 ```toml
 [theme]
-paddingTop = "1rem"        # Gap above first widget in main content area
-paddingBottom = "2rem"     # Gap below last widget in main content area
+paddingTop = "1rem"
+paddingBottom = "2rem"
 
 [theme.sidebar]
-paddingTop = "0.5rem"      # Independent gap for sidebar; inherits from [theme] if unset
+paddingTop = "0.5rem"      # Overrides [theme]; inherits if unset
 paddingBottom = "1rem"
 ```
 
-**Behavior notes:**
-- When a header bar is visible (toolbar, logo, expand button), `paddingTop` is the gap *below* the header—Streamlit adds the header height automatically so the content clears the overlay.
-- Embed URL options (`?show_padding`, `?show_toolbar`) do not override a configured value.
-- If unset, the default spacing is used (typically 6 rem for non-embedded apps).
+**Main `paddingTop`:** Gap *below* visible header chrome. Streamlit adds header height automatically so content clears the overlay — `"0"` is flush under the header, not the top of the viewport. Embed options leave a configured value as-is (for example `?embed=true&embed_options=show_padding`).
+
+**Sidebar `paddingTop`:** Gap before the first sidebar widget. With sidebar page nav, that is nav → first widget; without page nav, header/logo row → first widget.
+
+**`paddingBottom`:** Replaces the default bottom inset in main or sidebar. Does not affect sticky `st.bottom` content.
 
 ## Sidebar customization
 

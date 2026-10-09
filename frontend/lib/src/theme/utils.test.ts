@@ -909,6 +909,10 @@ describe("createEmotionTheme", () => {
     ["calc(1rem + 2px)"],
     ["invalid"],
     ["1em"],
+    ["Infinity"],
+    ["1e999"],
+    ["-Infinity"],
+    ["NaN"],
   ])(
     "logs a warning and falls back to undefined for invalid paddingTop '%s'",
     invalidValue => {

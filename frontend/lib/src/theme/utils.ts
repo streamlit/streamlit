@@ -486,12 +486,16 @@ export const parseFontSize = (
  * Parses a `paddingTop` or `paddingBottom` theme config value.
  *
  * Accepted formats (non-negative):
- *  - `"1.5rem"` / `"16px"` — returned as-is (lowercased).
+ *  - `"1.5rem"` / `"16px"` — returned as a normalized `rem` or `px` string.
  *  - `"16"` (bare number string) — treated as pixels, returned as `"16px"`.
  *  - `"0"`, `"0rem"`, `"0px"` — all valid; returned as `"0px"` / `"0rem"`.
  *
- * Rejected: negative values, `%`, `vh`, `vw`, `calc()`, and other CSS units.
- * On rejection, logs a warning and returns `undefined` (caller keeps today's hardcoded path).
+ * Values are normalized through `Number()`, so `"1.50rem"` becomes `"1.5rem"`
+ * and `"1e1px"` becomes `"10px"`.
+ *
+ * Rejected: negative values, non-finite numbers, `%`, `vh`, `vw`, `calc()`,
+ * and other CSS units. On rejection, logs a warning and returns `undefined`
+ * so the caller keeps the built-in spacing.
  *
  * @param configName - The config key name, used in the warning message.
  * @param value - The raw config string to validate.
@@ -526,7 +530,7 @@ export const parsePadding = (
 
   const numericValue = Number(numericStr)
 
-  if (Number.isNaN(numericValue) || numericStr === "") {
+  if (!Number.isFinite(numericValue) || numericStr === "") {
     LOG.warn(
       `Invalid ${configName} in ${themeSection}: "${value}". Only rem or px values are allowed (e.g. "1.5rem", "24px"). Falling back to default.`
     )

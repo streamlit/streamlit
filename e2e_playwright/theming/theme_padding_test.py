@@ -41,44 +41,24 @@ def configure_padding():
 
 
 @pytest.mark.usefixtures("configure_padding")
-def test_padding_top_applied_to_main_block(app: Page):
-    """paddingTop=0rem + visible header bar → padding-top = headerHeight + 0rem = 60px."""
+def test_configured_padding_applied_to_main_and_sidebar(app: Page):
+    """Configured main/sidebar padding replaces built-in insets in one load."""
     expect_no_skeletons(app, timeout=25000)
 
     main_block = app.get_by_test_id("stMainBlockContainer")
+    sidebar_header = app.get_by_test_id("stSidebarHeader")
+    sidebar_content = app.get_by_test_id("stSidebarUserContent")
 
     # padding-top = calc(headerHeight + paddingTop) = calc(3.75rem + 0rem) = 60px
     # (3.75rem x 16px/rem = 60px at the default 16px base font size)
     expect(main_block).to_have_css("padding-top", "60px")
 
-    # Default unset path is 6rem = 96px — must NOT appear
-    expect(main_block).not_to_have_css("padding-top", "96px")
-
-
-@pytest.mark.usefixtures("configure_padding")
-def test_padding_bottom_applied_to_main_block(app: Page):
-    """paddingBottom=1rem overrides the default aesthetic inset on the main area."""
-    expect_no_skeletons(app, timeout=25000)
-
-    main_block = app.get_by_test_id("stMainBlockContainer")
-
-    # paddingBottom=1rem = 16px at 16px base font size
+    # paddingBottom=1rem = 16px at 16px base font size (replaces the usual 10rem inset)
     expect(main_block).to_have_css("padding-bottom", "16px")
 
-    # Default unset path (showPadding=False) would be theme.spacing.lg, not 10rem
-    expect(main_block).not_to_have_css("padding-bottom", "160px")
+    # Single-page app has no page nav; inherited paddingTop="0rem" is on header margin
+    expect(sidebar_header).to_have_css("margin-bottom", "0px")
+    expect(sidebar_content).to_have_css("padding-top", "0px")
 
-
-@pytest.mark.usefixtures("configure_padding")
-def test_sidebar_padding_bottom_override_is_independent(app: Page):
-    """[theme.sidebar] paddingBottom overrides the main theme value independently."""
-    expect_no_skeletons(app, timeout=25000)
-
-    main_block = app.get_by_test_id("stMainBlockContainer")
-    sidebar_content = app.get_by_test_id("stSidebarUserContent")
-
-    # Main block keeps its own value (1rem = 16px)
-    expect(main_block).to_have_css("padding-bottom", "16px")
-
-    # Sidebar uses the sidebar-specific override (3rem = 48px)
+    # Sidebar uses the sidebar-specific bottom override (3rem = 48px)
     expect(sidebar_content).to_have_css("padding-bottom", "48px")

@@ -2425,25 +2425,31 @@ _create_theme_options(
         CustomThemeCategories.DARK_SIDEBAR,
     ],
     description="""
-        The gap between Streamlit chrome (header bar, sidebar chrome) and the
-        first author widget in the main content area or sidebar.
+        The gap under the header to the first widget in the main content area
+        or sidebar.
 
-        Values can be specified in pixels or rem, like ``"1rem"`` or ``"16px"``.
-        A bare number without a unit is treated as pixels, e.g. ``"16"`` is
-        ``16px``. Zero is allowed (``"0"``, ``"0rem"``, ``"0px"``). Negative
+        Set this as a quoted string in "rem" or "px" (for example "1rem",
+        "16px", or "16"). A numeric string without a unit is treated as
+        pixels ("16" is 16px; "1.5" is 1.5px). Zero is allowed ("0", "0rem",
+        "0px"). An integer or float without quotes is ignored. Negative
         values, percentages, and other CSS units are rejected and fall back to
-        the default behavior.
+        the default.
 
-        When this is set, Streamlit computes the final CSS padding-top as the
-        configured value plus the height of any visible chrome above the content
-        (e.g., the sticky header bar). A value of ``"0"`` places the first
-        widget flush under the chrome with no extra breathing room.
+        Prefer rem (for example "1.5rem") so spacing scales with font size.
 
-        When this is not set, Streamlit uses its built-in defaults (6rem or
-        8rem with top nav in non-embedded apps).
+        Main area: The value is the gap below any visible header chrome
+        (toolbar, logo, expand button, top nav). Streamlit adds the header
+        height automatically so content clears the overlay. A value of "0"
+        places the first widget flush under that chrome (not flush to the top
+        of the viewport). Embed options such as show_padding / show_toolbar
+        do not override a configured value. If unset, Streamlit uses its
+        built-in defaults (typically 6rem, or 8rem with top nav).
 
-        To prefer rem over pixels for better font-size scaling, use a rem value
-        like ``"1.5rem"``.
+        Sidebar: The same gap under the sidebar's own chrome. With page
+        navigation that is nav to first widget (user-content paddingTop);
+        without page navigation it is header/logo row to first widget
+        (header marginBottom). Sidebar spacing is not added to headerHeight.
+        If unset, Streamlit uses its built-in sidebar spacing.
     """,
     type_=str,
 )
@@ -2459,19 +2465,20 @@ _create_theme_options(
         CustomThemeCategories.DARK_SIDEBAR,
     ],
     description="""
-        The aesthetic bottom inset between the last widget and the bottom of
-        the main content area or sidebar.
+        The aesthetic bottom inset after the last widget in the main content
+        area or sidebar.
 
-        Values can be specified in pixels or rem, like ``"2rem"`` or ``"32px"``.
-        A bare number without a unit is treated as pixels. Zero is allowed.
-        Negative values, percentages, and other CSS units are rejected and fall
-        back to the default behavior.
+        Set this as a quoted string in "rem" or "px" (for example "2rem" or
+        "32px"). A numeric string without a unit is treated as pixels. Zero
+        is allowed. An integer or float without quotes is ignored. Negative
+        values, percentages, and other CSS units are rejected and fall back
+        to the default.
 
-        When this is set, it replaces Streamlit's built-in bottom spacing
-        (10rem by default when there is no ``st.bottom`` content; 1rem when
-        ``st.bottom`` is present). ``st.bottom`` sticky content is not affected.
-
-        When this is not set, Streamlit uses its built-in defaults.
+        When set, this replaces Streamlit's built-in bottom spacing: typically
+        10rem in the main area with no st.bottom content (or 1rem when
+        st.bottom is present), and 6rem in the sidebar. Sticky st.bottom
+        content is not affected. Horizontal padding is not configurable yet.
+        If unset, Streamlit uses its built-in defaults.
     """,
     type_=str,
 )
