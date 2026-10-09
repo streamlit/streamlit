@@ -224,10 +224,11 @@ export const FlexBoxContainer = (
     overflow: layout_styles.overflow,
     overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
-    // Pixel-height blocks carry the height here so they can scroll.
-    // Stretch-height blocks always fill their LayoutWrapper; in a horizontal
-    // parent, layout_styles.height is "auto" because the wrapper stretches via
-    // align-self.
+    // Block height:
+    // - pixel: set here so the block can scroll.
+    // - stretch: always fill the LayoutWrapper, which does the sizing (in a
+    //   horizontal parent it stretches via align-self and layout_styles.height
+    //   is "auto").
     height: props.node.deltaBlock.heightConfig?.useStretch
       ? "100%"
       : layout_styles.height,

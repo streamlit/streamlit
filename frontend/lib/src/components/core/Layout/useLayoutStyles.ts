@@ -372,8 +372,9 @@ export const useLayoutStyles = ({
           // stretch along the cross axis to match the tallest sibling instead.
           height = "auto"
           alignSelf = "stretch"
-          // Percentage min/max heights only resolve in a fixed-height row,
-          // where they keep the element exactly as tall as the row.
+          // Percentage min/max heights resolve only when the row has a
+          // definite height (pixel or stretched), where they keep the element
+          // exactly as tall as the row.
           minHeight = "100%"
           maxHeight = "100%"
         } else {

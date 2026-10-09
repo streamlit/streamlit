@@ -172,7 +172,7 @@ Sibling cards with different content (for example, one `st.metric` without `delt
 
 - Prefer consistent cards: give all sibling metrics a `delta` and `chart_data`, or none, and use the same header elements in every card.
 - When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. `st.columns(n, border=True)` also gives equal-height bordered columns.
-- Horizontal containers size each card's width to its content, so mixed cards also get uneven widths. Use `st.columns` when cards should share a width.
+- In horizontal containers, a metric's width depends on its content, so metrics with different parts get uneven widths. Use `st.columns` when cards should share a width.
 - Pin a card's trailing button to the bottom with `st.space("stretch")`.
 
 ```python

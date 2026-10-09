@@ -48,7 +48,9 @@ def test_layouts_container_alignment(app: Page, assert_snapshot: ImageCompareFun
         assert_snapshot(locator, name=f"st_layouts_container_alignment-{key}")
 
 
-def _expect_heights_match(app: Page, tallest: Locator, stretched: list[Locator]):
+def _expect_heights_match(
+    app: Page, tallest: Locator, stretched: list[Locator]
+) -> None:
     def _heights_match() -> bool:
         tallest_height = _height(tallest)
         return bool(tallest_height) and all(
