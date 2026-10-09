@@ -110,20 +110,20 @@ Align elements placed side by side. Bottom-align rows that mix labeled inputs wi
 
 ```python
 # BAD: The button and toggle sit above the input field; the cards have uneven heights
-name_col, active_col, button_col = st.columns(3)
-name_col.text_input("Customer")
-active_col.toggle("Active only")
-button_col.button("Search")
+with st.container(horizontal=True):
+    st.text_input("Customer")
+    st.toggle("Active only")
+    st.button("Search")
 
 revenue_col, orders_col = st.columns(2)
 revenue_col.metric("Revenue", "$1.2M", "+8%", border=True)
 orders_col.metric("Orders", "1.4k", border=True)
 
 # GOOD: Everything lines up with the input field, and the cards share a height
-name_col, active_col, button_col = st.columns(3, vertical_alignment="bottom")
-name_col.text_input("Customer")
-active_col.toggle("Active only")
-button_col.button("Search")
+with st.container(horizontal=True, vertical_alignment="bottom"):
+    st.text_input("Customer")
+    st.toggle("Active only")
+    st.button("Search")
 
 revenue_col, orders_col = st.columns(2)
 revenue_col.metric("Revenue", "$1.2M", "+8%", border=True, height="stretch")

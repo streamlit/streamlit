@@ -143,13 +143,11 @@ Rows look off when neighboring elements have different heights. Know the default
 
 ```python
 # Labeled inputs, a toggle, and a button on one line
-name_col, region_col, active_col, button_col = st.columns(
-    [3, 2, 2, 1], vertical_alignment="bottom"
-)
-name_col.text_input("Customer")
-region_col.selectbox("Region", regions)
-active_col.toggle("Active only")
-button_col.button("Search", type="primary", width="stretch")
+with st.container(horizontal=True, vertical_alignment="bottom"):
+    st.text_input("Customer")
+    st.selectbox("Region", regions)
+    st.toggle("Active only")
+    st.button("Search", type="primary")
 
 # Toolbar with collapsed labels
 with st.container(horizontal=True, vertical_alignment="center"):
