@@ -266,8 +266,7 @@ has the client collect it first.
 shorter than the server's, and then the server is still waiting on a request nobody
 will read when the retry arrives: the retry would be told the session is busy until the
 server's timeout passed. So a request whose client disconnects stops waiting at once and
-leaves the run collectable, exactly as a `202` would. A chat client hit this on a slow
-page: every retry got `session_busy`.
+leaves the run collectable, exactly as a `202` would.
 
 That makes four session states: idle; serving a request; running a timed-out interaction
 that no request is waiting on, which a retry collects and any other request finds busy;
@@ -1213,9 +1212,9 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
    available apps. It depends on the authored `st.App` title/description in follow-up #2
    ([#16878](https://github.com/streamlit/streamlit/issues/16878)). It must never publish
    widget schemas or user-dependent page lists from a shared warm-up run.
-8. **Remaining interaction coverage.** Dataframe and chart selections first: two
-   independent chat-client evaluations named them the biggest gap, because "select a
-   row for details" and "click a bar to inspect" are how many dashboards drill down.
+8. **Remaining interaction coverage.** Dataframe and chart selections first, because
+   "select a row for details" and "click a bar to inspect" are how many dashboards
+   drill down, so without them an agent stops short of the detail views.
    Dataframe row and column selection is the smaller, most common case, and its state is
    already a JSON value the runtime validates; chart selections, whose point identity is
    library-specific, follow. Then uploads, including `st.chat_input` attachments;
@@ -1409,8 +1408,8 @@ new command or significant parameter should ship with all of the following, or a
    a client that disconnects first is treated as timed out, so a short client timeout
    costs a retry rather than the result. Follow-up #4's operation handle would make even
    the retries unnecessary. The session cap and idle TTL need defaults chosen against
-   real memory use; a chat client lost its session between turns at the 15-minute idle
-   TTL, which argues for a longer one if memory allows. The response size is
+   real memory use. A chat client's turns can be minutes apart, which argues for a
+   longer idle TTL than 15 minutes if memory allows. The response size is
    [open question 6](#open-questions).
 5. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
    times, and datetimes as ISO 8601 text, decimals as strings, durations as seconds,
@@ -1427,10 +1426,9 @@ new command or significant parameter should ship with all of the following, or a
    previews are the one case where truncation is safe, because a `url` serves the rest.
    The candidate answer is to extend that pattern — serve oversized option lists and
    figure specifications behind `data.url`, which MCP clients can read through
-   `get_data` — rather than to cap and discard. Chat clients have now measured the
-   cost: a load-testing page of Plotly charts was about 1 MB per response, and a
-   selectbox of about 400 wiki documents added about 25 KB to every call on its page.
-   After selections, this is the gap that most affects them.
+   `get_data` — rather than to cap and discard. The cost is real for chat clients: a
+   page of a few Plotly charts can reach a megabyte per response, and a selectbox of a
+   few hundred options adds tens of kilobytes to every call on its page.
 7. **What stability does the snapshot promise, and where does a public contract live?**
    The document is a compatibility surface from its first release: clients will key on
    element types, `props` names, and error codes, and every command's description becomes
