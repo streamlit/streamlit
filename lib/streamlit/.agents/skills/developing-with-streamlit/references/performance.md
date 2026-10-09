@@ -2,6 +2,18 @@
 
 Performance is the biggest win. Without caching and fragments, your app reruns everything on every interaction.
 
+## Contents
+
+- [Caching](#caching)
+- [Fragments](#fragments)
+- [Forms to batch interactions](#forms-to-batch-interactions)
+- [Skip reruns on individual widgets](#skip-reruns-on-individual-widgets)
+- [Conditional rendering](#conditional-rendering)
+- [Pre-computation](#pre-computation)
+- [Render stable UI before slow work](#render-stable-ui-before-slow-work)
+- [Perceived performance (loading states)](#perceived-performance-loading-states)
+- [References](#references)
+
 ## Caching
 
 ### @st.cache_data for data

@@ -5,6 +5,24 @@ Build professional, brand-aligned themes using `.streamlit/config.toml`. This sk
 
 Use `streamlit config show` to look up the full, current set of available theme configuration options and their descriptions before configuring a theme. The theme settings are grouped under `[theme]`, `[theme.sidebar]`, and the light and dark variants.
 
+## Contents
+
+- [Theme file setup](#theme-file-setup)
+- [Theme inheritance](#theme-inheritance)
+- [Color configuration](#color-configuration)
+- [Typography](#typography)
+- [Border and radius](#border-and-radius)
+- [Sidebar customization](#sidebar-customization)
+- [Light and dark modes](#light-and-dark-modes)
+- [Detecting current theme](#detecting-current-theme)
+- [Design principles](#design-principles)
+- [Example: VS Code dark theme](#example-vs-code-dark-theme)
+- [Common mistakes](#common-mistakes)
+- [IMPORTANT: No custom CSS unless explicitly requested](#important-no-custom-css-unless-explicitly-requested)
+- [Development workflow](#development-workflow)
+- [Theme templates](#theme-templates)
+- [References](#references)
+
 ## Theme file setup
 
 Theme options go in Streamlit's `config.toml` under the `[theme]` section:
