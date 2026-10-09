@@ -34,8 +34,11 @@ from streamlit.elements.lib.layout_utils import (
     get_height_config,
     get_justify,
     get_width_config,
+    is_int,
+    validate_bool_arg,
     validate_height,
     validate_horizontal_alignment,
+    validate_uint32_max,
     validate_vertical_alignment,
     validate_width,
     validate_wrap,
@@ -48,6 +51,7 @@ from streamlit.errors import (
     StreamlitInvalidParameterTypeError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -63,6 +67,7 @@ from streamlit.string_util import validate_icon_or_emoji
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
+    from streamlit.elements.lib.grid_container import GridContainer
     from streamlit.elements.lib.mutable_expander_container import ExpanderContainer
     from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
@@ -74,6 +79,11 @@ if TYPE_CHECKING:
     )
 
 SpecType: TypeAlias = int | Sequence[int | float]
+
+_GRID_COLUMNS_MIN = 1
+# Keep in sync with GRID_AUTO_COLUMN_CAP in
+# frontend/lib/src/components/core/Block/gridUtils.ts.
+_GRID_COLUMNS_MAX = 24
 
 
 @dataclass
@@ -734,6 +744,387 @@ class LayoutsMixin:
         row = self.dg._block(block_proto)
         total_weight = sum(weights)
         return [row._block(column_proto(w / total_weight)) for w in weights]
+
+    @gather_metrics("grid")
+    def grid(
+        self,
+        columns: Literal["auto"] | int = "auto",
+        *,
+        min_column_width: Literal["auto"] | int = "auto",
+        wrap: bool = True,
+        gap: Gap | tuple[Gap | None, Gap | None] | list[Gap | None] | None = "small",
+        vertical_alignment: Literal["top", "center", "bottom"] = "top",
+        border: bool = False,
+        row_height: Literal["content"] | int = "content",
+        width: WidthWithoutContent = "stretch",
+        height: Height = "content",
+        key: Key | None = None,
+        dense: bool = False,
+    ) -> GridContainer:
+        r"""Insert a responsive grid container.
+
+        Inserts a grid for repeated cards, metric walls, galleries, and
+        dashboard panels. Direct children become cells and reflow with the
+        available width. Use ``st.columns`` for a known side-by-side split
+        and ``st.container(horizontal=True)`` for natural-width toolbars.
+
+        To add elements to the returned container, use the ``with`` notation
+        (preferred) or call commands on the returned object. Group multiple
+        elements or span tracks with ``grid.cell()``.
+
+        Parameters
+        ----------
+        columns : "auto" or int
+            Number of equal-width columns.
+
+            - ``"auto"`` (default): Fit as many columns as the container
+              allows, using ``min_column_width``. Automatic layouts are
+              also capped at 24 columns.
+            - An integer from 1 to 24: Maximum column count. With
+              ``wrap=True`` (default), the grid wraps to fewer columns
+              when cells would fall below ``min_column_width``. With
+              ``wrap=False``, this count is kept at every width. For
+              example, ``st.grid(4)`` shows three columns on the default
+              centered layout because four would be narrower than
+              ``min_column_width``.
+
+        min_column_width : "auto" or int
+            The preferred outer width of each column, used as the wrapping
+            threshold. This can be one of the following:
+
+            - ``"auto"`` (default): Streamlit uses a theme-based width of
+              about 200 pixels. Cell border and padding sit inside that
+              width and do not increase it. With ``wrap=True``, this is
+              a wrapping threshold: once one column remains, that column
+              uses the container width and may be narrower. With
+              ``wrap=False``, cells shrink to this width and the grid
+              then scrolls horizontally.
+            - An integer specifying the minimum width in pixels: With
+              ``wrap=True``, this is a wrapping threshold. The grid drops
+              a column before cells would become narrower than this
+              width. Once one column remains, that column uses the
+              container width and may be narrower. With ``wrap=False``,
+              cells shrink to this width and the grid then scrolls
+              horizontally.
+
+        wrap : bool
+            Whether the number of columns can decrease as the container
+            gets narrower. This can be one of the following:
+
+            - ``True`` (default): The grid uses fewer columns when cells
+              would become narrower than ``min_column_width``.
+            - ``False``: The grid keeps the declared number of columns
+              and scrolls horizontally instead.
+
+            Setting ``wrap=False`` with ``columns="auto"`` raises an
+            exception, because there is no declared column count to
+            keep.
+
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, tuple, list, or None
+            The size of the gap between cells. A scalar matches
+            ``st.columns``. A 2-tuple or 2-list is ``(row_gap, column_gap)``.
+            This can be one of the following:
+
+            - ``"xxsmall"``: 0.25rem gap between the cells.
+            - ``"xsmall"``: 0.5rem gap between the cells.
+            - ``"small"`` (default): 1rem gap between the cells.
+            - ``"medium"``: 2rem gap between the cells.
+            - ``"large"``: 4rem gap between the cells.
+            - ``"xlarge"``: 6rem gap between the cells.
+            - ``"xxlarge"``: 8rem gap between the cells.
+            - A non-negative integer specifying the gap in pixels. For
+              example, ``gap=20`` sets a 20-pixel gap.
+            - ``None``: No gap between the cells.
+
+            The rem unit is relative to the ``theme.baseFontSize``
+            configuration option.
+
+        vertical_alignment : "top", "center", or "bottom"
+            Vertical alignment of content inside the cell. The cell frame
+            still fills the row. This can be one of the following:
+
+            - ``"top"`` (default): Align content to the top of the cell.
+            - ``"center"``: Center content vertically in the cell.
+            - ``"bottom"``: Align content to the bottom of the cell.
+
+        border : bool
+            Whether to show a border around each cell. If this is
+            ``False`` (default), no border is shown. If this is ``True``,
+            a border is shown around each cell.
+
+        row_height : "content" or int
+            The height of each row. This can be one of the following:
+
+            - ``"content"`` (default): Each row is as tall as its
+              tallest cell.
+            - A positive integer: Every row is that many pixels.
+              Content that is taller scrolls inside the cell. Content
+              does not stretch automatically. Inside ``grid.cell()``,
+              pass ``height="stretch"`` to a chart or dataframe to fill
+              the cell. Direct children of the grid do not stretch that
+              way.
+
+        width : "stretch" or int
+            The width of the grid. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the grid matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The grid has a
+              fixed width. If the specified width is greater than the
+              width of the parent container, the width of the grid
+              matches the width of the parent container.
+
+        height : "content", "stretch", or int
+            The height of the grid. This can be one of the following:
+
+            - ``"content"`` (default): The height of the grid matches the
+              height of its content.
+            - ``"stretch"``: The height of the grid matches the height of
+              its content or the height of the parent container,
+              whichever is larger. If the grid is not in a parent
+              container, the height of the grid matches the height of
+              its content.
+            - An integer specifying the height in pixels: The grid has a
+              fixed height. If the content is larger than the specified
+              height, scrolling is enabled.
+
+        key : str, int, or None
+            An optional string or integer to give this element a stable
+            identity. If this is ``None`` (default), the element's identity
+            will be determined based on the values of the other parameters.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
+
+        dense : bool
+            Whether later cells can backfill holes left by spanning cells.
+            If this is ``False`` (default), cells keep source order. If
+            this is ``True``, later cells can be placed visually ahead of
+            earlier ones to fill gaps, so keyboard and screen-reader
+            order (DOM order) may not match visual order.
+
+        Returns
+        -------
+        GridContainer
+            A container that supports ``with`` notation or method
+            calls. It also has a ``cell()`` method for grouping
+            elements and spanning columns or rows.
+
+        Examples
+        --------
+        **Example 1: Metric cards**
+
+        >>> import streamlit as st
+        >>>
+        >>> metrics = [
+        ...     ("Revenue", "$1.2M", "+8%"),
+        ...     ("Pipeline", "$4.8M", "+12%"),
+        ...     ("Conversion", "12.4%", "+1.1%"),
+        ...     ("Retention", "96%", "-0.4%"),
+        ... ]
+        >>> grid = st.grid(4, border=True)
+        >>> for label, value, delta in metrics:
+        ...     with grid.cell():
+        ...         st.metric(label, value, delta)
+
+        .. output::
+            https://doc-grid1.streamlit.app/
+            height: 220px
+
+        **Example 2: Full-width cell**
+
+        >>> import streamlit as st
+        >>>
+        >>> grid = st.grid("auto", min_column_width=220)
+        >>> with grid.cell(column_span="all"):
+        ...     st.markdown("**Featured**")
+        >>> with grid.cell():
+        ...     st.markdown("Card")
+
+        .. output::
+            https://doc-grid2.streamlit.app/
+            height: 200px
+
+        **Example 3: Fixed column count (no wrap)**
+
+        >>> import streamlit as st
+        >>> from numpy.random import default_rng as rng
+        >>>
+        >>> df = rng(0).standard_normal((20, 3))
+        >>> grid = st.grid(3, wrap=False, border=True)
+        >>> grid.cell().line_chart(df, height=220)
+        >>> grid.cell().bar_chart(df, height=220)
+        >>> grid.cell().dataframe(df, height=220)
+
+        .. output::
+            https://doc-grid3.streamlit.app/
+            height: 300px
+
+        """
+        validate_wrap(wrap)
+        validate_bool_arg("border", border)
+        validate_bool_arg("dense", dense)
+
+        if isinstance(columns, str) and columns == "auto":
+            validated_columns: Literal["auto"] | int = "auto"
+        elif isinstance(columns, str):  # type: ignore[unreachable]
+            raise StreamlitValueError(
+                "columns",
+                ['"auto"', "an integer from 1 to 24"],
+                detail=f"Got {columns!r}.",
+            )
+        elif not is_int(columns):
+            raise StreamlitInvalidParameterTypeError(
+                "columns",
+                type(columns).__name__,
+                ["int", '"auto"'],
+            )
+        elif not _GRID_COLUMNS_MIN <= columns <= _GRID_COLUMNS_MAX:
+            raise StreamlitValueOutOfRangeError(
+                "columns", columns, _GRID_COLUMNS_MIN, _GRID_COLUMNS_MAX
+            )
+        else:
+            validated_columns = columns
+
+        if validated_columns == "auto" and wrap is False:
+            raise StreamlitIncompatibleParametersError(
+                'columns="auto"',
+                "wrap=False",
+                explanation=(
+                    "`wrap=False` requires an explicit column count. "
+                    "Pass an integer, such as `st.grid(3, wrap=False)`."
+                ),
+            )
+
+        if isinstance(min_column_width, str) and min_column_width == "auto":
+            validated_min_column_width: Literal["auto"] | int = "auto"
+        elif isinstance(min_column_width, str):  # type: ignore[unreachable]
+            raise StreamlitValueError(
+                "min_column_width",
+                ['"auto"', "a positive integer"],
+                detail=f"Got {min_column_width!r}.",
+            )
+        elif not is_int(min_column_width):
+            raise StreamlitInvalidParameterTypeError(
+                "min_column_width",
+                type(min_column_width).__name__,
+                ["int", '"auto"'],
+            )
+        elif min_column_width < 1:
+            raise StreamlitValueError(
+                "min_column_width",
+                ['"auto"', "a positive integer"],
+                detail=f"Got {min_column_width!r}.",
+            )
+        else:
+            validate_uint32_max("min_column_width", min_column_width)
+            validated_min_column_width = min_column_width
+
+        if isinstance(gap, (tuple, list)):
+            if len(gap) != 2:
+                raise StreamlitValueError(
+                    "gap",
+                    ["a gap size", "a 2-tuple or 2-list of (row_gap, column_gap)"],
+                    detail=f"Got a sequence with {len(gap)} elements.",
+                )
+            row_gap, col_gap = gap
+            row_gap_detail: str | None = f"Got {row_gap!r} for the row gap in `gap`."
+            col_gap_detail: str | None = f"Got {col_gap!r} for the column gap in `gap`."
+        else:
+            row_gap = col_gap = gap
+            row_gap_detail = None
+            col_gap_detail = None
+
+        valid_alignments = ["top", "center", "bottom"]
+        if vertical_alignment not in valid_alignments:
+            raise StreamlitValueError(
+                "vertical_alignment",
+                [f"'{alignment}'" for alignment in valid_alignments],
+                detail=f"Got {vertical_alignment!r}.",
+            )
+
+        if isinstance(row_height, str) and row_height == "content":
+            validated_row_height: Literal["content"] | int = row_height
+        elif isinstance(row_height, str):  # type: ignore[unreachable]
+            raise StreamlitValueError(
+                "row_height",
+                ['"content"', "a positive integer"],
+                detail=f"Got {row_height!r}.",
+            )
+        elif not is_int(row_height):
+            raise StreamlitInvalidParameterTypeError(
+                "row_height",
+                type(row_height).__name__,
+                ["int", '"content"'],
+            )
+        elif row_height < 1:
+            raise StreamlitValueError(
+                "row_height",
+                ['"content"', "a positive integer"],
+                detail=f"Got {row_height!r}.",
+            )
+        else:
+            validate_uint32_max("row_height", row_height)
+            validated_row_height = row_height
+
+        validate_width(width=width)
+        validate_height(height, allow_content=True)
+
+        block_proto = BlockProto()
+        block_proto.allow_empty = True
+
+        grid_container = block_proto.grid_container
+        grid_container.max_columns = (
+            0 if validated_columns == "auto" else validated_columns
+        )
+        if validated_min_column_width != "auto":
+            grid_container.min_column_width_px = validated_min_column_width
+
+        grid_container.row_gap_config.CopyFrom(
+            get_gap_config(row_gap, parameter="gap", detail=row_gap_detail)
+        )
+        grid_container.column_gap_config.CopyFrom(
+            get_gap_config(col_gap, parameter="gap", detail=col_gap_detail)
+        )
+
+        alignment_mapping = {
+            "top": BlockProto.GridContainer.VerticalAlignment.TOP,
+            "center": BlockProto.GridContainer.VerticalAlignment.CENTER,
+            "bottom": BlockProto.GridContainer.VerticalAlignment.BOTTOM,
+        }
+        grid_container.vertical_alignment = alignment_mapping[vertical_alignment]
+        grid_container.show_cell_border = border
+        grid_container.wrap = wrap
+        grid_container.dense = dense
+
+        if validated_row_height == "content":
+            grid_container.cell_height_mode = (
+                BlockProto.GridContainer.CellHeightMode.CONTENT
+            )
+        else:
+            grid_container.cell_height_mode = (
+                BlockProto.GridContainer.CellHeightMode.FIXED
+            )
+            grid_container.cell_height_config.pixel_height = validated_row_height
+
+        block_proto.width_config.CopyFrom(get_width_config(width))
+        block_proto.height_config.CopyFrom(get_height_config(height))
+
+        maybe_key = to_key(key)
+        if maybe_key:
+            block_proto.id = compute_and_register_element_id(
+                "grid", user_key=maybe_key, dg=None, key_as_main_identity=False
+            )
+
+        grid_dg = cast(
+            "GridContainer",
+            self.dg._block(
+                block_proto,
+                dg_type=get_dg_singleton_instance().grid_container_cls,
+            ),
+        )
+        grid_dg._declared_columns = validated_columns
+        return grid_dg
 
     @gather_metrics("tabs")
     def tabs(

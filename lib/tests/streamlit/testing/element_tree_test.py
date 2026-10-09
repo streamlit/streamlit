@@ -3380,6 +3380,20 @@ def test_get_accepts_public_attribute_names() -> None:
     assert list(at.get("not_an_element")) == []
 
 
+def test_get_grid_accepts_public_name() -> None:
+    """``AppTest.get("grid")`` is the public name for a grid_container node."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.grid(2, key="cards")
+
+    at = AppTest.from_function(script).run()
+    assert len(at.get("grid")) == 1
+    assert list(at.get("grid")) == list(at.get("grid_container"))
+    assert at.get("grid")[0].key == "cards"
+
+
 def test_expander_key_and_get_by_key() -> None:
     """Keyed expanders expose .key even though the tree stores the sub-proto."""
 

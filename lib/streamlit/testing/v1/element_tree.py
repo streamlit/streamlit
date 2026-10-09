@@ -113,6 +113,7 @@ _GET_TYPE_ALIASES: dict[str, str] = {
     "datetime_input": "date_time_input",
     # Public collection name. The node type stays the proto field name.
     "help": "help_info",
+    "grid": "grid_container",
 }
 
 
@@ -2955,7 +2956,7 @@ class Block:
         ``segmented_control`` / ``container`` / ``form`` /
         ``form_submit_button`` / ``expander`` / ``tabs`` / ``columns`` /
         ``status`` / ``chat_message`` use the same filtering as the matching
-        attributes.
+        attributes. ``grid`` is the public name for a ``grid_container`` node.
         """
         if element_type == "pills":
             return list(self.pills)

@@ -16,20 +16,18 @@ ellipsizes instead of wrapping. For controls placed inside a layout, the default
 a horizontal container or is a direct layout child of an `st.columns` column or an
 `st.grid` cell, and `True` otherwise. A control therefore stays on one row exactly where
 compact, aligned controls matter most (toolbars, `st.container(horizontal=True)`, and
-column action rows), following the `st.markdown(width="auto")` precedent. Layout containers
-and text commands do not use this adaptive resolution: `st.container` and `st.columns`
-take `wrap: bool = True` (today's wrapping and stacking); the proposed `st.grid` adopts
-the same default for wrapping of column *tracks* (see the
-[grid spec](../2026-05-14-grid-layout/product-spec.md)). Text commands take
-`wrap: bool = True` (today's line wrapping). A single row of the content each command
-controls is requested only with an explicit `wrap=False`.
+column action rows), following the `st.markdown(width="auto")` precedent. Layout
+containers and text commands do not use this adaptive resolution: `st.container`,
+`st.columns`, and `st.grid` take `wrap: bool = True` (today's wrapping and stacking; for
+`st.grid`, wrapping of column tracks), and text commands take `wrap: bool = True`
+(today's line wrapping). A single row is requested only with an explicit `wrap=False`.
 
 This is a layout control with an adaptive default for interactive controls. Existing
 apps keep their current behavior everywhere except for controls inside horizontal
 containers, where the auto default now favors a single row, and controls directly
-placed in columns or grid cells, where the same default keeps neighboring controls
-aligned; layout containers and text commands keep their current defaults. The initial API covers
-`st.container`, `st.columns`, `st.multiselect`, `st.pills`, `st.segmented_control`,
+placed in columns or grid cells, where the same default keeps neighboring controls aligned; layout
+containers and text commands keep their current defaults. The initial API covers
+`st.container`, `st.columns`, `st.grid`, `st.multiselect`, `st.pills`, `st.segmented_control`,
 `st.button`, `st.download_button`, `st.link_button`, `st.form_submit_button`,
 `st.popover`, `st.menu_button`, `st.checkbox`, `st.toggle`, `st.markdown`, `st.title`,
 `st.header`, `st.subheader`, `st.caption`, and `st.text`.
@@ -227,8 +225,7 @@ the multi-item controls (`st.multiselect`, `st.pills`, `st.segmented_control`). 
 resolves `None` from its nearest real layout boundary: `False` inside a horizontal
 container (compact rows where they matter most, such as
 `st.container(horizontal=True)` and other toolbars) or when it is a direct layout child
-of an `st.columns` column or an `st.grid` cell, and `True` everywhere else. "Direct layout
-child" describes
+of an `st.columns` column or an `st.grid` cell, and `True` everywhere else. "Direct layout child" describes
 the Streamlit layout tree rather than literal DOM ancestry. A transparent block does not
 establish a layout boundary, so it preserves direct column or grid-cell placement. Any real nested
 layout provider — including a vertical container, expander, tab, form, dialog, chat
@@ -258,14 +255,14 @@ existing mobile breakpoint. Resolution follows the stable Streamlit layout tree,
 transient CSS viewport state; changing the value during responsive resize would make
 control heights unstable.
 
-The layout containers themselves — `st.container` and `st.columns`, and the proposed
-`st.grid` — do not use this adaptive resolution. Because `None` would not differ from
-today's wrapping/stacking behavior, they use a plain boolean default of `wrap=True` (a
-horizontal container wraps its children onto more rows; `st.columns` stacks responsively;
-`st.grid` may wrap to fewer column tracks). A single row of the content each command
-controls is requested only with an explicit `wrap=False`. Resolving a container's own
-default from whether it happens to be nested in another horizontal container would be
-surprising and could silently change existing layouts.
+The layout containers themselves — `st.container`, `st.columns`, and `st.grid` — do not use this
+adaptive resolution. Because `None` would not differ from today's wrapping/stacking
+behavior, they use a plain boolean default of `wrap=True` (a horizontal container wraps
+its children onto more rows; `st.columns` stacks responsively; `st.grid` may decrease
+its column-track count). A single row is requested
+only with an explicit `wrap=False`. Resolving a container's own default from whether it
+happens to be nested in another horizontal container would be surprising and could
+silently change existing layouts.
 
 Text commands (`st.markdown`, `st.title`, `st.header`, `st.subheader`,
 `st.caption`, `st.text`) likewise use a plain `wrap: bool = True`. Truncating
@@ -631,7 +628,7 @@ cases the compact behavior for free while keeping explicit `True`/`False` for fu
 control. This mirrors the existing `st.markdown(width="auto")` default, which likewise
 resolves to `content` inside horizontal containers and `stretch` otherwise. This adaptive
 resolution applies only to controls placed inside a layout; the layout containers
-`st.container` and `st.columns` use a fixed `wrap=True` default (today's wrapping and
+`st.container`, `st.columns`, and `st.grid` use a fixed `wrap=True` default (today's wrapping and
 stacking), because they have no distinct auto mode — `None` would behave identically to
 `True` — and deriving a container's wrapping from whether it is nested in another
 horizontal container would be surprising and could silently change existing layouts.

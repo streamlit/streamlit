@@ -51,6 +51,25 @@ with st.container(horizontal=True):
 
 Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows.
 
+For more control over card layout, use `st.grid`:
+
+```python
+# Uniform cards use a pixel row height. Borders sit inside the cell.
+grid = st.grid(4, border=True, row_height=160, gap="medium")
+with grid.cell():
+    st.metric("Revenue", "$1.2M", "-7%")
+with grid.cell():
+    st.metric("Users", "762k", "+12%")
+with grid.cell():
+    st.metric("Orders", "1.4k", "+5%")
+with grid.cell():
+    st.metric("Conversion", "3.2%", "+0.1%")
+```
+
+**Grid vs horizontal container:**
+- `st.container(horizontal=True)` — Simple metric rows, auto-wrapping
+- `st.grid` — Equal-width tracks, wrapping by `min_column_width`, spans via `grid.cell()`
+
 ## Zero deltas
 
 Streamlit treats numeric zeros and the string `"0"` as zero. It does not parse other string deltas as numbers to choose the arrow and color, so `"0%"` gets a green up-arrow. For a flat period, pass the number `0` as `delta` and put the qualifier text in `delta_description`:
@@ -184,9 +203,10 @@ Each template uses synthetic data that can be replaced with real queries. See `a
 
 ## References
 
-- `layouts.md` — Columns, containers, tabs, dialogs
+- `layouts.md` — Columns, containers, grids, tabs, dialogs
 - `data-display.md` — Charts, dataframes, column configuration
 - `performance.md` — Caching and fragments for heavy dashboards
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)
 - [st.columns](https://docs.streamlit.io/develop/api-reference/layout/st.columns)
+- [st.grid](https://docs.streamlit.io/develop/api-reference/layout/st.grid)

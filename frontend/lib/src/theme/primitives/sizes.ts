@@ -30,6 +30,8 @@ export const sizes = {
   // These rem tokens scale with theme.baseFontSize by design.
   // minSidebarWidth is also the drag floor for st.dialog left/right drawers.
   minSidebarWidth: "12.5rem",
+  // Preferred st.grid cell floor (~200px at a 16px root).
+  gridMinColumnWidth: "12.5rem",
   defaultSidebarWidth: "18.75rem",
   maxSidebarWidth: "37.5rem",
   toastWidth: "21rem",

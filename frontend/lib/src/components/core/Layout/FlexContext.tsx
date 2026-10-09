@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { createContext, type FC, type PropsWithChildren, useMemo } from "react"
+import {
+  createContext,
+  type CSSProperties,
+  type FC,
+  type PropsWithChildren,
+  useMemo,
+} from "react"
 
 import { Direction } from "./utils"
 
@@ -23,9 +29,9 @@ export interface IFlexContext {
   isInHorizontalLayout: boolean
   /**
    * True when widgets here are direct layout children of an `st.columns`
-   * column. Nested layout providers create a new context and leave this
-   * false. Transparent blocks do not create a provider, so they keep the
-   * parent value.
+   * column or an `st.grid` cell (including `grid.cell()`). Nested layout
+   * providers create a new context and leave this false. Transparent
+   * blocks do not create a provider, so they keep the parent value.
    */
   isDirectlyInColumn: boolean
   isInRoot: boolean
@@ -45,6 +51,23 @@ export interface IFlexContext {
    * Returns false if there's a fixed-width container that is closer than any content-width container.
    */
   isInContentWidthContainer: boolean
+  /**
+   * True inside a definite-height `st.grid` cell (pixel `row_height`). A
+   * `grid.cell()` block fills that cell so `height="stretch"` descendants
+   * resolve. Nested providers do not inherit this.
+   */
+  fillAvailableHeight?: boolean
+  /**
+   * `vertical_alignment` for that filling `grid.cell()` block, so
+   * content-sized children still pack to the top, center, or bottom.
+   */
+  fillJustify?: { fallback: CSSProperties["justifyContent"]; safe?: string }
+  /**
+   * Set by a filling `grid.cell()` block for its own children. Stretch-height
+   * elements take leftover space in the cell instead of 100% of the whole
+   * cell (which overflows siblings). Nested providers do not inherit this.
+   */
+  verticalStretchGrows?: boolean
 }
 
 export const FlexContext = createContext<IFlexContext | null>(null)
@@ -69,7 +92,7 @@ FlexContext.displayName = "FlexContext"
  * @returns isInHorizontalLayout: Whether the nearest `st.container` ancestor is
  *   a horizontal layout.
  * @returns isDirectlyInColumn: Whether widgets in this context are direct
- *   layout children of an `st.columns` column.
+ *   layout children of an `st.columns` column or an `st.grid` cell.
  * @returns parentWidth: The width of the parent container in pixels, if it has
  *   a fixed pixel width.
  * @returns isInContentWidthContainer: Whether this element is inside a content-width
@@ -87,6 +110,9 @@ export const FlexContextProvider: FC<
     parentWidth?: number
     hasContentWidth?: boolean
     hasFixedWidth?: boolean
+    fillAvailableHeight?: boolean
+    fillJustify?: IFlexContext["fillJustify"]
+    verticalStretchGrows?: boolean
     parentContext?: IFlexContext | null
   }>
 > = ({
@@ -98,6 +124,9 @@ export const FlexContextProvider: FC<
   parentWidth,
   hasContentWidth = false,
   hasFixedWidth = false,
+  fillAvailableHeight = false,
+  fillJustify,
+  verticalStretchGrows = false,
   parentContext = null,
 }) => {
   const value = useMemo<IFlexContext>(() => {
@@ -125,6 +154,9 @@ export const FlexContextProvider: FC<
       wrap,
       parentWidth,
       isInContentWidthContainer,
+      ...(fillAvailableHeight && { fillAvailableHeight: true }),
+      ...(fillJustify && { fillJustify }),
+      ...(verticalStretchGrows && { verticalStretchGrows: true }),
     }
   }, [
     direction,
@@ -134,6 +166,9 @@ export const FlexContextProvider: FC<
     parentWidth,
     hasContentWidth,
     hasFixedWidth,
+    fillAvailableHeight,
+    fillJustify,
+    verticalStretchGrows,
     parentContext,
   ])
 

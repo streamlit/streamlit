@@ -16,6 +16,7 @@
 
 import type { CSSProperties } from "react"
 
+import { css } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
@@ -29,6 +30,8 @@ import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
 
+import { computeGridTemplateColumns } from "./gridUtils"
+
 /**
  * Column vertical-alignment rules target the wrapper class rather than the two
  * field styled-components, so both widgets stay covered if their inner React
@@ -36,7 +39,7 @@ import { assertNever } from "~lib/util/assertNever"
  */
 const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 
-function translateGapWidth(
+export function translateGapWidth(
   gap: streamlit.GapConfig.$Properties | undefined,
   theme: EmotionTheme
 ): string {
@@ -73,6 +76,7 @@ interface StyledElementContainerProps {
   overflow: React.CSSProperties["overflow"]
   flex?: React.CSSProperties["flex"]
   minWidth?: React.CSSProperties["minWidth"]
+  minHeight?: React.CSSProperties["minHeight"]
   textAlign?: React.CSSProperties["textAlign"]
 }
 
@@ -94,6 +98,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     overflow,
     flex,
     minWidth,
+    minHeight,
     textAlign,
   }) => ({
     width,
@@ -104,6 +109,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     // in horizontal layouts. Particularly when an element uses the full screen wrapper.
     // Some components support zero width (e.g. iframe).
     minWidth: width === "0px" ? 0 : (minWidth ?? "1rem"),
+    minHeight,
     // Allows to have absolutely-positioned nodes inside app elements, like
     // floating buttons.
     position: "relative",
@@ -289,6 +295,13 @@ export interface StyledFlexContainerBlockProps {
    * (from `overflow`) instead of the `overflow` shorthand.
    */
   overflowX?: React.CSSProperties["overflowX"]
+  minHeight?: React.CSSProperties["minHeight"]
+  /**
+   * Replaces the proto justify when a `grid.cell()` block fills a
+   * definite-height row. `safe` is a second declaration so an unknown
+   * keyword does not drop the fallback.
+   */
+  $fillJustify?: { fallback: CSSProperties["justifyContent"]; safe?: string }
 }
 
 export const StyledFlexContainerBlock =
@@ -305,6 +318,8 @@ export const StyledFlexContainerBlock =
       justify,
       overflow,
       overflowX,
+      minHeight,
+      $fillJustify,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -321,7 +336,8 @@ export const StyledFlexContainerBlock =
         flexDirection: direction,
         flex,
         alignItems: getAlignItems(align),
-        justifyContent: getJustifyContent(justify),
+        justifyContent: $fillJustify?.fallback ?? getJustifyContent(justify),
+        minHeight,
         flexWrap: $wrap ? "wrap" : "nowrap",
         ...(border && {
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
@@ -362,13 +378,20 @@ export const StyledFlexContainerBlock =
             },
           }),
       }
-    }
+    },
+    // Unknown `safe` must not drop the fallback alignment.
+    ({ $fillJustify }) =>
+      $fillJustify?.safe &&
+      css`
+        justify-content: ${$fillJustify.safe};
+      `
   )
 
 interface StyledLayoutWrapperProps {
   width?: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex?: React.CSSProperties["flex"]
+  minHeight?: React.CSSProperties["minHeight"]
 }
 
 /**
@@ -386,7 +409,7 @@ export const StyledDialogContentEndPad = styled.div(({ theme }) => ({
 }))
 
 export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
-  ({ width, height, flex }) => ({
+  ({ width, height, flex, minHeight }) => ({
     display: "flex",
     // This shouldn't matter since this is a wrapper and should only have one child.
     // However, adding it here to be explicit.
@@ -396,5 +419,302 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     minWidth: "1rem",
     height,
     flex,
+    minHeight,
   })
+)
+
+export interface StyledGridContainerBlockProps {
+  columnCount: number
+  minColumnWidthPx: number
+  $wrap: boolean
+  rowGap: streamlit.GapConfig.$Properties | undefined
+  columnGap: streamlit.GapConfig.$Properties | undefined
+  cellHeightMode: BlockProto.GridContainer.CellHeightMode
+  cellHeightPx?: number
+  $dense?: boolean
+  /**
+   * When true, this element is the horizontal scrollport. Bounded-height
+   * grids apply that overflow on StyledGridScrollBody instead. Only set
+   * once tracks are wider than the box: overflow-x: auto coerces
+   * overflow-y: visible to auto and clips hover toolbars.
+   */
+  $horizontalScroll?: boolean
+}
+
+export const StyledGridContainerBlock =
+  styled.div<StyledGridContainerBlockProps>(
+    ({
+      theme,
+      columnCount,
+      minColumnWidthPx,
+      $wrap,
+      rowGap,
+      columnGap,
+      cellHeightMode,
+      cellHeightPx,
+      $dense,
+      $horizontalScroll = false,
+    }) => {
+      const rowGapPx = translateGapWidth(rowGap, theme)
+      const columnGapPx = translateGapWidth(columnGap, theme)
+
+      // Pixel row_height is a fixed track. Content, and the reserved EQUAL
+      // value, size each row to its tallest cell.
+      const gridAutoRows =
+        cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED &&
+        cellHeightPx
+          ? `${cellHeightPx}px`
+          : "auto"
+
+      return {
+        display: "grid",
+        width: "100%",
+        maxWidth: "100%",
+        // Tracks stay auto inside a bounded grid so the overflow port can
+        // measure them and scroll only when they exceed the box.
+        height: "auto",
+        minWidth: "1rem",
+        minHeight: 0,
+        gap: `${rowGapPx} ${columnGapPx}`,
+        gridTemplateColumns: computeGridTemplateColumns({
+          columnCount,
+          minColumnWidthPx,
+          wrap: $wrap,
+        }),
+        gridAutoRows,
+        // wrap=False keeps the declared track count and scrolls locally,
+        // but only once the tracks are wider than this box.
+        ...($horizontalScroll && {
+          overflowX: "auto" as const,
+          overflowY: "visible" as const,
+          // One-axis overflow can coerce the other axis, which would clip
+          // child focus rings. Cancel the extra padding with a negative
+          // margin so the outer layout is unchanged.
+          paddingBlock: theme.sizes.focusRingWidth,
+          marginBlock: `-${theme.sizes.focusRingWidth}`,
+        }),
+        // Dense packing mode fills gaps by reordering items
+        ...($dense && { gridAutoFlow: "dense" }),
+      }
+    }
+  )
+
+/**
+ * Bounded-height port around a content-sized grid. Fills the layout wrapper
+ * and becomes a vertical scrollport only when in-flow tracks exceed it, so
+ * chart hover toolbars stay visible when nothing actually overflows.
+ */
+export const StyledGridScrollBody = styled.div<{
+  $scroll: boolean
+  $horizontalScroll: boolean
+  $bounded: boolean
+}>(({ theme, $scroll, $horizontalScroll, $bounded }) => {
+  // Content-height grids keep this node so a later pixel/stretch height
+  // does not remount the grid. `display: contents` leaves layout unchanged.
+  if (!$bounded) {
+    return { display: "contents" }
+  }
+
+  return {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
+    width: "100%",
+    minHeight: 0,
+    flex: 1,
+    height: "100%",
+    maxHeight: "100%",
+    ...($scroll && {
+      overflowY: "auto" as const,
+      overflowX: $horizontalScroll ? ("auto" as const) : ("clip" as const),
+    }),
+    ...(!$scroll &&
+      $horizontalScroll && {
+        overflowX: "auto" as const,
+        overflowY: "visible" as const,
+        paddingBlock: theme.sizes.focusRingWidth,
+        marginBlock: `-${theme.sizes.focusRingWidth}`,
+      }),
+  }
+})
+
+/**
+ * Grows with grid tracks so ResizeObserver can detect overflow without
+ * reading scrollHeight.
+ */
+export const StyledGridContentMeasure = styled.div<{
+  $minWidthPx?: number
+  $passthrough?: boolean
+}>(({ $minWidthPx, $passthrough }) => {
+  if ($passthrough) {
+    return { display: "contents" }
+  }
+
+  return {
+    width: "100%",
+    // A percentage width alone stays inside the scrollport, so wrap=False
+    // tracks never increase scrollWidth. The track floor lets this box grow
+    // past the port; a wider port still stretches it via width: 100%.
+    ...($minWidthPx !== undefined &&
+      $minWidthPx > 0 && { minWidth: `${$minWidthPx}px` }),
+    minHeight: "min-content",
+    flexShrink: 0,
+  }
+})
+
+type GridCellJustify = {
+  fallback: CSSProperties["justifyContent"]
+  safe?: string
+}
+
+// Stable references. FlexContextProvider memoizes on fillJustify, so a new
+// object on every column-count change would re-render every cell.
+const GRID_CELL_JUSTIFY_TOP: GridCellJustify = Object.freeze({
+  fallback: "flex-start",
+})
+const GRID_CELL_JUSTIFY_CENTER: GridCellJustify = Object.freeze({
+  fallback: "center",
+  safe: "safe center",
+})
+const GRID_CELL_JUSTIFY_BOTTOM: GridCellJustify = Object.freeze({
+  fallback: "flex-end",
+  safe: "safe flex-end",
+})
+
+export function gridCellJustifyContent(
+  verticalAlignment: BlockProto.GridContainer.VerticalAlignment
+): GridCellJustify {
+  const { VerticalAlignment } = BlockProto.GridContainer
+  switch (verticalAlignment) {
+    case VerticalAlignment.CENTER:
+      return GRID_CELL_JUSTIFY_CENTER
+    case VerticalAlignment.BOTTOM:
+      return GRID_CELL_JUSTIFY_BOTTOM
+    case VerticalAlignment.TOP:
+    default:
+      return GRID_CELL_JUSTIFY_TOP
+  }
+}
+
+export interface StyledGridCellProps {
+  verticalAlignment: BlockProto.GridContainer.VerticalAlignment
+  showBorder: boolean
+  columnSpan?: number
+  columnSpanAll?: boolean
+  rowSpan?: number
+}
+
+export const StyledGridCell = styled.div<StyledGridCellProps>(
+  ({
+    theme,
+    verticalAlignment,
+    showBorder,
+    columnSpan,
+    columnSpanAll,
+    rowSpan,
+  }) => {
+    const { fallback, safe } = gridCellJustifyContent(verticalAlignment)
+
+    return css(
+      {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "stretch",
+        justifyContent: fallback,
+        minWidth: 0,
+        minHeight: 0,
+        maxWidth: "100%",
+        // Explicit height so stretch children (height: 100%) resolve against
+        // the grid area. Stretched grid items otherwise keep height: auto.
+        height: "100%",
+        // Overflow stays visible here so hover toolbars (position: absolute
+        // above a chart) can paint. In-flow scrolling is applied on
+        // StyledGridCellBody only when content actually exceeds the cell.
+        overflow: "visible",
+        ...(showBorder && {
+          border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+          borderRadius: theme.radii.default,
+          padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+        }),
+        ...(columnSpanAll && { gridColumn: "1 / -1" }),
+        ...(!columnSpanAll &&
+          columnSpan &&
+          columnSpan > 1 && { gridColumn: `span ${columnSpan}` }),
+        ...(rowSpan && rowSpan > 1 && { gridRow: `span ${rowSpan}` }),
+      },
+      // Second declaration so unknown `safe` does not drop the fallback.
+      safe &&
+        css`
+          justify-content: ${safe};
+        `
+    )
+  }
+)
+
+/**
+ * In-flow body of a grid cell. Fills a definite-height cell so stretch
+ * children resolve. `overflow: auto` is applied only when in-flow content
+ * exceeds the cell — a permanent scrollport would clip hover toolbars even
+ * when nothing scrolls.
+ */
+export const StyledGridCellBody = styled.div<{
+  $scroll: boolean
+  $passthrough?: boolean
+}>(({ $scroll, $passthrough }) => {
+  // Content rows keep the node so toggling row_height does not remount
+  // cell contents. The box itself stays out of layout.
+  if ($passthrough) {
+    return { display: "contents" }
+  }
+
+  return {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
+    width: "100%",
+    minHeight: 0,
+    flex: 1,
+    height: "100%",
+    maxHeight: "100%",
+    ...($scroll && { overflowY: "auto", overflowX: "clip" }),
+  }
+})
+
+interface StyledGridCellContentProps {
+  verticalAlignment: BlockProto.GridContainer.VerticalAlignment
+  $passthrough?: boolean
+}
+
+/**
+ * In-flow content of a grid cell. `min-height: min-content` lets this box
+ * grow with tall children so ResizeObserver can detect overflow without
+ * reading scrollHeight. `height: 100%` keeps stretch children resolving
+ * against the cell when content is shorter than the row. Alignment lives
+ * here because this box fills the cell; justify-content on the outer cell
+ * would otherwise be a no-op.
+ */
+export const StyledGridCellContent = styled.div<StyledGridCellContentProps>(
+  ({ verticalAlignment, $passthrough }) => {
+    if ($passthrough) {
+      return { display: "contents" }
+    }
+
+    const { fallback, safe } = gridCellJustifyContent(verticalAlignment)
+
+    return css(
+      {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "stretch",
+        justifyContent: fallback,
+        width: "100%",
+        height: "100%",
+        minHeight: "min-content",
+      },
+      safe &&
+        css`
+          justify-content: ${safe};
+        `
+    )
+  }
 )
