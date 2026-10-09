@@ -99,6 +99,18 @@ with st.container(key="vertical_parent_container", height=400):
   st.code("print('Additional content below')", height="stretch")
 ```
 
+- When the element is in a horizontal container, it should stretch to the height of its row (the tallest sibling).
+
+Examples:
+
+```python
+with st.container(horizontal=True):
+  # The bordered container stretches to the height of the taller text area.
+  with st.container(border=True, height="stretch"):
+    st.metric("Revenue", "$1.2M")
+  st.text_area("Notes", height=300)
+```
+
 2. Content
 
 When the height on an element is set to "content", the height of the element should be based on the contents of the element.
@@ -268,10 +280,14 @@ case "textArea": {
   const textAreaProto = node.element.textArea as TextAreaProto
   widgetProps.disabled = widgetProps.disabled || textAreaProto.disabled
 
+  // In horizontal layouts, a percentage height would block the row stretch,
+  // so stretch height falls back to the default layout styles.
   const config = node.element.heightConfig?.useStretch
     ? new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
-        styleOverrides: { height: "100%", flex: "1 1 8rem" },
+        styleOverrides: isInHorizontalLayout
+          ? undefined
+          : { height: "100%", flex: "1 1 8rem" },
       })
     : new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
@@ -312,14 +328,15 @@ The `useLayoutStyles` hook (in `useLayoutStyles.ts`) converts proto config to CS
 
 **Complete Proto to CSS Conversion (Default Behavior):**
 
-| Proto Field                | Default CSS Properties                       | Context                                               |
-| -------------------------- | -------------------------------------------- | ----------------------------------------------------- |
-| `widthConfig.useStretch`   | `width: "100%"` + `flex: "1 1 ${minWidth}"`  | Horizontal layouts apply flex with element categories |
-| `widthConfig.useContent`   | `width: "fit-content"`                       | Element shrinks to natural content size               |
-| `widthConfig.pixelWidth`   | `width: "${pixels}px"`                       | Fixed width in pixels                                 |
-| `heightConfig.useStretch`  | `height: "100%"` + `flex: "1 1 auto"`        | Vertical layouts apply flex properties                |
-| `heightConfig.useContent`  | `height: "auto"`                             | Element uses natural content height                   |
-| `heightConfig.pixelHeight` | `height: "${pixels}px"` + `overflow: "auto"` | Fixed height with scroll if needed                    |
+| Proto Field                | Default CSS Properties                                                      | Context                                               |
+| -------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `widthConfig.useStretch`   | `width: "100%"` + `flex: "1 1 ${minWidth}"`                                 | Horizontal layouts apply flex with element categories |
+| `widthConfig.useContent`   | `width: "fit-content"`                                                      | Element shrinks to natural content size               |
+| `widthConfig.pixelWidth`   | `width: "${pixels}px"`                                                      | Fixed width in pixels                                 |
+| `heightConfig.useStretch`  | `height: "100%"`                                                            | Vertical layouts: fills the parent height             |
+| `heightConfig.useStretch`  | `alignSelf: "stretch"` + `height: "auto"` + `minHeight`/`maxHeight: "100%"` | Horizontal layouts: stretches to the row height       |
+| `heightConfig.useContent`  | `height: "auto"`                                                            | Element uses natural content height                   |
+| `heightConfig.pixelHeight` | `height: "${pixels}px"` + `overflow: "auto"`                                | Fixed height with scroll if needed                    |
 
 **Min-Width Protection in Content-Width Containers:**
 
@@ -342,4 +359,5 @@ The element height does not fill the parent container height, instead it fits th
 Look for:
 
 - HTML elements interior to the component that may need `height: 100%` to stretch.
+- In horizontal layouts, a percentage `height` in `styleOverrides`, or a wrapper that doesn't forward `alignSelf`, `minHeight`, and `maxHeight` from `useLayoutStyles`, blocks the row stretch.
 - If it is a graph it may need the container height provided to the graphing library. The `useCalculatedDimensions` hook (in `frontend/lib/src/hooks/useCalculatedDimensions.ts`) can be utilized to measure the container height.

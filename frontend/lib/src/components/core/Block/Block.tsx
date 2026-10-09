@@ -117,6 +117,20 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactNode => {
   return elements
 }
 
+/**
+ * Maps a column's vertical alignment to the justify-content of its contents.
+ * The column itself stretches to the row height, so its contents are aligned
+ * inside it instead of shrinking the column.
+ */
+const COLUMN_CONTENT_JUSTIFY: Partial<
+  Record<BlockProto.Column.VerticalAlignment, BlockProto.FlexContainer.Justify>
+> = {
+  [BlockProto.Column.VerticalAlignment.CENTER]:
+    BlockProto.FlexContainer.Justify.JUSTIFY_CENTER,
+  [BlockProto.Column.VerticalAlignment.BOTTOM]:
+    BlockProto.FlexContainer.Justify.JUSTIFY_END,
+}
+
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
@@ -129,6 +143,7 @@ export const ContainerContentsWrapper = (
   props: ContainerContentsWrapperProps
 ): ReactElement => {
   const parentContext = useContext(FlexContext)
+  const columnAlignment = props.node.deltaBlock.column?.verticalAlignment
 
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
@@ -137,6 +152,9 @@ export const ContainerContentsWrapper = (
     height: props.height,
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
+    justify: notNullOrUndefined(columnAlignment)
+      ? COLUMN_CONTENT_JUSTIFY[columnAlignment]
+      : undefined,
   }
 
   return (
@@ -206,8 +224,13 @@ export const FlexBoxContainer = (
     overflow: layout_styles.overflow,
     overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
-    // We need the height on the container for scrolling.
-    height: layout_styles.height,
+    // Pixel-height blocks carry the height here so they can scroll.
+    // Stretch-height blocks always fill their LayoutWrapper; in a horizontal
+    // parent, layout_styles.height is "auto" because the wrapper stretches via
+    // align-self.
+    height: props.node.deltaBlock.heightConfig?.useStretch
+      ? "100%"
+      : layout_styles.height,
     // Flex properties are set on the LayoutWrapper.
     flex: "1",
     align: props.node.deltaBlock.flexContainer?.align,
@@ -509,6 +532,9 @@ export const BlockNodeRenderer = (
       width: styles.width,
       height: hasConstrainingHeight ? styles.height : undefined,
       flex: styles.flex,
+      alignSelf: styles.alignSelf,
+      minHeight: styles.minHeight,
+      maxHeight: styles.maxHeight,
       fragmentId: node.fragmentId,
     }
     return <Tabs {...tabsProps} />

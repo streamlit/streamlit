@@ -22,6 +22,7 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -98,9 +99,16 @@ def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
         get_text_area(app, "text area 12 (height=75)"), name="st_text_area-height_75"
     )
     # Expect this to default to the minimum height of 68px
-    assert_snapshot(
-        get_text_area(app, "text area 13 (height=60)"), name="st_text_area-height_60"
-    )
+    min_height_text_area = get_text_area(app, "text area 13 (height=60)")
+    assert_snapshot(min_height_text_area, name="st_text_area-height_60")
+    # The 68px minimum includes the field border, matching other large widgets.
+    min_height_field = min_height_text_area.get_by_test_id("stTextAreaRootElement")
+
+    def _field_has_min_height() -> bool:
+        box = min_height_field.bounding_box()
+        return box is not None and round(box["height"]) == 68
+
+    wait_until(app, _field_has_min_height)
     # gh-12867: Test very small height that produces negative calculation
     # Should clamp to 0px and use minHeight (68px)
     assert_snapshot(

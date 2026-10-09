@@ -92,7 +92,7 @@ st.dataframe(df, width="content")
 st.download_button("Download CSV", df.to_csv(), "orders.csv", width="stretch")
 ```
 
-Prefer horizontal containers for responsive rows, and reserve columns for fixed grids or specific width ratios.
+Prefer horizontal containers for responsive rows, and reserve columns for fixed grids, specific width ratios, or cards that must share a width.
 
 ```python
 # BAD: Columns for a simple button row
@@ -104,6 +104,30 @@ right.button("Save", type="primary")
 with st.container(horizontal=True, horizontal_alignment="right"):
     st.button("Cancel")
     st.button("Save", type="primary")
+```
+
+Align elements placed side by side. Bottom-align rows that mix labeled inputs with buttons, checkboxes, or toggles, and give sibling cards consistent content or `height="stretch"`. See "Aligning elements side by side" in [layouts.md](layouts.md) for element sizes and more patterns.
+
+```python
+# BAD: The button and toggle sit above the input field; the cards have uneven heights
+name_col, active_col, button_col = st.columns(3)
+name_col.text_input("Customer")
+active_col.toggle("Active only")
+button_col.button("Search")
+
+revenue_col, orders_col = st.columns(2)
+revenue_col.metric("Revenue", "$1.2M", "+8%", border=True)
+orders_col.metric("Orders", "1.4k", border=True)
+
+# GOOD: Everything lines up with the input field, and the cards share a height
+name_col, active_col, button_col = st.columns(3, vertical_alignment="bottom")
+name_col.text_input("Customer")
+active_col.toggle("Active only")
+button_col.button("Search")
+
+revenue_col, orders_col = st.columns(2)
+revenue_col.metric("Revenue", "$1.2M", "+8%", border=True, height="stretch")
+orders_col.metric("Orders", "1.4k", border=True, height="stretch")
 ```
 
 Use bordered containers for visual grouping.

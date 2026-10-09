@@ -1051,7 +1051,7 @@ class TextWidgetsMixin:
 
             The widget's height can't be smaller than the height of two lines.
             When ``label_visibility="collapsed"``, the minimum height is 68
-            pixels. Otherwise, the minimum height is 98 pixels.
+            pixels. Otherwise, the minimum height is 96 pixels.
 
         max_chars : int or None
             Maximum number of characters allowed in text area.

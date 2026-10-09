@@ -61,8 +61,8 @@ minimum width, then the column group scrolls horizontally instead of stacking.
 # GOOD
 col1, col2 = st.columns(2)
 
-# OK with alignment
-cols = st.columns(4, vertical_alignment="center")
+# OK: Bottom-align to line up buttons with labeled inputs
+cols = st.columns(4, vertical_alignment="bottom")
 
 # OK: Compact grid that must stay in one row (e.g. thumbnails)
 thumbnail_columns = st.columns(6, gap="xsmall", wrap=False)
@@ -122,6 +122,81 @@ with st.container(horizontal=True, horizontal_alignment="distribute"):
 ```
 
 Options: `"left"` (default), `"center"`, `"right"`, `"distribute"`
+
+## Aligning elements side by side
+
+Rows look off when neighboring elements have different heights. Know the default sizes, then align the row deliberately.
+
+**Default heights:**
+
+- Buttons (`st.button`, `st.download_button`, `st.link_button`, `st.popover`, `st.menu_button`) and unlabeled input fields share one height.
+- A visible label adds the same extra height to every input field (`st.text_input`, `st.number_input`, `st.selectbox`, `st.multiselect`, date and time inputs, `st.color_picker`, sliders). `label_visibility="hidden"` keeps that space; `"collapsed"` removes it.
+- Shorter: `st.checkbox`, `st.toggle`, and `st.feedback`. `st.pills` and `st.segmented_control` are slightly shorter than input fields.
+- Taller: `st.file_uploader` and `st.audio_input` share one height (the uploader grows in narrow columns). `st.text_area` defaults to three lines; at its minimum `height` with a collapsed label, it matches them.
+- `st.metric` grows with `delta`, and grows more with `chart_data`.
+
+**Widget rows:**
+
+- For labeled inputs next to buttons, checkboxes, or toggles, use `vertical_alignment="bottom"` on `st.columns` or a horizontal container. Checkboxes and toggles are then centered on the input field. `"center"` centers each element or column, label included, so the controls don't line up.
+- For toolbars, collapse the input labels and use `st.container(horizontal=True, vertical_alignment="center")`.
+- If a column has content below its input, such as a caption, top-align instead: put `st.space("small")` above the neighboring button or unlabeled widget. With the default gap, it takes up exactly a label's height. `st.space` only adds vertical space in vertical layouts like columns.
+
+```python
+# Labeled inputs, a toggle, and a button on one line
+name_col, region_col, active_col, button_col = st.columns(
+    [3, 2, 2, 1], vertical_alignment="bottom"
+)
+name_col.text_input("Customer")
+region_col.selectbox("Region", regions)
+active_col.toggle("Active only")
+button_col.button("Search", type="primary", width="stretch")
+
+# Toolbar with collapsed labels
+with st.container(horizontal=True, vertical_alignment="center"):
+    st.text_input("Search", label_visibility="collapsed", placeholder="Search")
+    st.segmented_control("View", ["Table", "Chart"], label_visibility="collapsed")
+    st.toggle("Live")
+    st.button("Export", icon=":material/download:")
+
+# Top-align a button with a labeled input that has a caption below
+key_col, button_col = st.columns(2)
+with key_col:
+    st.text_input("API key", type="password")
+    st.caption("Find your key in the account settings.")
+with button_col:
+    st.space("small")
+    st.button("Connect")
+```
+
+**Equal-height cards:**
+
+Sibling cards with different content (for example, one `st.metric` without `delta` or `chart_data`) end up with uneven heights.
+
+- Prefer consistent cards: give all sibling metrics a `delta` and `chart_data`, or none, and use the same header elements in every card.
+- When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. `st.columns(n, border=True)` also gives equal-height bordered columns.
+- Horizontal containers size each card's width to its content, so mixed cards also get uneven widths. Use `st.columns` when cards should share a width.
+- Pin a card's trailing button to the bottom with `st.space("stretch")`.
+
+```python
+# Equal-height KPI cards with mixed content
+revenue_col, users_col, orders_col = st.columns(3)
+revenue_col.metric(
+    "Revenue", "$1.2M", "+8%", chart_data=revenue_trend, border=True, height="stretch"
+)
+users_col.metric(
+    "Users", "762k", "+12%", chart_data=user_trend, border=True, height="stretch"
+)
+orders_col.metric("Orders", "1.4k", border=True, height="stretch")
+
+# Equal-height cards with buttons pinned to the bottom
+for col, (plan, features) in zip(st.columns(3), plans.items()):
+    with col.container(border=True, height="stretch"):
+        st.subheader(plan)
+        for feature in features:
+            st.markdown(f":material/check: {feature}")
+        st.space("stretch")
+        st.button("Choose", key=f"choose_{plan}", width="stretch")
+```
 
 ## Bordered containers
 
@@ -234,16 +309,9 @@ st.space(50)  # Custom pixels
 
 ## Width and height
 
-Control element sizing:
+Control element sizing (for equal-height cards, see "Aligning elements side by side" above):
 
 ```python
-# Stretch to fill available space (equal height columns)
-cols = st.columns(2)
-with cols[0].container(border=True, height="stretch"):
-    st.line_chart(data)
-with cols[1].container(border=True, height="stretch"):
-    st.dataframe(df)
-
 # Shrink to content size
 st.container(width="content")
 

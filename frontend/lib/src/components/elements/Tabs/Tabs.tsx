@@ -80,6 +80,9 @@ export interface TabProps extends BlockPropsWithoutWidth {
   width: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex: React.CSSProperties["flex"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
   fragmentId?: string
 }
 
@@ -91,6 +94,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     width,
     height,
     flex,
+    alignSelf,
+    minHeight,
+    maxHeight,
     widgetMgr,
     fragmentId,
   } = props
@@ -345,6 +351,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       width={width}
       height={height}
       flex={flex}
+      alignSelf={alignSelf}
+      minHeight={minHeight}
+      maxHeight={maxHeight}
     >
       <StyledTabsRoot
         selectedKey={String(activeTabKey)}

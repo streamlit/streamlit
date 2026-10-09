@@ -962,6 +962,21 @@ describe("ElementNodeRenderer Block Component", () => {
       }
     )
 
+    it.each(["chatInput", "textArea"])(
+      "leaves stretch-height %s to the default layout styles in horizontal layouts",
+      async type => {
+        const config = await renderAndGetContainerConfig(
+          type,
+          widgetProto,
+          { heightConfig: { useStretch: true } },
+          horizontalFlexContext
+        )
+        expect(config.minStretchWidth).toBe(MinStretchWidth.MEDIUM)
+        // A percentage height override would block the row stretch.
+        expect(config.styleOverrides).toBeUndefined()
+      }
+    )
+
     it("allows pixel-height chatInput containers to expand", async () => {
       const config = await renderAndGetContainerConfig(
         "chatInput",
