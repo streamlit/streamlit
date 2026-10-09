@@ -207,22 +207,24 @@ class AgentSessionClient(SessionClient):
         self._run_finished.clear()
         self.query_string_update = None
 
-    async def wait_until_settled(self, timeout: float) -> None:
+    async def wait_until_settled(self, timeout_seconds: float) -> None:
         """Wait for the run chain to stop producing new runs.
 
         One client submission can cause several script runs through callbacks,
         ``st.rerun()``, or a page redirect. "Settled" means no further run
         started within a short grace period after the last one finished.
+        ``timeout_seconds`` bounds the whole chain, including that grace period.
         """
-        deadline = time.monotonic() + timeout
+        deadline = time.monotonic() + timeout_seconds
 
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError
             try:
-                await asyncio.wait_for(self._run_finished.wait(), remaining)
-            except (TimeoutError, asyncio.TimeoutError) as exc:
+                async with asyncio.timeout(remaining):
+                    await self._run_finished.wait()
+            except TimeoutError as exc:
                 raise TimeoutError from exc
 
             # Give a follow-up run a chance to clear the event again.

@@ -976,7 +976,7 @@ def build_snapshot(
         "status": "error"
         if compile_error or _run_failed(session_state) or builder.saw_uncaught_exception
         else "ready",
-        "observed_at": datetime.datetime.now(datetime.timezone.utc)
+        "observed_at": datetime.datetime.now(datetime.UTC)
         .isoformat(timespec="seconds")
         .replace("+00:00", "Z"),
         "app_title": _app_title(messages, new_session),

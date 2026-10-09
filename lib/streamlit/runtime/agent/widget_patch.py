@@ -345,7 +345,7 @@ def _parse_iso(value: Any) -> datetime.date | datetime.time | None:
         try:
             parsed: datetime.date | datetime.time = parse(value)
             return parsed
-        except ValueError:  # noqa: PERF203
+        except ValueError:
             continue
     return None
 
