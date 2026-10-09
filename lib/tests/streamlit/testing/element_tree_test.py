@@ -1784,20 +1784,20 @@ def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
 def test_inspectable_elements_reject_unsupported_interactions() -> None:
     """Inspectable-only nodes reject set_value and click with AppTestError.
 
-    ``st.audio_input`` is an untyped element. Typed ``Markdown`` is covered
+    ``st.camera_input`` is an untyped element. Typed ``Markdown`` is covered
     too.
     """
 
     def script():
         import streamlit as st
 
-        st.audio_input("Mic", key="mic")
+        st.camera_input("Cam", key="cam")
         st.markdown("hi")
 
     at = AppTest.from_function(script).run()
-    node = at.get("audio_input")[0]
+    node = at.get("camera_input")[0]
     assert isinstance(node, UnknownElement)
-    assert node.key == "mic"
+    assert node.key == "cam"
 
     inspectable_guidance = (
         "AppTest can inspect this element but does not implement "
@@ -1805,21 +1805,166 @@ def test_inspectable_elements_reject_unsupported_interactions() -> None:
         "has a key, or use a Playwright e2e test."
     )
     with pytest.raises(AppTestError) as set_value_info:
-        node.set_value(b"wav")
+        node.set_value(b"jpg")
     assert str(set_value_info.value) == (
-        "set_value() is not supported for audio_input (key='mic'). "
+        "set_value() is not supported for camera_input (key='cam'). "
         f"{inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as click_info:
         node.click()
     assert str(click_info.value) == (
-        f"click() is not supported for audio_input (key='mic'). {inspectable_guidance}"
+        f"click() is not supported for camera_input (key='cam'). {inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as markdown_info:
         at.markdown[0].set_value("nope")
     assert str(markdown_info.value) == (
         f"set_value() is not supported for markdown. {inspectable_guidance}"
     )
+
+
+def test_audio_input_records_one_wav() -> None:
+    """``st.audio_input`` accepts one WAV and keeps it across reruns."""
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("changes", 0)
+
+        def on_change() -> None:
+            st.session_state.changes += 1
+
+        audio = st.audio_input("Mic", key="mic", sample_rate=48000, on_change=on_change)
+        st.sidebar.audio_input("Side", key="side", sample_rate=None)
+        if audio is None:
+            st.text("empty")
+        else:
+            st.text(f"name={audio.name}")
+            st.text(f"type={audio.type}")
+            st.text(f"bytes={audio.getvalue()!r}")
+
+    at = AppTest.from_function(script).run()
+    mic = at.audio_input(key="mic")
+    assert mic.value is None
+    assert mic.label == "Mic"
+    assert mic.sample_rate == 48000
+    assert at.sidebar.audio_input(key="side").sample_rate is None
+    assert at.session_state["mic"] is None
+    assert at.text[0].value == "empty"
+    assert at.get("audio_input")[0] is mic
+
+    at = mic.set_value(("clip.wav", b"RIFF", "audio/wav")).run()
+    recorded = at.audio_input(key="mic").value
+    assert recorded is not None
+    assert recorded.name == "clip.wav"
+    assert recorded.type == "audio/wav"
+    assert recorded.getvalue() == b"RIFF"
+    assert at.session_state["mic"].getvalue() == b"RIFF"
+    assert at.session_state["changes"] == 1
+    assert at.text[0].value == "name=clip.wav"
+    assert at.text[2].value == "bytes=b'RIFF'"
+
+    recorder = at.audio_input(key="mic")
+    committed = recorder.value
+    assert committed is not None
+    assert committed.getvalue() == b"RIFF"
+    recorder.upload("first.wav", b"one")
+    recorder.upload("other.WAV", b"more", mime_type="Audio/WAV")
+    assert recorder.value is committed
+    recorder.run()
+    assert at.audio_input(key="mic").value.name == "other.WAV"
+    assert at.audio_input(key="mic").value.type == "audio/wav"
+    assert at.audio_input(key="mic").value.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    at.run()
+    assert at.audio_input(key="mic").value.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    recorder = at.audio_input(key="mic")
+    recorder_repr = repr(recorder)
+    assert recorder_repr.startswith("AudioInput(")
+    assert "sample_rate=48000" in recorder_repr
+    with pytest.raises(
+        AppTestError, match=r"click\(\) is not supported for audio_input \(key='mic'\)"
+    ):
+        recorder.click()
+
+    at.audio_input(key="mic").clear().run()
+    assert at.audio_input(key="mic").value is None
+    assert at.session_state["mic"] is None
+    assert at.text[0].value == "empty"
+    assert at.session_state["changes"] == 3
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        (("notes.txt", b"hi", "audio/wav"), r"\.wav"),
+        (("clip.wav", b"hi", "text/plain"), "audio/wav"),
+        (
+            [("a.wav", b"a", "audio/wav"), ("b.wav", b"b", "audio/wav")],
+            "list is not accepted",
+        ),
+        (("clip.wav", "RIFF", "audio/wav"), "Got tuple"),
+        (b"raw-bytes", "Got bytes"),
+    ],
+    ids=["wrong_extension", "wrong_mime", "multiple_files", "str_content", "raw_bytes"],
+)
+def test_audio_input_rejects_invalid_recordings(value: Any, match: str) -> None:
+    """Invalid recordings raise AppTestError and leave the widget empty."""
+
+    def script():
+        import streamlit as st
+
+        st.audio_input("Mic", key="mic")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=match):
+        at.audio_input(key="mic").set_value(value)
+    assert at.audio_input(key="mic").value is None
+
+
+def test_audio_input_disabled_rejects_update() -> None:
+    """A disabled audio_input widget cannot accept a recording or be cleared."""
+
+    at = AppTest.from_string(
+        "import streamlit as st\nst.audio_input('Mic', disabled=True, key='mic')\n"
+    ).run()
+    with pytest.raises(AppTestError, match="disabled"):
+        at.audio_input(key="mic").upload("clip.wav", b"hi")
+    with pytest.raises(AppTestError, match="disabled"):
+        at.audio_input(key="mic").clear()
+
+
+def test_audio_input_form_applies_only_on_submit() -> None:
+    """A form recording stays uncommitted until submit.
+
+    ``clear_on_submit`` clears it on the next submit.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("rec-form", clear_on_submit=True):
+            audio = st.audio_input("Mic")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text("yes" if audio is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.audio_input[0].set_value(("a.wav", b"hi", "audio/wav")).run()
+    assert at.text[0].value == "no"
+
+    at.audio_input[0].set_value(("a.wav", b"hi", "audio/wav"))
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+    assert at.audio_input[0].value.getvalue() == b"hi"
+
+    at.button[1].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
 
 
 def test_pagination_set_value_selects_page() -> None:
