@@ -15,7 +15,17 @@
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_until
-from e2e_playwright.shared.app_utils import get_element_by_key, get_text_area
+from e2e_playwright.shared.app_utils import (
+    click_toggle,
+    get_element_by_key,
+    get_text_area,
+)
+
+# Match theme.sizes.defaultChartHeight (21.875rem) and defaultChartWidth (25rem).
+DEFAULT_CHART_HEIGHT_PX = 350
+DEFAULT_CHART_WIDTH_PX = 400
+# Matches DEFAULT_PLOTLY_HEIGHT in PlotlyChart.tsx.
+DEFAULT_PLOTLY_HEIGHT_PX = 450
 
 CONTAINER_KEYS = [
     "container-horizontal-align-left",
@@ -101,6 +111,133 @@ def test_stretch_height_in_horizontal_container(app: Page):
         )
 
     wait_until(app, _content_card_is_shorter)
+
+
+def test_stretch_chart_default_height_in_horizontal_container(app: Page):
+    """Stretch charts fall back to their default height and shrink back with the row."""
+    fallback_chart = get_element_by_key(
+        app, "container-horizontal-stretch-chart-fallback"
+    ).get_by_test_id("stVegaLiteChart")
+    # A short sibling doesn't squash the chart to the button height.
+    expect(fallback_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
+
+    # A content-width chart keeps its default width instead of collapsing.
+    content_width_chart = get_element_by_key(
+        app, "container-horizontal-content-width-chart"
+    ).get_by_test_id("stVegaLiteChart")
+    expect(content_width_chart).to_have_css("width", f"{DEFAULT_CHART_WIDTH_PX}px")
+    expect(content_width_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
+
+    # Plotly falls back to its default figure height.
+    plotly_chart = get_element_by_key(
+        app, "container-horizontal-stretch-plotly-fallback"
+    ).get_by_test_id("stPlotlyChart")
+    expect(plotly_chart).to_have_css("height", f"{DEFAULT_PLOTLY_HEIGHT_PX}px")
+
+    shrink_row = get_element_by_key(app, "container-horizontal-stretch-chart-shrink")
+    shrink_card = get_element_by_key(app, "stretch-chart-shrink-card")
+    shrink_chart = shrink_row.get_by_test_id("stVegaLiteChart")
+    _expect_heights_match(app, shrink_card, [shrink_chart])
+
+    click_toggle(app, "Tall card")
+    # The chart returns to its default height instead of keeping the height
+    # of the tall card it rendered at.
+    expect(shrink_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
+
+
+def _wraps_content(locator: Locator) -> bool:
+    """Whether the element's content fits without overflowing it."""
+    # Allow 1px because scrollHeight and clientHeight round fractional heights
+    # differently.
+    return bool(locator.evaluate("el => el.scrollHeight - el.clientHeight <= 1"))
+
+
+def test_stretch_charts_fit_containers_with_definite_height(app: Page):
+    """Stretch charts shrink to fit their siblings in definite-height containers."""
+    for key in ("fixed-card-title-and-chart", "fixed-row-stretch-kpi-cards"):
+        container = get_element_by_key(app, key)
+        charts = container.get_by_test_id("stVegaLiteChart")
+        expect(charts.first).to_be_visible()
+
+        def _charts_fit(
+            container: Locator = container, charts: Locator = charts
+        ) -> bool:
+            heights = [_height(chart) for chart in charts.all()]
+            return _wraps_content(container) and all(
+                height is not None and 0 < height < DEFAULT_CHART_HEIGHT_PX
+                for height in heights
+            )
+
+        # The container must not scroll because of the chart's default height.
+        wait_until(app, _charts_fit)
+
+
+def test_stretch_blocks_grow_in_fixed_height_parents(app: Page):
+    """Stretch containers and forms grow past a fixed-height parent; tabs scroll."""
+    form_parent = get_element_by_key(app, "fixed-parent-stretch-form")
+    for block, parent in (
+        (form_parent.get_by_test_id("stForm"), form_parent),
+        (
+            get_element_by_key(app, "stretch-card-overflow"),
+            get_element_by_key(app, "fixed-row-stretch-card"),
+        ),
+    ):
+        expect(block).to_be_visible()
+
+        def _grows_past_parent(
+            block: Locator = block, parent: Locator = parent
+        ) -> bool:
+            block_height = _height(block)
+            parent_height = _height(parent)
+            return (
+                _wraps_content(block)
+                and block_height is not None
+                and parent_height is not None
+                and block_height > parent_height
+            )
+
+        wait_until(app, _grows_past_parent)
+
+    # Stretch tabs stay capped at the parent and scroll inside the panel.
+    tab_panel = get_element_by_key(app, "fixed-parent-stretch-tabs").get_by_role(
+        "tabpanel"
+    )
+    expect(tab_panel).to_be_visible()
+    wait_until(
+        app,
+        lambda: bool(tab_panel.evaluate("el => el.scrollHeight > el.clientHeight")),
+    )
+
+
+def test_graphviz_and_text_area_keep_usable_size_in_rows(app: Page):
+    """Graphviz and text areas keep a usable size in stretched horizontal rows."""
+    graphviz = get_element_by_key(
+        app, "container-horizontal-stretch-graphviz"
+    ).get_by_test_id("stGraphVizChart")
+
+    def _graphviz_has_natural_width() -> bool:
+        box = graphviz.bounding_box()
+        return box is not None and box["width"] > 100
+
+    wait_until(app, _graphviz_has_natural_width)
+
+    # The field stays as tall as its textarea instead of stretching into an
+    # empty box with the resize handle in the middle.
+    text_area_root = get_text_area(app, "Distribute text area").get_by_test_id(
+        "stTextAreaRootElement"
+    )
+    textarea = text_area_root.locator("textarea")
+
+    def _root_hugs_textarea() -> bool:
+        root_height = _height(text_area_root)
+        textarea_height = _height(textarea)
+        return (
+            root_height is not None
+            and textarea_height is not None
+            and root_height - textarea_height <= 2
+        )
+
+    wait_until(app, _root_hugs_textarea)
 
 
 def test_checkbox_alignment_in_horizontal_container(app: Page):

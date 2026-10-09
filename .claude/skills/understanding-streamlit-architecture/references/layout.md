@@ -77,6 +77,8 @@ The modes are:
 When the height on an element is set to "stretch", the element should expand to fill available vertical space according to these rules:
 
 - The element's display height should not exceed the height of its parent container.
+- Exception: stretch-height containers and forms fill the parent but grow to fit taller content instead of letting it spill past their border. Tabs keep the cap and scroll inside the active panel.
+- Without a definite parent height (top level, content-height containers, content-height rows), stretch charts fall back to a default height. Vega and Plotly charts only claim that fallback when `FlexContext.hasDefiniteHeight` is false (`hasStretchHeightFallback()` in `FlexContext.tsx`). Inside a pixel-height container, or a stretch-height container that fills one, they shrink to fit their siblings instead, so a title plus a stretch chart doesn't make a fixed-height card scroll.
 
 Examples:
 
@@ -342,6 +344,8 @@ The `useLayoutStyles` hook (in `useLayoutStyles.ts`) converts proto config to CS
 | `heightConfig.useContent`  | `height: "auto"`                                                            | Element uses natural content height                   |
 | `heightConfig.pixelHeight` | `height: "${pixels}px"` + `overflow: "auto"`                                | Fixed height with scroll if needed                    |
 
+**Stretch-height blocks:** `BlockNodeRenderer` overrides the stretch styles for containers and forms that render through `StyledLayoutWrapper`. In vertical parents, the wrapper uses `flex: "0 1 100%"` with `height: "auto"`; in horizontal parents, it drops the `maxHeight` cap. The container's inner block and the form root use `height: "auto"` and fill the wrapper through flex. Without a percentage height, a flex item's automatic minimum size is its content height, so the block grows with its content. Its flexed size is still definite, so nested stretch children resolve their percentage heights. `min-height: min-content` isn't used because Firefox and WebKit treat it as `auto` in the block axis.
+
 **Min-Width Protection in Content-Width Containers:**
 
 When an element with `width="stretch"` is inside a content-width container (tracked via `FlexContext.isInContentWidthContainer`), min-width is automatically applied using the `minStretchBehavior` value. This prevents elements from becoming too narrow when the container shrinks to fit its content.
@@ -365,3 +369,4 @@ Look for:
 - HTML elements interior to the component that may need `height: 100%` to stretch.
 - In horizontal layouts, a percentage `height` in `styleOverrides`, or a wrapper that doesn't forward `alignSelf`, `minHeight`, and `maxHeight` from `useLayoutStyles`, blocks the row stretch.
 - If it is a graph it may need the container height provided to the graphing library. The `useCalculatedDimensions` hook (in `frontend/lib/src/hooks/useCalculatedDimensions.ts`) can be utilized to measure the container height.
+- If a graph sizes itself from its measured container, its rendered size can feed back into the container's height (it collapses to 0px, or never shrinks again). Size-contain the measured container (`contain: "size"` plus `containIntrinsicHeight` as the fallback height, see `ArrowVegaLiteChart` and `PlotlyChart`), and keep it `display: block` so its baseline can't grow the line box around it. Containment drops the content width too, so a content-width chart needs a known `containIntrinsicWidth` (Vega uses the spec width or `defaultChartWidth` for single-view charts and skips compositions).

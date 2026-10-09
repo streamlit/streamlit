@@ -350,7 +350,7 @@ export const StyledSegmentedControlButton = styled(
     maxWidth: "100%",
     marginRight: `-${theme.sizes.borderWidth}`, // Add negative margin to overlap borders
 
-    "&:first-child": {
+    "&:first-of-type": {
       borderTopLeftRadius: theme.radii.button,
       borderBottomLeftRadius: theme.radii.button,
     },
@@ -799,7 +799,7 @@ export const StyledSegmentedControlToggleButton = styled(
   maxWidth: $wrap ? "100%" : undefined,
   marginRight: `-${theme.sizes.borderWidth}`,
 
-  "&:first-child": {
+  "&:first-of-type": {
     borderTopLeftRadius: theme.radii.button,
     borderBottomLeftRadius: theme.radii.button,
   },

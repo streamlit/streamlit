@@ -174,9 +174,9 @@ class LayoutsMixin:
             - ``"stretch"``: The height of the container matches the height of
               its content or the height of the parent container, whichever is
               larger. In a horizontal container, the height of the container
-              matches the height of its row. If the container is not in a
-              parent container, the height of the container matches the height
-              of its content.
+              matches the height of its row or its content, whichever is
+              larger. If the container is not in a parent container, the height
+              of the container matches the height of its content.
             - An integer specifying the height in pixels: The container has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.

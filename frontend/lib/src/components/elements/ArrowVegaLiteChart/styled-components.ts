@@ -347,32 +347,73 @@ export const StyledVegaLiteChartTooltips = (
 interface StyledVegaLiteChartContainerProps {
   useContainerWidth: boolean
   useContainerHeight: boolean
+  /**
+   * Whether the chart is sized only by its parent. Size containment keeps the
+   * rendered chart from feeding its size back into the parent, so the chart
+   * can shrink again.
+   */
+  isSizeContained: boolean
+  /**
+   * Pixel width of a size-contained content-width chart, from its spec.
+   * Without it, the chart uses the default chart width.
+   */
+  contentWidth?: number
+  /**
+   * Whether a size-contained chart uses the default chart height when its
+   * parent has no definite height to fill.
+   */
+  hasFallbackHeight: boolean
 }
 
 export const StyledVegaLiteChartContainer =
   styled.div<StyledVegaLiteChartContainerProps>(
-    ({ theme, useContainerWidth, useContainerHeight }) => ({
-      width: useContainerWidth ? "100%" : "auto",
-      height: useContainerHeight ? "100%" : "auto",
-      // These styles come from VegaLite Library
-      "&.vega-embed": {
-        position: "relative",
-        display: "inline-block",
-        boxSizing: "border-box",
+    ({
+      theme,
+      useContainerWidth,
+      useContainerHeight,
+      isSizeContained,
+      contentWidth,
+      hasFallbackHeight,
+    }) => {
+      return {
+        width: useContainerWidth ? "100%" : "auto",
+        height: useContainerHeight ? "100%" : "auto",
+        ...(isSizeContained && {
+          contain: "size",
+          containIntrinsicHeight: hasFallbackHeight
+            ? theme.sizes.defaultChartHeight
+            : "none",
+          // Containment drops the rendered width, so a content-width chart
+          // needs its own width as the intrinsic width.
+          ...(!useContainerWidth && {
+            containIntrinsicWidth:
+              contentWidth === undefined
+                ? theme.sizes.defaultChartWidth
+                : `${contentWidth}px`,
+          }),
+        }),
+        // These styles come from VegaLite Library
+        "&.vega-embed": {
+          position: "relative",
+          // An inline-block's baseline would still let the rendered chart grow
+          // its parent's line box despite the size containment.
+          display: isSizeContained ? "block" : "inline-block",
+          boxSizing: "border-box",
 
-        "&.fit-x": {
-          width: "100%",
-        },
-        "&.fit-y": {
-          height: "100%",
-        },
-        // Reset pointer events on background/foreground SVG paths to display tooltips on all layers in dialogs.
-        "svg.marks g.role-scope": {
-          "path.background, path.foreground": {
-            pointerEvents: "auto",
+          "&.fit-x": {
+            width: "100%",
+          },
+          "&.fit-y": {
+            height: "100%",
+          },
+          // Reset pointer events on background/foreground SVG paths to display tooltips on all layers in dialogs.
+          "svg.marks g.role-scope": {
+            "path.background, path.foreground": {
+              pointerEvents: "auto",
+            },
           },
         },
-      },
-      "& form.vega-bindings": getVegaBindingStyles(theme),
-    })
+        "& form.vega-bindings": getVegaBindingStyles(theme),
+      }
+    }
   )
