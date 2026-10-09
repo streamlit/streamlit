@@ -84,10 +84,8 @@ Use parameters to prevent SQL injection:
 ```python
 conn = st.connection("snowflake")
 
-# Safe: parameterized
-df = conn.query(
-    "SELECT * FROM users WHERE region = :region", params={"region": selected_region}
-)
+# Safe: parameterized (Streamlit uses qmark binding: `?` placeholders, list params)
+df = conn.query("SELECT * FROM users WHERE region = ?", params=[selected_region])
 
 # UNSAFE: string formatting - don't do this
 # df = conn.query(f"SELECT * FROM users WHERE region = '{selected_region}'")
@@ -105,7 +103,7 @@ session = conn.session()
 session.write_pandas(df, "MY_TABLE", auto_create_table=True)
 
 # Execute statements
-session.sql("INSERT INTO logs VALUES (:ts, :msg)", params={...}).collect()
+session.sql("INSERT INTO logs VALUES (?, ?)", params=[ts, msg]).collect()
 ```
 
 ## Multiple connections
