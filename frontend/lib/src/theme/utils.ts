@@ -483,6 +483,71 @@ export const parseFontSize = (
 }
 
 /**
+ * Parses a `paddingTop` or `paddingBottom` theme config value.
+ *
+ * Accepted formats (non-negative):
+ *  - `"1.5rem"` / `"16px"` — returned as-is (lowercased).
+ *  - `"16"` (bare number string) — treated as pixels, returned as `"16px"`.
+ *  - `"0"`, `"0rem"`, `"0px"` — all valid; returned as `"0px"` / `"0rem"`.
+ *
+ * Rejected: negative values, `%`, `vh`, `vw`, `calc()`, and other CSS units.
+ * On rejection, logs a warning and returns `undefined` (caller keeps today's hardcoded path).
+ *
+ * @param configName - The config key name, used in the warning message.
+ * @param value - The raw config string to validate.
+ * @param inSidebar - When true, the warning message cites "theme.sidebar".
+ * @returns The normalised CSS length string, or `undefined` if invalid.
+ */
+export const parsePadding = (
+  configName: string,
+  value: string | null | undefined,
+  inSidebar: boolean
+): string | undefined => {
+  if (!notNullOrUndefined(value)) {
+    return undefined
+  }
+
+  const themeSection = inSidebar ? "theme.sidebar" : "theme"
+  const trimmed = value.trim().toLowerCase()
+
+  // Only allow rem and px units (or unitless numbers → treated as px)
+  const hasRemUnit = trimmed.endsWith("rem")
+  const hasPxUnit = trimmed.endsWith("px")
+
+  let numericStr: string
+  if (hasRemUnit) {
+    numericStr = trimmed.slice(0, -3)
+  } else if (hasPxUnit) {
+    numericStr = trimmed.slice(0, -2)
+  } else {
+    // Must be a bare number (no unit)
+    numericStr = trimmed
+  }
+
+  const numericValue = Number(numericStr)
+
+  if (Number.isNaN(numericValue) || numericStr === "") {
+    LOG.warn(
+      `Invalid ${configName} in ${themeSection}: "${value}". Only rem or px values are allowed (e.g. "1.5rem", "24px"). Falling back to default.`
+    )
+    return undefined
+  }
+
+  if (numericValue < 0) {
+    LOG.warn(
+      `Invalid ${configName} in ${themeSection}: "${value}". Negative values are not allowed. Falling back to default.`
+    )
+    return undefined
+  }
+
+  if (hasRemUnit) {
+    return `${numericValue}rem`
+  }
+  // px or unitless — return as px
+  return `${numericValue}px`
+}
+
+/**
  * Validates a font weight config value against three rules:
  *   1. Must be an integer.
  *   2. Must be an integer multiple of 50.
@@ -723,6 +788,9 @@ export const createEmotionTheme = (
     // Metric value styling
     metricValueFontSize,
     metricValueFontWeight,
+    // Page content padding
+    paddingTop,
+    paddingBottom,
     ...customColors
   } = themeInput
 
@@ -790,6 +858,8 @@ export const createEmotionTheme = (
     radii: EmotionTheme["radii"]
     fontSizes: EmotionTheme["fontSizes"]
     fontWeights: EmotionTheme["fontWeights"]
+    paddingTop: string | undefined
+    paddingBottom: string | undefined
   }
 
   const conditionalOverrides: ConditionalOverrides = {
@@ -803,6 +873,9 @@ export const createEmotionTheme = (
     radii: { ...baseThemeConfig.emotion.radii },
     fontSizes: { ...baseThemeConfig.emotion.fontSizes },
     fontWeights: { ...baseThemeConfig.emotion.fontWeights },
+    // Page content padding — parsed below; defaults to undefined (use hardcoded paths)
+    paddingTop: baseThemeConfig.emotion.paddingTop,
+    paddingBottom: baseThemeConfig.emotion.paddingBottom,
   }
 
   // Conditional Overrides - Colors
@@ -1044,6 +1117,22 @@ export const createEmotionTheme = (
   ) {
     conditionalOverrides.fontWeights.metricValueFontWeight =
       metricValueFontWeight
+  }
+
+  // Conditional Overrides - Page Content Padding
+
+  const parsedPaddingTop = parsePadding("paddingTop", paddingTop, inSidebar)
+  if (parsedPaddingTop !== undefined) {
+    conditionalOverrides.paddingTop = parsedPaddingTop
+  }
+
+  const parsedPaddingBottom = parsePadding(
+    "paddingBottom",
+    paddingBottom,
+    inSidebar
+  )
+  if (parsedPaddingBottom !== undefined) {
+    conditionalOverrides.paddingBottom = parsedPaddingBottom
   }
 
   // Font Overrides

@@ -283,6 +283,9 @@ describe("BidiComponent/utils/theme", () => {
       "fontSources",
       "showWidgetBorder",
       "showSidebarBorder",
+      // Page chrome spacing — not exposed to Components V2 themes.
+      "paddingTop",
+      "paddingBottom",
       "sidebar",
       "light",
       "dark",
@@ -311,6 +314,8 @@ describe("BidiComponent/utils/theme", () => {
       headingFontWeights: null,
       metricValueFontSize: null,
       metricValueFontWeight: null,
+      paddingTop: null,
+      paddingBottom: null,
 
       borderColor: null,
       dataframeBorderColor: null,

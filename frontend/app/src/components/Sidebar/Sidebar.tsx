@@ -309,7 +309,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         onMouseOut={onMouseOut}
         scrollbarGutterSize={scrollbarGutterSize}
       >
-        <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
+        <StyledSidebarHeaderContainer
+          hasPageNavAbove={hasPageNavAbove}
+          data-testid="stSidebarHeader"
+        >
           {renderLogoContent()}
           {/* Unmount while collapsed. The sidebar stays mounted offscreen, so on
               small viewports (where this button stays visible) it would be a

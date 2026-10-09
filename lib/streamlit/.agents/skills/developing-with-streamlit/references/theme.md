@@ -188,6 +188,25 @@ showSidebarBorder = true           # Show divider between sidebar and content
 
 **Radius keywords:** `"none"` (0), `"small"` (4px), `"medium"` (8px), `"large"` (12px), `"full"` (pill shape).
 
+## Content padding
+
+Control the gap between the Streamlit chrome (header bar, sidebar chrome) and the first author widget. Both values accept `rem`, `px`, or a unitless integer (treated as pixels). Zero (`"0rem"`, `"0px"`, `"0"`) is valid; negative values are ignored.
+
+```toml
+[theme]
+paddingTop = "1rem"        # Gap above first widget in main content area
+paddingBottom = "2rem"     # Gap below last widget in main content area
+
+[theme.sidebar]
+paddingTop = "0.5rem"      # Independent gap for sidebar; inherits from [theme] if unset
+paddingBottom = "1rem"
+```
+
+**Behavior notes:**
+- When a header bar is visible (toolbar, logo, expand button), `paddingTop` is the gap *below* the header—Streamlit adds the header height automatically so the content clears the overlay.
+- Embed URL options (`?show_padding`, `?show_toolbar`) do not override a configured value.
+- If unset, the default spacing is used (typically 6 rem for non-embedded apps).
+
 ## Sidebar customization
 
 Style the sidebar independently:

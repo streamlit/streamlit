@@ -946,6 +946,8 @@ def _mock_get_options_for_section(
         "backgroundColor": "white",
         "baseRadius": "1.2rem",
         "buttonRadius": "medium",
+        "paddingTop": "1rem",
+        "paddingBottom": "2rem",
         "borderColor": "#ff0000",
         "dataframeBorderColor": "#280f63",
         "codeFont": "Monaspace Argon",
@@ -996,6 +998,8 @@ def _mock_get_options_for_section(
         "baseFontWeight": 300,
         "baseRadius": "1.2rem",
         "buttonRadius": "medium",
+        "paddingTop": "1.5rem",
+        "paddingBottom": "3rem",
         "borderColor": "#ff0000",
         "dataframeBorderColor": "#280f63",
         "codeFont": "Monaspace Argon",
@@ -1683,6 +1687,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "baseFontWeight": None,
                     "baseRadius": None,
                     "buttonRadius": None,
+                    "paddingTop": None,
+                    "paddingBottom": None,
                     "borderColor": None,
                     "dataframeBorderColor": None,
                     "codeFont": None,
@@ -1750,6 +1756,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "baseFontWeight": None,
                     "baseRadius": None,
                     "buttonRadius": None,
+                    "paddingTop": None,
+                    "paddingBottom": None,
                     "borderColor": None,
                     "dataframeBorderColor": None,
                     "codeFont": None,
@@ -1817,6 +1825,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "backgroundColor": None,
                     "baseRadius": None,
                     "buttonRadius": None,
+                    "paddingTop": None,
+                    "paddingBottom": None,
                     "baseFontSize": None,
                     "baseFontWeight": None,
                     "borderColor": None,
@@ -1868,6 +1878,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "backgroundColor": None,
                         "baseRadius": None,
                         "buttonRadius": None,
+                        "paddingTop": None,
+                        "paddingBottom": None,
                         "borderColor": None,
                         "dataframeBorderColor": None,
                         "codeFont": None,
@@ -1931,6 +1943,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # Fields that are marked as optional in proto:
         assert not new_session_msg.custom_theme.HasField("base_radius")
         assert not new_session_msg.custom_theme.HasField("button_radius")
+        assert not new_session_msg.custom_theme.HasField("padding_top")
+        assert not new_session_msg.custom_theme.HasField("padding_bottom")
         assert not new_session_msg.custom_theme.HasField("border_color")
         assert not new_session_msg.custom_theme.HasField("dataframe_border_color")
         assert not new_session_msg.custom_theme.HasField("show_widget_border")
@@ -1976,6 +1990,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # Fields that are marked as optional in proto:
         assert not new_session_msg.custom_theme.sidebar.HasField("base_radius")
         assert not new_session_msg.custom_theme.sidebar.HasField("button_radius")
+        assert not new_session_msg.custom_theme.sidebar.HasField("padding_top")
+        assert not new_session_msg.custom_theme.sidebar.HasField("padding_bottom")
         assert not new_session_msg.custom_theme.sidebar.HasField("border_color")
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "dataframe_border_color"
@@ -2030,6 +2046,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.secondary_background_color == "blue"
         assert new_session_msg.custom_theme.base_radius == "1.2rem"
         assert new_session_msg.custom_theme.button_radius == "medium"
+        assert new_session_msg.custom_theme.padding_top == "1.5rem"
+        assert new_session_msg.custom_theme.padding_bottom == "3rem"
         assert new_session_msg.custom_theme.border_color == "#ff0000"
         assert new_session_msg.custom_theme.dataframe_border_color == "#280f63"
         assert new_session_msg.custom_theme.show_widget_border is True

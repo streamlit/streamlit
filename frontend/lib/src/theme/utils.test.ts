@@ -867,6 +867,72 @@ describe("createEmotionTheme", () => {
     expect(theme.linkUnderline).toBe(false)
   })
 
+  // == Theme padding properties ==
+
+  it("paddingTop is undefined by default (unset → use hardcoded paths)", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.paddingTop).toBeUndefined()
+  })
+
+  it("paddingBottom is undefined by default (unset → use hardcoded paths)", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.paddingBottom).toBeUndefined()
+  })
+
+  it.each([
+    ["1.5rem", "1.5rem"],
+    ["16px", "16px"],
+    ["16", "16px"],
+    ["0", "0px"],
+    ["0rem", "0rem"],
+    ["0px", "0px"],
+    ["0.5rem", "0.5rem"],
+  ])("parses valid paddingTop value '%s' → '%s'", (input, expected) => {
+    const theme = createEmotionTheme({ paddingTop: input })
+    expect(theme.paddingTop).toBe(expected)
+  })
+
+  it.each([
+    ["2rem", "2rem"],
+    ["24px", "24px"],
+    ["24", "24px"],
+  ])("parses valid paddingBottom value '%s' → '%s'", (input, expected) => {
+    const theme = createEmotionTheme({ paddingBottom: input })
+    expect(theme.paddingBottom).toBe(expected)
+  })
+
+  it.each([
+    ["-1rem"],
+    ["-1px"],
+    ["50%"],
+    ["1vh"],
+    ["calc(1rem + 2px)"],
+    ["invalid"],
+    ["1em"],
+  ])(
+    "logs a warning and falls back to undefined for invalid paddingTop '%s'",
+    invalidValue => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const theme = createEmotionTheme({ paddingTop: invalidValue })
+      expect(theme.paddingTop).toBeUndefined()
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        expect.stringContaining("paddingTop")
+      )
+    }
+  )
+
+  it.each([["-2rem"], ["50%"], ["1vw"]])(
+    "logs a warning and falls back to undefined for invalid paddingBottom '%s'",
+    invalidValue => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const theme = createEmotionTheme({ paddingBottom: invalidValue })
+      expect(theme.paddingBottom).toBeUndefined()
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        expect.stringContaining("paddingBottom")
+      )
+    }
+  )
+
   // == Theme color properties ==
 
   // Handled in newGenericColors
@@ -4839,6 +4905,56 @@ describe("Sidebar theme creation", () => {
       expect(lightSidebarTheme.emotion.colors.primary).toBe("lightblue")
       // Dark sidebar should use dark section config
       expect(darkSidebarTheme.emotion.colors.primary).toBe("darkblue")
+    })
+  })
+
+  describe("padding inheritance", () => {
+    it("main paddingTop inherits to sidebar when no sidebar override", () => {
+      const themeInput = {
+        paddingTop: "1rem",
+        paddingBottom: "2rem",
+      }
+      const mainTheme = createTheme("Custom", themeInput)
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(mainTheme.emotion.paddingTop).toBe("1rem")
+      expect(mainTheme.emotion.paddingBottom).toBe("2rem")
+      expect(sidebarTheme.emotion.paddingTop).toBe("1rem")
+      expect(sidebarTheme.emotion.paddingBottom).toBe("2rem")
+    })
+
+    it("sidebar paddingTop overrides main when [theme.sidebar] is set", () => {
+      const themeInput = {
+        paddingTop: "1rem",
+        paddingBottom: "2rem",
+        sidebar: {
+          paddingTop: "0.5rem",
+          paddingBottom: "3rem",
+        },
+      }
+      const mainTheme = createTheme("Custom", themeInput)
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      // Main theme uses [theme] values
+      expect(mainTheme.emotion.paddingTop).toBe("1rem")
+      expect(mainTheme.emotion.paddingBottom).toBe("2rem")
+      // Sidebar theme uses [theme.sidebar] overrides
+      expect(sidebarTheme.emotion.paddingTop).toBe("0.5rem")
+      expect(sidebarTheme.emotion.paddingBottom).toBe("3rem")
+    })
+
+    it("only [theme.sidebar] paddingBottom set, main keeps defaults", () => {
+      const themeInput = {
+        sidebar: {
+          paddingBottom: "3rem",
+        },
+      }
+      const mainTheme = createTheme("Custom", themeInput)
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(mainTheme.emotion.paddingTop).toBeUndefined()
+      expect(mainTheme.emotion.paddingBottom).toBeUndefined()
+      expect(sidebarTheme.emotion.paddingBottom).toBe("3rem")
     })
   })
 })

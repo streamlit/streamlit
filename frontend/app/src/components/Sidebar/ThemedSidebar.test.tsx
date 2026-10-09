@@ -18,8 +18,10 @@ import { screen } from "@testing-library/react"
 
 import {
   createSidebarTheme,
+  createTheme,
   emotionLightTheme,
   mockEndpoints,
+  mockTheme,
   type ThemeConfig,
 } from "@streamlit/lib"
 import { renderWithContexts } from "@streamlit/lib/testing"
@@ -58,6 +60,31 @@ describe("ThemedSidebar Component", () => {
 
     expect(screen.getByTestId("stSidebar")).toHaveStyle({
       backgroundColor: emotionLightTheme.colors.secondaryBg,
+    })
+  })
+
+  describe("configured padding (theme.paddingTop / theme.paddingBottom)", () => {
+    const getSidebarUserContentStyle = (): CSSStyleDeclaration =>
+      window.getComputedStyle(screen.getByTestId("stSidebarUserContent"))
+
+    it("uses configured paddingBottom on stSidebarUserContent", () => {
+      const customTheme = createTheme("Custom", { paddingBottom: "3rem" })
+      renderWithContexts(<ThemedSidebar {...getProps()} />, {
+        themeContext: {
+          activeTheme: customTheme,
+          setTheme: vi.fn(),
+          availableThemes: [],
+        },
+      })
+      const style = getSidebarUserContentStyle()
+      expect(style.paddingBottom).toBe("3rem")
+    })
+
+    it("falls back to sidebarTopSpace when paddingBottom is not configured", () => {
+      renderThemedSidebar()
+      const style = getSidebarUserContentStyle()
+      // Default sidebarTopSpace from mock theme
+      expect(style.paddingBottom).toBe(mockTheme.emotion.sizes.sidebarTopSpace)
     })
   })
 })
@@ -156,6 +183,28 @@ describe("createSidebarTheme", () => {
     const sidebarTheme = createSidebarTheme(theme)
     expect(sidebarTheme.themeInput?.primaryColor).toBe("#FF0000")
     expect(sidebarTheme.themeInput?.backgroundColor).toBe("#00FF00")
+  })
+
+  it("propagates paddingTop and paddingBottom to sidebar theme", () => {
+    const theme = createTheme("Custom", {
+      paddingTop: "1rem",
+      paddingBottom: "2rem",
+    })
+    const sidebarTheme = createSidebarTheme(theme)
+    expect(sidebarTheme.emotion.paddingTop).toBe("1rem")
+    expect(sidebarTheme.emotion.paddingBottom).toBe("2rem")
+  })
+
+  it("propagates paddingTop and paddingBottom when set on [theme.sidebar]", () => {
+    // sidebar-specific overrides win over main-theme values
+    const theme = createTheme("Custom", {
+      paddingTop: "1rem",
+      paddingBottom: "2rem",
+      sidebar: { paddingTop: "3rem", paddingBottom: "4rem" },
+    })
+    const sidebarTheme = createSidebarTheme(theme)
+    expect(sidebarTheme.emotion.paddingTop).toBe("3rem")
+    expect(sidebarTheme.emotion.paddingBottom).toBe("4rem")
   })
 
   it("removes empty array properties from sidebar overrides", () => {

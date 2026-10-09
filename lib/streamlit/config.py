@@ -2415,6 +2415,68 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "paddingTop",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The gap between Streamlit chrome (header bar, sidebar chrome) and the
+        first author widget in the main content area or sidebar.
+
+        Values can be specified in pixels or rem, like ``"1rem"`` or ``"16px"``.
+        A bare number without a unit is treated as pixels, e.g. ``"16"`` is
+        ``16px``. Zero is allowed (``"0"``, ``"0rem"``, ``"0px"``). Negative
+        values, percentages, and other CSS units are rejected and fall back to
+        the default behavior.
+
+        When this is set, Streamlit computes the final CSS padding-top as the
+        configured value plus the height of any visible chrome above the content
+        (e.g., the sticky header bar). A value of ``"0"`` places the first
+        widget flush under the chrome with no extra breathing room.
+
+        When this is not set, Streamlit uses its built-in defaults (6rem or
+        8rem with top nav in non-embedded apps).
+
+        To prefer rem over pixels for better font-size scaling, use a rem value
+        like ``"1.5rem"``.
+    """,
+    type_=str,
+)
+
+_create_theme_options(
+    "paddingBottom",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The aesthetic bottom inset between the last widget and the bottom of
+        the main content area or sidebar.
+
+        Values can be specified in pixels or rem, like ``"2rem"`` or ``"32px"``.
+        A bare number without a unit is treated as pixels. Zero is allowed.
+        Negative values, percentages, and other CSS units are rejected and fall
+        back to the default behavior.
+
+        When this is set, it replaces Streamlit's built-in bottom spacing
+        (10rem by default when there is no ``st.bottom`` content; 1rem when
+        ``st.bottom`` is present). ``st.bottom`` sticky content is not affected.
+
+        When this is not set, Streamlit uses its built-in defaults.
+    """,
+    type_=str,
+)
+
+_create_theme_options(
     "borderColor",
     categories=[
         "theme",

@@ -106,10 +106,26 @@ interface StyledSidebarUserContentProps {
 }
 
 export const StyledSidebarUserContent =
-  styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
-    paddingTop: hasPageNavAbove ? theme.spacing.twoXL : 0,
-    paddingBottom: theme.sizes.sidebarTopSpace,
-  }))
+  styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => {
+    const configuredTop = theme.paddingTop
+
+    let paddingTop: string | number
+    if (configuredTop !== undefined) {
+      // Set + page nav: gap goes onto user-content paddingTop (header→nav already separate)
+      // Set + no nav:   gap goes onto header marginBottom (see StyledSidebarHeaderContainer)
+      paddingTop = hasPageNavAbove ? configuredTop : 0
+    } else {
+      // Unset — today's paths
+      paddingTop = hasPageNavAbove ? theme.spacing.twoXL : 0
+    }
+
+    const paddingBottom =
+      theme.paddingBottom !== undefined
+        ? theme.paddingBottom
+        : theme.sizes.sidebarTopSpace
+
+    return { paddingTop, paddingBottom }
+  })
 
 interface StyledSidebarContentProps {
   scrollbarGutterSize: number
@@ -169,13 +185,32 @@ export const StyledResizeHandle = styled.div(({ theme }) => {
   }
 })
 
-export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: theme.spacing.lg,
-  height: theme.sizes.headerHeight,
-}))
+interface StyledSidebarHeaderContainerProps {
+  hasPageNavAbove: boolean
+}
+
+export const StyledSidebarHeaderContainer =
+  styled.div<StyledSidebarHeaderContainerProps>(
+    ({ hasPageNavAbove, theme }) => {
+      const configuredTop = theme.paddingTop
+
+      // When paddingTop is configured and there is no page nav, the gap between
+      // chrome and the first widget is expressed as marginBottom on this header
+      // row (the header→nav spacing stays at spacing.lg when nav is present).
+      const marginBottom =
+        configuredTop !== undefined && !hasPageNavAbove
+          ? configuredTop
+          : theme.spacing.lg
+
+      return {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom,
+        height: theme.sizes.headerHeight,
+      }
+    }
+  )
 
 export const StyledLogoLink = styled.a({
   "&:hover": {
