@@ -18,8 +18,8 @@ st.dataframe(df)
 ```
 
 **Why st.connection:**
-- Automatic connection pooling
-- Built-in caching
+- Created once and reused across reruns (cached with `st.cache_resource`)
+- Built-in query caching (without `ttl`, results are cached indefinitely; see [Cached queries](#cached-queries))
 - Handles reconnection
 - Works with st.secrets
 
@@ -40,7 +40,7 @@ This is useful when:
 
 ## Cached queries
 
-Use the built-in `ttl` parameter to cache query results:
+`conn.query` caches results. Without `ttl` they are cached indefinitely, so set `ttl` for data that changes:
 
 ```python
 from datetime import timedelta
