@@ -4,13 +4,13 @@
 
 - **v1 contamination (most common failure)**
 - Packaged assets and manifests (`asset_dir`, component key)
-- Renaming / placeholder drift
+- Renamed project/package still shows old template names
 - Inline strings vs file-backed assets (path heuristic)
 - Globs (0 matches or multiple matches)
 - Defaults, callbacks, and missing result attributes
 - Keys (Python `key=` vs frontend `key`)
 - Shadow DOM / `isolate_styles` surprises
-- Frontend build (Vite) gotchas
+- Frontend build gotchas
 - DOM clobbering (overwriting injected HTML/CSS)
 
 ### v1 contamination (most common failure)
@@ -97,7 +97,7 @@ Fix:
 
 ### Defaults, callbacks, and missing result attributes
 
-#### `default={...}` doesn’t apply / missing result attributes
+#### `default={...}` raises "is not a valid state name" / missing result attributes
 
 Defaults only apply to **state keys**, and Streamlit expects those keys to be declared via `on_<key>_change` callback parameters at mount time.
 

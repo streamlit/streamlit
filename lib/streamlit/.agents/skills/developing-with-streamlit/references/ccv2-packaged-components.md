@@ -18,13 +18,13 @@ Follow your generated project's README. **Only keep reading if you need to debug
 - Frontend framework note (React is optional)
 - TypeScript support (recommended)
 - Generate a new CCv2 component project
-  - Non-interactive generation (cookiecutter keys)
-  - Offline/airgapped
 - Dev loop (template default)
+- Packaged component workflow (copy/paste checklist)
 - Verify the build output (prevents most load failures)
+- React template data flow (critical — don't skip `index.tsx`)
 - Template invariants (don’t break these)
 - Rename checklist (avoid placeholder-name drift)
-- If you intentionally deviate from the template
+- Allowed customizations (after template generation only)
 - Verification recommendation
 
 ### Agent policy: template-only (mandatory)
@@ -36,7 +36,7 @@ If the request is for a packaged CCv2 component:
 - Never copy a packaged component scaffold from the internet, even as a "starting point."
 - If given existing non-template scaffolding, regenerate from the template and migrate code into it.
 - Customize only after generation so you retain known-good packaging defaults.
-- **NEVER introduce v1 APIs when customizing the template.** The template generates correct v2 code. When you modify `__init__.py`, JS/TS files, or `example.py`, use ONLY v2 APIs (`st.components.v2.component`, `setStateValue`, `setTriggerValue`, `parentElement`, `data`). Do NOT import `st.components.v1`, do NOT use `declare_component()`, do NOT use `Streamlit.setComponentValue()` or any v1 JavaScript globals. See the main SKILL.md "CRITICAL: CCv2 only" section for the full banned list.
+- **NEVER introduce v1 APIs when customizing the template.** The template generates correct v2 code. When you modify `__init__.py`, JS/TS files, or `example.py`, use ONLY v2 APIs (`st.components.v2.component`, `setStateValue`, `setTriggerValue`, `parentElement`, `data`). Do NOT import `st.components.v1`, do NOT use `declare_component()`, do NOT use `Streamlit.setComponentValue()` or any v1 JavaScript globals. See "v1 contamination" in [ccv2-troubleshooting.md](ccv2-troubleshooting.md) for the full banned list.
 
 ### Prerequisites (packaged components)
 
