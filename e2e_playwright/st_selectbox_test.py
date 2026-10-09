@@ -637,7 +637,9 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
-    # Re-anchor on the first option so the one-ArrowDown contract is stable.
+    # Re-anchor on the first option. ArrowDown before the sync lands focuses
+    # row 1; after it lands, the same key moves to row 2. React Aria does not
+    # wrap, so a few ArrowUps clamp at the first row either way.
     for _ in range(3):
         selectbox_input.press("ArrowUp")
     expect(options.first).to_have_attribute("data-focused", "true")

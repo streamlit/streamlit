@@ -304,6 +304,36 @@ describe("Selectbox widget", () => {
     expect(props.onChange).not.toHaveBeenCalled()
   })
 
+  it("does not commit on Tab after arrow navigation", async () => {
+    // Tab closes without selecting even after an explicit arrow move, matching
+    // the PR contract (develop would commit focusedKey via RAC commit()).
+    const user = userEvent.setup()
+    props = getProps({
+      value: undefined,
+      options: ["apple", "apricot", "banana"],
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    await user.keyboard("{ArrowDown}")
+    await waitFor(() => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        "apricot"
+      )
+    })
+    await user.keyboard("{Tab}")
+
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
   it("does not commit a typed filter on Tab", async () => {
     const user = userEvent.setup()
     props = getProps({

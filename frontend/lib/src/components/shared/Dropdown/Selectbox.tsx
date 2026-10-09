@@ -362,11 +362,11 @@ const Selectbox: FC<Props> = ({
     [filteredOptions, creatableItem]
   )
 
-  // Row Enter commits, and the row aria-activedescendant names.
-  // An unfiltered open matches the committed label. An exact typed value
-  // matches that option. A non-exact accept_new_options query uses the Add
-  // row (Enter creates it; ArrowDown moves to the first match). Otherwise
-  // the first match.
+  // Option Enter commits, and the row aria-activedescendant points to:
+  // - accept_new_options with a non-exact query: the "Add: …" row
+  // - an option whose value exactly matches the input (including the committed
+  //   label on an unfiltered open)
+  // - otherwise the first matching option
   const enterTargetId = useMemo((): string | null => {
     if (creatableItem) return CREATABLE_ID
     const exactMatch = displayOptions.find(

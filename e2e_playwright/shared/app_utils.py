@@ -310,10 +310,9 @@ def select_selectbox_option(
     # Wait for the React component to be fully initialized before interacting
     selectbox_input.wait_for(state="visible")
     selectbox_input.click()
-    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
-    # The first option is already active once the menu opens, so this ArrowDown
-    # moves to the next option. Filtering and clicking by name still find the
-    # right row.
+    # ArrowDown is a backup open. The Enter target is already active (the
+    # current value, or the first option when the input is empty), so this
+    # key moves to the next row. The helper then filters and clicks by name.
     selectbox_input.press("ArrowDown")
 
     # Wait for dropdown to be visible before typing

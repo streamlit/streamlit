@@ -275,7 +275,7 @@ describe("Multiselect widget", () => {
     )
   })
 
-  it("falls back to the first row on Enter when the hovered option is filtered away", async () => {
+  it("commits the bulk-select row on Enter when the hovered option is filtered away", async () => {
     const user = userEvent.setup()
     const props = getProps({
       default: [],
@@ -376,6 +376,40 @@ describe("Multiselect widget", () => {
     await user.click(screen.getByRole("button", { name: "Open" }))
     await waitFor(() => {
       expect(screen.getByRole("option", { name: "Select all" })).toBeVisible()
+    })
+    const callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock
+      .calls.length
+    await user.keyboard("{Tab}")
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
+      callsBeforeTab
+    )
+  })
+
+  it("does not commit on Tab after arrow navigation", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    await user.keyboard("{ArrowDown}")
+    await waitFor(() => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        "apricot"
+      )
     })
     const callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock
       .calls.length
