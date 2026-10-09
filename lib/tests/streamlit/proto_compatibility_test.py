@@ -168,6 +168,8 @@ pytestmark = pytest.mark.filterwarnings(
                 ("gray_text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("metric_value_font_size", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("metric_value_font_weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
+                ("padding_top", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("padding_bottom", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("sidebar", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("light", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("dark", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
