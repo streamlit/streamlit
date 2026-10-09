@@ -93,10 +93,11 @@ export function useSyncComboBoxEnterTargetFocus(
     const startedAt = performance.now()
 
     // True when focusedKey is a listed row this hook did not write, so a retry
-    // must leave it alone. Null is React Aria clearing focus on a query change.
-    // The last key this hook wrote is not a user move. A focused key missing
-    // from the collection (e.g. multiselect commit removes that option) is
-    // stale — allow sync so aria-activedescendant can follow the new target.
+    // must leave it alone.
+    // - null: React Aria cleared focus after a query change, so keep syncing
+    // - same as the last key this hook wrote: a later hover may replace it
+    // - missing from the collection: the row was removed (multiselect commit),
+    //   so keep syncing
     const userMovedOffEnterTarget = (): boolean => {
       const current = stateRef.current
       if (!current) return false

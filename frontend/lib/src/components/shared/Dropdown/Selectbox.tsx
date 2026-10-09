@@ -139,11 +139,6 @@ export const getInsertedText = (
   return after.slice(prefix, after.length - suffix)
 }
 
-/** Live ComboBox state pointer for capture-phase key handlers outside RAC. */
-type ComboBoxStateHandle = NonNullable<
-  React.ContextType<typeof ComboBoxStateContext>
->
-
 /**
  * Null-render component mounted inside <ComboBox> to expose React Aria's
  * internal open/close methods and to keep focusedKey on the Enter target for
@@ -152,15 +147,9 @@ type ComboBoxStateHandle = NonNullable<
 const DropdownController = memo<{
   openRef: React.MutableRefObject<(() => void) | null>
   closeRef: React.MutableRefObject<(() => void) | null>
-  stateRef: React.MutableRefObject<ComboBoxStateHandle | null>
   enterTargetKey: Key | null
-}>(({ openRef, closeRef, stateRef, enterTargetKey }) => {
+}>(({ openRef, closeRef, enterTargetKey }) => {
   const state = useContext(ComboBoxStateContext)
-
-  // Sync read for keydown handlers. Do not clear this in the effect cleanup:
-  // focus updates recreate `state` and would leave a null window for capture-
-  // phase ArrowDown (creatable Add → first match).
-  stateRef.current = state ?? null
 
   useEffect(() => {
     if (state) {
@@ -288,7 +277,6 @@ const Selectbox: FC<Props> = ({
   // prevents auto-open on Tab-focus (which caused spurious reopens after reruns).
   const openDropdownRef = useRef<(() => void) | null>(null)
   const closeDropdownRef = useRef<(() => void) | null>(null)
-  const comboBoxStateRef = useRef<ComboBoxStateHandle | null>(null)
 
   // Always-current mirrors of state values, for use inside stale RAC closures
   // that capture their dependencies at registration time.
@@ -356,14 +344,16 @@ const Selectbox: FC<Props> = ({
         }
   }, [acceptNewOptions, filterActive, inputValue, selectOptions])
 
+  // Put "Add: …" first when it is the Enter target so focusing it does not
+  // scroll best-ranked matches out of a short dropdown (list does not wrap).
   const displayOptions = useMemo<ComboOption[]>(
     () =>
-      creatableItem ? [...filteredOptions, creatableItem] : filteredOptions,
+      creatableItem ? [creatableItem, ...filteredOptions] : filteredOptions,
     [filteredOptions, creatableItem]
   )
 
   // Option Enter commits, and the row aria-activedescendant points to:
-  // - accept_new_options with a non-exact query: the "Add: …" row
+  // - accept_new_options with a non-exact query: the "Add: …" row (first)
   // - an option whose value exactly matches the input (including the committed
   //   label on an unfiltered open)
   // - otherwise the first matching option
@@ -376,9 +366,6 @@ const Selectbox: FC<Props> = ({
     const first = displayOptions.find(o => !o.isCreatable)
     return first?.id ?? null
   }, [creatableItem, displayOptions, inputValue])
-
-  const displayOptionsRef = useRef(displayOptions)
-  displayOptionsRef.current = displayOptions
 
   const virtualizerLayoutOptions = useMemo(
     () => ({
@@ -443,14 +430,11 @@ const Selectbox: FC<Props> = ({
       // guard correctly lets them through.
       if (!isOpenRef.current) return
 
-      // Mark that RAC committed a new selection so handleInputKeyDown can skip
-      // its auto-select and avoid double-committing (arrow-nav + Enter path).
+      // Mark that RAC handled Enter (including re-commit of the already-
+      // selected focusedKey via commitSelection(true)). The bubble handler
+      // must skip its creatable / enterTarget fallbacks in every non-null case.
       if (key !== null) {
-        const currentKey =
-          selectOptions.find(o => o.value === valueRef.current)?.id ?? null
-        if (String(key) !== String(currentKey ?? "")) {
-          racHandledEnterRef.current = true
-        }
+        racHandledEnterRef.current = true
       }
 
       if (key === null) {
@@ -567,24 +551,6 @@ const Selectbox: FC<Props> = ({
       ) {
         openDropdownRef.current?.()
       }
-      // Non-exact accept_new_options queries focus the last "Add" row. The list
-      // does not wrap, so RAC ArrowDown would stay there and Enter would create
-      // the query. Move to the first real match instead (bare Enter still creates).
-      if (e.key === "ArrowDown" && isOpenRef.current) {
-        const state = comboBoxStateRef.current
-        const focused = state?.selectionManager.focusedKey
-        if (state && String(focused ?? "") === CREATABLE_ID) {
-          const firstMatch = displayOptionsRef.current.find(
-            o => !o.isCreatable
-          )
-          if (firstMatch) {
-            e.preventDefault()
-            e.stopPropagation()
-            state.selectionManager.setFocusedKey(firstMatch.id)
-            return
-          }
-        }
-      }
       // Close before React Aria's Tab shortcut can commit() the synced
       // focusedKey. isOpenRef is cleared sync so handleSelectionChange drops
       // any late selection callback from close. Do not stopPropagation — dialog
@@ -691,7 +657,6 @@ const Selectbox: FC<Props> = ({
           <DropdownController
             openRef={openDropdownRef}
             closeRef={closeDropdownRef}
-            stateRef={comboBoxStateRef}
             enterTargetKey={enterTargetId}
           />
           <StyledGroup ref={setReference}>

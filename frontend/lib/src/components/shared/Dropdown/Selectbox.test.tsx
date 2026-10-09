@@ -305,8 +305,8 @@ describe("Selectbox widget", () => {
   })
 
   it("does not commit on Tab after arrow navigation", async () => {
-    // Tab closes without selecting even after an explicit arrow move, matching
-    // the PR contract (develop would commit focusedKey via RAC commit()).
+    // Tab closes the menu without selecting, including after ArrowDown moved
+    // the active option off the first row.
     const user = userEvent.setup()
     props = getProps({
       value: undefined,
@@ -377,8 +377,8 @@ describe("Selectbox widget", () => {
   })
 
   it("ArrowDown from the creatable Add row focuses the first match", async () => {
-    // Non-exact queries focus "Add: …" (last row). ArrowDown must reach the
-    // first match so ArrowDown+Enter selects it; bare Enter still creates.
+    // Non-exact queries focus leading "Add: …". ArrowDown reaches the first
+    // match so ArrowDown+Enter selects it; bare Enter still creates.
     const user = userEvent.setup()
     props = getProps({
       value: undefined,
@@ -391,7 +391,9 @@ describe("Selectbox widget", () => {
     await user.click(input)
     await user.type(input, "ap")
     await waitFor(() => {
-      expect(screen.getByRole("option", { name: /Add: ap/i })).toBeVisible()
+      const options = screen.getAllByRole("option")
+      expect(options[0]).toHaveTextContent(/Add: ap/i)
+      expect(options[1]).toHaveTextContent("apple")
     })
     await waitFor(
       () => {
@@ -416,10 +418,43 @@ describe("Selectbox widget", () => {
     expect(props.onChange).toHaveBeenCalledWith("apple")
   })
 
-  it("navigates from the creatable Add row with ArrowUp to the last match", async () => {
+  it("keeps best matches visible when Add is the Enter target among many options", async () => {
+    // Focusing a trailing Add row scrolled matches out of a short dropdown.
+    // Add stays first so the top matches remain rendered.
     const user = userEvent.setup()
     props = getProps({
       value: undefined,
+      options: Array.from({ length: 50 }, (_, i) => `apple-${i}`),
+      acceptNewOptions: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.type(input, "a")
+    await waitFor(() => {
+      const options = screen.getAllByRole("option")
+      expect(options[0]).toHaveTextContent(/Add: a/i)
+      expect(options.some(o => o.textContent === "apple-0")).toBe(true)
+    })
+    await waitFor(
+      () => {
+        const activeId = input.getAttribute("aria-activedescendant")
+        expect(document.getElementById(activeId as string)).toHaveTextContent(
+          /Add: a/i
+        )
+      },
+      { timeout: 3000 }
+    )
+    expect(screen.getByRole("option", { name: "apple-0" })).toBeVisible()
+  })
+
+  it("keeps the already-selected highlighted row on Enter with acceptNewOptions", async () => {
+    // RAC commitSelection(true) re-fires onChange for the current key; the
+    // bubble handler must not then create the typed query.
+    const user = userEvent.setup()
+    props = getProps({
+      value: "apple",
       options: ["apple", "apricot"],
       acceptNewOptions: true,
     })
@@ -427,7 +462,15 @@ describe("Selectbox widget", () => {
     const input = screen.getByRole("combobox")
 
     await user.click(input)
-    await user.type(input, "ap")
+    // Replace the committed label with a partial query (fresh-search path).
+    await user.keyboard("{Control>}a{/Control}ap")
+    await waitFor(
+      () => {
+        expect(screen.getByRole("option", { name: /Add: ap/i })).toBeVisible()
+        expect(screen.getByRole("option", { name: "apple" })).toBeVisible()
+      },
+      { timeout: 3000 }
+    )
     await waitFor(
       () => {
         const activeId = input.getAttribute("aria-activedescendant")
@@ -437,14 +480,52 @@ describe("Selectbox widget", () => {
       },
       { timeout: 3000 }
     )
+    await user.keyboard("{ArrowDown}")
+    await waitFor(
+      () => {
+        const activeId = input.getAttribute("aria-activedescendant")
+        expect(document.getElementById(activeId as string)).toHaveTextContent(
+          "apple"
+        )
+      },
+      { timeout: 3000 }
+    )
+    const callsBeforeEnter = vi.mocked(props.onChange).mock.calls.length
+    await user.keyboard("{Enter}")
 
-    await user.keyboard("{ArrowUp}")
+    expect(props.onChange).toHaveBeenCalledTimes(callsBeforeEnter)
+    expect(input).toHaveValue("apple")
+  }, 15000)
+
+  it("keeps the already-selected highlighted row on Enter without creatable", async () => {
+    const user = userEvent.setup()
+    props = getProps({
+      value: "apricot",
+      options: ["apple", "apricot", "banana"],
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.type(input, "a")
+    await waitFor(
+      () => {
+        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
+      },
+      { timeout: 3000 }
+    )
+    // First match is apple; ArrowDown lands on apricot (already selected).
+    await user.keyboard("{ArrowDown}")
     await waitFor(() => {
       const activeId = input.getAttribute("aria-activedescendant")
       expect(document.getElementById(activeId as string)).toHaveTextContent(
         "apricot"
       )
     })
+    await user.keyboard("{Enter}")
+
+    expect(props.onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue("apricot")
   })
 
   it("keeps ArrowDown focus after typing while the Enter-target sync settles", async () => {
