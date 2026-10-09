@@ -158,7 +158,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 
-If the user asks for a UI element or interaction that **has never been part of Streamlit's API** and cannot be built with any combination of native widgets (e.g., drag-and-drop, canvas drawing, custom interactive visualizations), **route to the CCv2 reference** (`references/custom-components-v2.md`). **Do not** route to CCv2 for features that exist in newer Streamlit versions (e.g., `st.connection`, `st.segmented_control`, `st.echarts_chart`) — suggest upgrading instead.
+If the user asks for a UI element or interaction that **has never been part of Streamlit's API** and cannot be built with any combination of native widgets (e.g., drag-and-drop, canvas drawing, custom interactive visualizations), **route to the CCv2 reference** (`references/custom-components-v2.md`). **Do not** route to CCv2 for UI that Streamlit already provides (e.g., `st.segmented_control`, `st.menu_button`, `st.echarts_chart`); check `references/api-reference.md` first. If the native command is newer than the app's installed Streamlit, suggest upgrading.
 
 **Common combinations:**
 
