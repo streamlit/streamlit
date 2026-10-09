@@ -51,9 +51,10 @@ which is just a masked text field with no identity behind it.
 
 ## Configure the provider in secrets.toml
 
-All auth config lives in an `[auth]` section of `.streamlit/secrets.toml`. Three
-keys are shared across every provider: `redirect_uri`, `cookie_secret`, and the
-per-provider `client_id`, `client_secret`, and `server_metadata_url`.
+All auth config lives in an `[auth]` section of `.streamlit/secrets.toml`.
+`redirect_uri` and `cookie_secret` are shared across every provider, along with
+the optional `expose_tokens`. Each provider also needs `client_id`,
+`client_secret`, and `server_metadata_url`.
 
 ```toml
 # .streamlit/secrets.toml
