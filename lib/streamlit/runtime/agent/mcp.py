@@ -93,7 +93,9 @@ from the latest result, and never construct one.
 
 A table or chart carries `data` with a preview. `complete: false` means there \
 is more, at `data.url`. Read it, and any image, PDF, or download a result \
-references, with the `get_data` tool. A client that can fetch over HTTP may \
+references, with the `get_data` tool. `get_data` reads only files the latest \
+result references, so read what you need before your next `interact` call. \
+A client that can fetch over HTTP may \
 instead resolve the URL against this MCP server's URL and fetch the Arrow IPC \
 stream itself.
 
@@ -111,11 +113,13 @@ Read a file an `interact` result references, through this connection, for when \
 you cannot fetch its URL: the full table behind a preview (`data.url`), an \
 image, a PDF, audio, or a download. Pass the `session_id` and the URL exactly \
 as the result shows it, or the bare file ID. Only files in the session's latest \
-result are available.
+result are available, so read them before your next `interact` call.
 
 A table comes back as JSON with its `columns`, its `row_count`, and up to \
 `limit` `rows` from `offset`, as values in `columns` order like \
 `data.preview`; `next_offset` is where the next page starts, null on the last. \
+The preview already holds the first rows, so start at `offset` equal to the \
+length of `data.preview.rows`. \
 An image or audio comes back as itself, text as text, and any other file as an \
 embedded resource with its MIME type.
 
@@ -174,10 +178,15 @@ def get_data_tool_definition() -> dict[str, Any]:
 
 def tool_definition() -> dict[str, Any]:
     """The ``interact`` tool, as ``tools/list`` reports it."""
+    from streamlit import config
+
+    ttl_minutes = int(config.get_option("server.agentSessionTTL")) / 60
     return {
         "name": TOOL_NAME,
         "title": _TOOL_TITLE,
-        "description": _TOOL_DESCRIPTION,
+        # The idle limit is this server's, so it is stated with its value.
+        "description": _TOOL_DESCRIPTION
+        + f"\nA session ends after {ttl_minutes:g} minutes without a request.\n",
         "inputSchema": _input_schema(),
         "annotations": {
             "title": _TOOL_TITLE,
@@ -377,7 +386,6 @@ def _file_result(file: data_access.FileContent) -> dict[str, Any]:
     if file.table is not None:
         return {
             "content": [{"type": "text", "text": json.dumps(file.table)}],
-            "structuredContent": file.table,
             "isError": False,
         }
     mimetype = file.mimetype
@@ -428,12 +436,10 @@ def _json_result(
         )
     # A failed interaction is a tool result, not a protocol error: MCP expects
     # the model to read what went wrong and correct itself, and the body says
-    # what to do next the same way the HTTP API's does.
+    # what to do next the same way the HTTP API's does. Text only: the same
+    # JSON as `structuredContent` too would double what a client that shows
+    # both puts in the model's context.
     return _result(
         request_id,
-        {
-            "content": [{"type": "text", "text": text}],
-            "structuredContent": body,
-            "isError": is_error,
-        },
+        {"content": [{"type": "text", "text": text}], "isError": is_error},
     )

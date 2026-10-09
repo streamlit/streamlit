@@ -262,6 +262,13 @@ going gets `session_busy`, where a browser interaction would interrupt the run: 
 a run whose result the client may still come back for is where the hard cases are, so v1
 has the client collect it first.
 
+**A client that gives up first is treated as timed out.** A client's own timeout can be
+shorter than the server's, and then the server is still waiting on a request nobody
+will read when the retry arrives: the retry would be told the session is busy until the
+server's timeout passed. So a request whose client disconnects stops waiting at once and
+leaves the run collectable, exactly as a `202` would. A chat client hit this on a slow
+page: every retry got `session_busy`.
+
 That makes four session states: idle; serving a request; running a timed-out interaction
 that no request is waiting on, which a retry collects and any other request finds busy;
 and holding the finished result of one, which a retry collects and any other request
@@ -934,7 +941,7 @@ operators and tests rather than for tuning per app.
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Whether the API is served              | Off                                                   | `server.enableAgentApi`                                                       |
-| How long one request waits for its run | 60 s, then `run_timed_out`; a retry keeps waiting     | `server.agentRunTimeout`                                                      |
+| How long one request waits for its run | 30 s, then `run_timed_out`; a retry keeps waiting; a client that disconnects ends the wait at once | `server.agentRunTimeout`                         |
 | Idle time before a session is reclaimed | 15 min                                                | `server.agentSessionTTL`                                                      |
 | Agent sessions held at once            | 100, then `too_many_sessions`                         | `server.agentMaxSessions`                                                     |
 | Interactions in flight per session     | 1, then `session_busy`                                | Fixed                                                                         |
@@ -1206,11 +1213,15 @@ considered while building the prototype are in [potential-follow-ups.md](potenti
    available apps. It depends on the authored `st.App` title/description in follow-up #2
    ([#16878](https://github.com/streamlit/streamlit/issues/16878)). It must never publish
    widget schemas or user-dependent page lists from a shared warm-up run.
-8. **Remaining interaction coverage.** Uploads, including `st.chat_input` attachments;
-   `st.data_editor` edits; dataframe and chart selections; deferred downloads;
-   per-action JSON Schema; and the browser's half of forms and bound parameters —
-   applying `clear_on_submit` and rewriting a bound parameter when its widget is set, as
-   described in
+8. **Remaining interaction coverage.** Dataframe and chart selections first: two
+   independent chat-client evaluations named them the biggest gap, because "select a
+   row for details" and "click a bar to inspect" are how many dashboards drill down.
+   Dataframe row and column selection is the smaller, most common case, and its state is
+   already a JSON value the runtime validates; chart selections, whose point identity is
+   library-specific, follow. Then uploads, including `st.chat_input` attachments;
+   `st.data_editor` edits; deferred downloads; per-action JSON Schema; and the browser's
+   half of forms and bound parameters — applying `clear_on_submit` and rewriting a
+   bound parameter when its widget is set, as described in
    [potential-follow-ups.md](potential-follow-ups.md#perform-more-of-the-browsers-form-and-url-behavior).
 
 ## Beyond the app surface
@@ -1394,11 +1405,12 @@ new command or significant parameter should ship with all of the following, or a
    keeps most filtered tables complete. The run timeout bounds how long one request
    waits, not how long the run may take, since a retry collects the run in progress, so
    its default should sit below the clients' own request timeouts rather than grow to fit
-   the slowest app. The prototype's 60 s equals the MCP TypeScript SDK's default, so a
-   slow page can reach such a client as a transport failure; about 30 s is the likely
-   answer. Follow-up #4's
-   operation handle would make even the retries unnecessary. The session cap and idle
-   TTL need defaults chosen against real memory use. The response size is
+   the slowest app. The prototype uses 30 s, half the MCP TypeScript SDK's default, and
+   a client that disconnects first is treated as timed out, so a short client timeout
+   costs a retry rather than the result. Follow-up #4's operation handle would make even
+   the retries unnecessary. The session cap and idle TTL need defaults chosen against
+   real memory use; a chat client lost its session between turns at the 15-minute idle
+   TTL, which argues for a longer one if memory allows. The response size is
    [open question 6](#open-questions).
 5. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
    times, and datetimes as ISO 8601 text, decimals as strings, durations as seconds,
@@ -1414,7 +1426,11 @@ new command or significant parameter should ship with all of the following, or a
    values a request may legally send, and the traces are the figure's data. Table
    previews are the one case where truncation is safe, because a `url` serves the rest.
    The candidate answer is to extend that pattern — serve oversized option lists and
-   figure specifications behind `data.url` — rather than to cap and discard.
+   figure specifications behind `data.url`, which MCP clients can read through
+   `get_data` — rather than to cap and discard. Chat clients have now measured the
+   cost: a load-testing page of Plotly charts was about 1 MB per response, and a
+   selectbox of about 400 wiki documents added about 25 KB to every call on its page.
+   After selections, this is the gap that most affects them.
 7. **What stability does the snapshot promise, and where does a public contract live?**
    The document is a compatibility surface from its first release: clients will key on
    element types, `props` names, and error codes, and every command's description becomes

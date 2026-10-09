@@ -30,10 +30,12 @@ mapped into ``st.user``.
 from __future__ import annotations
 
 # ruff: noqa: RUF029  # Async route handlers are idiomatic even without await
+import asyncio
+import contextlib
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, TypeVar
 
 from streamlit import config
 from streamlit.logger import get_logger
@@ -55,6 +57,8 @@ from streamlit.web.server.starlette.starlette_websocket import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable
+
     from starlette.requests import Request
     from starlette.responses import JSONResponse, Response
     from starlette.routing import BaseRoute
@@ -62,6 +66,11 @@ if TYPE_CHECKING:
     from streamlit.runtime.runtime import Runtime
 
 _LOGGER: Final = get_logger(__name__)
+
+_T = TypeVar("_T")
+
+# How often a waiting interaction checks whether its client is still there.
+_DISCONNECT_POLL_SECONDS: Final = 1.0
 
 _ROUTE_AGENT_INTERACT: Final = "_stcore/agent/v1/interact"
 _ROUTE_AGENT_SCHEMA: Final = "_stcore/agent/v1/openapi.json"
@@ -112,6 +121,30 @@ def _refused_origin(request: Request) -> bool:
         return False
     _LOGGER.debug("Refusing agent API request from Origin %r", origin)
     return True
+
+
+class _ClientGoneError(Exception):
+    """The client closed the connection before its interaction settled."""
+
+
+async def _unless_disconnected(request: Request, work: Awaitable[_T]) -> _T:
+    """Await ``work``, cancelling it once the client has gone away.
+
+    A client whose own timeout is shorter than `server.agentRunTimeout` would
+    otherwise leave its interaction in flight until the server's timeout, so its
+    retry is told the session is busy. Cancelling turns the wait into a timed-out
+    run, which the retry collects.
+    """
+    task = asyncio.ensure_future(work)
+    while True:
+        done, _ = await asyncio.wait({task}, timeout=_DISCONNECT_POLL_SECONDS)
+        if done:
+            return task.result()
+        if await request.is_disconnected():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+            raise _ClientGoneError
 
 
 async def _read_body(request: Request, limit: int) -> bytes | None:
@@ -268,15 +301,24 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         started = time.monotonic()
         try:
             assert registry is not None  # noqa: S101 - guarded by `enabled`
-            snapshot = await interact(
-                runtime,
-                registry,
-                payload,
-                # The same trusted headers the WebSocket maps for a browser.
-                # Never the auth cookie: it is only honored on the WebSocket
-                # behind an XSRF token, which a cross-site request here could
-                # otherwise ride.
-                user_info=_gather_user_info(request.headers),
+            snapshot = await _unless_disconnected(
+                request,
+                interact(
+                    runtime,
+                    registry,
+                    payload,
+                    # The same trusted headers the WebSocket maps for a browser.
+                    # Never the auth cookie: it is only honored on the WebSocket
+                    # behind an XSRF token, which a cross-site request here
+                    # could otherwise ride.
+                    user_info=_gather_user_info(request.headers),
+                ),
+            )
+        except _ClientGoneError:
+            _log_interaction(payload, None, "client_gone", 499, started)
+            # Nobody reads this; the run is collectable by a retry.
+            return error_status("run_timed_out"), _error_body(
+                "run_timed_out", "The client disconnected before the run settled."
             )
         except AgentRequestError as exc:
             status = error_status(exc.code)

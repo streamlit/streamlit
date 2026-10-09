@@ -307,10 +307,12 @@ class AgentSessionRegistry:
         self._reclaim_idle()
         session = self._sessions.get(handle)
         if session is None or session.user_info != user_info:
+            ttl_minutes = int(config.get_option("server.agentSessionTTL")) / 60
             raise AgentRequestError(
                 "unknown_session",
-                "This session does not exist or has expired. Omit "
-                "`session_id` to start a new one.",
+                "This session does not exist or has expired: sessions end after "
+                f"{ttl_minutes:g} minutes without a request. Omit `session_id` to "
+                "start a new one.",
             )
         session.last_used = time.monotonic()
         return session
@@ -576,6 +578,12 @@ async def _settle(
     timeout = float(config.get_option("server.agentRunTimeout"))
     try:
         await session.client.wait_until_settled(timeout)
+    except asyncio.CancelledError:
+        # The client went away before the run settled. The run keeps going, as
+        # after a timeout, so the client's retry collects it rather than being
+        # told the session is busy or starting the run again.
+        session.timed_out = interaction
+        raise
     except TimeoutError as exc:
         session.timed_out = interaction
         raise AgentRequestError(
@@ -635,7 +643,7 @@ def _verify_page_exists(
     raise AgentRequestError(
         "unknown_page",
         f"No page with url_path {url_path!r}; the app ran its default "
-        f"page instead. Available: {sorted(available)}.",
+        "page instead. `error.pages` lists the available pages.",
         # The page list is the whole remedy, so it travels as data rather than
         # only inside the message.
         details={"pages": pages},
@@ -727,7 +735,7 @@ def _resolve_page(
 
     raise AgentRequestError(
         "unknown_page",
-        f"No page with url_path {page!r}. Available: {sorted(known_paths)}.",
+        f"No page with url_path {page!r}. `error.pages` lists the available pages.",
         # As data, in the shape of the snapshot's `pages`, like the check a
         # creating call gets after its run.
         details={

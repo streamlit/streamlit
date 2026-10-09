@@ -45,7 +45,7 @@ ARROW_MIMETYPE: Final = "application/vnd.apache.arrow.stream"
 # A response is bounded rather than truncated: a cut-off image or table page
 # is useless, and the caller can always ask for fewer rows.
 MAX_RESULT_BYTES: Final = 5 * 1024 * 1024
-DEFAULT_ROW_LIMIT: Final = 1000
+DEFAULT_ROW_LIMIT: Final = 500
 
 _ARGUMENTS: Final = {"session_id", "url", "offset", "limit"}
 

@@ -1294,9 +1294,10 @@ _create_option(
 
         This bounds the wait, not the run: the app keeps running, and a retry
         of the same request waits for it instead of starting it over. Keep it
-        at or below the request timeout of the clients you expect.
+        below the request timeout of the clients you expect; many MCP clients
+        give up after 60 seconds.
     """,
-    default_val=60,
+    default_val=30,
     type_=int,
 )
 

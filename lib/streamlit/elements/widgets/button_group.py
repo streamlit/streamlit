@@ -1533,7 +1533,11 @@ class ButtonGroupMixin:
                 key=element_id,
                 action="value",
                 label=label,
-                options=[option.content for option in proto.options],
+                # The labels the widget accepts, not the proto's display
+                # content, which moves a leading icon into its own field.
+                options=list(string_formatted_options)
+                if string_formatted_options is not None
+                else [option.content for option in proto.options],
                 selection_mode=selection_mode,
                 help=help,
                 required=proto.required,

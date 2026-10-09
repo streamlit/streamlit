@@ -47,9 +47,9 @@ references; see [Data for chat clients](#data-for-chat-clients).
   `query_params`, `context` — with the same schema, made self-contained: MCP has no
   `components` section to point into and not every client resolves `$ref`, so
   referenced schemas are inlined.
-- **Result:** the snapshot, as structured content and as JSON text for clients that do
-  not read structured output. Structured content arrived in protocol version
-  2025-06-18, so a client that negotiates an earlier version only has the text.
+- **Result:** the snapshot as JSON text, which every client reads. Not also as
+  `structuredContent`: a client that shows both puts the snapshot in the model's
+  context twice, and a chat client measured exactly that doubling.
 - **Annotations:** not read-only and not idempotent, because any action may write.
 
 **Data stays behind `data.url`, as in the HTTP API.** A snapshot inlines up to 100 rows
@@ -188,18 +188,23 @@ data-heavy analysis named this the biggest limitation, so the endpoint closes it
 second tool:
 
 ```text
-get_data(session_id, url, offset=0, limit=1000)
+get_data(session_id, url, offset=0, limit=500)
 ```
 
 - **Input:** a `data.url` or media URL exactly as a result shows it, or the bare file ID.
   The server resolves it, so the model never has to, and no absolute URL is needed,
   which would be wrong behind a prefix-stripping proxy.
 - **Scope:** only files the session's latest result references, which keeps the
-  fetch-now rule and the session's identity binding.
+  fetch-now rule and the session's identity binding. Both tool descriptions say so, so
+  a model reads the data it needs before its next `interact` call replaces the result.
 - **Tables** come back as JSON rows in `columns` order, the shape of `data.preview`, with
   `row_count` and the `next_offset` of the following page. The snapshot already decodes
   the Arrow stream to build its preview, so paging reuses that rather than adding a
   parser. Rows, because a model reads them and cannot read Arrow without code execution.
+- **Page size** defaults to 500 rows, so most tables come back in one or two calls while
+  a page of a wide table stays a manageable share of the model's context: a 249-row page
+  of a 33-column table was about 200 KB. A caller that wants more or fewer passes
+  `limit`.
 - **Other files** come back as themselves, typed by MIME type: images and audio as MCP
   image and audio content, text and JSON as text, and anything else, such as a PDF, as an
   embedded resource with its MIME type.

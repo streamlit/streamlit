@@ -241,23 +241,23 @@ agent API's release, and the ECharts part depends on the previous item.
 **What would make it worth doing:** the agent API's release, or agents struggling with
 large Plotly figures in practice.
 
-## Return `run_timed_out` before the client gives up
+## Report how each sent value landed
 
-**Today:** `server.agentRunTimeout` defaults to 60 s, the same as the MCP TypeScript
-SDK's default request timeout, which SDK-based clients use unless they change it. On a
-slow page, such a client can give up before the `202 run_timed_out` arrives, and sees a
-transport failure instead of the structured "call again with `session_id`".
+**Today:** a value the runtime changes or drops shows only in the next snapshot. A
+number below its minimum comes back as the default, and a value sent to a widget the
+same rerun removed is gone, with nothing saying either happened; the client has to
+compare what it sent with each `value`.
 
-**The fuller version:** a lower default, around 30 s, so `run_timed_out` arrives first.
-The other distinctions a client might want already exist or stay out: a timeout in the
-app's own query or API call is the app's exception, reported as `status: "error"`, and
-partial page state for a timed-out run stays out, as the product spec decides.
+**The fuller version:** a short per-key note in the response for values that did not
+land as sent: applied, reset to the default, trimmed, or dropped because the widget is
+no longer on the page.
 
-**Why not now:** the right value depends on the timeouts real clients use, which have
-not been measured; the option's description already says to keep it below them.
+**Why not now:** the snapshot already shows the outcome, and working out why a value
+changed means reproducing each widget's reset rules, which #16203 moves into the
+widgets, where the note could come from.
 
-**What would make it worth doing:** MCP clients failing on slow pages, which the first
-chat-client feedback reported as intermittent trouble on a data-heavy page.
+**What would make it worth doing:** agents repeatedly misreading a reset as success.
+One chat-client evaluation asked for it.
 
 ## Read the last snapshot without running
 
