@@ -187,9 +187,10 @@ if prompt:
         if prompt.files:
             st.image(prompt.files[0])
 
-    # Send to vision model
+    # Send to vision model; a message can be text-only, so files may be empty
     with st.chat_message("assistant"):
-        response = analyze_image(prompt.files[0], prompt.text)
+        image = prompt.files[0] if prompt.files else None
+        response = analyze_image(image, prompt.text)
         st.write(response)
 ```
 
