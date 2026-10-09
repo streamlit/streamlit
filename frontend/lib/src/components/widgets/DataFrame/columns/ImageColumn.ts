@@ -37,7 +37,7 @@ function ImageColumn(props: BaseColumnProps): BaseColumn {
     displayData: [],
     readonly: true,
     allowOverlay: true,
-    contentAlign: props.contentAlignment || "center",
+    contentAlign: props.contentAlignment ?? "center",
     style: "normal",
   }
 

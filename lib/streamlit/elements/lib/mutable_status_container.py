@@ -15,9 +15,7 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Final, Literal, Self, TypeAlias, cast
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib import agent_spec

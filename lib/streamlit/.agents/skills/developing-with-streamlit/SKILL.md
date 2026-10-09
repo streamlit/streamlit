@@ -81,7 +81,7 @@ Step 4: Check if app is running and offer to run it
 
 **Goal:** Determine what the user needs and load the appropriate guidance.
 
-**IMPORTANT — `use_container_width` is deprecated.** Never add `use_container_width` to new code. Streamlit elements now stretch to fill their container by default. Use `width="stretch"` or `width="content"` instead. Remove `use_container_width` when you encounter it.
+**IMPORTANT — `use_container_width` is deprecated.** Never add `use_container_width` to new code. Use `width="stretch"` or `width="content"` instead. Dataframes and most charts stretch to fill their container by default, but buttons, including `st.button`, `st.download_button`, `st.form_submit_button`, `st.link_button`, and `st.page_link`, default to `width="content"`; pass `width="stretch"` to make one fill its container. Remove `use_container_width` when you encounter it.
 
 ### Proactively Look Up API Details
 
@@ -117,6 +117,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Prefer Vega-based charts (`st.altair_chart`, `st.line_chart`, `st.area_chart`, `st.scatter_chart`, `st.bar_chart`, `st.vega_lite_chart`) over `st.pyplot` and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart.
 - Prefer `st.segmented_control` over `st.radio(..., horizontal=True)`.
 - Use `st.pills` for a multiselect with a small number of options that fit on one line.
+- Use `st.menu_button` for a button that opens a short list of one-shot actions. Do not build one from `st.popover` with buttons or from `st.selectbox`.
 - Initialize `st.session_state` in one clear place, avoid module-level mutable state for per-user data, and set widget `key` values when widgets repeat, parameters change dynamically, or code needs programmatic access.
 - Keep page files as direct scripts; do not wrap page bodies in functions. Move shared business logic into modules.
 
@@ -132,7 +133,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **App is slow, reruns take too long, data loads repeatedly, or work is recomputed unnecessarily** — caching strategies (`st.cache_data`, `st.cache_resource`), `st.fragment` for partial reruns, (optionally) `parallel=True` when independent fragments can run concurrently, and `on_change="ignore"` to update a widget without a rerun | read `references/performance.md` |
 | **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers | read `references/dashboards.md` |
 | **Making an app look polished** — icons (Material Symbols), spacing, color accents, visual hierarchy, and small design touches that elevate quality | read `references/design.md` |
-| **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect`, including modern replacements for deprecated patterns and how to filter high-cardinality values (thousands+) without sending them all to the browser | read `references/selection-widgets.md` |
+| **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect` vs `st.feedback` (ratings), including modern replacements for deprecated patterns, and how to filter high-cardinality values (thousands+) without sending them all to the browser | read `references/selection-widgets.md` |
 | **Custom themes, colors, or styling requests** — configuring colors in `.streamlit/config.toml`, reading the active theme at runtime via `st.context.theme`, and the CSS pattern to use only when the user explicitly asks for CSS | read `references/theme.md` |
 | **Page structure and layout** — `st.columns`, `st.tabs`, `st.sidebar`, `st.container`, `st.expander`, responsive layout patterns, and when to use each container type | read `references/layouts.md` |
 | **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, `st.table` for small static tables and key-value/description lists, chart selection, accessible `alt=` names, and best practices for large datasets | read `references/data-display.md` |

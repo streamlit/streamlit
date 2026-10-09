@@ -216,7 +216,7 @@ class HashTest(unittest.TestCase):
         assert get_hash(naive_datetime1) != get_hash(naive_datetime3)
 
     def test_datetime_aware(self):
-        tz_info = datetime.timezone.utc
+        tz_info = datetime.UTC
         aware_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
         aware_datetime1_copy = datetime.datetime(
             2007, 12, 23, 15, 45, 55, tzinfo=tz_info

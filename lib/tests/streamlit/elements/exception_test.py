@@ -14,7 +14,6 @@
 
 """exception Unittest."""
 
-import builtins
 import os
 import traceback
 import unittest
@@ -647,7 +646,7 @@ def test_filter_keeps_user_file_outside_the_package_dir() -> None:
 
 @pytest.mark.parametrize("error", [OSError("boom"), RuntimeError("symlink loop")])
 def test_is_under_dir_returns_false_on_resolve_error(error: Exception) -> None:
-    """Unresolvable frame paths (including 3.10-3.12 symlink loops) are kept."""
+    """Unresolvable paths are kept, including 3.11/3.12 symlink-loop errors."""
     with patch.object(Path, "resolve", side_effect=error):
         assert _is_under_dir("whatever.py", _STREAMLIT_PACKAGE_DIR) is False
 
@@ -751,24 +750,17 @@ def test_uncaught_chained_exception_keeps_cause_message_when_full() -> None:
     assert "FileNotFoundError: /secret/path/do-not-leak" in joined
 
 
-_EXCEPTION_GROUP_TYPE = getattr(builtins, "ExceptionGroup", None)
-
-
 def _exception_group_with_raised_child(message: str) -> BaseException:
     """Build an ExceptionGroup whose child has a real traceback."""
-    assert _EXCEPTION_GROUP_TYPE is not None
     try:
         try:
             raise ValueError(message)
         except ValueError as child:
-            raise _EXCEPTION_GROUP_TYPE("g", [child]) from None
+            raise ExceptionGroup("g", [child]) from None
     except BaseException as err:
         return err
 
 
-@pytest.mark.skipif(
-    _EXCEPTION_GROUP_TYPE is None, reason="ExceptionGroup requires 3.11+"
-)
 def test_exception_group_includes_child_frames_and_messages() -> None:
     """ExceptionGroup children are formatted so user frames are not dropped."""
     rows = _get_stack_trace_str_list(_exception_group_with_raised_child("child boom"))
@@ -778,9 +770,6 @@ def test_exception_group_includes_child_frames_and_messages() -> None:
     assert "+---------------- 1 ----------------" in joined
 
 
-@pytest.mark.skipif(
-    _EXCEPTION_GROUP_TYPE is None, reason="ExceptionGroup requires 3.11+"
-)
 def test_exception_group_user_children_survive_streamlit_only_group_stack() -> None:
     """A Streamlit-only group stack still surfaces user frames from children."""
     tbe = traceback.TracebackException.from_exception(
@@ -799,9 +788,6 @@ def test_exception_group_user_children_survive_streamlit_only_group_stack() -> N
     assert not any(st_file in row for row in rows)
 
 
-@pytest.mark.skipif(
-    _EXCEPTION_GROUP_TYPE is None, reason="ExceptionGroup requires 3.11+"
-)
 def test_exception_group_child_message_is_redacted() -> None:
     """Group child messages honor include_exception_message like cause rows."""
     secret = "user-child-do-not-leak"
@@ -820,16 +806,12 @@ def _wrap_in_exception_groups(
     inner: BaseException, levels: int
 ) -> traceback.TracebackException:
     """Wrap ``inner`` in ``levels`` ExceptionGroup layers, innermost first."""
-    assert _EXCEPTION_GROUP_TYPE is not None
     current: BaseException = inner
     for i in range(levels):
-        current = _EXCEPTION_GROUP_TYPE(f"g{i}", [current])
+        current = ExceptionGroup(f"g{i}", [current])
     return traceback.TracebackException.from_exception(current)
 
 
-@pytest.mark.skipif(
-    _EXCEPTION_GROUP_TYPE is None, reason="ExceptionGroup requires 3.11+"
-)
 def test_exception_group_formats_children_through_max_depth() -> None:
     """CPython formats through ``max_group_depth`` nested groups, then truncates.
 
@@ -854,20 +836,14 @@ def test_exception_group_formats_children_through_max_depth() -> None:
     assert any("nested exceptions not shown" in row for row in over_limit_rows)
 
 
-@pytest.mark.skipif(
-    _EXCEPTION_GROUP_TYPE is None, reason="ExceptionGroup requires 3.11+"
-)
 def test_exception_group_truncates_children_beyond_max_width() -> None:
     """More than ``max_group_width`` children keep the first 15 and an omitted row."""
-    assert _EXCEPTION_GROUP_TYPE is not None
     extra = 3
     children = [
         ValueError(f"width-child-{i}")
         for i in range(_EXCEPTION_GROUP_MAX_WIDTH + extra)
     ]
-    tbe = traceback.TracebackException.from_exception(
-        _EXCEPTION_GROUP_TYPE("wide", children)
-    )
+    tbe = traceback.TracebackException.from_exception(ExceptionGroup("wide", children))
     rows = _format_traceback_rows(
         tbe, include_exception_line=False, include_exception_message=True
     )

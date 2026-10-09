@@ -1347,7 +1347,7 @@ def _parse_and_populate_chart_colors(
         for color in colors:
             try:
                 msg_field.append(color)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.%s config option: %s.",
                     config_key,
@@ -1440,7 +1440,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                     ):
                         font_face["weight_range"] = str(font_face["weight_range"])
                 msg.font_faces.append(ParseDict(font_face, FontFace()))
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.fontFaces config option: %s.",
                     font_face,
@@ -1479,7 +1479,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         for size in heading_font_sizes:
             try:
                 msg.heading_font_sizes.append(size)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.headingFontSizes config option: %s.",
                     size,
@@ -1520,7 +1520,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         for weight in heading_weights:
             try:
                 msg.heading_font_weights.append(weight)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.headingFontWeights config option: %s.",
                     weight,

@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Type tests for st.login."""
+"""Type tests for st.login and st.logout."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
-    from streamlit.user_info import login
+    from streamlit.user_info import login, logout
 
     # =====================================================================
     # st.login return type tests
@@ -59,3 +57,18 @@ if TYPE_CHECKING:
 
     # Unknown argument
     login("google", help="Log in")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
+
+    # =====================================================================
+    # st.logout return type tests
+    # =====================================================================
+
+    # Returns None. Logout takes no arguments.
+    assert_type(logout(), None)
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # logout() takes no arguments (unlike st.login, which accepts a provider)
+    logout("google")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+    logout(provider="google")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]

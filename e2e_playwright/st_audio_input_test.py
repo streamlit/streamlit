@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUM_AUDIO_INPUTS = 13
+NUM_AUDIO_INPUTS = 14
 
 
 def grant_microphone_permissions(page: Page) -> None:
@@ -705,3 +705,51 @@ def test_audio_input_timer_display(app: Page):
     second_recorded_seconds = timer_seconds()
     assert 4 <= second_recorded_seconds <= 6
     expect(timer).to_have_text(re.compile(r"00:0[4-6]"))
+
+
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_audio_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    grant_microphone_permissions(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore audio value:", "False")
+
+    record_and_stop(app, "Ignore change audio input")
+    ignore_audio = get_audio_input_by_label(app, "Ignore change audio input")
+    ignore_audio.hover()
+    # Match the "Clear recording" prefix; the accessible name also includes the label.
+    expect(ignore_audio.get_by_role("button", name="Clear recording")).to_be_visible()
+
+    # The recording commit does not rerun. Wait so a spurious rerun would appear.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect_prefixed_markdown(app, "Ignore audio value:", "False")
+
+    app.get_by_role("button", name="Apply ignore audio", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore audio value: True", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore audio value: True", exact=True)
+    ).to_be_visible()
+
+    ignore_audio.hover()
+    ignore_audio.get_by_role("button", name="Clear recording").click()
+    # Clearing does not rerun either. Wait so a spurious rerun would appear.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 3", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore audio value: True", exact=True)).to_be_visible()
+
+    app.get_by_role("button", name="Apply ignore audio", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Ignore audio value: False", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore audio value: False", exact=True)
+    ).to_be_visible()

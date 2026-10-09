@@ -18,12 +18,11 @@ from typing import (
     Any,
     Generic,
     Literal,
+    Never,
     TypeVar,
     cast,
     overload,
 )
-
-from typing_extensions import Never
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib import agent_spec

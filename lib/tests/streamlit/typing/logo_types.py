@@ -16,9 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Any, assert_type, cast
 
 if TYPE_CHECKING:
     import io

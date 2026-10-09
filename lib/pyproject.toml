@@ -24,7 +24,7 @@ description = "A faster way to build and share data apps"
 # before building. See .github/workflows/release.yml.
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{ name = "Snowflake Inc", email = "hello@streamlit.io" }]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -32,7 +32,6 @@ classifiers = [
   "Environment :: Web Environment",
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -61,25 +60,30 @@ dependencies = [
   # API that our built-in charts rely on.
   "altair>=5.0.0,<7,!=5.4.0,!=5.4.1",
   "click>=7.0,<9",
-  "numpy>=1.23,<3",
+  # The minimum-dependency job installs the locked Matplotlib 3.11, which
+  # requires numpy>=1.25. NumPy 1.23.2 has Python 3.11 wheels, but that job
+  # fails collection with it.
+  "numpy>=1.25.0,<3",
   # The "packaging" package isn't version-capped because they use calendar-based
   # versioning, i.e. "major" version increase != breaking changes
   "packaging>=20",
-  # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
-  # the index dtype. Pandas 3.x requires Python >= 3.11.
-  "pandas>=1.4.0,<4",
-  "pillow>=7.1.0,<13",
+  # pandas 1.5.0–1.5.2 expose the dataframe interchange `Column.size` as an
+  # attribute instead of a method, which crashes interchange conversion of
+  # string columns.
+  "pandas>=1.5.3,<4",
+  # 9.2.0 is the first release that publishes Python 3.11 wheels.
+  "pillow>=9.2.0,<13",
   "pydeck>=0.8.0b4,<1",
   # Release builds generate Python protobuf code with protoc 26.1, whose
   # corresponding minimum runtime version is protobuf 5.26.1.
   "protobuf>=5.26.1,<8",
+  # 10.0.1 is the first release that publishes Python 3.11 wheels.
   # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
   # See https://github.com/apache/arrow/issues/50471.
-  "pyarrow>=7.0,!=25.0.0,<26",
+  "pyarrow>=10.0.1,!=25.0.0,<26",
   "requests>=2.27,<3",
-  # Starting from Python 3.11, Python has built in support for reading TOML files.
-  # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
-  "toml>=0.10.1,<2",
+  # Writes credentials and `streamlit config show` output. Reading uses stdlib tomllib.
+  "tomli-w>=1.0.0,<2",
   # Starlette requires typing-extensions >= 4.10.
   "typing-extensions>=4.10.0,<5",
   # ASGI web-framework. 0.46.0 is the first version whose `GZipMiddleware`
@@ -94,7 +98,7 @@ dependencies = [
   "anyio>=4.0.0,<5",
   # Required for file-upload support:
   "python-multipart>=0.0.10,<1",
-  # Required for websocket support. Websockets 17.x requires Python >= 3.11.
+  # Required for websocket support:
   "websockets>=12.0.0,<18",
   # Required for cookie signing:
   "itsdangerous>=2.1.2,<3",
