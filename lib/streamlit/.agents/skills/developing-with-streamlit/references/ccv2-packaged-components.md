@@ -55,7 +55,7 @@ Inline components are great for getting started quickly. Move to a packaged comp
 
 The official Streamlit `component-template` v2 supports both **React + TypeScript (Vite)** and **Pure TypeScript (Vite)** (no React). CCv2 also works with **any frontend framework that compiles to JavaScript** (Svelte, Vue, Angular, vanilla TS/JS, etc.).
 
-The only requirement is that you produce JS/CSS assets into your component’s `asset_dir`, then register them from Python via `html=...`, `js="..."`, and `css="..."` using **asset-dir-relative** paths/globs.
+The only requirement is that you produce JS/CSS assets into your component’s `asset_dir`, then register them from Python via `js="..."` and `css="..."` using **asset-dir-relative** paths/globs. `html=` is always inline markup, never a path: `html="index.html"` renders the literal text.
 
 ### TypeScript support (recommended)
 
