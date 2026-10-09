@@ -260,13 +260,14 @@ def test_cold_shared_cache_waiters_finish_after_full_rerun(
         expect(
             page.get_by_text("Cold cache compute started", exact=True)
         ).to_be_visible(timeout=5000)
+        expect(page.get_by_text("Cache wait run: 1", exact=True)).to_be_visible()
         for label in ("A", "B", "C"):
             expect(
                 page.get_by_text(f"Cache fragment {label} started", exact=True)
             ).to_be_visible()
             expect(
                 page.get_by_text(
-                    f"Cache fragment {label}: shared cached value", exact=True
+                    f"Cache fragment {label} run 1: shared cached value", exact=True
                 )
             ).to_have_count(0)
 
@@ -274,10 +275,11 @@ def test_cold_shared_cache_waiters_finish_after_full_rerun(
         release_file.touch()
         wait_for_app_run(page)
 
+        expect(page.get_by_text("Cache wait run: 2", exact=True)).to_be_visible()
         for label in ("A", "B", "C"):
             expect(
                 page.get_by_text(
-                    f"Cache fragment {label}: shared cached value", exact=True
+                    f"Cache fragment {label} run 2: shared cached value", exact=True
                 )
             ).to_be_visible()
         completed = True

@@ -1334,6 +1334,30 @@ class CommonCacheThreadingTest(unittest.TestCase):
         yield_check.assert_called_once_with()
         lock.release.assert_called_once_with()
 
+    def test_contended_acquire_reuses_yield_check_while_polling(self):
+        """A contended waiter reuses one yield check across every polling timeout."""
+        lock = MagicMock()
+        lock.acquire.side_effect = [False, False, False, True]
+        yield_check = MagicMock()
+
+        with (
+            patch.object(
+                cache_utils, "get_run_yield_check", return_value=yield_check
+            ) as get_yield_check,
+            cache_utils._hold_compute_lock(lock),
+        ):
+            pass
+
+        get_yield_check.assert_called_once_with()
+        assert lock.acquire.call_args_list == [
+            call(blocking=False),
+            call(timeout=cache_utils._COMPUTE_LOCK_POLL_SECONDS),
+            call(timeout=cache_utils._COMPUTE_LOCK_POLL_SECONDS),
+            call(timeout=cache_utils._COMPUTE_LOCK_POLL_SECONDS),
+        ]
+        assert yield_check.call_count == 3
+        lock.release.assert_called_once_with()
+
     def test_contended_acquire_without_yield_check_blocks_once(self):
         """A waiter without a yield check uses a blocking lock acquisition."""
         lock = MagicMock()
@@ -1356,10 +1380,13 @@ class CommonCacheThreadingTest(unittest.TestCase):
         compute_started = threading.Event()
         release_compute = threading.Event()
         yield_checked = threading.Event()
+        call_count = 0
         waiter_results: list[int] = []
 
         @cache_decorator(show_spinner=False)
         def get_value() -> int:
+            nonlocal call_count
+            call_count += 1
             compute_started.set()
             assert release_compute.wait(timeout=5)
             return 42
@@ -1388,6 +1415,7 @@ class CommonCacheThreadingTest(unittest.TestCase):
         assert not owner.is_alive()
         assert not waiter.is_alive()
         assert waiter_results == [42]
+        assert call_count == 1
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -1487,10 +1515,13 @@ class CommonCacheThreadingTest(unittest.TestCase):
         compute_started = threading.Event()
         waiter_started = threading.Event()
         release_compute = threading.Event()
+        call_count = 0
         waiter_results: list[int] = []
 
         @cache_decorator(show_spinner=False)
         def get_value() -> int:
+            nonlocal call_count
+            call_count += 1
             compute_started.set()
             assert release_compute.wait(timeout=5)
             return 42
@@ -1521,6 +1552,7 @@ class CommonCacheThreadingTest(unittest.TestCase):
         assert not owner.is_alive()
         assert not waiter.is_alive()
         assert waiter_results == [42]
+        assert call_count == 1
 
     @parameterized.expand(
         [
