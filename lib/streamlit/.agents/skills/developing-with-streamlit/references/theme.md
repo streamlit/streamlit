@@ -120,7 +120,7 @@ font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:w
 
 ### Self-hosting custom fonts
 
-Use `[[theme.fontFaces]]` tables to load fonts via Streamlit's static file serving. Font files must be placed in a `static/` directory and served through the app—they cannot be arbitrary local file paths.
+Use `[[theme.fontFaces]]` tables to load fonts via Streamlit's static file serving. Font files must be placed in a `static/` directory and served through the app—they cannot be arbitrary local file paths. Static serving is off by default, so enable it with `[server] enableStaticServing = true`; otherwise the `app/static/...` URLs return 404 and the font falls back.
 
 **Before adding fonts to config.toml:** Verify the font files exist in the static directory.
 
