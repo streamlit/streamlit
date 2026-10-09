@@ -14,13 +14,20 @@
 
 from __future__ import annotations
 
+import re
+
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_form_button,
     expect_markdown,
+    expect_prefixed_markdown,
     get_element_by_key,
 )
 
@@ -209,3 +216,72 @@ def test_pagination_snapshot_width(
     expect(container).to_be_attached()
 
     assert_snapshot(container, name="st_pagination-width")
+
+
+def test_pagination_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on commit, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore pagination value:", "1")
+    # Default page is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_pagination="))
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    pagination = get_pagination(app, "ignore_pagination")
+
+    # Clicking the current page does not commit or rerun.
+    get_page_button(pagination, 1).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore pagination value:", "1")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_pagination="))
+
+    # A page button updates the URL without rerunning the app.
+    get_page_button(pagination, 3).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(get_page_button(pagination, 3)).to_have_attribute("aria-current", "page")
+    expect_prefixed_markdown(app, "Ignore pagination value:", "1")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_pagination=3"))
+
+    # Next commits the following page without a rerun.
+    get_next_button(pagination).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore pagination value:", "1")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_pagination=4"))
+    expect(get_page_button(pagination, 4)).to_have_attribute("aria-current", "page")
+
+    # Previous commits the preceding page without a rerun.
+    get_prev_button(pagination).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore pagination value:", "1")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_pagination=3"))
+    expect(get_page_button(pagination, 3)).to_have_attribute("aria-current", "page")
+
+    # A later rerun delivers the buffered value.
+    app.get_by_role("button", name="Apply ignore pagination", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    # has_text is a case-insensitive substring match, so
+    # "Applied ignore pagination value" would match this prefix too.
+    expect(app.get_by_text("Ignore pagination value: 3", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore pagination value: 3", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    pagination = get_pagination(app, "ignore_pagination")
+    expect(get_page_button(pagination, 3)).to_have_attribute("aria-current", "page")
+    expect_prefixed_markdown(app, "Ignore pagination value:", "3")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_pagination=3"))
