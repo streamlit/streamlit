@@ -7,9 +7,9 @@ created: 2026-07-16
 
 ## Summary
 
-Coding agents increasingly write Streamlit apps, and the more of an app an agent writes,
-the more it matters that the agent can verify its own changes and leave tests behind.
-Most of that test code will be written by agents and reviewed by people. This spec makes
+Most Streamlit apps are now written by coding agents, so it matters that an agent can
+verify its own changes and leave tests behind. Most of that test code will also be
+written by agents and reviewed by people. This spec makes
 every Streamlit app verifiable and testable for both. Two questions decide which tool to
 use: should the check outlive the session, and is it about the app's logic or its
 rendered UI?
