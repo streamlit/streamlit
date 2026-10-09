@@ -14,14 +14,19 @@
 
 """audio_input unit test."""
 
-from unittest.mock import patch
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.audio_input import AudioInputSerde
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidWidthError,
+    StreamlitValueError,
+)
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.uploaded_file_manager import (
@@ -61,12 +66,12 @@ class AudioInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.audio_input("the label", label_visibility="wrong_value")
 
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_width_config_stretch(self):
@@ -190,10 +195,9 @@ class AudioInputTest(DeltaGeneratorTestCase):
     )
     def test_invalid_sample_rates(self, sample_rate):
         """Test that invalid sample rates raise an exception."""
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.audio_input("the label", sample_rate=sample_rate)
-        assert "Invalid sample_rate" in str(e.value)
-        assert "Must be one of" in str(e.value)
+        assert "Invalid `sample_rate` value" in str(e.value)
 
     @patch("streamlit.elements.widgets.audio_input._get_upload_files")
     def test_not_allowed_file_extension_raise_an_exception_for_camera_input(
@@ -254,3 +258,50 @@ class AudioInputSerdeTest(DeltaGeneratorTestCase):
 
         # Should return empty state for deleted file
         assert len(result.uploaded_file_info) == 0
+
+
+class AudioInputOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.audio_input("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.audio_input
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.audio_input("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.audio_input("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.audio_input("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.audio_input
+        assert c.ignore_rerun is True

@@ -11,7 +11,7 @@ Use `border=True` to create visual cards. Supported on `st.container`, `st.metri
 # Container card
 with st.container(border=True):
     st.subheader("Sales Overview")
-    st.line_chart(sales_data)
+    st.line_chart(sales_data, alt="Sales over time")
 
 # Metric card
 st.metric("Revenue", "$1.2M", "+12%", border=True)
@@ -30,12 +30,12 @@ Add context to cards with headers or bold text:
 # With subheader
 with st.container(border=True):
     st.subheader("Monthly Trends")
-    st.line_chart(data)
+    st.line_chart(data, alt="Monthly trends over time")
 
 # With bold label
 with st.container(border=True):
     st.markdown("**Top Products**")
-    st.dataframe(top_products)
+    st.dataframe(top_products, alt="Top products")
 ```
 
 ## KPI rows
@@ -50,6 +50,16 @@ with st.container(horizontal=True):
 ```
 
 Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows.
+
+## Zero deltas
+
+Streamlit treats numeric zeros and the string `"0"` as zero. It does not parse other string deltas as numbers to choose the arrow and color, so `"0%"` gets a green up-arrow. For a flat period, pass the number `0` as `delta` and put the qualifier text in `delta_description`:
+
+```python
+st.metric("Orders", "1.4k", 0, delta_description="vs. last month", border=True)
+```
+
+Streamlit shows that delta in gray with no arrow.
 
 ## Metrics with sparklines
 
@@ -77,26 +87,32 @@ Combine cards into a dashboard:
 ```python
 # KPI row
 with st.container(horizontal=True):
-    st.metric("Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend, chart_type="line")
-    st.metric("Users", "762k", "+12%", border=True, chart_data=user_trend, chart_type="line")
-    st.metric("Orders", "1.4k", "+5%", border=True, chart_data=order_trend, chart_type="bar")
+    st.metric(
+        "Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend, chart_type="line"
+    )
+    st.metric(
+        "Users", "762k", "+12%", border=True, chart_data=user_trend, chart_type="line"
+    )
+    st.metric(
+        "Orders", "1.4k", "+5%", border=True, chart_data=order_trend, chart_type="bar"
+    )
 
 # Charts row
 col1, col2 = st.columns(2)
 with col1:
     with st.container(border=True):
         st.subheader("Revenue by Region")
-        st.bar_chart(region_data, x="region", y="revenue")
+        st.bar_chart(region_data, x="region", y="revenue", alt="Revenue by region")
 
 with col2:
     with st.container(border=True):
         st.subheader("Monthly Trend")
-        st.line_chart(monthly_data, x="month", y="value")
+        st.line_chart(monthly_data, x="month", y="value", alt="Monthly trend")
 
 # Data table
 with st.container(border=True):
     st.subheader("Recent Orders")
-    st.dataframe(orders_df, hide_index=True)
+    st.dataframe(orders_df, hide_index=True, alt="Recent orders")
 ```
 
 ## Smooth loading with parallel fragments + skeletons
@@ -105,13 +121,11 @@ When a dashboard has multiple cards with independent, compute-intensive data loa
 
 ```python
 @st.cache_data(ttl="15m")
-def load_revenue():
-    ...  # Slow query / API call
+def load_revenue(): ...  # Slow query / API call
 
 
 @st.cache_data(ttl="15m")
-def load_orders():
-    ...  # Independent slow query / API call
+def load_orders(): ...  # Independent slow query / API call
 
 
 @st.fragment(parallel=True)
@@ -120,7 +134,7 @@ def revenue_card():
         st.subheader("Revenue by Region")
         with st.skeleton(height=260):
             data = load_revenue()
-            st.bar_chart(data, x="region", y="revenue")
+            st.bar_chart(data, x="region", y="revenue", alt="Revenue by region")
 
 
 @st.fragment(parallel=True)
@@ -129,7 +143,7 @@ def orders_card():
         st.subheader("Recent Orders")
         with st.skeleton(height=260):
             data = load_orders()
-            st.dataframe(data, hide_index=True)
+            st.dataframe(data, hide_index=True, alt="Recent orders")
 
 
 col1, col2 = st.columns(2)
@@ -159,7 +173,7 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 
 | Template | Features |
 |----------|----------|
-| `dashboard-metrics` | `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, time-series charts, date filtering |
+| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, time-series charts, date filtering |
 | `dashboard-companies` | Company comparison with sparkline columns, filterable data tables, custom cache spinner |
 | `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, popover filters |
 | `dashboard-feature-usage` | Feature adoption tracking, trend analysis, conditional "Raw data" expander |

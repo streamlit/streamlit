@@ -17,10 +17,11 @@
 import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
+import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { render } from "~lib/test_util"
 
 import JsonPathTooltip, {
-  JsonPathTooltipProps,
+  type JsonPathTooltipProps,
   OPEN_GUARD_MS,
 } from "./JsonPathTooltip"
 
@@ -49,6 +50,15 @@ describe("JsonPathTooltip", () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it("mounts the tooltip in the shared floating overlay portal", () => {
+    render(<JsonPathTooltip {...getProps()} />)
+
+    const portalHost = document.getElementById(FLOATING_OVERLAY_PORTAL_ID)
+    expect(portalHost).toContainElement(
+      screen.getByTestId("stJsonPathTooltipBody")
+    )
   })
 
   it("renders the path text", () => {

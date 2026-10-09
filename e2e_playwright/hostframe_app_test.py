@@ -99,7 +99,6 @@ def _check_widgets_and_sidebar_nav_links_disabled(frame_locator: FrameLocator):
     # Slider
     slider = frame_locator.get_by_test_id("stSlider")
     expect(slider.get_by_test_id("stWidgetLabel")).to_have_attribute("disabled", "")
-    # Baseweb uses a div with role="slider"
     expect(slider.get_by_role("slider")).to_have_attribute("disabled", "")
 
     # Checkbox - widget label disabled if input is disabled

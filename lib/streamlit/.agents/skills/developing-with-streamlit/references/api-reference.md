@@ -43,7 +43,6 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.balloons` | Draw celebratory balloons. Use sparingly for success moments or lightweight feedback. |
 | `st.bar_chart` | Display a bar chart. Use it for straightforward categorical or binned comparisons. |
 | `st.button` | Display a button widget. It returns `True` on the script rerun triggered by a click. |
-| `st.cache` | Legacy caching decorator (deprecated). Do not use in new code; prefer `st.cache_data` for serializable data and `st.cache_resource` for shared resources. |
 | `st.cache_data` | Cache the return value of a function. Use it for expensive computations or data-loading steps that return serializable data; each caller receives a copy of the cached value. |
 | `st.cache_resource` | Cache a shared resource returned by a function. Use it for global objects such as database connections, ML models, or clients that should be reused across reruns and sessions. |
 | `st.camera_input` | Display a widget that returns pictures from the user's webcam. It returns an `UploadedFile` with the captured image when the user takes a picture, and `None` before then. |
@@ -60,9 +59,10 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.dataframe` | Display a dataframe as an interactive table. Supports column configuration, selection, sizing, sorting, and efficient data exploration. |
 | `st.date_input` | Display a date input widget. It can return a single date or a date range depending on the initial value. |
 | `st.datetime_input` | Display a date and time input widget. Use it when users need to choose precise timestamps rather than dates alone. |
-| `st.dialog` | Function decorator to create a modal dialog. Use it to isolate short workflows while preserving Streamlit's rerun model. |
+| `st.dialog` | Function decorator to create a modal dialog or a modal side drawer. Use it to isolate short workflows while preserving Streamlit's rerun model. |
 | `st.divider` | Display a horizontal rule. Use it to separate sections without adding a heavy layout container. |
 | `st.download_button` | Display a download button widget. Use it for generated files, reports, transformed data, or other app outputs. |
+| `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for ECharts-native visualizations. |
 | `st.echo` | Use in a `with` block to draw some code on the app, then execute it. Useful for tutorials, examples, and educational apps. |
 | `st.empty` | Insert a single-element container. Use it as a placeholder when you need to replace, update, or clear one element later. |
 | `st.error` | Display error message. Use it for failures or blocking conditions that require user attention. |
@@ -74,7 +74,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.form_submit_button` | Display a form submit button. It must be used inside `st.form` and triggers the form's batched submission. A form needs at least one submit button to be functional. |
 | `st.fragment` | Decorator to turn a function into a fragment which can rerun independently of the full app. Use it to reduce rerun cost for isolated interactive sections or run independent, slow sections in parallel during full app reruns. |
 | `st.get_option` | Return the current value of a given Streamlit configuration option. Use it for runtime-aware behavior that depends on configured settings. |
-| `st.graphviz_chart` | Display a graph using the dagre-d3 library. Use it for directed graphs, diagrams, and node-edge visualizations. |
+| `st.graphviz_chart` | Display a graph using the d3-graphviz library and Graphviz WASM. Use it for directed graphs, diagrams, and node-edge visualizations. |
 | `st.header` | Display text in header formatting. Use it for major sections below the page title. |
 | `st.help` | Display help and other information for a given object. It renders docstrings, signatures, and related information inside the app. |
 | `st.html` | Insert HTML into your app. JavaScript is ignored by default (opt in with `unsafe_allow_javascript=True`); for interactive components that exchange data with Python, use `st.components.v2.component()` instead. |
@@ -139,8 +139,8 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.write_stream` | Stream a generator, iterable, or stream-like sequence to the app. Use it for token streams, incremental text, or progressively produced output. |
 | **Top-level objects** | |
 | `st.bottom` | Bottom-pinned container for the main app area. Use it as a container object, not as a function. |
-| `st.context` | Read-only access to user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. |
-| `st.query_params` | Mutable mapping for the browser URL query parameters. Use it to read or update URL state. |
+| `st.context` | Read-only access to user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. Attribute and bracket access are equivalent (`st.context.timezone` and `st.context["timezone"]`), but it is not a dict: no `.get()`, `.keys()`, or iteration. |
+| `st.query_params` | Mutable mapping for the browser URL query parameters. Use it to read or update URL state, but to sync a widget's value to the URL set `bind="query-params"` on the widget instead. |
 | `st.secrets` | Dict-like access to secrets loaded from `secrets.toml`. Use it for credentials and configuration that should not be hard-coded. |
 | `st.session_state` | Per-session mutable mapping for app state. Use it to persist values across reruns and share state between widgets and app logic. |
 | `st.sidebar` | Sidebar container that exposes most element methods as `st.sidebar.<command>()` and supports `with st.sidebar:` blocks. |
@@ -170,3 +170,25 @@ Run this command with the Streamlit installation relevant to the code being edit
 | **Public namespaces** | |
 | `st.column_config` | Namespace of column configuration helpers for `st.dataframe` and `st.data_editor`. See the `st.column_config` helper rows above and inspect helpers such as `st.column_config.NumberColumn` for exact parameters. |
 | `st.components` | Namespace for custom components. Prefer `st.components.v2.component()` for new HTML/JS components; `st.components.v1` is deprecated for new work. |
+| `st.typing` | Curated namespace of public Streamlit-owned types for annotations. Prefer imports from `streamlit.typing` over internal implementation modules. |
+
+## Public annotation types
+
+Import Streamlit-owned return and state types from `streamlit.typing`, not from modules under `streamlit.elements` or `streamlit.runtime`:
+
+```python
+from streamlit.typing import DataframeState, UploadedFile
+```
+
+| Type | Produced by |
+|------|-------------|
+| `UploadedFile` | `st.file_uploader`, `st.camera_input`, `st.audio_input`, and file/audio fields from `st.chat_input` |
+| `ChatInputValue` | `st.chat_input` when file or audio input is enabled |
+| `DataframeState` | `st.dataframe` when selection events are enabled |
+| `PlotlyState` | `st.plotly_chart` when selection events are enabled |
+| `VegaLiteState` | `st.altair_chart` and `st.vega_lite_chart` when selection events are enabled |
+| `PydeckState` | `st.pydeck_chart` when selection events are enabled |
+| `DataEditorState` | Session State for a keyed `st.data_editor` |
+| `ButtonColumnClickState` | Session State for a keyed `st.column_config.ButtonColumn` click |
+
+These are the runtime classes returned by Streamlit, so they work in annotations and `isinstance` checks. Obtain their values from the corresponding command or Session State entry instead of constructing them directly.

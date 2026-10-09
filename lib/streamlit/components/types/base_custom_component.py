@@ -40,7 +40,10 @@ class BaseCustomComponent(ABC):
         module_name: str | None = None,
     ) -> None:
         if path is None and url is None:
-            raise StreamlitAPIException("Either 'path' or 'url' must be set.")
+            raise StreamlitAPIException(
+                "Either 'path' or 'url' must be set.",
+                error_id="custom-component-path-or-url-required",
+            )
 
         self._name = name
         self._path = path

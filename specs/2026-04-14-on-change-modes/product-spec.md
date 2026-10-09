@@ -94,21 +94,26 @@ All stateful widgets with `on_change`:
 
 - `st.slider`, `st.select_slider`
 - `st.selectbox`, `st.multiselect`, `st.radio`
+- `st.pills`, `st.segmented_control`
+- `st.feedback`
 - `st.checkbox`, `st.toggle`
 - `st.text_input`, `st.text_area`
 - `st.number_input`
-- `st.date_input`, `st.time_input`
+- `st.date_input`, `st.time_input`, `st.datetime_input`
 - `st.file_uploader`
 - `st.color_picker`
 - `st.camera_input`, `st.audio_input`
 - `st.data_editor`
-- `st.feedback`
+- `st.pagination`
 
 ### Not Affected: Trigger Widgets
 
 Trigger-based widgets (`st.button`, `st.chat_input`, `st.form_submit_button`, `st.menu_button`)
 are excluded because their values only exist during the rerun. Without a rerun, the trigger value
 is never received by Python code.
+
+`st.tabs`, `st.expander`, and `st.popover` already default to `on_change="ignore"`, where that
+mode means the container does not track state. They are out of scope for this change.
 
 ### Behavior
 
@@ -120,6 +125,9 @@ When `on_change="ignore"`:
 4. **No rerun is triggered**
 5. On next rerun (e.g., triggered by a button click), the frontend sends the updated value to the
    backend, and Python code receives it
+6. If the widget is bound with `bind="query-params"`, the URL is updated immediately on
+   interaction — the same as widgets inside a form. Python still does not receive the
+   value until the next rerun. A page load or share uses the updated URL value.
 
 ### Examples
 
@@ -170,14 +178,37 @@ st.title("Sales Dashboard")
 
 # Filters don't trigger reruns
 col1, col2, col3 = st.columns(3)
-region = col1.selectbox("Region", ["All", "North", "South", "East", "West"], on_change="ignore")
+region = col1.selectbox(
+    "Region", ["All", "North", "South", "East", "West"], on_change="ignore"
+)
 year = col2.selectbox("Year", [2024, 2023, 2022], on_change="ignore")
-category = col3.multiselect("Category", ["Electronics", "Clothing", "Food"], on_change="ignore")
+category = col3.multiselect(
+    "Category", ["Electronics", "Clothing", "Food"], on_change="ignore"
+)
 
 # Apply filters button
 if st.button("Apply Filters"):
     data = load_sales_data(region, year, category)
     st.line_chart(data)
+```
+
+**Example 4: Ignore + query-param binding**
+
+```python
+import streamlit as st
+
+threshold = st.slider(
+    "Threshold",
+    0.0,
+    1.0,
+    0.5,
+    key="threshold",
+    on_change="ignore",
+    bind="query-params",
+)
+
+if st.button("Apply"):
+    st.write("Threshold:", threshold)
 ```
 
 ### Reading Widget Values
@@ -186,6 +217,11 @@ When `on_change="ignore"`:
 
 - The **frontend UI** updates immediately (user sees the new slider position, selected option, etc.)
 - **Python code** still sees the **previous value** until a rerun is triggered by another means
+- Downstream UI that depends on the return value (charts, paged content, and so on) also stays on
+  the previous value until the next rerun. For `st.pagination`, the page buttons update immediately
+  while the listed page's content does not.
+- If `bind="query-params"` is set, the **URL** updates immediately, the same as widgets
+  inside a form. The URL can therefore show a value Python has not received yet.
 - On the next rerun, the updated value becomes available via:
   1. **Return value**: `value = st.slider(..., on_change="ignore")`
   2. **Session state**: `st.session_state.my_key` if `key="my_key"` is provided
@@ -193,8 +229,9 @@ When `on_change="ignore"`:
 This is the expected behavior - the feature is designed for cases where you want to batch multiple
 widget changes before processing them together.
 
-**Note:** Widget values modified with `on_change="ignore"` are held in browser memory only. If the
-session ends or the page is refreshed before a rerun occurs, those changes are lost.
+**Note:** Unbound values modified with `on_change="ignore"` are held in browser memory only. If
+the session ends or the page is refreshed before a rerun occurs, those changes are lost. Bound
+values survive a refresh or share via the URL.
 
 ## Checklist
 

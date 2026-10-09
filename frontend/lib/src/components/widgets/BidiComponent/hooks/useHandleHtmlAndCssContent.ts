@@ -126,6 +126,16 @@ export const useHandleHtmlAndCssContent = ({
       return
     }
 
+    // Abort the CSS error listener on cleanup so a stale stylesheet cannot
+    // call `setError` after this effect has been replaced.
+    const controller = new AbortController()
+    const handleCssLoadError = (): void => {
+      handleError(
+        new Error(`Failed to load CSS from ${cssLinkHref}`),
+        setError
+      )
+    }
+
     try {
       if (contentRef.current?.parentNode === parent) {
         parent.removeChild(contentRef.current)
@@ -156,18 +166,19 @@ export const useHandleHtmlAndCssContent = ({
           linkElement.crossOrigin = cssLinkCrossOrigin
         }
 
-        linkElement.onerror = () => {
-          handleError(
-            new Error(`Failed to load CSS from ${cssLinkHref}`),
-            setError
-          )
-        }
+        linkElement.addEventListener("error", handleCssLoadError, {
+          signal: controller.signal,
+        })
         contentRef.current.appendChild(linkElement)
       }
 
       parent.appendChild(contentRef.current)
     } catch (error) {
       handleError(error, setError, "Failed to process HTML/CSS content")
+    }
+
+    return () => {
+      controller.abort()
     }
   }, [
     html,

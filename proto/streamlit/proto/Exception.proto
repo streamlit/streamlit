@@ -43,4 +43,13 @@ message Exception {
 
   // Indicates the width setting: "stetch", "content" or a pixel value.
   streamlit.WidthConfig width_config = 6;
+
+  // True if Streamlit itself raised this exception (a subclass of
+  // streamlit.errors.Error, e.g. StreamlitAPIException) rather than an
+  // arbitrary user/runtime error like ZeroDivisionError. The frontend uses
+  // this to scope the in-error "Install skills" callout to mistakes the
+  // Streamlit agent skills can actually help with. Additive and
+  // backwards-compatible: proto3 defaults it to false, so existing external
+  // consumers of this (deliberately stable) proto are unaffected.
+  bool is_streamlit_exception = 7;
 }

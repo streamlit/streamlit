@@ -29,3 +29,12 @@ if st.button("`pages/02_page2.py`"):
 
 if st.button("`pages/08_slow_page.py`"):
     st.switch_page(Path("pages/08_slow_page.py"))
+
+
+def switch_to_page_2() -> None:
+    st.switch_page("pages/02_page2.py")
+
+
+# Keep last: mpa_basics_test.py selects the buttons above by position.
+# The label must not contain any label above, since get_button() matches by substring.
+st.button("callback nav to page 2", on_click=switch_to_page_2)

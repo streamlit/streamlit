@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useMemo, useRef } from "react"
+import { memo, type ReactElement, useEffect, useMemo, useRef } from "react"
 
 import { getLogger } from "loglevel"
 
-import { ISubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
+import { type SubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
 
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
 import { StyledVideo, StyledVideoIframe } from "./styled-components"
 
@@ -41,8 +41,17 @@ function Video({
   const videoRef = useRef<HTMLVideoElement>(null)
 
   /* Element may contain "url" or "data" property. */
-  const { type, url, startTime, subtitles, endTime, loop, autoplay, muted } =
-    element
+  const {
+    type,
+    url,
+    startTime,
+    subtitles,
+    endTime,
+    loop,
+    autoplay,
+    muted,
+    alt,
+  } = element
 
   let crossOrigin = useCrossOriginAttribute(url)
 
@@ -181,11 +190,11 @@ function Video({
   const getYoutubeSrc = (urlArg: string): string => {
     const youtubeUrl = new URL(urlArg)
 
-    if (startTime && !isNaN(startTime)) {
+    if (startTime && !Number.isNaN(startTime)) {
       youtubeUrl.searchParams.append("start", startTime.toString())
     }
 
-    if (endTime && !isNaN(endTime)) {
+    if (endTime && !Number.isNaN(endTime)) {
       youtubeUrl.searchParams.append("end", endTime.toString())
     }
 
@@ -217,7 +226,10 @@ function Video({
       <StyledVideoIframe
         className="stVideo"
         data-testid="stVideo"
-        title={url}
+        // An iframe always needs a title for its accessible name, so the URL
+        // stays as the fallback when the author did not provide a description.
+        // Blank input must fall back too, or the iframe ends up untitled.
+        title={alt?.trim() || url}
         src={getYoutubeSrc(url)}
         allow="autoplay; encrypted-media"
         allowFullScreen
@@ -250,13 +262,17 @@ function Video({
       data-testid="stVideo"
       ref={videoRef}
       controls
+      // Only set an accessible name when the author provided one. Blank input
+      // is treated as absent: aria-label=" " computes to an empty accessible
+      // name, which is worse than having no aria-label at all.
+      aria-label={alt?.trim() || undefined}
       muted={muted}
       autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}
       crossOrigin={crossOrigin}
       onError={handleVideoError}
     >
-      {subtitles?.map((subtitle: ISubtitleTrack, idx: number) => (
+      {subtitles?.map((subtitle: SubtitleTrack.$Properties, idx: number) => (
         <track
           // TODO: Update to match React best practices
           // eslint-disable-next-line @eslint-react/no-array-index-key

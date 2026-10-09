@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     from datetime import timedelta
@@ -71,6 +69,10 @@ if TYPE_CHECKING:
     assert_type(audio("audio.wav", autoplay=True), DeltaGenerator)
     assert_type(audio("audio.wav", autoplay=False), DeltaGenerator)
 
+    # Audio with alt parameter
+    assert_type(audio("audio.wav", alt="A cat purring"), DeltaGenerator)
+    assert_type(audio("audio.wav", alt=None), DeltaGenerator)
+
     # Audio with width parameter - "stretch" or int
     assert_type(audio("audio.wav", width="stretch"), DeltaGenerator)
     assert_type(audio("audio.wav", width=400), DeltaGenerator)
@@ -85,6 +87,7 @@ if TYPE_CHECKING:
             end_time=120,
             loop=True,
             autoplay=False,
+            alt="A cat purring",
             width="stretch",
         ),
         DeltaGenerator,
@@ -95,7 +98,10 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid width value (not "stretch" or int)
-    audio("audio.wav", width="content")  # type: ignore[arg-type]
+    audio("audio.wav", width="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid alt value (must be a string or None)
+    audio("audio.wav", alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing sample_rate as positional argument (should be keyword-only)
-    audio("audio.wav", "audio/wav", 0, 44100)  # type: ignore[call-arg]
+    audio("audio.wav", "audio/wav", 0, 44100)  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

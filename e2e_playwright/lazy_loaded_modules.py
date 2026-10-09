@@ -34,9 +34,8 @@ lazy_loaded_modules = [
     "pyarrow",
     "pydeck",
     "rich",
-    "tenacity",
-    # toml is automatically loaded if there is a secret.toml, config.toml or
-    # a local credentials.toml file. So, we cannot test this here.
+    # Only imported when writing TOML (`streamlit config show`, credentials save).
+    "tomli_w",
     # Internal modules:
     "streamlit.emojis",
     "streamlit.material_icon_names",

@@ -14,14 +14,9 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import type * as ReactAriaComponents from "react-aria-components"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
@@ -29,7 +24,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 // async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
 // Mocking it here prevents the animation machinery from running in unit tests.
 vi.mock("react-aria-components", async importOriginal => {
-  const actual = await importOriginal<typeof import("react-aria-components")>()
+  const actual = await importOriginal<typeof ReactAriaComponents>()
   return { ...actual, SelectionIndicator: () => null }
 })
 
@@ -37,7 +32,7 @@ import { BlockNode } from "~lib/AppNode"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Tabs, { TabProps } from "./Tabs"
+import Tabs, { type TabProps } from "./Tabs"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
@@ -51,7 +46,13 @@ function makeTab(label: string, children: BlockNode[] = []): BlockNode {
 
 function makeTabsNode(
   tabs: number,
-  options?: { blockId?: string; widgetId?: string }
+  options?: {
+    blockId?: string
+    widgetId?: string
+    queryParamKey?: string
+    defaultTabLabel?: string
+    defaultTabIndex?: number
+  }
 ): BlockNode {
   return new BlockNode(
     FAKE_SCRIPT_HASH,
@@ -61,6 +62,9 @@ function makeTabsNode(
       id: options?.blockId ?? "",
       tabContainer: {
         id: options?.widgetId ?? undefined,
+        defaultTabIndex: options?.defaultTabIndex ?? 0,
+        queryParamKey: options?.queryParamKey,
+        defaultTabLabel: options?.defaultTabLabel,
       },
     })
   )
@@ -363,10 +367,9 @@ describe("st.tabs", () => {
       await user.click(tabs[2])
 
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-        { id: widgetId, formId: "" },
+        widgetId,
         "Tab 2",
-        { fromUi: true },
-        undefined
+        { formId: "", fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -415,20 +418,18 @@ describe("st.tabs", () => {
       expect(tabs[2]).toHaveAttribute("aria-selected", "true")
       expect(tabs[0]).toHaveAttribute("aria-selected", "false")
 
-      // The widget manager must be updated with the new tab label and fromUi:false
+      // The widget manager must be updated with the new tab label and fromUser:false
       // so subsequent reruns don't send a stale value and break tab.open (gh issue #15458).
-      expect(setStringValueSpy).toHaveBeenCalledWith(
-        { id: widgetId, formId: "" },
-        "Tab 2",
-        { fromUi: false },
-        undefined
-      )
-      // Must NOT use fromUi:true — that would schedule a spurious rerun
+      expect(setStringValueSpy).toHaveBeenCalledWith(widgetId, "Tab 2", {
+        formId: "",
+        fragmentId: undefined,
+        fromUser: false,
+      })
+      // Must NOT use fromUser:true — that would schedule a spurious rerun
       expect(setStringValueSpy).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
-        { fromUi: true },
-        expect.anything()
+        expect.objectContaining({ fromUser: true })
       )
     })
   })
@@ -448,7 +449,9 @@ describe("st.tabs", () => {
         scrollWidth: 800,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollRight")).toBeVisible()
@@ -464,7 +467,9 @@ describe("st.tabs", () => {
         scrollWidth: 700,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollLeft")).toBeVisible()
@@ -482,7 +487,9 @@ describe("st.tabs", () => {
         scrollWidth: 900,
         clientWidth: 200,
       })
-      fireEvent.scroll(tablist)
+      act(() => {
+        tablist.dispatchEvent(new Event("scroll"))
+      })
 
       await waitFor(() => {
         expect(screen.getByTestId("stTabsScrollLeft")).toBeVisible()
@@ -562,10 +569,12 @@ describe("st.tabs", () => {
       rerender(<Tabs {...getProps({ node: replacement, widgetMgr })} />)
 
       await waitFor(() => {
-        const tabs = screen.getAllByRole("tab")
-        expect(tabs[0]).toHaveAttribute("aria-selected", "true")
-        expect(tabs[0]).toHaveTextContent("Alpha")
+        expect(screen.getAllByRole("tab")[0]).toHaveAttribute(
+          "aria-selected",
+          "true"
+        )
       })
+      expect(screen.getAllByRole("tab")[0]).toHaveTextContent("Alpha")
       expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe(
         "Alpha"
       )
@@ -625,10 +634,12 @@ describe("st.tabs", () => {
       rerender(<Tabs {...getProps({ node: longerList, widgetMgr })} />)
 
       await waitFor(() => {
-        const tabs = screen.getAllByRole("tab")
-        expect(tabs[1]).toHaveAttribute("aria-selected", "true")
-        expect(tabs[1]).toHaveTextContent("B")
+        expect(screen.getAllByRole("tab")[1]).toHaveAttribute(
+          "aria-selected",
+          "true"
+        )
       })
+      expect(screen.getAllByRole("tab")[1]).toHaveTextContent("B")
       expect(screen.getAllByRole("tab")[0]).toHaveAttribute(
         "aria-selected",
         "false"
@@ -673,5 +684,93 @@ describe("st.tabs", () => {
         "false"
       )
     })
+  })
+})
+
+describe("Tabs query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      widgetId: "tabs-qp",
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+    })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      "tabs-qp",
+      "my_tabs",
+      "string_value",
+      "Tab 0",
+      false,
+      undefined
+    )
+  })
+
+  it("uses defaultTabLabel rather than the current selection as the binding default", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      widgetId: "tabs-qp",
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+      defaultTabIndex: 2,
+    })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      "tabs-qp",
+      "my_tabs",
+      "string_value",
+      "Tab 0",
+      false,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      widgetId: "tabs-qp",
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+    })
+    const unregisterSpy = vi.spyOn(widgetMgr, "unregisterQueryParamBinding")
+
+    const { unmount } = render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      "tabs-qp"
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, { widgetId: "tabs-qp" })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("does not register query param binding without widget id", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+    })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
 })

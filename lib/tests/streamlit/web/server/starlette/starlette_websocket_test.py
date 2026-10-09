@@ -21,6 +21,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from starlette.websockets import WebSocketDisconnect
 
 from streamlit.errors import StreamlitAuthError
 from streamlit.runtime import runtime_util
@@ -30,6 +31,7 @@ from streamlit.web.server.starlette.starlette_websocket import (
     StarletteSessionClient,
     _gather_user_info,
     _get_signed_cookie_with_chunks,
+    _is_host_allowed,
     _is_origin_allowed,
     _parse_decoded_user_cookie,
     _parse_subprotocols,
@@ -362,8 +364,76 @@ class TestParseUserCookieSigned:
         assert result["is_logged_in"] is True
 
 
+class TestIsHostAllowed:
+    """Tests for _is_host_allowed function."""
+
+    @pytest.mark.parametrize(
+        ("host", "expected"),
+        [
+            ("app.example.com:8501", True),
+            ("APP.EXAMPLE.COM.", True),
+            ("sub.example.org:443", True),
+            ("example.org", False),
+            ("attacker.example.net:8501", False),
+            ("[::1]:8501", True),
+            ("app.example.com:not-a-port", False),
+            ("user:pass@app.example.com:8501", False),
+            ("app.example.com/evil", False),
+            (None, False),
+        ],
+        ids=[
+            "exact_host_with_port",
+            "host_case_and_trailing_dot",
+            "wildcard_subdomain",
+            "wildcard_excludes_base_domain",
+            "disallowed_host",
+            "ipv6_host",
+            "invalid_port",
+            "embedded_credentials",
+            "path_component",
+            "missing_host",
+        ],
+    )
+    @patch_config_options(
+        {
+            "server.allowedHosts": [
+                "app.example.com",
+                "*.example.org",
+                "::1",
+            ]
+        }
+    )
+    def test_host_allowlist(self, host: str | None, expected: bool) -> None:
+        """Test exact, wildcard, and IP Host allow-list entries."""
+        assert _is_host_allowed(host) is expected
+
+    @patch_config_options({"server.allowedHosts": []})
+    def test_empty_host_allowlist_preserves_existing_behavior(self) -> None:
+        """Test that Host validation remains opt-in for compatibility."""
+        assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
+        assert _is_host_allowed(None) is True
+
+    @patch_config_options({"server.allowedHosts": ["*"]})
+    def test_global_host_wildcard_allows_any_valid_host(self) -> None:
+        """Test that the global wildcard accepts any valid Host header."""
+        assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
+        assert _is_host_allowed("dynamic-proxy.example.com:not-a-port") is False
+        assert _is_host_allowed(None) is False
+
+
 class TestIsOriginAllowed:
     """Tests for _is_origin_allowed function (Origin validation for WebSocket)."""
+
+    @patch_config_options({"server.allowedHosts": ["app.example.com"]})
+    def test_rejects_same_origin_connection_with_disallowed_host(self) -> None:
+        """Test that same-origin comparison cannot bypass Host validation."""
+        assert (
+            _is_origin_allowed(
+                "http://rebind.attacker.example:8501",
+                "rebind.attacker.example:8501",
+            )
+            is False
+        )
 
     @pytest.mark.parametrize(
         ("origin", "host", "expected"),
@@ -745,7 +815,9 @@ class TestWebsocketHandlerMessageSize:
 
         mock_websocket.close.assert_called_once_with(code=1009)
         mock_runtime.handle_backmsg.assert_not_called()
-        mock_runtime.disconnect_session.assert_called_once_with("test-session-id")
+        mock_runtime.disconnect_session.assert_called_once_with(
+            "test-session-id", client=mock_client
+        )
 
 
 class TestGetSignedCookieWithChunks:
@@ -833,6 +905,59 @@ class TestStarletteSessionClient:
 
         assert client._closed.is_set()
         assert client._sender_task.cancelled()
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        ("error_type", "expect_exception_log"),
+        [(WebSocketDisconnect, False), (RuntimeError, True)],
+        ids=["disconnect", "generic-error"],
+    )
+    async def test_sender_closes_client_on_send_failure(
+        self, error_type: type[BaseException], expect_exception_log: bool
+    ) -> None:
+        """Send failures close the client without propagating to the caller."""
+        mock_websocket = MagicMock()
+        mock_websocket.send_bytes = AsyncMock(side_effect=error_type())
+        client = StarletteSessionClient(mock_websocket)
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket._LOGGER"
+        ) as mock_logger:
+            await client._send_queue.put(b"payload")
+            await asyncio.wait_for(client._closed.wait(), timeout=1)
+            mock_websocket.send_bytes.assert_awaited_once_with(b"payload")
+            if expect_exception_log:
+                mock_logger.exception.assert_called_once()
+            else:
+                mock_logger.exception.assert_not_called()
+        await client.aclose()
+
+
+class TestWebsocketOriginRejection:
+    """The websocket handler must close disallowed origins before accepting."""
+
+    @patch_config_options({"server.enableCORS": True})
+    def test_rejects_disallowed_origin(self) -> None:
+        """Cross-origin connections are closed with policy-violation code 1008."""
+        mock_websocket = MagicMock()
+        mock_websocket.headers = MagicMock()
+        mock_websocket.headers.get.side_effect = lambda key: {
+            "Origin": "http://evil.com",
+            "Host": "localhost:8501",
+        }.get(key)
+        mock_websocket.close = AsyncMock()
+        mock_runtime = MagicMock()
+
+        handler = create_websocket_handler(mock_runtime)
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket.is_url_from_allowed_origins",
+            return_value=False,
+        ) as mock_allowed_origin:
+            asyncio.run(handler(mock_websocket))
+
+        mock_allowed_origin.assert_called_once_with("http://evil.com")
+        mock_websocket.close.assert_awaited_once_with(code=1008)
+        mock_websocket.accept.assert_not_called()
+        mock_runtime.connect_session.assert_not_called()
 
 
 class TestCreateWebsocketRoutes:

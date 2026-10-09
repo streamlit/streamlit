@@ -36,9 +36,11 @@ st.write("Hello")
 if __name__ == "__main__":
     # Hacky: relies on private internals
     from streamlit.runtime.scriptrunner import get_script_run_ctx
+
     if get_script_run_ctx() is None:
         import sys
         from streamlit.web.cli import main
+
         sys.argv = ["streamlit", "run", __file__]
         main()
 ```

@@ -16,7 +16,7 @@
 
 import {
   act,
-  fireEvent,
+  createEvent,
   screen,
   waitFor,
   within,
@@ -27,7 +27,6 @@ import {
   FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
-  IFileURLs,
   LabelVisibility as LabelVisibilityProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
@@ -36,7 +35,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import FileUploader, { Props } from "./FileUploader"
+import FileUploader, { type Props } from "./FileUploader"
 
 const createFile = (
   filename = "filename.txt",
@@ -56,8 +55,32 @@ const createFile = (
   return file
 }
 
+/**
+ * Dispatch a drag-and-drop of `files` onto a dropzone container. `userEvent.upload`
+ * only targets `<input>` elements, so it cannot simulate drops on arbitrary dropzone
+ * containers or multi-file selection on a non-multiple input — this helper builds the
+ * drop event manually to exercise those paths.
+ */
+const dropFiles = (dropzone: HTMLElement, files: File[]): void => {
+  const dropEvent = createEvent.drop(dropzone)
+  Object.defineProperty(dropEvent, "dataTransfer", {
+    value: {
+      types: ["Files"],
+      files,
+      items: files.map(file => ({
+        kind: "file",
+        type: file.type,
+        getAsFile: () => file,
+      })),
+    },
+  })
+  act(() => {
+    dropzone.dispatchEvent(dropEvent)
+  })
+}
+
 const buildFileUploaderStateProto = (
-  fileUrlsArray: IFileURLs[]
+  fileUrlsArray: FileURLsProto.$Properties[]
 ): FileUploaderStateProto =>
   new FileUploaderStateProto({
     uploadedFileInfo: fileUrlsArray.map(
@@ -88,7 +111,7 @@ const getProps = (
       sendRerunBackMsg: vi.fn(),
       formsDataChanged: vi.fn(),
     }),
-    // @ts-expect-error
+    // @ts-expect-error - upload client fixture does not implement FileUploadClient
     uploadClient: {
       uploadFile: vi.fn().mockImplementation(() => {
         return Promise.resolve()
@@ -130,7 +153,7 @@ describe("FileUploader widget tests", () => {
     const { element, widgetMgr } = props
 
     widgetMgr.setFileUploaderStateValue(
-      element,
+      element.id,
       buildFileUploaderStateProto([
         new FileURLsProto({
           fileId: "filename.txt",
@@ -138,13 +161,28 @@ describe("FileUploader widget tests", () => {
           deleteUrl: "filename.txt",
         }),
       ]),
-      { fromUi: false },
-      undefined
+      { formId: element.formId, fragmentId: undefined, fromUser: false }
     )
 
     render(<FileUploader {...props} />)
     const fileNameNode = screen.getByText("filename.txt")
     expect(fileNameNode).toBeInTheDocument()
+  })
+
+  it("renders the empty dropzone when widget state has no uploaded files", () => {
+    const props = getProps()
+    const { element, widgetMgr } = props
+
+    widgetMgr.setFileUploaderStateValue(
+      element.id,
+      buildFileUploaderStateProto([]),
+      { formId: element.formId, fragmentId: undefined, fromUser: false }
+    )
+
+    render(<FileUploader {...props} />)
+
+    expect(screen.queryByTestId("stFileChip")).not.toBeInTheDocument()
+    expect(screen.getByText("Upload")).toBeVisible()
   })
 
   it("shows a label", () => {
@@ -202,7 +240,7 @@ describe("FileUploader widget tests", () => {
     expect(fileDropZoneInput.files?.[0]).toEqual(fileToUpload)
 
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       buildFileUploaderStateProto([
         {
           fileId: "filename.txt",
@@ -210,10 +248,7 @@ describe("FileUploader widget tests", () => {
           deleteUrl: "filename.txt",
         },
       ]),
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -231,7 +266,7 @@ describe("FileUploader widget tests", () => {
     await user.upload(fileDropZoneInput, fileToUpload)
 
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       buildFileUploaderStateProto([
         {
           fileId: "filename.txt",
@@ -240,9 +275,10 @@ describe("FileUploader widget tests", () => {
         },
       ]),
       {
-        fromUi: true,
-      },
-      "myFragmentId"
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: true,
+      }
     )
   })
 
@@ -268,12 +304,9 @@ describe("FileUploader widget tests", () => {
       }),
     ]
 
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files", "Files", "Files"],
-        files: filesToUpload,
-      },
-    })
+    // Drop multiple files onto a single-file dropzone; user.upload on a
+    // non-multiple input cannot exercise this rejection path.
+    dropFiles(fileDropZone, filesToUpload)
 
     await waitFor(() =>
       expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
@@ -292,7 +325,7 @@ describe("FileUploader widget tests", () => {
     expect(errors[1].textContent).toContain("Only one file is allowed.")
 
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       buildFileUploaderStateProto([
         {
           fileId: "filename1.txt",
@@ -300,10 +333,7 @@ describe("FileUploader widget tests", () => {
           deleteUrl: "filename1.txt",
         },
       ]),
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
   it("replaces file on single file uploader", async () => {
@@ -342,18 +372,19 @@ describe("FileUploader widget tests", () => {
     expect(currentFiles[0].textContent).toContain("filename2.txt")
     expect(fileDropZoneInput.files?.[0]).toEqual(secondFile)
     expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
-    // setFileUploaderStateValue should have been called once on init (fromUi false),
+    // setFileUploaderStateValue should have been called once on init (fromUser false),
     // once when the first file finished uploading, once when the existing file was
     // cleared before the replacement, and once for the replacement upload.
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(4)
   })
 
   it("uploads multiple files, even if some have errors", async () => {
+    const user = userEvent.setup({ applyAccept: false })
     const props = getProps({ multipleFiles: true, type: [".txt"] })
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     const filesToUpload = [
       new File(["Text in a file!"], "filename1.txt", {
@@ -370,17 +401,7 @@ describe("FileUploader widget tests", () => {
       }),
     ]
 
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: filesToUpload,
-        items: filesToUpload.map(file => ({
-          kind: "file",
-          type: file.type,
-          getAsFile: () => file,
-        })),
-      },
-    })
+    await user.upload(fileDropZoneInput, filesToUpload)
 
     await waitFor(() =>
       expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
@@ -393,7 +414,7 @@ describe("FileUploader widget tests", () => {
     expect(errorFileNames.length).toBe(1)
 
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       buildFileUploaderStateProto([
         {
           fileId: "filename1.txt",
@@ -406,14 +427,12 @@ describe("FileUploader widget tests", () => {
           deleteUrl: "filename2.txt",
         },
       ]),
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
   it("uploads directory with multiple files successfully", async () => {
+    const user = userEvent.setup()
     const props = getProps({
       multipleFiles: true,
       acceptDirectory: true,
@@ -422,7 +441,7 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     // Simulate directory upload with files in different folders
     const directoryFiles = [
@@ -432,17 +451,7 @@ describe("FileUploader widget tests", () => {
       createFile("project/config.txt", "project/config.txt"),
     ]
 
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: directoryFiles,
-        items: directoryFiles.map(file => ({
-          kind: "file",
-          type: file.type,
-          getAsFile: () => file,
-        })),
-      },
-    })
+    await user.upload(fileDropZoneInput, directoryFiles)
 
     await waitFor(() =>
       expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(4)
@@ -459,6 +468,7 @@ describe("FileUploader widget tests", () => {
   })
 
   it("filters directory upload files by type restrictions", async () => {
+    const user = userEvent.setup({ applyAccept: false })
     const props = getProps({
       multipleFiles: true,
       acceptDirectory: true,
@@ -467,7 +477,7 @@ describe("FileUploader widget tests", () => {
     vi.spyOn(props.widgetMgr, "setFileUploaderStateValue")
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     // Mix of valid and invalid files for directory upload
     const mixedFiles = [
@@ -477,17 +487,7 @@ describe("FileUploader widget tests", () => {
       createFile("docs/document.pdf", "docs/document.pdf", "application/pdf"),
     ]
 
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: mixedFiles,
-        items: mixedFiles.map(file => ({
-          kind: "file",
-          type: file.type,
-          getAsFile: () => file,
-        })),
-      },
-    })
+    await user.upload(fileDropZoneInput, mixedFiles)
 
     await waitFor(() =>
       expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(2)
@@ -574,14 +574,9 @@ describe("FileUploader widget tests", () => {
 
     const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
 
-    // Simulate empty directory
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: [],
-        items: [],
-      },
-    })
+    // Simulate empty directory. userEvent.upload no-ops on an empty selection,
+    // so dispatch the drop directly to actually exercise the empty-drop path.
+    dropFiles(fileDropZone, [])
 
     await waitFor(() => {
       // No upload calls should be made
@@ -632,7 +627,7 @@ describe("FileUploader widget tests", () => {
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(3)
 
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       buildFileUploaderStateProto([
         {
           fileId: "filename1.txt",
@@ -645,10 +640,7 @@ describe("FileUploader widget tests", () => {
           deleteUrl: "filename2.txt",
         },
       ]),
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     const firstDeleteBtn = screen.getAllByTestId("stFileChipDeleteBtn")[0]
@@ -665,7 +657,7 @@ describe("FileUploader widget tests", () => {
     // has been updated.
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(4)
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       buildFileUploaderStateProto([
         {
           fileId: "filename2.txt",
@@ -673,10 +665,7 @@ describe("FileUploader widget tests", () => {
           deleteUrl: "filename2.txt",
         },
       ]),
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 
@@ -687,7 +676,7 @@ describe("FileUploader widget tests", () => {
 
     // Seed an existing uploaded file before rendering (simulates server state)
     props.widgetMgr.setFileUploaderStateValue(
-      props.element,
+      props.element.id,
       buildFileUploaderStateProto([
         new FileURLsProto({
           fileId: "file1.txt",
@@ -695,8 +684,7 @@ describe("FileUploader widget tests", () => {
           deleteUrl: "file1.txt",
         }),
       ]),
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
 
     render(<FileUploader {...props} />)
@@ -759,21 +747,18 @@ describe("FileUploader widget tests", () => {
     // WidgetStateManager will still have been called once, during component mounting
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledTimes(1)
     expect(props.widgetMgr.setFileUploaderStateValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       buildFileUploaderStateProto([]),
-      {
-        fromUi: false,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
   it("can delete file with ErrorStatus", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ applyAccept: false })
     const props = getProps({ multipleFiles: false, type: [".txt"] })
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     const filesToUpload = [
       new File(["Another PDF file"], "anotherpdffile.pdf", {
@@ -783,17 +768,7 @@ describe("FileUploader widget tests", () => {
     ]
 
     // Drop a file with an error (wrong extension)
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: filesToUpload,
-        items: filesToUpload.map(file => ({
-          kind: "file",
-          type: file.type,
-          getAsFile: () => file,
-        })),
-      },
-    })
+    await user.upload(fileDropZoneInput, filesToUpload)
 
     await waitFor(() =>
       expect(screen.getAllByTestId("stFileChip").length).toBe(1)
@@ -832,10 +807,11 @@ describe("FileUploader widget tests", () => {
   })
 
   it("shows an ErrorStatus when File extension is not allowed", async () => {
+    const user = userEvent.setup({ applyAccept: false })
     const props = getProps({ multipleFiles: false, type: [".png"] })
     render(<FileUploader {...props} />)
 
-    const fileDropZone = screen.getByTestId("stFileUploaderDropzone")
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
 
     const filesToUpload = [
       new File(["TXT file"], "txtfile.txt", {
@@ -845,17 +821,7 @@ describe("FileUploader widget tests", () => {
     ]
 
     // Drop a file with an error (wrong extension)
-    fireEvent.drop(fileDropZone, {
-      dataTransfer: {
-        types: ["Files"],
-        files: filesToUpload,
-        items: filesToUpload.map(file => ({
-          kind: "file",
-          type: file.type,
-          getAsFile: () => file,
-        })),
-      },
-    })
+    await user.upload(fileDropZoneInput, filesToUpload)
 
     await waitFor(() =>
       expect(screen.getAllByTestId("stFileChip").length).toBe(1)
@@ -965,5 +931,327 @@ describe("FileUploader widget tests", () => {
     await waitFor(() => {
       expect(screen.queryAllByTestId("stFileChip")).toHaveLength(0)
     })
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  function createWidgetMgrWithRerunSpy(): {
+    widgetMgr: WidgetStateManager
+    sendRerunBackMsg: ReturnType<typeof vi.fn>
+  } {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    return { widgetMgr, sendRerunBackMsg }
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setFileUploaderStateValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setFileUploaderStateValue"
+    )
+
+    render(<FileUploader {...props} />)
+    setFileUploaderStateValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile())
+
+    await waitFor(() => {
+      expect(setFileUploaderStateValueSpy).toHaveBeenCalled()
+    })
+    expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        },
+      ]),
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(screen.getByTestId("stFileChip").textContent).toContain(
+      "filename.txt"
+    )
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
+    const props = getProps({ ignoreRerun: false }, { widgetMgr })
+    const setFileUploaderStateValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setFileUploaderStateValue"
+    )
+
+    render(<FileUploader {...props} />)
+    setFileUploaderStateValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile())
+
+    await waitFor(() => {
+      expect(setFileUploaderStateValueSpy).toHaveBeenCalled()
+    })
+    expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        },
+      ]),
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when an uploaded file is deleted", async () => {
+    const user = userEvent.setup()
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
+    const props = getProps(
+      { ignoreRerun: true, multipleFiles: true },
+      { widgetMgr }
+    )
+    const setFileUploaderStateValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setFileUploaderStateValue"
+    )
+
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile("filename1.txt"))
+    await user.upload(fileDropZoneInput, createFile("filename2.txt"))
+    await waitFor(() => {
+      expect(screen.getAllByTestId("stFileChip")).toHaveLength(2)
+    })
+
+    setFileUploaderStateValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const firstDeleteBtn = screen.getAllByTestId("stFileChipDeleteBtn")[0]
+    await user.click(within(firstDeleteBtn).getByRole("button"))
+
+    await waitFor(() => {
+      expect(setFileUploaderStateValueSpy).toHaveBeenCalled()
+    })
+    expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename2.txt",
+          uploadUrl: "filename2.txt",
+          deleteUrl: "filename2.txt",
+        },
+      ]),
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a single file is replaced", async () => {
+    const user = userEvent.setup()
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setFileUploaderStateValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setFileUploaderStateValue"
+    )
+
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile("file1.txt"))
+    await waitFor(() => {
+      expect(screen.getByTestId("stFileChip").textContent).toContain(
+        "file1.txt"
+      )
+    })
+
+    setFileUploaderStateValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.upload(fileDropZoneInput, createFile("file2.txt"))
+    await waitFor(() => {
+      expect(screen.getByTestId("stFileChip").textContent).toContain(
+        "file2.txt"
+      )
+    })
+
+    expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      buildFileUploaderStateProto([
+        {
+          fileId: "file2.txt",
+          uploadUrl: "file2.txt",
+          deleteUrl: "file2.txt",
+        },
+      ]),
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    expect(screen.getAllByTestId("stFileChip")).toHaveLength(1)
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when another file is added", async () => {
+    const user = userEvent.setup()
+    const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
+    const props = getProps(
+      { ignoreRerun: true, multipleFiles: true },
+      { widgetMgr }
+    )
+    const setFileUploaderStateValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setFileUploaderStateValue"
+    )
+
+    render(<FileUploader {...props} />)
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile("file1.txt"))
+    await waitFor(() => {
+      expect(screen.getByTestId("stFileChip").textContent).toContain(
+        "file1.txt"
+      )
+    })
+
+    setFileUploaderStateValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.upload(fileDropZoneInput, createFile("file2.txt"))
+    await waitFor(() => {
+      expect(screen.getAllByTestId("stFileChip")).toHaveLength(2)
+    })
+
+    expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      buildFileUploaderStateProto([
+        {
+          fileId: "file1.txt",
+          uploadUrl: "file1.txt",
+          deleteUrl: "file1.txt",
+        },
+        {
+          fileId: "file2.txt",
+          uploadUrl: "file2.txt",
+          deleteUrl: "file2.txt",
+        },
+      ]),
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+      },
+      { widgetMgr }
+    )
+    const setFileUploaderStateValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setFileUploaderStateValue"
+    )
+
+    render(<FileUploader {...props} />)
+    setFileUploaderStateValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const fileDropZoneInput = screen.getByTestId("stFileUploaderDropzoneInput")
+    await user.upload(fileDropZoneInput, createFile())
+
+    await waitFor(() => {
+      expect(setFileUploaderStateValueSpy).toHaveBeenCalled()
+    })
+    expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      buildFileUploaderStateProto([
+        {
+          fileId: "filename.txt",
+          uploadUrl: "filename.txt",
+          deleteUrl: "filename.txt",
+        },
+      ]),
+      {
+        formId: "testForm",
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
   })
 })

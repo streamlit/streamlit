@@ -133,6 +133,7 @@ def test_single_row_select(app: Page):
 
 
 def test_single_row_select_with_sorted_column(app: Page):
+    """Test that sorting preserves the row selection in single-row mode (#8851)."""
     canvas = _get_single_row_select_df(app)
     expect_canvas_to_be_visible(canvas)
 
@@ -144,25 +145,28 @@ def test_single_row_select_with_sorted_column(app: Page):
     selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
     expect(selection_text).to_have_count(1)
 
-    # Sort the first column
-    # this is expected to clear the previous row selection:
+    # Sort the first column ascending. The row selection should be preserved
+    # and keep pointing at the same underlying data row (original index 0),
+    # even though its display position changed.
     sort_column(canvas, 1, has_row_marker_col=True)
     wait_for_app_run(app)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row selection:",
+        "{'selection': {'rows': [0], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
 
-    # The dataframe selection should be cleared
-    expected = "Dataframe single-row selection: {'selection': {'rows': [], 'columns': [], 'cells': []}}"
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-    expect(selection_text).to_have_count(1)
-
-    # select first row again:
+    # Selecting the first *display* row now selects a different original row,
+    # since the column is sorted (original row 4 sorts to the top for this data).
     select_row(canvas, 1)
     wait_for_app_run(app)
-
-    # The first row got selected, but the real numerical row index
-    # should be different since the first column is sorted
-    expected = "Dataframe single-row selection: {'selection': {'rows': [4], 'columns': [], 'cells': []}}"
-    selection_text = app.get_by_test_id("stMarkdownContainer").filter(has_text=expected)
-    expect(selection_text).to_have_count(1)
+    expect_prefixed_markdown(
+        app,
+        "Dataframe single-row selection:",
+        "{'selection': {'rows': [4], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
 
 
 def test_single_row_required_selection(
@@ -412,33 +416,44 @@ def test_multi_row_and_multi_column_select(app: Page):
     _expect_multi_row_multi_column_selection(app)
 
 
-def test_single_row_select_and_sort(app: Page):
-    canvas = _get_single_row_select_df(app)
+def test_multi_row_select_and_sort(app: Page):
+    """Test that sorting preserves multiple row selections in multi-row mode (#8851)."""
+    canvas = _get_multi_row_select_df(app)
     expect_canvas_to_be_visible(canvas)
+    canvas.scroll_into_view_if_needed()
 
-    # Select a single row
+    # Select two rows (original indices 0 and 2)
     select_row(canvas, 1)
+    select_row(canvas, 3)
     wait_for_app_run(app)
-
-    # The row selection should be returned
     expect_prefixed_markdown(
         app,
-        "Dataframe single-row selection:",
-        "{'selection': {'rows': [0], 'columns': [], 'cells': []}}",
+        "Dataframe multi-row selection:",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
 
-    # Sort the dataframe via the column header
+    # Capture the run counter before sorting to verify that sorting is
+    # frontend-only and does not trigger an extra rerun (the reported selection
+    # value is unchanged, so no on_select / rerun should fire).
+    runs_element = app.get_by_test_id("stMarkdownContainer").filter(has_text="Runs:")
+    runs_before_sort = runs_element.inner_text()
+
+    # Sort the first column ascending. Both selections should be preserved and
+    # keep pointing at the same underlying data rows. Sorting is frontend-only:
+    # the reported original row indices stay [0, 2] (stable ascending order,
+    # independent of the display order) and no extra rerun is triggered, since
+    # the underlying selected data rows are unchanged.
     sort_column(canvas, 1, has_row_marker_col=True)
     wait_for_app_run(app)
-
-    # The row selection should be cleared
     expect_prefixed_markdown(
         app,
-        "Dataframe single-row selection:",
-        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        "Dataframe multi-row selection:",
+        "{'selection': {'rows': [0, 2], 'columns': [], 'cells': []}}",
         exact_match=True,
     )
+    # The sort must NOT trigger an additional rerun (frontend-only operation).
+    expect(runs_element).to_have_text(runs_before_sort)
 
 
 # Issue #11345: Test for behavior consistency with sorting via column menu
@@ -467,11 +482,11 @@ def test_single_row_and_single_column_select_and_sort(app: Page):
     app.get_by_test_id("stDataFrameColumnMenu").get_by_text("Sort ascending").click()
     wait_for_app_run(app)
 
-    # The row selection should be cleared, but the column selection should remain
+    # Both the row and column selections should be preserved after sorting (#8851).
     expect_prefixed_markdown(
         app,
         "Dataframe single-row-single-column selection:",
-        "{'selection': {'rows': [], 'columns': ['col_1'], 'cells': []}}",
+        "{'selection': {'rows': [0], 'columns': ['col_1'], 'cells': []}}",
         exact_match=True,
     )
 
@@ -952,6 +967,18 @@ def _get_programmatic_row_selection_df(app: Page) -> Locator:
     )
 
 
+def _wait_for_programmatic_selection_applied(app: Page) -> None:
+    """Wait for glide-data-grid to apply a programmatic selection internally.
+
+    The selection debounce is 150ms and the React effect that applies the
+    programmatic selection runs after DOM commit. ``expect``/``wait_until``
+    cannot observe this because glide-data-grid renders to a <canvas>, so
+    selected-row state is not exposed as a DOM attribute, CSS class, or ARIA
+    property.
+    """
+    app.wait_for_timeout(250)
+
+
 def test_programmatic_row_selection_via_session_state(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -1005,14 +1032,7 @@ def test_programmatic_row_selection_via_session_state(
     # Row position 2 in the grid corresponds to row index 1 (since hide_index=True
     # and position 1 is the header). Clicking it should toggle (add) row 1.
     canvas.scroll_into_view_if_needed()
-    # Wait for glide-data-grid to apply the programmatic selection internally.
-    # The selection debounce is 150ms and the React effect that applies the
-    # programmatic selection runs after DOM commit. We cannot use expect/wait_until
-    # here because glide-data-grid renders to a <canvas> — selected-row state is
-    # not exposed as a DOM attribute, CSS class, or ARIA property that Playwright
-    # could observe. Without this wait the subsequent click may land before the
-    # grid has updated its internal selection, producing wrong results.
-    app.wait_for_timeout(250)
+    _wait_for_programmatic_selection_applied(app)
     select_row(canvas, 2)
     wait_for_app_run(app)
 
@@ -1027,7 +1047,17 @@ def test_programmatic_row_selection_via_session_state(
 
 
 def test_programmatic_clear_row_selection_via_session_state(app: Page):
-    """Test that selections can be cleared programmatically via session state."""
+    """Test that selections can be cleared programmatically via session state.
+
+    Clearing twice with the same empty JSON (after a user re-selects a row)
+    must also clear the grid UI, not only the Python return value.
+    """
+    canvas = _get_programmatic_row_selection_df(app)
+    expect_canvas_to_be_visible(canvas)
+
+    dataframe_toolbar = canvas.get_by_test_id("stElementToolbar")
+    toolbar_buttons = dataframe_toolbar.get_by_test_id("stElementToolbarButton")
+
     # Scroll to the test section and verify initial pre-set selection
     expect_prefixed_markdown(
         app,
@@ -1053,6 +1083,30 @@ def test_programmatic_clear_row_selection_via_session_state(app: Page):
         has_text="Programmatic row selection:"
     )
     expect(programmatic_md).not_to_contain_text("[1, 3]")
+    expect(toolbar_buttons.get_by_label("Clear selection")).to_have_count(0)
+
+    canvas.scroll_into_view_if_needed()
+    _wait_for_programmatic_selection_applied(app)
+    select_row(canvas, 2)
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(
+        app,
+        "Programmatic row selection:",
+        "{'selection': {'rows': [1], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+    expect(toolbar_buttons.get_by_label("Clear selection")).to_have_count(1)
+
+    click_button(app, "Clear dataframe selection")
+
+    expect_prefixed_markdown(
+        app,
+        "Programmatic row selection:",
+        "{'selection': {'rows': [], 'columns': [], 'cells': []}}",
+        exact_match=True,
+    )
+    expect(toolbar_buttons.get_by_label("Clear selection")).to_have_count(0)
 
 
 def test_programmatic_column_and_cell_selection(

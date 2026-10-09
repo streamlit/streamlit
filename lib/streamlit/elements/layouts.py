@@ -16,10 +16,13 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from numbers import Integral
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
+    EXPANDABLE_TYPE_TO_PROTO_MAPPING,
+    ExpandableType,
     Gap,
     Height,
     HorizontalAlignment,
@@ -35,19 +38,26 @@ from streamlit.elements.lib.layout_utils import (
     validate_horizontal_alignment,
     validate_vertical_alignment,
     validate_width,
+    validate_wrap,
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import (
-    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidColumnSpecError,
-    StreamlitInvalidVerticalAlignmentError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import (
+    BindOption,
+    get_session_state,
+    register_widget,
+    validate_on_change_mode,
+)
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -57,7 +67,11 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
     from streamlit.elements.lib.mutable_tab_container import TabContainer
-    from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
+    from streamlit.runtime.state import (
+        WidgetArgs,
+        WidgetCallback,
+        WidgetKwargs,
+    )
 
 SpecType: TypeAlias = int | Sequence[int | float]
 
@@ -109,6 +123,7 @@ class LayoutsMixin:
         width: Width = "stretch",
         height: Height = "content",
         horizontal: bool = False,
+        wrap: bool = True,
         horizontal_alignment: HorizontalAlignment = "left",
         vertical_alignment: VerticalAlignment = "top",
         gap: Gap | None = "small",
@@ -175,8 +190,24 @@ class LayoutsMixin:
             Whether to use horizontal flexbox layout. If this is ``False``
             (default), the container's elements are laid out vertically. If
             this is ``True``, the container's elements are laid out
-            horizontally and will overflow to the next line if they don't fit
-            within the container's width.
+            horizontally and, by default, wrap onto additional rows if they
+            don't fit within the container's width. Use ``wrap`` to instead
+            keep the elements in a single, horizontally scrolling row.
+
+        wrap : bool
+            Whether the elements in a horizontal container can wrap onto
+            additional rows. This only applies when ``horizontal`` is ``True``.
+            This can be one of the following:
+
+            - ``True`` (default): The elements wrap onto additional rows when
+              they don't fit within the container's width.
+            - ``False``: The elements stay in a single row. If they don't fit
+              within the container's width, the container scrolls horizontally
+              instead of wrapping.
+
+            Setting ``wrap=False`` with ``horizontal=False`` raises an
+            exception, since there is no horizontal row of elements to keep in a
+            single, scrolling row.
 
         horizontal_alignment : "left", "center", "right", or "distribute"
             The horizontal alignment of the elements inside the container. This
@@ -339,19 +370,46 @@ class LayoutsMixin:
             https://doc-container5.streamlit.app/
             height: 250px
 
+        **Example 6: No-wrap horizontal container (toolbar)**
+
+        Use ``wrap=False`` to keep a horizontal container's elements in a single
+        row. When the elements don't fit, the container scrolls horizontally
+        instead of wrapping onto additional rows.
+
+        >>> import streamlit as st
+        >>>
+        >>> with st.container(horizontal=True, wrap=False):
+        ...     for label in ("Edit", "Duplicate", "Archive", "Delete"):
+        ...         st.button(label)
+
+        .. output::
+            https://doc-container6.streamlit.app/
+            height: 200px
+
         """
         key = to_key(key)
         block_proto = BlockProto()
         block_proto.allow_empty = False
         block_proto.flex_container.border = border or False
-        block_proto.flex_container.gap_config.CopyFrom(
-            get_gap_config(gap, "st.container")
-        )
+        block_proto.flex_container.gap_config.CopyFrom(get_gap_config(gap))
 
         validate_horizontal_alignment(horizontal_alignment)
         validate_vertical_alignment(vertical_alignment)
+        if wrap is False and not horizontal:
+            raise StreamlitIncompatibleParametersError(
+                "wrap=False",
+                "horizontal=False",
+                explanation=(
+                    "A vertical container has no horizontal row of elements to "
+                    "keep in a single, scrolling row. Set `horizontal=True` to "
+                    "use `wrap=False`, or remove the `wrap` argument."
+                ),
+            )
         if horizontal:
-            block_proto.flex_container.wrap = True
+            # `wrap=True` (default) keeps the default horizontal behavior of
+            # wrapping onto additional rows. `wrap=False` keeps the elements in
+            # a single, horizontally scrollable row.
+            block_proto.flex_container.wrap = wrap
             block_proto.flex_container.direction = (
                 BlockProto.FlexContainer.Direction.HORIZONTAL
             )
@@ -405,6 +463,7 @@ class LayoutsMixin:
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         width: WidthWithoutContent = "stretch",
+        wrap: bool = True,
     ) -> list[DeltaGenerator]:
         """Insert containers laid out as side-by-side columns.
 
@@ -468,6 +527,14 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the column group matches the
               width of the parent container.
+
+        wrap : bool
+            Whether columns may stack vertically on narrow viewports. If this
+            is ``True`` (default), columns stack when the viewport is at most
+            ``640px`` wide. If this is ``False``, stacking is disabled and
+            columns stay in a single row. Columns shrink until a usable
+            minimum width, then the column group scrolls horizontally instead
+            of overflowing the page.
 
         Returns
         -------
@@ -573,16 +640,56 @@ class LayoutsMixin:
             https://doc-columns-borders.streamlit.app/
             height: 250px
 
+        **Example 6: Disable wrapping for a thumbnail row**
+
+        Use ``wrap=False`` to keep columns in one row and scroll horizontally
+        when they do not fit.
+
+        >>> import streamlit as st
+        >>>
+        >>> images = [
+        ...     "https://static.streamlit.io/examples/cat.jpg",
+        ...     "https://static.streamlit.io/examples/dog.jpg",
+        ...     "https://static.streamlit.io/examples/owl.jpg",
+        ...     "https://static.streamlit.io/examples/cat.jpg",
+        ...     "https://static.streamlit.io/examples/dog.jpg",
+        ...     "https://static.streamlit.io/examples/owl.jpg",
+        ... ]
+        >>> thumbnail_columns = st.columns(6, gap="xsmall", wrap=False)
+        >>> for column, image in zip(thumbnail_columns, images):
+        ...     column.image(image)
+
+        .. output::
+            https://doc-columns-wrap-false.streamlit.app/
+            height: 250px
+
         """
-        weights = spec
-        if isinstance(weights, int):
+        # Check `int` before `Integral` so ty can narrow `SpecType` (`int` is not
+        # treated as `numbers.Integral`). numpy integers (e.g. np.int64) are
+        # Integral but not int.
+        if isinstance(spec, int):
             # If the user provided a single number, expand into equal weights.
             # E.g. (1,) * 3 => (1, 1, 1)
             # NOTE: A negative/zero spec will expand into an empty tuple.
-            weights = (1,) * weights
+            weights: Sequence[int | float] = (1,) * spec
+        elif isinstance(spec, Integral):
+            weights = (1,) * int(spec)
+        else:
+            weights = spec
 
-        if len(weights) == 0 or any(weight <= 0 for weight in weights):
+        try:
+            invalid_spec = len(weights) == 0 or any(weight <= 0 for weight in weights)
+        except TypeError as ex:
+            raise StreamlitInvalidParameterTypeError(
+                "spec",
+                type(spec).__name__,
+                ["int", "sequence of numbers"],
+            ) from ex
+
+        if invalid_spec:
             raise StreamlitInvalidColumnSpecError()
+
+        validate_wrap(wrap)
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType
@@ -593,12 +700,13 @@ class LayoutsMixin:
         }
 
         if vertical_alignment not in vertical_alignment_mapping:
-            raise StreamlitInvalidVerticalAlignmentError(
-                vertical_alignment=vertical_alignment,
-                element_type="st.columns",
+            raise StreamlitValueError(
+                "vertical_alignment",
+                [f"'{alignment}'" for alignment in vertical_alignment_mapping],
+                detail=f"Got {vertical_alignment!r}.",
             )
 
-        gap_config = get_gap_config(gap, "st.columns")
+        gap_config = get_gap_config(gap)
 
         def column_proto(normalized_weight: float) -> BlockProto:
             col_proto = BlockProto()
@@ -615,7 +723,7 @@ class LayoutsMixin:
         block_proto.flex_container.direction = (
             BlockProto.FlexContainer.Direction.HORIZONTAL
         )
-        block_proto.flex_container.wrap = True
+        block_proto.flex_container.wrap = wrap
         block_proto.flex_container.gap_config.CopyFrom(gap_config)
         block_proto.flex_container.scale = 1
         block_proto.flex_container.align = BlockProto.FlexContainer.Align.STRETCH
@@ -639,6 +747,7 @@ class LayoutsMixin:
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        bind: BindOption = None,
     ) -> Sequence[TabContainer]:
         r"""Insert containers separated into tabs.
 
@@ -652,10 +761,11 @@ class LayoutsMixin:
 
         By default, all tab content is computed and sent to the frontend
         regardless of which tab is selected. To enable lazy execution where
-        only the selected tab's content runs, use ``on_change="rerun"`` or
-        pass a callable to ``on_change``. Each tab's ``.open`` property
-        indicates whether it is the currently selected tab, letting you
-        conditionally render expensive content.
+        only the selected tab's content runs, use ``on_change="rerun"``,
+        pass a callable to ``on_change``, or set ``bind="query-params"``
+        (with ``key``). Each tab's ``.open`` property indicates whether it
+        is the currently selected tab when state tracking is enabled, letting
+        you conditionally render expensive content.
 
         Parameters
         ----------
@@ -721,9 +831,10 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
-            key lets you read or update the active tab label via
-            ``st.session_state[key]``. For more details, see `Widget behavior
+            When ``on_change`` is set to ``"rerun"`` or a callable, or when
+            ``bind="query-params"`` is set, setting a key lets you read or
+            update the active tab label via ``st.session_state[key]``. For
+            more details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a
@@ -734,9 +845,10 @@ class LayoutsMixin:
             controls whether tabs track state and trigger reruns. ``on_change``
             can be one of the following values:
 
-            - ``"ignore"`` (default): The tabs don't track state. All tab content
-              runs regardless of which tab is selected. The ``.open`` attribute
-              of each tab container returns ``None`` for all tabs.
+            - ``"ignore"`` (default): The tabs don't track state, unless
+              ``bind="query-params"`` is set. Without state tracking, the
+              ``.open`` attribute of each tab container returns ``None`` and
+              all tab content runs regardless of which tab is selected.
 
             - ``"rerun"``: The tabs track state. Streamlit reruns the app when
               the user switches tabs. The ``.open`` attribute of each tab
@@ -760,6 +872,31 @@ class LayoutsMixin:
 
         kwargs : dict or None
             An optional dict of kwargs to pass to the ``on_change`` callback.
+
+        bind : "query-params" or None
+            Binding mode for syncing the active tab with a URL query parameter.
+            If this is ``None`` (default), the active tab is not synced to the
+            URL. When this is set to ``"query-params"``, switching tabs updates
+            the URL, and the active tab can be initialized or updated through a
+            query parameter in the URL. This requires ``key`` to be set. The key
+            is used as the query parameter name, and the value is the active
+            tab's label. The value is the label string verbatim, so Markdown
+            formatting in labels produces URLs with raw Markdown syntax and
+            renaming a tab invalidates existing links.
+
+            Invalid query parameter values are ignored and removed from the
+            URL.
+
+            When ``bind="query-params"`` is set, the tabs track state even if
+            ``on_change`` is ``"ignore"`` (the default). Switching tabs still
+            reruns the app, like ``on_change="rerun"``, so ``.open`` and Session
+            State stay in sync. When the active tab equals the default tab, the
+            query parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through ``st.query_params``;
+            it can only be programmatically changed through ``st.session_state``.
+
+            Tab labels must be non-empty and unique when ``bind="query-params"``
+            is set, so each label maps unambiguously to a query-parameter value.
 
         Returns
         -------
@@ -849,8 +986,8 @@ class LayoutsMixin:
         **Example 4: Programmatically control the tab state**
 
         You can use a key to programmatically control the tab state or access
-        the state in callbacks. You must set the ``on_change`` parameter for
-        the tabs to track state.
+        the state in callbacks. Set ``on_change`` to ``"rerun"`` or a callable,
+        or set ``bind="query-params"``, for the tabs to track state.
 
         .. code-block:: python
             :filename: streamlit_app.py
@@ -891,40 +1028,65 @@ class LayoutsMixin:
 
         """
         if not tabs:
-            raise StreamlitAPIException(
-                "The input argument to st.tabs must contain at least one tab label."
+            raise StreamlitMissingRequiredParameterError(
+                "tabs", detail="Provide at least one tab label."
             )
 
         if default and default not in tabs:
-            raise StreamlitAPIException(
-                f"The default tab '{default}' is not in the list of tabs."
-            )
-
-        if any(not isinstance(tab, str) for tab in tabs):
-            raise StreamlitAPIException(
-                "The tabs input list to st.tabs is only allowed to contain strings."
-            )
-
-        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
             raise StreamlitValueError(
-                "on_change",
-                ["'rerun'", "'ignore'", "a callback function"],
+                "default",
+                ["a tab label from `tabs`"],
+                detail=f"`{default}` is not in the list of tabs.",
             )
+
+        for tab in tabs:
+            if not isinstance(tab, str):
+                raise StreamlitInvalidParameterTypeError(
+                    "tabs",
+                    type(tab).__name__,
+                    ["a string for each tab label"],
+                )
+
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+        )
+
+        # register_widget validates bind too, but an invalid value leaves the
+        # tabs non-stateful, so that check is never reached. Validate up front.
+        if bind is not None and bind != "query-params":
+            raise StreamlitValueError("bind", ["'query-params'", "None"])
+
+        if bind == "query-params":
+            if any(not label for label in tabs):
+                raise StreamlitValueError(
+                    "tabs",
+                    ["non-empty labels"],
+                    detail="Tab labels must be non-empty when bind='query-params'.",
+                )
+            if len(set(tabs)) != len(tabs):
+                raise StreamlitValueError(
+                    "tabs",
+                    ["unique labels"],
+                    detail="Tab labels must be unique when bind='query-params'.",
+                )
 
         key = to_key(key)
         default_index = tabs.index(default) if default else 0
-        is_stateful = on_change != "ignore"
+        default_label = tabs[default_index]
+        is_stateful = on_change != "ignore" or bind == "query-params"
 
         element_id: str | None = None
         block_id: str | None = None
-        current_tab_label = tabs[default_index]
+        current_tab_label = default_label
 
         if is_stateful:
-            is_callback = callable(on_change)
+            is_callback = on_change_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change) if is_callback else None,
+                on_change=on_change_callback,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -944,7 +1106,7 @@ class LayoutsMixin:
             )
             block_id = element_id
 
-            serde = _TabsSerde(default_label=tabs[default_index])
+            serde = _TabsSerde(default_label=default_label)
 
             tabs_state = register_widget(
                 element_id,
@@ -952,14 +1114,25 @@ class LayoutsMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="string_value",
-                on_change_handler=on_change if callable(on_change) else None,
-                args=args if callable(on_change) else None,
-                kwargs=kwargs if callable(on_change) else None,
+                on_change_handler=on_change_callback,
+                args=args if is_callback else None,
+                kwargs=kwargs if is_callback else None,
+                bind=bind,
+                clearable=False,
+                formatted_options=list(tabs),
             )
 
             current_tab_label = tabs_state.value
             if current_tab_label not in tabs:
-                current_tab_label = tabs[default_index]
+                current_tab_label = default_label
+                if key is not None:
+                    # Keep session state and .open aligned (matches st.selectbox)
+                    # when the stored label is no longer valid. For bound tabs,
+                    # also drop a stale URL param that may still reference it.
+                    get_session_state().reset_state_value(str(key), default_label)
+                    if bind == "query-params":
+                        with get_session_state().query_params() as qp:
+                            qp.remove_param(str(key))
         elif key is not None:
             block_id = compute_and_register_element_id(
                 "tabs",
@@ -997,6 +1170,12 @@ class LayoutsMixin:
         if is_stateful and element_id is not None:
             block_proto.tab_container.id = element_id
 
+        # Send the original default label because default_tab_index tracks the
+        # current selection.
+        if bind == "query-params" and key is not None:
+            block_proto.tab_container.query_param_key = str(key)
+            block_proto.tab_container.default_tab_label = default_label
+
         if block_id is not None:
             block_proto.id = block_id
 
@@ -1023,11 +1202,12 @@ class LayoutsMixin:
         *,
         key: Key | None = None,
         icon: str | None = None,
-        type: Literal["default", "compact"] = "default",
+        type: ExpandableType = "default",
         width: WidthWithoutContent = "stretch",
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        bind: BindOption = None,
     ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -1042,9 +1222,10 @@ class LayoutsMixin:
         By default, all content within the expander is computed and sent to the
         frontend, even if the expander is closed. To enable lazy execution
         where content only runs when the expander is open, use
-        ``on_change="rerun"`` or pass a callable to ``on_change``. The ``.open``
-        property indicates whether the expander is currently open, letting you
-        conditionally render expensive content.
+        ``on_change="rerun"``, pass a callable to ``on_change``, or set
+        ``bind="query-params"`` (with ``key``). The ``.open`` property
+        indicates whether the expander is currently open when state tracking is
+        enabled, letting you conditionally render expensive content.
 
         .. note::
 
@@ -1080,9 +1261,10 @@ class LayoutsMixin:
             generated for the widget based on the values of the other
             parameters. No two widgets may have the same key.
 
-            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
-            key lets you read or update the expanded state via
-            ``st.session_state[key]``. For more details, see `Widget behavior
+            When ``on_change`` is set to ``"rerun"`` or a callable, or when
+            ``bind="query-params"`` is set, setting a key lets you read or update
+            the expanded state via ``st.session_state[key]``. For more details,
+            see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             Additionally, if ``key`` is provided, it will be used as a
@@ -1090,8 +1272,9 @@ class LayoutsMixin:
 
         icon : str, None
             An optional emoji or icon to display next to the expander label. If ``icon``
-            is ``None`` (default), no icon is displayed. If ``icon`` is a
-            string, the following options are valid:
+            is ``None`` (default), no icon is displayed, except with
+            ``type="step"``, which falls back to a faded circle placeholder. If
+            ``icon`` is a string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
               or ``icon="🔥"``. Emoji short codes are not supported.
@@ -1107,12 +1290,21 @@ class LayoutsMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
-        type : "default" or "compact"
-            The visual style of the expander. If ``"default"`` (default), the
-            expander is displayed with a border and background. If ``"compact"``,
-            the expander is rendered as a minimal inline toggle, ideal for
-            displaying AI reasoning, thoughts, or collapsible metadata without
-            visual clutter.
+        type : "default", "compact", or "step"
+            The visual style of the expander. This can be one of the following:
+
+            - ``"default"`` (default): The expander is displayed with a border
+              and background.
+            - ``"compact"``: The expander is rendered as a minimal inline
+              toggle, ideal for displaying AI reasoning, thoughts, or
+              collapsible metadata without visual clutter.
+            - ``"step"``: The expander is rendered as a timeline step with an
+              icon column and a vertical connector line. Consecutive step
+              containers form a connected timeline, which is useful for
+              chain-of-thought output, multi-stage pipelines, and activity
+              feeds. A step without content ends the timeline. Any other
+              element between two steps starts a new timeline segment, even an
+              invisible one like ``st.empty()``.
 
         width : "stretch" or int
             The width of the expander container. This can be one of the following:
@@ -1129,10 +1321,11 @@ class LayoutsMixin:
             collapses it. This controls whether the expander tracks state
             and triggers reruns. ``on_change`` can be one of the following:
 
-            - ``"ignore"`` (default): The expander doesn't track state. All
-              expander content runs regardless of whether the expander is open
-              or closed. The ``.open`` attribute of the expander container
-              returns ``None``.
+            - ``"ignore"`` (default): Unless ``bind="query-params"`` is set,
+              the expander doesn't track state. All expander content runs
+              regardless of whether the expander is open or closed. The
+              ``.open`` attribute of the expander container returns ``None``
+              when state tracking is disabled.
 
             - ``"rerun"``: The expander tracks state. Streamlit reruns the app
               when the user expands or collapses the expander. The ``.open``
@@ -1158,6 +1351,24 @@ class LayoutsMixin:
         kwargs : dict or None
             An optional dict of kwargs to pass to the ``on_change``
             callback.
+
+        bind : "query-params" or None
+            Binding mode for syncing the expander's expanded state with a URL
+            query parameter. If this is ``None`` (default), the expanded state
+            is not synced to the URL. When this is set to ``"query-params"``,
+            changes to the expander update the URL, and the expander can be
+            initialized or updated through a query parameter in the URL. This
+            requires ``key`` to be set. The key is used as the query parameter
+            name.
+
+            When ``bind="query-params"`` is set, the expander tracks state even
+            if ``on_change`` is ``"ignore"`` (the default). Toggling still
+            reruns the app, like ``on_change="rerun"``, so ``.open`` and Session
+            State stay in sync. When the expander's state equals its default,
+            the query parameter is removed from the URL to keep it clean. A
+            bound query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed through
+            ``st.session_state``.
 
         Returns
         -------
@@ -1215,8 +1426,9 @@ class LayoutsMixin:
         **Example 3: Programmatically control the expander state**
 
         You can use a key to programmatically control the expander state or
-        access the state in callbacks. You must set the ``on_change`` parameter
-        for the expander to track state.
+        access the state in callbacks. Set ``on_change`` to ``"rerun"`` or a
+        callable, or set ``bind="query-params"``, for the expander to track
+        state.
 
         .. code-block:: python
             :filename: streamlit_app.py
@@ -1243,31 +1455,62 @@ class LayoutsMixin:
             https://doc-expander-callback.streamlit.app/
             height: 300px
 
+        **Example 4: Display a timeline of steps**
+
+        Use ``type="step"`` to turn consecutive expanders into a connected
+        timeline. The last step is empty, so it terminates the timeline.
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            with st.expander("Understanding the question", type="step"):
+                st.write("Parsed: 'What is the weather in NYC?'")
+
+            with st.expander("Searching for information", type="step"):
+                st.json({"sources": ["weather.gov", "accuweather.com"]})
+
+            # A step with no content terminates the timeline.
+            st.expander("Generating response", type="step")
+
+        .. output::
+            https://doc-expander-step.streamlit.app/
+            height: 300px
+
         """
         if label is None:
-            raise StreamlitAPIException("A label is required for an expander")
+            raise StreamlitMissingRequiredParameterError("label")
 
-        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+        )
+
+        if type not in EXPANDABLE_TYPE_TO_PROTO_MAPPING:
             raise StreamlitValueError(
-                "on_change", ["'rerun'", "'ignore'", "a callable"]
+                "type", [repr(name) for name in EXPANDABLE_TYPE_TO_PROTO_MAPPING]
             )
 
-        if type not in {"default", "compact"}:
-            raise StreamlitValueError("type", ["'default'", "'compact'"])
+        # register_widget validates bind too, but an invalid value leaves the
+        # expander non-stateful, so that check is never reached. Validate up front.
+        if bind is not None and bind != "query-params":
+            raise StreamlitValueError("bind", ["'query-params'", "None"])
 
         key = to_key(key)
-        is_stateful = on_change != "ignore"
+        is_stateful = on_change != "ignore" or bind == "query-params"
 
         current_expanded = expanded
         element_id: str | None = None
         block_id: str | None = None
 
         if is_stateful:
-            is_callback = callable(on_change)
+            is_callback = on_change_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change) if is_callback else None,
+                on_change=on_change_callback,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1296,9 +1539,11 @@ class LayoutsMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="bool_value",
-                on_change_handler=on_change if callable(on_change) else None,
-                args=args if callable(on_change) else None,
-                kwargs=kwargs if callable(on_change) else None,
+                on_change_handler=on_change_callback,
+                args=args if is_callback else None,
+                kwargs=kwargs if is_callback else None,
+                bind=bind,
+                clearable=False,
             )
 
             current_expanded = expander_state.value
@@ -1313,16 +1558,18 @@ class LayoutsMixin:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
         expandable_proto.label = label
-        expandable_proto.type = (
-            BlockProto.Expandable.Type.COMPACT
-            if type == "compact"
-            else BlockProto.Expandable.Type.DEFAULT
-        )
+        expandable_proto.type = EXPANDABLE_TYPE_TO_PROTO_MAPPING[type]
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
         if is_stateful and element_id is not None:
             expandable_proto.id = element_id
+
+        # register_widget already requires a key when bind="query-params"; keep
+        # the guard for symmetry with checkbox.py.
+        if bind == "query-params" and key is not None:
+            expandable_proto.query_param_key = str(key)
+            expandable_proto.default_expanded = expanded
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
@@ -1357,6 +1604,7 @@ class LayoutsMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        wrap: bool | None = None,
         key: Key | None = None,
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
@@ -1482,6 +1730,24 @@ class LayoutsMixin:
             The popover container's minimum width matches the width of its
             button. The popover container may be wider than its button to fit
             the container's contents.
+
+        wrap : bool or None
+            Whether the popover button's label can wrap onto multiple lines.
+            This can be one of the following:
+
+            - ``None`` (default): Streamlit decides based on the surrounding
+              layout. Inside a horizontal container or when directly placed
+              in a column (not nested in another container), the button keeps its standard, single-row height
+              and truncates an overflowing label with an ellipsis; in other
+              layouts, the label wraps onto additional lines.
+            - ``True``: If the label is too wide for the button, it wraps onto
+              additional lines and the button grows taller.
+            - ``False``: The button keeps its standard, single-row height. A
+              label that is too wide is truncated with an ellipsis.
+
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. The icon and
+            chevron remain visible.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -1613,22 +1879,22 @@ class LayoutsMixin:
 
         """
         if label is None:
-            raise StreamlitAPIException("A label is required for a popover")
+            raise StreamlitMissingRequiredParameterError("label")
 
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
         if type not in {"primary", "secondary", "tertiary"}:
-            raise StreamlitAPIException(
-                'The type argument to st.popover must be "primary", "secondary", or "tertiary". '
-                f'\nThe argument passed was "{type}".'
+            raise StreamlitValueError(
+                "type", ["'primary'", "'secondary'", "'tertiary'"]
             )
 
-        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
-            raise StreamlitValueError(
-                "on_change", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+        )
 
         key = to_key(key)
         is_stateful = on_change != "ignore"
@@ -1638,11 +1904,11 @@ class LayoutsMixin:
         block_id: str | None = None
 
         if is_stateful:
-            is_callback = callable(on_change)
+            is_callback = on_change_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_change) if is_callback else None,
+                on_change=on_change_callback,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1672,9 +1938,10 @@ class LayoutsMixin:
                 serializer=serde.serialize,
                 ctx=ctx,
                 value_type="bool_value",
-                on_change_handler=on_change if callable(on_change) else None,
-                args=args if callable(on_change) else None,
-                kwargs=kwargs if callable(on_change) else None,
+                on_change_handler=on_change_callback,
+                args=args if is_callback else None,
+                kwargs=kwargs if is_callback else None,
+                disabled=disabled,
             )
 
             current_open = popover_state.value
@@ -1691,6 +1958,8 @@ class LayoutsMixin:
         popover_proto.disabled = disabled
         popover_proto.type = type
         popover_proto.open = current_open
+        if wrap is not None:
+            popover_proto.wrap = wrap
         if help:
             popover_proto.help = str(help)
         if icon is not None:
@@ -1729,7 +1998,7 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
-        type: Literal["default", "compact"] = "default",
+        type: ExpandableType = "default",
         width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
@@ -1786,12 +2055,22 @@ class LayoutsMixin:
             - ``complete``: A checkmark icon is shown.
             - ``error``: An error icon is shown.
 
-        type : "default" or "compact"
-            The visual style of the status container. If ``"default"`` (default),
-            the container is displayed with a border and background. If
-            ``"compact"``, the container is rendered as a minimal inline
-            toggle, ideal for displaying AI reasoning or task progress without
-            visual clutter.
+        type : "default", "compact", or "step"
+            The visual style of the status container. This can be one of the
+            following:
+
+            - ``"default"`` (default): The container is displayed with a border
+              and background.
+            - ``"compact"``: The container is rendered as a minimal inline
+              toggle, ideal for displaying AI reasoning or task progress
+              without visual clutter.
+            - ``"step"``: The container is rendered as a timeline step with an
+              icon column and a vertical connector line. Consecutive step
+              containers form a connected timeline, which is useful for
+              chain-of-thought output, multi-stage pipelines, and activity
+              feeds. A step without content ends the timeline. Any other
+              element between two steps starts a new timeline segment, even an
+              invisible one like ``st.empty()``.
 
         width : "stretch" or int
             The width of the status container. This can be one of the following:
@@ -1853,6 +2132,31 @@ class LayoutsMixin:
             https://doc-status-update.streamlit.app/
             height: 300px
 
+        With ``type="step"``, consecutive status containers form a connected
+        timeline. The last step is empty, so it terminates the timeline:
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import time
+
+            import streamlit as st
+
+            with st.status("Loading data", type="step"):
+                time.sleep(1)
+                st.write("Loaded 1,234 records.")
+
+            with st.status("Analyzing data", type="step"):
+                time.sleep(1)
+                st.write("Found 3 anomalies.")
+
+            # A step with no content terminates the timeline.
+            st.status("Report ready", state="complete", type="step")
+
+        .. output::
+            https://doc-status-step.streamlit.app/
+            height: 300px
+
         """
         return get_dg_singleton_instance().status_container_cls._create(
             self.dg, label, expanded=expanded, state=state, type=type, width=width
@@ -1862,8 +2166,9 @@ class LayoutsMixin:
         self,
         title: str,
         *,
-        dismissible: bool = True,
         width: Literal["small", "large", "medium"] = "small",
+        position: Literal["left", "center", "right"] = "center",
+        dismissible: bool = True,
         icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
@@ -1875,8 +2180,9 @@ class LayoutsMixin:
         return get_dg_singleton_instance().dialog_container_cls._create(
             self.dg,
             title,
-            dismissible=dismissible,
             width=width,
+            position=position,
+            dismissible=dismissible,
             icon=icon,
             on_dismiss=on_dismiss,
         )

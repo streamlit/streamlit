@@ -77,8 +77,10 @@ import streamlit as st
 if "read_links" not in st.session_state:
     st.session_state.read_links = set()
 
+
 def mark_as_read(link_id):
     st.session_state.read_links.add(link_id)
+
 
 results = [
     {"id": 1, "title": "Result 1", "url": "https://example.com/1"},

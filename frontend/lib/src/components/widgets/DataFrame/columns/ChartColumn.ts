@@ -15,11 +15,11 @@
  */
 
 import {
-  GridCell,
+  type GridCell,
   GridCellKind,
-  LoadingCell,
+  type LoadingCell,
 } from "@glideapps/glide-data-grid"
-import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
+import type { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
 import { resolveNamedColor } from "~lib/theme/getColors"
 import type { ChartColor, EmotionTheme } from "~lib/theme/types"
@@ -27,8 +27,8 @@ import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getEmptyCell,
   getErrorCell,
   mergeColumnParameters,
@@ -210,18 +210,19 @@ function BaseChartColumn(
 
       // Check if the first value is larger than the second value
       let chartColor = defaultColor
+      const lastValue = normalizedChartData.at(-1)
       if (
         parameters.color === "auto" &&
+        lastValue !== undefined &&
         // Chart is pointing down
-        normalizedChartData[0] >
-          normalizedChartData[normalizedChartData.length - 1]
+        normalizedChartData[0] > lastValue
       ) {
         chartColor = theme.colors.redColor
       } else if (
         parameters.color === "auto-inverse" &&
+        lastValue !== undefined &&
         // Chart is pointing up:
-        normalizedChartData[0] <
-          normalizedChartData[normalizedChartData.length - 1]
+        normalizedChartData[0] < lastValue
       ) {
         chartColor = theme.colors.redColor
       }
@@ -246,7 +247,7 @@ function BaseChartColumn(
         return null
       }
 
-      return cell.data?.values === undefined ? null : cell.data?.values
+      return cell.data?.values ?? null
     },
   }
 }

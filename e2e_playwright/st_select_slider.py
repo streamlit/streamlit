@@ -271,3 +271,17 @@ bound_formatted = st.select_slider(
     bind="query-params",
 )
 st.write("Bound formatted:", bound_formatted)
+
+# --- on_change="ignore" select slider ---
+ignore_select_slider = st.select_slider(
+    "Ignore change select slider",
+    options=["red", "orange", "yellow", "green", "blue", "indigo", "violet"],
+    value="red",
+    key="ignore_select_slider",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore select slider value:", ignore_select_slider)
+
+if st.button("Apply ignore select slider", key="apply_ignore_select_slider"):
+    st.write("Applied ignore select slider value:", ignore_select_slider)

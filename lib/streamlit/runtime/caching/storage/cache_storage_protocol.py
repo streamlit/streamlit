@@ -30,7 +30,7 @@ How these classes work together
 - CacheStorageManager : each instance of this is able to create CacheStorage
 instances, and optionally to clear data of all cache storages.
 
-- CacheStorage : each instance of this is able to get, set, delete, and clear
+- CacheStorage : each instance of this is able to check, get, set, delete, and clear
 entries for a single `@st.cache_data` decorated function.
 
   ┌───────────────────────────────┐
@@ -46,6 +46,7 @@ entries for a single `@st.cache_data` decorated function.
      │                │  CacheStorage        │
      │ create(context)│                      │
      └────────────────►    - get             │
+                      │    - has             │
                       │    - set             │
                       │    - delete          │
                       │    - close (optional)│
@@ -124,6 +125,11 @@ class CacheStorage(Protocol):
     This is a responsibility of the concrete implementation to ensure thread safety
     guarantees.
     """
+
+    @abstractmethod
+    def has(self, key: str) -> bool:
+        """Return whether the key is present without reading its stored value."""
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def get(self, key: str) -> bytes:

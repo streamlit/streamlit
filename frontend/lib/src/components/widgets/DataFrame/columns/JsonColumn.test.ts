@@ -19,7 +19,7 @@ import { Field, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
-import { JsonCell } from "./cells/JsonCell"
+import type { JsonCell } from "./cells/JsonCell"
 import JsonColumn from "./JsonColumn"
 import { isMissingValueCell } from "./utils"
 

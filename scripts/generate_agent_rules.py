@@ -108,6 +108,13 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
         "always_apply": False,
     },
     {
+        "cursor_mdc": ".cursor/rules/embedded_skills.mdc",
+        "github_copilot": ".github/instructions/embedded_skills.instructions.md",
+        "agents_md": "lib/streamlit/.agents/skills/AGENTS.md",
+        "globs": "lib/streamlit/.agents/skills/**/*",
+        "always_apply": False,
+    },
+    {
         "cursor_mdc": ".cursor/rules/python_tests.mdc",
         "github_copilot": ".github/instructions/python_tests.instructions.md",
         "agents_md": "lib/tests/AGENTS.md",

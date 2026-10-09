@@ -386,3 +386,28 @@ st.slider(
 st.write(f"Slider counter: {st.session_state.slider_setvalue_counter}")
 
 st.button("Trigger slider rerun")
+
+# --- on_change="ignore" slider ---
+ignore_slider = st.slider(
+    "Ignore change slider",
+    min_value=0,
+    max_value=100,
+    value=25,
+    key="ignore_slider",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore slider value:", ignore_slider)
+
+if st.button("Apply ignore slider", key="apply_ignore"):
+    st.write("Applied ignore slider value:", ignore_slider)
+
+# Slider with reversed min/max (swapped to [1, 10]; value stays inside the range).
+reversed_bounds_value = st.slider(
+    "Reversed bounds slider",
+    min_value=10,
+    max_value=1,
+    value=5,
+    key="reversed_bounds_slider",
+)
+st.write("Reversed bounds slider value:", reversed_bounds_value)

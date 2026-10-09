@@ -19,7 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
 
-import FormattingMenu, { FormattingMenuProps } from "./FormattingMenu"
+import FormattingMenu, { type FormattingMenuProps } from "./FormattingMenu"
 
 describe("DataFrame FormattingMenu", () => {
   const defaultChildren = <div>Trigger</div>
@@ -39,6 +39,10 @@ describe("DataFrame FormattingMenu", () => {
   it("renders number format options when columnKind is number", () => {
     render(
       <FormattingMenu {...defaultProps}>{defaultChildren}</FormattingMenu>
+    )
+
+    expect(screen.getByTestId("stDataFrameColumnFormattingMenu")).toHaveClass(
+      "stDataFrameColumnFormattingMenu"
     )
 
     // Check for presence of number-specific formats

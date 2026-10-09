@@ -1,7 +1,8 @@
 include streamlit/py.typed
-# Intentionally broad — package-data globs in pyproject.toml restrict which
-# file types end up in the wheel. This wildcard ensures sdist includes everything
-# needed for the bundled skills without duplicating the extension list here.
-recursive-include streamlit/.agents *
+# Git-tracked files under streamlit/.agents would otherwise all ship.
+# Keep only the published skill trees.
+prune streamlit/.agents
+recursive-include streamlit/.agents/meta-skill/developing-with-streamlit *
+recursive-include streamlit/.agents/skills/developing-with-streamlit *
 recursive-include streamlit/hello *
 recursive-include streamlit/static *

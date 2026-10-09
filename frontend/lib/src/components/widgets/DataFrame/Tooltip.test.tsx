@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import Tooltip, { TooltipProps } from "./Tooltip"
+import Tooltip, { type TooltipProps } from "./Tooltip"
 
 describe("Dataframe Tooltip", () => {
   const defaultProps: TooltipProps = {

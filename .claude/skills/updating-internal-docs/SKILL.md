@@ -24,6 +24,7 @@ Priority files (most likely to contain codebase-specific instructions):
 - `.claude/agents/*.md` - Subagent definitions
 - `wiki/**/*.md` - Developer wiki
 - `CONTRIBUTING.md` - Contributor guide
+- `lib/streamlit/.agents/skills/AGENTS.md` - Authoring instructions for bundled skills
 - `lib/streamlit/.agents/skills/*/SKILL.md` - **Bundled skills for Streamlit app development** (shipped with the library)
 - `lib/streamlit/.agents/skills/*/references/*.md` - Reference docs for bundled skills
 
@@ -32,6 +33,9 @@ Priority files (most likely to contain codebase-specific instructions):
 - `.github/copilot-instructions.md`
 - `.github/instructions/*.md`
 - `.cursor/rules/*.mdc`
+- `.claude/agents/reviewing-local-changes.md` from `## Review Checklist` onward (generated from `scripts/assets/code-review-instructions.md`)
+
+If you edit a source `AGENTS.md` or `scripts/assets/code-review-instructions.md`, run `uv run python scripts/generate_agent_rules.py` so generated copies stay in sync.
 
 ## Verification checklist
 
@@ -46,14 +50,19 @@ Priority files (most likely to contain codebase-specific instructions):
 - [ ] `.github/workflows/AGENTS.md` reflects actual workflow files
 - [ ] `CONTRIBUTING.md` skill/agent overview matches `.claude/skills/*/` and `.claude/agents/`
 - [ ] **Bundled skills** (`lib/streamlit/.agents/skills/`) reflect current Streamlit API and features
+- [ ] Conventions in docs are not already fully enforced by lint, format, type-check, Knip, or other CI checks (if they are, treat as REDUNDANT and omit or remove)
 
 ### Bundled skills and feature changes
 
 When a PR **adds or changes a Streamlit feature** (new widget, API change, deprecation, new capability), check if the bundled skills need updates:
 
+- Read `lib/streamlit/.agents/skills/AGENTS.md` before editing bundled skills. It decides which features get prominent guidance and how to update references, examples, routing, and public API summaries.
 - **Reference docs** in `lib/streamlit/.agents/skills/developing-with-streamlit/references/` — update the relevant existing reference to document the new feature or API change
 
+For periodic reviews, treat recently merged PRs as leads for documentation drift. Inspect those diffs, then verify the current code before updating docs. A merge does not by itself require a bundled-skill update; apply the prominence and scope rules in `lib/streamlit/.agents/skills/AGENTS.md`.
+
 Common triggers for bundled skill updates:
+
 - New `st.*` commands or widgets
 - Parameter changes to existing commands
 - Deprecated APIs or patterns (add warnings, remove outdated examples)
@@ -83,7 +92,8 @@ Common triggers for bundled skill updates:
 | OUTDATED | Info no longer accurate (old make targets, renamed files) |
 | INCORRECT | Factually wrong (wrong paths, invalid commands) |
 | VERSION_MISMATCH | Documented version differs from actual |
-| MISSING | Important info not documented |
+| MISSING | Important info not documented. Do not flag conventions already enforced by lint, format, type-check, Knip, or CI. |
+| REDUNDANT | Restates a convention already enforced by lint, format, type-check, Knip, or CI |
 | BROKEN_LINK | Links to non-existent resources |
 | INCONSISTENT | Conflicts with other docs |
 
@@ -116,6 +126,10 @@ Found {N} issues across {M} files:
    Current:  Link to `./docs/setup.md`
    Actual:   File does not exist
 
+4. [REDUNDANT] frontend/AGENTS.md:20
+   Current:  Documents a specific oxlint/eslint/ruff rule (e.g. type-only imports)
+   Actual:   Already enforced by lint/CI; omit from docs
+
 Which issues should I fix?
 Recommended: "all"
 Options: "1" | "1,2,3" | "all" | "skip 3"
@@ -125,6 +139,9 @@ Options: "1" | "1,2,3" | "all" | "skip 3"
 
 - **Verify before proposing**: Always check the codebase before suggesting a fix
 - **Minimal changes**: Only change what's actually wrong
+- **Keep all documentation selective and brief**: Not every codebase detail needs to be documented. Add information only when it is relevant to developer decisions, correct usage, maintenance, or preventing likely mistakes; do not expand docs with minor details merely for completeness.
+- **Do not document conventions already enforced by CI or linting**: If a formatter, linter (ruff, oxlint, eslint), type checker, Knip, or other CI check already fails or auto-fixes a convention, do not add it and remove it if it is already documented. Confirm the named rule exists and is enabled before treating a convention as redundant. Agents and developers will see the tool error anyway. Document only judgment calls, exceptions, and "what to use instead" that the tool message does not explain. How to *run* those tools (make targets, when to use them) remains useful.
+- **Prefer durable, high-level descriptions**: Describe make commands and workflows briefly in terms of their purpose, trigger, and when to use them. Avoid documenting individual implementation steps, options, or mechanics unless they are important for correct use or maintenance.
 - **Test commands**: Run commands before documenting them
 - **Keep style consistent**: Match existing documentation style
 

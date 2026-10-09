@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
@@ -35,22 +34,24 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
     BindOption,
+    OnChangeMode,
     PersistStateOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-
 
 # Compiled regex for validating hex colors (#RGB or #RRGGBB format)
 _HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}){1,2}$")
@@ -89,7 +90,7 @@ class ColorPickerMixin:
         value: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -153,9 +154,29 @@ class ColorPickerMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this color_picker's value
-            changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the color picker should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the color picker. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new color (closing the popover by clicking the
+              swatch, clicking outside, pressing Escape, or tabbing out).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new color. The color picker still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -201,6 +222,14 @@ class ColorPickerMixin:
             query parameter can't be set or deleted through
             ``st.query_params``; it can only be programmatically changed
             through ``st.session_state``.
+
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (closing the popover by clicking the swatch,
+            clicking outside, pressing Escape, or tabbing out); dragging or
+            typing in the open popover does not update it. As with widgets
+            inside a form, the URL can show a value that Python hasn't
+            received yet. Python receives the new value on the next rerun,
+            so a page load or share uses the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -257,7 +286,7 @@ class ColorPickerMixin:
         value: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -269,14 +298,18 @@ class ColorPickerMixin:
         ctx: ScriptRunContext | None = None,
     ) -> str:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=value,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         # Enforce minimum width of 40px to match the color block's intrinsic size.
         # The color block is always 40x40px, so the widget should never be smaller.
@@ -303,17 +336,21 @@ class ColorPickerMixin:
 
         # make sure the value is a string
         if not isinstance(value, str):
-            raise StreamlitAPIException(f"""
-Color Picker Value has invalid type: {type(value).__name__}. Expects a hex string
-like '#00FFAA' or '#000'.
-""")
+            raise StreamlitInvalidParameterTypeError(
+                "value",
+                type(value).__name__,
+                ["str"],
+                detail="Pass a hex string like `'#00FFAA'` or `'#000'`.",
+            )
 
-        # validate the value and expects a hex string
         if not _HEX_COLOR_RE.match(value):
-            raise StreamlitAPIException(f"""
-'{value}' is not a valid hex code for colors. Valid ones are like
-'#00FFAA' or '#000'.
-""")
+            # Not StreamlitInvalidColorError: its message documents RGB
+            # sequences, which st.color_picker does not accept.
+            raise StreamlitAPIException(
+                f"'{value}' is not a valid hex code for colors. Valid ones are like "
+                "'#00FFAA' or '#000'.",
+                error_id="color-picker-invalid-hex",
+            )
 
         color_picker_proto = ColorPickerProto()
         color_picker_proto.id = element_id
@@ -326,23 +363,27 @@ like '#00FFAA' or '#000'.
         )
 
         if help is not None:
-            color_picker_proto.help = dedent(help)
+            color_picker_proto.help = to_help_str(help)
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
             color_picker_proto.query_param_key = str(key)
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            color_picker_proto.ignore_rerun = True
+
         serde = ColorPickerSerde(value)
 
         widget_state = register_widget(
             color_picker_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
             bind=bind,
             persist_state=persist_state,
             # Color picker is not clearable (defaults to black)

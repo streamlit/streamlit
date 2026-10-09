@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     from datetime import datetime, time, timedelta
@@ -53,7 +51,11 @@ if TYPE_CHECKING:
     assert_type(time_input("label", help="help"), time)
     assert_type(time_input("label", key="foo"), time)
     assert_type(time_input("label", key=123), time)
+    assert_type(time_input("label", on_change=None), time)
+    assert_type(time_input("label", on_change="rerun"), time)
+    assert_type(time_input("label", on_change="ignore"), time)
     assert_type(time_input("label", on_change=lambda: None), time)
+    assert_type(time_input("label", value=None, on_change="ignore"), time | None)
     assert_type(time_input("label", args=("arg",)), time)
     assert_type(time_input("label", kwargs={"k": "v"}), time)
     assert_type(time_input("label", width="stretch"), time)
@@ -68,3 +70,8 @@ if TYPE_CHECKING:
         time | None,
     )
     assert_type(time_input("label", time(12, 0), key="my_key", bind=None), time)
+
+    # Test format parameter
+    assert_type(time_input("label", format="12h"), time)
+    assert_type(time_input("label", format="24h"), time)
+    assert_type(time_input("label", format="localized"), time)

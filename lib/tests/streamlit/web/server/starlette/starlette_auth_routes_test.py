@@ -33,9 +33,14 @@ from starlette.testclient import TestClient
 from streamlit.errors import StreamlitMissingAuthlibError
 from streamlit.web.server.starlette import starlette_app_utils, starlette_auth_routes
 from streamlit.web.server.starlette.starlette_auth_routes import (
+    _AuthlibConfig,
+    _create_oauth_client,
     _get_cookie_path,
     _get_origin_from_secrets,
     _get_provider_by_state,
+    _get_provider_logout_url,
+    _looks_like_provider_section,
+    _normalize_nested_config,
     _parse_provider_token,
     create_auth_routes,
 )
@@ -136,6 +141,66 @@ def _mock_missing_starlette_client_import(missing_module: str) -> Any:
 
 
 @pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        # Nested dicts and lists are traversed and rebuilt.
+        ({"a": {"b": [1, {"c": 2}]}}, {"a": {"b": [1, {"c": 2}]}}),
+        ([{"x": 1}, "y"], [{"x": 1}, "y"]),
+        # Scalars pass through untouched.
+        ("plain", "plain"),
+        (42, 42),
+        (None, None),
+    ],
+)
+def test_normalize_nested_config(value: Any, expected: Any) -> None:
+    """Test that nested config data is normalized recursively for Authlib."""
+    assert _normalize_nested_config(value) == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ({"client_id": "cid"}, True),
+        ({"server_metadata_url": "https://example.com"}, True),
+        ({"request_token_url": "https://example.com"}, True),
+        ({"unrelated": "value"}, False),
+        ({}, False),
+    ],
+)
+def test_looks_like_provider_section(value: dict[str, Any], expected: bool) -> None:
+    """Test that provider sections are recognized by their characteristic keys."""
+    assert _looks_like_provider_section(value) is expected
+
+
+class TestAuthlibConfig:
+    """Tests for the _AuthlibConfig flat lookup adapter."""
+
+    def test_flat_provider_lookup(self) -> None:
+        """Test that nested provider keys are exposed via flat Authlib-style keys."""
+        config = _AuthlibConfig(
+            {"GOOGLE": {"client_id": "cid", "client_secret": "sec"}}
+        )
+        # Lookup is case-insensitive on both the provider and the parameter.
+        assert config.get("GOOGLE_client_id") == "cid"
+        assert config.get("google_CLIENT_SECRET") == "sec"
+
+    def test_returns_top_level_key_directly(self) -> None:
+        """Test that keys present at the top level are returned as-is."""
+        config = _AuthlibConfig({"redirect_uri": "http://localhost/oauth2callback"})
+        assert config.get("redirect_uri") == "http://localhost/oauth2callback"
+
+    @pytest.mark.parametrize(
+        "key",
+        [123, "noseparator", "UNKNOWN_client_id", "GOOGLE_missing"],
+        ids=["non-string", "no-separator", "unknown-provider", "unknown-param"],
+    )
+    def test_get_returns_default_for_unresolvable_key(self, key: object) -> None:
+        """Test that keys that cannot be resolved to a provider return the default."""
+        config = _AuthlibConfig({"GOOGLE": {"client_id": "cid"}})
+        assert config.get(key, "fallback") == "fallback"
+
+
+@pytest.mark.parametrize(
     "missing_module",
     [
         # Authlib itself is not installed.
@@ -168,6 +233,90 @@ def test_create_oauth_client_preserves_nested_module_not_found(
         starlette_auth_routes._create_oauth_client("default")
 
     assert exc_info.value.name == "httpx"
+
+
+class TestCreateOAuthClientConfig:
+    """Tests for _create_oauth_client's config assembly (with Authlib installed)."""
+
+    _SERVER_METADATA_URL = (
+        "https://accounts.google.com/.well-known/openid-configuration"
+    )
+
+    def test_builds_client_from_auth_section(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that a provider client is built from the secrets auth section."""
+        auth_section = MagicMock()
+        auth_section.to_dict.return_value = {
+            "google": {
+                "client_id": "cid",
+                "client_secret": "sec",
+                "server_metadata_url": self._SERVER_METADATA_URL,
+            }
+        }
+        monkeypatch.setattr(
+            starlette_auth_routes, "get_secrets_auth_section", lambda: auth_section
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "get_redirect_uri",
+            lambda section: "http://localhost:8501/oauth2callback",
+        )
+
+        client, redirect_uri = _create_oauth_client("google")
+
+        assert client.client_id == "cid"
+        assert redirect_uri == "http://localhost:8501/oauth2callback"
+        # Default OIDC scope/prompt are injected into client_kwargs.
+        assert "openid" in client.client_kwargs["scope"]
+        assert client.client_kwargs["prompt"] == "select_account"
+
+    def test_defaults_when_no_auth_section(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that the client falls back to an empty config and root redirect."""
+        monkeypatch.setattr(
+            starlette_auth_routes, "get_secrets_auth_section", lambda: None
+        )
+
+        client, redirect_uri = _create_oauth_client("google")
+
+        assert redirect_uri == "/"
+        assert client.client_id is None
+
+    def test_generates_default_provider_section(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that the "default" provider is synthesized from a flat auth section."""
+        auth_section = MagicMock()
+        # Flat auth section without an explicit "default" provider table.
+        auth_section.to_dict.return_value = {
+            "redirect_uri": "http://localhost:8501/oauth2callback"
+        }
+        generated_section = {
+            "client_id": "generated-cid",
+            "client_secret": "generated-sec",
+            "server_metadata_url": self._SERVER_METADATA_URL,
+        }
+        monkeypatch.setattr(
+            starlette_auth_routes, "get_secrets_auth_section", lambda: auth_section
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "get_redirect_uri",
+            lambda section: "http://localhost:8501/oauth2callback",
+        )
+        generate_mock = MagicMock(return_value=generated_section)
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "generate_default_provider_section",
+            generate_mock,
+        )
+
+        client, _ = _create_oauth_client("default")
+
+        generate_mock.assert_called_once_with(auth_section)
+        assert client.client_id == "generated-cid"
 
 
 def test_redirect_without_provider(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -943,6 +1092,17 @@ class TestGetProviderByState:
             == "github"
         )
 
+    def test_skips_state_prefixed_key_with_too_few_parts(self) -> None:
+        """Test that a `_state_`-prefixed key with fewer than 4 parts is skipped.
+
+        Keys like ``_state_google`` pass the prefix filter but cannot be split
+        into the expected four parts, so they must be skipped gracefully.
+        """
+        mock_request = MagicMock()
+        mock_request.session = {"_state_google": {}}
+
+        assert _get_provider_by_state(mock_request, "google") is None
+
 
 class TestGetOriginFromSecrets:
     """Tests for _get_origin_from_secrets function."""
@@ -987,10 +1147,6 @@ class TestGetProviderLogoutUrl:
     ) -> None:
         """Test that None is returned when no user cookie exists."""
 
-        from streamlit.web.server.starlette.starlette_auth_routes import (
-            _get_provider_logout_url,
-        )
-
         mock_request = MagicMock()
         mock_request.cookies = {}
 
@@ -1000,10 +1156,6 @@ class TestGetProviderLogoutUrl:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that None is returned when cookie doesn't contain provider."""
-
-        from streamlit.web.server.starlette.starlette_auth_routes import (
-            _get_provider_logout_url,
-        )
 
         # Mock cookie without provider field
         monkeypatch.setattr(
@@ -1019,10 +1171,6 @@ class TestGetProviderLogoutUrl:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that None is returned when provider has no end_session_endpoint."""
-
-        from streamlit.web.server.starlette.starlette_auth_routes import (
-            _get_provider_logout_url,
-        )
 
         # Mock cookie with provider
         monkeypatch.setattr(
@@ -1052,10 +1200,6 @@ class TestGetProviderLogoutUrl:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that logout URL is returned when provider has end_session_endpoint."""
-
-        from streamlit.web.server.starlette.starlette_auth_routes import (
-            _get_provider_logout_url,
-        )
 
         # Mock cookies - must differentiate between USER and TOKENS cookies
         def mock_get_cookie(request: Any, name: str) -> bytes | None:
@@ -1112,10 +1256,6 @@ class TestGetProviderLogoutUrl:
     ) -> None:
         """Test that None is returned when redirect_uri doesn't end with /oauth2callback."""
 
-        from streamlit.web.server.starlette.starlette_auth_routes import (
-            _get_provider_logout_url,
-        )
-
         # Mock user cookie with provider
         monkeypatch.setattr(
             starlette_auth_routes,
@@ -1151,6 +1291,71 @@ class TestGetProviderLogoutUrl:
 
         # Should return None when redirect_uri is invalid
         assert result is None
+
+    @patch_config_options({"server.cookieSecret": "test-secret"})
+    def test_returns_none_when_tokens_cookie_is_invalid_json(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that a malformed tokens cookie aborts the logout URL lookup."""
+
+        def mock_get_cookie(request: Any, name: str) -> bytes | None:
+            if name == USER_COOKIE_NAME:
+                return b'{"provider": "testprovider"}'
+            if name == TOKENS_COOKIE_NAME:
+                return b"not-valid-json"
+            return None
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_cookie_value_from_request",
+            mock_get_cookie,
+        )
+
+        class MockClient:
+            client_id = "test-client-id"
+
+            async def load_server_metadata(self) -> dict[str, Any]:
+                return {
+                    "issuer": "https://example.com",
+                    "end_session_endpoint": "https://example.com/logout",
+                }
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_create_oauth_client",
+            lambda provider: (MockClient(), "/redirect"),
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "get_validated_redirect_uri",
+            lambda: "http://localhost:8501/oauth2callback",
+        )
+
+        mock_request = MagicMock()
+        assert asyncio.run(_get_provider_logout_url(mock_request)) is None
+
+    def test_returns_none_on_unexpected_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that unexpected errors are swallowed and None is returned."""
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_cookie_value_from_request",
+            lambda request, name: b'{"provider": "testprovider"}',
+        )
+
+        def _raise(provider: str) -> tuple[Any, str]:
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_create_oauth_client",
+            _raise,
+        )
+
+        mock_request = MagicMock()
+        assert asyncio.run(_get_provider_logout_url(mock_request)) is None
 
 
 class TestLogoutWithProviderRedirect:

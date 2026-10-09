@@ -18,13 +18,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.58.0"
+version = "1.65.0"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [{ name = "Snowflake Inc", email = "hello@streamlit.io" }]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
@@ -32,7 +32,6 @@ classifiers = [
   "Environment :: Web Environment",
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -56,34 +55,41 @@ dependencies = [
   # Altair 5.4.0 and 5.4.1 have compatibility issues with narwhals library
   # that cause st.line_chart and other built-in charts to fail rendering.
   # See: https://github.com/streamlit/streamlit/issues/12064
-  "altair>=4.0,<7,!=5.4.0,!=5.4.1",
-  "blinker>=1.5.0,<2",
-  "cachetools>=5.5,<8",
+  # 5.0.0 is the first version exposing the offset encoding channels
+  # (alt.XOffset/alt.YOffset) and the alt.selection_point/selection_interval
+  # API that our built-in charts rely on.
+  "altair>=5.0.0,<7,!=5.4.0,!=5.4.1",
   "click>=7.0,<9",
-  "gitpython>=3.0.7,<4,!=3.1.19",
-  "numpy>=1.23,<3",
+  # The minimum-dependency job installs the locked Matplotlib 3.11, which
+  # requires numpy>=1.25. NumPy 1.23.2 has Python 3.11 wheels, but that job
+  # fails collection with it.
+  "numpy>=1.25.0,<3",
   # The "packaging" package isn't version-capped because they use calendar-based
   # versioning, i.e. "major" version increase != breaking changes
   "packaging>=20",
-  # Pandas <1.4 has a bug related to deleting columns in a DataFrame changing
-  # the index dtype. Pandas 3.x requires Python >= 3.11.
-  "pandas>=1.4.0,<4",
-  "pillow>=7.1.0,<13",
+  # pandas 1.5.0–1.5.2 expose the dataframe interchange `Column.size` as an
+  # attribute instead of a method, which crashes interchange conversion of
+  # string columns.
+  "pandas>=1.5.3,<4",
+  # 9.2.0 is the first release that publishes Python 3.11 wheels.
+  "pillow>=9.2.0,<13",
   "pydeck>=0.8.0b4,<1",
-  # `protoc` < 3.20 is not able to generate protobuf code compatible with protobuf >= 3.20.
-  "protobuf>=3.20,<8",
+  # Release builds generate Python protobuf code with protoc 26.1, whose
+  # corresponding minimum runtime version is protobuf 5.26.1.
+  "protobuf>=5.26.1,<8",
+  # 10.0.1 is the first release that publishes Python 3.11 wheels.
   # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
   # See https://github.com/apache/arrow/issues/50471.
-  "pyarrow>=7.0,<25",
+  "pyarrow>=10.0.1,!=25.0.0,<26",
   "requests>=2.27,<3",
-  "tenacity>=8.1.0,<10",
-  # Starting from Python 3.11, Python has built in support for reading TOML files.
-  # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
-  "toml>=0.10.1,<2",
+  # Writes credentials and `streamlit config show` output. Reading uses stdlib tomllib.
+  "tomli-w>=1.0.0,<2",
   # Starlette requires typing-extensions >= 4.10.
   "typing-extensions>=4.10.0,<5",
-  # ASGI web-framework:
-  "starlette>=0.40.0,<2",
+  # ASGI web-framework. 0.46.0 is the first version whose `GZipMiddleware`
+  # excludes `DEFAULT_EXCLUDED_CONTENT_TYPES` (e.g. `text/event-stream`) from
+  # compression, which our gzip wrapper relies on.
+  "starlette>=0.46.0,<2",
   # ASGI server:
   "uvicorn>=0.30.0,<1",
   # Faster http parsing for Starlette server:
@@ -93,7 +99,7 @@ dependencies = [
   # Required for file-upload support:
   "python-multipart>=0.0.10,<1",
   # Required for websocket support:
-  "websockets>=12.0.0,<17",
+  "websockets>=12.0.0,<18",
   # Required for cookie signing:
   "itsdangerous>=2.1.2,<3",
   # Don't require watchdog on MacOS, since it'll fail without xcode tools.
@@ -108,7 +114,7 @@ snowflake = [
   "snowflake-connector-python>=3.3.0",
 ]
 # Optional dependency required for PDF rendering:
-pdf = ["streamlit-pdf>=1.0.0"]
+pdf = ["streamlit-pdf>=2.1.0"]
 # Optional dependencies required for auth:
 auth = [
   "Authlib>=1.3.2",
@@ -161,9 +167,13 @@ exclude = ["tests", "tests.*"]
 [tool.setuptools.package-data]
 streamlit = [
     "py.typed",
-    ".agents/**/*.md",
-    ".agents/skills/**/assets/templates/**/*.py",
-    ".agents/skills/**/assets/templates/**/*.toml",
+    # Published skill trees only. Other files under .agents are repo-local
+    # (authoring guidance) and are not part of the package.
+    ".agents/meta-skill/developing-with-streamlit/**/*.md",
+    ".agents/meta-skill/developing-with-streamlit/**/*.py",
+    ".agents/skills/developing-with-streamlit/**/*.md",
+    ".agents/skills/developing-with-streamlit/assets/templates/**/*.py",
+    ".agents/skills/developing-with-streamlit/assets/templates/**/*.toml",
     "hello/**/*.py",
 ]
 

@@ -14,23 +14,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Any, Literal, assert_type, cast
 
 # Perform type checking tests for st.plotly_chart.
-# The return type depends on the on_select parameter:
-# - no on_select / on_select="rerun" / callable -> returns PlotlyState
-# - on_select="ignore" -> returns DeltaGenerator
-# Note: because the "ignore" overload has no default value, omitting on_select
-# resolves to the "rerun" overload and therefore returns PlotlyState.
+# Return type depends on on_select:
+# - omitted or "ignore" -> DeltaGenerator
+# - "rerun" or a callback -> PlotlyState
 if TYPE_CHECKING:
     import plotly.graph_objs as go
     from matplotlib.figure import Figure as MatplotlibFigure
     from plotly.basedatatypes import BaseFigure
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.plotly_chart import PlotlyMixin, PlotlyState
+    from streamlit.elements.plotly_chart import PlotlyMixin, PlotlySelectionState
+    from streamlit.typing import PlotlyState
 
     plotly_chart = PlotlyMixin().plotly_chart
 
@@ -42,15 +39,27 @@ if TYPE_CHECKING:
 
     # =====================================================================
     # Basic return type tests with different figure inputs
-    # (no on_select -> resolves to the "rerun" overload -> PlotlyState)
+    # (omitted on_select -> DeltaGenerator)
     # =====================================================================
 
-    assert_type(plotly_chart(fig), PlotlyState)
-    assert_type(plotly_chart(data), PlotlyState)
-    assert_type(plotly_chart(base_fig), PlotlyState)
-    assert_type(plotly_chart(mpl_fig), PlotlyState)
-    assert_type(plotly_chart([fig, data]), PlotlyState)
-    assert_type(plotly_chart({"data": data}), PlotlyState)
+    assert_type(plotly_chart(fig), DeltaGenerator)
+    assert_type(plotly_chart(data), DeltaGenerator)
+    assert_type(plotly_chart(base_fig), DeltaGenerator)
+    assert_type(plotly_chart(mpl_fig), DeltaGenerator)
+    assert_type(plotly_chart([fig, data]), DeltaGenerator)
+    assert_type(plotly_chart({"data": data}), DeltaGenerator)
+
+    plotly_state = plotly_chart(fig, on_select="rerun")
+    assert_type(plotly_state.selection, PlotlySelectionState)
+    assert_type(plotly_state["selection"], PlotlySelectionState)
+    assert_type(plotly_state.selection.points, list[dict[str, Any]])
+    assert_type(plotly_state.selection["points"], list[dict[str, Any]])
+    assert_type(plotly_state.selection.point_indices, list[int])
+    assert_type(plotly_state.selection["point_indices"], list[int])
+    assert_type(plotly_state.selection.box, list[dict[str, Any]])
+    assert_type(plotly_state.selection["box"], list[dict[str, Any]])
+    assert_type(plotly_state.selection.lasso, list[dict[str, Any]])
+    assert_type(plotly_state.selection["lasso"], list[dict[str, Any]])
 
     # =====================================================================
     # Return type tests with on_select="ignore" -> DeltaGenerator
@@ -67,6 +76,13 @@ if TYPE_CHECKING:
     # =====================================================================
 
     assert_type(plotly_chart(fig, on_select="rerun"), PlotlyState)
+
+    # Non-literal on_select returns the union of both result types.
+    on_select: Literal["ignore", "rerun"] = "rerun"
+    # ty infers `PlotlyState` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        plotly_chart(fig, on_select=on_select), DeltaGenerator | PlotlyState
+    )
 
     # =====================================================================
     # Return type tests with callback function -> PlotlyState
@@ -176,6 +192,20 @@ if TYPE_CHECKING:
     )
 
     # =====================================================================
+    # Test alt parameter (str or None)
+    # =====================================================================
+
+    assert_type(
+        plotly_chart(fig, on_select="ignore", alt="Scatter of x versus y"),
+        DeltaGenerator,
+    )
+    assert_type(plotly_chart(fig, on_select="ignore", alt=None), DeltaGenerator)
+    assert_type(
+        plotly_chart(fig, alt="Scatter of x versus y", on_select="rerun"),
+        PlotlyState,
+    )
+
+    # =====================================================================
     # Test with all parameters combined (on_select="ignore" -> DeltaGenerator)
     # =====================================================================
 
@@ -190,6 +220,7 @@ if TYPE_CHECKING:
             on_select="ignore",
             selection_mode=("points", "box", "lasso"),
             config={"scrollZoom": False},
+            alt="Full chart description",
         ),
         DeltaGenerator,
     )
@@ -209,6 +240,7 @@ if TYPE_CHECKING:
             on_select="rerun",
             selection_mode=["points", "box"],
             config={"displayModeBar": True},
+            alt="Selectable chart description",
         ),
         PlotlyState,
     )
@@ -228,6 +260,7 @@ if TYPE_CHECKING:
             on_select=my_callback,
             selection_mode="points",
             config=None,
+            alt="Callback chart description",
         ),
         PlotlyState,
     )
@@ -237,11 +270,14 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid theme value (only "streamlit" or None)
-    plotly_chart(fig, theme="dark")  # type: ignore[call-overload]
+    plotly_chart(fig, theme="dark")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid width / height values (only int or "stretch" / "content")
-    plotly_chart(fig, width="invalid")  # type: ignore[call-overload]
-    plotly_chart(fig, height=None)  # type: ignore[call-overload]
+    plotly_chart(fig, width="invalid")  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
+    plotly_chart(fig, height=None)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]
 
     # Invalid selection_mode value
-    plotly_chart(fig, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]
+    plotly_chart(fig, on_select="rerun", selection_mode="invalid")  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+
+    # Invalid alt type (str or None only)
+    plotly_chart(fig, alt=123)  # type: ignore[call-overload]  # ty: ignore[invalid-argument-type]

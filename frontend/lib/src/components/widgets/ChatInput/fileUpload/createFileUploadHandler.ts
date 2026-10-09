@@ -16,11 +16,12 @@
 
 import type { AxiosProgressEvent } from "axios"
 
-import { IFileURLs } from "@streamlit/protobuf"
+import type { FileURLs } from "@streamlit/protobuf"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
-import { FileUploadClient } from "~lib/FileUploadClient"
-import { WidgetInfo } from "~lib/WidgetStateManager"
+import type { FileUploadClient } from "~lib/FileUploadClient"
+import { formatRejectionMessage } from "~lib/util/ErrorHandling"
+import type { WidgetInfo } from "~lib/WidgetStateManager"
 
 interface CreateUploadFileParams {
   getNextLocalFileId: () => number
@@ -29,7 +30,7 @@ interface CreateUploadFileParams {
   uploadClient: FileUploadClient
   element: WidgetInfo
   onUploadProgress: (e: AxiosProgressEvent, id: number) => void
-  onUploadComplete: (id: number, fileURLs: IFileURLs) => void
+  onUploadComplete: (id: number, fileURLs: FileURLs.$Properties) => void
 }
 
 export const createUploadFileHandler =
@@ -42,7 +43,7 @@ export const createUploadFileHandler =
     onUploadProgress,
     onUploadComplete,
   }: CreateUploadFileParams) =>
-  (fileURLs: IFileURLs, file: File): void => {
+  (fileURLs: FileURLs.$Properties, file: File): void => {
     // Create an UploadFileInfo for this file and add it to our state.
     // For directory uploads, prefer the webkitRelativePath so we preserve
     // the original directory structure in the displayed file name.
@@ -64,17 +65,14 @@ export const createUploadFileHandler =
 
     uploadClient
       .uploadFile(
-        {
-          formId: "", // TODO[kajarnec] fix this probably with uploadFile refactoring
-          ...element,
-        },
+        { id: element.id, formId: element.formId ?? "" },
         fileURLs.uploadUrl as string,
         file,
         e => onUploadProgress(e, uploadingFileInfo.id),
         abortController.signal
       )
       .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
-      .catch(err => {
+      .catch((err: unknown) => {
         // If this was an abort error, we don't show the user an error -
         // the cancellation was in response to an action they took.
         if (!(err instanceof DOMException && err.name === "AbortError")) {
@@ -82,7 +80,7 @@ export const createUploadFileHandler =
             uploadingFileInfo.id,
             uploadingFileInfo.setStatus({
               type: "error",
-              errorMessage: err ? err.toString() : "Unknown error",
+              errorMessage: formatRejectionMessage(err),
             })
           )
         }

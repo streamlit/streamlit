@@ -23,7 +23,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -214,7 +218,10 @@ class PdfTest(DeltaGeneratorTestCase):
 
     def test_pdf_with_none_data(self):
         """Test PDF with None data."""
-        with pytest.raises(StreamlitAPIException, match="The PDF data cannot be None"):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"`data` parameter is required",
+        ):
             st.pdf(None)
 
     def test_pdf_with_unsupported_data_type(self):
@@ -222,7 +229,8 @@ class PdfTest(DeltaGeneratorTestCase):
         unsupported_data = {"not": "supported"}
 
         with pytest.raises(
-            StreamlitAPIException, match="Unsupported data type for PDF"
+            StreamlitInvalidParameterTypeError,
+            match=r"Invalid `data` type",
         ):
             st.pdf(unsupported_data)
 
@@ -252,3 +260,62 @@ class PdfTest(DeltaGeneratorTestCase):
         # Component should receive height as string
         assert json_args["height"] == "450"
         assert isinstance(json_args["height"], str)
+
+    def test_pdf_alt_is_forwarded_when_nonempty(self) -> None:
+        """Non-empty alt is passed through to streamlit-pdf as a kwarg."""
+        url = "https://example.com/fake-document.pdf"
+        with patch("streamlit.elements.pdf._get_pdf_component") as mock_get:
+            mock_component = mock_get.return_value
+            mock_component.return_value = None
+            st.pdf(url, alt="Q3 2026 financial report")
+
+        mock_component.assert_called_once()
+        kwargs = mock_component.call_args.kwargs
+        assert kwargs["alt"] == "Q3 2026 financial report"
+        assert kwargs["file"] == url
+
+    def test_pdf_alt_omitted_from_component_when_blank(self) -> None:
+        """Blank / omitted alt is not forwarded (older streamlit-pdf compat)."""
+        url = "https://example.com/fake-document.pdf"
+        with patch("streamlit.elements.pdf._get_pdf_component") as mock_get:
+            mock_component = mock_get.return_value
+            mock_component.return_value = None
+
+            st.pdf(url)
+            assert "alt" not in mock_component.call_args.kwargs
+
+            st.pdf(url, alt=None)
+            assert "alt" not in mock_component.call_args.kwargs
+
+            st.pdf(url, alt="")
+            assert "alt" not in mock_component.call_args.kwargs
+
+            st.pdf(url, alt="  ")
+            assert "alt" not in mock_component.call_args.kwargs
+
+    def test_pdf_alt_strips_whitespace(self) -> None:
+        """Leading and trailing whitespace is stripped before forwarding alt."""
+        url = "https://example.com/fake-document.pdf"
+        with patch("streamlit.elements.pdf._get_pdf_component") as mock_get:
+            mock_component = mock_get.return_value
+            mock_component.return_value = None
+            st.pdf(url, alt="  Q3 report  ")
+
+        assert mock_component.call_args.kwargs["alt"] == "Q3 report"
+
+    def test_pdf_alt_appears_in_component_json(self) -> None:
+        """Non-empty alt appears on the bidi component JSON (streamlit-pdf>=2.1.0)."""
+        url = "https://example.com/fake-document.pdf"
+        st.pdf(url, alt="Q3 2026 financial report")
+
+        element = self.get_delta_from_queue().new_element
+        json_args = json.loads(element.bidi_component.json)
+        assert json_args["alt"] == "Q3 2026 financial report"
+
+    def test_pdf_alt_preserves_adversarial_plain_text(self) -> None:
+        """Quotes and angle brackets stay literal in the component JSON."""
+        adversarial = 'Report of "A < B" & totals <script>alert(1)</script>'
+        st.pdf("https://example.com/fake-document.pdf", alt=adversarial)
+
+        element = self.get_delta_from_queue().new_element
+        assert json.loads(element.bidi_component.json)["alt"] == adversarial

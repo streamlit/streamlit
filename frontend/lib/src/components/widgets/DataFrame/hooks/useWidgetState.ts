@@ -15,21 +15,24 @@
  */
 
 import {
-  MutableRefObject,
+  type MutableRefObject,
   useCallback,
   useEffect,
   useRef,
   useState,
 } from "react"
 
-import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
+import {
+  CompactSelection,
+  type GridSelection,
+} from "@glideapps/glide-data-grid"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import EditingState, { getColumnName } from "./EditingState"
 
@@ -186,6 +189,8 @@ interface UseWidgetStateReturn {
   updateNumRows: () => void
   // Debounced callback to sync editing state with widget manager
   syncEditState: () => void
+  // Immediately syncs a pending edit and cancels its debounce timeout
+  flushEditState: () => void
   // Creates a sync selection state callback for the given columns and getOriginalIndex
   // This needs to be called after useColumnSort since it needs the sorted columns and getOriginalIndex
   createSyncSelectionState: (
@@ -330,32 +335,22 @@ function useWidgetState({
       formId: element.formId ?? undefined,
     })
 
-    if (currentWidgetState === undefined) {
-      // Create an empty widget state
-      currentWidgetState = new EditingState(0).toJson([])
-    }
+    // Create an empty widget state when the manager has no value yet.
+    currentWidgetState ??= new EditingState(0).toJson([])
 
     // Only update if there is actually a difference between editing and widget state
     if (currentEditingState !== currentWidgetState) {
-      widgetMgr.setStringValue(
-        {
-          id: element.id,
-          formId: element.formId ?? undefined,
-        },
-        currentEditingState,
-        {
-          fromUi: true,
-        },
-        fragmentId
-      )
+      widgetMgr.setStringValue(element.id, currentEditingState, {
+        formId: element.formId ?? undefined,
+        fragmentId,
+        fromUser: true,
+      })
     }
   }, [originalColumns, element.id, element.formId, widgetMgr, fragmentId])
 
   // Debounced version of syncEditState to prevent rapid updates
-  const { debouncedCallback: syncEditState } = useDebouncedCallback(
-    innerSyncEditState,
-    DEBOUNCE_TIME_MS
-  )
+  const { debouncedCallback: syncEditState, flush: flushEditState } =
+    useDebouncedCallback(innerSyncEditState, DEBOUNCE_TIME_MS)
 
   /**
    * Creates a function to sync selection state with the widget manager.
@@ -389,6 +384,12 @@ function useWidgetState({
         selectionState.selection.rows = newSelection.rows
           .toArray()
           .map(row => getOriginalIndex(row))
+          // Report row indices in a stable ascending order so the serialized
+          // selection is independent of the current sort/display order. This
+          // keeps the widget value unchanged when only the display order
+          // changes (e.g. after sorting), avoiding spurious reruns / on_select
+          // callbacks.
+          .toSorted((a, b) => a - b)
         selectionState.selection.columns = newSelection.columns
           .toArray()
           .map(columnIdx => getColumnName(columns[columnIdx]))
@@ -431,17 +432,11 @@ function useWidgetState({
           currentWidgetState === undefined ||
           currentWidgetState !== newWidgetState
         ) {
-          widgetMgr.setStringValue(
-            {
-              id: element.id,
-              formId: element.formId ?? undefined,
-            },
-            newWidgetState,
-            {
-              fromUi: true,
-            },
-            fragmentId
-          )
+          widgetMgr.setStringValue(element.id, newWidgetState, {
+            formId: element.formId ?? undefined,
+            fragmentId,
+            fromUser: true,
+          })
         }
       }
     },
@@ -507,17 +502,11 @@ function useWidgetState({
         )
 
         if (defaultSelection !== undefined) {
-          widgetMgr.setStringValue(
-            {
-              id: element.id,
-              formId: element.formId ?? undefined,
-            },
-            element.selectionDefault,
-            {
-              fromUi: false,
-            },
-            fragmentId
-          )
+          widgetMgr.setStringValue(element.id, element.selectionDefault, {
+            formId: element.formId ?? undefined,
+            fragmentId,
+            fromUser: false,
+          })
         }
 
         return defaultSelection
@@ -540,17 +529,11 @@ function useWidgetState({
             cells: [],
           },
         })
-        widgetMgr.setStringValue(
-          {
-            id: element.id,
-            formId: element.formId ?? undefined,
-          },
-          selectionState,
-          {
-            fromUi: false,
-          },
-          fragmentId
-        )
+        widgetMgr.setStringValue(element.id, selectionState, {
+          formId: element.formId ?? undefined,
+          fragmentId,
+          fromUser: false,
+        })
 
         return defaultRequiredSelection
       }
@@ -633,17 +616,11 @@ function useWidgetState({
       // This avoids overwriting a previously valid persisted selection with
       // malformed JSON.
       if (selection !== undefined) {
-        widgetMgr.setStringValue(
-          {
-            id: element.id,
-            formId: element.formId ?? undefined,
-          },
-          selectionState,
-          {
-            fromUi: false,
-          },
-          fragmentId
-        )
+        widgetMgr.setStringValue(element.id, selectionState, {
+          formId: element.formId ?? undefined,
+          fragmentId,
+          fromUser: false,
+        })
       }
 
       return selection
@@ -658,6 +635,7 @@ function useWidgetState({
     resetEditingState,
     updateNumRows,
     syncEditState,
+    flushEditState,
     createSyncSelectionState,
     onFormCleared,
     loadInitialSelectionState,

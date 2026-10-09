@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { forwardRef, memo, ReactElement } from "react"
+import { forwardRef, memo, type ReactElement } from "react"
 
 import {
   BaseButtonKind,
   BaseButtonSize,
-  BaseLinkButtonProps as BaseLinkButtonPropsT,
+  type BaseLinkButtonProps as BaseLinkButtonPropsT,
   StyledPrimaryLinkButton,
   StyledSecondaryLinkButton,
   StyledTertiaryLinkButton,

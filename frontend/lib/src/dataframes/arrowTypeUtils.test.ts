@@ -51,7 +51,7 @@ import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import {
-  ArrowType,
+  type ArrowType,
   convertVectorToList,
   DataFrameCellType,
   getPandasTypeName,
@@ -557,6 +557,24 @@ describe("getTimezone", () => {
       {
         type: DataFrameCellType.DATA,
         arrowField: new Field("test", new Timestamp(TimeUnit.SECOND), true),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "datetime",
+          numpy_type: "datetime64[ns]",
+          metadata: { timezone: "America/New_York" },
+        },
+      },
+      "America/New_York",
+    ],
+    [
+      {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "test",
+          new Timestamp(TimeUnit.SECOND, null),
+          true
+        ),
         pandasType: {
           field_name: "test",
           name: "test",

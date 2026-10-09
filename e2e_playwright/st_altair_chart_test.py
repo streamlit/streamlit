@@ -12,18 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pathlib
+import struct
+
 import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
 from e2e_playwright.shared.react18_utils import wait_for_react_stability
 from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 BASELINE_CHARTS = 9
 REGRESSION_CHART_INDEX = 9
 ISSUE_14050_CHART_INDEX = 10
-NUM_CHARTS = 11
+NUM_CHARTS = 17
 
 
 def test_altair_chart_displays_correctly(
@@ -31,6 +34,9 @@ def test_altair_chart_displays_correctly(
 ):
     charts = themed_app.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(NUM_CHARTS)
+    # Vega always mounts an empty bindings form; hide it so charts without
+    # parameter widgets do not pick up extra padding.
+    expect(charts.nth(0).locator("form.vega-bindings")).to_be_hidden()
 
     # Each chart container carries the Vega "graphics-document" ARIA role once
     # it has rendered. Verify every baseline chart is a visible graphics
@@ -141,7 +147,40 @@ def test_download_chart_as_png(app: Page):
     with app.expect_download() as download_info:
         download_button.click()
 
-    assert download_info.value.suggested_filename.endswith("_chart.png")
+    download = download_info.value
+    assert download.suggested_filename.endswith("_chart.png")
+
+    # Assert the exported PNG's dimensions correspond to ~2x the on-screen
+    # chart size so a regression in `toImageURL`'s scaleFactor semantics can't
+    # slip through. Playwright's headless Chromium reports
+    # `devicePixelRatio == 1`, so the `Math.max(2, dpr || 1)` floor in
+    # `useVegaEmbed` deterministically applies a 2x scale here.
+    graphics_doc = get_vega_graphics_document(chart)
+    expect(graphics_doc).to_be_visible()
+    gd_bbox = graphics_doc.bounding_box()
+    assert gd_bbox is not None
+    png_bytes = pathlib.Path(download.path()).read_bytes()
+    assert png_bytes[:8] == b"\x89PNG\r\n\x1a\n", "downloaded file is not a PNG"
+    # PNG IHDR: 8-byte signature + 4-byte length + 4-byte type ("IHDR"), then
+    # width (u32 big-endian) and height (u32 big-endian) at bytes 16..24.
+    png_width, png_height = struct.unpack(">II", png_bytes[16:24])
+    # Vega's `toImageURL` scales the view's width/height by scaleFactor; on-
+    # screen the same view is laid out inside the graphics-document. A tight
+    # tolerance handles Vega's internal padding differing by a few pixels from
+    # the CSS bounding box. A 1x export would fall far outside this window.
+    tolerance = 8
+    expected_width = round(gd_bbox["width"] * 2)
+    expected_height = round(gd_bbox["height"] * 2)
+    assert abs(png_width - expected_width) <= tolerance, (
+        f"PNG width {png_width} is not ~2x graphics-document width "
+        f"{gd_bbox['width']:.1f} (expected ~{expected_width}, tolerance "
+        f"{tolerance})"
+    )
+    assert abs(png_height - expected_height) <= tolerance, (
+        f"PNG height {png_height} is not ~2x graphics-document height "
+        f"{gd_bbox['height']:.1f} (expected ~{expected_height}, tolerance "
+        f"{tolerance})"
+    )
 
 
 def test_show_chart_data_button(app: Page, assert_snapshot: ImageCompareFunction):
@@ -178,3 +217,81 @@ def test_show_chart_data_button(app: Page, assert_snapshot: ImageCompareFunction
     toolbar_buttons.get_by_label("Show Chart").click()
 
     expect(dataframe).not_to_be_attached()
+
+
+def test_altair_chart_binding_widget_styling(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Altair parameter bindings (sliders, selects, radios, etc.) follow the theme."""
+    chart = get_element_by_key(themed_app, "altair_chart_bindings").get_by_test_id(
+        "stVegaLiteChart"
+    )
+    expect(chart).to_be_visible()
+    expect(get_vega_graphics_document(chart)).to_be_visible()
+
+    bindings = chart.locator("form.vega-bindings")
+    expect(bindings).to_be_visible()
+    expect(bindings.locator(".vega-bind")).to_have_count(5)
+    expect(bindings.locator("input[type='range']")).to_be_visible()
+    expect(bindings.locator("select")).to_be_visible()
+    expect(bindings.locator("input[type='radio']")).to_have_count(3)
+    expect(bindings.locator("input[type='checkbox']")).to_be_visible()
+    expect(bindings.locator("input[type='text']")).to_be_visible()
+
+    wait_for_react_stability(themed_app)
+    assert_snapshot(chart, name="st_altair_chart-binding_widgets")
+
+    # Vega's native binding controls stay interactive (they are not Streamlit
+    # widgets). Changing them must not surface an exception.
+    select = bindings.get_by_role("combobox")
+    expect(select).to_have_value("USA")
+    select.select_option("Europe")
+    expect(select).to_have_value("Europe")
+    checkbox = bindings.get_by_role("checkbox")
+    expect(checkbox).to_be_checked()
+    checkbox.uncheck()
+    expect(checkbox).not_to_be_checked()
+    expect(themed_app.get_by_test_id("stException")).to_have_count(0)
+
+
+def test_geoshape_lookup_and_inline_featurecollection_render(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Geoshape lookup and inline FeatureCollection charts render filled polygons."""
+    charts = app.get_by_test_id("stVegaLiteChart")
+    expect(charts).to_have_count(NUM_CHARTS)
+
+    lookup_chart = get_element_by_key(app, "altair_geoshape_lookup").get_by_test_id(
+        "stVegaLiteChart"
+    )
+    inline_chart = get_element_by_key(app, "altair_geoshape_inline").get_by_test_id(
+        "stVegaLiteChart"
+    )
+
+    for chart in (lookup_chart, inline_chart):
+        expect(get_vega_graphics_document(chart)).to_be_visible()
+
+    # URL GeoJSON is fetched asynchronously; wait for lookup output before
+    # snapshotting so an empty first paint cannot pass as a rendered map.
+    expect(lookup_chart.get_by_text("population")).to_be_visible()
+    wait_for_react_stability(app)
+
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    assert_snapshot(lookup_chart, name="st_altair_chart-geoshape_lookup")
+    assert_snapshot(inline_chart, name="st_altair_chart-geoshape_inline_geojson")
+
+
+def test_altair_chart_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the Vega graphics-document accessible name."""
+    labeled = get_vega_graphics_document(get_element_by_key(app, "altair_alt"))
+    expect(labeled).to_have_accessible_name("Bar chart of categories A and B")
+
+    unlabeled = get_vega_graphics_document(get_element_by_key(app, "altair_no_alt"))
+    # vega-embed's default when the chart has no description.
+    expect(unlabeled).to_have_accessible_name("Vega visualization")
+
+    overridden = get_vega_graphics_document(
+        get_element_by_key(app, "altair_alt_overrides_description")
+    )
+    expect(overridden).to_have_accessible_name("Streamlit alt overrides description")

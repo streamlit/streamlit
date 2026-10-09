@@ -18,10 +18,12 @@
 import { defineConfig } from "vite"
 import { analyzer } from "vite-bundle-analyzer"
 import terminal from "vite-plugin-terminal"
-import { version } from "./package.json"
+import appPackage from "./package.json" with { type: "json" }
 
 import react from "@vitejs/plugin-react-swc"
-import path from "path"
+
+// Vite's native config loader requires the extension on relative imports.
+import { katexWoff2Only } from "./vite-plugins/katexWoff2Only.ts"
 
 const BASE = "./"
 const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
@@ -96,10 +98,11 @@ export default defineConfig(({ command }) => ({
   base: BASE,
   define: {
     PACKAGE_METADATA: {
-      version,
+      version: appPackage.version,
     },
   },
   plugins: [
+    katexWoff2Only(),
     react({
       jsxImportSource: "@emotion/react",
       plugins: [["@swc/plugin-emotion", {}]],
@@ -134,10 +137,6 @@ export default defineConfig(({ command }) => ({
   resolve: {
     tsconfigPaths: true,
     alias: [
-      {
-        find: /^react-uid$/,
-        replacement: path.resolve(__dirname, "src/util/reactUidCompat.ts"),
-      },
       // Alias react-syntax-highlighter to the cjs version to avoid
       // issues with the esm version causing a bug in rendering
       // See https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/565

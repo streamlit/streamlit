@@ -17,9 +17,7 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING, Any, Final, Literal
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Any, Final, Literal, Self
 
 from streamlit.errors import NoSessionContext
 from streamlit.proto.Element_pb2 import Element as ElementProto
@@ -117,7 +115,7 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
 
         return dir(DeltaGenerator)
 
-    def __enter__(self) -> Self:  # type: ignore[override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
         """Enter context manager mode with 0.5s delay before showing skeleton.
 
         In context manager mode, we clear the immediately-shown skeleton and switch

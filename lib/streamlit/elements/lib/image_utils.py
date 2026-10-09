@@ -23,7 +23,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal, TypeAlias, Union, cast
 
 from streamlit import runtime, url_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.utils import normalize_alt
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitValueError,
+)
 from streamlit.runtime import caching
 
 if TYPE_CHECKING:
@@ -156,10 +160,14 @@ def _np_array_to_bytes(array: npt.NDArray[Any], output_format: str = "JPEG") -> 
 def _verify_np_shape(array: npt.NDArray[Any]) -> npt.NDArray[Any]:
     shape: NumpyShape = array.shape
     if len(shape) not in {2, 3}:
-        raise StreamlitAPIException("Numpy shape has to be of length 2 or 3.")
+        raise StreamlitValueError(
+            "image",
+            ["a 2D or 3D NumPy array"],
+        )
     if len(shape) == 3 and shape[-1] not in {1, 3, 4}:
         raise StreamlitAPIException(
-            f"Channel can only be 1, 3, or 4 got {shape[-1]}. Shape is {shape}"
+            f"Channel can only be 1, 3, or 4 got {shape[-1]}. Shape is {shape}",
+            error_id="image-invalid-channel-count",
         )
 
     # If there's only one channel, convert is to x, y
@@ -223,12 +231,18 @@ def _clip_image(image: npt.NDArray[Any], clamp: bool) -> npt.NDArray[Any]:
         if clamp:
             data = np.clip(image, 0, 1.0)
         elif np.amin(image) < 0.0 or np.amax(image) > 1.0:
-            raise RuntimeError("Data is outside [0.0, 1.0] and clamp is not set.")
+            raise StreamlitAPIException(
+                "Data is outside [0.0, 1.0] and clamp is not set.",
+                error_id="image-out-of-range",
+            )
         data = data * 255  # noqa: PLR6104
     elif clamp:
         data = np.clip(image, 0, 255)
     elif np.amin(image) < 0 or np.amax(image) > 255:
-        raise RuntimeError("Data is outside [0, 255] and clamp is not set.")
+        raise StreamlitAPIException(
+            "Data is outside [0, 255] and clamp is not set.",
+            error_id="image-out-of-range",
+        )
     return data
 
 
@@ -328,7 +342,8 @@ def image_to_url(
             else:
                 raise StreamlitAPIException(
                     'When using `channels="BGR"`, the input image should '
-                    "have exactly 3 color channels"
+                    "have exactly 3 color channels",
+                    error_id="image-bgr-requires-three-channels",
                 )
 
         image_data = _np_array_to_bytes(array=image, output_format=output_format)
@@ -363,6 +378,10 @@ def marshall_images(
     clamp: bool,
     channels: Channels = "RGB",
     output_format: ImageFormatOrAuto = "auto",
+    # Typed as object rather than st.image's public
+    # str | Sequence[str | None] | None because the runtime also coerces bytes,
+    # 1-D ndarrays, and other non-string scalars to strings.
+    alt: object | None = None,
 ) -> None:
     """Fill an ImageListProto with a list of images and their captions.
     The images will be resized and reformatted as necessary.
@@ -397,6 +416,10 @@ def marshall_images(
         while diagrams should use the PNG format for lossless compression.
         Defaults to 'auto' which identifies the compression type based
         on the type and format of the image argument.
+    alt
+        Accessible name(s) for the image(s). A single string pairs with a
+        single image; a sequence must match the image count. ``None`` omits
+        the attribute; ``""`` is decorative.
     """
     import numpy as np
 
@@ -404,6 +427,7 @@ def marshall_images(
 
     # Turn single image and caption into one element list.
     images: Sequence[AtomicImage]
+    images_from_set = isinstance(image, set)
     if isinstance(image, (list, set, tuple)):
         images = list(image)  # ty: ignore[invalid-assignment]
     elif isinstance(image, np.ndarray) and len(image.shape) == 4:
@@ -422,23 +446,81 @@ def marshall_images(
     else:
         captions = [str(caption)]
 
-    if not isinstance(captions, list):
-        raise StreamlitAPIException(
-            "If image is a list then caption should be a list as well."
-        )
-
     if len(captions) != len(images):
         raise StreamlitAPIException(
-            f"Cannot pair {len(captions)} captions with {len(images)} images."
+            f"Cannot pair {len(captions)} captions with {len(images)} images.",
+            error_id="image-caption-count-mismatch",
         )
 
+    if alt is None:
+        alts: Sequence[object | None] = [None] * len(images)
+    elif isinstance(alt, str):
+        if len(images) != 1:
+            raise StreamlitAPIException(
+                "A single `alt` string can only be used with a single image. "
+                f"You passed {len(images)} images; provide a sequence of "
+                f"{len(images)} alt values (use None to skip an image).",
+                error_id="image-alt-count-mismatch",
+            )
+        alts = [alt]
+    elif isinstance(alt, (bytes, bytearray)):
+        # bytes/bytearray are Sequences of ints; treat them as one scalar name.
+        if len(images) != 1:
+            raise StreamlitAPIException(
+                "A single `alt` value can only be used with a single image. "
+                f"You passed {len(images)} images; provide a sequence of "
+                f"{len(images)} alt values (use None to skip an image).",
+                error_id="image-alt-count-mismatch",
+            )
+        alts = [alt]
+    elif isinstance(alt, np.ndarray) and len(alt.shape) == 1:
+        if images_from_set:
+            raise StreamlitAPIException(
+                "A sequence-valued `alt` cannot be paired with a set of images "
+                "because set order is undefined. Pass a list or tuple of images.",
+                error_id="image-alt-with-set",
+            )
+        alts = alt.tolist()
+        if len(alts) != len(images):
+            raise StreamlitAPIException(
+                f"Cannot pair {len(alts)} alt values with {len(images)} images.",
+                error_id="image-alt-count-mismatch",
+            )
+    elif isinstance(alt, Sequence):
+        if images_from_set:
+            raise StreamlitAPIException(
+                "A sequence-valued `alt` cannot be paired with a set of images "
+                "because set order is undefined. Pass a list or tuple of images.",
+                error_id="image-alt-with-set",
+            )
+        alts = alt
+        if len(alts) != len(images):
+            raise StreamlitAPIException(
+                f"Cannot pair {len(alts)} alt values with {len(images)} images.",
+                error_id="image-alt-count-mismatch",
+            )
+    else:
+        # A non-string scalar (e.g. an int) is stringified later by normalize_alt.
+        if len(images) != 1:
+            raise StreamlitAPIException(
+                "A single `alt` value can only be used with a single image. "
+                f"You passed {len(images)} images; provide a sequence of "
+                f"{len(images)} alt values (use None to skip an image).",
+                error_id="image-alt-count-mismatch",
+            )
+        alts = [alt]
+
     # Each image in an image list needs to be kept track of at its own coordinates.
-    for coord_suffix, (single_image, single_caption) in enumerate(
-        zip(images, captions, strict=False)
+    for coord_suffix, (single_image, single_caption, single_alt) in enumerate(
+        zip(images, captions, alts, strict=False)
     ):
         proto_img = proto_imgs.imgs.add()
         if single_caption is not None:
             proto_img.caption = str(single_caption)
+
+        normalized_alt = normalize_alt(single_alt, allow_empty=True)
+        if normalized_alt is not None:
+            proto_img.alt = normalized_alt
 
         # We use the index of the image in the input image list to identify this image inside
         # MediaFileManager. For this, we just add the index to the image's "coordinates".

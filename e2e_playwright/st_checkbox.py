@@ -75,6 +75,29 @@ st.checkbox("checkbox with content width", width="content")
 st.checkbox("checkbox with stretch width", width="stretch")
 st.checkbox("checkbox with 200px width", width=200)
 
+# wrap=False keeps the checkbox on one row and ellipsizes an overflowing label,
+# exposing the full label via a native title on the label (help lives on a
+# separate icon, so both coexist). A narrow fixed width forces the long label to
+# overflow, so the auto default (wrap=None) in a vertical layout wraps and grows
+# taller while wrap=False stays single-row.
+_WRAP_LABEL = "Include archived projects from the last several quarters"
+with st.container(key="wrap_checkboxes"):
+    st.checkbox(_WRAP_LABEL, width=200, wrap=False, key="wrap_false_checkbox")
+    st.checkbox(_WRAP_LABEL, width=200, key="wrap_auto_vertical_checkbox")
+    st.checkbox(
+        _WRAP_LABEL,
+        width=200,
+        wrap=False,
+        help="wrap help text",
+        key="wrap_help_checkbox",
+    )
+
+# Default (auto) wrap: inside a horizontal container the label does not wrap; it
+# ellipsizes and exposes the full label via a native title. A fixed container
+# width narrower than the label forces the overflow.
+with st.container(horizontal=True, width=250, key="wrap_auto_horizontal_checkbox"):
+    st.checkbox(_WRAP_LABEL, key="wrap_auto_checkbox")
+
 st.markdown("Dynamic checkbox:")
 
 if st.toggle("Update checkbox props"):
@@ -137,3 +160,21 @@ else:
     unbind_val = st.checkbox("Unbindable checkbox", key="unbindable")
 st.write("unbindable value:", unbind_val)
 st.write("bind active:", use_bind)
+
+# --- on_change="ignore" checkbox ---
+# Run counter so test_checkbox_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_checkbox = st.checkbox(
+    "Ignore change checkbox",
+    key="ignore_checkbox",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore checkbox value:", ignore_checkbox)
+
+if st.button("Apply ignore checkbox", key="apply_ignore_checkbox"):
+    st.write("Applied ignore checkbox value:", ignore_checkbox)

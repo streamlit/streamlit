@@ -432,7 +432,10 @@ const renderer: CustomRenderer<ButtonCell> = {
         textColor = "#ffffff"
         break
       case "secondary":
-        bgColor = isHovered ? theme.bgHeaderHovered : "transparent"
+        bgColor = isHovered
+          ? ((theme as unknown as { bgButtonHovered?: string })
+              .bgButtonHovered ?? theme.bgHeaderHovered)
+          : "transparent"
         borderColor = theme.borderColor
         textColor = theme.textDark
         break

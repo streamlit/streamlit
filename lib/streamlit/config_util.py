@@ -17,6 +17,7 @@ from __future__ import annotations
 import copy
 import os
 import re
+import tomllib
 import urllib.error
 import urllib.request
 from typing import TYPE_CHECKING, Any, TypedDict
@@ -37,6 +38,26 @@ from streamlit.errors import (
 # files containing only theme options, not large data files.
 _MAX_THEME_FILE_SIZE_BYTES = 1024 * 1024  # 1MB
 _CONFIG_FILE_SCOPES = ("global", "project", "script")
+
+
+def _dump_toml_value(key: str, value: Any) -> str:
+    """Serialize one config value as a TOML assignment to ``key``.
+
+    ``None`` has no TOML representation. Return "" so callers treat the option
+    as unset.
+    """
+    if value is None:
+        return ""
+
+    # Imported here so a normal script run does not load tomli_w.
+    import tomli_w
+
+    return tomli_w.dumps({key: value})
+
+
+def _comment_toml(toml_text: str) -> str:
+    """Prefix every line so a multiline value stays commented out."""
+    return "".join(f"# {line}\n" for line in toml_text.splitlines())
 
 
 class _ThemeOverride(TypedDict):
@@ -178,16 +199,19 @@ def show_config(
                     f"This option will be removed on or after {option.expiration_date}."
                 )
 
-            import toml
-
-            toml_default = toml.dumps({"default": option.default_val})
-            toml_default = toml_default[10:].strip()
+            toml_default = _dump_toml_value("default", option.default_val).strip()
+            # Drop an assignment prefix so the comment shows the value. A table
+            # dump (``[default]``) has no prefix, so removeprefix leaves it.
+            toml_default = toml_default.removeprefix("default = ").strip()
 
             if len(toml_default) > 0:
                 # Ensure a line break before appending "Default" comment, if not already there
                 if out[-1] != "#":
                     append_comment("")
-                append_comment(f"Default: {toml_default}")
+                default_lines = toml_default.splitlines()
+                append_comment(f"Default: {default_lines[0]}")
+                for extra_line in default_lines[1:]:
+                    append_comment(extra_line)
             else:
                 # Don't say "Default: (unset)" here because this branch applies
                 # to complex config settings too.
@@ -202,12 +226,12 @@ def show_config(
                     append_comment("")
                 append_comment(f"The value below was set in {option.where_defined}")
 
-            toml_setting = toml.dumps({key: option.value})
+            toml_setting = _dump_toml_value(key, option.value)
 
             if len(toml_setting) == 0:
                 toml_setting = f"# {key} =\n"
             elif not option_is_manually_set:
-                toml_setting = f"# {toml_setting}"
+                toml_setting = _comment_toml(toml_setting)
 
             append_setting(toml_setting)
 
@@ -595,12 +619,6 @@ def _load_theme_file(
     Otherwise returns the parsed TOML content as a dictionary.
     """
 
-    def _raise_missing_toml() -> None:
-        raise StreamlitInvalidThemeError(
-            "The 'toml' package is required to load theme files. "
-            "Please install it with 'pip install toml'."
-        )
-
     def _raise_file_not_found() -> None:
         raise FileNotFoundError(f"Theme file not found: {file_path_or_url}")
 
@@ -616,11 +634,6 @@ def _load_theme_file(
             f"Maximum allowed size is {_MAX_THEME_FILE_SIZE_BYTES:,} bytes (1MB). "
             f"Theme files should contain only configuration options, not large data."
         )
-
-    try:
-        import toml
-    except ImportError:
-        _raise_missing_toml()
 
     # Check if it's a URL using the url_util helper (only allow http/https schemes by default)
     is_valid_url = url_util.is_url(file_path_or_url)
@@ -650,7 +663,7 @@ def _load_theme_file(
             _raise_file_too_large()
 
         # Parse the TOML content
-        parsed_theme = toml.loads(content)  # ty: ignore[possibly-unresolved-reference]
+        parsed_theme = tomllib.loads(content)
 
         # Validate that the theme file has a theme section
         if "theme" not in parsed_theme:
@@ -665,8 +678,6 @@ def _load_theme_file(
 
     except (
         StreamlitInvalidThemeError,
-        StreamlitInvalidThemeOptionError,
-        StreamlitInvalidThemeSectionError,
         FileNotFoundError,
     ):
         # Re-raise these specific exceptions
@@ -873,8 +884,6 @@ def process_theme_inheritance(
 
     except (
         StreamlitInvalidThemeError,
-        StreamlitInvalidThemeOptionError,
-        StreamlitInvalidThemeSectionError,
         FileNotFoundError,
     ):
         # Re-raise expected user errors as-is to preserve specific error messages

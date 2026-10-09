@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, within } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Feedback as FeedbackProto } from "@streamlit/protobuf"
@@ -22,7 +22,7 @@ import { Feedback as FeedbackProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Feedback, { Props } from "./Feedback"
+import Feedback, { type Props } from "./Feedback"
 
 const getProps = (
   elementProps: Partial<FeedbackProto> = {},
@@ -112,10 +112,13 @@ describe("Feedback widget", () => {
 
       render(<Feedback {...props} />)
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "1",
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -125,11 +128,25 @@ describe("Feedback widget", () => {
 
       render(<Feedback {...props} />)
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "",
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
+    })
+
+    it("treats an empty string widget state as a cleared selection", () => {
+      const props = getProps()
+      vi.spyOn(props.widgetMgr, "getStringValue").mockReturnValue("")
+
+      render(<Feedback {...props} />)
+
+      getFeedbackButtons().forEach(button => {
+        expect(button).toHaveAttribute("aria-checked", "false")
+      })
     })
 
     it("selects an option when clicked", async () => {
@@ -146,10 +163,9 @@ describe("Feedback widget", () => {
       await user.click(buttons[0])
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "1",
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -168,10 +184,9 @@ describe("Feedback widget", () => {
       await user.click(buttons[0])
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "",
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -190,10 +205,9 @@ describe("Feedback widget", () => {
       await user.click(buttons[1])
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "0",
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -205,19 +219,25 @@ describe("Feedback widget", () => {
       render(<Feedback {...props} />)
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "",
-        { fromUi: false },
-        "myFragmentId"
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: false,
+        }
       )
 
       const buttons = getFeedbackButtons()
       await user.click(buttons[0])
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "1",
-        { fromUi: true },
-        "myFragmentId"
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: true,
+        }
       )
     })
   })
@@ -365,10 +385,13 @@ describe("Feedback widget", () => {
 
       // Should have called setStringValue with the default value
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "2",
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
 
       // The first 3 buttons (0, 1, 2) should be shown as selected (filled stars)
@@ -461,10 +484,9 @@ describe("Feedback widget", () => {
       await user.keyboard("{Enter}")
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "1",
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -482,11 +504,28 @@ describe("Feedback widget", () => {
       await user.keyboard(" ")
 
       expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         "1",
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
+    })
+
+    it("ignores keys that are not used for navigation or selection", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        type: FeedbackProto.FeedbackType.THUMBS,
+      })
+      const setStringValue = vi.spyOn(props.widgetMgr, "setStringValue")
+
+      render(<Feedback {...props} />)
+      setStringValue.mockClear()
+
+      const buttons = getFeedbackButtons()
+      buttons[0].focus()
+      await user.keyboard("{Escape}")
+
+      expect(buttons[0]).toHaveFocus()
+      expect(setStringValue).not.toHaveBeenCalled()
     })
   })
 
@@ -561,6 +600,17 @@ describe("Feedback widget", () => {
       expect(buttons[2]).toHaveAttribute("aria-label", "3 out of 5 stars")
       expect(buttons[3]).toHaveAttribute("aria-label", "4 out of 5 stars")
       expect(buttons[4]).toHaveAttribute("aria-label", "5 out of 5 stars")
+    })
+
+    it("falls back to generic rating labels for unknown feedback types", () => {
+      const props = getProps({
+        type: 999 as FeedbackProto.FeedbackType,
+      })
+      render(<Feedback {...props} />)
+
+      expect(screen.getByLabelText("Rating 2")).toBeVisible()
+      expect(screen.getByLabelText("Rating 1")).toBeVisible()
+      expect(screen.queryByLabelText("Thumbs up")).not.toBeInTheDocument()
     })
 
     it("has aria-label on radiogroup", () => {
@@ -643,5 +693,152 @@ describe("Feedback widget", () => {
       // Thumbs down (value 0) should be selected
       expect(activeButtons).toHaveLength(1)
     })
+
+    it("updates from a click when proto still has a leftover value", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        type: FeedbackProto.FeedbackType.THUMBS,
+        value: 0,
+      })
+      render(<Feedback {...props} />)
+
+      const buttons = getFeedbackButtons()
+      await user.click(buttons[0])
+
+      const feedbackWidget = screen.getByTestId("stFeedback")
+      const activeButtons = within(feedbackWidget).getAllByTestId(
+        "stFeedbackButtonActive"
+      )
+      expect(activeButtons).toHaveLength(1)
+      expect(buttons[0]).toHaveAttribute("aria-checked", "true")
+    })
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Feedback {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("radio", { name: "Thumbs up" }))
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "1", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("sends an empty string without a rerun when a default selection is cleared", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true, default: 1 }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Feedback {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("radio", { name: "Thumbs up" }))
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: false }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Feedback {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("radio", { name: "Thumbs up" }))
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "1", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+      },
+      { widgetMgr }
+    )
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Feedback {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("radio", { name: "Thumbs up" }))
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "1", {
+      formId: "testForm",
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
   })
 })

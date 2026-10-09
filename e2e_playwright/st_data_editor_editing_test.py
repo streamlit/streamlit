@@ -322,6 +322,33 @@ def test_data_editor_keeps_state_after_unmounting(
 # ---------------------------------------------------------------------------
 
 
+def test_clicking_button_commits_open_cell_editor(app: Page) -> None:
+    data_editor = _get_editor(app, "overlay_submit_editor")
+    expect_canvas_to_be_visible(data_editor)
+    click_on_cell(
+        data_editor,
+        row_pos=1,
+        col_pos=0,
+        column_width="small",
+        double_click=True,
+    )
+
+    cell_overlay = get_open_cell_overlay(app)
+    cell_overlay.locator(".gdg-input").fill("edited")
+
+    # Sanity check that nothing has been submitted yet.
+    expect_prefixed_markdown(app, "Submitted value:", "not submitted")
+
+    # Clicking the button closes the overlay during pointerdown and triggers a
+    # rerun during click. The pending edit must be synced before that rerun.
+    app.get_by_role("button", name="Submit edit").click()
+    wait_for_app_run(app)
+
+    # Without flushing the pending edit, the button click would commit the
+    # pre-edit value ("original") instead of "edited".
+    expect_prefixed_markdown(app, "Submitted value:", "edited")
+
+
 def _test_number_cell_editing(
     themed_app: Page,
     assert_snapshot: ImageCompareFunction,
@@ -341,14 +368,23 @@ def _test_number_cell_editing(
     cell_overlay.press("ControlOrMeta+A")
 
     # Get the (number) input element and check the value
-    expect(cell_overlay.locator(".gdg-input")).to_have_attribute("value", "1231231.41")
+    input_field = cell_overlay.locator(".gdg-input")
+    expect(input_field).to_have_attribute("value", "1231231.41")
     if not skip_snapshot:
         assert_snapshot(cell_overlay, name="st_data_editor-number_col_editor")
 
     # Change the value
-    cell_overlay.locator(".gdg-input").fill("9876.54")
-    # Press Enter to apply the change
-    themed_app.keyboard.press("Enter")
+    input_field.fill("9876.54")
+    expect(input_field).to_have_value("9876.54")
+    # `fill()` updates the input's DOM value and fires a single input event, but
+    # the overlay editor commits on Enter via a deferred (setTimeout) callback
+    # that closes over the React state value. If Enter arrives before that state
+    # update has re-rendered, the commit uses the previous value. Yield one
+    # event-loop task so the re-render flushes before we press Enter. (Atomic
+    # fill+Enter is a test-harness timing artifact; real typing never hits this
+    # sub-frame window.)
+    themed_app.evaluate("() => new Promise(resolve => setTimeout(resolve, 0))")
+    input_field.press("Enter")
     wait_for_app_run(themed_app)
 
     # Check if that the value was submitted
@@ -359,12 +395,81 @@ def test_number_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunc
     _test_number_cell_editing(themed_app, assert_snapshot)
 
 
+def test_number_cell_editing_preserves_leading_decimal(app: Page) -> None:
+    """Test that a leading decimal point survives sequential input.
+
+    Regression test for streamlit/streamlit#16909: the number overlay editor
+    reset its text from the parsed cell value on every keystroke, so typing
+    ".07" lost the leading "." and committed 7.
+    """
+    cell_editor = _get_editor(app, "cell_editor")
+    expect_canvas_to_be_visible(cell_editor)
+
+    click_on_cell(cell_editor, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(app)
+    cell_overlay.click()
+    cell_overlay.press("ControlOrMeta+A")
+    input_field = cell_overlay.locator(".gdg-input")
+    # Sequential input reproduces the per-keystroke reset; fill() does not.
+    input_field.press_sequentially(".07", delay=50)
+
+    expect(input_field).to_have_value(".07")
+    input_field.press("Enter")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Edited DF:", "0.07", exact_match=False)
+
+
 @pytest.mark.performance
 def test_number_cell_editing_performance(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the number cell can be edited."""
     _test_number_cell_editing(app, assert_snapshot, skip_snapshot=True)
+
+
+def test_number_cell_editor_ignores_ime_composing_enter(app: Page) -> None:
+    """Enter during IME composition must not commit the cell.
+
+    Regression test for streamlit/streamlit#16129: with a CJK IME active,
+    the Enter that confirms the composition fires a keydown with
+    ``isComposing=true``. The overlay editor used to treat that as a
+    cell-commit, closing the editor after the first composed digit and
+    making multi-digit input impossible.
+    """
+    cell_editor = _get_editor(app, "cell_editor")
+    expect_canvas_to_be_visible(cell_editor)
+
+    click_on_cell(cell_editor, 1, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(app)
+    input_field = cell_overlay.locator(".gdg-input")
+    expect(input_field).to_be_visible()
+
+    # Simulate the Enter that confirms an IME composition. In real browsers
+    # this fires with ``isComposing=true`` / ``keyCode=229`` and must be a
+    # no-op for the cell overlay.
+    input_field.evaluate(
+        """el => {
+            el.focus();
+            el.dispatchEvent(new KeyboardEvent("keydown", {
+                key: "Enter",
+                code: "Enter",
+                keyCode: 229,
+                which: 229,
+                bubbles: true,
+                cancelable: true,
+                isComposing: true,
+            }));
+        }"""
+    )
+
+    # The editor must remain open after a composing Enter.
+    expect(cell_overlay).to_be_visible()
+    expect(input_field).to_be_visible()
+
+    # A regular (non-composing) Enter should still commit the cell.
+    app.keyboard.press("Enter")
+    expect(cell_overlay).not_to_be_visible()
 
 
 def test_text_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):

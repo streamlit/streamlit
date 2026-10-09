@@ -471,12 +471,13 @@ class ScriptRunContextTest(unittest.TestCase):
         assert ctx.shared.tracked_commands == ()
         assert ctx.shared.tracked_commands_count == 0
 
-    def test_run_wrapper_accepts_positional_args(self):
-        """The _run_with_thread_state wrapper must accept positional arguments.
+    def test_run_wrapper_tolerates_extra_positional_arg_from_thread_wrapper(self):
+        """The wrapper must tolerate an extra positional argument without
+        forwarding it to the already-bound original run().
 
-        Regression test for GitHub issue #15374: some threading patterns call
-        thread.run() with positional arguments. The wrapper installed by
-        add_script_run_ctx must handle this gracefully to avoid TypeError.
+        Regression test for GitHub issues #15374 and #16139, where a thread
+        wrapper (Sentry's ThreadingIntegration) re-invokes the wrapper with the
+        thread as an extra positional arg; forwarding it raised a TypeError.
         """
         pages_manager = PagesManager("/main/script/path")
         enable_mpa_v2_mode(pages_manager)
@@ -484,20 +485,22 @@ class ScriptRunContextTest(unittest.TestCase):
 
         ThreadState.initialize(fragment_id="test_fragment")
 
-        received_args: list[object] = []
+        run_calls: list[object] = []
 
-        class ThreadWithRunArgs(threading.Thread):
-            """Thread subclass whose run() accepts extra arguments."""
+        class NoArgRunThread(threading.Thread):
+            """Thread whose run() takes no args, like threading.Thread/Timer."""
 
-            def run(self, *args: object) -> None:
-                received_args.extend(args)
+            def run(self) -> None:
+                run_calls.append(ThreadState.get().fragment_id)
 
-        t = ThreadWithRunArgs()
+        t = NoArgRunThread()
         add_script_run_ctx(t, ctx)
 
-        t.run("test_arg")
+        # Simulate the Sentry ThreadingIntegration calling pattern: the wrapper
+        # is invoked with the thread instance as an extra positional argument.
+        t.run(t)
 
-        assert received_args == ["test_arg"]
+        assert run_calls == ["test_fragment"]
 
 
 def test_script_run_context_attr_name_reexported_from_leaf_module() -> None:

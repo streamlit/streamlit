@@ -419,10 +419,14 @@ def _main_run(
     discovery_result = discover_asgi_app(Path(main_script_path))
 
     if discovery_result.is_asgi_app:
+        app_import_string = discovery_result.import_string
+        if app_import_string is None:  # pragma: no cover - defensive
+            raise RuntimeError("ASGI app discovery did not return an import string")
+
         # Run as ASGI app with uvicorn
         bootstrap.run_asgi_app(
             main_script_path,
-            discovery_result.import_string,  # type: ignore[arg-type]
+            app_import_string,
             args,
             flag_options,
         )
@@ -545,8 +549,9 @@ def main_skills(global_mode: bool, yes: bool) -> None:
 
     \b
     Global mode (--global):
-        Installs a meta skill globally (in user directory) that is available
-        to all projects.
+        Installs a version-agnostic meta skill into your user directory. It
+        discovers each project's installed Streamlit at runtime, so a single
+        global install works across all projects and Streamlit versions.
 
     \b
     Examples:

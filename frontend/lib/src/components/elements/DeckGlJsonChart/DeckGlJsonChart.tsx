@@ -14,11 +14,19 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useContext, useEffect, useState } from "react"
+import {
+  type FC,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
 import "./patchLumaCanvasContext"
 
-import { LayersList, PickingInfo } from "@deck.gl/core"
+import type { LayersList, PickingInfo } from "@deck.gl/core"
 import { DeckGL } from "@deck.gl/react"
 import { Close } from "@emotion-icons/material-outlined"
 import { registerLoaders } from "@loaders.gl/core"
@@ -45,7 +53,12 @@ import {
 } from "./styled-components"
 import type { DeckGlElementState, DeckGLProps } from "./types"
 import { EMPTY_STATE, useDeckGl } from "./useDeckGl"
+import { shouldShowBasemap } from "./utils/mapShell"
 
+// CSV/GLTF loaders must be registered globally so pydeck JSON layers can
+// resolve those types. loaders.gl marks registerLoaders deprecated in favor of
+// per-call loader lists, which pydeck JSON does not provide.
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- see comment above
 registerLoaders([CSVLoader, GLTFLoader])
 
 const EMPTY_SELECTION = EMPTY_STATE.selection
@@ -93,8 +106,16 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
   const mapboxToken = element.mapboxToken || contextMapboxToken
   const usesMapbox =
-    deck.mapProvider == "mapbox" ||
-    (deck?.mapStyle && deck.mapStyle?.indexOf("mapbox") >= 0)
+    deck.mapProvider === "mapbox" ||
+    (deck?.mapStyle && deck.mapStyle?.includes("mapbox") === true)
+  const showBasemap = useMemo(
+    () =>
+      shouldShowBasemap({
+        views: deck.views,
+        mapStyle: deck.mapStyle,
+      }),
+    [deck.views, deck.mapStyle]
+  )
 
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -197,7 +218,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
       }
 
       setSelection({
-        fromUi: true,
+        fromUser: true,
         value: { selection: newSelection },
       })
     },
@@ -207,15 +228,22 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   const handleClearSelectionClick = useCallback(() => {
     setSelection({
       value: { selection: EMPTY_SELECTION },
-      fromUi: true,
+      fromUser: true,
     })
   }, [setSelection])
+
+  // Name the chart only when alt is non-blank. Pair aria-label with
+  // role="figure" so the name is exposed on this generic div without
+  // role="img", which would make the toolbar and Mapbox controls presentational.
+  const accessibleName = element.alt?.trim() || undefined
 
   return (
     <StyledDeckGlChart
       className="stDeckGlJsonChart"
       data-testid="stDeckGlJsonChart"
       isStretchHeight={isStretchHeight}
+      role={accessibleName ? "figure" : undefined}
+      aria-label={accessibleName}
     >
       {usesMapbox ? <MapBoxCss /> : null}
       <Toolbar
@@ -225,12 +253,14 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         onCollapse={collapse}
         target={StyledDeckGlChart}
         locked={hasActiveSelection && !disabled ? true : undefined}
+        labelContext={accessibleName}
       >
         {hasActiveSelection && !disabled && (
           <ToolbarAction
             label="Clear selection"
             onClick={handleClearSelectionClick}
             icon={Close}
+            labelContext={accessibleName}
           />
         )}
       </Toolbar>
@@ -245,26 +275,30 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
             getTooltip={createTooltip}
             // @ts-expect-error There is a type mismatch due to our versions of the libraries
             ContextProvider={MapContext.Provider}
-            controller
+            parameters={deck.parameters}
+            views={deck.views}
+            // Deck copies a truthy controller onto views[0]; skip if views exist.
+            controller={!deck.views}
             onClick={
               isSelectionModeActivated && !disabled ? handleClick : undefined
             }
           >
-            <StaticMap
-              mapStyle={
-                deck.mapStyle &&
-                (typeof deck.mapStyle === "string"
-                  ? deck.mapStyle
-                  : deck.mapStyle[0])
-              }
-              mapboxApiAccessToken={mapboxToken}
-            />
-            <StyledNavigationControlContainer>
-              <NavigationControl
-                data-testid="stDeckGlJsonChartZoomButton"
-                showCompass={false}
-              />
-            </StyledNavigationControlContainer>
+            {showBasemap && (
+              <>
+                <StaticMap
+                  mapStyle={
+                    deck.mapStyle &&
+                    (typeof deck.mapStyle === "string"
+                      ? deck.mapStyle
+                      : deck.mapStyle[0])
+                  }
+                  mapboxApiAccessToken={mapboxToken}
+                />
+                <StyledNavigationControlContainer data-testid="stDeckGlJsonChartZoomButton">
+                  <NavigationControl showCompass={false} />
+                </StyledNavigationControlContainer>
+              </>
+            )}
           </DeckGL>
         </StyledMapContainer>
       )}

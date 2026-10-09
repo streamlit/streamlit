@@ -34,6 +34,8 @@ skills/*
 !skills/generating-changelog/
 !skills/improving-frontend-coverage/
 !skills/improving-python-coverage/
+!skills/reviewing-pr-description/
+!skills/reviewing-readability/
 
 # Allow agents
 !agents/

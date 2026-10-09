@@ -14,28 +14,43 @@
  * limitations under the License.
  */
 
-import { forwardRef } from "react"
+import { forwardRef, type ReactElement, useImperativeHandle } from "react"
 
+import {
+  CompactSelection,
+  type GridCell,
+  type GridSelection,
+} from "@glideapps/glide-data-grid"
 import { act, screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
+import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render, renderWithContexts } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 // Track DataEditor calls for assertions - separate from the component so we can use forwardRef
 const dataEditorMockFn = vi.fn()
+const dataEditorScrollToMock = vi.fn()
+const dataEditorRemeasureColumnsMock = vi.fn()
+const dataEditorUpdateCellsMock = vi.fn()
 
 vi.mock("@glideapps/glide-data-grid", async () => ({
   ...(await vi.importActual("@glideapps/glide-data-grid")),
   // Use forwardRef to properly handle refs passed from DataFrame.
   // Don't spread props to the div - they contain non-DOM attributes like
   // imageEditorOverride, headerIcons, validateCell, onPaste, etc.
-  DataEditor: forwardRef((props, _ref) => {
+  DataEditor: forwardRef((props, ref) => {
     dataEditorMockFn(props, {})
+    useImperativeHandle(ref, () => ({
+      updateCells: dataEditorUpdateCellsMock,
+      remeasureColumns: dataEditorRemeasureColumnsMock,
+      scrollTo: dataEditorScrollToMock,
+    }))
     return <div data-testid="mock-data-editor" />
   }),
 }))
@@ -45,7 +60,7 @@ vi.mock("@glideapps/glide-data-grid", async () => ({
 // distribution. But the file picker most likely wouldn't work anyways in jest-dom.
 vi.mock("native-file-system-adapter", () => ({}))
 
-import DataFrame, { DataFrameProps } from "./DataFrame"
+import DataFrame, { type DataFrameProps } from "./DataFrame"
 
 const getProps = (
   data: Uint8Array,
@@ -66,17 +81,142 @@ const getProps = (
 describe("DataFrame widget", () => {
   const props = getProps(TEN_BY_TEN)
 
+  const getDataEditorProps = (): Record<string, unknown> =>
+    dataEditorMockFn.mock.lastCall?.[0] as Record<string, unknown>
+
+  const getEditorColumns = (): { title: string }[] =>
+    getDataEditorProps().columns as { title: string }[]
+
+  const createWidgetMgr = (): WidgetStateManager =>
+    ({
+      getStringValue: vi.fn(),
+      setStringValue: vi.fn(),
+    }) as unknown as WidgetStateManager
+
+  const emptyGridSelection = (): GridSelection => ({
+    columns: CompactSelection.empty(),
+    rows: CompactSelection.empty(),
+    current: undefined,
+  })
+
+  const cellSelection = (): GridSelection => ({
+    ...emptyGridSelection(),
+    current: {
+      cell: [1, 0],
+      range: { x: 1, y: 0, width: 1, height: 1 },
+      rangeStack: [],
+    },
+  })
+
+  const COLUMN_MENU_BOUNDS = { x: 10, y: 20, width: 80, height: 24 }
+
+  const invokeDataEditorCallback = (
+    name: string,
+    ...args: unknown[]
+  ): void => {
+    const callback = getDataEditorProps()[name] as (
+      ...cbArgs: unknown[]
+    ) => void
+    callback(...args)
+  }
+
+  const selectRow = (rowIndex: number): void => {
+    act(() => {
+      invokeDataEditorCallback("onGridSelectionChange", {
+        ...emptyGridSelection(),
+        rows: CompactSelection.fromSingleSelection(rowIndex),
+      })
+    })
+  }
+
+  const clickColumnHeader = (columnIdx = 1): void => {
+    act(() => {
+      invokeDataEditorCallback("onHeaderClicked", columnIdx, {})
+    })
+  }
+
+  const openColumnMenu = (columnIdx = 1): void => {
+    act(() => {
+      invokeDataEditorCallback(
+        "onHeaderMenuClick",
+        columnIdx,
+        COLUMN_MENU_BOUNDS
+      )
+    })
+  }
+
+  const EMPTY_SELECTION_STATE = JSON.stringify({
+    selection: { rows: [], columns: [], cells: [] },
+  })
+  const ROW_SELECTION_STATE = JSON.stringify({
+    selection: { rows: [1], columns: [], cells: [] },
+  })
+
+  const renderRowSelectionDataFrame = (
+    selectionState?: string
+  ): { rerender: (nextSelectionState?: string) => void } => {
+    const widgetMgr = createWidgetMgr()
+    const frame = (state?: string): ReactElement => (
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          selectionMode: [DataframeProto.SelectionMode.MULTI_ROW],
+          selectionState: state,
+        })}
+        widgetMgr={widgetMgr}
+      />
+    )
+
+    const { rerender } = render(frame(selectionState))
+    return {
+      rerender: (nextSelectionState?: string): void => {
+        rerender(frame(nextSelectionState))
+      },
+    }
+  }
+
+  const selectedRows = (): number[] =>
+    (
+      getDataEditorProps() as { gridSelection: GridSelection }
+    ).gridSelection.rows.toArray()
+
   beforeEach(() => {
     vi.clearAllMocks()
     dataEditorMockFn.mockClear()
+    dataEditorScrollToMock.mockClear()
+    dataEditorRemeasureColumnsMock.mockClear()
+    dataEditorUpdateCellsMock.mockClear()
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
       elementRef: { current: null },
       values: [250],
     })
+    // afterEach restoreAllMocks() resets vitest.setup.ts's matchMedia mock.
+    // Re-stub matches:false so cell-selection stays focus-gated (isTouchDevice).
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
+    // DataFrame portals column menus into #portal (normally created by
+    // PortalProvider); without this host, createPortal would target null.
+    if (!document.getElementById(DATAFRAME_PORTAL_ID)) {
+      const portal = document.createElement("div")
+      portal.id = DATAFRAME_PORTAL_ID
+      document.body.appendChild(portal)
+    }
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
+    document.getElementById(DATAFRAME_PORTAL_ID)?.remove()
   })
 
   it("renders without crashing", () => {
@@ -102,6 +242,69 @@ describe("DataFrame widget", () => {
     const styledResizableContainer = screen.getByTestId("stDataFrame")
 
     expect(styledResizableContainer).toHaveClass("stDataFrame")
+  })
+
+  it("sets role=region and aria-label on the grid host when alt is provided", () => {
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          alt: "Top 20 customers by revenue",
+        })}
+      />
+    )
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).toHaveAttribute("role", "region")
+    expect(gridHost).toHaveAccessibleName("Top 20 customers by revenue")
+    // Outer wrapper stays unnamed so the toolbar is outside the named region.
+    expect(screen.getByTestId("stDataFrame")).not.toHaveAttribute("role")
+    expect(screen.getByTestId("stDataFrame")).not.toHaveAttribute("aria-label")
+    // Toolbar chrome reuses alt as button context (separate from the region name).
+    expect(
+      screen.getByRole("button", {
+        name: /^Fullscreen: Top 20 customers by revenue$/,
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: /^Download as CSV: Top 20 customers by revenue$/,
+      })
+    ).toBeInTheDocument()
+    // Glide still mounts under the named host and is not aria-hidden
+    // (unit tests mock DataEditor as mock-data-editor).
+    const glideEditor = screen.getByTestId("mock-data-editor")
+    expect(glideEditor).toBeVisible()
+    expect(gridHost).toContainElement(glideEditor)
+    expect(gridHost).not.toHaveAttribute("aria-hidden")
+    expect(glideEditor).not.toHaveAttribute("aria-hidden")
+  })
+
+  it("omits role and aria-label when alt is not provided", () => {
+    render(<DataFrame {...props} />)
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).not.toHaveAttribute("role")
+    expect(gridHost).not.toHaveAttribute("aria-label")
+  })
+
+  it.each(["", "   "])("omits role and aria-label when alt is %j", alt => {
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          alt,
+        })}
+      />
+    )
+
+    const gridHost = screen.getByTestId("stDataFrameResizable")
+    expect(gridHost).not.toHaveAttribute("role")
+    expect(gridHost).not.toHaveAttribute("aria-label")
   })
 
   it("should have a toolbar", () => {
@@ -161,6 +364,104 @@ describe("DataFrame widget", () => {
       })
     )
   })
+
+  const renderEditableDataFrame = (): {
+    widgetMgr: WidgetStateManager
+    updatedCell: GridCell
+  } => {
+    vi.useFakeTimers()
+    const widgetMgr = createWidgetMgr()
+
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.FIXED)}
+        widgetMgr={widgetMgr}
+      />
+    )
+
+    const dataEditorProps = dataEditorMockFn.mock.lastCall?.[0]
+    const updatedCell = {
+      ...dataEditorProps.getCellContent([1, 0]),
+      data: 999,
+      displayData: "999",
+    }
+    return { widgetMgr, updatedCell }
+  }
+
+  it("flushes a pending edit when clicking outside the data editor", () => {
+    const { widgetMgr, updatedCell } = renderEditableDataFrame()
+    const dataEditorProps = dataEditorMockFn.mock.lastCall?.[0]
+
+    act(() => {
+      const pointerDownEvent = new MouseEvent("pointerdown")
+      Object.defineProperty(pointerDownEvent, "target", {
+        value: document.body,
+      })
+      expect(dataEditorProps.isOutsideClick(pointerDownEvent)).toBe(true)
+      dataEditorProps.onCellEdited([1, 0], updatedCell)
+      dataEditorProps.onFinishedEditing(updatedCell, [0, 0])
+    })
+    expect(widgetMgr.setStringValue).toHaveBeenCalledOnce()
+
+    act(() => {
+      vi.runAllTimers()
+    })
+    expect(widgetMgr.setStringValue).toHaveBeenCalledOnce()
+  })
+
+  it("keeps a pending edit debounced when clicking another grid cell", () => {
+    const { widgetMgr, updatedCell } = renderEditableDataFrame()
+    const dataEditorProps = dataEditorMockFn.mock.lastCall?.[0]
+
+    const pointerDownEvent = new MouseEvent("pointerdown")
+    Object.defineProperty(pointerDownEvent, "target", {
+      value: screen.getByTestId("mock-data-editor"),
+    })
+
+    act(() => {
+      expect(dataEditorProps.isOutsideClick(pointerDownEvent)).toBe(true)
+      dataEditorProps.onCellEdited([1, 0], updatedCell)
+      dataEditorProps.onFinishedEditing(updatedCell, [0, 0])
+    })
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.runAllTimers()
+    })
+    expect(widgetMgr.setStringValue).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    ["Enter", [0, 1], true],
+    ["Tab", [1, 0], true],
+    ["a zero-movement editor completion", [0, 0], false],
+  ] as const)(
+    "keeps pending edits debounced for %s",
+    (_key, movement, armOutsideClick) => {
+      const { widgetMgr, updatedCell } = renderEditableDataFrame()
+      const dataEditorProps = dataEditorMockFn.mock.lastCall?.[0]
+      let outsideClickResult: boolean | undefined
+
+      act(() => {
+        if (armOutsideClick) {
+          const pointerDownEvent = new MouseEvent("pointerdown")
+          Object.defineProperty(pointerDownEvent, "target", {
+            value: document.body,
+          })
+          outsideClickResult = dataEditorProps.isOutsideClick(pointerDownEvent)
+        }
+        dataEditorProps.onCellEdited([1, 0], updatedCell)
+        dataEditorProps.onFinishedEditing(updatedCell, movement)
+      })
+      expect(outsideClickResult).toBe(armOutsideClick ? true : undefined)
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+      act(() => {
+        vi.runAllTimers()
+      })
+      expect(widgetMgr.setStringValue).toHaveBeenCalledOnce()
+    }
+  )
 
   it("shows search when Ctrl+F is pressed and search is enabled", () => {
     render(<DataFrame {...props} />)
@@ -286,9 +587,15 @@ describe("DataFrame widget", () => {
   })
 
   it("Touch detection correctly deactivates some features", () => {
-    // Set window.matchMedia to simulate a touch device
-    window.matchMedia = vi.fn().mockImplementation(() => ({
+    vi.spyOn(window, "matchMedia").mockImplementation((query: string) => ({
       matches: true,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
     }))
 
     render(
@@ -377,5 +684,403 @@ describe("DataFrame widget", () => {
       }),
       {}
     )
+  })
+
+  it("renders empty-state cell content when the table has no rows", () => {
+    render(<DataFrame {...getProps(EMPTY)} />)
+
+    const cell = (
+      getDataEditorProps().getCellContent as (
+        item: readonly [number, number]
+      ) => {
+        displayData: string
+        contentAlign: string
+        allowOverlay: boolean
+      }
+    )([0, 0])
+
+    expect(cell.displayData).toBe("empty")
+    expect(cell.contentAlign).toBe("center")
+    expect(cell.allowOverlay).toBe(false)
+  })
+
+  it("throws when a lazy dataframe is missing its initial chunk", () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {})
+
+    expect(() =>
+      render(
+        <DataFrame
+          {...getProps(TEN_BY_TEN)}
+          element={DataframeProto.create({
+            lazyData: {
+              sourceId: "lazy-source",
+              pageSize: 50,
+              rowCount: 100,
+            },
+          })}
+        />
+      )
+    ).toThrow("Lazy dataframe is missing its initial chunk")
+
+    consoleError.mockRestore()
+  })
+
+  it("throws when arrow data is missing and no data prop is provided", () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {})
+
+    expect(() =>
+      render(
+        <DataFrame
+          {...getProps(TEN_BY_TEN)}
+          element={DataframeProto.create({
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+          })}
+        />
+      )
+    ).toThrow("DataFrame element is missing arrowData")
+
+    consoleError.mockRestore()
+  })
+
+  it("toggles search from the toolbar and closes it from the grid", async () => {
+    const user = userEvent.setup()
+    render(<DataFrame {...props} />)
+
+    await user.click(screen.getByLabelText("Search"))
+    expect(getDataEditorProps().showSearch).toBe(true)
+
+    await user.click(screen.getByLabelText("Search"))
+    expect(getDataEditorProps().showSearch).toBe(false)
+
+    await user.click(screen.getByLabelText("Search"))
+    act(() => {
+      invokeDataEditorCallback("onSearchClose")
+    })
+    expect(getDataEditorProps().showSearch).toBe(false)
+  })
+
+  it("sorts a column from the header and hides an open search overlay", async () => {
+    const user = userEvent.setup()
+    render(<DataFrame {...props} />)
+
+    await user.click(screen.getByLabelText("Search"))
+    expect(getDataEditorProps().showSearch).toBe(true)
+
+    const unsortedTitle = getEditorColumns()[1].title
+    clickColumnHeader()
+
+    expect(getDataEditorProps().showSearch).toBe(false)
+    expect(getEditorColumns()[1].title).toBe(`↑ ${unsortedTitle}`)
+  })
+
+  it("does not sort when column selection is activated", () => {
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          selectionMode: [DataframeProto.SelectionMode.MULTI_COLUMN],
+        })}
+      />
+    )
+
+    const titlesBeforeSort = getEditorColumns().map(column => column.title)
+    clickColumnHeader()
+    expect(getEditorColumns().map(column => column.title)).toEqual(
+      titlesBeforeSort
+    )
+  })
+
+  it("applies row selection and clears it from the toolbar", async () => {
+    const user = userEvent.setup()
+    renderRowSelectionDataFrame()
+
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
+
+    selectRow(2)
+
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+    await user.click(screen.getByLabelText("Clear selection"))
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
+  })
+
+  it("preserves selected rows after a column sort", () => {
+    vi.useFakeTimers()
+    renderRowSelectionDataFrame()
+
+    selectRow(2)
+
+    const selectedDisplayRows = (): number[] =>
+      (getDataEditorProps().gridSelection as GridSelection).rows.toArray()
+    const cellDataAtRow = (row: number): unknown => {
+      const getCellContent = getDataEditorProps().getCellContent as (
+        cell: [number, number]
+      ) => GridCell
+      const cell = getCellContent([1, row])
+      return "displayData" in cell ? cell.displayData : cell.kind
+    }
+
+    expect(selectedDisplayRows()).toEqual([2])
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+    const selectedCellData = cellDataAtRow(2)
+
+    // Row selection is remapped on a 0ms timeout after sort; flush it.
+    // First click sorts ascending (already ordered); second click reverses so
+    // original row 2 moves away from display index 2.
+    act(() => {
+      invokeDataEditorCallback("onHeaderClicked", 1, {})
+    })
+    act(() => {
+      invokeDataEditorCallback("onHeaderClicked", 1, {})
+    })
+    act(() => {
+      vi.runAllTimers()
+    })
+
+    const remappedRows = selectedDisplayRows()
+    expect(remappedRows).toHaveLength(1)
+    expect(remappedRows[0]).not.toBe(2)
+    expect(cellDataAtRow(remappedRows[0])).toEqual(selectedCellData)
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+  })
+
+  it("applies programmatic selection from selectionState", () => {
+    renderRowSelectionDataFrame(ROW_SELECTION_STATE)
+
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+  })
+
+  it("clears programmatic selection when selectionState is empty", () => {
+    const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
+
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+
+    rerender(EMPTY_SELECTION_STATE)
+
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
+  })
+
+  it("applies a later identical empty selectionState after a user reselects", () => {
+    const { rerender } = renderRowSelectionDataFrame(EMPTY_SELECTION_STATE)
+
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
+
+    selectRow(1)
+
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+
+    // User-driven reruns omit the one-shot field. processedSelectionStateRef
+    // must reset here or the next identical empty JSON is dropped.
+    rerender(undefined)
+
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+
+    rerender(EMPTY_SELECTION_STATE)
+
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
+  })
+
+  it("applies a later identical non-empty selectionState after a user reselects", () => {
+    const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
+
+    selectRow(3)
+    expect(selectedRows()).toEqual([3])
+    rerender(undefined)
+    rerender(ROW_SELECTION_STATE)
+
+    expect(selectedRows()).toEqual([1])
+  })
+
+  it("does not re-apply the same selectionState after a user selection", () => {
+    const { rerender } = renderRowSelectionDataFrame(ROW_SELECTION_STATE)
+
+    selectRow(3)
+    rerender(ROW_SELECTION_STATE)
+
+    expect(selectedRows()).toEqual([3])
+  })
+
+  it("adds a row from the toolbar in dynamic editing mode", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.DYNAMIC)}
+        widgetMgr={createWidgetMgr()}
+      />
+    )
+
+    expect(getDataEditorProps().rows).toBe(10)
+    expect(screen.getByLabelText("Add row")).toBeInTheDocument()
+    expect(screen.queryByLabelText("Delete row(s)")).not.toBeInTheDocument()
+
+    await user.click(screen.getByLabelText("Add row"))
+
+    expect(getDataEditorProps().rows).toBe(11)
+    expect(dataEditorScrollToMock).toHaveBeenCalledWith(0, 10, "vertical")
+    expect(screen.getByLabelText("Add row")).toBeInTheDocument()
+  })
+
+  it("deletes selected rows from the toolbar in delete-only mode", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.DELETE_ONLY)}
+        widgetMgr={createWidgetMgr()}
+      />
+    )
+
+    expect(getDataEditorProps().rows).toBe(10)
+    selectRow(1)
+
+    expect(screen.getByLabelText("Delete row(s)")).toBeInTheDocument()
+    await user.click(screen.getByLabelText("Delete row(s)"))
+
+    expect(getDataEditorProps().rows).toBe(9)
+    expect(screen.queryByLabelText("Delete row(s)")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Clear selection")).not.toBeInTheDocument()
+  })
+
+  it("toggles the column visibility menu from the toolbar", async () => {
+    const user = userEvent.setup()
+    render(<DataFrame {...props} />)
+
+    expect(
+      screen.queryByTestId("stDataFrameColumnVisibilityMenu")
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByLabelText("Show/hide columns"))
+    expect(screen.getByTestId("stDataFrameColumnVisibilityMenu")).toBeVisible()
+
+    await user.click(screen.getByLabelText("Show/hide columns"))
+    expect(
+      screen.queryByTestId("stDataFrameColumnVisibilityMenu")
+    ).not.toBeInTheDocument()
+  })
+
+  it("opens the column menu and pins the column", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [2000],
+    })
+    render(<DataFrame {...props} />)
+
+    const freezeColumnsBeforePin = getDataEditorProps().freezeColumns as number
+    openColumnMenu()
+
+    expect(screen.getByTestId("stDataFrameColumnMenu")).toBeVisible()
+    await user.click(screen.getByText("Pin column"))
+
+    expect(
+      screen.queryByTestId("stDataFrameColumnMenu")
+    ).not.toBeInTheDocument()
+    expect(getDataEditorProps().freezeColumns).toBe(freezeColumnsBeforePin + 1)
+  })
+
+  it("autosizes a column from the column menu", async () => {
+    const user = userEvent.setup()
+    render(<DataFrame {...props} />)
+
+    openColumnMenu()
+    await user.click(screen.getByText("Autosize"))
+
+    expect(
+      screen.queryByTestId("stDataFrameColumnMenu")
+    ).not.toBeInTheDocument()
+    expect(dataEditorRemeasureColumnsMock).toHaveBeenCalled()
+  })
+
+  it("sorts a column from the column menu", async () => {
+    const user = userEvent.setup()
+    render(<DataFrame {...props} />)
+
+    const unsortedTitle = getEditorColumns()[1].title
+    openColumnMenu()
+    await user.click(screen.getByText("Sort ascending"))
+
+    expect(
+      screen.queryByTestId("stDataFrameColumnMenu")
+    ).not.toBeInTheDocument()
+    expect(getEditorColumns()[1].title).toBe(`↑ ${unsortedTitle}`)
+  })
+
+  it("hides a column from the column menu", async () => {
+    const user = userEvent.setup()
+    render(<DataFrame {...props} />)
+
+    const columnCount = getEditorColumns().length
+    openColumnMenu()
+    await user.click(screen.getByText("Hide column"))
+
+    expect(
+      screen.queryByTestId("stDataFrameColumnMenu")
+    ).not.toBeInTheDocument()
+    expect(getEditorColumns()).toHaveLength(columnCount - 1)
+  })
+
+  it("does not open a column menu while the visibility menu is open", async () => {
+    const user = userEvent.setup()
+    render(<DataFrame {...props} />)
+
+    await user.click(screen.getByLabelText("Show/hide columns"))
+    expect(screen.getByTestId("stDataFrameColumnVisibilityMenu")).toBeVisible()
+
+    openColumnMenu()
+
+    expect(
+      screen.queryByTestId("stDataFrameColumnMenu")
+    ).not.toBeInTheDocument()
+  })
+
+  it("tracks focus from mouse movement over the grid", () => {
+    render(<DataFrame {...props} />)
+
+    act(() => {
+      invokeDataEditorCallback("onMouseMove", { kind: "out-of-bounds" })
+    })
+    act(() => {
+      invokeDataEditorCallback("onGridSelectionChange", cellSelection())
+    })
+    expect(
+      (getDataEditorProps().gridSelection as GridSelection).current
+    ).toBeUndefined()
+
+    act(() => {
+      invokeDataEditorCallback("onMouseMove", { kind: "cell" })
+    })
+    act(() => {
+      invokeDataEditorCallback("onGridSelectionChange", cellSelection())
+    })
+    expect(
+      (getDataEditorProps().gridSelection as GridSelection).current?.cell
+    ).toEqual([1, 0])
+  })
+
+  it("highlights the hovered row", () => {
+    render(<DataFrame {...props} />)
+
+    act(() => {
+      invokeDataEditorCallback("onItemHovered", {
+        kind: "cell",
+        location: [1, 0],
+        bounds: { x: 0, y: 0, width: 40, height: 24 },
+        isTouchDevice: false,
+      })
+    })
+
+    const getRowThemeOverride = getDataEditorProps().getRowThemeOverride as (
+      row: number
+    ) => { bgCell?: string } | undefined
+    expect(getRowThemeOverride(0)).toEqual(
+      expect.objectContaining({ bgCell: expect.any(String) })
+    )
+    expect(getRowThemeOverride(1)).toBeUndefined()
   })
 })

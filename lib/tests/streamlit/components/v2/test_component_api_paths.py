@@ -21,7 +21,11 @@ import pytest
 
 from streamlit.components.v2 import component as component_api
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
-from streamlit.errors import StreamlitAPIException, StreamlitComponentRegistryError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitComponentRegistryError,
+    StreamlitInvalidParameterTypeError,
+)
 from streamlit.runtime import Runtime
 
 if TYPE_CHECKING:
@@ -203,7 +207,7 @@ def test_api_rejects_non_string_types(tmp_path: Path) -> None:
         patch.object(Runtime, "exists", return_value=True),
         _with_runtime_manager(manager),
     ):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             component_api(name="pkg.slider", js=123)  # type: ignore[arg-type]
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             component_api(name="pkg.slider", css=["invalid"])  # type: ignore[arg-type]

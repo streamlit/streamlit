@@ -20,7 +20,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit import config
-from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
+from streamlit.errors import MarkdownFormattedException
 
 if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -89,17 +89,6 @@ _Note that increasing the limit may lead to long loading times and large memory 
 of the Streamlit server._
 """
         ).strip("\n")
-
-
-class BadDurationStringError(StreamlitAPIException):
-    """Raised when a bad duration argument string is passed."""
-
-    def __init__(self, duration: str) -> None:
-        MarkdownFormattedException.__init__(
-            self,
-            "TTL string doesn't look right. It should be formatted as"
-            f"`'1d2h34m'` or `2 days`, for example. Got: {duration}",
-        )
 
 
 def serialize_forward_msg(msg: ForwardMsg) -> bytes:

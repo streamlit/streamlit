@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 
-import { MarkdownCell } from "./cells/MarkdownCell"
+import type { MarkdownCell } from "./cells/MarkdownCell"
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   removeLineBreaks,
   toSafeString,

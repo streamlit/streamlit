@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { GridCell } from "@glideapps/glide-data-grid"
+import type { GridCell } from "@glideapps/glide-data-grid"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   isMissingValueCell,
 } from "~lib/components/widgets/DataFrame/columns"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
@@ -133,7 +133,7 @@ class EditingState {
 
     // Convert undefined values to null, otherwise this is removed here since
     // undefined does not exist in JSON.
-    const json = JSON.stringify(currentState, (_k, v) =>
+    const json = JSON.stringify(currentState, (_k, v: unknown) =>
       v === undefined ? null : v
     )
     return json
@@ -152,7 +152,11 @@ class EditingState {
     this.deletedRows = []
 
     // Parse JSON editing string:
-    const editingState = JSON.parse(editingStateJson)
+    const editingState = JSON.parse(editingStateJson) as {
+      edited_rows: Record<string, Record<string, unknown>>
+      added_rows: Record<string, unknown>[]
+      deleted_rows: number[]
+    }
     // Map columns to column index
     const columnsByIndex = new Map<number, BaseColumn>()
     columns.forEach(column => {
@@ -327,13 +331,14 @@ class EditingState {
 
   /**
    * Deletes the given rows from the editing state.
+   * Does not mutate the input array.
    *
    * @param rows - The rows to delete
    */
   deleteRows(rows: number[]): void {
     // Delete row one by one starting from the row with the highest index
     rows
-      .sort((a, b) => b - a)
+      .toSorted((a, b) => b - a)
       .forEach(row => {
         this.deleteRow(row)
       })
@@ -361,7 +366,7 @@ class EditingState {
       // Add to the set
       this.deletedRows.push(row)
       // Sort the deleted rows (important for calculation of the original row index)
-      this.deletedRows = this.deletedRows.sort((a, b) => a - b)
+      this.deletedRows = this.deletedRows.toSorted((a, b) => a - b)
     }
 
     // Remove all cells from cell state associated with this row:

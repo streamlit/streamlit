@@ -14,13 +14,19 @@
 
 from __future__ import annotations
 
-import re
+import asyncio
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit.runtime import Runtime
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.testing.v1 import AppTest
+from streamlit.runtime.scriptrunner import ScriptRunnerEvent
+from streamlit.runtime.state.common import TESTING_KEY
+from streamlit.testing.v1 import AppTest, local_script_runner
+from streamlit.testing.v1.local_script_runner import LocalScriptRunner
+from streamlit.util import calc_hash
 
 
 def test_smoke():
@@ -44,6 +50,98 @@ def test_smoke():
     assert at.radio.values == ["b", "c"]
 
 
+def test_each_run_closes_its_local_script_runner_event_loop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each AppTest.run() creates a LocalScriptRunner that owns and closes a fresh loop."""
+    created_loops: list[asyncio.AbstractEventLoop] = []
+    original_new_event_loop = asyncio.new_event_loop
+
+    def track_new_event_loop() -> asyncio.AbstractEventLoop:
+        loop = original_new_event_loop()
+        created_loops.append(loop)
+        return loop
+
+    monkeypatch.setattr(asyncio, "new_event_loop", track_new_event_loop)
+
+    at = AppTest.from_string(
+        "import asyncio\nimport streamlit as st\nst.text(str(id(asyncio.get_event_loop())))"
+    )
+    at.run()
+    assert len(at.exception) == 0
+    first_loop_id = at.text[0].value
+    at.run()
+    assert len(at.exception) == 0
+    second_loop_id = at.text[0].value
+
+    assert len(created_loops) == 2
+    assert created_loops[0] is not created_loops[1]
+    assert all(loop.is_closed() for loop in created_loops)
+    assert first_loop_id == str(id(created_loops[0]))
+    assert second_loop_id == str(id(created_loops[1]))
+
+
+def test_local_script_runner_closes_loop_when_initialization_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """LocalScriptRunner closes its loop after an ordinary initialization error."""
+    created_loops: list[asyncio.AbstractEventLoop] = []
+    original_new_event_loop = asyncio.new_event_loop
+    initialization_error = RuntimeError("initialization failed")
+
+    def track_new_event_loop() -> asyncio.AbstractEventLoop:
+        loop = original_new_event_loop()
+        created_loops.append(loop)
+        return loop
+
+    def fail_initialization(*_args: object, **_kwargs: object) -> None:
+        raise initialization_error
+
+    monkeypatch.setattr(asyncio, "new_event_loop", track_new_event_loop)
+    monkeypatch.setattr(
+        local_script_runner.ScriptRunner, "__init__", fail_initialization
+    )
+
+    try:
+        with pytest.raises(RuntimeError) as exc_info:
+            AppTest.from_string("pass").run()
+
+        assert exc_info.value is initialization_error
+        assert len(created_loops) == 1
+        assert created_loops[0].is_closed()
+    finally:
+        for loop in created_loops:
+            if not loop.is_closed():
+                loop.close()
+
+
+def test_local_script_runner_skips_orphan_cleanup_when_runtime_missing() -> None:
+    """Orphan cleanup is skipped when no Runtime singleton exists.
+
+    Without the gate, ``runtime.get_instance()`` raises ``RuntimeError`` on the
+    script thread. AppTest itself installs a Runtime for the run; this covers
+    the override when tests call ``_on_script_finished`` directly.
+    """
+    runner = MagicMock()
+    runner._session_state = MagicMock()
+    ctx = MagicMock()
+    ctx.has_script_started = True
+    ctx.shared.widget_ids_this_run.snapshot.return_value = frozenset()
+    previous_runtime = Runtime._instance
+    Runtime._instance = None
+    try:
+        with patch("streamlit.runtime.get_instance") as mock_get_instance:
+            LocalScriptRunner._on_script_finished(
+                runner,
+                ctx,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                premature_stop=False,
+            )
+        mock_get_instance.assert_not_called()
+    finally:
+        Runtime._instance = previous_runtime
+
+
 def test_from_file_str():
     script = AppTest.from_file("../test_data/widgets_script.py")
     script.run()
@@ -54,7 +152,35 @@ def test_from_file_path():
     script.run()
 
 
-def test_get_query_params():
+def test_from_file_resolves_relative_path_from_calling_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Verify relative paths resolve against the calling file, not the CWD."""
+    cwd_script = tmp_path / "test_data/main.py"
+    cwd_script.parent.mkdir()
+    cwd_script.write_text(
+        'import streamlit as st\nst.text("wrong main page")\n', encoding="utf-8"
+    )
+    monkeypatch.chdir(tmp_path)
+
+    at = AppTest.from_file("test_data/main.py").run()
+
+    assert at.text[0].value == "main page"
+
+
+def test_from_file_raises_immediately_for_missing_script():
+    """Verify from_file raises immediately when the script is missing."""
+    missing_script = Path(__file__).parent / "test_data/missing.py"
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        AppTest.from_file("test_data/missing.py")
+
+    assert str(missing_script.resolve()) in str(exc_info.value)
+
+
+def test_get_query_params() -> None:
+    """Query params set on AppTest are visible to the script as strings."""
+
     def script():
         import streamlit as st
 
@@ -66,17 +192,50 @@ def test_get_query_params():
     at.query_params["bar"] = "baz"
     at.run()
     assert at.json[0].value == '{"foo": "5", "bar": "baz"}'
+    assert at.query_params["foo"] == "5"
+    assert at.query_params["bar"] == "baz"
 
 
-def test_set_query_params():
+def test_set_query_params() -> None:
+    """Single query param values set by the app stay str after .run()."""
+
     def script():
         import streamlit as st
 
         st.query_params["foo"] = "bar"
 
     at = AppTest.from_function(script).run()
-    # parse.parse_qs puts everything in lists
-    assert at.query_params["foo"] == ["bar"]
+    assert at.query_params["foo"] == "bar"
+
+
+def test_query_params_round_trip() -> None:
+    """AppTest preserves single, repeated, and blank query parameters across runs."""
+
+    def script():
+        import streamlit as st
+
+        st.query_params["from_app"] = "bar"
+
+    at = AppTest.from_function(script)
+    at.query_params["x"] = "1"
+    at.query_params["one"] = ["solo"]
+    at.query_params["tags"] = ["a", "b"]
+    at.query_params["empty"] = ""
+    at.run()
+
+    assert at.query_params["x"] == "1"
+    assert at.query_params["one"] == "solo"
+    assert at.query_params["tags"] == ["a", "b"]
+    assert at.query_params["empty"] == ""
+    assert at.query_params["from_app"] == "bar"
+
+    # Second run re-encodes the collapsed dict; values must stay stable.
+    at.run()
+    assert at.query_params["x"] == "1"
+    assert at.query_params["one"] == "solo"
+    assert at.query_params["tags"] == ["a", "b"]
+    assert at.query_params["empty"] == ""
+    assert at.query_params["from_app"] == "bar"
 
 
 def test_secrets():
@@ -207,21 +366,42 @@ def test_trigger_recursion():
     at.button[0].click().run()
 
 
-def test_switch_page():
+def test_switch_page_uses_paths_relative_to_main_script():
+    """Verify page paths are resolved relative to the main script."""
     at = AppTest.from_file("test_data/main.py").run()
     assert at.text[0].value == "main page"
 
     at.switch_page("pages/page1.py").run()
     assert at.text[0].value == "page 1"
 
-    with pytest.raises(
-        ValueError,
-        match=re.compile(
-            r".*make sure the page given is relative to the main script.*"
-        ),
-    ):
-        # Pages must be relative to main script path
-        at.switch_page("test_data/pages/page1.py")
+    invalid_page_path = "test_data/pages/page1.py"
+    with pytest.raises(ValueError, match="relative to the main script") as exc_info:
+        at.switch_page(invalid_page_path)
+
+    expected_path = (Path(__file__).parent / "test_data" / invalid_page_path).resolve()
+    assert str(expected_path) in str(exc_info.value)
+
+
+def test_switch_page_preserves_main_script_for_page_links(tmp_path: Path):
+    """Verify switched pages resolve page links from the main script."""
+    main_script = tmp_path / "main.py"
+    page_script = tmp_path / "pages/register.py"
+    page_script.parent.mkdir()
+    main_script.write_text(
+        'import streamlit as st\nst.page_link("pages/register.py", label="Register")\n',
+        encoding="utf-8",
+    )
+    page_script.write_text(
+        'import streamlit as st\nst.page_link("main.py", label="Main")\n'
+        'st.text("register page")\n',
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(main_script).run()
+    at.switch_page("pages/register.py").run()
+
+    assert not at.exception
+    assert at.text[0].value == "register page"
 
 
 def test_switch_page_widgets():
@@ -233,6 +413,188 @@ def test_switch_page_widgets():
     assert not at.slider
     at.switch_page("main.py").run()
     assert at.slider[0].value == 0
+
+
+@pytest.mark.parametrize(
+    ("persist_clause", "kept_while_hidden", "value_after_show"),
+    [
+        (', persist_state="page"', True, "SKU-42"),
+        (', persist_state="session"', True, "SKU-42"),
+        ("", False, ""),
+    ],
+)
+def test_page_persist_same_page_hide_show(
+    persist_clause: str, kept_while_hidden: bool, value_after_show: str
+) -> None:
+    """A keyed text input keeps or drops its value when hidden and shown on the same page.
+
+    The result follows persist_state.
+    """
+    script = (
+        "import streamlit as st\n"
+        'if st.toggle("Show", key="show"):\n'
+        f'    st.text_input("SKU", key="sku"{persist_clause})\n'
+    )
+    at = AppTest.from_string(script).run()
+    at.toggle[0].set_value(True).run()
+    at.text_input[0].set_value("SKU-42").run()
+    at.toggle[0].set_value(False).run()
+    if kept_while_hidden:
+        assert at.session_state["sku"] == "SKU-42"
+    else:
+        assert "sku" not in at.session_state
+    at.toggle[0].set_value(True).run()
+    assert at.text_input[0].value == value_after_show
+
+
+def test_switch_page_clears_page_persist_keeps_session(tmp_path: Path) -> None:
+    """switch_page drops page persistence and keeps session persistence."""
+    main_script = tmp_path / "main.py"
+    other_page = tmp_path / "pages" / "other.py"
+    other_page.parent.mkdir()
+    main_script.write_text(
+        "import streamlit as st\n"
+        'st.text_input("Page", key="page_sku", persist_state="page")\n'
+        'st.text_input("Session", key="session_sku", persist_state="session")\n',
+        encoding="utf-8",
+    )
+    other_page.write_text(
+        'import streamlit as st\nst.text("other")\n',
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(main_script).run()
+    at.text_input(key="page_sku").set_value("SKU-42")
+    at.text_input(key="session_sku").set_value("SESS-9")
+    at.run()
+    at.switch_page("pages/other.py").run()
+    assert at.text[0].value == "other"
+    assert "page_sku" not in at.session_state
+    assert at.session_state["session_sku"] == "SESS-9"
+
+    at.switch_page("main.py").run()
+    assert at.text_input(key="page_sku").value == ""
+    assert at.text_input(key="session_sku").value == "SESS-9"
+
+
+def test_keyed_tabs_on_change_rerun_survives_child_run() -> None:
+    """A keyed tab with on_change='rerun' stays selected after a child widget run."""
+    at = AppTest.from_string(
+        "import streamlit as st\n"
+        'a, b = st.tabs(["A", "B"], key="section", on_change="rerun")\n'
+        "if b.open:\n"
+        '    st.text_input("Note", key="note")\n'
+    ).run()
+    assert len(at.text_input) == 0
+
+    at.session_state["section"] = "B"
+    at.run()
+    at.text_input[0].set_value("kept").run()
+    assert at.session_state["section"] == "B"
+    assert at.get_by_key("section").proto.tab_container.default_tab_index == 1
+    assert at.text_input[0].value == "kept"
+
+
+def test_page_persist_pages_directory_same_page_hide_show(tmp_path: Path) -> None:
+    """A pages/ app keeps page persistence across a same-page hide and show."""
+    app_script = tmp_path / "app.py"
+    other_page = tmp_path / "pages" / "other.py"
+    other_page.parent.mkdir()
+    app_script.write_text(
+        "import streamlit as st\n"
+        'if st.toggle("Show", key="show"):\n'
+        '    st.text_input("SKU", key="sku", persist_state="page")\n',
+        encoding="utf-8",
+    )
+    other_page.write_text(
+        'import streamlit as st\nst.text("other")\n',
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(app_script).run()
+    at.toggle[0].set_value(True).run()
+    at.text_input[0].set_value("SKU-42").run()
+    at.toggle[0].set_value(False).run()
+    assert at.session_state["sku"] == "SKU-42"
+    at.toggle[0].set_value(True).run()
+    assert at.text_input[0].value == "SKU-42"
+
+
+def test_keyed_tabs_on_change_rerun_survives_child_run_in_navigation() -> None:
+    """A keyed tab inside st.navigation stays selected after a child widget run."""
+
+    def script():
+        import streamlit as st
+
+        def home():
+            b = st.tabs(["A", "B"], key="section", on_change="rerun")[1]
+            if b.open:
+                st.text_input("Note", key="note")
+
+        st.navigation([st.Page(home, title="Home")]).run()
+
+    at = AppTest.from_function(script).run()
+    assert len(at.text_input) == 0
+
+    at.session_state["section"] = "B"
+    at.run()
+    at.text_input[0].set_value("kept").run()
+    assert at.session_state["section"] == "B"
+    assert at.get_by_key("section").proto.tab_container.default_tab_index == 1
+    assert at.text_input[0].value == "kept"
+
+
+def test_keyed_tabs_on_change_rerun_survives_child_run_in_pages_directory(
+    tmp_path: Path,
+) -> None:
+    """A keyed tab in a pages/ app stays selected after a child widget run."""
+    app_script = tmp_path / "app.py"
+    other_page = tmp_path / "pages" / "other.py"
+    other_page.parent.mkdir()
+    app_script.write_text(
+        "import streamlit as st\n"
+        'a, b = st.tabs(["A", "B"], key="section", on_change="rerun")\n'
+        "if b.open:\n"
+        '    st.text_input("Note", key="note")\n',
+        encoding="utf-8",
+    )
+    other_page.write_text(
+        'import streamlit as st\nst.text("other")\n',
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(app_script).run()
+    assert len(at.text_input) == 0
+
+    at.session_state["section"] = "B"
+    at.run()
+    at.text_input[0].set_value("kept").run()
+    assert at.session_state["section"] == "B"
+    assert at.get_by_key("section").proto.tab_container.default_tab_index == 1
+    assert at.text_input[0].value == "kept"
+
+
+def test_page_persist_before_navigation_same_page_hide_show() -> None:
+    """A page-scoped input before st.navigation keeps its value when hidden and shown."""
+
+    def script():
+        import streamlit as st
+
+        def home():
+            st.text("home")
+
+        if st.toggle("Show", key="show"):
+            st.text_input("SKU", key="sku", persist_state="page")
+
+        st.navigation([st.Page(home, title="Home")]).run()
+
+    at = AppTest.from_function(script).run()
+    at.toggle[0].set_value(True).run()
+    at.text_input[0].set_value("SKU-42").run()
+    at.toggle[0].set_value(False).run()
+    assert at.session_state["sku"] == "SKU-42"
+    at.toggle[0].set_value(True).run()
+    assert at.text_input[0].value == "SKU-42"
 
 
 def test_navigation_with_callable_pages():
@@ -318,3 +680,460 @@ def test_navigation_resets_pages_manager_state():
         assert "Page content" in at.markdown.values
     finally:
         PagesManager.uses_pages_directory = original_value
+
+
+def test_dynamic_widget_does_not_duplicate_on_rerun() -> None:
+    """Dynamically adding an element before an existing widget should not
+    leave stale widgets in the AppTest tree after a rerun.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/12566
+    """
+
+    def script():
+        import streamlit as st
+
+        if "_string_value" not in st.session_state:
+            st.session_state._string_value = "string1"
+
+        if st.session_state.get("_bool_value", False):
+            with st.container(key="k_container"):
+                st.html("<style>color: red;</style>")
+
+        with st.container():
+            st.text_input("Text", value=st.session_state._string_value)
+
+            if st.button("Button", key="k_button"):
+                st.session_state._string_value = "string2"
+                st.session_state._bool_value = True
+                st.rerun()
+
+    at = AppTest.from_function(script).run()
+    assert len(at.text_input) == 1
+    assert at.text_input[0].value == "string1"
+
+    at = at.button(key="k_button").click().run()
+    assert len(at.text_input) == 1
+    assert at.text_input[0].value == "string2"
+
+    # A subsequent run with no interaction should not raise KeyError from
+    # stale widget ids left over in the previous run's tree.
+    at = at.run()
+    assert len(at.text_input) == 1
+    assert at.text_input[0].value == "string2"
+
+
+def test_removed_widget_does_not_persist_on_rerun() -> None:
+    """A widget removed during a rerun should not remain in the AppTest tree.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/9128
+    """
+
+    def script():
+        import streamlit as st
+
+        if "started" not in st.session_state:
+            st.session_state.started = False
+
+        if not st.session_state.started:
+            with st.status("Starting", expanded=True) as status:
+                question_1 = status.text_input("Start", key="question_1")
+
+                if len(question_1) > 5:
+                    st.write("ok: started")
+                    st.session_state.started = True
+                    st.rerun()
+        else:
+            st.status("Started", state="complete", expanded=False)
+
+            with st.status("Question 2", expanded=True) as status:
+                question_2 = status.text_input("Question 2", key="question_2")
+
+                if len(question_2) > 5:
+                    st.write("ok: stopping")
+                    st.stop()
+
+    at = AppTest.from_function(script).run()
+    assert at.session_state.started is False
+    assert len(at.text_input) == 1
+    assert at.text_input[0].key == "question_1"
+
+    at = at.text_input(key="question_1").set_value("aaaaaa").run()
+    assert at.session_state.started is True
+    assert len(at.text_input) == 1
+    with pytest.raises(KeyError):
+        at.text_input(key="question_1")
+    assert at.text_input[0].key == "question_2"
+
+    at = at.text_input(key="question_2").set_value("bbbbbb").run()
+    assert len(at.text_input) == 1
+    assert at.text_input(key="question_2").value == "bbbbbb"
+
+
+def test_sidebar_widgets_removed_when_not_rendered() -> None:
+    """Widgets omitted on a rerun must leave the sidebar tree.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/9814
+    """
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("logged_in", False)
+        if st.session_state.logged_in:
+            if st.sidebar.button("Logout"):
+                st.session_state.logged_in = False
+                st.rerun()
+        elif st.button("Login"):
+            st.session_state.logged_in = True
+            st.rerun()
+
+    at = AppTest.from_function(script).run()
+    assert len(at.sidebar.button) == 0
+    assert len(at.button) == 1
+
+    at = at.button[0].click().run()
+    assert (len(at.button), len(at.sidebar.button)) == (1, 1)
+
+    at = at.sidebar.button[0].click().run()
+    assert (len(at.button), len(at.sidebar.button)) == (1, 0)
+
+
+def test_run_tolerates_unimplemented_elements() -> None:
+    """Apps that use unimplemented commands must still run and stay inspectable."""
+
+    def script():
+        import streamlit as st
+
+        st.progress(40, text="halfway")
+        st.html("<b>hi</b>")
+        st.balloons()
+        st.page_link("https://example.com", label="Example")
+        st.title("still works")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    assert at.title[0].value == "still works"
+    assert len(at.get("progress")) == 1
+    assert at.get("progress")[0].value == 40
+    assert at.get("html")[0].value == "<b>hi</b>"
+    assert at.get("page_link")[0].value == "Example"
+
+
+def test_unimplemented_id_bearing_element_exposes_key_and_value() -> None:
+    """Unknown elements with IDs expose their key and Session State value."""
+
+    def script():
+        import streamlit as st
+
+        st.plotly_chart(
+            {"data": [{"x": [1], "y": [2], "type": "scatter"}]},
+            key="chart",
+            on_select="rerun",
+        )
+
+    at = AppTest.from_function(script).run()
+    chart = at.get("plotly_chart")[0]
+    assert chart.key == "chart"
+    assert chart.value == {
+        "selection": {"points": [], "point_indices": [], "box": [], "lasso": []}
+    }
+
+
+def test_switch_page_respects_custom_url_path(tmp_path: Path) -> None:
+    """switch_page must use the navigation page hash, not the filename slug.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/16611
+    """
+    (tmp_path / "home.py").write_text(
+        'import streamlit as st\nst.text("home page")\n', encoding="utf-8"
+    )
+    (tmp_path / "other.py").write_text(
+        'import streamlit as st\nst.text("other page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "pg = st.navigation([\n"
+        "    st.Page('home.py', title='Home'),\n"
+        "    st.Page('other.py', title='Other', url_path='custom'),\n"
+        "])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+
+    at.switch_page("other.py").run()
+    assert not at.exception
+    assert at.text[0].value == "other page"
+
+
+def test_switch_page_prefers_filename_url_for_duplicate_script(
+    tmp_path: Path,
+) -> None:
+    """A file registered twice resolves to the URL matching its filename."""
+    (tmp_path / "home.py").write_text(
+        'import streamlit as st\nst.text("home page")\n', encoding="utf-8"
+    )
+    (tmp_path / "shared.py").write_text(
+        'import streamlit as st\nst.text("shared page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "pg = st.navigation([\n"
+        "    st.Page('home.py', title='Home'),\n"
+        "    st.Page('shared.py', title='Alternate', url_path='alternate'),\n"
+        "    st.Page('shared.py', title='Shared', url_path='shared'),\n"
+        "])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    at.switch_page("shared.py")
+    assert at._page_hash == calc_hash("shared")
+    at.run()
+    assert at.text[0].value == "shared page"
+
+
+def test_switch_page_unknown_navigation_page_raises(tmp_path: Path) -> None:
+    """Unknown navigation files must raise instead of opening the default page."""
+    (tmp_path / "home.py").write_text(
+        'import streamlit as st\nst.text("home page")\n', encoding="utf-8"
+    )
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "pg = st.navigation([st.Page('home.py', title='Home')])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    with pytest.raises(ValueError, match="after updating the state"):
+        at.switch_page("orphan.py")
+
+
+def test_switch_page_rejects_unregistered_file_in_callable_navigation(
+    tmp_path: Path,
+) -> None:
+    """Callable-only navigation must not silently open the default page."""
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "def home():\n"
+        "    st.text('home page')\n"
+        "pg = st.navigation([st.Page(home, title='Home')])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    with pytest.raises(ValueError, match="navigation page"):
+        at.switch_page("orphan.py")
+
+
+def test_switch_page_does_not_match_callable_url_path_slug(tmp_path: Path) -> None:
+    """A file slug must not steal a callable page that hashes the same url_path."""
+    (tmp_path / "settings.py").write_text(
+        'import streamlit as st\nst.text("file settings")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "def home():\n"
+        "    st.text('home page')\n"
+        "def settings():\n"
+        "    st.text('callable settings')\n"
+        "pg = st.navigation([\n"
+        "    st.Page(home, title='Home'),\n"
+        "    st.Page(settings, title='Settings'),\n"
+        "])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    with pytest.raises(ValueError, match="navigation page"):
+        at.switch_page("settings.py")
+
+
+def test_switch_page_keeps_navigation_registry_after_failed_run(
+    tmp_path: Path,
+) -> None:
+    """A run that fails before st.navigation must not erase the last registry."""
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "if st.session_state.get('fail'):\n"
+        "    raise RuntimeError('boom')\n"
+        "def home():\n"
+        "    st.text('home page')\n"
+        "pg = st.navigation([st.Page(home, title='Home')])\n"
+        "pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    at.session_state["fail"] = True
+    at.run()
+    assert at.exception
+    with pytest.raises(ValueError, match="navigation page"):
+        at.switch_page("orphan.py")
+
+
+def test_switch_page_drops_registry_when_navigation_is_skipped(
+    tmp_path: Path,
+) -> None:
+    """A successful run that skips st.navigation must not keep the old pages."""
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "if st.session_state.get('plain'):\n"
+        "    st.text('plain page')\n"
+        "else:\n"
+        "    def home():\n"
+        "        st.text('home page')\n"
+        "    pg = st.navigation([st.Page(home, title='Home')])\n"
+        "    pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    at.session_state["plain"] = True
+    at.run()
+    assert at.text[0].value == "plain page"
+    at.switch_page("orphan.py")
+    assert at._page_hash == calc_hash("orphan")
+
+
+def test_switch_page_drops_registry_after_rendered_exception(
+    tmp_path: Path,
+) -> None:
+    """A successful st.exception run must not keep the old navigation pages."""
+    (tmp_path / "orphan.py").write_text(
+        'import streamlit as st\nst.text("orphan page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "if st.session_state.get('show_exception'):\n"
+        "    st.exception(RuntimeError('displayed'))\n"
+        "else:\n"
+        "    def home():\n"
+        "        st.text('home page')\n"
+        "    pg = st.navigation([st.Page(home, title='Home')])\n"
+        "    pg.run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    assert at.text[0].value == "home page"
+    at.session_state["show_exception"] = True
+    at.run()
+    assert at.exception[0].message == "displayed"
+    at.switch_page("orphan.py")
+    assert at._page_hash == calc_hash("orphan")
+
+
+def test_keyed_fragment_rerun_button_before_fragment() -> None:
+    """Fragment key registered in a previous run is resolvable when a callback fires
+    before the fragment re-registers itself in the current run.
+
+    This is the critical ordering: the button appears before the fragment in the
+    script, so the button's ``on_click`` callback fires (via ``on_script_will_rerun``)
+    before the fragment has had a chance to register its key in the fresh run.
+    Without persisting ``MemoryFragmentStorage`` across ``AppTest.run()`` calls,
+    ``st.rerun("key")`` would raise "No fragment found for target 'key'".
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        # Button is BEFORE the fragment: its on_click fires before the fragment
+        # registers, so the key must be found in the storage from the prior run.
+        st.button("Refresh fragment", on_click=lambda: st.rerun("counter"))
+
+        @st.fragment(key="counter")
+        def counter_fragment() -> None:
+            n = st.session_state.get("frag_count", 0)
+            st.session_state["frag_count"] = n + 1
+            st.text(f"fragment ran {n + 1} time(s)")
+
+        counter_fragment()
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    assert at.text[0].value == "fragment ran 1 time(s)"
+
+    at.button[0].click().run()
+    assert not at.exception, at.exception
+    assert at.text[0].value == "fragment ran 2 time(s)"
+
+
+def test_session_state_get_returns_script_value() -> None:
+    """``AppTest.session_state.get`` returns a key the script set."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.session_state["x"] = 7
+        st.session_state["empty"] = None
+
+    at = AppTest.from_function(script).run()
+    assert at.session_state.get("x") == 7
+    assert at.session_state.get("empty") is None
+    assert at.session_state.get("empty", "fallback") is None
+    assert at.session_state.get("missing") is None
+    assert at.session_state.get("missing", "fallback") == "fallback"
+
+
+def test_session_state_dict_api_matches_filtered_state() -> None:
+    """Dict-style access exposes only user state and keyed widget values."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.session_state["count"] = 1
+        st.radio("radio", options=["a", "b"], key="r")
+
+    at = AppTest.from_function(script)
+    at.session_state["seeded"] = True
+    assert "seeded" in at.session_state
+    assert set(at.session_state.keys()) == {"seeded"}
+    assert len(at.session_state) == 1
+    at = at.run()
+    assert at.session_state["count"] == 1
+    assert at.session_state.count == 1
+    assert "count" in at.session_state
+    assert "r" in at.session_state
+    assert "seeded" in at.session_state
+    assert TESTING_KEY not in at.session_state
+    assert set(at.session_state.keys()) == {"count", "r", "seeded"}
+    assert dict(at.session_state.items()) == {"count": 1, "r": "a", "seeded": True}
+    assert dict(
+        zip(at.session_state.keys(), at.session_state.values(), strict=True)
+    ) == {"count": 1, "r": "a", "seeded": True}
+    assert at.session_state.to_dict() == {"count": 1, "r": "a", "seeded": True}
+    assert len(at.session_state) == 3
+    assert set(at.session_state) == {"count", "r", "seeded"}
+    assert "count" in repr(at.session_state)
+    assert TESTING_KEY not in repr(at.session_state)
+
+    at.session_state.extra = "yes"
+    del at.session_state.extra
+    del at.session_state["count"]
+    with pytest.raises(AttributeError, match="missing not found in session_state"):
+        _ = at.session_state.missing
+    assert "count" not in at.session_state
+    assert "extra" not in at.session_state

@@ -124,7 +124,7 @@ function extractAccessibilityInfo(source: string): {
     const multiLineDescr = /^\s*accDescr\s*\{([^}]*)\}/m.exec(source)
     if (multiLineDescr) {
       // Normalize whitespace in multi-line descriptions
-      result.description = multiLineDescr[1].trim().replace(/\s+/g, " ")
+      result.description = multiLineDescr[1].trim().replaceAll(/\s+/g, " ")
     }
   }
 
@@ -132,10 +132,28 @@ function extractAccessibilityInfo(source: string): {
 }
 
 /**
- * Generates accessible alt text for a mermaid diagram.
- * Prefers user-provided accTitle/accDescr directives, falls back to diagram type.
+ * Streamlit-authored accessible name from st.mermaid_chart(alt=...).
+ * Uses a %% comment so every Mermaid grammar ignores it (unlike accTitle).
+ * Value must be on the same line as the marker (do not let whitespace cross
+ * newlines, or an empty %% stAlt: would capture the next source line).
  */
-function getAltText(source: string): string {
+function extractStreamlitAlt(source: string): string | undefined {
+  const match = /^\s*%%\s*stAlt\s*:[^\S\n]*(.+)$/m.exec(source)
+  return match ? match[1].trim() : undefined
+}
+
+/**
+ * Author-provided accessible name for toolbar chrome.
+ * Prefers Streamlit's %% stAlt: marker, then Mermaid accTitle/accDescr.
+ * Omits the type-derived fallback so unlabeled diagrams keep generic
+ * Fullscreen / Download labels.
+ */
+function getAuthorProvidedAltText(source: string): string | undefined {
+  const streamlitAlt = extractStreamlitAlt(source)
+  if (streamlitAlt) {
+    return streamlitAlt
+  }
+
   const { title, description } = extractAccessibilityInfo(source)
 
   if (title && description) {
@@ -147,8 +165,18 @@ function getAltText(source: string): string {
   if (description) {
     return description
   }
+  return undefined
+}
 
-  return `Mermaid ${getDiagramTypeFromSource(source)}`
+/**
+ * Accessible alt text for the diagram image: the author-provided name, else a
+ * type-derived fallback.
+ */
+function getAltText(source: string): string {
+  return (
+    getAuthorProvidedAltText(source) ??
+    `Mermaid ${getDiagramTypeFromSource(source)}`
+  )
 }
 
 /**
@@ -157,6 +185,31 @@ function getAltText(source: string): string {
  * tracking explicit, rather than using a separate module-level variable.
  */
 const THEME_CONFIG_KEY = Symbol.for("streamlit.mermaid.themeConfigKey")
+
+/**
+ * Config keys locked against `%%{init}%%` directive overrides.
+ *
+ * Includes Mermaid's documented defaults plus Streamlit hardening keys Mermaid
+ * does not lock. Without the extras, diagram source can re-enable `htmlLabels`
+ * or inject page-wide CSS via `themeCSS`. Mermaid walks nested objects, so
+ * keys like `flowchart.htmlLabels` are covered. Prefer this static list over
+ * deprecated/internal `mermaid.mermaidAPI`.
+ */
+const SECURE_CONFIG_KEYS = [
+  // Mermaid defaults: https://mermaid.js.org/config/schema-docs/config-properties-secure.html
+  "secure",
+  "securityLevel",
+  "startOnLoad",
+  "maxTextSize",
+  "suppressErrorRendering",
+  "maxEdges",
+  // Streamlit hardening beyond Mermaid's defaults
+  "htmlLabels",
+  "themeCSS",
+  "fontFamily",
+  "altFontFamily",
+  "dompurifyConfig",
+]
 
 interface MermaidChartProps {
   /**
@@ -468,6 +521,7 @@ const MermaidChart = memo(function MermaidChart({
           mermaid.initialize({
             startOnLoad: false,
             securityLevel: "strict",
+            secure: SECURE_CONFIG_KEYS,
             suppressErrorRendering: true,
             ...themeConfig,
           })
@@ -477,7 +531,7 @@ const MermaidChart = memo(function MermaidChart({
         // Generate a unique ID for this render. Includes render counter to prevent
         // conflicts when multiple renders overlap (e.g., rapid source changes).
         // Remove colons since mermaid uses it as a CSS selector.
-        const diagramId = `mermaid-${uniqueId.replace(/:/g, "")}-${renderNum}`
+        const diagramId = `mermaid-${uniqueId.replaceAll(":", "")}-${renderNum}`
         const { svg } = await mermaid.render(diagramId, source)
 
         if (isCancelled) return
@@ -557,38 +611,46 @@ const MermaidChart = memo(function MermaidChart({
     }
 
     const img = new Image()
-    img.onload = () => {
-      // Use natural dimensions from the SVG viewBox (avoids forced reflow)
-      const width = img.naturalWidth || 800
-      const height = img.naturalHeight || 600
+    img.addEventListener(
+      "load",
+      () => {
+        // Use natural dimensions from the SVG viewBox (avoids forced reflow)
+        const width = img.naturalWidth || 800
+        const height = img.naturalHeight || 600
 
-      const canvas = document.createElement("canvas")
-      const scale = 2 // 2x scale for better quality
-      canvas.width = width * scale
-      canvas.height = height * scale
+        const canvas = document.createElement("canvas")
+        const scale = 2 // 2x scale for better quality
+        canvas.width = width * scale
+        canvas.height = height * scale
 
-      const ctx = canvas.getContext("2d")
-      if (!ctx) {
-        downloadingBlobUrlRef.current = null
-        return
-      }
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          downloadingBlobUrlRef.current = null
+          return
+        }
 
-      ctx.fillStyle = theme.colors.bgColor
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      ctx.scale(scale, scale)
-      ctx.drawImage(img, 0, 0, width, height)
+        ctx.fillStyle = theme.colors.bgColor
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.scale(scale, scale)
+        ctx.drawImage(img, 0, 0, width, height)
 
-      const link = document.createElement("a")
-      link.download = "mermaid-diagram.png"
-      link.href = canvas.toDataURL("image/png")
-      link.click()
+        const link = document.createElement("a")
+        link.download = "mermaid-diagram.png"
+        link.href = canvas.toDataURL("image/png")
+        link.click()
 
-      releaseDownloadUrl()
-    }
-    img.onerror = () => {
-      LOG.error("Failed to load SVG for PNG export")
-      releaseDownloadUrl()
-    }
+        releaseDownloadUrl()
+      },
+      { once: true }
+    )
+    img.addEventListener(
+      "error",
+      () => {
+        LOG.error("Failed to load SVG for PNG export")
+        releaseDownloadUrl()
+      },
+      { once: true }
+    )
     img.src = svgBlobUrl
   }, [svgBlobUrl, theme.colors.bgColor])
 
@@ -632,6 +694,8 @@ const MermaidChart = memo(function MermaidChart({
     )
   }
 
+  const labelContext = getAuthorProvidedAltText(source)
+
   // Render the SVG via an <img> tag with blob URL.
   return (
     <ErrorBoundary>
@@ -645,16 +709,21 @@ const MermaidChart = memo(function MermaidChart({
           isFullScreen={isFullScreen}
           onExpand={expand}
           onCollapse={collapse}
+          labelContext={labelContext}
         >
           <ToolbarAction
             label="Download as PNG"
             icon={FileDownload}
             onClick={handleDownloadPng}
+            labelContext={labelContext}
           />
           <ToolbarAction
             label={copyLabel}
             icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySource}
+            // Skip context while on the transient copied label so the name
+            // stays "Copied" rather than "Copied: {context}".
+            labelContext={isCopied ? undefined : labelContext}
           />
         </Toolbar>
         <StyledMermaidContainer

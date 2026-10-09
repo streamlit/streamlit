@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-if (typeof Promise.withResolvers === "undefined") {
+if (Promise.withResolvers === undefined) {
   Promise.withResolvers = <T>() => {
     let promiseResolve: PromiseWithResolvers<T>["resolve"]
     let promiseReject: PromiseWithResolvers<T>["reject"]

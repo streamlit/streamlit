@@ -50,6 +50,7 @@ from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
+from streamlit.elements.echarts_chart import EChartsMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.exception import ExceptionMixin
 from streamlit.elements.form import FormMixin
@@ -106,7 +107,11 @@ from streamlit.elements.widgets.slider import SliderMixin
 from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
 from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
+)
 from streamlit.proto import Block_pb2
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -116,6 +121,7 @@ from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
+    is_fragment_callback_warning_suppressed,
 )
 
 if TYPE_CHECKING:
@@ -182,14 +188,23 @@ def _maybe_print_fragment_callback_warning() -> None:
     # on this thread, since ScriptRunContext.reset() and add_script_run_ctx()
     # are the only public entry points for binding ctx, and both seed
     # ThreadState. ThreadState.get() is therefore safe here without a guard.
-    if ctx and ThreadState.get().in_fragment_callback:
-        warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
+    if not ctx or not ThreadState.get().in_fragment_callback:
+        return
 
-        logger.get_logger("root").warning(
-            f"\n  {warning} A fragment rerun was triggered with a callback that displays one or more elements. "
-            "During a fragment rerun, within a callback, displaying elements is not officially supported because "
-            "those elements will replace the existing elements at the top of your app."
-        )
+    # The internal yield-point placeholder is not a user element. The runner
+    # raises in _enqueue_forward_msg before sending it. Skip the warning for
+    # that write. Read the flag only on this path so ordinary element writes
+    # skip the ContextVar lookup.
+    if is_fragment_callback_warning_suppressed():
+        return
+
+    warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
+
+    logger.get_logger("root").warning(
+        f"\n  {warning} A fragment rerun was triggered with a callback that displays one or more elements. "
+        "During a fragment rerun, within a callback, displaying elements is not officially supported because "
+        "those elements will replace the existing elements at the top of your app."
+    )
 
 
 class DeltaGenerator(
@@ -218,6 +233,7 @@ class DeltaGenerator(
     MarkdownMixin,
     MapMixin,
     MediaMixin,
+    EChartsMixin,
     MermaidChartMixin,
     MetricMixin,
     MenuButtonMixin,
@@ -393,20 +409,21 @@ class DeltaGenerator(
         def wrapper(*args: Any, **kwargs: Any) -> NoReturn:
             if name in streamlit_methods:
                 if self._root_container == RootContainer.SIDEBAR:
-                    message = (
+                    raise StreamlitAPIException(
                         f"Method `{name}()` does not exist for "
-                        f"`st.sidebar`. Did you mean `st.{name}()`?"
+                        f"`st.sidebar`. Did you mean `st.{name}()`?",
+                        error_id="sidebar-method-does-not-exist",
                     )
-                else:
-                    message = (
-                        f"Method `{name}()` does not exist for "
-                        "`DeltaGenerator` objects. Did you mean "
-                        f"`st.{name}()`?"
-                    )
-            else:
-                message = f"`{name}()` is not a valid Streamlit command."
-
-            raise StreamlitAPIException(message)
+                raise StreamlitAPIException(
+                    f"Method `{name}()` does not exist for "
+                    "`DeltaGenerator` objects. Did you mean "
+                    f"`st.{name}()`?",
+                    error_id="delta-generator-method-does-not-exist",
+                )
+            raise StreamlitAPIException(
+                f"`{name}()` is not a valid Streamlit command.",
+                error_id="invalid-streamlit-command",
+            )
 
         return wrapper
 
@@ -457,6 +474,26 @@ class DeltaGenerator(
     @property
     def _is_top_level(self) -> bool:
         return self._provided_cursor is None
+
+    @property
+    def _block_delta_path(self) -> list[int]:
+        """The absolute delta path where `_block()` placed this block.
+
+        Only read this on a DeltaGenerator that `_block()` returned, whose cursor
+        `parent_path` is the block's own path. On a DeltaGenerator that `_enqueue()`
+        returned, the same expression gives the parent block's path instead.
+
+        `_block()` can redirect the write into layout-transparent wrapper blocks, which
+        places the block deeper than the parent cursor points to (see issue #16281).
+        Elements that re-send their own block proto later (`st.status`, `st.dialog`)
+        must therefore store this path instead of deriving it from the parent cursor.
+
+        The path is empty when there is no cursor, for example in bare mode.
+        """
+        own_cursor = self._cursor
+        if own_cursor is None:
+            return []
+        return [own_cursor.root_container, *own_cursor.parent_path]
 
     @property
     def _id(self) -> str:
@@ -520,7 +557,7 @@ class DeltaGenerator(
                 if fragment_path and not _is_inside_fragment_path(
                     cursor_path, fragment_path
                 ):
-                    raise StreamlitAPIException(
+                    raise StreamlitInvalidLayoutContextError(
                         "Writing to containers outside a parallel fragment is not "
                         "allowed during the initial page load, because parallel "
                         "fragments run concurrently on separate threads and "
@@ -808,7 +845,7 @@ def _get_or_create_outside_wrapper(
     if ctx.fragment_ids_this_run and (
         dg._creating_fragment_id not in ctx.fragment_ids_this_run
     ):
-        raise StreamlitAPIException(
+        raise StreamlitInvalidLayoutContextError(
             "A fragment tried to write to a container created outside the "
             "fragment, but that container was not written to during the initial "
             "run, so Streamlit could not reserve a stable position for it.\n\n"

@@ -300,3 +300,15 @@ with st.form("form_with_dynamic_button"):
             key="dynamic_button_with_key",
         )
         st.write("Clicked initial button:", clicked)
+
+# wrap=False keeps the submit button on one row and ellipsizes an overflowing
+# label, exposing the full label via a native title. A fixed width narrower than
+# the label forces the truncation.
+with st.form("wrap_submit_form"):
+    st.write("Form with a no-wrap submit button")
+    st.form_submit_button(
+        "Regenerate the complete quarterly report now",
+        width=200,
+        wrap=False,
+        key="wrap_false_submit_button",
+    )

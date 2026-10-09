@@ -190,7 +190,7 @@ if st.button("Open Nested Dialogs"):
 def dialog_with_error() -> None:
     with st.form(key="forecast_form"):
         # foo is an invalid argument, so this shows an error
-        st.form_submit_button("Submit", foo="bar")  # type: ignore[call-arg]
+        st.form_submit_button("Submit", foo="bar")  # type: ignore[call-arg] # ty: ignore[unknown-argument]
 
 
 if st.button("Open Dialog with Key Error"):
@@ -366,3 +366,165 @@ if st.button("Open Fast Dialog"):
 
 if st.button("Open Slow Dialog"):
     slow_dialog()
+
+
+# Regression coverage for #16005: widgets inside an st.popover that is opened
+# inside an st.dialog should be interactable (the popover body must not be
+# occluded by the dialog's React Aria overlay).
+@st.dialog("Dialog with popover")
+def dialog_with_popover() -> None:
+    st.write("dialog content")
+    with st.popover("Open popover"):
+        fruit = st.selectbox("Fruit", ["Apple", "Banana", "Cherry"])
+        st.write(f"picked: {fruit}")
+
+
+if st.button("Open Dialog with Popover"):
+    dialog_with_popover()
+
+
+# Regression coverage for #16538: a color picker palette opened inside an
+# st.dialog must stay interactive without dismissing the dialog.
+@st.dialog("Dialog with color picker")
+def dialog_with_color_picker() -> None:
+    color = st.color_picker("Dialog color picker")
+    st.write(f"Selected color: {color}")
+
+
+if st.button("Open Dialog with Color Picker"):
+    dialog_with_color_picker()
+
+
+# Regression coverage (#16005): a menu button dropdown opened inside an
+# st.dialog must stay interactive without dismissing the dialog.
+@st.dialog("Dialog with menu button")
+def dialog_with_menu_button() -> None:
+    selected = st.menu_button(
+        "Dialog menu",
+        options=["Alpha", "Beta", "Gamma"],
+    )
+    st.write(f"menu selected: {selected}")
+
+
+if st.button("Open Dialog with Menu Button"):
+    dialog_with_menu_button()
+
+
+# Regression coverage (#16005): a JSON path tooltip opened inside an
+# st.dialog must stay interactive without dismissing the dialog.
+@st.dialog("Dialog with JSON path tooltip")
+def dialog_with_json_path_tooltip() -> None:
+    st.json({"level1": {"level2": "value"}}, expanded=True)
+
+
+if st.button("Open Dialog with JSON Path Tooltip"):
+    dialog_with_json_path_tooltip()
+
+
+@st.dialog("Left drawer", position="left")
+def left_drawer_dialog() -> None:
+    st.write("Drawer content on the left")
+    if st.button("Submit", key="left-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open Left Drawer"):
+    left_drawer_dialog()
+
+
+@st.dialog("Right drawer", position="right")
+def right_drawer_dialog() -> None:
+    st.write("Drawer content on the right")
+    if st.button("Submit", key="right-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open Right Drawer"):
+    right_drawer_dialog()
+
+
+@st.dialog("Tall left drawer", position="left")
+def tall_left_drawer_dialog() -> None:
+    st.write("Top of tall drawer")
+    for i in range(40):
+        st.write(f"Row {i}")
+    if st.button("Submit", key="tall-left-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open Tall Left Drawer"):
+    tall_left_drawer_dialog()
+
+
+# Regression coverage for #9405: a dialog closed via st.rerun() must disappear
+# as soon as the next full-app run starts, even if that run then blocks.
+# Keep this longer than the hide-assertion window in
+# test_dialog_closes_before_blocking_follow_up_work. If the sleep finishes
+# first, clearStaleNodes can unmount the leftover dialog and the test would
+# pass without the early-hide fix.
+_BLOCKING_AFTER_DIALOG_CLOSE_SECONDS = 4
+
+
+@st.dialog("Dialog closed before blocking work")
+def dialog_closed_before_blocking() -> None:
+    st.write("Submit to close this dialog, then the app will block.")
+    if st.button("Submit then block", key="dialog-submit-then-block"):
+        st.session_state.block_after_dialog_close = True
+        st.rerun()
+
+
+if st.session_state.get("block_after_dialog_close"):
+    st.write("Blocking operation started")
+    time.sleep(_BLOCKING_AFTER_DIALOG_CLOSE_SECONDS)
+    st.write("Blocking operation done")
+    st.session_state.block_after_dialog_close = False
+elif st.button("Open dialog that blocks after close"):
+    dialog_closed_before_blocking()
+
+
+# Regression coverage for #17011: a dialog and its nested fragment must remain
+# interactive when only the fragment that opened the dialog reruns.
+def rerun_dialog_parent() -> None:
+    st.rerun(scope="dialog_parent")
+
+
+@st.fragment
+def nested_dialog_fragment() -> None:
+    if st.button("Increment nested dialog fragment"):
+        st.session_state.nested_dialog_clicks = (
+            st.session_state.get("nested_dialog_clicks", 0) + 1
+        )
+    st.write(f"Nested dialog clicks: {st.session_state.get('nested_dialog_clicks', 0)}")
+
+
+@st.dialog("Parent fragment rerun dialog", dismissible=False)
+def parent_fragment_rerun_dialog() -> None:
+    if st.button("Increment parent fragment dialog"):
+        st.session_state.parent_fragment_dialog_clicks = (
+            st.session_state.get("parent_fragment_dialog_clicks", 0) + 1
+        )
+
+    st.write(
+        "Parent fragment dialog clicks: "
+        f"{st.session_state.get('parent_fragment_dialog_clicks', 0)}"
+    )
+
+    st.button("Rerun dialog parent", on_click=rerun_dialog_parent)
+    nested_dialog_fragment()
+
+    if st.button("Close parent fragment dialog"):
+        st.rerun()
+
+
+@st.fragment(key="dialog_parent")
+def dialog_parent_fragment() -> None:
+    st.session_state.dialog_parent_runs = (
+        st.session_state.get("dialog_parent_runs", 0) + 1
+    )
+    st.write(f"Dialog parent runs: {st.session_state.dialog_parent_runs}")
+
+    if st.button("Open parent fragment rerun dialog"):
+        parent_fragment_rerun_dialog()
+
+
+dialog_parent_fragment()

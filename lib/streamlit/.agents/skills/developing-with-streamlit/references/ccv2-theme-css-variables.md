@@ -131,10 +131,16 @@ Per-level convenience variables:
 - `--st-code-font-size`
 - `--st-code-font-weight` (number)
 
+#### Metric value
+
+- `--st-metric-value-font-size`
+- `--st-metric-value-font-weight` (number)
+
 ### Data display tokens (dataframes/tables)
 
 - `--st-dataframe-border-color`
 - `--st-dataframe-header-background-color`
+- `--st-dataframe-header-text-color`
 
 ### Data visualization tokens (chart palettes)
 
@@ -200,6 +206,7 @@ Families:
 - `--st-code-text-color`
 - `--st-dataframe-border-color`
 - `--st-dataframe-header-background-color`
+- `--st-dataframe-header-text-color`
 - `--st-font`
 - `--st-gray-background-color`
 - `--st-gray-color`
@@ -225,6 +232,8 @@ Families:
 - `--st-heading-font-weights`
 - `--st-link-color`
 - `--st-link-underline`
+- `--st-metric-value-font-size`
+- `--st-metric-value-font-weight`
 - `--st-orange-background-color`
 - `--st-orange-color`
 - `--st-orange-text-color`

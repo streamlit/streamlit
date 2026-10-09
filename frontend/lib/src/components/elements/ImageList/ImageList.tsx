@@ -14,11 +14,19 @@
  * limitations under the License.
  */
 
-import { CSSProperties, memo, ReactElement } from "react"
+import {
+  type CSSProperties,
+  memo,
+  type ReactElement,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { getLogger } from "loglevel"
 
-import {
+import type {
   ImageList as ImageListProto,
   Image as ImageProto,
   streamlit,
@@ -31,8 +39,10 @@ import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/st
 import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import { plainTextWithBlockGaps } from "~lib/util/plainText"
+import { isDangerousLinkUri } from "~lib/util/UriUtil"
+import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   StyledCaption,
@@ -46,7 +56,7 @@ const LOG = getLogger("ImageList")
 export interface ImageListProps {
   endpoints: StreamlitEndpoints
   element: ImageListProto
-  widthConfig?: streamlit.IWidthConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
   disableFullscreenMode?: boolean
 }
 
@@ -58,7 +68,7 @@ export interface ImageListProps {
  * @returns The width to use for images, or undefined for original size
  */
 function getImageWidth(
-  widthConfig: streamlit.IWidthConfig | null | undefined,
+  widthConfig: streamlit.WidthConfig.$Properties | null | undefined,
   containerWidth: number
 ): number | undefined {
   if (widthConfig) {
@@ -81,31 +91,75 @@ function getImageWidth(
 }
 
 const Image = ({
-  itemKey,
   image,
   imgStyle,
   buildMediaURL,
   handleImageError,
   shouldStretch,
   link,
+  onCaptionPlainTextChange,
 }: {
-  itemKey: string
   image: ImageProto
   imgStyle: CSSProperties
   buildMediaURL: (url: string) => string
   handleImageError: (e: React.SyntheticEvent<HTMLImageElement>) => void
   shouldStretch?: boolean
   link?: string
+  /** Reports rendered caption plain text (not markdown source) for toolbar naming. */
+  onCaptionPlainTextChange?: (text: string | undefined) => void
 }): ReactElement => {
   const crossOrigin = useCrossOriginAttribute(image.url)
-  const isLinkBlocked = link ? isDangerousLinkUri(link) : false
-  const href = isLinkBlocked ? BLOCKED_LINK_URI : link
+  const captionDomId = useId()
+  const captionRef = useRef<HTMLDivElement>(null)
+  // Name the link from the caption only when the caption actually renders
+  // text. Label Markdown strips some constructs (a lone `---` becomes
+  // nothing), which would otherwise point aria-labelledby at an empty node.
+  const [captionHasText, setCaptionHasText] = useState(false)
+  // Do not wrap a dangerous URI in an anchor. A neutralized href="#" is
+  // still a nameless focusable control (WCAG SC 4.1.2).
+  const safeLink = link && !isDangerousLinkUri(link) ? link : undefined
+  // Unset means omit alt (detectable missing name). Empty string is decorative.
+  const imgAlt: string | undefined = isNullOrUndefined(image.alt)
+    ? undefined
+    : image.alt
+
+  // Watch the caption for text that arrives late: async Markdown plugins
+  // (KaTeX, emoji) swap a loading skeleton for real content after the first
+  // render. Linked images use captionHasText; the parent additionally asks
+  // for the rendered plain text when this is the only image and it has no
+  // alt. Skip the observer when neither consumer is active (for example,
+  // unlinked gallery members).
+  useLayoutEffect(() => {
+    const node = captionRef.current
+    if ((!safeLink && !onCaptionPlainTextChange) || !image.caption || !node) {
+      setCaptionHasText(false)
+      onCaptionPlainTextChange?.(undefined)
+      return
+    }
+
+    const syncCaptionPlainText = (): void => {
+      const text = plainTextWithBlockGaps(node)
+      setCaptionHasText(text.length > 0)
+      onCaptionPlainTextChange?.(text || undefined)
+    }
+
+    syncCaptionPlainText()
+
+    const observer = new MutationObserver(syncCaptionPlainText)
+    observer.observe(node, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+    return () => observer.disconnect()
+  }, [image.caption, onCaptionPlainTextChange, safeLink])
 
   const imageElement = (
+    // oxlint-disable-next-line jsx-a11y/alt-text
     <img
       style={imgStyle}
       src={buildMediaURL(image.url)}
-      alt={itemKey}
+      alt={imgAlt}
       onError={handleImageError}
       crossOrigin={crossOrigin}
     />
@@ -116,15 +170,16 @@ const Image = ({
       data-testid="stImageContainer"
       shouldStretch={shouldStretch}
     >
-      {href ? (
+      {safeLink ? (
         <StyledImageLink
-          href={href}
-          target={isLinkBlocked ? "_self" : "_blank"}
+          href={safeLink}
+          target="_blank"
           rel="noreferrer"
-          onClick={isLinkBlocked ? event => event.preventDefault() : undefined}
-          // For blocked links, fall back to the image's alt text instead of the
-          // neutralized "#" href, which is meaningless to screen readers.
-          aria-label={image.caption || (isLinkBlocked ? undefined : link)}
+          // Name the link from the visible caption, then alt, then the URL.
+          // Label by the caption node so markdown is announced as plain text.
+          {...(captionHasText
+            ? { "aria-labelledby": captionDomId }
+            : { "aria-label": imgAlt || safeLink })}
           data-testid="stImageLink"
         >
           {imageElement}
@@ -133,7 +188,12 @@ const Image = ({
         imageElement
       )}
       {image.caption && (
-        <StyledCaption data-testid="stImageCaption" style={imgStyle}>
+        <StyledCaption
+          ref={captionRef}
+          id={captionDomId}
+          data-testid="stImageCaption"
+          style={imgStyle}
+        >
           <StreamlitMarkdown
             source={image.caption}
             allowHTML={false}
@@ -202,6 +262,22 @@ function ImageList({
     )
   }
 
+  // Rendered caption plain text for the single-image toolbar fallback.
+  const [captionPlainText, setCaptionPlainText] = useState<
+    string | undefined
+  >()
+
+  // The gallery has one list-level Fullscreen button, so borrow a name only
+  // when there is exactly one image; otherwise the button would be named after
+  // an arbitrary member. Prefer alt, else the caption's rendered plain text.
+  // Gated on singleImage so a 1→N rerun cannot leak a stale caption.
+  const singleImage = element.imgs.length === 1 ? element.imgs[0] : undefined
+  const altContext = singleImage?.alt?.trim() || undefined
+  const labelContext =
+    altContext ?? (singleImage ? captionPlainText : undefined)
+  const reportCaptionPlainText =
+    singleImage && !altContext ? setCaptionPlainText : undefined
+
   return (
     <StyledToolbarElementContainer
       width={containerWidth}
@@ -215,28 +291,29 @@ function ImageList({
         onExpand={expand}
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
+        labelContext={labelContext}
       ></Toolbar>
       <StyledImageList
         className="stImage"
         data-testid="stImage"
         shouldStretch={shouldStretch}
       >
-        {element.imgs.map(
-          (iimage, idx): ReactElement => (
-            <Image
-              // TODO: Update to match React best practices
-              // eslint-disable-next-line @eslint-react/no-array-index-key
-              key={idx}
-              itemKey={idx.toString()}
-              image={iimage as ImageProto}
-              imgStyle={imgStyle}
-              buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}
-              handleImageError={handleImageError}
-              shouldStretch={shouldStretch}
-              link={element.imgs.length === 1 ? element.link : undefined}
-            />
-          )
-        )}
+        {element.imgs.map((iimage, idx): ReactElement => (
+          <Image
+            // TODO: Update to match React best practices
+            // eslint-disable-next-line @eslint-react/no-array-index-key
+            key={idx}
+            image={iimage as ImageProto}
+            imgStyle={imgStyle}
+            buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}
+            handleImageError={handleImageError}
+            shouldStretch={shouldStretch}
+            link={element.imgs.length === 1 ? element.link : undefined}
+            onCaptionPlainTextChange={
+              idx === 0 ? reportCaptionPlainText : undefined
+            }
+          />
+        ))}
       </StyledImageList>
     </StyledToolbarElementContainer>
   )

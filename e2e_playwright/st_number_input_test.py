@@ -28,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
     expect_help_tooltip,
+    expect_markdown,
     expect_prefixed_markdown,
     fill_number_input,
     get_element_by_key,
@@ -35,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUMBER_INPUT_COUNT = 24
+NUMBER_INPUT_COUNT = 29
 
 
 def test_number_input_widget_display(
@@ -735,3 +736,180 @@ def test_number_input_query_param_non_clearable_empty_value(
     # Non-clearable number input should reject empty value, show default 3.14
     expect_prefixed_markdown(page, "bound float value:", "3.14")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+
+
+def test_number_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore number value:", "25")
+
+    number_input = get_number_input(app, "Ignore change number input")
+    number_input_field = number_input.locator("input").first
+
+    # Fill without committing - URL should not update until Enter.
+    number_input_field.fill("30")
+    expect(number_input_field).to_have_value("30")
+    wait_for_app_run(app)
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_number="))
+
+    # Commit with Enter - should NOT trigger a rerun, but should update the URL
+    number_input_field.press("Enter")
+
+    # Give a spurious rerun a chance to land before asserting the counter.
+    wait_for_app_run(app)
+
+    # Verify no rerun occurred (run count should still be 1)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(number_input_field).to_have_value("30")
+    expect_prefixed_markdown(app, "Ignore number value:", "25")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_number=30"))
+
+    # Click button to trigger a rerun - buffered value should be sent
+    app.get_by_role("button", name="Apply ignore number", exact=True).click()
+    wait_for_app_run(app)
+
+    # Verify the updated value is now visible
+    expect(app.get_by_text("Ignore number value: 30", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore number value: 30", exact=True)
+    ).to_be_visible()
+
+    # Type-then-click: blur commits the dirty value, then the button reruns.
+    number_input_field.fill("40")
+    expect(number_input_field).to_have_value("40")
+    app.get_by_role("button", name="Apply ignore number", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Ignore number value: 40", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore number value: 40", exact=True)
+    ).to_be_visible()
+
+    # Stepper commits immediately without a rerun, and updates the bound URL.
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    number_input.get_by_test_id("stNumberInputStepUp").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(number_input_field).to_have_value("41")
+    expect(app.get_by_text("Ignore number value: 40", exact=True)).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_number=41"))
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(
+        get_number_input(app, "Ignore change number input").locator("input").first
+    ).to_have_value("41")
+    expect_prefixed_markdown(app, "Ignore number value:", "41")
+
+
+def test_number_input_required_blocks_empty_commits_and_form_submits(app: Page):
+    """Verify required number inputs block empty form submissions and commits
+    while accepting zero and preserving hidden-label accessibility.
+    """
+    amount_widget = get_element_by_key(app, "required_amount")
+    count_widget = get_element_by_key(app, "required_count")
+    amount_field = amount_widget.locator("input").first
+
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(
+        amount_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    ).not_to_be_visible()
+    expect(amount_field).to_have_attribute("aria-required", "true")
+    expect(amount_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+
+    submit_button = app.get_by_role(
+        "button", name="Submit required number input form", exact=True
+    )
+    submit_button.click()
+    expect(amount_widget.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
+    expect(count_widget.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
+    expect(amount_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(count_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    amount_field.fill("5")
+    submit_button.click()
+    expect(amount_field).to_have_value("5.00")
+    expect(
+        amount_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    ).not_to_be_visible()
+    expect(count_widget.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    count_widget.locator("input").first.fill("0")
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "required form submitted: True")
+    expect_markdown(app, "required amount: 5.0")
+    expect_markdown(app, "required count: 0")
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(
+        amount_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    ).not_to_be_visible()
+    expect(count_widget.get_by_test_id("stTooltipErrorHoverTarget")).not_to_be_visible()
+
+    standalone_widget = get_element_by_key(app, "required_standalone")
+    standalone_field = standalone_widget.locator("input").first
+    standalone_field.fill("7")
+    standalone_field.press("Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone: 7.0")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(standalone_widget.get_by_test_id("stNumberInputClearButton")).to_have_count(
+        0
+    )
+
+    standalone_field.fill("")
+    standalone_field.blur()
+    expect(
+        standalone_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    ).to_be_visible()
+    expect(standalone_widget.get_by_role("alert")).to_have_text(
+        "This field is required."
+    )
+    expect_markdown(app, "required standalone: 7.0")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+
+    standalone_field.fill("0")
+    standalone_field.press("Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone: 0.0")
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    expect(
+        standalone_widget.get_by_test_id("stTooltipErrorHoverTarget")
+    ).not_to_be_visible()
+
+    hidden_widget = get_element_by_key(app, "required_hidden")
+    expect(hidden_widget.locator("input").first).to_have_attribute(
+        "aria-required", "true"
+    )
+    expect(hidden_widget.get_by_test_id("stWidgetLabelRequired")).to_have_count(0)
+
+
+def test_number_input_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the required marker and the required error state."""
+    widget = get_element_by_key(themed_app, "required_standalone")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_number_input-required_marker")
+
+    field = widget.locator("input").first
+    field.fill("7")
+    field.press("Enter")
+    wait_for_app_run(themed_app)
+    field.fill("")
+    field.blur()
+    expect(widget.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
+    assert_snapshot(widget, name="st_number_input-required_error")

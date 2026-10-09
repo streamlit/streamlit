@@ -18,11 +18,12 @@ from __future__ import annotations
 
 from collections.abc import Iterator, MutableMapping, Sequence
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import (
     TYPE_CHECKING,
     Any,
     Literal,
+    TypeAlias,
     cast,
     overload,
 )
@@ -52,7 +53,12 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.audio_input import ALLOWED_SAMPLE_RATES
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
 from streamlit.proto.Common_pb2 import ChatInputValue as ChatInputValueProto
@@ -70,6 +76,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.state.session_state_proxy import get_session_state
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
@@ -89,10 +96,14 @@ _ACCEPTED_AUDIO_MIME_TYPES: frozenset[str] = frozenset(
     }
 )
 
+_ChatInputValueItem: TypeAlias = str | list[UploadedFile] | UploadedFile | None
 
-@dataclass
-class ChatInputValue(MutableMapping[str, Any]):
+
+@dataclass(repr=False)
+class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
     """Represents the value returned by `st.chat_input` after user interaction.
+
+    To use this type in an annotation, import it from ``streamlit.typing``.
 
     This dataclass contains the user's input text, any files uploaded, and optionally
     an audio recording. It provides a dict-like interface for accessing and modifying
@@ -120,39 +131,44 @@ class ChatInputValue(MutableMapping[str, Any]):
     audio: UploadedFile | None = None
     _include_files: bool = field(default=False, repr=False, compare=False)
     _include_audio: bool = field(default=False, repr=False, compare=False)
-    _included_keys: tuple[str, ...] = field(init=False, repr=False, compare=False)
 
-    def __post_init__(self) -> None:
-        """Compute and cache the included keys after initialization."""
-        keys: list[str] = ["text"]
-        if self._include_files:
-            keys.append("files")
-        if self._include_audio:
-            keys.append("audio")
-        object.__setattr__(self, "_included_keys", tuple(keys))
-
-    def _get_included_keys(self) -> tuple[str, ...]:
-        """Return tuple of keys that should be exposed based on inclusion flags."""
-        return self._included_keys
+    def to_dict(self) -> dict[str, _ChatInputValueItem]:
+        # Include flags stay the allow-list. Instance attrs drop out after del.
+        stored = vars(self)
+        result: dict[str, _ChatInputValueItem] = {}
+        if "text" in stored:
+            result["text"] = stored["text"]
+        if self._include_files and "files" in stored:
+            result["files"] = stored["files"]
+        if self._include_audio and "audio" in stored:
+            result["audio"] = stored["audio"]
+        return result
 
     def __len__(self) -> int:
-        return len(self._get_included_keys())
+        return len(self.to_dict())
 
     def __iter__(self) -> Iterator[str]:
-        return iter(self._get_included_keys())
+        return iter(self.to_dict())
 
     def __contains__(self, key: object) -> bool:
-        if not isinstance(key, str):
-            return False
-        return key in self._get_included_keys()
+        return isinstance(key, str) and key in self.to_dict()
 
-    def __getitem__(self, item: str) -> str | list[UploadedFile] | UploadedFile | None:
-        if item not in self._get_included_keys():
+    @overload
+    def __getitem__(self, item: Literal["text"]) -> str: ...
+
+    @overload
+    def __getitem__(self, item: Literal["files"]) -> list[UploadedFile]: ...
+
+    @overload
+    def __getitem__(self, item: Literal["audio"]) -> UploadedFile | None: ...
+
+    @overload
+    def __getitem__(self, item: str) -> _ChatInputValueItem: ...
+
+    def __getitem__(self, item: str) -> _ChatInputValueItem:
+        if item not in self:
             raise KeyError(f"Invalid key: {item}")
-        try:
-            return getattr(self, item)  # type: ignore[no-any-return]
-        except AttributeError:  # pragma: no cover - defensive
-            raise KeyError(f"Invalid key: {item}") from None
+        return self.to_dict()[item]
 
     def __getattribute__(self, name: str) -> Any:
         # Intercept access to files/audio when they're excluded
@@ -169,30 +185,29 @@ class ChatInputValue(MutableMapping[str, Any]):
         return object.__getattribute__(self, name)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        if key not in self._get_included_keys():
+        allowed = {"text"}
+        if self._include_files:
+            allowed.add("files")
+        if self._include_audio:
+            allowed.add("audio")
+        if key not in allowed:
             raise KeyError(f"Invalid key: {key}")
         setattr(self, key, value)
 
     def __delitem__(self, key: str) -> None:
-        if key not in self._get_included_keys():
+        if key not in self:
             raise KeyError(f"Invalid key: {key}")
-        try:
-            delattr(self, key)
-        except AttributeError:  # pragma: no cover - defensive
-            raise KeyError(f"Invalid key: {key}") from None
+        delattr(self, key)
 
-    def to_dict(self) -> dict[str, str | list[UploadedFile] | UploadedFile | None]:
-        result: dict[str, str | list[UploadedFile] | UploadedFile | None] = {
-            "text": self.text
-        }
-        if self._include_files:
-            result["files"] = self.files
-        if self._include_audio:
-            result["audio"] = self.audio
-        return result
+    def __repr__(self) -> str:
+        # Build the repr from to_dict() so excluded keys do not raise.
+        # The generated dataclass repr always reads .files/.audio, which
+        # __getattribute__ rejects when those inputs were not accepted.
+        args = ", ".join(f"{key}={value!r}" for key, value in self.to_dict().items())
+        return f"{type(self).__name__}({args})"
 
 
-class PresetNames(str, Enum):
+class PresetNames(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
     AI = "ai"  # Equivalent to assistant
@@ -247,7 +262,8 @@ def _process_avatar_input(
         )
     except Exception as ex:
         raise StreamlitAPIException(
-            "Failed to load the provided avatar value as an image."
+            "Failed to load the provided avatar value as an image.",
+            error_id="chat-failed-loading-avatar-image",
         ) from ex
 
 
@@ -339,21 +355,23 @@ def _pop_audio_file(
     if not uploaded_file.name.lower().endswith(_ACCEPTED_AUDIO_EXTENSION):
         raise StreamlitAPIException(
             f"Invalid file extension for audio input: `{uploaded_file.name}`. "
-            f"Only WAV files ({_ACCEPTED_AUDIO_EXTENSION}) are accepted."
+            f"Only WAV files ({_ACCEPTED_AUDIO_EXTENSION}) are accepted.",
+            error_id="audio-input-invalid-file-extension",
         )
 
     # Validate MIME type (browsers may send different variations of WAV MIME types)
     if uploaded_file.type not in _ACCEPTED_AUDIO_MIME_TYPES:
         raise StreamlitAPIException(
             f"Invalid MIME type for audio input: `{uploaded_file.type}`. "
-            f"Expected one of {_ACCEPTED_AUDIO_MIME_TYPES}."
+            f"Expected one of {_ACCEPTED_AUDIO_MIME_TYPES}.",
+            error_id="audio-input-invalid-mime-type",
         )
 
     # Remove the file from the manager after creating the UploadedFile object.
     # Only MemoryUploadedFileManager implements remove_file (not part of the
     # UploadedFileManager Protocol). This explicit type check ensures we only
     # use this cleanup logic with manager types we've explicitly approved.
-    if audio_file_info and isinstance(ctx.uploaded_file_mgr, MemoryUploadedFileManager):
+    if isinstance(ctx.uploaded_file_mgr, MemoryUploadedFileManager):
         ctx.uploaded_file_mgr.remove_file(
             session_id=ctx.session_id,
             file_id=audio_file_info.file_id,
@@ -393,8 +411,8 @@ class ChatInputSerde:
             _include_audio=self.accept_audio,
         )
 
-    def serialize(self, v: str | None) -> ChatInputValueProto:
-        return ChatInputValueProto(data=v)
+    def serialize(self, v: str | ChatInputValue | None) -> ChatInputValueProto:
+        return ChatInputValueProto(data=v.text if isinstance(v, ChatInputValue) else v)
 
 
 class ChatMixin:
@@ -508,9 +526,7 @@ class ChatMixin:
 
         """
         if name is None:
-            raise StreamlitAPIException(
-                "The author name is required for a chat message, please set it via the parameter `name`."
-            )
+            raise StreamlitMissingRequiredParameterError("name")
 
         if avatar is None and (
             name.lower() in {item.value for item in PresetNames} or is_emoji(name)
@@ -572,27 +588,6 @@ class ChatMixin:
         key: Key | None = None,
         max_chars: int | None = None,
         max_upload_size: int | None = None,
-        accept_file: Literal[False] = False,
-        file_type: str | Sequence[str] | None = None,
-        accept_audio: Literal[True],
-        audio_sample_rate: int | None = 16000,
-        disabled: bool = False,
-        submit_mode: Literal["submit", "disable", "stop"] = "submit",
-        on_submit: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
-        width: WidthWithoutContent = "stretch",
-        height: Height = "content",
-    ) -> ChatInputValue | None: ...
-
-    @overload
-    def chat_input(
-        self,
-        placeholder: str = "Your message",
-        *,
-        key: Key | None = None,
-        max_chars: int | None = None,
-        max_upload_size: int | None = None,
         accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
@@ -605,6 +600,55 @@ class ChatMixin:
         width: WidthWithoutContent = "stretch",
         height: Height = "content",
     ) -> ChatInputValue | None: ...
+
+    # accept_audio=True with omitted accept_file, literal False, or a
+    # non-literal bool infers ChatInputValue | None.
+    # Includes audio_sample_rate so that combination matches.
+    # When accept_file is False or non-literal, audio_sample_rate without
+    # accept_audio=True matches no overload, which keeps it a type error.
+    @overload
+    def chat_input(
+        self,
+        placeholder: str = "Your message",
+        *,
+        key: Key | None = None,
+        max_chars: int | None = None,
+        max_upload_size: int | None = None,
+        accept_file: bool | Literal["multiple", "directory"] = False,
+        file_type: str | Sequence[str] | None = None,
+        accept_audio: Literal[True],
+        audio_sample_rate: int | None = 16000,
+        disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
+        on_submit: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
+        height: Height = "content",
+    ) -> ChatInputValue | None: ...
+
+    # Non-literal accept_file / accept_audio values return the union of both
+    # result types. audio_sample_rate is omitted so that kwarg still requires
+    # an accept_audio=True overload to match.
+    @overload
+    def chat_input(
+        self,
+        placeholder: str = "Your message",
+        *,
+        key: Key | None = None,
+        max_chars: int | None = None,
+        max_upload_size: int | None = None,
+        accept_file: bool | Literal["multiple", "directory"] = False,
+        file_type: str | Sequence[str] | None = None,
+        accept_audio: bool = False,
+        disabled: bool = False,
+        submit_mode: Literal["submit", "disable", "stop"] = "submit",
+        on_submit: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
+        height: Height = "content",
+    ) -> str | ChatInputValue | None: ...
 
     @gather_metrics("chat_input")
     def chat_input(
@@ -788,7 +832,7 @@ class ChatMixin:
 
         Returns
         -------
-        None, str, or dict-like
+        None, str, or ChatInputValue
             The user's submission. This is one of the following types:
 
             - ``None``: If the user didn't submit a message, file, or audio
@@ -796,12 +840,17 @@ class ChatMixin:
             - A string: When the widget isn't configured to accept files or
               audio recordings, and the user submitted a message in the last
               rerun, the widget returns the user's message as a string.
-            - A dict-like object: When the widget is configured to accept files
-              or audio recordings, and the user submitted any content in the
-              last rerun, the widget returns a dict-like object.
+            - A ``ChatInputValue`` object: When the widget is configured to
+              accept files or audio recordings, and the user submitted any
+              content in the last rerun, the widget returns a ``ChatInputValue``
+              object. This object is dictionary-like and supports both key and
+              attribute notation.
               The object always includes the ``text`` attribute, and
               optionally includes ``files`` and/or ``audio`` attributes depending
               on the ``accept_file`` and ``accept_audio`` parameters.
+
+            To use ``ChatInputValue`` or ``UploadedFile`` in an annotation,
+            import them from ``streamlit.typing``.
 
             When the widget is configured to accept files or audio recordings,
             and the user submitted content in the last rerun, you can access
@@ -928,6 +977,11 @@ class ChatMixin:
 
         """
         key = to_key(key)
+        on_submit = validate_on_change_mode(
+            on_submit,
+            supported_modes=(),
+            param_name="on_submit",
+        )
 
         check_widget_policies(
             self.dg,
@@ -938,22 +992,29 @@ class ChatMixin:
         )
 
         if accept_file not in {True, False, "multiple", "directory"}:
-            raise StreamlitAPIException(
-                "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
+            raise StreamlitValueError(
+                "accept_file",
+                ["True", "False", "'multiple'", "'directory'"],
+                detail=f"Got {accept_file!r}.",
             )
 
         if submit_mode not in {"submit", "disable", "stop"}:
-            raise StreamlitAPIException(
-                "The `submit_mode` parameter must be 'submit', 'disable', or 'stop'."
+            raise StreamlitValueError(
+                "submit_mode", ["'submit'", "'disable'", "'stop'"]
             )
 
         if max_upload_size is not None and (
-            not isinstance(max_upload_size, int) or max_upload_size <= 0
+            isinstance(max_upload_size, bool)
+            or not isinstance(max_upload_size, int)
+            or max_upload_size < 1
         ):
-            raise StreamlitAPIException(
-                "The `max_upload_size` parameter must be a positive integer "
-                "representing the maximum file size in megabytes, or None "
-                "to fall back to the `server.maxUploadSize` configuration option."
+            raise StreamlitValueError(
+                "max_upload_size",
+                ["a positive integer"],
+                detail=(
+                    "Set it to None to fall back to the `server.maxUploadSize` "
+                    "configuration option."
+                ),
             )
 
         ctx = get_script_run_ctx()
@@ -995,9 +1056,9 @@ class ChatMixin:
             audio_sample_rate is not None
             and audio_sample_rate not in ALLOWED_SAMPLE_RATES
         ):
-            raise StreamlitAPIException(
-                f"Invalid audio_sample_rate: {audio_sample_rate}. "
-                f"Must be one of {sorted(ALLOWED_SAMPLE_RATES)} Hz, or None for browser default."
+            raise StreamlitValueError(
+                "audio_sample_rate",
+                [str(rate) for rate in sorted(ALLOWED_SAMPLE_RATES)] + ["None"],
             )
 
         # It doesn't make sense to create a chat input inside a form.
@@ -1005,14 +1066,13 @@ class ChatMixin:
         # We omit this check for scripts running outside streamlit, because
         # they will have no script_run_ctx.
         if runtime.exists() and is_in_form(self.dg):
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 "`st.chat_input()` can't be used in a `st.form()`."
             )
 
-        # Determine the position of the chat input:
-        # Use bottom position if chat input is within the main container
-        # either directly or within a vertical container. If it has any
-        # other container types as parents, we use inline position.
+        # Streamlit auto-moves a chat input into the bottom container only when it is
+        # called from the main app body with no layout ancestors. Calls already inside
+        # `st.bottom` or other containers stay where they were created.
         ancestor_block_types = set(self.dg._active_dg._ancestor_block_types)
         if (
             self.dg._active_dg._root_container == RootContainer.MAIN
@@ -1025,6 +1085,7 @@ class ChatMixin:
         chat_input_proto = ChatInputProto()
         chat_input_proto.id = element_id
         chat_input_proto.placeholder = str(placeholder)
+        chat_input_proto.is_auto_positioned_at_bottom = position == "bottom"
 
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars
@@ -1053,7 +1114,7 @@ class ChatMixin:
             accept_audio=accept_audio,
             allowed_types=file_type,
         )
-        widget_state = register_widget(  # type: ignore[misc]
+        widget_state = register_widget(
             chat_input_proto.id,
             on_change_handler=on_submit,
             args=args,
@@ -1062,6 +1123,7 @@ class ChatMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="chat_input_value",
+            disabled=disabled,
         )
 
         layout_config = create_layout_config(
@@ -1077,7 +1139,9 @@ class ChatMixin:
         else:
             chat_input_proto.submit_mode = ChatInputProto.SubmitMode.SUBMIT_MODE_SUBMIT
 
-        if widget_state.value_changed and widget_state.value is not None:
+        # Only plain str values are pushed to the frontend. ChatInputValue is the
+        # deserialized submit/return form and is not a valid programmatic set_value.
+        if widget_state.value_changed and isinstance(widget_state.value, str):
             # Support for programmatically setting the text in the chat input
             # via session state. Since chat input has a trigger state,
             # it works a bit differently to other widgets. We are not changing
@@ -1095,7 +1159,10 @@ class ChatMixin:
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)
-        has_one_shot = widget_state.value_changed and widget_state.value is not None
+        # Match the set_value guard so one-shot only fires when a str was pushed.
+        has_one_shot = widget_state.value_changed and isinstance(
+            widget_state.value, str
+        )
         if position == "bottom":
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.

@@ -22,13 +22,20 @@ from streamlit.delta_generator_singletons import (
     get_dg_singleton_instance,
     get_last_dg_added_to_context_stack,
 )
-from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.fragment import _check_not_parallel_worker, _fragment
+from streamlit.errors import (
+    StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
+)
+from streamlit.runtime.fragment import (
+    _check_not_parallel_worker,
+    _fragment,
+    _FragmentLifetime,
+)
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import get_object_name
 
 if TYPE_CHECKING:
-    from streamlit.elements.lib.dialog import DialogWidth
+    from streamlit.elements.lib.dialog import DialogPosition, DialogWidth
     from streamlit.runtime.state import WidgetCallback
 
 
@@ -46,14 +53,16 @@ def _assert_no_nested_dialogs() -> None:
 
     Raises
     ------
-    StreamlitAPIException
+    StreamlitInvalidLayoutContextError
         Raised if the user tries to nest dialogs inside of each other.
     """
     last_dg_in_current_context = get_last_dg_added_to_context_stack()
     if last_dg_in_current_context and "dialog" in set(
         last_dg_in_current_context._ancestor_block_types
     ):
-        raise StreamlitAPIException("Dialogs may not be nested inside other dialogs.")
+        raise StreamlitInvalidLayoutContextError(
+            "Dialogs may not be nested inside other dialogs."
+        )
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -64,14 +73,15 @@ def _dialog_decorator(
     title: str,
     *,
     width: DialogWidth = "small",
+    position: DialogPosition = "center",
     dismissible: bool = True,
     icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F:
     if title is None or title == "":
-        raise StreamlitAPIException(
-            "A non-empty `title` argument has to be provided for dialogs, for example "
-            '`@st.dialog("Example Title")`.'
+        raise StreamlitMissingRequiredParameterError(
+            "title",
+            detail='For example: `@st.dialog("Example Title")`.',
         )
 
     @wraps(non_optional_func)
@@ -83,8 +93,9 @@ def _dialog_decorator(
         # not inherit the sidebar theming.
         dialog = get_dg_singleton_instance().event_dg._dialog(
             title=title,
-            dismissible=dismissible,
             width=width,
+            position=position,
+            dismissible=dismissible,
             icon=icon,
             on_dismiss=on_dismiss,
         )
@@ -100,7 +111,11 @@ def _dialog_decorator(
         fragmented_dialog_content = cast(
             "Callable[[], None]",
             _fragment(
-                dialog_content, additional_hash_info=get_object_name(non_optional_func)
+                dialog_content,
+                additional_hash_info=get_object_name(non_optional_func),
+                # The dialog stays mounted in event_dg when its opener fragment
+                # reruns, so keep its callable until a full app rerun.
+                lifetime=_FragmentLifetime.FULL_APP_SCOPED,
             ),
         )
 
@@ -116,6 +131,7 @@ def dialog_decorator(
     title: str,
     *,
     width: DialogWidth = "small",
+    position: DialogPosition = "center",
     dismissible: bool = True,
     icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
@@ -133,6 +149,7 @@ def dialog_decorator(
     title: F,
     *,
     width: DialogWidth = "small",
+    position: DialogPosition = "center",
     dismissible: bool = True,
     icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
@@ -144,6 +161,7 @@ def dialog_decorator(
     title: F | str,
     *,
     width: DialogWidth = "small",
+    position: DialogPosition = "center",
     dismissible: bool = True,
     icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
@@ -154,6 +172,12 @@ def dialog_decorator(
     function. When you call a dialog function, Streamlit inserts a modal dialog
     into your app. Streamlit element commands called within the dialog function
     render inside the modal dialog.
+
+    By default, the dialog is a centered modal. Set ``position`` to ``"left"``
+    or ``"right"`` to show the dialog as a user-resizable full-height side
+    drawer. Side drawers stay modal: the rest of the app is inert, and
+    ``width``, ``dismissible``, ``icon``, and ``on_dismiss`` apply the same
+    way in every position.
 
     The dialog function can accept arguments that can be passed when it is
     called. Any values from the dialog that need to be accessed from the wider
@@ -215,6 +239,16 @@ def dialog_decorator(
           pixels wide.
         - ``"medium"``: The modal dialog will be up to 750 pixels wide.
         - ``"large"``: The modal dialog will be up to 1280 pixels wide.
+
+    position : "center", "left", "right"
+        The position of the modal dialog. This can be one of the following:
+
+        - ``"center"`` (default): The modal dialog is centered in the
+          viewport.
+        - ``"left"``: The dialog is shown as a user-resizable full-height
+          drawer attached to the left side of the viewport.
+        - ``"right"``: The dialog is shown as a user-resizable full-height
+          drawer attached to the right side of the viewport.
 
     dismissible : bool
         Whether the modal dialog can be dismissed by the user. If this is
@@ -293,6 +327,25 @@ def dialog_decorator(
         https://doc-modal-dialog.streamlit.app/
         height: 350px
 
+    You can also show the dialog as a side drawer. Set ``position`` to
+    ``"right"`` (or ``"left"``) to attach a user-resizable, full-height
+    drawer to that side of the viewport. In this app, clicking "**Open
+    details**" opens a right-side drawer with more information about an
+    item.
+
+    >>> import streamlit as st
+    >>>
+    >>> @st.dialog("Details", position="right")
+    >>> def show_details(item):
+    >>>     st.write(f"Details for {item}")
+    >>>
+    >>> if st.button("Open details"):
+    >>>     show_details("Order #1234")
+
+    .. output::
+        https://doc-modal-dialog-drawer.streamlit.app/
+        height: 350px
+
     """
 
     func_or_title = title
@@ -303,6 +356,7 @@ def dialog_decorator(
                 non_optional_func=f,
                 title=func_or_title,
                 width=width,
+                position=position,
                 dismissible=dismissible,
                 icon=icon,
                 on_dismiss=on_dismiss,
@@ -315,6 +369,7 @@ def dialog_decorator(
         func,
         "",
         width=width,
+        position=position,
         dismissible=dismissible,
         icon=icon,
         on_dismiss=on_dismiss,

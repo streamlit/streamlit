@@ -194,3 +194,14 @@ st.download_button(
     icon_position="right",
     key="download_emoji_right",
 )
+
+# wrap=False keeps the button on one row and ellipsizes an overflowing label,
+# exposing the full label via a native title. A fixed width narrower than the
+# label forces the truncation.
+st.download_button(
+    "Regenerate the complete quarterly report now",
+    data="data",
+    width=200,
+    wrap=False,
+    key="wrap_false_download_button",
+)

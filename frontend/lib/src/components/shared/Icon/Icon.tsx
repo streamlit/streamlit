@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, ReactNode } from "react"
+import { memo, type ReactElement, type ReactNode } from "react"
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 
-import type { IconSize } from "~lib/theme/types"
+import type { IconSizeProp } from "~lib/theme/types"
 
 import { StyledEmojiIcon, StyledIcon } from "./styled-components"
 
 interface GetDefaultPropsArgs {
-  size?: IconSize
+  size?: IconSizeProp
   margin?: string
   padding?: string
   color?: string
 }
 
 interface DefaultProps {
-  size: IconSize
+  size: IconSizeProp
   margin: string
   padding: string
   color: string | undefined
@@ -50,7 +50,7 @@ const getDefaultProps = ({
 
 interface IconProps {
   content: EmotionIcon
-  size?: IconSize
+  size?: IconSizeProp
   color?: string
   margin?: string
   padding?: string
@@ -76,7 +76,7 @@ const Icon = memo(function Icon({
 })
 
 interface EmojiIconProps {
-  size?: IconSize
+  size?: IconSizeProp
   margin?: string
   padding?: string
   children: ReactNode

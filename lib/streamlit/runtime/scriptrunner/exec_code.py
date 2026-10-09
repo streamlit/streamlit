@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -40,20 +41,26 @@ if TYPE_CHECKING:
 class modified_sys_path:  # noqa: N801
     """A context for prepending a directory to sys.path for a second.
 
+    If initialized with a file path, its parent directory is prepended instead.
+
     Code inspired by IPython:
     Source: https://github.com/ipython/ipython/blob/master/IPython/utils/syspathcontext.py#L42
     """
 
     def __init__(self, main_script_path: str) -> None:
-        self._main_script_path = main_script_path
+        self._main_script_dir = os.path.abspath(main_script_path)
+
+        if os.path.isfile(self._main_script_dir):
+            self._main_script_dir = os.path.dirname(self._main_script_dir)
+
         self._added_path = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def __enter__(self) -> None:
-        if self._main_script_path not in sys.path:
-            sys.path.insert(0, self._main_script_path)
+        if self._main_script_dir not in sys.path:
+            sys.path.insert(0, self._main_script_dir)
             self._added_path = True
 
     def __exit__(
@@ -64,7 +71,7 @@ class modified_sys_path:  # noqa: N801
     ) -> Literal[False]:
         if self._added_path:
             try:
-                sys.path.remove(self._main_script_path)
+                sys.path.remove(self._main_script_dir)
             except ValueError:
                 # It's already removed.
                 pass

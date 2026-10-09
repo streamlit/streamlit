@@ -18,12 +18,12 @@ import { useCallback } from "react"
 
 import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
-import { SignalValue, View as VegaView } from "vega"
+import type { SignalValue, View as VegaView } from "vega"
 
 import { debounce, notNullOrUndefined } from "~lib/util/utils"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import type { VegaLiteChartElement } from "./arrowUtils"
 
 /**
  * Debounce time for triggering a widget state update
@@ -122,12 +122,13 @@ export const useVegaLiteSelections = (
             // with the backend.
             if (!isEqual(currentWidgetState, updatedSelections)) {
               widgetMgr.setStringValue(
-                widgetInfo,
+                widgetInfo.id,
                 JSON.stringify(updatedSelections),
                 {
-                  fromUi: true,
-                },
-                fragmentId
+                  formId: widgetInfo.formId,
+                  fragmentId,
+                  fromUser: true,
+                }
               )
             }
           })
@@ -172,12 +173,13 @@ export const useVegaLiteSelections = (
 
     if (!isEqual(currentWidgetState, emptySelectionState)) {
       widgetMgr.setStringValue(
-        widgetInfo,
+        widgetInfo.id,
         JSON.stringify(emptySelectionState),
         {
-          fromUi: true,
-        },
-        fragmentId
+          formId: widgetInfo.formId,
+          fragmentId,
+          fromUser: true,
+        }
       )
     }
   }, [chartId, formId, fragmentId, selectionMode, widgetMgr])

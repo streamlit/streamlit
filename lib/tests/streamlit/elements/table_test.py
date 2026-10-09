@@ -27,7 +27,9 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
+from streamlit.elements.table import marshall_table
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitInvalidHeightError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
@@ -276,6 +278,47 @@ class StTableAPITest(DeltaGeneratorTestCase):
             convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
         )
 
+    def test_table_alt_is_stored_only_when_nonempty(self) -> None:
+        """A non-empty alt is stored on the proto."""
+        df = pd.DataFrame({"A": [1, 2]})
+        st.table(df, alt="Confusion matrix of predicted vs actual species")
+        el = self.get_delta_from_queue().new_element.table
+        assert el.HasField("alt")
+        assert el.alt == "Confusion matrix of predicted vs actual species"
+
+    @parameterized.expand(
+        [
+            ("omitted",),
+            (None,),
+            ("",),
+            ("  ",),
+        ]
+    )
+    def test_table_alt_unset_for_blank_or_omitted(self, alt_value: object) -> None:
+        """Omitted / None / empty / whitespace alt leave the proto field unset."""
+        df = pd.DataFrame({"A": [1, 2]})
+        if alt_value == "omitted":
+            st.table(df)
+        else:
+            st.table(df, alt=alt_value)  # type: ignore[arg-type]
+        assert not self.get_delta_from_queue().new_element.table.HasField("alt")
+
+    def test_table_alt_strips_whitespace(self) -> None:
+        """Leading and trailing whitespace is stripped from alt."""
+        df = pd.DataFrame({"A": [1, 2]})
+        st.table(df, alt="  Confusion matrix of species  ")
+        el = self.get_delta_from_queue().new_element.table
+        assert el.HasField("alt")
+        assert el.alt == "Confusion matrix of species"
+
+    def test_table_alt_preserves_adversarial_plain_text(self) -> None:
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Table of "A < B" & values <script>alert(1)</script>'
+        st.table(pd.DataFrame({"A": [1]}), alt=adversarial)
+        el = self.get_delta_from_queue().new_element.table
+        assert el.HasField("alt")
+        assert el.alt == adversarial
+
 
 class HideIndexHideHeaderTest(DeltaGeneratorTestCase):
     """Test hide_index and hide_header parameters for st.table."""
@@ -386,3 +429,22 @@ class HideIndexHideHeaderTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.table
         assert proto.hide_index is True
         assert proto.hide_header is True
+
+    def test_unevaluated_data_auto_hides_index(self) -> None:
+        """Unevaluated inputs collect a preview and hide the synthetic RangeIndex."""
+        df = pd.DataFrame({"a": [1, 2, 3]}, index=["x", "y", "z"])
+        with patch(
+            "streamlit.elements.table.dataframe_util.is_unevaluated_data_object",
+            return_value=True,
+        ):
+            st.table(df)
+        proto = self.get_delta_from_queue().new_element.table
+        assert proto.hide_index is True
+
+
+def test_marshall_table_styler_requires_string_uuid() -> None:
+    """Styler marshalling raises when ``default_uuid`` is not a string."""
+    proto = TableProto()
+    styler = pd.DataFrame({"a": [1]}).style
+    with pytest.raises(StreamlitAPIException, match="Default UUID"):
+        marshall_table(proto.arrow_data, styler, default_uuid=None)

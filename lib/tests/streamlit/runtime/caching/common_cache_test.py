@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import threading
 import time
 import unittest
@@ -27,9 +29,10 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import (
+    cache_background_refresh,
     cache_data,
     cache_data_api,
     cache_resource,
@@ -37,8 +40,12 @@ from streamlit.runtime.caching import (
     clear_session_data_cache,
     clear_session_resource_cache,
 )
-from streamlit.runtime.caching.cache_errors import CacheReplayClosureError
-from streamlit.runtime.caching.cache_utils import CachedResult
+from streamlit.runtime.caching.cache_errors import (
+    CachedFunctionReturnedAwaitableError,
+    CachedStFunctionInBackgroundModeWarning,
+    CacheReplayClosureError,
+)
+from streamlit.runtime.caching.cache_utils import _LOGGER, CachedResult
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
@@ -57,7 +64,7 @@ from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads
 from tests.streamlit.elements.image_test import create_image
-from tests.testutil import create_mock_script_run_ctx
+from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 
 def get_text_or_block(delta):
@@ -281,7 +288,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             st.text("foo")
             warning.assert_not_called()
 
-            # Test nested st.cache functions
+            # Test nested cached functions
             @cache_decorator
             def outer():
                 @cache_decorator
@@ -295,7 +302,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
 
             warning.reset_mock()
 
-            # Test st.cache functions that raise errors
+            # Test cached functions that raise errors
             with pytest.raises(RuntimeError):
 
                 @cache_decorator
@@ -312,7 +319,7 @@ class CommonCacheTest(DeltaGeneratorTestCase):
             st.text("foo")
             warning.assert_not_called()
 
-            # Test st.cache functions with widgets
+            # Test cached functions with widgets
             @cache_decorator
             def cached_widget():
                 st.button("Press me!")
@@ -344,6 +351,197 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         text = self.get_text_delta_contents()
 
         assert text == ["1", "---", "1"]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_cached_st_function_replay_isolated(self, _, cache_decorator) -> None:
+        """Concurrent async cache misses capture only their own display messages."""
+
+        async def run_concurrent_misses() -> None:
+            first_started = asyncio.Event()
+            second_finished = asyncio.Event()
+
+            @cache_decorator(show_spinner=False)
+            async def cached_text(label: str) -> str:
+                st.text(f"{label}-before")
+                if label == "first":
+                    first_started.set()
+                    await second_finished.wait()
+                else:
+                    await first_started.wait()
+                    st.text(f"{label}-after")
+                    second_finished.set()
+                    return label
+                st.text(f"{label}-after")
+                return label
+
+            await asyncio.gather(cached_text("first"), cached_text("second"))
+
+            self.clear_queue()
+            await cached_text("first")
+            st.text("---")
+            await cached_text("second")
+
+        asyncio.run(run_concurrent_misses())
+
+        assert self.get_text_delta_contents() == [
+            "first-before",
+            "first-after",
+            "---",
+            "second-before",
+            "second-after",
+        ]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_cached_st_function_replay_includes_child_tasks(
+        self, _, cache_decorator
+    ) -> None:
+        """Child tasks contribute display messages to their cached parent."""
+
+        async def run_miss_and_hit() -> None:
+            async def write_text(label: str) -> None:
+                await asyncio.sleep(0)
+                st.text(label)
+
+            @cache_decorator(show_spinner=False)
+            async def cached_text() -> None:
+                await asyncio.gather(write_text("first"), write_text("second"))
+
+            await cached_text()
+            self.clear_queue()
+            await cached_text()
+
+        asyncio.run(run_miss_and_hit())
+
+        assert self.get_text_delta_contents() == ["first", "second"]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_detached_child_cannot_mutate_cached_replay(
+        self, _, cache_decorator
+    ) -> None:
+        """A child writing after its parent returns cannot alter cached replay."""
+
+        async def run_detached_child_then_hit() -> None:
+            child_started = asyncio.Event()
+            allow_child_write = asyncio.Event()
+            child_task: asyncio.Task[None] | None = None
+
+            async def write_late() -> None:
+                child_started.set()
+                await allow_child_write.wait()
+                st.text("late")
+
+            @cache_decorator(show_spinner=False)
+            async def cached_text() -> None:
+                nonlocal child_task
+                st.text("captured")
+                child_task = asyncio.create_task(write_late())
+                await child_started.wait()
+
+            await cached_text()
+            assert child_task is not None
+
+            allow_child_write.set()
+            await child_task
+
+            self.clear_queue()
+            await cached_text()
+
+        asyncio.run(run_detached_child_then_hit())
+
+        assert self.get_text_delta_contents() == ["captured"]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_cached_widget_policy_resets_after_success_and_error(
+        self, name, cache_decorator
+    ) -> None:
+        """Widget policy applies inside async caches and resets on every exit path."""
+
+        @cache_decorator(show_spinner=False)
+        async def cached_widget(should_raise: bool) -> None:
+            st.button(f"inside-{name}-{should_raise}")
+            await asyncio.sleep(0)
+            if should_raise:
+                raise RuntimeError("boom")
+
+        with patch.object(st, "exception") as warning:
+            asyncio.run(cached_widget(False))
+            warning.assert_called_once()
+
+            warning.reset_mock()
+            st.button(f"outside-success-{name}")
+            warning.assert_not_called()
+
+            with pytest.raises(RuntimeError, match="boom"):
+                asyncio.run(cached_widget(True))
+            warning.assert_called_once()
+
+            warning.reset_mock()
+            st.button(f"outside-error-{name}")
+            warning.assert_not_called()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_mixed_nested_cache_replay_resets_after_inner_error(
+        self, _, cache_decorator
+    ) -> None:
+        """Nested sync output, blocks, and media replay through an async outer cache."""
+
+        @cache_decorator(show_spinner=False)
+        def inner(label: str, should_raise: bool) -> None:
+            with st.container():
+                st.text(f"inner-{label}")
+                st.image(create_image(5))
+            if should_raise:
+                raise RuntimeError("inner boom")
+
+        @cache_decorator(show_spinner=False)
+        async def outer(label: str, inner_raises: bool) -> None:
+            st.text(f"outer-{label}-before")
+            try:
+                inner(label, inner_raises)
+            except RuntimeError:
+                st.text(f"outer-{label}-handled")
+            await asyncio.sleep(0)
+            st.text(f"outer-{label}-after")
+
+        async def populate_and_replay() -> None:
+            await outer("success", False)
+            await outer("error", True)
+
+            self.clear_queue()
+            await outer("success", False)
+            st.text("---")
+            await outer("error", True)
+
+        asyncio.run(populate_and_replay())
+
+        assert self.get_text_delta_contents() == [
+            "outer-success-before",
+            "inner-success",
+            "outer-success-after",
+            "---",
+            "outer-error-before",
+            "inner-error",
+            "outer-error-handled",
+            "outer-error-after",
+        ]
+        replayed_images = [
+            delta.new_element.imgs
+            for delta in self.get_all_deltas_from_queue()
+            if delta.HasField("new_element")
+            and delta.new_element.WhichOneof("type") == "imgs"
+        ]
+        assert len(replayed_images) == 2
+        assert all(image_list.imgs[0].url for image_list in replayed_images)
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -836,13 +1034,13 @@ class CommonCacheTest(DeltaGeneratorTestCase):
     def test_bad_scope_raises_exception(self, _, cache_decorator):
         """A bad scope argument should raise an exception."""
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
 
             @cache_decorator(scope="request")
             def get_foo() -> None:
                 pass
 
-        e.match("Unsupported scope option.*request")
+        e.match(r"Invalid `scope` value")
 
 
 class CommonCacheTTLTest(unittest.TestCase):
@@ -1109,3 +1307,554 @@ def test_arrow_replay():
     at = AppTest.from_file("test_data/arrow_replay.py").run()
 
     assert not at.exception
+
+
+# The fresh ttl (in seconds) used across the background-refresh tests. Default
+# hard eviction bound is 2*_BG_TTL; individual tests may override the multiplier.
+_BG_TTL = 100
+
+
+class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
+    """Behavior common to refresh_mode="background" on both cache decorators."""
+
+    def tearDown(self):
+        cache_data.clear()
+        cache_resource.clear()
+        # Shut down the shared executor and clear the degradation latch so tests are
+        # isolated from one another.
+        cache_background_refresh.reset()
+        super().tearDown()
+
+    @staticmethod
+    def _sync_submit(task):
+        """Run a submitted background-refresh task inline for deterministic tests."""
+        task()
+        return True
+
+    def _patch_sync_submit(self):
+        """Patch the background manager so refreshes run synchronously and succeed."""
+        return patch.object(
+            cache_background_refresh.get_background_refresh_manager(),
+            "submit",
+            side_effect=self._sync_submit,
+        )
+
+    def _text_deltas(self) -> list[str]:
+        return [
+            element.text.body
+            for element in (
+                delta.new_element for delta in self.get_all_deltas_from_queue()
+            )
+            if element.WhichOneof("type") == "text"
+        ]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_fresh_hit_no_refresh(self, _, cache_decorator, timer_patch: Mock):
+        """Within the fresh window, a hit returns the cached value and triggers no refresh."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        with self._patch_sync_submit() as submit_mock:
+            timer_patch.return_value = _BG_TTL * 0.5
+            assert foo() == 1
+            assert call_count[0] == 1
+            submit_mock.assert_not_called()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_stale_serves_old_then_refreshes(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """In the stale window the old value is served immediately while a refresh updates it."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        with self._patch_sync_submit() as submit_mock:
+            timer_patch.return_value = _BG_TTL * 1.5
+            # The stale value is served immediately (not the refreshed one).
+            assert foo() == 1
+            submit_mock.assert_called_once()
+
+        # The background refresh recomputed a new value and reset the freshness clock.
+        assert call_count[0] == 2
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo() == 2
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_background_refresh_rejects_awaitable(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """Streamlit closes the rejected coroutine, serves stale data, and starts cooldown."""
+        call_count = [0]
+        created_coroutines: list[Any] = []
+
+        async def operation() -> int:
+            return 42
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> Any:
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return 1
+            coroutine = operation()
+            created_coroutines.append(coroutine)
+            return coroutine
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        with (
+            self._patch_sync_submit(),
+            patch.object(_LOGGER, "warning") as warning_mock,
+        ):
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 1
+
+        assert call_count[0] == 2
+        assert len(created_coroutines) == 1
+        assert inspect.getcoroutinestate(created_coroutines[0]) == inspect.CORO_CLOSED
+        assert isinstance(
+            warning_mock.call_args.args[2], CachedFunctionReturnedAwaitableError
+        )
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo() == 1
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_hard_expiry_blocks_foreground(self, _, cache_decorator, timer_patch: Mock):
+        """Past the default 2*ttl hard bound, the call blocks and recomputes."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        with self._patch_sync_submit() as submit_mock:
+            timer_patch.return_value = _BG_TTL * 2 + 1
+            # Recomputed in the foreground, returning the new value directly.
+            assert foo() == 2
+            # A hard miss is not a stale serve, so no background refresh is triggered.
+            submit_mock.assert_not_called()
+
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [
+            ("cache_data_widen", cache_data, 4.0, _BG_TTL * 2.5, _BG_TTL * 4 + 1),
+            (
+                "cache_resource_widen",
+                cache_resource,
+                4.0,
+                _BG_TTL * 2.5,
+                _BG_TTL * 4 + 1,
+            ),
+            ("cache_data_shorten", cache_data, 1.5, _BG_TTL * 1.25, _BG_TTL * 1.75),
+            (
+                "cache_resource_shorten",
+                cache_resource,
+                1.5,
+                _BG_TTL * 1.25,
+                _BG_TTL * 1.75,
+            ),
+        ]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_configured_multiplier_sets_hard_expiry(
+        self,
+        _name: str,
+        cache_decorator: Any,
+        multiplier: float,
+        stale_at: float,
+        expired_at: float,
+        timer_patch: Mock,
+    ) -> None:
+        """The configured multiplier sets when a stale value is served vs hard-expired."""
+        call_count = [0]
+
+        with patch_config_options(
+            {"runner.cacheBackgroundRefreshTTLMultiplier": multiplier}
+        ):
+
+            @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+            def foo() -> int:
+                call_count[0] += 1
+                return call_count[0]
+
+            timer_patch.return_value = 0
+            assert foo() == 1
+
+            # Fail the refresh so the stale value stays until hard expiry.
+            with patch.object(
+                cache_background_refresh.get_background_refresh_manager(),
+                "submit",
+                return_value=False,
+            ) as submit_mock:
+                timer_patch.return_value = stale_at
+                assert foo() == 1
+                submit_mock.assert_called_once()
+                assert call_count[0] == 1
+
+                submit_mock.reset_mock()
+                timer_patch.return_value = expired_at
+                assert foo() == 2
+                submit_mock.assert_not_called()
+
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_refresh_deduplicated(self, _, cache_decorator, timer_patch: Mock):
+        """Only one background refresh is scheduled per key while one is already in flight."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        captured: list = []
+
+        def capture_submit(task):
+            # Capture but don't run: the per-key compute lock stays held, simulating an
+            # in-flight refresh.
+            captured.append(task)
+            return True
+
+        with patch.object(
+            cache_background_refresh.get_background_refresh_manager(),
+            "submit",
+            side_effect=capture_submit,
+        ):
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 1
+            # A second stale access while the first refresh is "in flight" is deduped.
+            assert foo() == 1
+            assert len(captured) == 1
+
+        # Running the captured refresh releases the lock and updates the value.
+        captured[0]()
+        assert call_count[0] == 2
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo() == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_refresh_failure_cooldown(self, _, cache_decorator, timer_patch: Mock):
+        """A failed refresh keeps serving stale, logs, and applies a per-key retry cooldown."""
+        # Use a long ttl so the 60s failure cooldown fits inside the stale window.
+        ttl = 1000
+        call_count = [0]
+        should_fail = [False]
+
+        @cache_decorator(ttl=ttl, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            if should_fail[0]:
+                raise RuntimeError("boom")
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+        should_fail[0] = True
+
+        # First stale access: the refresh runs and fails; the stale value is still served.
+        with self._patch_sync_submit():
+            timer_patch.return_value = ttl * 1.5
+            assert foo() == 1
+        assert call_count[0] == 2
+
+        # Within the cooldown window, no new refresh is triggered.
+        with patch.object(
+            cache_background_refresh.get_background_refresh_manager(), "submit"
+        ) as submit_mock:
+            timer_patch.return_value = ttl * 1.5 + 30
+            assert foo() == 1
+            submit_mock.assert_not_called()
+        assert call_count[0] == 2
+
+        # After the cooldown elapses, the refresh is retried and now succeeds.
+        should_fail[0] = False
+        with self._patch_sync_submit():
+            timer_patch.return_value = ttl * 1.5 + 61
+            assert foo() == 1
+        assert call_count[0] == 3
+        timer_patch.return_value = ttl * 1.5 + 61
+        assert foo() == 3
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_orphan_refresh_discarded_after_clear(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """A refresh completing after a full cache clear is discarded, not written back."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        captured: list = []
+
+        def capture_submit(task):
+            captured.append(task)
+            return True
+
+        with patch.object(
+            cache_background_refresh.get_background_refresh_manager(),
+            "submit",
+            side_effect=capture_submit,
+        ):
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 1
+            assert len(captured) == 1
+
+        # Clear the whole cache before the in-flight refresh writes back.
+        foo.clear()
+
+        # The refresh computes a value, but it must be discarded (generation changed /
+        # entry gone), so it never repopulates the cleared cache.
+        captured[0]()
+        assert call_count[0] == 2
+
+        # The next access is a normal miss that recomputes from scratch (not the
+        # discarded refresh value).
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo() == 3
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_orphan_refresh_discarded_after_per_key_clear(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """A refresh finishing after a per-key clear + recompute must not clobber the fresh value.
+
+        Unlike a whole-cache clear, ``func.clear(*args)`` does not bump the cache
+        generation, so this guards the per-key epoch path specifically.
+        """
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo(_arg: int) -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo(1) == 1
+
+        captured: list = []
+
+        def capture_submit(task):
+            captured.append(task)
+            return True
+
+        with patch.object(
+            cache_background_refresh.get_background_refresh_manager(),
+            "submit",
+            side_effect=capture_submit,
+        ):
+            timer_patch.return_value = _BG_TTL * 1.5
+            # Stale serve schedules a refresh that stays "in flight" (not run yet).
+            assert foo(1) == 1
+            assert len(captured) == 1
+
+        # Clear just this key and recompute it in the foreground before the in-flight
+        # refresh writes back.
+        foo.clear(1)
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo(1) == 2
+
+        # The older in-flight refresh now completes: it computes a value but must be
+        # discarded because the key was individually cleared since it was triggered.
+        captured[0]()
+        assert call_count[0] == 3
+
+        # The freshly recomputed value survives; the stale refresh did not clobber it.
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo(1) == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_foreground_recompute_clears_failure_cooldown(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """A successful foreground recompute clears a prior refresh-failure cooldown.
+
+        Covers "failed refresh -> hard expiry -> foreground recompute -> later stale
+        window": the later stale window must refresh again rather than stay stuck on the
+        old cooldown.
+        """
+        # A short ttl so the whole cycle stays well within the 60s failure cooldown.
+        ttl = 10
+        call_count = [0]
+        should_fail = [False]
+
+        @cache_decorator(ttl=ttl, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            if should_fail[0]:
+                raise RuntimeError("boom")
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        # A stale access triggers a refresh that fails, arming the 60s cooldown.
+        should_fail[0] = True
+        with self._patch_sync_submit():
+            timer_patch.return_value = ttl * 1.5
+            assert foo() == 1
+        assert call_count[0] == 2
+
+        # The entry hard-expires (>= 2*ttl) and a foreground recompute succeeds; this
+        # must clear the still-active failure cooldown.
+        should_fail[0] = False
+        timer_patch.return_value = ttl * 2 + 1
+        assert foo() == 3
+
+        # A later stale window (still within 60s of the failure) now triggers a
+        # background refresh again, proving the cooldown was cleared.
+        with self._patch_sync_submit() as submit_mock:
+            timer_patch.return_value = ttl * 2 + 1 + ttl * 1.5
+            assert foo() == 3
+            submit_mock.assert_called_once()
+        assert call_count[0] == 4
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_no_spinner_on_stale_serve(self, _, cache_decorator, timer_patch: Mock):
+        """A stale serve returns immediately without showing a spinner."""
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background")
+        def foo() -> int:
+            return 1
+
+        timer_patch.return_value = 0
+        foo()
+        # A foreground miss shows the spinner; clear it before the stale serve.
+        assert not self.forward_msg_queue.is_empty()
+        self.clear_queue()
+
+        with self._patch_sync_submit():
+            timer_patch.return_value = _BG_TTL * 1.5
+            foo()
+
+        assert self.forward_msg_queue.is_empty()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_no_replay_and_warning_on_display(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """Display output renders on the miss (with a warning) but is not replayed on hits."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            st.text("hello")
+            return call_count[0]
+
+        with patch.object(st, "exception") as mock_exception:
+            timer_patch.return_value = 0
+            with self.assertLogs(_LOGGER) as logs:
+                assert foo() == 1
+            # Display output renders live during the actual miss.
+            assert self._text_deltas() == ["hello"]
+            # A warning is emitted about background-mode display commands.
+            mock_exception.assert_called_once()
+            assert isinstance(
+                mock_exception.call_args[0][0],
+                CachedStFunctionInBackgroundModeWarning,
+            )
+            assert 'refresh_mode="background"' in logs.records[0].getMessage()
+            assert logs.records[0].stack_info is not None
+
+            mock_exception.reset_mock()
+            self.clear_queue()
+
+            # A fresh hit does not replay the cached display output and does not warn.
+            timer_patch.return_value = _BG_TTL * 0.5
+            assert foo() == 1
+            assert self._text_deltas() == []
+            mock_exception.assert_not_called()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_real_thread_refresh(self, _, cache_decorator, timer_patch: Mock):
+        """A stale access triggers a real background-thread refresh that updates the entry."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        timer_patch.return_value = _BG_TTL * 1.5
+        # First stale access serves the old value and schedules a real refresh thread.
+        assert foo() == 1
+
+        # Poll until the background refresh completes and the entry becomes fresh again.
+        deadline = time.time() + 5
+        result = foo()
+        while result != 2 and time.time() < deadline:
+            time.sleep(0.01)
+            result = foo()
+
+        assert result == 2
+        assert call_count[0] == 2

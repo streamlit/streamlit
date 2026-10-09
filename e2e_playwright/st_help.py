@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import streamlit as st
-from streamlit.elements.help import _get_scriptrunner_frame
+from streamlit.elements.help import _get_caller_frame
 
-if _get_scriptrunner_frame() is None:
+if _get_caller_frame() is None:
     st.warning(
         """
         You're running this script in an `exec` context, so the `foo` part

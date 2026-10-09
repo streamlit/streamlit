@@ -54,3 +54,7 @@ class FileIsInFolderTest(unittest.TestCase):
 
         assert not is_blacklisted("/foo/not_blacklisted/script.py")
         assert not is_blacklisted("/foo/not_blacklisted/.hidden_script.py")
+
+    def test_repr_contains_class_name(self):
+        """The blacklist repr includes its class name for debugging."""
+        assert "FolderBlackList" in repr(FolderBlackList([]))

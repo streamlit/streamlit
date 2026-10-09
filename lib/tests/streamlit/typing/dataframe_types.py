@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform type checking tests for st.dataframe.
 # The return type depends on the on_select parameter:
@@ -27,7 +25,8 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.arrow import ArrowMixin, DataframeState
+    from streamlit.elements.arrow import ArrowMixin, DataframeSelectionState
+    from streamlit.typing import DataframeState
 
     dataframe = ArrowMixin().dataframe
 
@@ -64,6 +63,16 @@ if TYPE_CHECKING:
     assert_type(dataframe(None, on_select="rerun"), DataframeState)
     assert_type(dataframe([[1, 2], [3, 4]], on_select="rerun"), DataframeState)
     assert_type(dataframe({"col1": [1, 2]}, on_select="rerun"), DataframeState)
+
+    dataframe_state = dataframe(df, on_select="rerun")
+    assert_type(dataframe_state.selection, DataframeSelectionState)
+    assert_type(dataframe_state["selection"], DataframeSelectionState)
+    assert_type(dataframe_state.selection.rows, list[int])
+    assert_type(dataframe_state.selection["rows"], list[int])
+    assert_type(dataframe_state["selection"].columns, list[str])
+    assert_type(dataframe_state["selection"]["columns"], list[str])
+    assert_type(dataframe_state.selection.cells, list[tuple[int, str]])
+    assert_type(dataframe_state.selection["cells"], list[tuple[int, str]])
 
     # =====================================================================
     # Return type tests with callback function
@@ -244,6 +253,12 @@ if TYPE_CHECKING:
         ),
         DataframeState,
     )
+    # Round-trip: returned DataframeState must be valid for selection_default.
+    returned_state = dataframe(df, on_select="rerun")
+    assert_type(
+        dataframe(df, on_select="rerun", selection_default=returned_state),
+        DataframeState,
+    )
 
     # =====================================================================
     # Test row_height parameter (int or None)
@@ -264,6 +279,22 @@ if TYPE_CHECKING:
     assert_type(dataframe(df, placeholder="-", on_select="rerun"), DataframeState)
 
     # =====================================================================
+    # Test alt parameter (str or None)
+    # =====================================================================
+
+    assert_type(dataframe(df, alt="Top customers"), DeltaGenerator)
+    assert_type(dataframe(df, alt=None), DeltaGenerator)
+    assert_type(dataframe(df, alt="Top customers", on_select="rerun"), DataframeState)
+
+    # =====================================================================
+    # Test lazy parameter (bool or None)
+    # =====================================================================
+
+    assert_type(dataframe(df, lazy=None), DeltaGenerator)
+    assert_type(dataframe(df, lazy=True), DeltaGenerator)
+    assert_type(dataframe(df, lazy=False), DeltaGenerator)
+
+    # =====================================================================
     # Test with all parameters combined (on_select="ignore")
     # =====================================================================
 
@@ -282,6 +313,7 @@ if TYPE_CHECKING:
             selection_default=None,
             row_height=35,
             placeholder="-",
+            alt="Top customers",
         ),
         DeltaGenerator,
     )

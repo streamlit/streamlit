@@ -11,7 +11,7 @@ on:
         description: "Model to use for coverage improvement"
         required: false
         type: string
-        default: "claude-opus-4-8-thinking-xhigh"
+        default: "grok-4.7-xhigh"
       dry_run:
         description: "Run without creating PR"
         type: boolean
@@ -19,7 +19,7 @@ on:
         default: false
 
 env:
-  MODEL: ${{ inputs.model || 'claude-opus-4-8-thinking-xhigh' }}
+  MODEL: ${{ inputs.model || 'grok-4.7-xhigh' }}
 
 jobs:
   check-secrets:
@@ -60,7 +60,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: develop
           fetch-depth: 0
@@ -158,7 +158,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: develop
           fetch-depth: 0
@@ -251,7 +251,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.ai-frontend-coverage.outputs.develop_sha }}
           fetch-depth: 0
@@ -351,7 +351,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
-              labels: ['change:other', 'impact:internal'],
+              labels: ['change:other', 'impact:internal', 'bot-pr'],
             });
 
       - name: Write step summary
@@ -388,7 +388,7 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.ai-python-coverage.outputs.develop_sha }}
           fetch-depth: 0
@@ -488,7 +488,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
-              labels: ['change:other', 'impact:internal'],
+              labels: ['change:other', 'impact:internal', 'bot-pr'],
             });
 
       - name: Write step summary

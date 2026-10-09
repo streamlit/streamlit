@@ -20,7 +20,7 @@ import { Progress as ProgressProto } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
 
-import Progress, { ProgressProps } from "./Progress"
+import Progress, { type ProgressProps } from "./Progress"
 
 const getProps = (
   propOverrides: Partial<ProgressProps> = {}

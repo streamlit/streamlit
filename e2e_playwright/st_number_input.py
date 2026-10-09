@@ -219,3 +219,63 @@ with st.form("number_input_form"):
     )
     st.form_submit_button("Submit number input form")
 st.write("number input in form - value: ", form_num)
+
+# Lets the on_change="ignore" test assert that committing a value does not rerun the app.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+# --- on_change="ignore" number input ---
+ignore_number = st.number_input(
+    "Ignore change number input",
+    min_value=0,
+    max_value=100,
+    value=25,
+    step=1,
+    key="ignore_number",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore number value:", ignore_number)
+
+if st.button("Apply ignore number", key="apply_ignore_number"):
+    st.write("Applied ignore number value:", ignore_number)
+
+st.markdown("Required number inputs:")
+
+with st.form("required_number_input_form", clear_on_submit=True):
+    st.number_input(
+        "Required amount",
+        value=None,
+        key="required_amount",
+        required=True,
+    )
+    st.number_input(
+        "Required count",
+        value=None,
+        min_value=0,
+        key="required_count",
+        required=True,
+    )
+    required_form_submitted = st.form_submit_button("Submit required number input form")
+
+st.write("required form submitted:", required_form_submitted)
+st.write("required amount:", st.session_state.get("required_amount"))
+st.write("required count:", st.session_state.get("required_count"))
+
+required_standalone = st.number_input(
+    "Required standalone",
+    value=None,
+    key="required_standalone",
+    required=True,
+)
+st.write("required standalone:", required_standalone)
+
+st.number_input(
+    "Required hidden",
+    value=None,
+    key="required_hidden",
+    required=True,
+    label_visibility="hidden",
+)

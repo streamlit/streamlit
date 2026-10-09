@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 # Note: Due to https://mypy.readthedocs.io/en/latest/duck_type_compatibility.html, mypy will not detect
@@ -383,3 +381,30 @@ if TYPE_CHECKING:
     assert_type(slider("foo", value=5.0, persist_state="session"), float)
     assert_type(slider("foo", persist_state=None), int)
     assert_type(slider("foo", value=(1, 10), persist_state="session"), tuple[int, int])
+
+    # Check on_change parameter modes
+    assert_type(slider("foo", on_change=None), int)
+    assert_type(slider("foo", on_change="rerun"), int)
+    assert_type(slider("foo", on_change="ignore"), int)
+    assert_type(slider("foo", on_change=lambda: None), int)
+    assert_type(slider("foo", value=5.0, on_change="ignore"), float)
+    assert_type(slider("foo", value=(1, 10), on_change="ignore"), tuple[int, int])
+
+    def on_slider_change(prefix: str) -> None: ...
+
+    # Common parameters combined
+    assert_type(
+        slider(
+            "foo",
+            value=5,
+            key="threshold",
+            help="Choose a threshold",
+            on_change=on_slider_change,
+            args=("threshold",),
+            kwargs={},
+            disabled=False,
+            label_visibility="visible",
+            width=400,
+        ),
+        int,
+    )

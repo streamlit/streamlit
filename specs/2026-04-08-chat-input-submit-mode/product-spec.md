@@ -42,20 +42,27 @@ Current workarounds from the community (all have significant drawbacks):
 if "disabled" not in st.session_state:
     st.session_state.disabled = False
 
+
 def on_submit():
     st.session_state.disabled = True
 
-if prompt := st.chat_input("Ask", on_submit=on_submit, disabled=st.session_state.disabled):
+
+if prompt := st.chat_input(
+    "Ask", on_submit=on_submit, disabled=st.session_state.disabled
+):
     # ... generate response ...
     st.session_state.disabled = False
     st.rerun()  # Extra rerun needed to re-enable
 
 # Workaround 2: CSS hack (fragile, loses focus)
-st.markdown("""
+st.markdown(
+    """
 <style>
     .stApp[data-test-script-state="running"] .stChatInput textarea { display: none; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 ```
 
 ## Proposal

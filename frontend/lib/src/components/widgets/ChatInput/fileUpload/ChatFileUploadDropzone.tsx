@@ -18,7 +18,7 @@ import { memo } from "react"
 
 import type { DropzoneInputProps, DropzoneRootProps } from "react-dropzone"
 
-import { AcceptFileValue } from "~lib/util/utils"
+import type { AcceptFileValue } from "~lib/util/utils"
 
 import {
   configureFileInputProps,

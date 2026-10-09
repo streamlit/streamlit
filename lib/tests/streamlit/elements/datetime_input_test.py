@@ -16,7 +16,8 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,8 +27,13 @@ import streamlit as st
 from streamlit.elements.widgets.time_widgets import DateTimeInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
+    StreamlitInvalidMinMaxError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
+    StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -117,6 +123,14 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         assert proto.min == min_value.strftime(DATETIME_FORMAT)
         assert proto.max == max_value.strftime(DATETIME_FORMAT)
 
+    def test_min_max_values_clamp_at_year_limits(self):
+        """Test that default bounds clamp and serialize with a four-digit year (GH#7427)."""
+        st.datetime_input("the label", datetime.min)
+
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert proto.min == "0001-01-01T00:00"
+        assert proto.max == "0011-01-01T23:59"
+
     def test_label_visibility(self):
         """Test that label visibility works."""
         st.datetime_input("the label", label_visibility="hidden")
@@ -129,24 +143,33 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
 
     def test_label_visibility_wrong_value(self):
         """Test that invalid label visibility raises."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError):
             st.datetime_input("the label", label_visibility="wrong_value")
 
     def test_step_validation(self):
         """Test invalid step values."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.datetime_input("The label", step=True)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.datetime_input("The label", step=(1, 0))
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitValueOutOfRangeError, match=r"\[60 seconds, 23 hours\]"
+        ):
             st.datetime_input("The label", step=30)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitValueOutOfRangeError, match=r"\[60 seconds, 23 hours\]"
+        ):
             st.datetime_input("The label", step=timedelta(hours=24))
 
     def test_format_validation(self):
         """Test invalid format raises."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError, match="YYYY/MM/DD"):
             st.datetime_input("the label", format="YY/MM/DD")
+
+    def test_invalid_format_type(self) -> None:
+        """Non-string format values raise StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.datetime_input("the label", format=123)  # type: ignore[arg-type]
 
     def test_width_config_default(self):
         """Test that default width is 'stretch'."""
@@ -280,18 +303,23 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
             assert proto.max == "2024-01-01T12:00"
 
     def test_min_max_exception(self):
-        """Test that min_value > max_value raises an exception."""
+        """min_value after max_value raises StreamlitInvalidMinMaxError."""
         min_value = datetime(2030, 1, 1, 12, 0)
         max_value = datetime(2020, 1, 1, 12, 0)
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidMinMaxError, match="cannot be greater than"):
             st.datetime_input("Label", min_value=min_value, max_value=max_value)
+
+    def test_min_equals_max_is_allowed(self):
+        """Equal bounds remain a valid single-instant range."""
+        equal = datetime(2024, 1, 1, 12, 0)
+        st.datetime_input("Label", value=equal, min_value=equal, max_value=equal)
 
     def test_initial_value_out_of_bounds_exception(self):
         """Test that initial value out of min/max bounds raises an exception."""
         min_value = datetime(2020, 1, 1, 12, 0)
         max_value = datetime(2030, 1, 1, 12, 0)
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueBelowMinError):
             st.datetime_input(
                 "Label",
                 value=datetime(2010, 1, 1),
@@ -299,7 +327,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
                 max_value=max_value,
             )
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueAboveMaxError):
             st.datetime_input(
                 "Label",
                 value=datetime(2040, 1, 1),
@@ -310,7 +338,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
     def test_timezone_handling(self):
         """Test that timezone-aware datetimes are normalized to naive."""
         # Create a timezone-aware datetime
-        dt_aware = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+        dt_aware = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
 
         st.datetime_input("Label", value=dt_aware)
 
@@ -656,8 +684,8 @@ class DateTimeInputBindQueryParamsTest(DeltaGeneratorTestCase):
             st.datetime_input("the label", bind="query-params")
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.datetime_input("the label", key="my_key", bind="invalid-value")
 
     def test_bind_query_params_with_explicit_value(self):
@@ -754,3 +782,50 @@ class TestDateTimeInputSerdeISO:
         )
         result = serde.deserialize(["2026-01-01T00:00"])
         assert result == datetime(2025, 6, 15, 12, 0)
+
+
+class DateTimeInputOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.datetime_input("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.date_time_input
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.datetime_input("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.datetime_input("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.datetime_input("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.date_time_input
+        assert c.ignore_rerun is True

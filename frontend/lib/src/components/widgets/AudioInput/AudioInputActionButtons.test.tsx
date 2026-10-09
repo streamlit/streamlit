@@ -18,9 +18,10 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
+import { lightTheme } from "~lib/theme/themeConfigs"
 
 import AudioInputActionButtons, {
-  AudioInputActionButtonProps,
+  type AudioInputActionButtonProps,
 } from "./AudioInputActionButtons"
 
 const getProps = (): AudioInputActionButtonProps => ({
@@ -130,7 +131,9 @@ describe("AudioInputActionButton", () => {
       )
 
       const recordButton = screen.getByLabelText("Record")
-      expect(recordButton).toHaveStyle("color: rgba(49, 51, 63, 0.2)")
+      expect(recordButton).toHaveStyle(
+        `color: ${lightTheme.emotion.colors.fadedText40}`
+      )
 
       await user.click(recordButton)
       expect(startRecording).not.toHaveBeenCalled()

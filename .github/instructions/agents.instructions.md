@@ -83,5 +83,5 @@ Run the fixing-pr subagent to fix CI failures and address PR review comments for
 |-------|---------|
 | `fixing-pr` | Fix CI failures and address PR review comments |
 | `qa-testing-feature` | QA test features using Playwright |
-| `reviewing-local-changes` | Code review for quality, security, best practices |
+| `reviewing-local-changes` | Code review for quality, security, best practices, and product/API alignment |
 | `simplifying-local-changes` | Simplify and refine code changes |

@@ -19,6 +19,15 @@ VERSION=$1
 VERSION_BRANCH="release/${VERSION}"
 
 git switch --create "$VERSION_BRANCH"
-python scripts/update_version.py "$VERSION"
-git commit --all --message="Up version to ${VERSION}"
+uv run --no-sync python scripts/update_version.py "$VERSION"
+# Clear UV_LOCKED if inherited from a make_init-based environment so this
+# relock can proceed. Release automation sets up via setup_automation (which
+# does not set UV_LOCKED), so this is a defensive no-op in those flows.
+env -u UV_LOCKED uv lock
+# Stage tracked updates and the lockfile explicitly. `git commit --all` skips
+# an untracked lockfile when patching a tag that predates it, and `-f` forces
+# the add even if that tag's .gitignore still lists uv.lock.
+git add --update
+git add -f uv.lock
+git commit --message="Up version to ${VERSION}"
 git push origin "$VERSION_BRANCH"

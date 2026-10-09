@@ -17,8 +17,6 @@ import math
 import threading
 from typing import TYPE_CHECKING
 
-from cachetools import TTLCache
-
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
@@ -26,6 +24,7 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorageContext,
     CacheStorageKeyNotFoundError,
 )
+from streamlit.runtime.caching.ttl_cache import TTLCache
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 
 if TYPE_CHECKING:
@@ -87,6 +86,13 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     @property
     def stats_families(self) -> Sequence[str]:
         return (CACHE_MEMORY_FAMILY,)
+
+    def has(self, key: str) -> bool:
+        """Return whether the key is in memory or the underlying storage."""
+        with self._mem_cache_lock:
+            if key in self._mem_cache:
+                return True
+        return self._persist_storage.has(key)
 
     def get(self, key: str) -> bytes:
         """

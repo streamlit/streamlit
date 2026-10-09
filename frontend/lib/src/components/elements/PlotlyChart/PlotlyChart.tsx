@@ -15,9 +15,9 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useMemo,
@@ -38,8 +38,12 @@ import useTimeout from "~lib/hooks/useTimeout"
 import Plot, {
   type Figure as PlotlyFigureType,
 } from "~lib/util/reactPlotlyCompat"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import {
+  migratePlotlyMapboxConfig,
+  migratePlotlyMapboxFigure,
+} from "./mapboxCompat"
 import { StyledPlotlyChartContainer } from "./styled-components"
 import {
   applyTheming,
@@ -110,14 +114,16 @@ export function PlotlyChart({
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
     if (!element.spec) {
-      return {
+      const emptyFigure: PlotlyFigureType = {
         layout: {},
         data: [],
-        frames: undefined,
+        frames: null,
       }
+      return emptyFigure
     }
 
-    return JSON.parse(element.spec)
+    const spec: unknown = JSON.parse(element.spec)
+    return migratePlotlyMapboxFigure(spec)
     // We want to reload the initialFigureSpec object whenever the element id changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [element.id, element.spec])
@@ -131,7 +137,7 @@ export function PlotlyChart({
       "figure"
     )
     if (initialFigureState) {
-      return initialFigureState
+      return migratePlotlyMapboxFigure(initialFigureState)
     }
     return applyTheming(initialFigureSpec, element.theme, theme)
   })
@@ -148,19 +154,19 @@ export function PlotlyChart({
     element.selectionMode.includes(PlotlyChartProto.SelectionMode.POINTS)
 
   const plotlyConfig = useMemo(() => {
-    if (!element.config) {
-      // If there is no config, return an empty object
-      return {}
-    }
-
-    const config = JSON.parse(element.config)
+    const config = migratePlotlyMapboxConfig(
+      (element.config ? JSON.parse(element.config) : {}) as Plotly.Config
+    )
 
     // Customize the plotly toolbar:
     if (!disableFullscreenMode) {
       // Add a fullscreen button to the plotly toolbar:
+      const fullscreenLabel = isFullScreen ? "Close fullscreen" : "Fullscreen"
       config.modeBarButtonsToAdd = [
         {
-          name: isFullScreen ? "Close fullscreen" : "Fullscreen",
+          name: fullscreenLabel,
+          // ModeBarButton requires title (hover / accessible name); keep it aligned with name.
+          title: fullscreenLabel,
           icon: isFullScreen
             ? FULLSCREEN_COLLAPSE_ICON
             : FULLSCREEN_EXPAND_ICON,
@@ -176,32 +182,48 @@ export function PlotlyChart({
       ]
     }
 
-    if (!config.modeBarButtonsToRemove) {
-      // Only modify the mode bar buttons if it's not already set
-      // in the config provided by the user.
-
-      // Hide the logo by default
-      config.displaylogo = false
-
-      const modeBarButtonsToRemove = ["sendDataToCloud"]
-
-      if (!isSelectionActivated) {
-        // Remove lasso & select buttons in read-only charts:
-        modeBarButtonsToRemove.push("lasso2d", "select2d")
-      } else {
-        if (!isLassoSelectionActivated) {
-          // Remove the lasso button if lasso selection is not activated
-          modeBarButtonsToRemove.push("lasso2d")
-        }
-
-        if (!isBoxSelectionActivated) {
-          // Remove the box select button if box selection is not activated
-          modeBarButtonsToRemove.push("select2d")
-        }
-      }
-
-      config.modeBarButtonsToRemove = modeBarButtonsToRemove
+    // plotly.js v4 adds `sendChartToCloud` when `showSendToCloud` is true.
+    // Default the flag off, and also remove the button so layout.modebar.add
+    // cannot put it back unless the app opts in with showSendToCloud: true.
+    if (config.showSendToCloud === undefined) {
+      config.showSendToCloud = false
     }
+
+    if (config.displaylogo === undefined) {
+      // Hide the Plotly logo unless the user explicitly opts in.
+      config.displaylogo = false
+    }
+
+    const modeBarButtonsToRemove: NonNullable<
+      Plotly.Config["modeBarButtonsToRemove"]
+    > = Array.isArray(config.modeBarButtonsToRemove)
+      ? [...config.modeBarButtonsToRemove]
+      : []
+
+    const removeModeBarButton = (name: Plotly.ModeBarDefaultButtons): void => {
+      if (!modeBarButtonsToRemove.includes(name)) {
+        modeBarButtonsToRemove.push(name)
+      }
+    }
+
+    if (!isSelectionActivated) {
+      // Remove lasso & select buttons in read-only charts
+      removeModeBarButton("lasso2d")
+      removeModeBarButton("select2d")
+    } else {
+      if (!isLassoSelectionActivated) {
+        removeModeBarButton("lasso2d")
+      }
+      if (!isBoxSelectionActivated) {
+        removeModeBarButton("select2d")
+      }
+    }
+
+    if (config.showSendToCloud !== true) {
+      removeModeBarButton("sendChartToCloud")
+    }
+
+    config.modeBarButtonsToRemove = modeBarButtonsToRemove
     return config
     // We want to reload the plotlyConfig object whenever the element id changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
@@ -376,19 +398,18 @@ export function PlotlyChart({
       setPlotlyFigure((prevFigure: PlotlyFigureType) => {
         return {
           ...prevFigure,
-          data: prevFigure.data.map((trace: Plotly.Data) => {
+          data: prevFigure.data.map(trace => {
             return {
               ...trace,
               // Set to null to clear the selection an empty
               // array here would still show everything as opaque
               selectedpoints: null,
-            } as Plotly.Data
+            }
           }),
           layout: {
             ...prevFigure.layout,
-            // selections is not part of the plotly typing:
             selections: [],
-          } as PlotlyFigureType["layout"],
+          },
         }
       })
     },
@@ -480,11 +501,20 @@ export function PlotlyChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [plotlyFigure.layout?.dragmode])
 
+  // Only name the container when the author provided a non-blank alt.
+  // Blank input is treated as absent: aria-label=" " computes to an empty
+  // accessible name, which is worse than none. role="figure" (not "img")
+  // is required to legally expose aria-label on this otherwise-generic div
+  // without making Plotly's focusable modebar presentational.
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledPlotlyChartContainer
       ref={containerRef}
       className="stPlotlyChart"
       data-testid="stPlotlyChart"
+      role={accessibleName ? "figure" : undefined}
+      aria-label={accessibleName}
     >
       <Plot
         data={plotlyFigure.data}

@@ -91,7 +91,8 @@ class AlertMixin:
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon
             is displayed and removed from the body text. If no leading icon is
-            found, no icon is displayed. If ``icon`` is a string, it takes
+            found, no icon is displayed. Pass ``icon=""`` to skip extraction
+            and show no icon. If ``icon`` is a non-empty string, it takes
             precedence over any icon in the body, and the following options
             are valid:
 
@@ -200,7 +201,8 @@ class AlertMixin:
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon
             is displayed and removed from the body text. If no leading icon is
-            found, no icon is displayed. If ``icon`` is a string, it takes
+            found, no icon is displayed. Pass ``icon=""`` to skip extraction
+            and show no icon. If ``icon`` is a non-empty string, it takes
             precedence over any icon in the body, and the following options
             are valid:
 
@@ -308,7 +310,8 @@ class AlertMixin:
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon
             is displayed and removed from the body text. If no leading icon is
-            found, no icon is displayed. If ``icon`` is a string, it takes
+            found, no icon is displayed. Pass ``icon=""`` to skip extraction
+            and show no icon. If ``icon`` is a non-empty string, it takes
             precedence over any icon in the body, and the following options
             are valid:
 
@@ -417,7 +420,8 @@ class AlertMixin:
             is ``None`` (default), Streamlit attempts to extract a leading
             emoji or Material icon shortcode from ``body``. If found, the icon
             is displayed and removed from the body text. If no leading icon is
-            found, no icon is displayed. If ``icon`` is a string, it takes
+            found, no icon is displayed. Pass ``icon=""`` to skip extraction
+            and show no icon. If ``icon`` is a non-empty string, it takes
             precedence over any icon in the body, and the following options
             are valid:
 

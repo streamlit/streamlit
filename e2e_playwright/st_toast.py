@@ -23,12 +23,23 @@ st.toast(
     icon="🦄",
 )
 
-st.toast("Your edited image was saved!", icon=":material/cabin:")
+# Emit the material-icon toast on demand so the snapshot test can wait for the
+# icon font first. Mounting before the font is ready caused a 1px height flake.
+if st.button("Show material icon toast"):
+    st.toast(
+        "Your edited image was saved!",
+        icon=":material/cabin:",
+        duration="infinite",
+    )
 
 if st.button("Show duration toasts"):
     st.toast("I am a toast with a short duration", duration=2)
     st.toast("I am a toast with a long duration", duration="long")
     st.toast("I am a persistent toast", duration="infinite")
+
+if st.button("Toast and rerun"):
+    st.toast("Toast survives rerun", icon="🚀")
+    st.rerun()
 
 
 @st.dialog("Streamlit Toast Notification")

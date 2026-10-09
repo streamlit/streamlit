@@ -47,7 +47,7 @@ describe("DebugVisitor.visitElementNode", () => {
     const node = text("hello")
     const out = node.accept(new DebugVisitor())
     expect(out).toBe(
-      `└── ElementNode [text] "hello" (activeScriptHash: ${FAKE_SCRIPT_HASH.substring(0, MAX_HASH_LENGTH)})\n`
+      `└── ElementNode [text] "hello" (activeScriptHash: ${FAKE_SCRIPT_HASH.slice(0, MAX_HASH_LENGTH)})\n`
     )
   })
 
@@ -65,7 +65,7 @@ describe("DebugVisitor.visitElementNode", () => {
     const runId = "1234567890abcdef"
     const node = text("x", runId)
     const out = node.accept(new DebugVisitor())
-    expect(out).toContain(`(run: ${runId.substring(0, MAX_HASH_LENGTH)})`)
+    expect(out).toContain(`(run: ${runId.slice(0, MAX_HASH_LENGTH)})`)
   })
 
   it("includes fragmentId and activeScriptHash (shortened)", () => {
@@ -114,7 +114,7 @@ describe("DebugVisitor.visitBlockNode", () => {
     const b = block([text("c")], runId)
     const out = b.accept(new DebugVisitor())
     expect(out.split("\n")[0]).toContain(
-      `(run: ${runId.substring(0, MAX_HASH_LENGTH)})`
+      `(run: ${runId.slice(0, MAX_HASH_LENGTH)})`
     )
   })
 })
@@ -143,7 +143,7 @@ describe("DebugVisitor.visitTransientNode", () => {
 
     // Root line with truncated run id
     expect(out.split("\n")[0]).toBe(
-      `└── TransientNode [2 transient] (run: ${runId.substring(0, MAX_HASH_LENGTH)})`
+      `└── TransientNode [2 transient] (run: ${runId.slice(0, MAX_HASH_LENGTH)})`
     )
 
     // Contains anchor section and its rendered element

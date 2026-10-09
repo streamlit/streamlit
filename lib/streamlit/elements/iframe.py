@@ -19,12 +19,18 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit import runtime, url_util
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     validate_height,
     validate_width,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.utils import normalize_alt
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.IFrame_pb2 import IFrame as IFrameProto
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
@@ -35,6 +41,11 @@ if TYPE_CHECKING:
 # File extensions that are treated as HTML and embedded via srcdoc
 _HTML_EXTENSIONS: Final = frozenset({".html", ".htm", ".xhtml"})
 
+_STRING_FILE_PATH_WARNING: Final = (
+    "Passing a local file path as a string to `st.iframe` is no longer supported. "
+    "To load a local file, pass a `pathlib.Path` object instead."
+)
+
 # Maximum path length to check - skip filesystem calls for obviously long strings
 # that are likely HTML content. Most OS path limits are 256-4096 characters.
 _MAX_PATH_LENGTH: Final = 4096
@@ -44,7 +55,7 @@ def _is_file(obj: str) -> bool:
     """Check if obj is a file path, without throwing if not."""
 
     # Skip filesystem check for long strings (likely HTML content) or strings
-    # containing '<' (likely HTML tags) to avoid unnecessary I/O
+    # containing '<' (likely HTML tags) to avoid unnecessary I/O.
     if len(obj) > _MAX_PATH_LENGTH or "<" in obj:
         return False
 
@@ -59,14 +70,14 @@ def _validate_tab_index(tab_index: int | None) -> None:
     """Validate tab_index according to web specifications."""
     if tab_index is None:
         return
-    if not (
-        isinstance(tab_index, int)
-        and not isinstance(tab_index, bool)
-        and tab_index >= -1
-    ):
-        raise StreamlitAPIException(
-            "tab_index must be None, -1, or a non-negative integer."
+    if isinstance(tab_index, bool) or not isinstance(tab_index, int):
+        raise StreamlitInvalidParameterTypeError(
+            "tab_index",
+            type(tab_index).__name__,
+            ["int"],
         )
+    if tab_index < -1:
+        raise StreamlitValueError("tab_index", ["None", "-1", "a non-negative integer"])
 
 
 class IframeMixin:
@@ -259,11 +270,12 @@ class IframeMixin:
         width: int | Literal["stretch", "content"] = "stretch",
         height: int | Literal["stretch", "content"] = "content",
         tab_index: int | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Embed content in an iframe.
 
         ``st.iframe`` embeds external URLs, HTML content, or local files in an
-        iframe. It auto-detects the input type and handles it appropriately.
+        iframe. It handles the input based on its type and URL pattern.
 
         .. warning::
             HTML strings, local HTML files, and same-origin relative URLs are
@@ -285,11 +297,12 @@ class IframeMixin:
               ``/app/static/report.html``. Useful for referencing files served
               via Streamlit's `static file serving
               <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
-            - **Local file path**: A path to a local file, either as a string
-              or ``Path`` object. HTML files (``.html``, ``.htm``, ``.xhtml``)
-              are read and embedded directly. Other files (PDF, images, SVG,
-              etc.) are uploaded to Streamlit's media storage and rendered
-              using the browser's native viewer.
+            - **Local file path**: A ``pathlib.Path`` object pointing to a
+              local file. HTML files (``.html``, ``.htm``, ``.xhtml``) are read
+              and embedded directly. Other files (PDF, images, SVG, etc.) are
+              uploaded to Streamlit's media storage and rendered using the
+              browser's native viewer. Strings are interpreted only as URLs or
+              HTML content, never as local file paths.
             - **HTML string**: If ``src`` doesn't match any of the above
               patterns, it's treated as raw HTML and embedded directly in the
               iframe.
@@ -327,12 +340,31 @@ class IframeMixin:
             <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex>`_
             documentation on MDN.
 
+        alt : str or None
+            A description of the embed for screen readers and other assistive
+            technologies. Streamlit maps this to the iframe's ``title``
+            attribute, which is the frame's accessible name. If this is
+            ``None`` (default), the title stays ``"st.iframe"``.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+            An iframe must have a title, so empty ``alt`` keeps the
+            ``"st.iframe"`` fallback rather than becoming decorative.
+
+            Describe the embedded content rather than repeating text that is
+            already visible on the page.
+
         Examples
         --------
         Embed an external website:
 
         >>> import streamlit as st
-        >>> st.iframe("https://docs.streamlit.io", height=600)
+        >>> st.iframe(
+        ...     "https://docs.streamlit.io",
+        ...     height=600,
+        ...     alt="Streamlit documentation",
+        ... )
 
         Embed HTML content directly:
 
@@ -361,7 +393,8 @@ class IframeMixin:
         # Track whether content can be measured (srcdoc) or not (URL)
         uses_srcdoc = False
 
-        # Determine input type: Path object > absolute URL > existing file > relative URL > HTML string
+        # Determine input type: Path object > absolute URL > deprecated string
+        # file path > relative URL > HTML string.
         src_str = str(src) if isinstance(src, Path) else src
 
         if isinstance(src, Path):
@@ -371,10 +404,11 @@ class IframeMixin:
         elif url_util.is_url(src_str, allowed_schemas=("http", "https", "data")):
             iframe_proto.src = src_str
         elif _is_file(src_str):
-            # Check for existing file before relative URL to handle Unix paths
-            uses_srcdoc = self._process_local_file(
-                iframe_proto, src_str, self.dg._get_delta_path_str()
-            )
+            # Keep the filesystem lookup temporarily so existing string paths
+            # receive a migration warning, but never read from a string path.
+            show_deprecation_warning(_STRING_FILE_PATH_WARNING)
+            iframe_proto.srcdoc = src_str
+            uses_srcdoc = True
         elif src_str.startswith("/"):
             # Relative URL - /-prefixed strings that aren't existing files
             iframe_proto.src = src_str
@@ -387,6 +421,10 @@ class IframeMixin:
         _validate_tab_index(tab_index)
         if tab_index is not None:
             iframe_proto.tab_index = tab_index
+
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            iframe_proto.alt = normalized_alt
 
         # For URLs (not srcdoc), "content" sizing falls back because cross-origin
         # content cannot be measured. Height falls back to 400px, width to stretch.
@@ -442,7 +480,8 @@ class IframeMixin:
                 UnicodeDecodeError,
             ) as e:
                 raise StreamlitAPIException(
-                    f"Unable to read file '{file_path}': {e}"
+                    f"Unable to read file '{file_path}': {e}",
+                    error_id="iframe-unable-to-read-html-file",
                 ) from e
             return True
         # Non-HTML files: upload to media storage
@@ -451,7 +490,8 @@ class IframeMixin:
                 file_data = f.read()
         except (FileNotFoundError, PermissionError, OSError) as e:
             raise StreamlitAPIException(
-                f"Unable to read file '{file_path}': {e}"
+                f"Unable to read file '{file_path}': {e}",
+                error_id="iframe-unable-to-read-file",
             ) from e
 
         mimetype, _ = mimetypes.guess_type(file_path)

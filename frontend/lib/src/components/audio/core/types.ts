@@ -48,24 +48,20 @@ export interface WaveformController {
   readonly isPlaybackPlaying: boolean
   readonly mountRef: RefObject<HTMLDivElement>
 
-  start(): Promise<void>
-
-  stop(): Promise<StopResult>
-
-  approve(blob?: Blob): Promise<void>
-
-  cancel(): void
-
-  destroy(): void
+  start: () => Promise<void>
+  stop: () => Promise<StopResult>
+  approve: (blob?: Blob) => Promise<void>
+  cancel: () => void
+  destroy: () => void
 
   playback: {
-    isPlaying(): boolean
-    play(): Promise<void>
-    pause(): void
-    load(source: Blob | ArrayBuffer | string): Promise<void>
-    getCurrentTimeMs(): number
-    getDurationMs(): number
+    isPlaying: () => boolean
+    play: () => Promise<void>
+    pause: () => void
+    load: (source: Blob | ArrayBuffer | string) => Promise<void>
+    getCurrentTimeMs: () => number
+    getDurationMs: () => number
   }
 
-  setEventHandlers(events: WaveformControllerEvents): void
+  setEventHandlers: (events: WaveformControllerEvents) => void
 }

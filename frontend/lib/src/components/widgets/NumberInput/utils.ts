@@ -17,10 +17,10 @@ import { getLogger } from "loglevel"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
-import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
+import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
 
 const LOG = getLogger("NumberInput")
 
@@ -57,7 +57,7 @@ export const getDecimalPlaces = (step: number): number => {
     if (match) {
       // Account for decimal places in the coefficient (e.g., "2.5" has 1)
       const coefficientDecimals = (match[1]?.split(".")[1] || "").length
-      const exponent = parseInt(match[2], 10)
+      const exponent = Number.parseInt(match[2], 10)
       return coefficientDecimals + exponent
     }
     return 0
@@ -226,22 +226,22 @@ export function updateWidgetMgrState(
   vws: ValueWithSource<number | null>,
   fragmentId: string | undefined
 ): void {
+  const update: WidgetUpdate = {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  }
+
   switch (element.dataType) {
     case NumberInputProto.DataType.INT:
-      widgetMgr.setIntValue(
-        element,
-        vws.value,
-        { fromUi: vws.fromUi },
-        fragmentId
-      )
+      widgetMgr.setIntValue(element.id, vws.value, update)
       break
     case NumberInputProto.DataType.FLOAT:
-      widgetMgr.setDoubleValue(
-        element,
-        vws.value,
-        { fromUi: vws.fromUi },
-        fragmentId
-      )
+      widgetMgr.setDoubleValue(element.id, vws.value, update)
       break
     default:
       throw new Error("Invalid data type")

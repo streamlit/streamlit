@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type, cast
 
 # Perform type checking tests for st.column_config.ButtonColumn.
 # The return type depends on whether a key is provided:
@@ -28,6 +26,13 @@ if TYPE_CHECKING:
         ButtonColumnResult,
         ColumnConfig,
     )
+    from streamlit.typing import ButtonColumnClickState
+
+    click_state = cast("ButtonColumnClickState", object())
+    assert_type(click_state.row, int)
+    assert_type(click_state["row"], int)
+    assert_type(click_state.label, str)
+    assert_type(click_state["label"], str)
 
     # =====================================================================
     # Return type tests - verify overload resolution

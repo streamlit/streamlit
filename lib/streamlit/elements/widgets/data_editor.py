@@ -23,14 +23,11 @@ from typing import (
     Final,
     Literal,
     TypeAlias,
-    TypedDict,
     TypeVar,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import Required
 
 from streamlit import dataframe_util
 from streamlit import logger as _logger
@@ -63,8 +60,13 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
+from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversionError
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -73,9 +75,10 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.type_util import is_list_like, is_type
-from streamlit.util import calc_hash, create_fast_hasher
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash, create_fast_hasher
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -89,15 +92,16 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = _logger.get_logger(__name__)
 
-# All formats that support direct editing, meaning that these
-# formats will be returned with the same type when used with data_editor.
+T = TypeVar("T")
+
+# Dataframe-like inputs return the same type. List, dict, and set inputs use
+# dedicated overloads that preserve inner type parameters but return the plain
+# builtin, matching the runtime conversion (a dict subclass in returns a plain
+# dict out). The bound's tuple[Any] matches only 1-tuples, so longer tuples hit
+# the data: Any overload and return pd.DataFrame.
 EditableData = TypeVar(
     "EditableData",
-    bound=dataframe_util.DataFrameGenericAlias[Any]
-    | tuple[Any]
-    | list[Any]
-    | set[Any]
-    | dict[str, Any],
+    bound=dataframe_util.DataFrameGenericAlias[Any] | tuple[Any],
 )
 
 
@@ -116,64 +120,86 @@ DataTypes: TypeAlias = Union[
 ]
 
 
-class EditingState(TypedDict, total=False):
-    """
-    A dictionary representing the current state of the data editor.
+class DataEditorState(ReadOnlyAttributeDictionary):
+    """The schema for the data editor state.
+
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    The state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Top-level assignment and
+    nested dict mutation raise ``TypeError``. List fields (``added_rows``,
+    ``deleted_rows``) are ordinary lists and are not frozen. Data editor
+    states cannot be programmatically changed or set through Session State.
 
     Attributes
     ----------
-    edited_rows : Dict[int, Dict[str, str | int | float | bool | None]]
-        An hierarchical mapping of edited cells based on:
-        row position -> column name -> value.
+    edited_rows : dict[int, dict[str, str | int | float | bool | list[str] | None]]
+        A hierarchical mapping of edited cells based on row position ->
+        column name -> value. Row positions refer to the original source
+        dataframe before pending edits are applied.
 
-    added_rows : List[Dict[str, str | int | float | bool | None]]
+    added_rows : list[dict[str, str | int | float | bool | list[str] | None]]
         A list of added rows, where each row is a mapping from column name to
         the cell value.
 
-    deleted_rows : List[int]
-        A list of deleted rows, where each row is the numerical position of
-        the deleted row.
+    deleted_rows : list[int]
+        A list of deleted rows, where each entry is the numerical position of
+        the deleted row in the original source dataframe.
     """
 
-    edited_rows: Required[dict[int, dict[str, str | int | float | bool | None]]]
-    added_rows: Required[list[dict[str, str | int | float | bool | None]]]
-    deleted_rows: Required[list[int]]
+    edited_rows: dict[int, dict[str, str | int | float | bool | list[str] | None]]
+    added_rows: list[dict[str, str | int | float | bool | list[str] | None]]
+    deleted_rows: list[int]
+
+    @overload
+    def __getitem__(
+        self, key: Literal["edited_rows"]
+    ) -> dict[int, dict[str, str | int | float | bool | list[str] | None]]: ...
+
+    @overload
+    def __getitem__(
+        self, key: Literal["added_rows"]
+    ) -> list[dict[str, str | int | float | bool | list[str] | None]]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["deleted_rows"]) -> list[int]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
 
 
 @dataclass
 class DataEditorSerde:
     """DataEditorSerde is used to serialize and deserialize the data editor state."""
 
-    def deserialize(self, ui_value: str | None) -> EditingState:
-        data_editor_state: EditingState = cast(
-            "EditingState",
+    def deserialize(self, ui_value: str | None) -> DataEditorState:
+        # Keep the payload as a plain dict until the end so missing-key and
+        # row-key mutations below can still run before we wrap.
+        data_editor_state: dict[str, Any] = (
             {
                 "edited_rows": {},
                 "added_rows": [],
                 "deleted_rows": [],
             }
             if ui_value is None
-            else json.loads(ui_value),
+            else json.loads(ui_value)
         )
 
-        # Make sure that all editing state keys are present:
-        if "edited_rows" not in data_editor_state:
-            data_editor_state["edited_rows"] = {}  # type: ignore[unreachable]
-
-        if "deleted_rows" not in data_editor_state:
-            data_editor_state["deleted_rows"] = []  # type: ignore[unreachable]
-
-        if "added_rows" not in data_editor_state:
-            data_editor_state["added_rows"] = []  # type: ignore[unreachable]
+        data_editor_state.setdefault("edited_rows", {})
+        data_editor_state.setdefault("added_rows", [])
+        data_editor_state.setdefault("deleted_rows", [])
 
         # Convert the keys (numerical row positions) to integers.
         # The keys are strings because they are serialized to JSON.
         data_editor_state["edited_rows"] = {
             int(k): v for k, v in data_editor_state["edited_rows"].items()
         }
-        return data_editor_state
+        return DataEditorState(data_editor_state)
 
-    def serialize(self, editing_state: EditingState) -> str:
+    def serialize(self, editing_state: DataEditorState) -> str:
         return json.dumps(editing_state, default=str)
 
 
@@ -493,10 +519,15 @@ def _apply_row_additions(
             # Add row using the user-provided index value.
             # This handles any type of index that cannot be auto incremented.
 
-            # Note: this just overwrites the row in case the index value
-            # already exists. In the future, it would be better to
-            # require users to provide unique non-None values for the index with
-            # some kind of visual indications.
+            # Widget state is client-controlled, so reject duplicate index values
+            # instead of letting an "added" row overwrite an existing row.
+            if index_value in df.index:
+                _LOGGER.warning(
+                    "Cannot add row because its index value already exists. "
+                    "Row addition skipped."
+                )
+                continue
+
             _assign_row_values(df, index_value, new_row)
             continue
 
@@ -533,7 +564,7 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
 
 def _apply_dataframe_edits(
     df: pd.DataFrame,
-    data_editor_state: EditingState,
+    data_editor_state: DataEditorState,
     dataframe_schema: DataframeSchema,
 ) -> None:
     """Apply edits to the provided dataframe (inplace).
@@ -545,7 +576,7 @@ def _apply_dataframe_edits(
     df : pd.DataFrame
         The dataframe to apply the edits to.
 
-    data_editor_state : EditingState
+    data_editor_state : DataEditorState
         The editing state of the data editor component.
 
     dataframe_schema: DataframeSchema
@@ -618,6 +649,37 @@ def _fix_column_headers(data_df: pd.DataFrame) -> None:
         )
 
 
+def _stringify_arrow_incompatible_columns(
+    data_df: pd.DataFrame,
+    column_config_mapping: ColumnConfigMapping,
+    *,
+    trial_conversion: bool,
+) -> None:
+    """Stringify Arrow-incompatible columns in place and disable editing for them.
+
+    A converted column has to be read-only because the frontend sends edits back
+    in the column's original type, which the stringified data no longer matches.
+
+    With ``trial_conversion=False``, only the checks that don't require converting
+    the column are applied.
+    """
+    for column_name, column_data in data_df.items():
+        if (
+            dataframe_util.determine_arrow_column_fix(
+                column_data, trial_conversion=trial_conversion
+            )
+            is not None
+        ):
+            update_column_config(
+                column_config_mapping, str(column_name), {"disabled": True}
+            )
+            # Every fix becomes a string here, including the ones
+            # ``fix_arrow_incompatible_column_types`` would turn into lists: the
+            # editor cannot round-trip converted values, so the column is disabled
+            # either way and a string is the more readable representation.
+            data_df[cast("Any", column_name)] = column_data.astype("string")
+
+
 def _check_column_names(data_df: pd.DataFrame) -> None:
     """Check if the column names in the provided dataframe are valid.
 
@@ -636,7 +698,8 @@ def _check_column_names(data_df: pd.DataFrame) -> None:
         raise StreamlitAPIException(
             f"All column names are required to be unique for usage with data editor. "
             f"The following column names are duplicated: {list(duplicated_columns)}. "
-            f"Please rename the duplicated columns in the provided data."
+            f"Please rename the duplicated columns in the provided data.",
+            error_id="data-editor-duplicate-column-names",
         )
 
     # Check if the column names are not named "_index" and raise an exception if so.
@@ -644,7 +707,8 @@ def _check_column_names(data_df: pd.DataFrame) -> None:
         raise StreamlitAPIException(
             f"The column name '{INDEX_IDENTIFIER}' is reserved for the index column "
             f"and can't be used for data columns. Please rename the column in the "
-            f"provided data."
+            f"provided data.",
+            error_id="data-editor-reserved-index-column-name",
         )
 
 
@@ -707,11 +771,83 @@ def _check_type_compatibilities(
                     f"`{column_name}` is not compatible for editing the underlying "
                     f"data type `{column_data_kind}`.\n\nYou have following options to "
                     f"fix this: 1) choose a compatible type 2) disable the column "
-                    f"3) convert the column into a compatible data type."
+                    f"3) convert the column into a compatible data type.",
+                    error_id="data-editor-incompatible-column-type",
                 )
 
 
 class DataEditorMixin:
+    # Inner types are echoed. Runtime may convert row/column tuples to lists
+    # (e.g. [(1, 2)] becomes list[list[int]]); that mismatch is pre-existing.
+    @overload
+    def data_editor(
+        self,
+        data: list[T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+        alt: str | None = None,
+    ) -> list[T]:
+        pass
+
+    @overload
+    def data_editor(
+        self,
+        data: dict[str, T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+        alt: str | None = None,
+    ) -> dict[str, T]:
+        pass
+
+    @overload
+    def data_editor(
+        self,
+        data: set[T],
+        *,
+        width: Width = "stretch",
+        height: Height | Literal["auto"] = "auto",
+        use_container_width: bool | None = None,
+        hide_index: bool | None = None,
+        column_order: Iterable[str] | None = None,
+        column_config: ColumnConfigMappingInput | None = None,
+        num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
+        disabled: bool | Iterable[str | int] = False,
+        key: Key | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        row_height: int | None = None,
+        placeholder: str | None = None,
+        alt: str | None = None,
+    ) -> set[T]:
+        pass
+
     @overload
     def data_editor(
         self,
@@ -731,6 +867,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> EditableData:
         pass
 
@@ -753,6 +890,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> pd.DataFrame:
         pass
 
@@ -775,6 +913,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -935,6 +1074,10 @@ class DataEditorMixin:
             `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
+            The value in Session State is a ``DataEditorState`` object that
+            describes the pending edits. To use this type in an annotation,
+            import it from ``streamlit.typing``.
+
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
 
@@ -967,6 +1110,18 @@ class DataEditorMixin:
             ``None`` (default), missing values are displayed as "None". To
             leave a cell empty, use an empty string (``""``). Other common
             values are ``"null"``, ``"NaN"`` and ``"-"``.
+
+        alt : str or None
+            A short, plain-text accessible name for the data editor. If this is
+            ``None`` (default), the grid has no element-level accessible name.
+            Cell values remain available through the grid's own accessibility
+            tree.
+
+            An empty or whitespace-only string is treated the same as ``None``.
+
+            Prefer naming what the data is (for example, "Editable customer
+            list") rather than pasting cell contents. This is a short name
+            for findability, not a full text alternative for the table.
 
         Returns
         -------
@@ -1069,6 +1224,10 @@ class DataEditorMixin:
         import pyarrow as pa
 
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         validate_width(width, allow_content=True)
         validate_height(
@@ -1110,7 +1269,7 @@ class DataEditorMixin:
 
         data_format = dataframe_util.determine_data_format(data)
         if data_format == dataframe_util.DataFormat.UNKNOWN:
-            raise StreamlitAPIException(
+            raise StreamlitDataframeConversionError(
                 f"The data type ({type(data).__name__}) or format is not supported by "
                 "the data editor. Please convert your data into a Pandas Dataframe or "
                 "another supported data format."
@@ -1124,7 +1283,8 @@ class DataEditorMixin:
         if not _is_supported_index(data_df.index):
             raise StreamlitAPIException(
                 f"The type of the dataframe index - {type(data_df.index).__name__} - is not "
-                "yet supported by the data editor."
+                "yet supported by the data editor.",
+                error_id="data-editor-unsupported-index-type",
             )
 
         # Check if the column names are valid and unique.
@@ -1137,19 +1297,20 @@ class DataEditorMixin:
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(processed_column_config)
 
-        # Deactivate editing for columns that are not compatible with arrow
-        for column_name, column_data in data_df.items():
-            if dataframe_util.determine_arrow_column_fix(column_data) is not None:
-                update_column_config(
-                    column_config_mapping, str(column_name), {"disabled": True}
-                )
-                # Convert incompatible type to string
-                data_df[cast("Any", column_name)] = column_data.astype("string")
-
         apply_data_specific_configs(column_config_mapping, data_format)
 
         # Fix the column headers to work correctly for data editing:
         _fix_column_headers(data_df)
+
+        # Deactivate editing for columns that are not compatible with Arrow.
+        # This has to run after the column headers are fixed, so that the column
+        # config is keyed by the same names the frontend receives.
+        # Columns that only a trial conversion can detect are left to the Arrow
+        # serialization below: it fails on them anyway, and this way a dataframe
+        # that serializes fine never pays for a trial conversion.
+        _stringify_arrow_incompatible_columns(
+            data_df, column_config_mapping, trial_conversion=False
+        )
 
         has_range_index = isinstance(data_df.index, pd.RangeIndex)
 
@@ -1191,7 +1352,26 @@ class DataEditorMixin:
         # Convert the dataframe to an arrow table which is used as the main
         # serialization format for sending the data to the frontend.
         # We also utilize the arrow schema to determine the data kinds of every column.
-        arrow_table = pa.Table.from_pandas(data_df)
+        arrow_conversion_errors = dataframe_util.get_arrow_conversion_errors()
+        try:
+            arrow_table = pa.Table.from_pandas(data_df)
+        except arrow_conversion_errors as ex:
+            _LOGGER.info(
+                "Serialization of dataframe to Arrow table was unsuccessful. "
+                "Converting the incompatible columns to strings and retrying.",
+                exc_info=ex,
+            )
+            _stringify_arrow_incompatible_columns(
+                data_df, column_config_mapping, trial_conversion=True
+            )
+            try:
+                arrow_table = pa.Table.from_pandas(data_df)
+            except arrow_conversion_errors as retry_ex:
+                # The retry only stringifies columns, never the index: the data
+                # editor identifies rows by their index values.
+                raise StreamlitDataframeConversionError(
+                    f"Unable to convert dataframe to Arrow table.\n{retry_ex}"
+                ) from retry_ex
 
         # Determine the dataframe schema which is required for parsing edited values
         # and for checking type compatibilities.
@@ -1235,6 +1415,8 @@ class DataEditorMixin:
                 include_row_count=True,
             )
 
+        normalized_alt = normalize_alt(alt)
+
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
@@ -1249,11 +1431,15 @@ class DataEditorMixin:
             num_rows=num_rows,
             row_height=row_height,
             placeholder=placeholder,
+            alt=normalized_alt,
             **signature_kwargs,
         )
 
         proto = DataframeProto()
         proto.id = element_id
+
+        if normalized_alt is not None:
+            proto.alt = normalized_alt
 
         if row_height:
             proto.row_height = row_height
@@ -1325,6 +1511,9 @@ class DataEditorMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            # `disabled` may be a list of column names for partial disabling;
+            # only enforce server-side when the entire editor is disabled.
+            disabled=disabled is True,
         )
 
         _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)

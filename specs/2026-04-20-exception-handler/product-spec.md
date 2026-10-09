@@ -80,6 +80,7 @@ import sentry_sdk
 
 sentry_sdk.init(dsn="...")
 
+
 def handle_script_error(exc: Exception) -> None:
     """Called for every uncaught exception in user script code.
 
@@ -87,6 +88,7 @@ def handle_script_error(exc: Exception) -> None:
     Return True instead to suppress the default display and show custom UI.
     """
     sentry_sdk.capture_exception(exc)
+
 
 app = st.App(
     "main.py",
@@ -170,7 +172,7 @@ st.App(
 app = st.App(
     "main.py",
     exception_handlers=(
-        {404: not_found_handler},      # HTTP layer
+        {404: not_found_handler},  # HTTP layer
         sentry_sdk.capture_exception,  # Script layer
     ),
 )
@@ -227,13 +229,15 @@ from starlette.responses import HTMLResponse
 
 sentry_sdk.init(dsn="...")
 
+
 async def custom_404(request, exc):
     return HTMLResponse("<h1>Page not found</h1>", status_code=404)
+
 
 app = st.App(
     "main.py",
     on_script_error=sentry_sdk.capture_exception,  # Script exceptions → Sentry
-    exception_handlers={404: custom_404},          # HTTP 404 → custom page
+    exception_handlers={404: custom_404},  # HTTP 404 → custom page
 )
 ```
 
@@ -350,6 +354,7 @@ import sentry_sdk
 
 sentry_sdk.init(dsn="...")
 
+
 def custom_error_handler(exc: Exception) -> bool:
     """Show friendly error message and report to Sentry."""
     sentry_sdk.capture_exception(exc)
@@ -362,6 +367,7 @@ def custom_error_handler(exc: Exception) -> bool:
 
     return True  # Suppress default exception display
 
+
 app = st.App("main.py", on_script_error=custom_error_handler)
 ```
 
@@ -373,6 +379,7 @@ import logging
 
 logger = logging.getLogger("myapp")
 
+
 def log_exception(exc: Exception) -> None:
     logger.error(
         "Uncaught exception in Streamlit app",
@@ -380,8 +387,9 @@ def log_exception(exc: Exception) -> None:
         extra={
             "session_id": st.session_state.get("_session_id"),
             "user": st.user.email if st.user.is_logged_in else None,
-        }
+        },
     )
+
 
 app = st.App("main.py", on_script_error=log_exception)
 ```
@@ -395,13 +403,15 @@ from starlette.responses import HTMLResponse
 
 sentry_sdk.init(dsn="...")
 
+
 async def maintenance_page(request, exc):
     return HTMLResponse("<h1>Under maintenance</h1>", status_code=503)
+
 
 app = st.App(
     "main.py",
     on_script_error=sentry_sdk.capture_exception,  # Script errors → Sentry
-    exception_handlers={503: maintenance_page},    # HTTP 503 → maintenance page
+    exception_handlers={503: maintenance_page},  # HTTP 503 → maintenance page
 )
 ```
 
@@ -415,9 +425,11 @@ import datadog
 sentry_sdk.init(dsn="...")
 datadog.initialize(api_key="...")
 
+
 def multi_service_handler(exc: Exception) -> None:
     sentry_sdk.capture_exception(exc)
     datadog.statsd.increment("streamlit.errors", tags=[f"type:{type(exc).__name__}"])
+
 
 app = st.App("main.py", on_script_error=multi_service_handler)
 ```

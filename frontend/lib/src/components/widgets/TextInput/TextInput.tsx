@@ -15,52 +15,131 @@
  */
 
 import {
-  FocusEvent,
+  type CompositionEvent,
+  type FocusEvent,
   memo,
-  MouseEvent,
-  ReactElement,
+  type MouseEvent,
+  type ReactElement,
   useCallback,
+  useContext,
+  useEffect,
   useId,
+  useMemo,
+  useRef,
   useState,
 } from "react"
 
+import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { Cancel } from "@emotion-icons/material-rounded"
+import { getLogger } from "loglevel"
 import { TextField } from "react-aria-components"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import {
   DynamicIcon,
   isMaterialIcon,
 } from "~lib/components/shared/Icon/DynamicIcon"
+import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
-import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
 import { convertRemToPx } from "~lib/theme/utils"
-import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { isEnterKeyPressed } from "~lib/util/inputUtils"
+import {
+  isInForm,
+  labelVisibilityProtoValueToEnum,
+  notNullOrUndefined,
+} from "~lib/util/utils"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StyledClearButton,
+  StyledEndEnhancers,
+  StyledErrorEnhancer,
   StyledInputElement,
+  StyledInputInstructionsContainer,
   StyledInputRoot,
   StyledPasswordToggle,
   StyledStartEnhancer,
   StyledTextInput,
+  StyledVisuallyHidden,
 } from "./styled-components"
+import {
+  compileTextInputValidationRegex,
+  getInvalidTextInputMessage,
+  INVALID_TEXT_INPUT_MESSAGE,
+  isRequiredEmptyText,
+  passesTextInputValidation,
+} from "./validation"
 
 export interface Props {
   disabled: boolean
   element: TextInputProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
+}
+
+const LOG = getLogger("TextInput")
+
+function liveFinishAcksWidget(
+  fragmentId: string | undefined,
+  finishedFragmentIds: readonly string[]
+): boolean {
+  // Empty ids means a full-script finish. A non-empty list is a fragment
+  // finish and only acks the widget that belongs to one of those fragments.
+  if (finishedFragmentIds.length === 0) {
+    return true
+  }
+  return (
+    notNullOrUndefined(fragmentId) && finishedFragmentIds.includes(fragmentId)
+  )
+}
+
+/** Subscribes to ScriptRunContext only while live is enabled. */
+function LivePendingCommitAck({
+  fragmentId,
+  dirtyRef,
+  pendingLiveCommitsRef,
+}: {
+  fragmentId?: string
+  dirtyRef: { current: boolean }
+  pendingLiveCommitsRef: { current: Set<string | null> }
+}): null {
+  const { scriptRunFinishedSequence, scriptRunFinishedFragmentIds } =
+    useContext(ScriptRunContext)
+  const lastFinishedSequenceRef = useRef(scriptRunFinishedSequence)
+  useEffect(() => {
+    const runFinished =
+      lastFinishedSequenceRef.current !== scriptRunFinishedSequence
+    lastFinishedSequenceRef.current = scriptRunFinishedSequence
+    if (!runFinished || dirtyRef.current) {
+      return
+    }
+    if (!liveFinishAcksWidget(fragmentId, scriptRunFinishedFragmentIds)) {
+      return
+    }
+    pendingLiveCommitsRef.current.clear()
+  }, [
+    dirtyRef,
+    fragmentId,
+    pendingLiveCommitsRef,
+    scriptRunFinishedFragmentIds,
+    scriptRunFinishedSequence,
+  ])
+  return null
 }
 
 function TextInput({
@@ -84,13 +163,61 @@ function TextInput({
    */
   const [dirty, setDirty] = useState(false)
 
+  /**
+   * Whether the input is currently focused.
+   */
+  const [focused, setFocused] = useState(false)
+
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+  const uiValueRef = useRef(uiValue)
+  uiValueRef.current = uiValue
+  const lastCommittedValueRef = useRef<string | null>(
+    getStateFromWidgetMgr(widgetMgr, element) ?? null
+  )
+  // User-committed strings that may still be in flight. Used to recognize
+  // stale setValue echoes of older reruns. Ordinary live reruns do not send
+  // setValue and often reuse the same proto, so we ack when a finished run
+  // belongs to this widget (full-script finish, or this fragmentId) and
+  // the input is not dirty. A matching latest-commit setValue also removes
+  // that entry. Other authoritative setValue updates apply without clearing
+  // older pending commits, so delayed stale echoes remain blocked until a
+  // matching finished rerun catches up.
+  const pendingLiveCommitsRef = useRef(new Set<string | null>())
+  const isComposingRef = useRef(false)
+  // True after a dirty live input dropped an incoming setValue. The next
+  // pause/blur must commit even if the string still equals lastCommitted,
+  // so Python does not stay on the dropped write.
+  const droppedIncomingWhileDirtyRef = useRef(false)
+
+  const setDirtyAndRef = useCallback((nextDirty: boolean): void => {
+    dirtyRef.current = nextDirty
+    setDirty(nextDirty)
+  }, [])
+
+  const setUiValueAndRef = useCallback((nextValue: string): void => {
+    uiValueRef.current = nextValue
+    setUiValue(nextValue)
+  }, [])
+
   /** Controls visibility of the password plain-text toggle. */
   const [showPassword, setShowPassword] = useState(false)
 
+  // Tracks whether the user's current value failed validation. We store a
+  // boolean rather than the message string so the displayed message always
+  // reflects the latest `element.validateMessage`: the message can change on
+  // rerun while the widget identity stays stable (only the regex is part of
+  // the widget ID), and a stored string would otherwise go stale.
+  const [hasUserError, setHasUserError] = useState(false)
+  const [hasRequiredError, setHasRequiredError] = useState(false)
+
   const onFormCleared = useCallback(() => {
+    uiValueRef.current = element.default ?? null
     setUiValue(element.default ?? null)
-    setDirty(true)
-  }, [element.default])
+    setDirtyAndRef(true)
+    setHasUserError(false)
+    setHasRequiredError(false)
+  }, [element.default, setDirtyAndRef])
 
   const queryParamBinding = element.queryParamKey
     ? {
@@ -100,6 +227,48 @@ function TextInput({
         clearable: true,
       }
     : undefined
+
+  const { placeholder, formId, icon, maxChars } = element
+  const inForm = isInForm({ formId })
+  // protobufjs optional uint32 is `null` when unset (prototype default), not
+  // `undefined`. `0` is a live-on immediate commit and must not be treated as off.
+  // isLive = configured on the proto. liveEnabled = configured and outside a form.
+  const isLive = notNullOrUndefined(element.liveDebounceMs)
+  const liveDebounceMs = element.liveDebounceMs ?? 0
+  const liveEnabled = isLive && !inForm
+
+  // Skip script-driven setValue that would clobber live edits:
+  // - dirty: keystrokes not yet committed. Drop the write entirely rather
+  //   than applying it only to WidgetStateManager: a live commit of the
+  //   dirty string would overwrite it, and Python would briefly see a value
+  //   the user has already typed past.
+  // - an in-flight user-committed string that is not the latest: a stale
+  //   echo of an older rerun, including after blur
+  // Matching the latest commit acks only that pending entry so a later stale
+  // echo of an earlier commit (A then B then A, then a late B) is still
+  // dropped. Return false after the delete: setValue is already consumed, and
+  // reapplying the current value would only rewrite React / WidgetStateManager
+  // state. Any other incoming value (callback / session_state write) applies,
+  // including while focused. Keep pending commits so a later echo of an
+  // older in-flight value cannot overwrite that authoritative write. A
+  // finished script run later clears the set.
+  const shouldApplyIncomingValue = useCallback(
+    (incoming: string | null): boolean => {
+      if (dirtyRef.current) {
+        droppedIncomingWhileDirtyRef.current = true
+        return false
+      }
+      if (incoming === lastCommittedValueRef.current) {
+        pendingLiveCommitsRef.current.delete(incoming)
+        return false
+      }
+      if (pendingLiveCommitsRef.current.has(incoming)) {
+        return false
+      }
+      return true
+    },
+    []
+  )
 
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
@@ -115,30 +284,266 @@ function TextInput({
     formClearBehavior: "resetValueAndRunCallback",
     onFormCleared,
     queryParamBinding,
+    shouldApplyIncomingValue: liveEnabled
+      ? shouldApplyIncomingValue
+      : undefined,
   })
+
+  // session_state / callback writes update `value` without going through
+  // commitWidgetValue; keep lastCommitted aligned so later echoes compare
+  // against the script's value, not the previous user commit.
+  // This must run during render: useBasicWidgetState's setValue effect is
+  // registered by a hook called above, so it runs before any effect declared
+  // here. Moving this into useEffect would leave the ref stale for that
+  // setValue effect. A discarded render still writes the ref.
+  if (!dirty) {
+    lastCommittedValueRef.current = value
+  }
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)
 
-  /**
-   * Whether the input is currently focused.
-   */
-  const [focused, setFocused] = useState(false)
-
   const theme = useEmotionTheme()
   const id = useId()
-  const { placeholder, formId, icon, maxChars } = element
+  const errorId = `${id}-error`
 
   const isPassword = element.type === TextInputProto.Type.PASSWORD
+  const isSearch = element.type === TextInputProto.Type.SEARCH
+  // Show a Streamlit-styled clear (×) button for search inputs holding a value,
+  // replacing the browser's native (and visually inconsistent) search-clear
+  // control, which we hide via CSS. Required fields hide the X because it
+  // would commit empty; keyboard emptying still works.
+  const showClearButton =
+    isSearch && !disabled && !element.required && Boolean(uiValue)
 
-  const commitWidgetValue = useCallback((): void => {
-    setDirty(false)
-    setValueWithSource({ value: uiValue, fromUi: true })
-  }, [uiValue, setValueWithSource])
+  const compiledValidationResult = useMemo(
+    () => compileTextInputValidationRegex(element.validateRegex),
+    [element.validateRegex]
+  )
+  const validateRegex =
+    compiledValidationResult instanceof RegExp
+      ? compiledValidationResult
+      : undefined
+  const configError =
+    typeof compiledValidationResult === "string"
+      ? compiledValidationResult
+      : null
+  const hasValidationConfig = Boolean(element.validateRegex)
+  // The user error is only ever set while validation is configured, but derive
+  // the displayed error defensively so it's never shown without an active
+  // config. The user-error message is derived from the current
+  // `element.validateMessage` so it stays in sync when only the message changes.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank validation message uses the generated fallback
+  const customMessage = element.validateMessage || undefined
+  const userError = hasUserError
+    ? (customMessage ??
+      (validateRegex
+        ? getInvalidTextInputMessage(validateRegex)
+        : INVALID_TEXT_INPUT_MESSAGE))
+    : null
+  // Gate on the current proto flag and UI value: required is not part of
+  // keyed widget identity, so hasRequiredError can survive a rerun that
+  // turns required off or writes a non-empty session_state value. Also
+  // drop the stored flag when the mask would hide it, so required off→on
+  // or a programmatic fill-then-clear does not resurrect the error
+  // without a new user commit/submit.
+  const requiredError = requiredFieldError(
+    element.required,
+    hasRequiredError,
+    isRequiredEmptyText(uiValue)
+  )
+  if (hasRequiredError && requiredError === null) {
+    setHasRequiredError(false)
+  }
+  const validateDisplayed = hasValidationConfig
+    ? (configError ?? userError)
+    : null
+  const displayedError = requiredError ?? validateDisplayed
 
-  // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
-  const allowEnterToSubmit = isInForm({ formId })
+  const commitWidgetValue = useCallback(
+    (valueToCommit: string | null = uiValueRef.current): void => {
+      lastCommittedValueRef.current = valueToCommit
+      // on_change="ignore" stages without a rerun, so nothing will echo-ack.
+      if (liveEnabled && !element.ignoreRerun) {
+        pendingLiveCommitsRef.current.add(valueToCommit)
+      }
+      setDirtyAndRef(false)
+      setValueWithSource({ value: valueToCommit, fromUser: true })
+    },
+    [element.ignoreRerun, liveEnabled, setDirtyAndRef, setValueWithSource]
+  )
+
+  const isUserValueInvalid = useCallback(
+    (nextValue: string | null): boolean => {
+      if (!validateRegex) {
+        return false
+      }
+
+      return !passesTextInputValidation(nextValue, validateRegex)
+    },
+    [validateRegex]
+  )
+
+  /**
+   * Runs the required and `validate` checks for the given value, updates the
+   * displayed error, and returns whether the value may be committed.
+   *
+   * Required-empty is checked first so whitespace-only values show the required
+   * message rather than the validate message. Live debounce can pass
+   * `showRequiredError: false` so an empty mid-edit block does not paint
+   * until blur, Enter, or form submit.
+   */
+  const validateBeforeCommit = useCallback(
+    (
+      valueToValidate: string | null = uiValueRef.current,
+      { showRequiredError = true }: { showRequiredError?: boolean } = {}
+    ): boolean => {
+      if (element.required && isRequiredEmptyText(valueToValidate)) {
+        if (showRequiredError) {
+          setHasRequiredError(true)
+        }
+        setHasUserError(false)
+        return false
+      }
+
+      setHasRequiredError(false)
+
+      // Empty values always bypass validation — including when the regex config
+      // itself is broken — so users can still clear the field or submit an empty
+      // form input when the field is not required. The config error remains
+      // visible via `displayedError`.
+      if (valueToValidate === null || valueToValidate === "") {
+        setHasUserError(false)
+        return true
+      }
+
+      if (configError) {
+        return false
+      }
+
+      const invalid = isUserValueInvalid(valueToValidate)
+      setHasUserError(invalid)
+      return !invalid
+    },
+    [configError, element.required, isUserValueInvalid]
+  )
+
+  const tryCommitOutsideForm = useCallback(
+    (
+      valueToCommit: string | null = uiValueRef.current,
+      { showRequiredError = true }: { showRequiredError?: boolean } = {}
+    ): boolean => {
+      if (!dirtyRef.current) {
+        return true
+      }
+
+      // Validate before the same-value short-circuit. An empty default is also
+      // the last accepted value, so typing then clearing would otherwise skip
+      // the required error.
+      if (!validateBeforeCommit(valueToCommit, { showRequiredError })) {
+        return false
+      }
+
+      // Skip a second commit of the same value (e.g. a trailing input event
+      // after compositionend already committed), unless a dirty setValue was
+      // dropped and Python may still hold that write.
+      const forceResync = droppedIncomingWhileDirtyRef.current
+      if (valueToCommit === lastCommittedValueRef.current && !forceResync) {
+        setDirtyAndRef(false)
+        return true
+      }
+
+      droppedIncomingWhileDirtyRef.current = false
+      commitWidgetValue(valueToCommit)
+      return true
+    },
+    [commitWidgetValue, setDirtyAndRef, validateBeforeCommit]
+  )
+
+  // Live debounce blocks empty required commits without painting the error
+  // while the user is still editing. Blur, Enter, and form submit paint.
+  const tryLiveCommit = useCallback((): boolean => {
+    return tryCommitOutsideForm(uiValueRef.current, {
+      showRequiredError: false,
+    })
+  }, [tryCommitOutsideForm])
+
+  const { debouncedCallback: scheduleLiveCommit, cancel: cancelLiveCommit } =
+    useDebouncedCallback(tryLiveCommit, liveDebounceMs)
+
+  // useDebouncedCallback (autoStart: false) does not cancel a manually
+  // started timer when the delay changes. Cancel when live is disabled or
+  // the widget unmounts. If only the delay changes, reschedule so a dirty
+  // value still commits after inactivity.
+  useEffect(() => {
+    const pendingLiveCommits = pendingLiveCommitsRef.current
+    return () => {
+      cancelLiveCommit()
+      pendingLiveCommits.clear()
+    }
+  }, [cancelLiveCommit, liveEnabled])
+
+  const prevLiveDebounceMsRef = useRef(liveDebounceMs)
+  useEffect(() => {
+    const delayChanged = prevLiveDebounceMsRef.current !== liveDebounceMs
+    prevLiveDebounceMsRef.current = liveDebounceMs
+    if (!delayChanged || !liveEnabled || !dirtyRef.current) {
+      return
+    }
+    if (liveDebounceMs === 0) {
+      tryLiveCommit()
+      return
+    }
+    scheduleLiveCommit()
+  }, [liveDebounceMs, liveEnabled, scheduleLiveCommit, tryLiveCommit])
+
+  const commitOrScheduleLive = useCallback(
+    (valueToCommit: string | null = uiValueRef.current): void => {
+      if (!liveEnabled || isComposingRef.current) {
+        return
+      }
+      if (liveDebounceMs === 0) {
+        tryCommitOutsideForm(valueToCommit, { showRequiredError: false })
+        return
+      }
+      // Debounce > 0: fire with uiValueRef at timer time, not this keystroke.
+      scheduleLiveCommit()
+    },
+    [liveDebounceMs, liveEnabled, scheduleLiveCommit, tryCommitOutsideForm]
+  )
+
+  const handleAcceptedChange = useCallback(
+    (newValue: string): void => {
+      setHasUserError(false)
+      setHasRequiredError(false)
+      commitOrScheduleLive(newValue)
+    },
+    [commitOrScheduleLive]
+  )
+
+  const formSubmitValidatorRef = useRef<() => boolean>(() => true)
+  formSubmitValidatorRef.current = () => {
+    if (!validateBeforeCommit(uiValueRef.current)) {
+      return false
+    }
+
+    if (dirtyRef.current) {
+      widgetMgr.setStringValue(element.id, uiValueRef.current, {
+        formId: element.formId,
+        fragmentId,
+        fromUser: true,
+      })
+      lastCommittedValueRef.current = uiValueRef.current
+      setDirtyAndRef(false)
+    }
+
+    return true
+  }
+
+  // Show "Please enter" instructions if in a form & allowed, or not in form
+  // and dirty. Hide "Press Enter to apply" when live updates are on.
+  const allowEnterToSubmit = inForm
     ? widgetMgr.allowFormEnterToSubmit(formId)
-    : dirty
+    : dirty && !isLive
 
   const shouldShowInstructions =
     focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
@@ -155,33 +560,156 @@ function TextInput({
         setFocused(false)
         return
       }
-      if (dirty) {
-        commitWidgetValue()
+
+      if (inForm) {
+        // Inside a form, intermediate commits (blur, or Enter without submit)
+        // intentionally skip validation: the value only stages into the form's
+        // pending state and isn't sent to the server until submit, where the
+        // registered form submit validator gates the entire form. Deferring
+        // field-level errors to submit time is the intended form UX, so don't
+        // run the regex check here.
+        if (dirtyRef.current) {
+          commitWidgetValue()
+        }
+      } else {
+        cancelLiveCommit()
+        tryCommitOutsideForm()
       }
+
       setFocused(false)
     },
-    [dirty, commitWidgetValue, elementRef]
+    [
+      cancelLiveCommit,
+      commitWidgetValue,
+      elementRef,
+      inForm,
+      tryCommitOutsideForm,
+    ]
   )
 
   const handleToggleShowPassword = useCallback((): void => {
     setShowPassword(prev => !prev)
   }, [])
 
+  const handleClear = useCallback((): void => {
+    // Commits "" immediately so search results update. Unreachable when
+    // element.required is true: showClearButton already hides the X.
+    // Required-error state is not reset here; that path never renders
+    // the button.
+    cancelLiveCommit()
+    setUiValueAndRef("")
+    setHasUserError(false)
+    commitWidgetValue("")
+  }, [cancelLiveCommit, commitWidgetValue, setUiValueAndRef])
+
   const onChange = useOnInputChange({
     formId,
     maxChars,
-    setDirty,
-    setUiValue,
+    setDirty: setDirtyAndRef,
+    setUiValue: setUiValueAndRef,
     setValueWithSource,
+    additionalAction: handleAcceptedChange,
   })
 
-  const onKeyDown = useSubmitFormViaEnterKey(
-    formId,
-    commitWidgetValue,
-    dirty,
-    widgetMgr,
-    fragmentId
+  const handleCompositionStart = useCallback((): void => {
+    isComposingRef.current = true
+    cancelLiveCommit()
+  }, [cancelLiveCommit])
+
+  const handleCompositionEnd = useCallback(
+    (e: CompositionEvent<HTMLInputElement>): void => {
+      isComposingRef.current = false
+      // compositionend does not go through the input handler. Route through
+      // onChange so maxChars and uiValue stay in sync before a live commit.
+      // A trailing input event with the same value is deduped by
+      // tryCommitOutsideForm.
+      onChange({ target: { value: e.currentTarget.value } })
+      // IME confirmation writes the native value before React. If maxChars
+      // rejected it, state is unchanged so React will not re-render — snap
+      // the input back to the last accepted string.
+      const accepted = uiValueRef.current ?? ""
+      if (e.currentTarget.value !== accepted) {
+        e.currentTarget.value = accepted
+      }
+    },
+    [onChange]
   )
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>): void => {
+      if (!isEnterKeyPressed(event)) {
+        return
+      }
+
+      event.preventDefault()
+
+      if (inForm) {
+        if (allowEnterToSubmit) {
+          // No explicit commit is needed here: `useOnInputChange` already
+          // pushes the latest value to the form's widget state on every
+          // keystroke, and the registered form submit validator commits the
+          // final value when validation is configured. Clear dirty only when
+          // submit succeeds so `useUpdateUiValue` can sync post-submit
+          // script-driven value changes (e.g. session_state updates in a
+          // callback). On validation failure, dirty stays true.
+          if (widgetMgr.submitForm(formId, fragmentId)) {
+            setDirtyAndRef(false)
+          }
+          return
+        }
+
+        // See `handleBlur`: in-form commits intentionally defer validation to
+        // form submit, so the staged value is committed without the regex check.
+        if (dirtyRef.current) {
+          commitWidgetValue()
+        }
+        return
+      }
+
+      cancelLiveCommit()
+      tryCommitOutsideForm()
+    },
+    [
+      allowEnterToSubmit,
+      cancelLiveCommit,
+      commitWidgetValue,
+      formId,
+      fragmentId,
+      inForm,
+      setDirtyAndRef,
+      tryCommitOutsideForm,
+      widgetMgr,
+    ]
+  )
+
+  // Surface an invalid `validate` regex to the developer via the console. A
+  // given regex is fixed for a widget's identity, so this logs once per distinct
+  // config error.
+  useEffect(() => {
+    if (configError) {
+      LOG.error(configError)
+    }
+  }, [configError])
+
+  useEffect(() => {
+    if (!inForm || (!element.required && !hasValidationConfig)) {
+      return undefined
+    }
+
+    const validator = (): boolean => formSubmitValidatorRef.current()
+    widgetMgr.addFormSubmitValidator(formId, element.id, validator)
+
+    return () => {
+      widgetMgr.removeFormSubmitValidator(formId, element.id)
+    }
+  }, [
+    element.id,
+    element.required,
+    formId,
+    hasValidationConfig,
+    inForm,
+    widgetMgr,
+  ])
 
   return (
     <StyledTextInput
@@ -189,9 +717,17 @@ function TextInput({
       data-testid="stTextInput"
       ref={elementRef}
     >
+      {liveEnabled && (
+        <LivePendingCommitAck
+          fragmentId={fragmentId}
+          dirtyRef={dirtyRef}
+          pendingLiveCommitsRef={pendingLiveCommitsRef}
+        />
+      )}
       <WidgetLabel
         label={element.label}
         disabled={disabled}
+        required={element.required}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
@@ -201,11 +737,19 @@ function TextInput({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <TextField isDisabled={disabled}>
+      {/*
+       * Keep React Aria out of native constraint validation so a native
+       * `type="email"`/`"url"` `typeMismatch` does not create a second invalid
+       * state alongside our regex `validate` tooltip. TextInput already owns
+       * `aria-invalid` and the error UI, so we also deliberately do NOT set
+       * `isInvalid` here.
+       */}
+      <TextField isDisabled={disabled} validationBehavior="aria">
         <StyledInputRoot
           data-testid="stTextInputRootElement"
           $isFocused={focused}
           $hasIcon={!!icon}
+          $hasError={Boolean(displayedError)}
         >
           {icon && (
             <StyledStartEnhancer $isMaterialIcon={isMaterialIcon(icon)}>
@@ -218,45 +762,101 @@ function TextInput({
           )}
           <StyledInputElement
             id={id}
+            data-testid="stTextInputField"
             aria-label={element.label}
+            aria-required={element.required ? true : undefined}
+            aria-invalid={displayedError ? true : undefined}
+            aria-describedby={displayedError ? errorId : undefined}
             value={uiValue ?? ""}
             placeholder={placeholder}
             type={showPassword ? "text" : getTypeString(element)}
+            // Label the mobile keyboard's return key for search inputs. This is
+            // the one type-aligned keyboard hint we set; other types rely on
+            // the native input `type` alone.
+            enterKeyHint={
+              element.type === TextInputProto.Type.SEARCH
+                ? "search"
+                : undefined
+            }
             autoComplete={element.autocomplete}
             onFocus={handleFocus}
             onBlur={handleBlur}
             onChange={onChange}
-            onKeyDown={onKeyDown}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
           />
-          {isPassword && (
-            <StyledPasswordToggle
-              type="button"
-              onMouseDown={preventFocusLoss}
-              onClick={handleToggleShowPassword}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              aria-pressed={showPassword}
-              disabled={disabled}
-            >
-              <DynamicIcon
-                iconValue={
-                  showPassword
-                    ? ":material/visibility_off:"
-                    : ":material/visibility:"
-                }
-                size="base"
-              />
-            </StyledPasswordToggle>
-          )}
+          <StyledEndEnhancers>
+            {displayedError && (
+              <StyledErrorEnhancer data-testid="stTextInputErrorIcon">
+                <Tooltip
+                  content={displayedError}
+                  placement={Placement.TOP_RIGHT}
+                  error
+                >
+                  <Icon content={ErrorOutline} size="base" />
+                </Tooltip>
+              </StyledErrorEnhancer>
+            )}
+            {showClearButton && (
+              <StyledClearButton
+                type="button"
+                data-testid="stTextInputClearButton"
+                aria-label="Clear entry"
+                tabIndex={-1}
+                // Prevent mousedown from moving focus off the input before the
+                // click fires, which would otherwise commit the dirty value via
+                // handleBlur and cause a spurious extra rerun.
+                onMouseDown={preventFocusLoss}
+                onClick={handleClear}
+              >
+                <Cancel size={theme.iconSizes.base} aria-hidden="true" />
+              </StyledClearButton>
+            )}
+            {isPassword && (
+              <StyledPasswordToggle
+                type="button"
+                onMouseDown={preventFocusLoss}
+                onClick={handleToggleShowPassword}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                disabled={disabled}
+              >
+                <DynamicIcon
+                  iconValue={
+                    showPassword
+                      ? ":material/visibility_off:"
+                      : ":material/visibility:"
+                  }
+                  size="base"
+                />
+              </StyledPasswordToggle>
+            )}
+          </StyledEndEnhancers>
         </StyledInputRoot>
       </TextField>
+      {displayedError && (
+        // The error message is shown visually in a tooltip on hover. The tooltip
+        // trigger isn't focusable, so we also expose the message to assistive
+        // tech via a visually hidden, aria-describedby-linked alert.
+        <StyledVisuallyHidden id={errorId} role="alert">
+          {displayedError}
+        </StyledVisuallyHidden>
+      )}
       {shouldShowInstructions && (
-        <InputInstructions
-          dirty={dirty}
-          value={uiValue ?? ""}
-          maxLength={maxChars}
-          inForm={isInForm({ formId })}
-          allowEnterToSubmit={allowEnterToSubmit}
-        />
+        <StyledInputInstructionsContainer
+          $hasErrorIcon={Boolean(displayedError)}
+          $hasClearButton={showClearButton}
+          $hasPasswordToggle={isPassword}
+        >
+          <InputInstructions
+            dirty={dirty}
+            value={uiValue ?? ""}
+            maxLength={maxChars}
+            inForm={inForm}
+            allowEnterToSubmit={allowEnterToSubmit}
+          />
+        </StyledInputInstructionsContainer>
       )}
     </StyledTextInput>
   )
@@ -283,16 +883,32 @@ function updateWidgetMgrState(
   vws: ValueWithSource<string | null>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setStringValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, vws.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  })
+}
+
+/**
+ * Maps each `TextInputProto.Type` enum value to its native DOM `<input type>`.
+ * `PHONE` is the only entry whose DOM type (`"tel"`) differs from its name.
+ */
+const DOM_INPUT_TYPE_BY_PROTO: Record<number, string> = {
+  [TextInputProto.Type.DEFAULT]: "text",
+  [TextInputProto.Type.PASSWORD]: "password",
+  [TextInputProto.Type.EMAIL]: "email",
+  [TextInputProto.Type.URL]: "url",
+  [TextInputProto.Type.PHONE]: "tel",
+  [TextInputProto.Type.SEARCH]: "search",
 }
 
 function getTypeString(element: TextInputProto): string {
-  return element.type === TextInputProto.Type.PASSWORD ? "password" : "text"
+  return DOM_INPUT_TYPE_BY_PROTO[element.type] ?? "text"
 }
 
 // Prevents the toggle button from stealing focus from the input on mousedown,

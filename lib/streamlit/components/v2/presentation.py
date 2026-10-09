@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypedDict, cast
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Any, Self, TypedDict, cast
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.logger import get_logger
@@ -74,7 +72,8 @@ def make_bidi_component_presenter(
                 ):
                     raise StreamlitAPIException(
                         f"`st.session_state.{user_key}.{k}` cannot be modified after the component"
-                        f" with key `{user_key}` is instantiated."
+                        f" with key `{user_key}` is instantiated.",
+                        error_id="bidi-component-state-cannot-be-modified",
                     )
 
         # Base state must be a flat mapping; otherwise, present as-is.

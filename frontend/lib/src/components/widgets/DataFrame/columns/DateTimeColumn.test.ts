@@ -17,13 +17,13 @@
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { DatePickerType } from "@glideapps/glide-data-grid-cells"
+import type { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import { DateDay, Field, Time, Timestamp, TimeUnit } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
-import { BaseColumnProps, isErrorCell } from "./utils"
+import { type BaseColumnProps, isErrorCell } from "./utils"
 
 const MOCK_DATETIME_COLUMN_TEMPLATE: BaseColumnProps = {
   id: "1",
@@ -175,11 +175,14 @@ describe("DateTimeColumn", () => {
     }
   )
 
-  it.each([[NaN], ["foo"]])("%p results in error cell", (input: unknown) => {
-    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
-    const cell = mockColumn.getCell(input)
-    expect(isErrorCell(cell)).toEqual(true)
-  })
+  it.each([[Number.NaN], ["foo"]])(
+    "%p results in error cell",
+    (input: unknown) => {
+      const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
+    }
+  )
 
   it("respects min_value config option", () => {
     const MOCK_DATETIME_COLUMN_WITH_MIN: BaseColumnProps = {
@@ -330,6 +333,18 @@ describe("DateTimeColumn", () => {
     )
   })
 
+  it("keeps a zero UTC offset on empty cells", () => {
+    const mockColumn = DateTimeColumn({
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        timezone: "UTC",
+      },
+    })
+    const mockCell = mockColumn.getCell(null)
+
+    expect((mockCell as DatePickerType).data.timezoneOffset).toBe(0)
+  })
+
   it("returns false for validateInput when value is null and column is required", () => {
     const MOCK_DATETIME_COLUMN_REQUIRED: BaseColumnProps = {
       ...MOCK_DATETIME_COLUMN_TEMPLATE,
@@ -352,7 +367,42 @@ describe("DateTimeColumn", () => {
   it("returns false for validateInput when value cannot be interpreted as date", () => {
     const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
     expect(mockColumn.validateInput!("not-a-date")).toBe(false)
-    expect(mockColumn.validateInput!(NaN)).toBe(false)
+    expect(mockColumn.validateInput!(Number.NaN)).toBe(false)
+  })
+
+  describe("valuesEqual", () => {
+    const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
+
+    it("treats different ISO representations of the same instant as equal", () => {
+      expect(
+        mockColumn.valuesEqual!(
+          "2023-04-25T10:30:00.000Z",
+          "2023-04-25T12:30:00.000+02:00"
+        )
+      ).toBe(true)
+    })
+
+    it("treats different instants as not equal", () => {
+      expect(
+        mockColumn.valuesEqual!(
+          "2023-04-25T10:30:00.000Z",
+          "2023-04-25T11:30:00.000Z"
+        )
+      ).toBe(false)
+    })
+
+    it("falls back to identity comparison for unparseable values", () => {
+      // Neither value parses as a date, so it falls back to Object.is.
+      expect(mockColumn.valuesEqual!("not-a-date", "not-a-date")).toBe(true)
+      expect(mockColumn.valuesEqual!("not-a-date", "other")).toBe(false)
+      expect(mockColumn.valuesEqual!(null, null)).toBe(true)
+    })
+
+    it("treats a parseable and an unparseable value as not equal", () => {
+      expect(
+        mockColumn.valuesEqual!("2023-04-25T10:30:00.000Z", "not-a-date")
+      ).toBe(false)
+    })
   })
 
   it("adapts default format based on step size >= 60", () => {
@@ -491,11 +541,14 @@ describe("DateColumn", () => {
     }
   )
 
-  it.each([[NaN], ["foo"]])("%p results in error cell", (input: unknown) => {
-    const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
-    const cell = mockColumn.getCell(input)
-    expect(isErrorCell(cell)).toEqual(true)
-  })
+  it.each([[Number.NaN], ["foo"]])(
+    "%p results in error cell",
+    (input: unknown) => {
+      const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
+    }
+  )
 
   it("respects min_value config option", () => {
     const MOCK_DATE_COLUMN_TEMPLATE_WITH_MIN: BaseColumnProps = {
@@ -682,11 +735,14 @@ describe("TimeColumn", () => {
     }
   )
 
-  it.each([[NaN], ["foo"]])("%p results in error cell", (input: unknown) => {
-    const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE)
-    const cell = mockColumn.getCell(input)
-    expect(isErrorCell(cell)).toEqual(true)
-  })
+  it.each([[Number.NaN], ["foo"]])(
+    "%p results in error cell",
+    (input: unknown) => {
+      const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE)
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
+    }
+  )
 
   it("respects min_value config option", () => {
     const MOCK_TIME_COLUMN_TEMPLATE_WITH_MIN: BaseColumnProps = {

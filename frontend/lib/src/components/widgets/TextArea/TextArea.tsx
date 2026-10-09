@@ -15,7 +15,7 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
   useCallback,
   useId,
@@ -24,14 +24,14 @@ import {
   useState,
 } from "react"
 
-import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
+import type { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -41,7 +41,7 @@ import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { getTextAreaHeight } from "./heightUtils"
 import {
@@ -82,12 +82,15 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<TextAreaValue>,
   fragmentId: string | undefined
 ): void => {
-  widgetMgr.setStringValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  })
 }
 
 const TextArea: FC<Props> = ({
@@ -195,7 +198,7 @@ const TextArea: FC<Props> = ({
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
-    setValueWithSource({ value: uiValue, fromUi: true })
+    setValueWithSource({ value: uiValue, fromUser: true })
   }, [uiValue, setValueWithSource])
 
   const onBlur = useCallback(() => {

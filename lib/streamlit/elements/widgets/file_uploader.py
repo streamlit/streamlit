@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 from streamlit import config
@@ -39,19 +38,22 @@ from streamlit.elements.lib.utils import (
     get_label_visibility_proto_value,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    OnChangeMode,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -151,16 +153,11 @@ class FileUploaderSerde:
 
 
 class FileUploaderMixin:
-    # Multiple overloads are defined on `file_uploader()` below to represent
-    # the different return types of `file_uploader()`.
-    # These return types differ according to the value of the `accept_multiple_files` argument.
-    # There must be 2x2=4 overloads to cover all the possible arguments,
-    # as these overloads must be mutually exclusive for mypy.
-    # There are 3 associated variables, each with 2+ options.
-    # 1. The `accept_multiple_files` argument is set as `True` or `"directory"`,
-    #    or it is set as `False` or omitted, in which case the default value `False`.
-    # 2. The `type` argument may or may not be provided as a keyword-only argument.
-    # 3. Directory uploads always return a list of UploadedFile objects.
+    # The overloads below narrow the return type by `accept_multiple_files`:
+    # `True`/`"directory"` return a list, `False` (or omitted) returns a single
+    # file or None. Each case is duplicated because `type` can be passed
+    # positionally or keyword-only (https://github.com/python/mypy/issues/4020).
+    # A final fallback covers non-literal AcceptMultipleFiles values.
 
     # 1. type is given as not a keyword-only argument
     # 2. accept_multiple_files = True or "directory"
@@ -172,7 +169,7 @@ class FileUploaderMixin:
         accept_multiple_files: Literal[True, "directory"],
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -192,7 +189,7 @@ class FileUploaderMixin:
         accept_multiple_files: Literal[False] = False,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -218,7 +215,7 @@ class FileUploaderMixin:
         type: str | Sequence[str] | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         max_upload_size: int | None = None,
@@ -238,7 +235,7 @@ class FileUploaderMixin:
         type: str | Sequence[str] | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         max_upload_size: int | None = None,
@@ -246,6 +243,25 @@ class FileUploaderMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | None: ...
+
+    # Non-literal accept_multiple_files values return the union of both result types.
+    @overload
+    def file_uploader(
+        self,
+        label: str,
+        type: str | Sequence[str] | None = None,
+        accept_multiple_files: AcceptMultipleFiles = False,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        *,
+        max_upload_size: int | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: WidthWithoutContent = "stretch",
+    ) -> UploadedFile | list[UploadedFile] | None: ...
 
     @gather_metrics("file_uploader")
     def file_uploader(
@@ -255,7 +271,7 @@ class FileUploaderMixin:
         accept_multiple_files: AcceptMultipleFiles = False,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -378,9 +394,30 @@ class FileUploaderMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this file_uploader's value
-            changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the file uploader should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the file uploader. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (after an upload completes, a file is
+              deleted, or a file is replaced in single-file mode).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The file uploader still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. The file
+              itself is still uploaded to the server immediately; only the
+              rerun is deferred. Ignored commits are held in the browser and
+              are lost if the page is refreshed before that rerun. Inside
+              ``st.form``, this has no effect: the form already defers all
+              commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -420,7 +457,8 @@ class FileUploaderMixin:
 
             The ``UploadedFile`` class is a subclass of ``BytesIO``, and
             therefore is "file-like". This means you can pass an instance of it
-            anywhere a file is expected.
+            anywhere a file is expected. To use this type in an annotation,
+            import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -503,7 +541,7 @@ class FileUploaderMixin:
         accept_multiple_files: AcceptMultipleFiles = False,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -514,25 +552,33 @@ class FileUploaderMixin:
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
-        # Validate max_upload_size early to provide a clear error message
         if max_upload_size is not None and (
-            not isinstance(max_upload_size, int) or max_upload_size <= 0
+            isinstance(max_upload_size, bool)
+            or not isinstance(max_upload_size, int)
+            or max_upload_size < 1
         ):
-            raise StreamlitAPIException(
-                "The `max_upload_size` parameter must be a positive integer "
-                "representing the maximum file size in megabytes, or None "
-                "to fall back to the `server.maxUploadSize` configuration option."
+            raise StreamlitValueError(
+                "max_upload_size",
+                ["a positive integer"],
+                detail=(
+                    "Set it to None to fall back to the `server.maxUploadSize` "
+                    "configuration option."
+                ),
             )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None,
             writes_allowed=False,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "file_uploader",
@@ -579,7 +625,10 @@ class FileUploaderMixin:
         )
 
         if help is not None:
-            file_uploader_proto.help = dedent(help)
+            file_uploader_proto.help = to_help_str(help)
+
+        if isinstance(on_change, str) and on_change == "ignore":
+            file_uploader_proto.ignore_rerun = True
 
         serde = FileUploaderSerde(accept_multiple_files, allowed_types=normalized_type)
 
@@ -588,13 +637,14 @@ class FileUploaderMixin:
         # know about.
         widget_state = register_widget(
             file_uploader_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
             value_type="file_uploader_state_value",
+            disabled=disabled,
         )
 
         layout_config = create_layout_config(width=width)

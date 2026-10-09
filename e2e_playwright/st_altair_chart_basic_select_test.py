@@ -19,6 +19,7 @@ attach an event listener to the canvas and read the position from there.
 
 import re
 from dataclasses import dataclass
+from typing import Literal
 
 import pytest
 from playwright.sync_api import Locator, Page, expect
@@ -471,3 +472,31 @@ def test_selection_persists_after_data_update(app: Page):
     # Verify selection persisted after data change
     # The selection should still show the same category even though values changed
     expect_prefixed_markdown(app, "Persistent selection:", expected_selection)
+
+
+def _assert_single_region_bind(
+    chart: Locator, *, role: Literal["radio", "combobox"], count: int
+) -> None:
+    """Region bind must appear once, not once per injected encoding."""
+    expect(chart.get_by_text("Region:")).to_have_count(1)
+    expect(chart.get_by_role(role)).to_have_count(count)
+
+
+def test_binding_widgets_not_duplicated_with_on_select(app: Page):
+    """Altair bind widgets must not be cloned when on_select is enabled (#8765)."""
+    radio_chart = get_element_by_key(app, "bind_radio_rerun")
+    select_chart = get_element_by_key(app, "bind_select_rerun")
+
+    expect(radio_chart).to_be_visible()
+    expect(get_vega_graphics_document(radio_chart)).to_be_visible()
+    _assert_single_region_bind(radio_chart, role="radio", count=3)
+
+    radio_chart.get_by_role("radio", name="Europe").click()
+    _assert_single_region_bind(radio_chart, role="radio", count=3)
+
+    expect(select_chart).to_be_visible()
+    expect(get_vega_graphics_document(select_chart)).to_be_visible()
+    _assert_single_region_bind(select_chart, role="combobox", count=1)
+
+    select_chart.get_by_role("combobox").select_option("Europe")
+    _assert_single_region_bind(select_chart, role="combobox", count=1)

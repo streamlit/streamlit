@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback } from "react"
+import { type FC, memo, useCallback } from "react"
 
-import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
+import type { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
 import UISelectbox from "~lib/components/shared/Dropdown/Selectbox"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
@@ -66,12 +66,15 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<SelectboxValue>,
   fragmentId: string | undefined
 ): void => {
-  widgetMgr.setStringValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  })
 }
 
 const Selectbox: FC<Props> = ({
@@ -115,7 +118,7 @@ const Selectbox: FC<Props> = ({
 
   const onChange = useCallback(
     (valueArg: SelectboxValue) => {
-      setValueWithSource({ value: valueArg, fromUi: true })
+      setValueWithSource({ value: valueArg, fromUser: true })
     },
     [setValueWithSource]
   )

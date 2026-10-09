@@ -21,7 +21,7 @@ import { ConnectionState } from "@streamlit/connection"
 import { ScriptRunState } from "@streamlit/lib"
 import { render } from "@streamlit/lib/testing"
 
-import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
+import StatusWidget, { type StatusWidgetProps } from "./StatusWidget"
 
 const getProps = (
   propOverrides: Partial<StatusWidgetProps> = {}
@@ -227,6 +227,31 @@ describe("StatusWidget element", () => {
 
     expect(rerunScript).toHaveBeenCalledWith(true)
   })
+
+  it.each([
+    ["A", "a"],
+    ["Shift+A", "{Shift>}a{/Shift}"],
+  ])("calls Always rerun when %s is pressed", async (_label, keys) => {
+    const user = userEvent.setup()
+    const rerunScript = vi.fn()
+
+    render(
+      <StatusWidget
+        {...getProps({
+          rerunScript,
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+          showScriptChangedActions: true,
+        })}
+      />
+    )
+
+    expect(await screen.findByText("Always rerun")).toBeVisible()
+
+    await user.keyboard(keys)
+
+    expect(rerunScript).toHaveBeenCalledWith(true)
+    expect(rerunScript).not.toHaveBeenCalledWith(false)
+  })
 })
 
 describe("Running Icon", () => {
@@ -273,10 +298,12 @@ describe("Running Icon", () => {
     })
 
     await waitFor(() => {
-      const icon = screen.getByTestId("stStatusWidgetNewYearsIcon")
-      expect(icon).toBeVisible()
-      expect(icon).toHaveAttribute("src", "/src/assets/img/fireworks.gif")
+      expect(screen.getByTestId("stStatusWidgetNewYearsIcon")).toBeVisible()
     })
+    expect(screen.getByTestId("stStatusWidgetNewYearsIcon")).toHaveAttribute(
+      "src",
+      "/src/assets/img/fireworks.gif"
+    )
   })
 
   it("renders firework gif on Jan 6th", async () => {
@@ -294,10 +321,12 @@ describe("Running Icon", () => {
     })
 
     await waitFor(() => {
-      const icon = screen.getByTestId("stStatusWidgetNewYearsIcon")
-      expect(icon).toBeVisible()
-      expect(icon).toHaveAttribute("src", "/src/assets/img/fireworks.gif")
+      expect(screen.getByTestId("stStatusWidgetNewYearsIcon")).toBeVisible()
     })
+    expect(screen.getByTestId("stStatusWidgetNewYearsIcon")).toHaveAttribute(
+      "src",
+      "/src/assets/img/fireworks.gif"
+    )
   })
 
   it("renders regular running gif after New Years", async () => {
@@ -342,5 +371,40 @@ describe("Running Icon", () => {
       const icon = screen.getByTestId("stStatusWidgetRunningManIcon")
       expect(icon).toBeVisible()
     })
+  })
+
+  it("keeps the previous status mounted while the running man is delayed", () => {
+    vi.setSystemTime(new Date("January 7, 2023 00:00:00"))
+
+    const { rerender } = render(
+      <StatusWidget
+        {...getProps({
+          scriptRunState: ScriptRunState.NOT_RUNNING,
+          showScriptChangedActions: true,
+        })}
+      />
+    )
+
+    expect(screen.getByText("File change.")).toBeVisible()
+    expect(
+      screen.queryByTestId("stStatusWidgetRunningManIcon")
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <StatusWidget
+        {...getProps({
+          scriptRunState: ScriptRunState.RUNNING,
+          showScriptChangedActions: true,
+        })}
+      />
+    )
+
+    // Returning null during the delay takes the fade-out path, so the previous
+    // view stays mounted (CSSTransition may already have it non-visible).
+    expect(screen.queryByText("File change.")).toBeInTheDocument()
+    expect(screen.queryByTestId("stStatusWidget")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stStatusWidgetRunningManIcon")
+    ).not.toBeInTheDocument()
   })
 })

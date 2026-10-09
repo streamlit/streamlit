@@ -28,7 +28,7 @@ import {
   getDataArrays,
   getDataSets,
   getInlineData,
-  WrappedNamedDataset,
+  type WrappedNamedDataset,
 } from "./arrowUtils"
 
 describe("Types of dataframe indexes as x axis", () => {

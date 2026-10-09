@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { EmotionTheme as StreamlitTheme } from "~lib/theme/types"
+import type { EmotionTheme as StreamlitTheme } from "~lib/theme/types"
 
 // Outside imports make declarations not ambient, so we separate out from
 // the ambient declarations.d.ts
@@ -22,5 +22,6 @@ import { EmotionTheme as StreamlitTheme } from "~lib/theme/types"
 // This declaration allows us to extend our type declarations for emotion's
 // theme (an empty object) to be our type
 declare module "@emotion/react" {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   export interface Theme extends StreamlitTheme {}
 }

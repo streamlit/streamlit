@@ -25,10 +25,20 @@ from streamlit.elements.lib.utils import (
     LabelVisibility,
     get_label_visibility_proto_value,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.Metric_pb2 import Metric as MetricProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import AnyNumber, clean_text, from_number
+from streamlit.string_util import (
+    AnyNumber,
+    clean_text,
+    from_number,
+    to_help_str,
+    validate_icon_or_emoji,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -99,6 +109,7 @@ class MetricMixin:
         delta_color: DeltaColor = "normal",
         *,
         help: str | None = None,
+        icon: str | None = None,
         label_visibility: LabelVisibility = "visible",
         border: bool = False,
         width: Width = "stretch",
@@ -146,6 +157,13 @@ class MetricMixin:
               the arrow points down and the delta is red.
             - Otherwise, the arrow points up and the delta is green.
 
+            Streamlit treats numeric zeros and the string ``"0"`` as zero. It
+            does not parse other string deltas as numbers to choose the arrow
+            and color, so they follow the sign rule above: ``"0%"`` is positive
+            and ``"-0.0%"`` is negative. To show a gray zero delta with
+            qualifier text, pass the number ``0`` as ``delta``. Put the
+            qualifier text in ``delta_description``.
+
             You can modify the display, color, and orientation of the arrow
             using the ``delta_color`` and ``delta_arrow`` parameters.
 
@@ -167,6 +185,9 @@ class MetricMixin:
               ``"blue"``, ``"violet"``, ``"gray"``/``"grey"``, or
               ``"primary"``.
 
+            See the ``delta`` parameter for how Streamlit determines a zero
+            delta.
+
         help : str or None
             A tooltip that gets displayed next to the metric label. Streamlit
             only displays the tooltip when ``label_visibility="visible"``. If
@@ -175,6 +196,25 @@ class MetricMixin:
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
+
+        icon : str or None
+            An optional emoji or icon to display next to the metric label. If
+            ``icon`` is ``None`` (default), no icon is displayed. If ``icon``
+            is a string, the following options are valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -241,6 +281,9 @@ class MetricMixin:
               specified direction.
             - ``"off"``: No arrow is shown, but the delta value remains
               visible.
+
+            See the ``delta`` parameter for how Streamlit determines a zero
+            delta.
 
         format : str or None
             A format string controlling how numbers are displayed for ``value``
@@ -366,16 +409,31 @@ class MetricMixin:
                     https://doc-metric-example5.streamlit.app/
                     height: 300px
 
+                **Example 6: Show an icon**
+
+                Add an icon before the label with the ``icon`` parameter.
+
+                >>> import streamlit as st
+                >>>
+                >>> st.metric(
+                ...     "Temperature", "70 °F", "1.2 °F", icon=":material/thermostat:"
+                ... )
+
+                .. output::
+                    https://doc-metric-example6.streamlit.app/
+                    height: 210px
+
         """
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         metric_proto = MetricProto()
         metric_proto.body = _parse_value(value)
-        metric_proto.label = _parse_label(label)
+        metric_proto.label = label
         metric_proto.delta = _parse_delta(delta)
         metric_proto.show_border = border
         if help is not None:
-            metric_proto.help = dedent(help)
+            metric_proto.help = to_help_str(help)
+        metric_proto.icon = validate_icon_or_emoji(icon)
 
         color_and_direction = _determine_delta_color_and_direction(
             cast("DeltaColor", clean_text(delta_color)), delta
@@ -397,11 +455,12 @@ class MetricMixin:
             for val in convert_anything_to_list(chart_data):
                 try:
                     prepared_data.append(float(val))
-                except Exception as ex:  # noqa: PERF203
+                except Exception as ex:
                     raise StreamlitAPIException(
                         "Only numeric values are supported for chart data sequence. The "
                         f"value '{val}' is of type {type(val)} and "
-                        "cannot be converted to float."
+                        "cannot be converted to float.",
+                        error_id="metric-chart-data-not-numeric",
                     ) from ex
             if len(prepared_data) > 0:
                 metric_proto.chart_data.extend(prepared_data)
@@ -441,17 +500,23 @@ def _parse_chart_type(
 
 def _parse_delta_arrow(delta_arrow: DeltaArrow) -> DeltaArrow:
     if delta_arrow not in {"auto", "up", "down", "off"}:
-        raise StreamlitValueError("delta_arrow", ["auto", "up", "down", "off"])
+        raise StreamlitValueError("delta_arrow", ["'auto'", "'up'", "'down'", "'off'"])
     return delta_arrow
 
 
-def _parse_label(label: str) -> str:
-    if not isinstance(label, str):
-        raise TypeError(
-            f"'{label}' is of type {type(label)}, which is not an accepted type."
-            " label only accepts: str. Please convert the label to an accepted type."
-        )
-    return label
+def _parse_metric_number(value: AnyNumber, parameter: str) -> str:
+    """Render ``value`` for display. Invalid types raise StreamlitInvalidParameterTypeError."""
+    try:
+        return from_number(value)
+    except TypeError as ex:
+        # from_number is a generic helper and raises a native TypeError, which
+        # would bypass Streamlit's user-facing error types.
+        raise StreamlitInvalidParameterTypeError(
+            parameter,
+            type(value).__name__,
+            ["int", "float", "Decimal", "NumPy number"],
+            detail="Convert the value to a number type.",
+        ) from ex
 
 
 def _parse_value(value: Value) -> str:
@@ -459,7 +524,7 @@ def _parse_value(value: Value) -> str:
         return "—"
     if isinstance(value, str):
         return value
-    return from_number(value)
+    return _parse_metric_number(value, "value")
 
 
 def _parse_delta(delta: Delta) -> str:
@@ -467,7 +532,7 @@ def _parse_delta(delta: Delta) -> str:
         return ""
     if isinstance(delta, str):
         return dedent(delta)
-    return from_number(delta)
+    return _parse_metric_number(delta, "delta")
 
 
 def _determine_delta_color_and_direction(
@@ -475,10 +540,22 @@ def _determine_delta_color_and_direction(
     delta: Delta,
 ) -> MetricColorAndDirection:
     if delta_color not in _VALID_DELTA_COLORS:
-        raise StreamlitAPIException(
-            f"'{delta_color}' is not an accepted value. delta_color only accepts: "
-            "'normal', 'inverse', 'off', or a color name ('red', 'orange', 'yellow', "
-            "'green', 'blue', 'violet', 'gray'/'grey', 'primary')"
+        raise StreamlitValueError(
+            "delta_color",
+            [
+                "'normal'",
+                "'inverse'",
+                "'off'",
+                "'red'",
+                "'orange'",
+                "'yellow'",
+                "'green'",
+                "'blue'",
+                "'violet'",
+                "'gray'",
+                "'grey'",
+                "'primary'",
+            ],
         )
 
     if delta is None or delta == "":

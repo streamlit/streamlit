@@ -56,16 +56,15 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Final, Self, cast
 
-from blinker import ANY, Signal
-from typing_extensions import Self
 from watchdog import events
 from watchdog.observers import Observer
 
 from streamlit import env_util
 from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.logger import get_logger
+from streamlit.signal_util import Signal
 from streamlit.util import repr_
 from streamlit.watcher import util
 
@@ -391,7 +390,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                 return
 
             watched_path.on_changed.disconnect(callback)
-            if not watched_path.on_changed.has_receivers_for(ANY):
+            if not watched_path.on_changed.has_receivers():
                 del self._watched_paths[path]
 
     def is_watching_paths(self) -> bool:

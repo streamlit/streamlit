@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { getCookie, localStorageAvailable } from "."
+import {
+  generateUuid,
+  getCookie,
+  localStorageAvailable,
+  parseUserAgent,
+} from "."
 
 describe("browser", () => {
   describe("localStorageAvailable", () => {
@@ -49,7 +54,7 @@ describe("browser", () => {
     afterEach(() => {
       document.cookie.split(";").forEach(cookie => {
         const eqPos = cookie.indexOf("=")
-        const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
+        const name = eqPos > -1 ? cookie.slice(0, eqPos) : cookie
         document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`
       })
     })
@@ -90,6 +95,134 @@ describe("browser", () => {
       document.cookie = "flavor=chocolatechip;"
       const cookie = getCookie("flavor")
       expect(cookie).toEqual("chocolatechip")
+    })
+  })
+
+  describe("generateUuid", () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+    })
+
+    it("uses crypto.randomUUID when available", () => {
+      const uuid = "123e4567-e89b-42d3-a456-426614174000"
+      vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(uuid)
+
+      expect(generateUuid()).toBe(uuid)
+    })
+
+    it("generates a version 4 UUID with getRandomValues as a fallback", () => {
+      vi.stubGlobal("crypto", {
+        getRandomValues: (bytes: Uint8Array) => {
+          bytes.fill(0xff)
+          return bytes
+        },
+      })
+
+      expect(generateUuid()).toBe("ffffffff-ffff-4fff-bfff-ffffffffffff")
+    })
+  })
+
+  describe("parseUserAgent", () => {
+    it.each([
+      [
+        "Android phone",
+        "mobile",
+        "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/123.0 Mobile Safari/537.36",
+      ],
+      [
+        "Android tablet",
+        "tablet",
+        "Mozilla/5.0 (Linux; Android 14; Tablet) AppleWebKit/537.36 Chrome/123.0 Safari/537.36",
+      ],
+      [
+        "Web0S TV",
+        "smarttv",
+        "Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36 DMOST/2.0.0 (; LGE; webOS TV)",
+      ],
+      [
+        // Palm Pre phone; the coarse `webOS` token wins over mobile, unlike
+        // historical ua-parser-js which reported this as `mobile`.
+        "legacy webOS device",
+        "smarttv",
+        "Mozilla/5.0 (webOS/1.4.2; U; en-US) AppleWebKit/532.2 (KHTML, like Gecko) Version/1.0 Safari/532.2 Pre/1.1",
+      ],
+      [
+        "Galaxy Watch",
+        "wearable",
+        "Mozilla/5.0 (Linux; Android 11; Galaxy Watch) AppleWebKit/537.36 Chrome/123.0 Mobile Safari/537.36 Wear OS",
+      ],
+      [
+        "PlayStation",
+        "console",
+        "Mozilla/5.0 (PlayStation 5) AppleWebKit/537.36 Chrome/123.0 Safari/537.36",
+      ],
+      [
+        "Chromecast",
+        "embedded",
+        "Mozilla/5.0 (CrKey armv7l) AppleWebKit/537.36 Chrome/123.0 Safari/537.36",
+      ],
+    ])("classifies %s as %s", (_label, deviceType, userAgent) => {
+      expect(parseUserAgent(userAgent).deviceType).toBe(deviceType)
+    })
+
+    it("prefers Edge over Chrome when both tokens are present", () => {
+      expect(
+        parseUserAgent(
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
+        )
+      ).toEqual({
+        browserName: "Edge",
+        browserVersion: "120.0.0.0",
+        deviceType: undefined,
+        os: "Windows",
+      })
+    })
+
+    it("reports Ubuntu rather than Linux for Firefox on Ubuntu", () => {
+      expect(
+        parseUserAgent(
+          "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0"
+        )
+      ).toEqual({
+        browserName: "Firefox",
+        browserVersion: "121.0",
+        deviceType: undefined,
+        os: "Ubuntu",
+      })
+    })
+
+    it("reports Mobile Safari for an iPhone Safari user agent", () => {
+      expect(
+        parseUserAgent(
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        )
+      ).toEqual({
+        browserName: "Mobile Safari",
+        browserVersion: "17.0",
+        deviceType: "mobile",
+        os: "iOS",
+      })
+    })
+
+    it("returns empty fields for an unknown user agent", () => {
+      expect(parseUserAgent("custom-client")).toEqual({
+        browserName: undefined,
+        browserVersion: undefined,
+        deviceType: undefined,
+        os: undefined,
+      })
+    })
+
+    it("reuses a parse for the same user agent and refreshes when it changes", () => {
+      const phoneUa =
+        "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/123.0 Mobile Safari/537.36"
+      const tabletUa =
+        "Mozilla/5.0 (Linux; Android 14; Tablet) AppleWebKit/537.36 Chrome/123.0 Safari/537.36"
+
+      expect(parseUserAgent(phoneUa)).toBe(parseUserAgent(phoneUa))
+      expect(parseUserAgent(tabletUa).deviceType).toBe("tablet")
+      expect(parseUserAgent(phoneUa).deviceType).toBe("mobile")
     })
   })
 })

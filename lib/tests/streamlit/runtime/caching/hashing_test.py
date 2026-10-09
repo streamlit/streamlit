@@ -39,24 +39,33 @@ import pytest
 from parameterized import parameterized
 from PIL import Image
 
+from streamlit import config
 from streamlit.proto.Common_pb2 import FileURLs
 from streamlit.runtime.caching import cache_data, cache_resource
 from streamlit.runtime.caching.cache_errors import UnhashableTypeError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.hashing import (
+    _LOGGER,
+    _MAX_SAMPLE_SEED,
+    _NP_SAMPLE_SIZE,
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
     UserHashError,
     _CacheFuncHasher,
     _HashStack,
     _HashStacks,
+    _sample_seed,
+    _warned_sample_seeds,
     update_hash,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.type_util import is_type
+from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    import numpy.typing as npt
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
@@ -207,7 +216,7 @@ class HashTest(unittest.TestCase):
         assert get_hash(naive_datetime1) != get_hash(naive_datetime3)
 
     def test_datetime_aware(self):
-        tz_info = datetime.timezone.utc
+        tz_info = datetime.UTC
         aware_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
         aware_datetime1_copy = datetime.datetime(
             2007, 12, 23, 15, 45, 55, tzinfo=tz_info
@@ -925,15 +934,37 @@ def test_hash_stack_pretty_print_handles_str_conversion_error() -> None:
 def test_pandas_series_hash_pickle_fallback_on_type_error() -> None:
     """Series that ``hash_pandas_object`` cannot hash fall back to pickling."""
     series = pd.Series([[1, 2], [3, 4]])
-    assert get_hash(series) == get_hash(series)
-    assert get_hash(series) != get_hash(pd.Series([[1, 2], [3, 5]]))
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        digest = get_hash(series)
+
+    assert digest == get_hash(series)
+    assert digest != get_hash(pd.Series([[1, 2], [3, 5]]))
+
+    mock_warning.assert_called_once()
+    # The traceback must not be attached anymore (``exc_info`` was removed).
+    assert "exc_info" not in mock_warning.call_args.kwargs
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert "failed for a pandas Series" in logged_message
+    assert "falling back to pickling the object" in logged_message
+    assert "unhashable type: 'list'" in logged_message
 
 
 def test_pandas_dataframe_hash_pickle_fallback_on_type_error() -> None:
     """DataFrame that ``hash_pandas_object`` cannot hash fall back to pickling."""
     df = pd.DataFrame({"col": [[1], [2]]})
-    assert get_hash(df) == get_hash(df)
-    assert get_hash(df) != get_hash(pd.DataFrame({"col": [[1], [3]]}))
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        digest = get_hash(df)
+
+    assert digest == get_hash(df)
+    assert digest != get_hash(pd.DataFrame({"col": [[1], [3]]}))
+
+    mock_warning.assert_called_once()
+    # The traceback must not be attached anymore (``exc_info`` was removed).
+    assert "exc_info" not in mock_warning.call_args.kwargs
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert "failed for a pandas DataFrame" in logged_message
+    assert "falling back to pickling the object" in logged_message
+    assert "unhashable type: 'list'" in logged_message
 
 
 def test_numpy_ufunc_hashes_by_encoded_name() -> None:
@@ -950,26 +981,38 @@ def test_module_hashes_via_module_name() -> None:
 
 @pytest.mark.require_integration
 @pytest.mark.parametrize(
-    ("make_obj", "method_name"),
+    ("make_obj", "method_name", "expected_obj_type"),
     [
-        (lambda pl: pl.Series([1, 2, 3]), "hash"),
-        (lambda pl: pl.DataFrame({"a": [1, 2]}), "hash_rows"),
+        (lambda pl: pl.Series([1, 2, 3]), "hash", "polars Series"),
+        (lambda pl: pl.DataFrame({"a": [1, 2]}), "hash_rows", "polars DataFrame"),
     ],
     ids=["series", "dataframe"],
 )
 def test_polars_pickle_fallback_when_hash_raises_typeerror(
     make_obj: Callable[..., Any],
     method_name: str,
+    expected_obj_type: str,
 ) -> None:
     """Polars objects fall back to pickle when native hashing raises ``TypeError``."""
     import polars as pl
 
     obj = make_obj(pl)
     cls = type(obj)
-    with mock.patch.object(cls, method_name, side_effect=TypeError("forced")):
+    with (
+        mock.patch.object(cls, method_name, side_effect=TypeError("forced")),
+        mock.patch.object(_LOGGER, "warning") as mock_warning,
+    ):
         digest = get_hash(obj)
     with mock.patch.object(cls, method_name, side_effect=TypeError("forced")):
         assert get_hash(obj) == digest
+
+    mock_warning.assert_called_once()
+    # The traceback must not be attached anymore (``exc_info`` was removed).
+    assert "exc_info" not in mock_warning.call_args.kwargs
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert "falling back to pickling the object" in logged_message
+    assert f"failed for a {expected_obj_type}" in logged_message
+    assert "forced" in logged_message
 
 
 @pytest.mark.require_integration
@@ -1014,3 +1057,529 @@ def test_PIL_pmode_palette_collision_prevention() -> None:
 
     # But the hashes should differ because we now include the palette
     assert get_hash(im1) != get_hash(im2)
+
+
+# Tests for the ``runner.cacheHashSeed`` config option (GitHub issue #14622).
+#
+# Large pandas/polars/numpy objects are hashed from a fixed random sample, so two
+# large objects differing only outside the sampled positions share a cache key.
+# The seed selects which positions are sampled, letting an app that has hit such a
+# collision move off it. It does not make hashing exact.
+
+
+def _large_pandas_dataframe() -> pd.DataFrame:
+    return pd.DataFrame({"a": np.arange(_PANDAS_ROWS_LARGE)})
+
+
+def _large_pandas_series() -> pd.Series:
+    return pd.Series(np.arange(_PANDAS_ROWS_LARGE))
+
+
+def _large_numpy_array() -> npt.NDArray[Any]:
+    return np.arange(_NP_SIZE_LARGE)
+
+
+def _large_polars_dataframe() -> Any:
+    import polars as pl
+
+    return pl.DataFrame({"a": range(_PANDAS_ROWS_LARGE)})
+
+
+def _large_polars_series() -> Any:
+    import polars as pl
+
+    return pl.Series(range(_PANDAS_ROWS_LARGE))
+
+
+def test_cache_hash_seed_defaults_to_zero() -> None:
+    """The default must keep the historical sample positions."""
+    assert config.get_option("runner.cacheHashSeed") == 0
+    assert _sample_seed() == 0
+
+
+@pytest.mark.parametrize("value", [7, "7"], ids=["int", "numeric_string"])
+def test_cache_hash_seed_accepts_any_whole_number_representation(
+    value: object,
+) -> None:
+    """``cacheHashSeed = 7`` and ``cacheHashSeed = "7"`` must mean the same thing.
+
+    ``config.get_option`` returns the raw parsed value rather than coercing it to
+    the declared type, so an unquoted TOML value arrives as an int and a quoted
+    one as a str.
+    """
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        assert _sample_seed() == 7
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param("not-a-number", id="text"),
+        pytest.param("", id="empty"),
+        pytest.param(None, id="none"),
+        # `bool` is an `int` subclass, so `int(True)` is 1 rather than an error.
+        # TOML writes these as `cacheHashSeed = true` / `false`.
+        pytest.param(True, id="bool_true"),
+        pytest.param(False, id="bool_false"),
+        # `int(float("inf"))` raises OverflowError, which is not a ValueError.
+        # TOML writes these as `cacheHashSeed = inf` / `-inf` / `nan`.
+        pytest.param(float("inf"), id="inf"),
+        pytest.param(float("-inf"), id="negative_inf"),
+        pytest.param(float("nan"), id="nan"),
+    ],
+)
+def test_cache_hash_seed_falls_back_to_zero_for_unusable_values(
+    value: object,
+) -> None:
+    """A malformed value must leave cache keys unchanged, not raise from hashing."""
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        assert _sample_seed() == 0
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(True, id="bool_true"),
+        pytest.param(float("inf"), id="inf"),
+        pytest.param(float("nan"), id="nan"),
+    ],
+)
+def test_cache_hash_seed_rejects_bool_and_non_finite_floats(
+    value: object,
+) -> None:
+    """These three slip past a plain ``int()`` guard in three different ways.
+
+    ``int(True)`` succeeds and yields ``1``, quietly changing every large-object
+    cache key; ``int(float("inf"))`` raises ``OverflowError``, which is not a
+    ``ValueError`` and so would have escaped the fallback entirely; and
+    ``int(float("nan"))`` raises ``ValueError``, which was already caught -- it is
+    covered here so that difference stays deliberate rather than incidental.
+    """
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": value}):
+            assert _sample_seed() == 0
+
+    mock_warning.assert_called_once()
+
+
+def test_cache_hash_seed_does_not_treat_a_bool_as_the_int_it_subclasses() -> None:
+    """``cacheHashSeed = true`` must not become the perfectly valid seed ``1``."""
+    with patch_config_options({"runner.cacheHashSeed": True}):
+        from_bool = _sample_seed()
+    with patch_config_options({"runner.cacheHashSeed": 1}):
+        from_int = _sample_seed()
+
+    assert from_int == 1, "a real 1 must still be honoured"
+    assert from_bool == 0, "True must fall back rather than alias seed 1"
+
+
+def test_cache_hash_seed_truncates_a_fractional_value() -> None:
+    """A float is converted rather than rejected; only the seed changes.
+
+    Truncation is toward zero and is not warned about, since the result is a usable
+    seed -- the config description documents this explicitly.
+    """
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": 1.5}):
+            assert _sample_seed() == 1
+
+    mock_warning.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(-1, id="negative"),
+        pytest.param(2**32, id="one_past_max"),
+        pytest.param(2**64, id="far_past_max"),
+    ],
+)
+def test_cache_hash_seed_falls_back_to_zero_for_out_of_range_values(
+    value: int,
+) -> None:
+    """An out-of-range seed must be ignored rather than reach the sampling backends.
+
+    ``int()`` accepts these, but numpy's ``RandomState`` (and pandas' ``random_state=``,
+    which defers to it) only accepts ``[0, 2**32 - 1]``, so without a range check they
+    would raise from inside the cache-hashing path.
+    """
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        assert _sample_seed() == 0
+
+
+def test_cache_hash_seed_honours_the_largest_supported_value() -> None:
+    """The upper bound must be usable, not silently reset to the default."""
+    with patch_config_options({"runner.cacheHashSeed": _MAX_SAMPLE_SEED}):
+        assert _sample_seed() == _MAX_SAMPLE_SEED
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(-1, id="negative"),
+        pytest.param(2**32, id="one_past_max"),
+        pytest.param("not-a-number", id="text"),
+    ],
+)
+def test_cache_hash_seed_warns_when_it_ignores_a_value(value: object) -> None:
+    """An ignored seed must say so; this option exists to debug silent cache hits.
+
+    Raising would break caching outright, so the fallback warns instead of failing.
+    """
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": value}):
+            assert _sample_seed() == 0
+
+    mock_warning.assert_called_once()
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert repr(value) in logged_message, "the warning must name the value the user set"
+    assert str(_MAX_SAMPLE_SEED) in logged_message, (
+        "the warning must state the valid range"
+    )
+
+
+def test_cache_hash_seed_warns_only_once_for_a_repeated_value() -> None:
+    """``_sample_seed`` runs per hash, so an unchanged bad value must not flood the log."""
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": -1}):
+            for _ in range(5):
+                assert _sample_seed() == 0
+
+    mock_warning.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "value", [0, 7, _MAX_SAMPLE_SEED], ids=["default", "normal", "max_supported"]
+)
+def test_cache_hash_seed_stays_quiet_for_a_usable_value(value: int) -> None:
+    """A seed that is honoured must not warn."""
+    _warned_sample_seeds.clear()
+
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        with patch_config_options({"runner.cacheHashSeed": value}):
+            assert _sample_seed() == value
+
+    mock_warning.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(-1, id="negative"),
+        pytest.param(2**32, id="one_past_max"),
+        pytest.param(2**64, id="far_past_max"),
+        pytest.param(_MAX_SAMPLE_SEED, id="max_supported"),
+    ],
+)
+@pytest.mark.parametrize(
+    "make_obj",
+    [
+        pytest.param(_large_pandas_dataframe, id="pandas_dataframe"),
+        pytest.param(_large_pandas_series, id="pandas_series"),
+        pytest.param(_large_numpy_array, id="numpy_array"),
+        pytest.param(
+            _large_polars_dataframe,
+            id="polars_dataframe",
+            marks=pytest.mark.require_integration,
+        ),
+        pytest.param(
+            _large_polars_series,
+            id="polars_series",
+            marks=pytest.mark.require_integration,
+        ),
+    ],
+)
+def test_cache_hash_seed_never_breaks_hashing_of_a_large_object(
+    make_obj: Callable[[], Any], value: int
+) -> None:
+    """Hashing a large object must succeed whatever the option is set to.
+
+    This is the user-visible symptom: a bad seed reaching the sampling call raises
+    and breaks ``@st.cache_data`` / ``@st.cache_resource`` entirely, so assert on a
+    real hash rather than only on ``_sample_seed``'s return value.
+    """
+    obj = make_obj()
+
+    with patch_config_options({"runner.cacheHashSeed": value}):
+        assert isinstance(get_hash(obj), bytes)
+
+
+@pytest.mark.parametrize(
+    "make_obj",
+    [
+        pytest.param(_large_pandas_dataframe, id="pandas_dataframe"),
+        pytest.param(_large_pandas_series, id="pandas_series"),
+        pytest.param(_large_numpy_array, id="numpy_array"),
+        # The polars cases need the integration dependency group, and the marker is
+        # exclusive in both directions -- an unmarked polars test would be skipped by
+        # the default run (no polars) and by the integration run (no marker), so it
+        # would never actually execute.
+        pytest.param(
+            _large_polars_dataframe,
+            id="polars_dataframe",
+            marks=pytest.mark.require_integration,
+        ),
+        pytest.param(
+            _large_polars_series,
+            id="polars_series",
+            marks=pytest.mark.require_integration,
+        ),
+    ],
+)
+def test_cache_hash_seed_reaches_every_sampling_path(
+    make_obj: Callable[[], Any],
+) -> None:
+    """Changing the seed must change the cache key of a large object."""
+    obj = make_obj()
+
+    with patch_config_options({"runner.cacheHashSeed": 0}):
+        hash_default = get_hash(obj)
+    with patch_config_options({"runner.cacheHashSeed": 1}):
+        hash_other = get_hash(obj)
+
+    assert hash_default != hash_other
+
+
+def test_cache_hash_seed_is_deterministic_for_pandas_dataframe() -> None:
+    """A given seed must produce a stable cache key across calls."""
+    with patch_config_options({"runner.cacheHashSeed": 7}):
+        first = get_hash(_large_pandas_dataframe())
+        second = get_hash(_large_pandas_dataframe())
+
+    assert first == second
+
+
+def test_cache_hash_seed_does_not_affect_small_objects() -> None:
+    """Objects below the sampling threshold are hashed in full either way."""
+    small = pd.DataFrame({"a": np.arange(10)})
+
+    with patch_config_options({"runner.cacheHashSeed": 0}):
+        hash_default = get_hash(small)
+    with patch_config_options({"runner.cacheHashSeed": 99}):
+        hash_other = get_hash(small)
+
+    assert hash_default == hash_other
+
+
+def test_cache_hash_seed_moves_off_a_real_collision() -> None:
+    """The escape hatch the option exists to provide (GitHub issue #14622).
+
+    Builds a genuine collision under the default seed by mutating only positions
+    that seed never draws -- the drawn positions depend on the seed and the array
+    length, not on the values, so this is exact rather than probabilistic -- then
+    shows a different seed tells the two arrays apart.
+    """
+    length = _NP_SIZE_LARGE + 100_000
+    base = np.arange(length)
+
+    # Replay seed 0 -- the historical default, not ``_sample_seed()`` -- to find the
+    # indices that sampler never draws. ``value == index`` for arange, so the drawn
+    # values are the drawn indices.
+    drawn = np.random.RandomState(0).choice(base.flat, size=_NP_SAMPLE_SIZE)
+    never_drawn = np.setdiff1d(np.arange(length), np.unique(drawn))
+    assert never_drawn.size > 0, (
+        "expected the default seed to leave positions unsampled"
+    )
+
+    mutated = base.copy()
+    mutated[never_drawn] = -1
+
+    with patch_config_options({"runner.cacheHashSeed": 0}):
+        assert get_hash(base) == get_hash(mutated), (
+            "expected a collision under the default seed"
+        )
+
+    with patch_config_options({"runner.cacheHashSeed": 12345}):
+        assert get_hash(base) != get_hash(mutated)
+
+
+class _FakePolarsHashResult:
+    """Chainable stand-in for Polars ``hash`` / ``hash_rows`` Arrow output."""
+
+    def hash(self, seed: int = 0) -> _FakePolarsHashResult:
+        return self
+
+    def to_arrow(self) -> _FakePolarsHashResult:
+        return self
+
+    def to_string(self) -> str:
+        return "polars-hash"
+
+
+class _FakePolarsSeries:
+    """Minimal Polars Series stand-in for hashing tests."""
+
+    def __init__(self, n: int = 3) -> None:
+        self.dtype = "Int64"
+        self.shape = (n,)
+        self._n = n
+
+    def __len__(self) -> int:
+        return self._n
+
+    def sample(self, n: int, seed: int = 0) -> _FakePolarsSeries:
+        return _FakePolarsSeries(n)
+
+    def hash(self, seed: int = 0) -> _FakePolarsHashResult:
+        return _FakePolarsHashResult()
+
+
+class _FakePolarsDataFrame:
+    """Minimal Polars DataFrame stand-in for hashing tests."""
+
+    def __init__(self, n: int = 3) -> None:
+        self.shape = (n, 1)
+        self.schema = {"a": "Int64"}
+        self._n = n
+
+    def __len__(self) -> int:
+        return self._n
+
+    def sample(self, n: int, seed: int = 0) -> _FakePolarsDataFrame:
+        return _FakePolarsDataFrame(n)
+
+    def hash_rows(self, seed: int = 0) -> _FakePolarsHashResult:
+        return _FakePolarsHashResult()
+
+
+class _UnhashablePolarsSeries(_FakePolarsSeries):
+    """Polars Series stand-in whose native ``hash`` raises ``TypeError``."""
+
+    def hash(self, seed: int = 0) -> _FakePolarsHashResult:
+        raise TypeError("forced")
+
+
+class _UnhashablePolarsDataFrame(_FakePolarsDataFrame):
+    """Polars DataFrame stand-in whose ``hash_rows`` raises ``TypeError``."""
+
+    def hash_rows(self, seed: int = 0) -> _FakePolarsHashResult:
+        raise TypeError("forced")
+
+
+def _hash_as_polars_type(obj: object, type_name: str) -> bytes:
+    """Hash ``obj`` while treating it as the given Polars type."""
+
+    def fake_is_type(_obj: object, type_to_check: object) -> bool:
+        return type_to_check == type_name
+
+    with (
+        mock.patch.dict("sys.modules", {"polars": mock.MagicMock()}),
+        mock.patch(
+            "streamlit.runtime.caching.hashing.type_util.is_type",
+            side_effect=fake_is_type,
+        ),
+    ):
+        return get_hash(obj)
+
+
+_POLARS_HASH_CASES = [
+    (_FakePolarsSeries, "polars.series.series.Series"),
+    (_FakePolarsDataFrame, "polars.dataframe.frame.DataFrame"),
+]
+
+
+@pytest.mark.parametrize(
+    ("factory", "type_name"),
+    _POLARS_HASH_CASES,
+    ids=["series", "dataframe"],
+)
+def test_polars_hashing_is_deterministic_with_mocked_polars(
+    factory: type[Any], type_name: str
+) -> None:
+    """Polars hashing is deterministic for mocked Series and DataFrame stand-ins."""
+    digest = _hash_as_polars_type(factory(), type_name)
+    assert digest == _hash_as_polars_type(factory(), type_name)
+
+
+@pytest.mark.parametrize(
+    ("factory", "type_name"),
+    _POLARS_HASH_CASES,
+    ids=["series", "dataframe"],
+)
+def test_polars_hashing_samples_large_objects(
+    factory: type[Any], type_name: str
+) -> None:
+    """Large Polars objects are hashed from a sample of rows."""
+    large = factory(n=_PANDAS_ROWS_LARGE)
+    with mock.patch.object(large, "sample", wraps=large.sample) as mock_sample:
+        _hash_as_polars_type(large, type_name)
+    mock_sample.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("factory", "type_name", "label"),
+    [
+        (_UnhashablePolarsSeries, "polars.series.series.Series", "polars Series"),
+        (
+            _UnhashablePolarsDataFrame,
+            "polars.dataframe.frame.DataFrame",
+            "polars DataFrame",
+        ),
+    ],
+    ids=["series", "dataframe"],
+)
+def test_polars_hashing_pickles_on_typeerror(
+    factory: type[Any], type_name: str, label: str
+) -> None:
+    """``TypeError`` from native Polars hashing falls back to pickle."""
+    obj = factory()
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        digest = _hash_as_polars_type(obj, type_name)
+    mock_warning.assert_called_once()
+    assert "exc_info" not in mock_warning.call_args.kwargs
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert digest == _hash_as_polars_type(obj, type_name)
+    assert label in logged_message
+    assert "forced" in logged_message
+    assert "falling back to pickling the object" in logged_message
+
+
+class _FakePydanticV1:
+    """Pydantic v1-style model that exposes ``json()`` instead of ``model_dump_json``."""
+
+    def json(self) -> str:
+        return '{"a": 1}'
+
+
+class _FakePydanticUnhashable:
+    """Pydantic-like model whose JSON dump fails."""
+
+    def model_dump_json(self) -> str:
+        raise TypeError("cannot serialize")
+
+
+def test_pydantic_v1_model_hashes_via_json_method() -> None:
+    """Pydantic v1 models without ``model_dump_json`` hash via ``json()``."""
+    obj = _FakePydanticV1()
+    with (
+        mock.patch(
+            "streamlit.runtime.caching.hashing.type_util.is_pydantic_model",
+            return_value=True,
+        ),
+        mock.patch.object(obj, "json", wraps=obj.json) as mock_json,
+    ):
+        digest = get_hash(obj)
+    mock_json.assert_called()
+    with mock.patch(
+        "streamlit.runtime.caching.hashing.type_util.is_pydantic_model",
+        return_value=True,
+    ):
+        assert get_hash(obj) == digest
+
+
+def test_pydantic_like_model_is_unhashable_when_json_dump_fails() -> None:
+    """Failed Pydantic serialization raises ``UnhashableTypeError``."""
+    with mock.patch(
+        "streamlit.runtime.caching.hashing.type_util.is_pydantic_model",
+        return_value=True,
+    ):
+        with pytest.raises(UnhashableTypeError, match="unhashable members"):
+            get_hash(_FakePydanticUnhashable())

@@ -25,10 +25,10 @@ import {
 import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
+import { CustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
-import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
+import type { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import { LocalStore } from "~lib/util/storageUtils"
 import {
   isDarkThemeInQueryParams,
@@ -36,19 +36,19 @@ import {
   notNullOrUndefined,
 } from "~lib/util/utils"
 
-import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
 import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
 import type {
   CachedTheme,
+  DerivedColors,
   EmotionTheme,
+  EmotionThemeColors,
   ThemeConfig,
   ThemeSelection,
   ThemeSpacing,
 } from "./types"
-import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
@@ -93,7 +93,7 @@ export function sortThemeInputKeys(obj: unknown): unknown {
   if (typeof obj === "object") {
     const sorted: Record<string, unknown> = {}
     Object.keys(obj)
-      .sort()
+      .toSorted()
       .forEach(key => {
         sorted[key] = sortThemeInputKeys((obj as Record<string, unknown>)[key])
       })
@@ -106,7 +106,7 @@ export function sortThemeInputKeys(obj: unknown): unknown {
 
 function mergeTheme(
   theme: ThemeConfig,
-  injectedTheme: ICustomThemeConfig | undefined
+  injectedTheme: CustomThemeConfig.$Properties | undefined
 ): ThemeConfig {
   // We confirm the injectedTheme is a valid object before merging it
   // since the type makes assumption about the implementation of the
@@ -432,13 +432,13 @@ export const parseRadius = (
   } else if (processedRadius === "full") {
     radiusValue = 1.4
   } else if (processedRadius.endsWith("rem")) {
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
   } else if (processedRadius.endsWith("px")) {
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
     cssUnit = "px"
-  } else if (!isNaN(parseFloat(processedRadius))) {
+  } else if (!Number.isNaN(Number.parseFloat(processedRadius))) {
     // Fallback: if the value can be parsed as a number, treat it as pixels
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
     cssUnit = "px"
   }
 
@@ -462,7 +462,7 @@ export const parseFontSize = (
     // If string, check its valid (ends with "rem" or "px")
     // and can be parsed as a number
     const processedFontSize = fontSize.trim().toLowerCase()
-    const parsedFontSize = parseFloat(processedFontSize)
+    const parsedFontSize = Number.parseFloat(processedFontSize)
     if (
       parsedFontSize &&
       (processedFontSize.endsWith("rem") || processedFontSize.endsWith("px"))
@@ -483,7 +483,19 @@ export const parseFontSize = (
 }
 
 /**
- * Validate a font weight config
+ * Validates a font weight config value against three rules:
+ *   1. Must be an integer.
+ *   2. Must be an integer multiple of 50.
+ *   3. Must be within [`minWeight`, `maxWeight`] (inclusive).
+ *
+ * @param weightConfigName - Name of the config option, used in the warning message.
+ * @param fontWeight - The value to validate; null/undefined means "not configured".
+ * @param minWeight - Lower bound (inclusive).
+ * @param maxWeight - Upper bound (inclusive).
+ * @param inSidebar - When true, the warning message cites "theme.sidebar" instead of "theme".
+ * @returns `true` if the value is set and passes all three rules.
+ *   Returns `false` and logs a warning when the value is set but fails any rule.
+ *   Returns `false` silently when the value is null or undefined.
  */
 const isValidFontWeight = (
   weightConfigName: string,
@@ -497,12 +509,12 @@ const isValidFontWeight = (
   // If the font weight config is set, validate it (log warning if invalid)
   if (notNullOrUndefined(fontWeight)) {
     const isInteger = Number.isInteger(fontWeight)
-    const isIncrementOf100 = fontWeight % 100 === 0
+    const isIncrementOf50 = fontWeight % 50 === 0
     const isInRange = fontWeight >= minWeight && fontWeight <= maxWeight
 
-    if (!isInteger || !isIncrementOf100 || !isInRange) {
+    if (!isInteger || !isIncrementOf50 || !isInRange) {
       LOG.warn(
-        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 100. Falling back to default font weight.`
+        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 50. Falling back to default font weight.`
       )
       return false
     }
@@ -536,7 +548,7 @@ const convertHeadingFontSizeToRem = (
     return validatedSize
   } else if (validatedSize?.endsWith("px")) {
     // Convert the font size to rem, and round to nearest 8th
-    const remValue = parseFloat(validatedSize) / baseFontSize
+    const remValue = Number.parseFloat(validatedSize) / baseFontSize
     return `${remValue}rem`
   }
 
@@ -575,7 +587,8 @@ const setHeadingFontSizes = (
 
       // If valid configured value, overwrite the default heading font size
       if (convertedSize) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font sizes have no index signature
         headingFontSizesOverrides[headingFontSizeKey] = convertedSize
       }
     })
@@ -654,7 +667,8 @@ const setFontWeights = (
           inSidebar
         )
       ) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font weights have no index signature
         fontWeightOverrides[headingFontWeightKey] = weight
       }
     })
@@ -683,7 +697,7 @@ const validateChartColors = (
 }
 
 export const createEmotionTheme = (
-  themeInput: Partial<ICustomThemeConfig>,
+  themeInput: Partial<CustomThemeConfig.$Properties>,
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
   const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
@@ -714,7 +728,7 @@ export const createEmotionTheme = (
 
   const parsedColors = Object.entries(customColors).reduce(
     (colorsArg: Record<string, string>, [key, color]) => {
-      // @ts-expect-error
+      // @ts-expect-error - remaining theme values are not all typed as color strings
       const validatedColor = parseColor(color, key, inSidebar)
       if (validatedColor) {
         colorsArg[key] = validatedColor
@@ -733,6 +747,7 @@ export const createEmotionTheme = (
     textColor: bodyText,
     dataframeBorderColor,
     dataframeHeaderBackgroundColor,
+    dataframeHeaderTextColor,
     borderColor,
     linkColor,
     codeTextColor,
@@ -792,11 +807,23 @@ export const createEmotionTheme = (
 
   // Conditional Overrides - Colors
 
+  // Code background should use the codeBackgroundColor config if provided,
+  // otherwise use the derived bgMix (configured/derived or default) above
   conditionalOverrides.colors.codeBackgroundColor =
-    codeBackgroundColor ?? colors.codeBackgroundColor
+    codeBackgroundColor ?? conditionalOverrides.colors.codeBackgroundColor
 
+  // Dataframe header background should use the config if provided,
+  // otherwise use the derived bgMix (configured/derived or default) above
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
-    dataframeHeaderBackgroundColor ?? colors.dataframeHeaderBackgroundColor
+    dataframeHeaderBackgroundColor ??
+    conditionalOverrides.colors.dataframeHeaderBackgroundColor
+
+  // Use the configured header text color when set. Otherwise keep the
+  // fadedText60 default from createEmotionColors (which already tracks
+  // textColor).
+  conditionalOverrides.colors.dataframeHeaderTextColor =
+    dataframeHeaderTextColor ??
+    conditionalOverrides.colors.dataframeHeaderTextColor
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
@@ -903,7 +930,7 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(baseRadius)) {
     const [radiusValue, cssUnit] = parseRadius(baseRadius)
 
-    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+    if (notNullOrUndefined(radiusValue) && !Number.isNaN(radiusValue)) {
       const radiusWithCssUnit = addCssUnit(radiusValue, cssUnit)
       conditionalOverrides.radii.default = radiusWithCssUnit
 
@@ -939,7 +966,7 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(buttonRadius)) {
     const [radiusValue, cssUnit] = parseRadius(buttonRadius)
 
-    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+    if (notNullOrUndefined(radiusValue) && !Number.isNaN(radiusValue)) {
       // If valid buttonRadius set, override baseRadius fallback
       conditionalOverrides.radii.button = addCssUnit(radiusValue, cssUnit)
     } else {
@@ -988,7 +1015,7 @@ export const createEmotionTheme = (
     )
     if (parsedSize) {
       // Additional validation: must be greater than 0
-      const numericValue = parseFloat(parsedSize)
+      const numericValue = Number.parseFloat(parsedSize)
       if (numericValue <= 0) {
         LOG.warn(
           `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
@@ -1011,15 +1038,12 @@ export const createEmotionTheme = (
   )
 
   // Conditional Overrides - Metric Value Font Weight
-  if (metricValueFontWeight) {
-    if (metricValueFontWeight >= 100 && metricValueFontWeight <= 900) {
-      conditionalOverrides.fontWeights.metricValueFontWeight =
-        metricValueFontWeight
-    } else {
-      LOG.warn(
-        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
-      )
-    }
+  if (
+    metricValueFontWeight &&
+    isValidFontWeight("metricValueFontWeight", metricValueFontWeight, 100, 900)
+  ) {
+    conditionalOverrides.fontWeights.metricValueFontWeight =
+      metricValueFontWeight
   }
 
   // Font Overrides
@@ -1142,29 +1166,17 @@ export const createTheme = (
   const bgColor = completedThemeInput.backgroundColor
   const startingTheme = merge(
     cloneDeep(
-      baseThemeConfig
-        ? baseThemeConfig
-        : getLuminance(bgColor) > 0.5
-          ? lightTheme
-          : darkTheme
+      baseThemeConfig || (getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme)
     ),
     { emotion: { inSidebar } }
   )
 
   const emotion = createEmotionTheme(completedThemeInput, startingTheme)
 
-  // We need to deep clone the theme object to prevent a bug in BaseWeb that causes
-  // primitives to be modified globally. This cloning decouples our BaseWeb theme
-  // object from the shared primitive objects and prevents unintended side effects.
-  const basewebTheme = cloneDeep(
-    createBaseUiTheme(emotion, startingTheme.primitives)
-  )
-
   return {
     ...startingTheme,
     name: themeName,
     emotion,
-    basewebTheme,
     themeInput,
   }
 }
@@ -1342,7 +1354,7 @@ export function addCssUnit(n: number, unit: "px" | "rem"): string {
 }
 
 function roundToTwoDecimals(n: number): number {
-  return parseFloat(n.toFixed(2))
+  return Number.parseFloat(n.toFixed(2))
 }
 
 export function blend(color: string, background: string | undefined): string {
@@ -1359,32 +1371,34 @@ export function blend(color: string, background: string | undefined): string {
 }
 
 /**
- * Convert a SCSS rem value to pixels.
- * @param scssValue: a string containing a value in rem units with or without the "rem" unit suffix
+ * Convert a CSS rem value to pixels.
+ * @param cssValue: a string containing a value in rem units with or without the "rem" unit suffix
+ * @param rootFontSizePx: optional root font size. Prefer `theme.fontSizes.baseFontSize`
+ *   so the conversion matches the theme even before `html { font-size }` is applied.
  * @returns pixel value of the given rem value
  */
-export const convertRemToPx = (scssValue: string): number => {
-  const remValue = parseFloat(scssValue.replace(/rem$/, ""))
-  return (
-    // TODO(lukasmasuch): We might want to somehow cache this value at some point.
-    // However, I did experimented with the performance of calling this, and
-    // it seems not like a big deal to call it many times.
-    remValue *
-    // We fallback to 16px if the fontSize is not defined (should only happen in tests)
-    (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
-  )
+export const convertRemToPx = (
+  cssValue: string,
+  rootFontSizePx?: number
+): number => {
+  const remValue = Number.parseFloat(cssValue.replace(/rem$/, ""))
+  const fontSize =
+    rootFontSizePx ??
+    // Fall back to the live root font size, then 16px (tests without a document style).
+    (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) ||
+      16)
+  return remValue * fontSize
 }
 
 /**
  * Customizer function for lodash mergeWith that skips protobuf default values
- * (empty strings, null, empty arrays) to prevent them from overwriting valid values.
- * @returns objValue (keep existing value) if srcValue is a protobuf default, undefined otherwise
+ * (empty strings, null, empty arrays) to prevent them from overwriting valid values,
+ * and replaces non-empty arrays atomically instead of merging by index.
  */
 const skipProtobufDefaults = (
   objValue: unknown,
   srcValue: unknown
 ): unknown => {
-  // Exclude empty strings, empty arrays, and null values
   if (
     srcValue === "" ||
     srcValue === null ||
@@ -1392,7 +1406,11 @@ const skipProtobufDefaults = (
   ) {
     return objValue
   }
-  // Let mergeWith handle all other cases normally
+  // Replace non-empty arrays wholesale — lodash index-merges arrays, which
+  // leaves leftover parent colors/sizes when a section override is shorter.
+  if (Array.isArray(srcValue) && srcValue.length > 0) {
+    return srcValue
+  }
   return undefined
 }
 
@@ -1455,7 +1473,7 @@ export const handleSectionInheritance = (
  * @returns true if the section has any actual values set
  */
 export const hasThemeSectionConfigs = (
-  section: ICustomThemeConfig | null | undefined
+  section: CustomThemeConfig.$Properties | null | undefined
 ): boolean => {
   if (!section) {
     return false

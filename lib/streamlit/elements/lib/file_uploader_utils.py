@@ -132,7 +132,10 @@ def enforce_filename_restriction(filename: str, allowed_types: Sequence[str]) ->
     # Ensure that there isn't a null byte in a filename
     # since this could be a workaround to bypass the file type check.
     if "\0" in filename:
-        raise StreamlitAPIException("Filename cannot contain null bytes.")
+        raise StreamlitAPIException(
+            "Filename cannot contain null bytes.",
+            error_id="filename-contains-null-bytes",
+        )
 
     # Check if any MIME types are present (contain "/")
     has_mime_types = any("/" in t for t in allowed_types)
@@ -153,5 +156,6 @@ def enforce_filename_restriction(filename: str, allowed_types: Sequence[str]) ->
         normalized_filename.endswith(allowed_type) for allowed_type in extension_types
     ):
         raise StreamlitAPIException(
-            f"Invalid file extension: `{extension}`. Allowed: {extension_types}"
+            f"Invalid file extension: `{extension}`. Allowed: {extension_types}",
+            error_id="file-uploader-invalid-extension",
         )

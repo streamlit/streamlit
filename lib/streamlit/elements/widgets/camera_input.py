@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast
 
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
@@ -33,19 +32,22 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.file_uploader import _get_upload_files
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    OnChangeMode,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -98,7 +100,7 @@ class CameraInputMixin:
         label: str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -158,9 +160,30 @@ class CameraInputMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this camera_input's value
-            changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the camera input should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the camera input. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (after a photo capture upload completes
+              or a captured photo is cleared).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The camera input still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. The photo
+              itself is still uploaded to the server immediately; only the
+              rerun is deferred. Ignored commits are held in the browser and
+              are lost if the page is refreshed before that rerun. Inside
+              ``st.form``, this has no effect: the form already defers all
+              commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -209,9 +232,10 @@ class CameraInputMixin:
         Returns
         -------
         None or UploadedFile
-            The UploadedFile class is a subclass of BytesIO, and therefore is
-            "file-like". This means you can pass an instance of it anywhere a
-            file is expected.
+            The ``UploadedFile`` class is a subclass of ``BytesIO``, and
+            therefore is "file-like". This means you can pass an instance of it
+            anywhere a file is expected. To use this type in an annotation,
+            import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -240,9 +264,8 @@ class CameraInputMixin:
 
         """
         if resolution is not None and resolution not in _RESOLUTION_TO_HEIGHT:
-            raise StreamlitAPIException(
-                f"Invalid resolution: {resolution!r}. "
-                f"Must be one of {list(_RESOLUTION_TO_HEIGHT)}, or None."
+            raise StreamlitValueError(
+                "resolution", ["'480p'", "'720p'", "'1080p'", "None"]
             )
 
         ctx = get_script_run_ctx()
@@ -265,7 +288,7 @@ class CameraInputMixin:
         label: str,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -276,15 +299,19 @@ class CameraInputMixin:
         ctx: ScriptRunContext | None = None,
     ) -> UploadedFile | None:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None,
             writes_allowed=False,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "camera_input",
@@ -310,7 +337,10 @@ class CameraInputMixin:
             camera_input_proto.resolution_height = _RESOLUTION_TO_HEIGHT[resolution]
 
         if help is not None:
-            camera_input_proto.help = dedent(help)
+            camera_input_proto.help = to_help_str(help)
+
+        if isinstance(on_change, str) and on_change == "ignore":
+            camera_input_proto.ignore_rerun = True
 
         layout_config = create_layout_config(width=width)
 
@@ -318,13 +348,14 @@ class CameraInputMixin:
 
         camera_input_state = register_widget(
             camera_input_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
             value_type="file_uploader_state_value",
+            disabled=disabled,
         )
 
         self.dg._enqueue(

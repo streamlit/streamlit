@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import itertools
 import json
+import os
 import re
 import warnings
 from unittest import mock
@@ -30,7 +31,6 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.map import _DEFAULT_MAP, _DEFAULT_ZOOM_LEVEL
 from streamlit.errors import StreamlitAPIException
-from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 mock_df = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
@@ -365,13 +365,20 @@ class StMapTest(DeltaGeneratorTestCase):
         ):
             st.map(df)
 
-    def test_mapbox_token_is_set_in_proto(self):
-        """Test that mapbox token is set in proto if configured."""
-
-        with patch_config_options({"mapbox.token": "test_mapbox_token"}):
+    def test_mapbox_token_is_set_in_proto(self) -> None:
+        """Test that mapbox token is set in proto from MAPBOX_API_KEY."""
+        with mock.patch.dict(os.environ, {"MAPBOX_API_KEY": "test_mapbox_token"}):
             st.map(mock_df)
             c = self.get_delta_from_queue().new_element.deck_gl_json_chart
             assert c.mapbox_token == "test_mapbox_token"
+
+    def test_mapbox_token_not_set_without_env_var(self) -> None:
+        """Test that mapbox token is empty when MAPBOX_API_KEY is unset."""
+        with mock.patch.dict(os.environ):
+            os.environ.pop("MAPBOX_API_KEY", None)
+            st.map(mock_df)
+            c = self.get_delta_from_queue().new_element.deck_gl_json_chart
+            assert c.mapbox_token == ""
 
 
 class StMapWidthHeightTest(DeltaGeneratorTestCase):
@@ -520,3 +527,40 @@ class StMapWidthHeightTest(DeltaGeneratorTestCase):
         kwargs = {param_name: invalid_value}
         with pytest.raises(StreamlitAPIException):
             st.map(mock_df, **kwargs)
+
+    def test_map_alt_sets_proto_field_and_drops_blank_values(self):
+        """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
+        st.map(mock_df, alt="Sample points near San Francisco")
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == "Sample points near San Francisco"
+
+        st.map(mock_df)
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+        st.map(mock_df, alt=None)
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+        st.map(mock_df, alt="  ")
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+    def test_map_alt_strips_whitespace(self):
+        """Leading and trailing whitespace is stripped from alt."""
+        st.map(mock_df, alt="  Sample points near San Francisco  ")
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == "Sample points near San Francisco"
+
+    def test_map_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Map of "A < B" & hubs <script>alert(1)</script>'
+        st.map(mock_df, alt=adversarial)
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == adversarial

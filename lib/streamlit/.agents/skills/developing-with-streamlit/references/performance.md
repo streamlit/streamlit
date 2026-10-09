@@ -13,8 +13,9 @@ Use for any function that loads or computes data.
 def load_data(path):
     return pd.read_csv(path)
 
-# GOOD: Cached
-@st.cache_data
+
+# GOOD: Cached, bounded with max_entries
+@st.cache_data(max_entries=100)
 def load_data(path):
     return pd.read_csv(path)
 ```
@@ -27,6 +28,7 @@ Use for connections, API clients, ML models—objects that can't be serialized.
 @st.cache_resource
 def get_client():
     return OpenAI(api_key=st.secrets["openai_key"])
+
 
 @st.cache_resource
 def load_model():
@@ -42,6 +44,7 @@ Note: `st.connection()` already handles caching internally — don't wrap it in 
 def get_metrics():
     return api.fetch()
 
+
 @st.cache_data(ttl="1h")  # 1 hour
 def load_reference_data():
     return pd.read_csv("large_reference.csv")
@@ -54,6 +57,71 @@ def load_reference_data():
 - Reference data → `ttl="1h"` or more
 - Static data → No TTL
 
+### Background refresh (serve stale while updating)
+
+By default, when a cached entry's `ttl` expires, the next call blocks while the function
+recomputes. Use `refresh_mode="background"` to instead return the expired value immediately
+and recompute in the background—ideal when slightly stale data is acceptable but latency
+isn't.
+
+```python
+@st.cache_data(ttl="5m", refresh_mode="background")
+def get_metrics():
+    return api.fetch()
+```
+
+Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be
+combined with `persist`. The function can't use session-specific features (e.g.
+`st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
+with both `st.cache_data` and `st.cache_resource`. Combining it with an `async def` cached
+function raises an error at decoration time; use `refresh_mode="foreground"` instead.
+
+By default Streamlit hard-expires a background-refresh entry at `2 × ttl`, serving
+it stale for one extra `ttl`. Set `runner.cacheBackgroundRefreshTTLMultiplier` to a
+finite number greater than `1.0` to move that bound: a multiplier of `M`
+hard-expires at `M × ttl`, giving a stale window of `(M - 1) × ttl`. Invalid
+values warn and fall back to `2.0`. Raising it avoids blocking recomputes after
+idle periods or failed refreshes; lowering it serves fresher data and frees
+memory sooner.
+
+```toml
+# .streamlit/config.toml
+[runner]
+cacheBackgroundRefreshTTLMultiplier = 4.0
+```
+
+Background refresh is access-driven: it starts only after a call observes an expired entry,
+so the caller may briefly receive stale data. For advanced cases that need the server to
+initiate background refreshes for specific global cache keys even without user traffic, use
+an `st.App` lifespan task to periodically call the cached function with those arguments. See
+[Scheduled background refresh for specific
+keys](server-asgi.md#scheduled-background-refresh-for-specific-keys).
+
+### Async functions
+
+`@st.cache_data` and `@st.cache_resource` can decorate `async def` functions. The decorated
+call returns an awaitable; you must await it (for example with `asyncio.run()` in a Streamlit
+script). Streamlit caches the awaited return value, not the coroutine.
+
+```python
+import asyncio
+
+import streamlit as st
+
+
+@st.cache_data
+async def load_config():
+    return await fetch_config()
+
+
+config = asyncio.run(load_config())
+```
+
+Do not cache live async clients or connections bound to the event loop that created
+them — that loop may already be closed on a later rerun, and the object will raise
+`Event loop closed`. Cache results that stay valid across loops, such as API payloads,
+dataframes, and config.
+
 ### Prevent unbounded cache growth
 
 **Important:** Caches without `ttl` or `max_entries` can grow indefinitely and cause memory issues. For any cached function that stores changing objects (user-specific data, parameterized queries), set limits:
@@ -64,10 +132,12 @@ def load_reference_data():
 def get_user_data(user_id):
     return fetch_user(user_id)
 
+
 # GOOD: Bounded cache with TTL
 @st.cache_data(ttl="1h")
 def get_user_data(user_id):
     return fetch_user(user_id)
+
 
 # GOOD: Bounded cache with max entries
 @st.cache_data(max_entries=100)
@@ -84,8 +154,10 @@ Use `@st.fragment` to isolate reruns for self-contained UI pieces.
 ```python
 # BAD: Full app reruns
 st.metric("Users", get_count())
-if st.button("Refresh"):
-    st.rerun()
+st.button("Refresh")
+query = st.text_input("Search", type="search", live=True)
+st.dataframe(search(query))
+
 
 # GOOD: Only fragment reruns
 @st.fragment
@@ -93,7 +165,15 @@ def live_metrics():
     st.metric("Users", get_count())
     st.button("Refresh")
 
+
+@st.fragment
+def live_search():
+    query = st.text_input("Search", type="search", live=True)
+    st.dataframe(search(query))
+
+
 live_metrics()
+live_search()
 ```
 
 For auto-refreshing metrics, use `run_every`:
@@ -103,10 +183,38 @@ For auto-refreshing metrics, use `run_every`:
 def auto_refresh_metrics():
     st.metric("Users", get_count())
 
+
 auto_refresh_metrics()
 ```
 
-Use for: live metrics, refresh buttons, interactive charts that don't affect global state.
+Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
+
+
+### Keyed reruns — target a fragment from a callback
+
+Use this when a widget *outside* a fragment should trigger only that fragment's rerun — not a full-app rerun. Give the fragment a stable name with `@st.fragment(key=...)` and call `st.rerun("<key>")` from the widget's callback.
+
+```python
+@st.fragment(key="charts")
+def charts():
+    st.line_chart(st.session_state.data)
+
+
+charts()
+# Button lives outside the fragment; clicking it reruns only "charts".
+st.button("Refresh charts", on_click=lambda: st.rerun("charts"))
+```
+
+To rerun multiple fragments at once, pass a list:
+
+```python
+st.button("Refresh all", on_click=lambda: st.rerun(["charts", "table"]))
+```
+
+**Constraints:**
+
+- `st.rerun("<key>")` is **only valid inside a widget callback** (`on_change`, `on_click`, etc.). Calling it from the main script body or a fragment body raises an error.
+- The named fragment must have been rendered during the **most recently completed full-app run**. Fragments evicted because they were behind a `False` conditional in that run are no longer in storage and raise an error.
 
 ### Parallel fragments
 
@@ -118,30 +226,37 @@ Use `parallel=True` to run independent fragments concurrently during full app re
 def revenue():
     st.metric("Revenue", query_revenue())  # ~3s
 
+
 @st.fragment
 def users():
     st.metric("Users", query_users())  # ~3s
+
 
 @st.fragment
 def orders():
     st.metric("Orders", query_orders())  # ~3s
 
+
 revenue()
 users()
 orders()
+
 
 # GOOD: Three slow queries run concurrently (~3s total)
 @st.fragment(parallel=True)
 def revenue():
     st.metric("Revenue", query_revenue())
 
+
 @st.fragment(parallel=True)
 def users():
     st.metric("Users", query_users())
 
+
 @st.fragment(parallel=True)
 def orders():
     st.metric("Orders", query_orders())
+
 
 revenue()
 users()
@@ -190,10 +305,10 @@ if submitted:
 Use `border=False` for seamless inline forms that don't look like forms:
 
 ```python
-with st.form("search", border=False):
+with st.form("invite", border=False):
     with st.container(horizontal=True):
-        query = st.text_input("Search", label_visibility="collapsed")
-        st.form_submit_button(":material/search:")
+        email = st.text_input("Email", label_visibility="collapsed")
+        st.form_submit_button("Invite")
 ```
 
 **When to use forms:**
@@ -203,6 +318,24 @@ with st.form("search", border=False):
 - Any UI where "submit" semantics make sense
 
 **When NOT to use forms:** If inputs depend on each other (e.g., selecting a country should update available cities), forms won't work since there's no rerun until submit.
+
+## Skip reruns on individual widgets
+
+Some input widgets accept `on_change="ignore"` instead of a callback or `"rerun"`. The widget still updates in the UI, but Streamlit does not rerun the script. Python sees the new value only on the next rerun triggered by something else (a button, another widget, and so on).
+
+```python
+threshold = st.slider("Threshold", 0.0, 1.0, 0.5, on_change="ignore")
+if st.button("Apply"):
+    run_model(threshold)
+```
+
+Use this when a single control should not rerun the app until the user applies it. Use a form when several related inputs should commit together.
+
+Caveats for `on_change="ignore"`:
+
+- The browser holds the pending value until the next rerun. A page refresh before then loses it, unless the widget also sets `bind="query-params"`.
+- Inside `st.form`, `on_change="ignore"` has no effect; the form already defers commits until submit.
+- `st.file_uploader`, `st.camera_input`, and `st.audio_input` still upload the file, photo, or recording immediately; only the rerun is deferred.
 
 ## Conditional rendering
 
@@ -214,7 +347,7 @@ By default, layout containers like `st.tabs`, `st.expander`, and `st.popover` al
 
 `st.tabs` renders ALL tab content on every rerun, even hidden tabs. Two fixes:
 
-**Preferred (Streamlit 1.55+): Dynamic tabs with `on_change="rerun"`**
+**Preferred: Dynamic tabs with `on_change="rerun"`**
 
 Keep the tabs UX. Setting `on_change="rerun"` makes tabs dynamic — each tab's `.open` property returns `True` for the selected tab and `False` otherwise, so you can guard expensive work. (With the default `on_change="ignore"`, all tab content runs on every rerun and `.open` is `None` for every tab.)
 
@@ -251,7 +384,7 @@ elif view == "Heavy":
 
 `st.expander` renders content even when collapsed. Two fixes:
 
-**Preferred (Streamlit 1.55+): Dynamic expander with `on_change="rerun"`**
+**Preferred: Dynamic expander with `on_change="rerun"`**
 
 With `on_change="rerun"`, the `.open` property returns `True` when the expander is open and `False` when collapsed, so you can guard expensive work. (Without `on_change`, `.open` is `None` and all content runs regardless.)
 
@@ -311,7 +444,9 @@ st.dataframe(report.transactions)  # Depends on report
 with st.sidebar:  # Independent of the report, but stuck behind it
     st.date_input("Date range")
     st.multiselect("Regions", regions)
-st.caption("Data refreshes hourly. Email support@example.com for access.")  # Independent
+st.caption(
+    "Data refreshes hourly. Email support@example.com for access."
+)  # Independent
 ```
 
 ```python
@@ -341,7 +476,7 @@ For independent slow sections, prefer `@st.fragment(parallel=True)` so each fill
 
 ## Perceived performance (loading states)
 
-The techniques above reduce _actual_ work and keep the UI fresh. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive instead of showing greyed, stale content. These don't speed up computation — pair them with caching and fragments. See `layouts.md` for details:
+The techniques above keep the UI fresh and responsive during slow work. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive instead of showing greyed, stale content. These don't speed up computation — pair them with caching and fragments to cut the _actual_ work. See `layouts.md` for details:
 
 - `st.spinner` — lightweight indicator wrapped around a block of slow work.
 - `st.skeleton` — animated placeholder that reserves layout space while content loads.

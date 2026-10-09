@@ -28,3 +28,4 @@ Rules:
 - `body` must be concise, specific, and MUST use [Conventional Comments](https://conventionalcomments.org/) syntax. Prefix every body with a label such as `issue:`, `suggestion:`, `nitpick:`, `question:`, or `thought:`.
 - `severity` must be one of: `high`, `medium`, `low`.
 - If no good inline candidates exist after triage, write `{"comments": []}`.
+- Drop comments that only ask for more detailed scripts or procedures in agent or skill instruction files. Those files are meant to stay high-level, and that is not a merge-blocking issue.

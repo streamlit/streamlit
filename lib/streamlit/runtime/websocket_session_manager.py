@@ -140,17 +140,52 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
                 "This should never happen."
             )
 
-        if existing_session_id in self._active_session_info_by_id:
-            _LOGGER.warning(
-                "Session with id %s is already connected! Connecting to a new session.",
-                existing_session_id,
-            )
+        active_session_info = (
+            self._active_session_info_by_id.get(existing_session_id)
+            if existing_session_id
+            else None
+        )
+        if active_session_info is not None:
+            if active_session_info.session.matches_user_info(user_info):
+                _LOGGER.warning(
+                    "Session with id %s is already connected! Reconnecting to existing session.",
+                    existing_session_id,
+                )
+                # Disconnecting the still-active session moves it into storage,
+                # which makes it available to the storage-based reconnect path
+                # below. The new client then reconnects to the same session
+                # (preserving its state) instead of a brand-new one being
+                # created.
+                self.disconnect_session(active_session_info.session.id)
+            else:
+                # The reconnect id points at a session that is still active
+                # under a different user's identity. Validate identity *before*
+                # disconnecting so we never tear down another user's active
+                # session: treat the id as invalid, hand out a fresh session,
+                # and leave the original session and its client untouched.
+                _LOGGER.warning(
+                    "Ignoring reconnect to active session id %s: user identity "
+                    "mismatch. Connecting to a new session instead.",
+                    existing_session_id,
+                )
+                existing_session_id = None
 
         session_info = (
             existing_session_id
             and existing_session_id not in self._active_session_info_by_id
             and self._session_storage.get(existing_session_id)
         )
+
+        # Only reconnect to a stored session when the reconnecting identity
+        # matches the identity that originally owned it. A mismatch is treated
+        # like an invalid reconnect id: fall through to create a fresh session
+        # and leave the stored session untouched. This is the defense for
+        # normally-disconnected sessions (the active-session path above handles
+        # the not-yet-disconnected case).
+        if isinstance(
+            session_info, SessionInfo
+        ) and not session_info.session.matches_user_info(user_info):
+            session_info = None
 
         if isinstance(session_info, SessionInfo):
             existing_session = session_info.session

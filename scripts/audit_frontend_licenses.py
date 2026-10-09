@@ -77,9 +77,9 @@ PACKAGE_EXCEPTIONS: set[PackageInfo] = {
         "UNKNOWN",
     ),
     (
-        # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
-        "@plotly/mapbox-gl@npm:1.13.4",
-        "SEE LICENSE IN LICENSE.txt",
+        # MIT license: https://github.com/mapbox/jsonlint
+        "@mapbox/jsonlint-lines-primitives@npm:2.0.3",
+        "UNKNOWN",
     ),
     (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
@@ -100,12 +100,6 @@ PACKAGE_EXCEPTIONS: set[PackageInfo] = {
         # MIT license: https://github.com/felixge/node-stack-trace/blob/master/License
         "stack-trace@npm:0.0.9",
         "UNKNOWN",
-    ),
-    (
-        # Licenses has a typo, is meant to be BSD-3-Clause
-        # https://github.com/luizbarboza/splaytree-ts/blob/master/LICENSE
-        "splaytree-ts@npm:1.0.2",
-        "BDS-3-Clause",
     ),
     (
         # MIT license: https://github.com/fabiospampinato/khroma/blob/master/license

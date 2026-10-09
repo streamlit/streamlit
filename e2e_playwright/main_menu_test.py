@@ -17,20 +17,37 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_loaded,
+    wait_until,
+)
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
+
+_MAIN_MENU_VERSION_PLACEHOLDER = "Made with Streamlit vX.XX.X"
+
+
+def _redact_main_menu_version(page: Page) -> None:
+    """Replace the version footer with a stable placeholder.
+
+    Nightly builds display ``1.x.x.dev`` (see ``formatDisplayVersion``), which is
+    wider than a release version. Menu rows are ``width: 100%``, so that extra
+    width would change snapshots of individual items as well as the popover.
+    """
+    # The version footer lives outside role="menu" (inside the popover wrapper).
+    page.get_by_test_id("stMainMenuPopover").get_by_text(
+        re.compile(r"^Made with Streamlit v")
+    ).evaluate(
+        "(el, text) => { el.textContent = text }",
+        _MAIN_MENU_VERSION_PLACEHOLDER,
+    )
 
 
 def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunction):
     themed_app.get_by_test_id("stMainMenu").click()
+    _redact_main_menu_version(themed_app)
 
-    # Replace version with placeholder so snapshots don't change across versions.
-    # The version footer lives outside role="menu" (inside the popover wrapper).
-    popover = themed_app.get_by_test_id("stMainMenuPopover")
-    popover.get_by_text(re.compile(r"^Made with Streamlit v")).evaluate(
-        "el => (el.textContent = 'Made with Streamlit vX.XX.X')"
-    )
-
-    assert_snapshot(popover, name="main_menu")
+    assert_snapshot(themed_app.get_by_test_id("stMainMenuPopover"), name="main_menu")
 
 
 def test_main_menu_closes_on_escape(app: Page):
@@ -152,9 +169,9 @@ def test_keyboard_activates_menu_item(app: Page):
 
 
 # WebKit (Safari) does not allow programmatic .focus() on buttons outside a
-# user-activation context. Our focus-return fires from react-focus-lock's
-# returnFocus callback (during FocusLock's unmount cleanup), which
-# Chromium/Firefox accept but WebKit silently ignores.
+# user-activation context. Our focus-return fires from a useLayoutEffect
+# (synchronously after the popover unmounts), which Chromium/Firefox accept
+# but WebKit silently ignores.
 @pytest.mark.skip_browser("webkit")
 def test_focus_returns_to_menu_button_after_close(app: Page):
     """Test that focus returns to the menu button after the popover closes."""
@@ -175,7 +192,7 @@ def test_tab_closes_menu(app: Page):
     """Test that pressing Tab from the menu eventually closes the popover.
 
     The first Tab moves focus from the menu items to the version CopyButton
-    (which lives outside role="menu" but inside the popover's focus-lock).
+    (which lives outside role="menu" but inside the popover's focus cycle).
     The second Tab closes the popover and advances focus.
     """
     menu_button = app.get_by_test_id("stMainMenuButton")
@@ -323,6 +340,30 @@ def test_auto_rerun_toggle_changes_state(app: Page):
 
     # Menu should remain open after toggling
     expect(popover).to_be_visible()
+
+
+def test_auto_rerun_toggle_with_custom_border_color(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Auto-rerun off track must not follow a custom opaque theme.borderColor.
+
+    The unchecked track is a surface filled with `fadedText10`, not a border, so
+    it must stay neutral even when the theme sets an opaque `borderColor`
+    (same rule as `st.toggle`).
+    """
+    apply_theme_via_window(app, base="light", borderColor="#00008B")
+    app.reload()
+    wait_for_app_loaded(app)
+
+    app.get_by_test_id("stMainMenu").click()
+    toggle = app.get_by_test_id("stMainMenuItem-autoRerun")
+    expect(toggle).to_be_visible()
+    expect(toggle).to_have_attribute("aria-checked", "false")
+
+    # Pin the footer width before snapshotting the full-width toggle row.
+    _redact_main_menu_version(app)
+
+    assert_snapshot(toggle, name="main_menu-auto_rerun-custom-theme")
 
 
 def test_rerun_visible_in_dev_mode(app: Page):

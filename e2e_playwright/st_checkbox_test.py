@@ -26,14 +26,18 @@ from e2e_playwright.shared.app_utils import (
     click_checkbox,
     click_toggle,
     expect_help_tooltip,
+    expect_label_truncated,
     expect_markdown,
     expect_prefixed_markdown,
     get_checkbox,
     get_element_by_key,
     get_expander,
+    reset_hovering,
 )
 
-CHECKBOX_ELEMENTS = 20
+CHECKBOX_ELEMENTS = 25
+
+WRAP_LABEL = "Include archived projects from the last several quarters"
 
 
 def test_checkbox_widget_display(
@@ -94,6 +98,21 @@ def test_checkbox_widget_display(
         get_checkbox(themed_app, "checkbox with 200px width"),
         name="st_checkbox-width_200px",
     )
+
+
+def test_checkbox_unchecked_hover(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Verify unchecked checkbox hover matches the secondary button in both themes."""
+    checkbox = get_checkbox(themed_app, "checkbox 2 (False)")
+    label = checkbox.locator("label").first
+
+    reset_hovering(themed_app)
+    expect(checkbox.locator("[data-hovered]")).to_have_count(0)
+
+    label.hover()
+    expect(label).to_have_attribute("data-hovered", "true")
+    assert_snapshot(checkbox, name="st_checkbox-unchecked_hover")
 
 
 def test_help_tooltip_works(app: Page):
@@ -158,6 +177,55 @@ def test_grouped_checkboxes_height(app: Page, assert_snapshot: ImageCompareFunct
     expect(get_checkbox(expander_details, "checkbox group - 1")).to_have_css(
         "height", "24px"
     )
+
+
+def test_wrap_false_single_row_and_auto_resolution(app: Page):
+    """wrap=False keeps the checkbox on one row and exposes the full label via a
+    native title, while the auto default (wrap=None) wraps and grows taller in a
+    vertical layout but ellipsizes with a title inside a horizontal container.
+    """
+    wrap_false = get_element_by_key(app, "wrap_false_checkbox")
+    wrap_auto_vertical = get_element_by_key(app, "wrap_auto_vertical_checkbox")
+
+    # wrap=False: label ellipsized and full label exposed via a native title.
+    # The checkbox indicator itself must remain visible (not clipped by truncation).
+    expect_label_truncated(wrap_false)
+    expect(wrap_false.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(wrap_false.get_by_role("checkbox")).to_be_visible()
+
+    # Auto default in a vertical layout wraps onto another line and adds no title.
+    expect(wrap_auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    false_box = wrap_false.get_by_test_id("stCheckbox").bounding_box()
+    auto_box = wrap_auto_vertical.get_by_test_id("stCheckbox").bounding_box()
+    assert false_box is not None
+    assert auto_box is not None
+    # The 4px margin absorbs sub-pixel rounding so the wrapped (two-line) checkbox
+    # is clearly taller than the single-row one, not just larger by rounding.
+    assert auto_box["height"] > false_box["height"] + 4
+
+    # Auto default inside a horizontal container keeps one row with a title.
+    wrap_auto_horizontal = get_element_by_key(app, "wrap_auto_checkbox")
+    expect_label_truncated(wrap_auto_horizontal)
+    expect(wrap_auto_horizontal.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+
+def test_wrap_false_title_and_help_coexist(app: Page):
+    """With help set, the full-label title stays on the label (the help tooltip
+    lives on a separate icon), so both coexist.
+    """
+    container = get_element_by_key(app, "wrap_help_checkbox")
+    # The label is still ellipsized and exposes the full label via a native title.
+    # The checkbox indicator and help icon must remain visible (not clipped when
+    # the help icon shares the truncated row).
+    expect_label_truncated(container)
+    expect(container.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(container.get_by_role("checkbox")).to_be_visible()
+    expect(container.get_by_test_id("stTooltipHoverTarget")).to_be_visible()
+
+    # Hovering the separate help icon still shows the help tooltip.
+    reset_hovering(app)
+    expect_help_tooltip(app, container, "wrap help text")
 
 
 def test_check_top_level_class(app: Page):
@@ -287,3 +355,43 @@ def test_checkbox_unbind_clears_url_param(page: Page, app_base_url: str):
     # Widget value should still be True (preserved in session state)
     expect_prefixed_markdown(page, "unbindable value:", "True")
     expect_prefixed_markdown(page, "bind active:", "False")
+
+
+def test_checkbox_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on click, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore checkbox value:", "False")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_checkbox="))
+
+    ignore_checkbox = get_checkbox(app, "Ignore change checkbox")
+
+    # Clicking the checkbox updates the URL without rerunning the app.
+    click_checkbox(app, "Ignore change checkbox")
+
+    # Catch a delayed rerun that click_checkbox's wait might miss.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(ignore_checkbox.get_by_role("checkbox")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore checkbox value:", "False")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_checkbox=true"))
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore checkbox", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore checkbox value: True", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore checkbox value: True", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(ignore_checkbox.get_by_role("checkbox")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore checkbox value:", "True")

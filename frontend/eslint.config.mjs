@@ -31,7 +31,6 @@ import testingLibrary from "eslint-plugin-testing-library"
 import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths"
 import globals from "globals"
 import { defineConfig, globalIgnores } from "eslint/config"
-import jsxA11y from "eslint-plugin-jsx-a11y"
 
 // Import other configs
 // Note: Some configs may need to be applied differently in flat config
@@ -42,10 +41,9 @@ const __dirname = path.dirname(__filename)
 // This is to support our custom rules, which are written in TypeScript,
 // but need to be imported as JS to work in ESLint.
 const jiti = createJiti(import.meta.url)
-const streamlitCustom = await jiti.import(
-  path.resolve(__dirname, "./eslint-plugin-streamlit-custom/src/index.ts"),
-  { default: true }
-)
+const streamlitCustom = await jiti.import("eslint-plugin-streamlit-custom", {
+  default: true,
+})
 
 /**
  * Helper to create the no-restricted-imports rule config.
@@ -74,6 +72,11 @@ export const getNoRestrictedImports = (
       message: "Please use the `AbortController` API instead of `CancelToken`",
     },
     {
+      // lodash only provides downstream peer/types; runtime imports use lodash-es.
+      name: "lodash",
+      message: "Please import from `lodash-es` for tree-shaking.",
+    },
+    {
       name: "react",
       importNames: ["default"],
       message:
@@ -90,11 +93,26 @@ export const getNoRestrictedImports = (
           message: "Test utilities must stay in test files.",
         },
       ]
+
+  // Only protobufjs' minimal runtime (Reader/Writer/util) belongs in the app
+  // bundle, which is what the generated proto code already imports. The full
+  // entry point adds the reflection layer and the .proto parser, and
+  // `protobufjs/light` still ships the reflection layer. Matched as a pattern
+  // rather than by name so deep and extensioned specifiers cannot slip past.
+  // Note that `protobufjs/minimal.d.ts` re-exports the full typings, so
+  // reflection classes like `Root` type-check when imported from
+  // `protobufjs/minimal` but are undefined at runtime.
+  const restrictedProtobufjs = {
+    regex: "^protobufjs$|^protobufjs/(?!minimal(\\.js)?$)",
+    message:
+      "Please import from `protobufjs/minimal` to keep the reflection layer and .proto parser out of the bundle.",
+  }
+
   return [
     "error",
     {
       paths: [...basePaths],
-      patterns: [...additionalPatterns],
+      patterns: [...additionalPatterns, restrictedProtobufjs],
     },
   ]
 }
@@ -240,7 +258,6 @@ export default defineConfig([
   {
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
-      ...jsxA11y.flatConfigs.recommended.plugins,
       lodash,
       "no-relative-import-paths": fixupPluginRules(noRelativeImportPaths),
       "streamlit-custom": streamlitCustom,
@@ -253,6 +270,20 @@ export default defineConfig([
       "no-console": "error",
       // Prevent unintentional use of `debugger`
       "no-debugger": "error",
+      // Correctness rules that eslint.configs.recommended does not enable
+      "no-self-compare": "error",
+      "no-return-assign": ["error", "always"],
+      "no-sequences": ["error", { allowInParentheses: false }],
+      "no-template-curly-in-string": "error",
+      "no-extend-native": "error",
+      // Keep default as the last switch clause
+      "default-case-last": "error",
+      // Safety net if the ForInStatement ban in no-restricted-syntax is relaxed
+      "guard-for-in": "error",
+      // Safety net if the LabeledStatement ban in no-restricted-syntax is relaxed
+      "no-labels": "error",
+      // Oxlint eslint/preserve-caught-error owns this check.
+      "preserve-caught-error": "off",
       // We do want to discourage the usage of flushSync
       "@eslint-react/dom-no-flush-sync": "error",
       // This was giving false positives
@@ -261,17 +292,26 @@ export default defineConfig([
       "@eslint-react/use-state": "off",
       // Turning off for now until we have clearer guidance on how to fix existing usages
       "@eslint-react/set-state-in-effect": "off",
-      // We don't want to warn about empty fragments
+      // Oxlint react/jsx-no-useless-fragment owns this check.
       "@eslint-react/jsx-no-useless-fragment": "off",
       // Prevent context values from being recreated on every render
       "@eslint-react/no-unstable-context-value": "error",
+      // Default-arg object/array literals are a new reference each render
+      "@eslint-react/no-unstable-default-props": "error",
+      // Require sandbox on raw <iframe> JSX, and rel=noopener on raw <a target=_blank>.
+      // Intrinsic elements only — styled.iframe / styled anchors are not checked.
+      "@eslint-react/dom-no-missing-iframe-sandbox": "error",
+      "@eslint-react/dom-no-unsafe-target-blank": "error",
       // We want to enforce display names for context providers for better debugging
       "@eslint-react/no-missing-context-display-name": "error",
       // New rules in @eslint-react v4/v5 — disable until existing violations are addressed
       "@eslint-react/exhaustive-deps": "off",
       // TypeScript rules with type-checking
-      // We want to use these, but we have far too many instances of these rules
-      // for it to be realistic right now. Over time, we should fix these.
+      // Production src enables no-unsafe-call / return / argument, no-misused-spread,
+      // and unbound-method (see the overlay below). This block leaves those rules
+      // off so tests, which that overlay ignores, stay exempt. Assignment and
+      // member access stay off here. A later overlay enables them for an
+      // explicit file list that already satisfies both rules.
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
@@ -298,17 +338,21 @@ export default defineConfig([
         },
       ],
       // It's safe to use functions before they're defined
-      "@typescript-eslint/no-use-before-define": ["warn", { functions: false }],
+      "@typescript-eslint/no-use-before-define": [
+        "warn",
+        { functions: false },
+      ],
       // Functions must have return types, but we allow inline function expressions to omit them
       "@typescript-eslint/explicit-function-return-type": [
         "warn",
         { allowExpressions: true },
       ],
-      // Disallow the @ts-ignore directive in favor of the more strict @ts-expect-error.
+      // Ban @ts-ignore: it stays silent after the error is fixed. @ts-expect-error
+      // fails once unused, and must describe the type mismatch it hides.
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {
-          "ts-expect-error": false,
+          "ts-expect-error": "allow-with-description",
           "ts-nocheck": false,
           "ts-check": false,
           "ts-ignore": true,
@@ -329,6 +373,13 @@ export default defineConfig([
       "@typescript-eslint/prefer-readonly": "warn",
       // Ensure return await is used in try/catch for proper error stack traces
       "@typescript-eslint/return-await": ["error", "in-try-catch"],
+      // Treat @deprecated API usage as errors
+      "@typescript-eslint/no-deprecated": "error",
+      // Require Promise .catch/.then rejection params to be unknown so callers must narrow before use
+      "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
+      // Mixed string/numeric members compare and reverse-map inconsistently;
+      // keep hand-written enums single-typed like generated protobuf ones.
+      "@typescript-eslint/no-mixed-enums": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
@@ -358,6 +409,11 @@ export default defineConfig([
         },
       ],
       "import-x/prefer-default-export": "off",
+      // Catch import specifiers that resolve to nothing useful: self-imports,
+      // redundant path segments, empty named blocks.
+      "import-x/no-self-import": "error",
+      "import-x/no-useless-path-segments": "error",
+      "import-x/no-empty-named-blocks": "error",
       "max-classes-per-file": "off",
       "no-shadow": "off",
       "no-param-reassign": "off",
@@ -435,18 +491,8 @@ export default defineConfig([
       "react-hooks/set-state-in-effect": "off",
       // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
       "react-hooks/no-deriving-state-in-effects": "error",
-      // jsx-a11y rules
-      ...jsxA11y.flatConfigs.recommended.rules,
-      // prohibit autoFocus prop
-      // https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/main/docs/rules/no-autofocus.md
-      "jsx-a11y/no-autofocus": ["error", { ignoreNonDOM: true }],
-      // Stricter a11y enforcement beyond the recommended ruleset:
-      // - Require accessible names for icon-only controls
-      "jsx-a11y/control-has-associated-label": "error",
-      // - Do not hide focusable controls from assistive technology
-      "jsx-a11y/no-aria-hidden-on-focusable": "error",
-      // - Avoid making non-interactive elements keyboard-focusable via tabIndex>=0
-      "jsx-a11y/no-noninteractive-tabindex": "error",
+      // useMemo must return a value; side-effect-only memos belong in useEffect
+      "react-hooks/void-use-memo": "error",
     },
     settings: {
       "import-x/resolver": {
@@ -467,26 +513,81 @@ export default defineConfig([
       "no-restricted-properties": getNoRestrictedProperties({
         includeUseTimeout: true,
       }),
+      // Require type on raw <button> JSX (not styled.button); omitted type submits the enclosing form.
+      // Tests still use <button> fixtures without type, so this stays production-only.
+      "@eslint-react/dom-no-missing-button-type": "error",
+      // Calling, returning, or passing `any` infects typed APIs. Spreading a
+      // class instance (protobuf, AxiosHeaders) copies enumerable own fields
+      // and drops methods. Extracting a class method without binding drops
+      // `this`. Tests stay exempt. Assignment and member access on `any` are
+      // enabled only for the explicit file list in the next overlay. Other
+      // production files can still read untyped values.
+      "@typescript-eslint/no-unsafe-call": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
+      "@typescript-eslint/no-unsafe-argument": "error",
+      "@typescript-eslint/no-misused-spread": "error",
+      "@typescript-eslint/unbound-method": "error",
+      // Suppressions must name the type mismatch. Options replace the base
+      // rule, so keep ts-ignore banned and ts-expect-error described.
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        {
+          "ts-expect-error": "allow-with-description",
+          "ts-nocheck": false,
+          "ts-check": false,
+          "ts-ignore": true,
+        },
+      ],
+    },
+  },
+  {
+    // Error when these files assign or read `any`. They satisfy both rules
+    // today (`unknown` annotations, `as` assertions, or `JSON5.parse<T>()`).
+    // Assertions and `JSON5.parse<T>()` still bypass these rules. Add a
+    // sibling module only after it satisfies them the same way.
+    files: [
+      "**/ArrowVegaLiteChart/useVegaElementPreprocessor.ts",
+      "**/dataframes/arrowFormatUtils.ts",
+      "**/dataframes/arrowParseUtils.ts",
+      "**/dataframes/arrowTypeUtils.ts",
+      "**/dataframes/Quiver.ts",
+      "**/PlotlyChart/PlotlyChart.tsx",
+      "**/DeckGlJsonChart/useDeckGl.tsx",
+      "**/DataFrame/hooks/EditingState.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
     },
   },
   // Test files specific configuration
   {
     files: ["**/*.test.ts", "**/*.test.tsx"],
-    ...testingLibrary.configs["flat/react"],
     plugins: {
-      ...testingLibrary.configs["flat/react"].plugins,
       "testing-library": testingLibrary,
       vitest,
     },
     rules: {
-      // Recommended vitest configuration to enforce good testing practices
+      // Merge the Testing Library preset into this `rules` object. Spreading the
+      // whole preset at this config root would let this `rules` key replace it
+      // and drop every recommended testing-library rule.
+      ...testingLibrary.configs["flat/react"].rules,
       ...vitest.configs.recommended.rules,
       // Allow hardcoded styles in test files
       "streamlit-custom/no-hardcoded-theme-values": "off",
       // Allow force reflow access in test files
       "streamlit-custom/no-force-reflow-access": "off",
 
-      // Testing library rules
+      // Recommended rules with large existing debt; enable in later cleanups.
+      // Plan: https://github.com/streamlit/streamlit/wiki/2026-09-03-improving-frontend-linting
+      "testing-library/no-node-access": "off",
+      "testing-library/no-container": "off",
+      "testing-library/prefer-presence-queries": "off",
+      "testing-library/no-unnecessary-act": "off",
+      "testing-library/no-manual-cleanup": "off",
+      "testing-library/render-result-naming-convention": "off",
+
+      // Testing library overrides
       "testing-library/prefer-user-event": "error",
       // Prefer screen.getBy* over destructured queries for consistency
       "testing-library/prefer-screen-queries": "warn",
@@ -494,7 +595,27 @@ export default defineConfig([
       "testing-library/prefer-find-by": "error",
       // Enforce consistent use of it() over test()
       "vitest/consistent-test-it": ["error", { fn: "it" }],
+      // Oxlint owns these vitest checks. Keep ESLint copies off so
+      // suppressions do not fork if the recommended preset grows.
+      "vitest/no-focused-tests": "off",
+      "vitest/no-commented-out-tests": "off",
+      "vitest/no-duplicate-hooks": "off",
+      "vitest/require-to-throw-message": "off",
       "no-restricted-imports": getNoRestrictedImports([], true),
+    },
+  },
+  // Vendored tests are ignored by oxlint; keep the ESLint copies on there.
+  {
+    files: ["**/vendor/**"],
+    plugins: {
+      vitest,
+    },
+    rules: {
+      "preserve-caught-error": "error",
+      "vitest/no-focused-tests": "error",
+      "vitest/no-commented-out-tests": "error",
+      "vitest/no-duplicate-hooks": "error",
+      "vitest/require-to-throw-message": "error",
     },
   },
   // Specific test files that need to access window.__streamlit for testing the config module itself
@@ -534,6 +655,15 @@ export default defineConfig([
       "streamlit-custom/enforce-memo": "error",
     },
   },
+  // Widgets only until the rest of the frontend is cleaned. `||` drops
+  // 0, "", and false, which are valid widget values. Keep `||` at call
+  // sites where a blank string is the unset sentinel.
+  {
+    files: ["**/components/widgets/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/prefer-nullish-coalescing": "error",
+    },
+  },
   // Styled components files
   {
     files: ["**/styled-components.ts", "**/styled-components.tsx"],
@@ -546,7 +676,7 @@ export default defineConfig([
   globalIgnores([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
-    "vitest.config.ts",
+    "vitest.config.mts",
     "vitest.setup.ts",
     "**/vite.config.ts",
     "lib/src/proto.js",

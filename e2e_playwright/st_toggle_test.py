@@ -26,14 +26,18 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
     expect_help_tooltip,
+    expect_label_truncated,
     expect_markdown,
     expect_prefixed_markdown,
     get_element_by_key,
     get_expander,
     get_toggle,
+    reset_hovering,
 )
 
-TOGGLE_ELEMENTS = 19
+TOGGLE_ELEMENTS = 24
+
+WRAP_LABEL = "Enable live updates for every connected data source right now"
 
 
 def test_toggle_widget_display(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -132,6 +136,55 @@ def test_grouped_toggles_height(app: Page, assert_snapshot: ImageCompareFunction
     expect(get_toggle(expander_details, "toggle group - 1")).to_have_css(
         "height", "24px"
     )
+
+
+def test_wrap_false_single_row_and_auto_resolution(app: Page):
+    """wrap=False keeps the toggle on one row and exposes the full label via a
+    native title, while the auto default (wrap=None) wraps and grows taller in a
+    vertical layout but ellipsizes with a title inside a horizontal container.
+    """
+    wrap_false = get_element_by_key(app, "wrap_false_toggle")
+    wrap_auto_vertical = get_element_by_key(app, "wrap_auto_vertical_toggle")
+
+    # wrap=False: label ellipsized and full label exposed via a native title.
+    # The toggle indicator itself must remain visible (not clipped by truncation).
+    expect_label_truncated(wrap_false)
+    expect(wrap_false.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(wrap_false.get_by_role("switch")).to_be_visible()
+
+    # Auto default in a vertical layout wraps onto another line and adds no title.
+    expect(wrap_auto_vertical.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+
+    false_box = wrap_false.get_by_test_id("stCheckbox").bounding_box()
+    auto_box = wrap_auto_vertical.get_by_test_id("stCheckbox").bounding_box()
+    assert false_box is not None
+    assert auto_box is not None
+    # The 4px margin absorbs sub-pixel rounding so the wrapped (two-line) toggle
+    # is clearly taller than the single-row one, not just larger by rounding.
+    assert auto_box["height"] > false_box["height"] + 4
+
+    # Auto default inside a horizontal container keeps one row with a title.
+    wrap_auto_horizontal = get_element_by_key(app, "wrap_auto_toggle")
+    expect_label_truncated(wrap_auto_horizontal)
+    expect(wrap_auto_horizontal.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+
+def test_wrap_false_title_and_help_coexist(app: Page):
+    """With help set, the full-label title stays on the label (the help tooltip
+    lives on a separate icon), so both coexist.
+    """
+    container = get_element_by_key(app, "wrap_help_toggle")
+    # The label is still ellipsized and exposes the full label via a native title.
+    # The toggle switch and help icon must remain visible (not clipped when
+    # the help icon shares the truncated row).
+    expect_label_truncated(container)
+    expect(container.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+    expect(container.get_by_role("switch")).to_be_visible()
+    expect(container.get_by_test_id("stTooltipHoverTarget")).to_be_visible()
+
+    # Hovering the separate help icon still shows the help tooltip.
+    reset_hovering(app)
+    expect_help_tooltip(app, container, "wrap help text")
 
 
 def test_check_top_level_class(app: Page):
@@ -241,3 +294,43 @@ def test_toggle_query_param_invalid_value(page: Page, app_base_url: str):
     # Toggle should use default (False), and invalid param should be cleared
     expect_prefixed_markdown(page, "bound toggle value:", "False")
     expect(page).not_to_have_url(re.compile(r"bound_toggle="))
+
+
+def test_toggle_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on click, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore toggle value:", "False")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_toggle="))
+
+    ignore_toggle = get_toggle(app, "Ignore change toggle")
+
+    # Clicking the toggle updates the URL without rerunning the app.
+    click_toggle(app, "Ignore change toggle")
+
+    # Catch a delayed rerun that click_toggle's wait might miss.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(ignore_toggle.get_by_role("switch")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore toggle value:", "False")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_toggle=true"))
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore toggle", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore toggle value: True", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore toggle value: True", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(ignore_toggle.get_by_role("switch")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore toggle value:", "True")

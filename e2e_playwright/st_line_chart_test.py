@@ -22,7 +22,7 @@ from e2e_playwright.shared.app_utils import get_element_by_key
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
-TOTAL_LINE_CHARTS = 15
+TOTAL_LINE_CHARTS = 17
 
 
 def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -222,3 +222,12 @@ def test_line_chart_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     # Take a snapshot of the single line chart, shows it applies the first color
     # from chartCategoricalColors (orange):
     assert_snapshot(line_chart_elements.nth(3), name="st_line_chart-custom-theme")
+
+
+def test_line_chart_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the Vega graphics-document accessible name."""
+    labeled = get_vega_graphics_document(get_element_by_key(app, "line_alt"))
+    expect(labeled).to_have_accessible_name("Line chart of columns a, b, and c")
+
+    unlabeled = get_vega_graphics_document(get_element_by_key(app, "line_no_alt"))
+    expect(unlabeled).to_have_accessible_name("Vega visualization")

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect } from "react"
+import { memo, type ReactElement, useEffect } from "react"
 
 import styled from "@emotion/styled"
 
@@ -69,11 +69,12 @@ function Tooltip({
 }: TooltipProps): ReactElement {
   const theme = useEmotionTheme()
 
-  const { refs, floatingStyles } = useFloatingOverlay({
-    open: true,
-    placement: "top",
-    offsetPx: 5,
-  })
+  const { refs, floatingStyles, setFloating, setReference } =
+    useFloatingOverlay({
+      open: true,
+      placement: "top",
+      offsetPx: 5,
+    })
 
   // Dismiss on Escape or a pointer-down outside the tooltip content (capture
   // phase, consistent with ColumnMenu pattern). Clicks inside the tooltip
@@ -103,7 +104,7 @@ function Tooltip({
        * middleware work correctly. Width/height 0 keeps it truly invisible.
        */}
       <div
-        ref={refs.setReference}
+        ref={setReference}
         data-testid="stDataFrameTooltipTarget"
         style={{
           position: "fixed",
@@ -115,7 +116,7 @@ function Tooltip({
       />
       <DataFrameOverlayPortal>
         <StyledDataFrameTooltipContainer
-          ref={refs.setFloating}
+          ref={setFloating}
           style={floatingStyles}
           role="tooltip"
         >

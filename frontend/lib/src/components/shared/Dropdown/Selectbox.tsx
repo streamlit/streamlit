@@ -15,7 +15,7 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
   type ReactElement,
   useCallback,
@@ -44,7 +44,10 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
 import { convertRemToPx } from "~lib/theme/utils"
 import {
   filterSelectOptions,
@@ -54,7 +57,7 @@ import { isMobile } from "~lib/util/isMobile"
 import {
   getSelectPlaceholder,
   isNullOrUndefined,
-  LabelVisibilityOptions,
+  type LabelVisibilityOptions,
 } from "~lib/util/utils"
 
 import {
@@ -91,6 +94,16 @@ type ComboOption = {
 }
 
 const CREATABLE_ID = "__creatable__"
+
+/**
+ * Pass-through filter for RAC's <ComboBox defaultFilter>. Streamlit's own
+ * `filterSelectOptions` runs upstream and produces `displayOptions`, so RAC
+ * must not re-filter — otherwise its built-in "contains" strategy would drop
+ * fuzzy matches like "ape" -> "Apple". See issue #16003.
+ *
+ * Defined at module scope so the prop is referentially stable across renders.
+ */
+const PASS_THROUGH_FILTER = (): boolean => true
 
 /**
  * If `after` is `before` with extra characters inserted (at any position),
@@ -209,13 +222,41 @@ const Selectbox: FC<Props> = ({
   // on both refs being mounted — the actual ComboBox open state is irrelevant
   // here since the floating element only exists in the DOM when RAC's Popover
   // renders it (i.e. when the dropdown is open).
-  const { refs, floatingStyles } = useFloatingOverlay({
-    open: true,
-    placement: "bottom-start",
-    offsetPx: convertRemToPx(theme.spacing.twoXS),
-    flipOptions: isInSidebar ? false : undefined,
-    matchTriggerWidth: true,
-  })
+  //
+  // In the sidebar, flip/shift are bounded by the viewport
+  // (document.documentElement) rather than the sidebar's `overflow: auto`
+  // clipping rect. Otherwise the dropdown cannot flip up when the trigger sits
+  // near the bottom of the sidebar and it overflows the viewport instead (issue
+  // #16181). This mirrors the sidebar handling in elements/Popover/Popover.tsx.
+  // `document.documentElement` is used rather than `document.body` because
+  // Streamlit's `.stApp` uses `position: absolute; inset: 0`, leaving
+  // document.body sized 0x0, so a body boundary would always report overflow
+  // and re-introduce the same clipping.
+  //
+  // Unlike Popover.tsx, no `size` middleware is needed here: the option list is
+  // already height-capped by CSS (`min(maxDropdownHeight, 70vh)` with internal
+  // scroll in Selectbox.styled.ts), so the dropdown cannot overflow the way
+  // arbitrary Popover content can.
+  const overlayOptions = useMemo(() => {
+    const base = {
+      open: true,
+      placement: "bottom-start" as const,
+      offsetPx: convertRemToPx(theme.spacing.twoXS),
+      matchTriggerWidth: true,
+    }
+    if (!isInSidebar || typeof document === "undefined") {
+      return base
+    }
+    const boundary = document.documentElement
+    return {
+      ...base,
+      flipOptions: { boundary },
+      shiftOptions: { boundary, padding: SHIFT_VIEWPORT_PADDING },
+    }
+  }, [theme.spacing.twoXS, isInSidebar])
+
+  const { floatingStyles, setFloating, setReference } =
+    useFloatingOverlay(overlayOptions)
 
   // Locally committed value (last value sent to Streamlit). Re-synced from
   // propValue when the backend pushes an update (form-clear, session state, etc.).
@@ -246,12 +287,14 @@ const Selectbox: FC<Props> = ({
   const inputValueRef = useRef(inputValue)
   inputValueRef.current = inputValue
 
-  // Set by handleSelectionChange when RAC commits a new selection (arrow-nav +
-  // Enter). Checked by handleInputKeyDown to avoid double-committing.
+  // Set by handleSelectionChange when RAC's onChange commits a new selection
+  // (arrow-nav + Enter). Checked by handleInputKeyDown to avoid
+  // double-committing.
   const racHandledEnterRef = useRef(false)
 
-  // Tracks whether the dropdown is open. RAC can fire deferred onSelectionChange
-  // callbacks after the dropdown closes; those are discarded via this ref.
+  // Tracks whether the dropdown is open. RAC can fire deferred ComboBox
+  // onChange callbacks after the dropdown closes; those are discarded via
+  // this ref.
   const isOpenRef = useRef(false)
 
   // Records isOpenRef at the moment Enter is pressed (capture phase) before
@@ -310,8 +353,9 @@ const Selectbox: FC<Props> = ({
     [theme.sizes.dropdownItemHeight]
   )
 
-  // Controlled selectedKey so RAC always knows the committed item and doesn't
-  // revert the input to "" on blur before handleBlur can restore it.
+  // Controlled ComboBox `value` (selected option id) so RAC always knows the
+  // committed item and doesn't revert the input to "" on blur before
+  // handleBlur can restore it.
   const localSelectedKey = useMemo<string | null>(() => {
     if (isNullOrUndefined(value)) return null
     const found = selectOptions.find(o => o.value === value)
@@ -339,10 +383,10 @@ const Selectbox: FC<Props> = ({
    * Commit a selection: update local state and notify the parent.
    * Does NOT close the dropdown — callers on the manual paths (keydown,
    * clear button) close explicitly; RAC-triggered paths (option click,
-   * arrow-nav + Enter) let RAC close the dropdown naturally after
-   * onSelectionChange returns. Calling state.close() inside
-   * onSelectionChange causes RAC to fire onInputChange with the old
-   * committed label, overwriting our setInputValue update.
+   * arrow-nav + Enter) let RAC close the dropdown naturally after RAC's
+   * onChange returns. Calling state.close() inside RAC's onChange causes
+   * RAC to fire onInputChange with the old committed label, overwriting
+   * our setInputValue update.
    */
   const commitSelection = useCallback(
     (newValue: string | null): void => {
@@ -358,8 +402,8 @@ const Selectbox: FC<Props> = ({
 
   const handleSelectionChange = useCallback(
     (key: Key | null): void => {
-      // Discard callbacks when the dropdown is closed. RAC fires
-      // onSelectionChange(currentKey) on close and via deferred pointerup
+      // Discard callbacks when the dropdown is closed. RAC fires its
+      // onChange(currentKey) on close and via deferred pointerup
       // listeners — both arrive after the real selection is already handled.
       // Genuine selections always fire BEFORE onOpenChange(false), so this
       // guard correctly lets them through.
@@ -463,7 +507,9 @@ const Selectbox: FC<Props> = ({
    *   whether the dropdown was open before RAC may have closed it.
    * - Opens the dropdown on ArrowUp/Down when closed.
    * - Blocks character input for FILTER_MODE_NONE (can't use readOnly — see above).
-   * - Clears the value on Escape when clearable.
+   * - On Escape while filtering, discards the typed query and restores the
+   *   committed label.
+   * - On Escape when not filtering and clearable, clears the committed value.
    */
   const handleInputKeyDownCapture = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -487,13 +533,24 @@ const Selectbox: FC<Props> = ({
       ) {
         openDropdownRef.current?.()
       }
-      if (
-        e.key === "Escape" &&
-        clearable &&
-        !isNullOrUndefined(valueRef.current)
-      ) {
-        e.preventDefault()
-        commitSelection(null)
+      if (e.key === "Escape") {
+        // Escape while filtering restores the committed label (see #16004).
+        // Handle this before the clear-on-Escape branch below, or Escape
+        // would wipe the committed value on a clearable selectbox.
+        if (filterActiveRef.current) {
+          e.preventDefault()
+          const committed = valueRef.current ?? ""
+          setInputValue(committed)
+          inputValueRef.current = committed
+          setFilterActive(false)
+          filterActiveRef.current = false
+          closeDropdownRef.current?.()
+          return
+        }
+        if (clearable && !isNullOrUndefined(valueRef.current)) {
+          e.preventDefault()
+          commitSelection(null)
+        }
       }
     },
     [clearable, commitSelection, isFilterNone, selectDisabled]
@@ -556,9 +613,9 @@ const Selectbox: FC<Props> = ({
       </WidgetLabel>
       <I18nProvider locale="en-US">
         <ComboBox
-          selectedKey={localSelectedKey}
+          value={localSelectedKey}
           inputValue={inputValue}
-          onSelectionChange={handleSelectionChange}
+          onChange={handleSelectionChange}
           onInputChange={handleInputChange}
           onOpenChange={handleOpenChange}
           isDisabled={selectDisabled}
@@ -567,12 +624,18 @@ const Selectbox: FC<Props> = ({
           onBlur={handleBlur}
           menuTrigger="manual"
           aria-label={label ?? "Selectbox"}
+          // Streamlit owns the filtering (fuzzy / contains / prefix / none),
+          // and passes the already-filtered list to <StyledListBox items=...>.
+          // Without this pass-through, RAC applies its own "contains" filter on
+          // top, dropping fuzzy matches whose query is not a contiguous
+          // substring (e.g. "ape" would not match "Apple"). See issue #16003.
+          defaultFilter={PASS_THROUGH_FILTER}
         >
           <DropdownController
             openRef={openDropdownRef}
             closeRef={closeDropdownRef}
           />
-          <StyledGroup ref={refs.setReference}>
+          <StyledGroup ref={setReference}>
             <StyledInput
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
@@ -594,6 +657,7 @@ const Selectbox: FC<Props> = ({
               <StyledClearButton
                 aria-label="Clear value"
                 slot={null}
+                isDisabled={selectDisabled}
                 onPress={handleClearValue}
               >
                 <Cancel size={theme.iconSizes.base} aria-hidden="true" />
@@ -607,7 +671,7 @@ const Selectbox: FC<Props> = ({
             </StyledOpenButton>
           </StyledGroup>
           <StyledPopover
-            ref={refs.setFloating}
+            ref={setFloating}
             data-testid="stSelectboxVirtualDropdown"
             placement="bottom left"
             isNonModal

@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -24,7 +24,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.feedback import FeedbackSerde
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -113,12 +117,11 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         assert delta.type == expected_type
 
     def test_invalid_option_literal(self):
-        """Test that invalid option raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that invalid option raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as e:
             st.feedback("foo")
         assert str(e.value) == (
-            "The options argument to st.feedback must be one of "
-            "['thumbs', 'faces', 'stars']. The argument passed was 'foo'."
+            "Invalid `options` value. Supported values: 'thumbs', 'faces', 'stars'."
         )
 
     @parameterized.expand([(0,), (1,)])
@@ -157,23 +160,23 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         val = st.feedback("thumbs")
         assert val is None
 
-    def test_invalid_default_for_thumbs(self):
-        """Test that invalid default for thumbs raises exception."""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.feedback("thumbs", default=2)
-        assert "must be a number between 0 and 1" in str(e.value)
-
-    def test_invalid_default_for_faces(self):
-        """Test that invalid default for faces raises exception."""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.feedback("faces", default=5)
-        assert "must be a number between 0 and 4" in str(e.value)
-
-    def test_invalid_default_for_stars(self):
-        """Test that invalid default for stars raises exception."""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.feedback("stars", default=-1)
-        assert "must be a number between 0 and 4" in str(e.value)
+    @parameterized.expand(
+        [
+            ("thumbs", 2, "[0, 1]"),
+            ("faces", 5, "[0, 4]"),
+            ("stars", -1, "[0, 4]"),
+        ]
+    )
+    def test_invalid_default(
+        self,
+        options: Literal["thumbs", "faces", "stars"],
+        default: int,
+        expected_range: str,
+    ):
+        """Out-of-range default raises StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as e:
+            st.feedback(options, default=default)
+        assert f"required range {expected_range}" in str(e.value)
 
     def test_disabled_state(self):
         """Test that disabled state is set correctly."""
@@ -242,6 +245,53 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.feedback
         assert proto.type == FeedbackProto.FeedbackType.THUMBS
+
+
+class FeedbackOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes set the ignore_rerun proto field."""
+        st.feedback("thumbs", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.feedback
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that an invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.feedback("thumbs", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.feedback("thumbs", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.feedback("thumbs", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.feedback
+        assert c.ignore_rerun is True
 
 
 class TestFeedbackWidthConfig(DeltaGeneratorTestCase):

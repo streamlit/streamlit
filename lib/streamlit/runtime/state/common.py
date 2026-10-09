@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
@@ -32,9 +32,7 @@ from typing import (
 )
 
 from streamlit import util
-from streamlit.errors import (
-    StreamlitAPIException,
-)
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 
 if TYPE_CHECKING:
     from streamlit.runtime.state.session_state import SessionState
@@ -50,6 +48,11 @@ T_co = TypeVar("T_co", covariant=True)
 WidgetArgs: TypeAlias = tuple[Any, ...] | list[Any]
 WidgetKwargs: TypeAlias = dict[str, Any]
 WidgetCallback: TypeAlias = Callable[..., None]
+
+# Type for the on_change mode parameter.
+# "rerun" (default): triggers a rerun when the widget value changes
+# "ignore": stores the value without triggering a rerun
+OnChangeMode: TypeAlias = Literal["rerun", "ignore"]
 
 # Type for the bind parameter on widgets
 # Currently only supports binding to query params
@@ -194,6 +197,13 @@ class WidgetMetadata(Generic[T]):
     # zero-width range).
     allow_url_duplicates: bool = False
 
+    # Whether the widget is disabled. A disabled widget cannot be interacted with
+    # in the browser, so it must never accept a value coming from the frontend.
+    # This is enforced server-side (see SessionState.register_widget): any incoming
+    # value for a disabled widget is discarded and its on-change callback is
+    # suppressed, guarding against forged BackMsg/WidgetState values.
+    disabled: bool = False
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -224,16 +234,26 @@ class RegisterWidgetResult(Generic[T_co]):
         wire form (not re-derived from the deserialized ``value``), callers can
         reconcile a stored value against freshly computed state even when the
         deserialized value is stale.
+    incoming_serialized_values : list of str or None
+        The array-widget counterpart of ``incoming_serialized_value``: the
+        stored serialized (wire) values as they entered this run, captured
+        before this run's serializer was applied. ``None`` for non-array
+        widgets or when no value is stored yet. Because these are the raw wire
+        labels (not re-derived from the deserialized ``value``), callers can
+        detect that a stored selection's formatted label changed between runs
+        even when the deserialized value is unchanged.
     """
 
     value: T_co
     value_changed: bool
     incoming_serialized_value: str | None = None
+    incoming_serialized_values: list[str] | None = None
 
     @classmethod
     def failure(
-        cls, deserializer: WidgetDeserializer[T_co]
-    ) -> RegisterWidgetResult[T_co]:
+        cls: type[RegisterWidgetResult[T]],
+        deserializer: WidgetDeserializer[T],
+    ) -> RegisterWidgetResult[T]:
         """The canonical way to construct a RegisterWidgetResult in cases
         where the true widget value could not be determined.
         """
@@ -267,8 +287,60 @@ def is_keyed_element_id(key: str) -> bool:
 def require_valid_user_key(key: str) -> None:
     """Raise an Exception if the given user_key is invalid."""
     if key == "":
-        raise StreamlitAPIException("The `key` argument must be non-empty.")
+        # Empty string is invalid input, not a missing required parameter: key is
+        # optional on most widgets.
+        raise StreamlitValueError(
+            "key",
+            ["a non-empty string"],
+        )
     if is_element_id(key):
         raise StreamlitAPIException(
-            f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."
+            f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved.",
+            error_id="reserved-generated-element-id-prefix",
         )
+
+
+def validate_on_change_mode(
+    callback: object,
+    *,
+    supported_modes: Collection[OnChangeMode],
+    none_supported: bool = True,
+    param_name: str = "on_change",
+) -> WidgetCallback | None:
+    """Validate a callback parameter and return its normalized callback.
+
+    Callables are always valid. ``None`` is valid only when ``none_supported``
+    is true, and mode strings are valid only when included in
+    ``supported_modes``. Valid non-callback values normalize to ``None`` because
+    their behavior is handled separately by the widget.
+
+    Raises
+    ------
+    StreamlitAPIException
+        If `callback` is a valid mode string but the widget does not support
+        callback modes.
+    StreamlitValueError
+        If `callback` is not `None`, not callable, and not a valid supported
+        mode string.
+    """
+    if callback is None and none_supported:
+        return None
+    if callable(callback):
+        return cast("WidgetCallback", callback)
+
+    # Require a str before membership so array-like values (e.g. NumPy arrays)
+    # cannot raise an ambiguous-truth ValueError from ``==``.
+    all_modes = get_args(OnChangeMode)
+    if isinstance(callback, str) and callback in all_modes:
+        if callback in supported_modes:
+            return None
+        raise StreamlitAPIException(
+            f'`{param_name}="{callback}"` is not supported on this widget. '
+            f"Pass a callback, or omit `{param_name}`.",
+            error_id="unsupported-on-change-mode",
+        )
+
+    valid_values = ["a callback function"]
+    if supported_modes:
+        valid_values = [repr(mode) for mode in supported_modes] + valid_values
+    raise StreamlitValueError(param_name, valid_values)

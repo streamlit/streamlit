@@ -21,5 +21,7 @@
  * Source: https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage
  */
 export const tick = (): Promise<void> =>
-  // eslint-disable-next-line no-restricted-globals -- Outside of the main packages, we need to use window.setTimeout.
-  new Promise<void>(resolve => setTimeout(resolve, 0))
+  new Promise<void>(resolve => {
+    // eslint-disable-next-line no-restricted-globals -- Outside of the main packages, we need to use window.setTimeout.
+    setTimeout(resolve, 0)
+  })

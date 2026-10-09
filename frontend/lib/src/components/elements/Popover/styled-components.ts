@@ -46,17 +46,29 @@ export const StyledPopoverBody = styled.div<{
 
 export const StyledPopoverLabelContainer = styled.div<{
   $hideChevron?: boolean
-}>(({ theme, $hideChevron }) => ({
+  $truncate?: boolean
+}>(({ theme, $hideChevron, $truncate }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.threeXS,
   // The SVG icon we are using seems to have an internal padding of around 25%.
   // Only apply when the chevron is visible.
   marginRight: $hideChevron ? 0 : `calc(-${theme.iconSizes.lg} * 0.25)`,
+  // Constrain the container to the button width so the label can ellipsize
+  // while the chevron stays visible. Account for the negative chevron margin;
+  // otherwise a content-width trigger loses that space and truncates a label
+  // that fits at its natural width.
+  ...($truncate && {
+    maxWidth: $hideChevron
+      ? "100%"
+      : `calc(100% + ${theme.iconSizes.lg} * 0.25)`,
+  }),
 }))
 
 export const StyledPopoverExpansionIcon = styled.div(({ theme }) => ({
   display: "inline-flex",
   // Small hack to better align the expansion icon with the label.
   marginTop: theme.spacing.threeXS,
+  // Keep the chevron visible when the label ellipsizes.
+  flexShrink: 0,
 }))

@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
@@ -91,7 +91,7 @@ jobs:
               draft: false,
             });
             const pr = created.data;
-            await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number, labels: ['change:chore', 'impact:internal', 'autofix'] });
+            await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number, labels: ['change:chore', 'impact:internal', 'bot-pr'] });
             core.setOutput('pr_url', pr.html_url);
 
       - name: Summary (@streamlit/component-v2-lib)

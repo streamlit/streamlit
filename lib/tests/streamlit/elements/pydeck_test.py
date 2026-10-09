@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 from unittest import mock
@@ -29,12 +30,17 @@ from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.deck_gl_json_chart import (
     PydeckMixin,
     PydeckSelectionSerde,
+    PydeckSelectionState,
+    PydeckState,
     _get_pydeck_width,
     parse_selection_mode,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
-from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 df1 = pd.DataFrame({"lat": [1, 2, 3, 4], "lon": [10, 20, 30, 40]})
@@ -63,6 +69,61 @@ class PyDeckTest(DeltaGeneratorTestCase):
             {"lat": 4, "lon": 40},
         ]
         assert el.deck_gl_json_chart.tooltip == ""
+
+    def test_orbit_view_parameters_and_no_basemap_are_serialized(self) -> None:
+        """OrbitView, WebGL parameters, and map_provider=None survive to_json()."""
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[pdk.Layer("PointCloudLayer", data=[{"x": 0, "y": 0, "z": 0}])],
+                initial_view_state=pdk.ViewState(
+                    target=[0, 0, 0], zoom=5, rotation_x=15, rotation_orbit=30
+                ),
+                views=[pdk.View(type="OrbitView", controller=True)],
+                map_provider=None,
+                parameters={"cull": True},
+            )
+        )
+
+        actual = json.loads(
+            self.get_delta_from_queue().new_element.deck_gl_json_chart.json
+        )
+
+        assert actual["views"][0]["@@type"] == "OrbitView"
+        assert actual["views"][0]["controller"] is True
+        assert actual["parameters"]["cull"] is True
+        assert not actual.get("mapProvider")
+        # pydeck 0.9.2+ writes "__MAP_STYLE__"; 0.8 keeps the default "dark".
+        assert actual["mapStyle"] in {"__MAP_STYLE__", "dark"}
+        assert actual["initialViewState"]["target"] == [0, 0, 0]
+        assert "latitude" not in actual["initialViewState"]
+
+    def test_layer_extensions_serialized(self) -> None:
+        """Extension @@type dicts on a pydeck Layer appear in the chart JSON sent to the frontend."""
+
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[
+                    pdk.Layer(
+                        "ScatterplotLayer",
+                        data=df1,
+                        get_filter_value="lat",
+                        filter_range=[0, 10],
+                        extensions=[
+                            {"@@type": "DataFilterExtension", "filterSize": 1},
+                        ],
+                    ),
+                ]
+            )
+        )
+
+        layer = json.loads(
+            self.get_delta_from_queue().new_element.deck_gl_json_chart.json
+        )["layers"][0]
+        assert layer["extensions"] == [
+            {"@@type": "DataFilterExtension", "filterSize": 1}
+        ]
+        assert layer["getFilterValue"] == "@@=lat"
+        assert layer["filterRange"] == [0, 10]
 
     def test_with_tooltip(self):
         """Test that pydeck object with tooltip works."""
@@ -199,11 +260,11 @@ class PyDeckTest(DeltaGeneratorTestCase):
 
     def test_unknown_selection_mode_raises_exception(self):
         """
-        Test that it throws an StreamlitAPIException when an unknown
+        Test that it throws an StreamlitValueError when an unknown
         selection_mode is given
         """
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.pydeck_chart(
                 pdk.Deck(
                     layers=[
@@ -214,15 +275,15 @@ class PyDeckTest(DeltaGeneratorTestCase):
                 selection_mode="multi-row",
             )
 
-        assert "Invalid selection mode: multi-row" in str(e.value)
+        assert "Invalid `selection_mode` value" in str(e.value)
 
     def test_selection_mode_set(self):
         """
-        Test that it throws an StreamlitAPIException when a set is given for
+        Test that it throws an StreamlitInvalidParameterTypeError when a set is given for
         selection_mode
         """
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
             st.pydeck_chart(
                 pdk.Deck(
                     layers=[
@@ -233,29 +294,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
                 selection_mode={"multi-object"},
             )
 
-        assert "Invalid selection mode: {'multi-object'}." in str(e.value)
-
-    @patch_config_options({"mapbox.token": "MOCK_CONFIG_KEY"})
-    def test_mapbox_token_config(self):
-        """Test a Mapbox token is passed in proto when provided in config."""
-
-        old_value = getattr(os.environ, "MAPBOX_API_KEY", None)
-        if old_value:
-            del os.environ["MAPBOX_API_KEY"]
-
-        st.pydeck_chart(
-            pdk.Deck(
-                layers=[
-                    pdk.Layer("ScatterplotLayer", data=df1),
-                ]
-            )
-        )
-
-        el = self.get_delta_from_queue().new_element
-        assert el.deck_gl_json_chart.mapbox_token == "MOCK_CONFIG_KEY"
-
-        if old_value:
-            os.environ["MAPBOX_API_KEY"] = old_value
+        assert "Invalid `selection_mode` type" in str(e.value)
 
 
 class PyDeckChartWidthTest(DeltaGeneratorTestCase):
@@ -398,30 +437,6 @@ class PyDeckChartWidthTest(DeltaGeneratorTestCase):
 
     def test_mapbox_token_direct(self):
         """Test a Mapbox token is passed in proto when provided directly."""
-
-        old_value = getattr(os.environ, "MAPBOX_API_KEY", None)
-        if old_value:
-            del os.environ["MAPBOX_API_KEY"]
-
-        st.pydeck_chart(
-            pdk.Deck(
-                api_keys={"mapbox": "MOCK_API_KEY"},
-                map_provider="mapbox",
-                layers=[
-                    pdk.Layer("ScatterplotLayer", data=df1),
-                ],
-            )
-        )
-
-        el = self.get_delta_from_queue().new_element
-        assert el.deck_gl_json_chart.mapbox_token == "MOCK_API_KEY"
-
-        if old_value:
-            os.environ["MAPBOX_API_KEY"] = old_value
-
-    @patch_config_options({"mapbox.token": "MOCK_CONFIG_KEY"})
-    def test_native_mapbox_token_wins(self):
-        """Test that PyDecks' native Mapbox token wins against out config."""
 
         old_value = getattr(os.environ, "MAPBOX_API_KEY", None)
         if old_value:
@@ -613,6 +628,48 @@ class PyDeckElementIdStabilityTest(DeltaGeneratorTestCase):
             # IDs should be different because selection_mode is in key_as_main_identity
             assert id1 != id2
 
+    def test_pydeck_chart_alt_included_in_id_when_selection_activated(self):
+        """When selections are on, changing only alt changes the element ID."""
+        deck = pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1, id="layer")])
+
+        def chart_id(**kwargs: object) -> str:
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.pydeck_chart(deck, on_select="rerun", **kwargs)
+            return self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+
+        with_alt = chart_id(alt="First description")
+        with_other_alt = chart_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt != with_other_alt
+        assert chart_id(alt="First description") == with_alt
+
+    def test_pydeck_chart_alt_does_not_create_id_when_selection_ignored(self):
+        """When on_select is ignore, alt does not invent element-ID hashing."""
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1)]),
+            on_select="ignore",
+            alt="Named map",
+        )
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.id == ""
+
+    def test_keyed_pydeck_chart_id_stable_when_alt_changes(self):
+        """With a key, alt is outside key_as_main_identity so ID stays stable."""
+        deck = pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1, id="layer")])
+
+        st.pydeck_chart(deck, key="stable_alt", on_select="rerun", alt="First name")
+        id_a = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+
+        self.script_run_ctx.shared.reset()
+        self.clear_queue()
+
+        st.pydeck_chart(deck, key="stable_alt", on_select="rerun", alt="Second name")
+        id_b = self.get_delta_from_queue().new_element.deck_gl_json_chart.id
+        assert id_a == id_b
+        assert id_a != ""
+
 
 class PydeckSelectionSerdeTest(DeltaGeneratorTestCase):
     """Test PydeckSelectionSerde serialization and deserialization."""
@@ -673,7 +730,33 @@ class PydeckSelectionSerdeTest(DeltaGeneratorTestCase):
         result = serde.deserialize(json_str)
 
         # Should support both dict and attribute access
+        assert isinstance(result, PydeckState)
+        assert isinstance(result.selection, PydeckSelectionState)
         assert result.selection.indices["layer1"] == [0]
+        # Nested selection must be a stable stored instance (not a per-access copy).
+        assert result["selection"] is result["selection"]
+        assert result.selection is result["selection"]
+
+    def test_state_is_read_only(self):
+        """The PyDeck event state is read-only at the top and nested levels.
+
+        It also keeps its typed classes through deepcopy, since Session State
+        deep-copies the initial widget value.
+        """
+        result = PydeckSelectionSerde().deserialize(None)
+
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result["selection"] = {}
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result.selection = {}
+        with pytest.raises(TypeError, match="Widget state is read-only"):
+            result["selection"]["indices"] = {"layer1": [0]}
+
+        # Read access still works, and deepcopy preserves the concrete types.
+        assert result.selection.indices == {}
+        copied = copy.deepcopy(result)
+        assert isinstance(copied, PydeckState)
+        assert isinstance(copied.selection, PydeckSelectionState)
 
 
 class ParseSelectionModeTest(DeltaGeneratorTestCase):
@@ -692,20 +775,20 @@ class ParseSelectionModeTest(DeltaGeneratorTestCase):
         assert len(result) == 1
 
     def test_invalid_selection_mode_raises_exception(self):
-        """Test that an invalid selection mode raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that an invalid selection mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as e:
             parse_selection_mode("invalid-mode")
-        assert "Invalid selection mode" in str(e.value)
+        assert "Invalid `selection_mode` value" in str(e.value)
 
     def test_set_selection_mode_raises_exception(self):
-        """Test that a set of selection modes raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that a set of selection modes raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
             parse_selection_mode({"single-object", "multi-object"})
         assert "Selection mode must be a single value" in str(e.value)
 
     def test_list_selection_mode_raises_exception(self):
-        """Test that a list of selection modes raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that a list of selection modes raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as e:
             parse_selection_mode(["single-object"])
         assert "Selection mode must be a single value" in str(e.value)
 
@@ -813,9 +896,54 @@ class PydeckCallbackTest(DeltaGeneratorTestCase):
         assert el.deck_gl_json_chart.id == ""
         assert el.deck_gl_json_chart.selection_mode == []
 
+    def test_pydeck_chart_alt_sets_proto_field_and_drops_blank_values(self):
+        """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
+        deck = pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1)])
+
+        st.pydeck_chart(deck, alt="Sample points near San Francisco")
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == "Sample points near San Francisco"
+
+        st.pydeck_chart(deck)
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+        st.pydeck_chart(deck, alt=None)
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+        st.pydeck_chart(deck, alt="  ")
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+    def test_pydeck_chart_alt_strips_whitespace(self):
+        """Leading and trailing whitespace is stripped from alt."""
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1)]),
+            alt="  Sample points near San Francisco  ",
+        )
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == "Sample points near San Francisco"
+
+    def test_pydeck_chart_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Map of "A < B" & hubs <script>alert(1)</script>'
+        st.pydeck_chart(
+            pdk.Deck(layers=[pdk.Layer("ScatterplotLayer", data=df1)]),
+            alt=adversarial,
+        )
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == adversarial
+
     def test_invalid_on_select_raises_exception(self):
-        """Test that an invalid on_select value raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that an invalid on_select value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as e:
             st.pydeck_chart(
                 pdk.Deck(
                     layers=[
@@ -824,7 +952,7 @@ class PydeckCallbackTest(DeltaGeneratorTestCase):
                 ),
                 on_select="invalid",
             )
-        assert "only 'ignore', 'rerun', or a callable is supported" in str(e.value)
+        assert "Invalid `on_select` value" in str(e.value)
 
 
 class TestPreparePydeckForJson:

@@ -36,7 +36,7 @@ import {
   PING_TIMEOUT_MS,
   SERVER_PING_PATH,
 } from "./constants"
-import { ErrorDetails, IHostConfigProperties, OnRetry } from "./types"
+import type { ErrorDetails, IHostConfigProperties, OnRetry } from "./types"
 import {
   FetchError,
   fetchWithTimeout,
@@ -215,10 +215,21 @@ If you are trying to access a Streamlit app running on another server, this coul
         }
         onHostConfigResp(hostConfigResp.data as IHostConfigProperties)
         resolve(uriNumber)
+        return
       })
-      .catch((error: FetchError) => {
+      .catch((error: unknown) => {
         if (cancelled) {
           return
+        }
+        // fetchWithTimeout always rejects with a FetchError. Other rejections
+        // (for example onHostConfigResp throwing) have no HTTP metadata, so
+        // retry with the error text only and skip sendClientError. Hosts are
+        // not sent a CLIENT_ERROR for this failure mode, which would otherwise
+        // be a misleading empty-URL event.
+        if (!(error instanceof FetchError)) {
+          const message =
+            error instanceof Error ? error.message : String(error)
+          return retry({ message })
         }
         // If its our 6th try (retry count at which we show connection error dialog), send a client error
         // to inform the host of connection error

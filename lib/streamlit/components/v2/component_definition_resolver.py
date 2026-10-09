@@ -106,7 +106,8 @@ def build_definition_with_validation(
         if asset_root is None:
             raise StreamlitAPIException(
                 f"Component '{component_key}' must be declared in pyproject.toml with asset_dir "
-                f"to use file-backed {kind}."
+                f"to use file-backed {kind}.",
+                error_id="component-missing-asset-dir",
             )
 
         value_str = value

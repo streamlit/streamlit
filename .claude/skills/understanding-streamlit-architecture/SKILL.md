@@ -14,7 +14,7 @@ Use this file as a quick mental model and navigation index; use `references/back
 |---------|-------------|-----------|
 | **Command** | Any function exposed in Streamlit's public API (`st.*` namespace). Commands can create elements/widgets, control execution flow, or configure app behavior. | `lib/streamlit/delta_generator.py`, `lib/streamlit/elements/`, `lib/streamlit/commands/` |
 | **Element** | Umbrella term for all UI components in Streamlit: widgets, containers, and display elements. Represented in `Element.proto` as a `oneof` union of ~50+ types. | `proto/streamlit/proto/Element.proto`, `lib/streamlit/elements/` |
-| **Widget** | Interactive element (button, slider, text_input) that triggers reruns on user interaction. Value accessible via return value or `st.session_state`. Some elements become widgets conditionally (e.g., dataframe/chart with `on_select`). | `lib/streamlit/elements/widgets/`, `frontend/lib/src/components/widgets/` |
+| **Widget** | Interactive element (button, slider, text_input) that typically triggers a rerun on user interaction. Value accessible via return value or `st.session_state`. Widgets that support `on_change="ignore"` update in the browser without rerunning until something else does. Some elements become widgets conditionally (e.g., dataframe/chart with `on_select`). | `lib/streamlit/elements/widgets/`, `frontend/lib/src/components/widgets/` |
 | **Display Element** | Non-interactive element (text, markdown, image, chart) that renders content without triggering reruns by itself. | `lib/streamlit/elements/`, `frontend/lib/src/components/elements/` |
 | **Container** | Layout block that groups elements spatially (sidebar, columns, expander, tabs, form). Represented as `BlockNode` in the element tree. | `lib/streamlit/elements/layouts.py`, `Block.proto` |
 | **DeltaGenerator** | The `st` object; API entry point that queues UI deltas. Uses mixin pattern to compose all `st.*` commands. | `lib/streamlit/delta_generator.py` |
@@ -72,7 +72,7 @@ flowchart TB
 Streamlit's execution model differs from traditional web frameworks:
 
 **Rerun triggers**:
-1. **Widget interaction**: User clicks button, moves slider, etc.
+1. **Widget interaction**: User clicks button, moves slider, etc. (widgets with `on_change="ignore"` update without a rerun)
 2. **Source code change**: File watcher detects script modification
 3. **`st.rerun()`**: Explicit programmatic rerun
 4. **Fragment timer**: `@st.fragment(run_every=...)` periodic reruns
@@ -81,6 +81,7 @@ Streamlit's execution model differs from traditional web frameworks:
 - Scripts execute **top-to-bottom** on every rerun
 - **Callbacks first**: `on_change`/`on_click` handlers run *before* the main script body
 - **Fragments typically isolate reruns**: Widget interactions inside `@st.fragment` usually rerun only that fragment
+- **Keyed fragment reruns**: `st.rerun("<key>")` from a widget callback reruns only the named `@st.fragment(key=...)` fragment(s)
 - **Control flow exceptions**: `st.stop()`, `st.rerun()`, `st.switch_page()` raise exceptions to halt/redirect execution
 
 **Session isolation**:
@@ -153,7 +154,7 @@ Streamlit's execution model differs from traditional web frameworks:
   - Deep dive: `references/frontend.md#element-tree-frontendlibsrcrender-tree`
 - **Element identity semantics**: Delta paths decide where a node lives; element IDs decide whether stateful elements can reconnect to prior state after remounts.
   - Deep dive: `references/element-identity.md`
-- **Fragments (`@st.fragment`)**: Fragment interactions usually trigger fragment-scoped reruns and update only affected regions.
+- **Fragments (`@st.fragment`)**: Fragment interactions usually trigger fragment-scoped reruns and update only affected regions. A widget callback can also target named fragments with `st.rerun("<key>")` when the fragment was declared with `@st.fragment(key=...)`.
   - Deep dive: [references/backend.md](references/backend.md#fragment-system-stfragment)
 
 ## Element identity

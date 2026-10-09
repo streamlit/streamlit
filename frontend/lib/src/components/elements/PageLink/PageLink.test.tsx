@@ -22,7 +22,7 @@ import { PageLink as PageLinkProto, streamlit } from "@streamlit/protobuf"
 import { render, renderWithContexts } from "~lib/test_util"
 import { lightTheme } from "~lib/theme/themeConfigs"
 
-import PageLink, { buildHref, Props } from "./PageLink"
+import PageLink, { buildHref, type Props } from "./PageLink"
 
 const getProps = (
   elementProps: Partial<PageLinkProto> = {},
@@ -148,6 +148,13 @@ describe("PageLink", () => {
 
     const pageLinkIcon = screen.getByTestId("stIconMaterial")
     expect(pageLinkIcon).toHaveTextContent("home")
+  })
+
+  it("names an icon-only page link when the label is empty", () => {
+    const props = getProps({ label: "", icon: ":material/home:" })
+    render(<PageLink {...props} />)
+
+    expect(screen.getByRole("link", { name: "home icon" })).toBeVisible()
   })
 
   it("renders an emoji icon when provided", () => {

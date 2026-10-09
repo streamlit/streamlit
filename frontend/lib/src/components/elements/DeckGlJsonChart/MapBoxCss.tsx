@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC } from "react"
+import type { FC } from "react"
 import "mapbox-gl/dist/mapbox-gl.css"
 
 /**
@@ -22,5 +22,5 @@ import "mapbox-gl/dist/mapbox-gl.css"
  * when the user wants to use Mapbox instead of Carto.
  */
 export const MapBoxCss: FC = () => {
-  return <></>
+  return null
 }

@@ -79,3 +79,10 @@ source = vega_data.unemployment_across_industries()
 st.area_chart(source, x="date", y="count", color="series", stack=True)
 st.area_chart(source, x="date", y="count", color="series", stack="normalize")
 st.area_chart(source, x="date", y="count", color="series", stack="center")
+
+# Keep accessible-name cases last because existing E2E assertions use positional
+# chart indexes.
+with st.container(key="area_alt"):
+    st.area_chart(df, alt="Area chart of columns a, b, and c")
+with st.container(key="area_no_alt"):
+    st.area_chart(df)

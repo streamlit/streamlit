@@ -99,9 +99,11 @@ When a `key` is provided and `on_change="rerun"` or a callback, the element's st
 ```python
 tabs = st.tabs(["Data", "Charts", "ML"], on_change="rerun", key="my_tabs")
 
+
 # Control which tab is active
 def goto_charts():
     st.session_state.my_tabs = "Charts"
+
 
 st.button("Go to Charts", on_click=goto_charts)
 
@@ -383,13 +385,17 @@ if st.session_state.exp:
 def show_expander(exp):
     exp.write("Heavy content")
 
+
 st.expander("Show details", func=show_expander)
+
 
 def show_tab_a(tab):
     tab.write("Tab A content")
 
+
 def show_tab_b(tab):
     tab.write("Tab B content")
+
 
 st.tabs({"A": show_tab_a, "B": show_tab_b})
 ```
@@ -426,6 +432,7 @@ st.tabs({"A": show_tab_a, "B": show_tab_b})
 @st.expander("Show details")
 def show_expander():
     st.write("Heavy content")
+
 
 show_expander()
 ```

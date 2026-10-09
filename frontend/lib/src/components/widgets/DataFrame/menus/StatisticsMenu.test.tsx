@@ -23,13 +23,14 @@ import { Quiver } from "~lib/dataframes/Quiver"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
 
-import StatisticsMenu, { StatisticsMenuProps } from "./StatisticsMenu"
+import StatisticsMenu, { type StatisticsMenuProps } from "./StatisticsMenu"
+import type * as StatisticsUtils from "./statisticsUtils"
 import {
-  BooleanStatistics,
+  type BooleanStatistics,
   computeStatistics,
-  DateTimeStatistics,
-  NumericStatistics,
-  TextStatistics,
+  type DateTimeStatistics,
+  type NumericStatistics,
+  type TextStatistics,
 } from "./statisticsUtils"
 
 // Mock only the computeStatistics dispatcher so we can drive the component's
@@ -37,7 +38,7 @@ import {
 // real Arrow columns for every type. The pure compute functions are covered
 // directly in statisticsUtils.test.ts.
 vi.mock("./statisticsUtils", async importOriginal => {
-  const actual = await importOriginal<typeof import("./statisticsUtils")>()
+  const actual = await importOriginal<typeof StatisticsUtils>()
   return {
     ...actual,
     computeStatistics: vi.fn(),
@@ -122,6 +123,9 @@ describe("StatisticsMenu", () => {
     )
 
     await waitFor(() => {
+      expect(screen.getByTestId("stDataFrameStatisticsMenu")).toHaveClass(
+        "stDataFrameStatisticsMenu"
+      )
       expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
     })
   })

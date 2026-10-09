@@ -86,8 +86,7 @@ conn = st.connection("snowflake")
 
 # Safe: parameterized
 df = conn.query(
-    "SELECT * FROM users WHERE region = :region",
-    params={"region": selected_region}
+    "SELECT * FROM users WHERE region = :region", params={"region": selected_region}
 )
 
 # UNSAFE: string formatting - don't do this

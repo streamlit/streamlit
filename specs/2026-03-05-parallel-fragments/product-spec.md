@@ -29,19 +29,22 @@ def sales_dashboard():
     data = fetch_sales_data()  # 2 seconds
     st.line_chart(data)
 
+
 @st.fragment
 def inventory_status():
-    data = fetch_inventory()   # 2 seconds
+    data = fetch_inventory()  # 2 seconds
     st.dataframe(data)
+
 
 @st.fragment
 def ml_predictions():
-    preds = run_model()        # 2 seconds
+    preds = run_model()  # 2 seconds
     st.bar_chart(preds)
 
-sales_dashboard()    # runs first  (0-2s)
-inventory_status()   # runs second (2-4s)
-ml_predictions()     # runs third  (4-6s)
+
+sales_dashboard()  # runs first  (0-2s)
+inventory_status()  # runs second (2-4s)
+ml_predictions()  # runs third  (4-6s)
 # Total: 6 seconds — each section appears as it completes, but the last
 # section doesn't appear until 6s even though all loads are independent
 ```
@@ -85,6 +88,7 @@ def fragment(
     parallel: bool = False,
 ) -> F: ...
 
+
 @overload
 def fragment(
     func: None = None,
@@ -112,12 +116,14 @@ def sales_dashboard():
     data = fetch_sales_data()  # 2s I/O
     st.line_chart(data)
 
+
 @st.fragment(parallel=True)
 def inventory_status():
-    data = fetch_inventory()   # 2s I/O
+    data = fetch_inventory()  # 2s I/O
     st.dataframe(data)
 
-sales_dashboard()   # dispatched to thread, main thread continues
+
+sales_dashboard()  # dispatched to thread, main thread continues
 inventory_status()  # dispatched to thread, main thread continues
 # Both run concurrently — total ~2s instead of 4s
 ```
@@ -127,17 +133,20 @@ inventory_status()  # dispatched to thread, main thread continues
 ```python
 st.title("Dashboard")
 
+
 @st.fragment(parallel=True)
 def slow_section():
     data = fetch_from_slow_api()  # 3s
     st.bar_chart(data)
 
+
 @st.fragment
 def fast_section():
     st.metric("Users online", get_user_count())
 
-slow_section()    # dispatched to thread
-fast_section()    # runs inline (not parallel) — renders immediately
+
+slow_section()  # dispatched to thread
+fast_section()  # runs inline (not parallel) — renders immediately
 st.write("Footer renders immediately")
 # fast_section and footer are visible while slow_section is still loading
 ```
@@ -206,8 +215,7 @@ An alternative API using a string enum for the execution mode:
 
 ```python
 @st.fragment(execution="parallel")
-def sales_dashboard():
-    ...
+def sales_dashboard(): ...
 ```
 
 Both options extend `@st.fragment` with a new keyword argument (satisfying API principle
@@ -392,10 +400,10 @@ sequential — only the interacted fragment reruns, so there is no race:
 ```python
 @st.fragment(parallel=True)
 def dashboard_card():
-    data = fetch_data()          # benefits from parallel execution
+    data = fetch_data()  # benefits from parallel execution
     st.metric("Revenue", data.revenue)
     if st.button("Details"):
-        details_dialog(data)     # only runs on user click → sequential rerun, safe
+        details_dialog(data)  # only runs on user click → sequential rerun, safe
 ```
 
 The runtime can distinguish parallel and sequential execution contexts because the fragment
@@ -534,10 +542,12 @@ async def sales_dashboard():
     data = await fetch_sales_async()  # yields to event loop
     st.line_chart(data)
 
+
 @st.fragment
 async def inventory_status():
     data = await fetch_inventory_async()  # yields to event loop
     st.dataframe(data)
+
 
 # Both fetches in-flight simultaneously via the event loop — same 2s result
 ```

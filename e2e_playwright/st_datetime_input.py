@@ -141,6 +141,12 @@ bound_minmax_dt = st.datetime_input(
 )
 st.write("Bound minmax datetime:", bound_minmax_dt)
 
+st.datetime_input(
+    "Datetime input narrow",
+    BASE_DATETIME,
+    width=110,
+    key="narrow_datetime",
+)
 st.markdown("Dynamic datetime input:")
 
 if st.toggle("Update datetime input props"):
@@ -169,3 +175,35 @@ else:
         max_value=datetime(2030, 12, 31, 23, 59),
     )
     st.write("Initial datetime input value:", dval)
+
+# --- Year-crossing bounds (see GitHub issue #16686) ---
+# `max_value`'s month/day precedes `min_value`'s, so the calendar header's year
+# dropdown must still offer the later year.
+st.datetime_input(
+    "Year-crossing datetime",
+    value=datetime(2025, 2, 1, 10, 0),
+    min_value=datetime(2024, 8, 3, 0, 0),
+    max_value=datetime(2025, 2, 3, 23, 59),
+)
+
+# --- on_change="ignore" datetime input ---
+# Run counter so test_datetime_input_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_datetime = st.datetime_input(
+    "Ignore change datetime input",
+    value=BASE_DATETIME,
+    key="ignore_datetime",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore datetime value:", ignore_datetime)
+
+# The Apply button lives in the sidebar so the open calendar popover can't cover
+# it. Clicking it right after typing closes the popover, which commits the typed
+# value, and then reruns the app in a single click.
+if st.sidebar.button("Apply ignore datetime", key="apply_ignore_datetime"):
+    st.write("Applied ignore datetime value:", ignore_datetime)

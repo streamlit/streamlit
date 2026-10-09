@@ -16,7 +16,7 @@
 
 import { memo } from "react"
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Mic } from "@emotion-icons/material-outlined"
 import {
   Pause,
@@ -25,17 +25,17 @@ import {
   StopCircle,
 } from "@emotion-icons/material-rounded"
 
-import BaseButton, {
+import {
   BaseButtonKind,
+  BaseButtonSize,
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 
 import {
   StyledActionButtonContainerDiv,
-  StyledActionButtonPlayPauseDiv,
-  StyledActionButtonStartRecordingDiv,
-  StyledActionButtonStopRecordingDiv,
+  StyledSecondaryIconActionButton,
+  StyledStopRecordingActionButton,
 } from "./styled-components"
 
 interface BaseActionButtonProps {
@@ -45,22 +45,24 @@ interface BaseActionButtonProps {
   iconContent: EmotionIcon
 }
 
-const ActionButton: React.FC<BaseActionButtonProps> = ({
+const SecondaryIconActionButton: React.FC<BaseActionButtonProps> = ({
   onClick,
   disabled,
   ariaLabel,
   iconContent,
 }) => (
-  <BaseButton
+  <StyledSecondaryIconActionButton
     kind={BaseButtonKind.BORDERLESS_ICON}
+    size={BaseButtonSize.MEDIUM}
     onClick={onClick}
     disabled={disabled}
-    aria-label={ariaLabel}
     containerWidth
+    autoFocus={false}
+    aria-label={ariaLabel}
     data-testid="stAudioInputActionButton"
   >
     <Icon content={iconContent} size="base" color="inherit" />
-  </BaseButton>
+  </StyledSecondaryIconActionButton>
 )
 
 export interface AudioInputActionButtonProps {
@@ -70,43 +72,47 @@ export interface AudioInputActionButtonProps {
   isUploading: boolean
   isError: boolean
   recordingUrlExists: boolean
-  startRecording(): void
-  stopRecording(): void
-  onClickPlayPause(): void
-  onClear(): void
+  startRecording: () => void
+  stopRecording: () => void
+  onClickPlayPause: () => void
+  onClear: () => void
 }
 
 interface AudioInputStopRecordingButtonProps {
   disabled: boolean
-  stopRecording(): void
+  stopRecording: () => void
 }
 
 interface AudioInputPlayPauseButtonProps {
   disabled: boolean
   isPlaying: boolean
-  onClickPlayPause(): void
+  onClickPlayPause: () => void
 }
 
 interface AudioInputStartRecordingButtonProps {
   disabled: boolean
-  startRecording(): void
+  startRecording: () => void
 }
 
 interface AudioInputResetButtonProps {
-  onClick(): void
+  onClick: () => void
 }
 
 const AudioInputStopRecordingButton: React.FC<
   AudioInputStopRecordingButtonProps
 > = ({ disabled, stopRecording }) => (
-  <StyledActionButtonStopRecordingDiv>
-    <ActionButton
-      onClick={stopRecording}
-      disabled={disabled}
-      ariaLabel="Stop recording"
-      iconContent={StopCircle}
-    />
-  </StyledActionButtonStopRecordingDiv>
+  <StyledStopRecordingActionButton
+    kind={BaseButtonKind.BORDERLESS_ICON}
+    size={BaseButtonSize.MEDIUM}
+    onClick={stopRecording}
+    disabled={disabled}
+    containerWidth
+    autoFocus={false}
+    aria-label="Stop recording"
+    data-testid="stAudioInputActionButton"
+  >
+    <Icon content={StopCircle} size="base" color="inherit" />
+  </StyledStopRecordingActionButton>
 )
 
 const AudioInputPlayPauseButton: React.FC<AudioInputPlayPauseButtonProps> = ({
@@ -114,51 +120,43 @@ const AudioInputPlayPauseButton: React.FC<AudioInputPlayPauseButtonProps> = ({
   isPlaying,
   onClickPlayPause,
 }) => {
-  return (
-    <StyledActionButtonPlayPauseDiv>
-      {isPlaying ? (
-        <ActionButton
-          onClick={onClickPlayPause}
-          disabled={disabled}
-          ariaLabel="Pause"
-          iconContent={Pause}
-        />
-      ) : (
-        <ActionButton
-          onClick={onClickPlayPause}
-          disabled={disabled}
-          ariaLabel="Play"
-          iconContent={PlayArrow}
-        />
-      )}
-    </StyledActionButtonPlayPauseDiv>
+  return isPlaying ? (
+    <SecondaryIconActionButton
+      onClick={onClickPlayPause}
+      disabled={disabled}
+      ariaLabel="Pause"
+      iconContent={Pause}
+    />
+  ) : (
+    <SecondaryIconActionButton
+      onClick={onClickPlayPause}
+      disabled={disabled}
+      ariaLabel="Play"
+      iconContent={PlayArrow}
+    />
   )
 }
 
 const AudioInputStartRecordingButton: React.FC<
   AudioInputStartRecordingButtonProps
 > = ({ disabled, startRecording }) => (
-  <StyledActionButtonStartRecordingDiv>
-    <ActionButton
-      onClick={startRecording}
-      disabled={disabled}
-      ariaLabel="Record"
-      iconContent={Mic}
-    />
-  </StyledActionButtonStartRecordingDiv>
+  <SecondaryIconActionButton
+    onClick={startRecording}
+    disabled={disabled}
+    ariaLabel="Record"
+    iconContent={Mic}
+  />
 )
 
 const AudioInputResetButton: React.FC<AudioInputResetButtonProps> = ({
   onClick,
 }) => (
-  <StyledActionButtonPlayPauseDiv>
-    <ActionButton
-      disabled={false}
-      onClick={onClick}
-      ariaLabel="Reset"
-      iconContent={Refresh}
-    />
-  </StyledActionButtonPlayPauseDiv>
+  <SecondaryIconActionButton
+    disabled={false}
+    onClick={onClick}
+    ariaLabel="Reset"
+    iconContent={Refresh}
+  />
 )
 
 const AudioInputActionButtons: React.FC<AudioInputActionButtonProps> = ({

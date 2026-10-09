@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect } from "react"
+import { memo, type ReactElement, useCallback, useEffect } from "react"
 
 import {
   DynamicIcon,
@@ -56,18 +56,18 @@ function ButtonActionMenu({
   onSelectAction,
   onCloseMenu,
 }: ButtonActionMenuProps): ReactElement {
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open: true,
     placement: "bottom-end",
     offsetPx: COLUMN_MENU_OFFSET,
   })
 
   // panelRef is used by the scroll-close effect below to ignore scrolls inside the panel.
-  const { panelRef, setFloatingRef } = useOverlayDismissal({
+  const { panelRef, setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: true,
     onClose: onCloseMenu,
-    floatingSetFn: refs.setFloating,
-    excludeSelectors: ['[data-testid="stDataFrameButtonActionMenuTarget"]'],
+    floatingSetFn: setFloating,
+    referenceSetFn: setReference,
   })
 
   // Close menu on any scroll in the document (fixed positioning would misalign
@@ -121,7 +121,7 @@ function ButtonActionMenu({
        * Its position (top/left from canvas coords) determines where the menu appears.
        */}
       <div
-        ref={refs.setReference}
+        ref={setReferenceRef}
         data-testid="stDataFrameButtonActionMenuTarget"
         style={{
           position: "fixed",
@@ -156,6 +156,7 @@ function ButtonActionMenu({
                   // instead of forcing a single line (which would overflow).
                   allowWrap
                   // Provide aria-label for icon-only menu items (where text is empty)
+                  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty label text falls through to the icon, then the raw label
                   aria-label={text || icon || label}
                 >
                   {icon && <DynamicIcon size="base" iconValue={icon} />}

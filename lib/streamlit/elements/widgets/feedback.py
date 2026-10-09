@@ -34,15 +34,16 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError, StreamlitValueOutOfRangeError
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
+        OnChangeMode,
         WidgetArgs,
         WidgetCallback,
         WidgetKwargs,
@@ -112,7 +113,7 @@ class FeedbackMixin:
         key: Key | None = None,
         default: int | None = None,
         disabled: bool = False,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
@@ -126,7 +127,7 @@ class FeedbackMixin:
         key: Key | None = None,
         default: int | None = None,
         disabled: bool = False,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
@@ -140,7 +141,7 @@ class FeedbackMixin:
         key: Key | None = None,
         default: int | None = None,
         disabled: bool = False,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
@@ -196,9 +197,29 @@ class FeedbackMixin:
             An optional boolean that disables the feedback widget if set
             to ``True``. The default is ``False``.
 
-        on_change : callable
-            An optional callback invoked when this feedback widget's value
-            changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the feedback widget should respond to value changes. This
+            controls whether or not Streamlit reruns the app when the user
+            interacts with the feedback widget. ``on_change`` can be one of
+            the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (clicking an option or clearing the
+              selection).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The feedback widget still updates in the
+              UI. The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun. Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -261,24 +282,21 @@ class FeedbackMixin:
 
         """
         if options not in {"thumbs", "faces", "stars"}:
-            raise StreamlitAPIException(
-                "The options argument to st.feedback must be one of "
-                "['thumbs', 'faces', 'stars']. "
-                f"The argument passed was '{options}'."
-            )
+            raise StreamlitValueError("options", ["'thumbs'", "'faces'", "'stars'"])
 
         num_options = _get_num_options(options)
 
-        if default is not None and (default < 0 or default >= num_options):
-            raise StreamlitAPIException(
-                f"The default value in '{options}' must be a number between 0 and {num_options - 1}."
-                f" The passed default value is {default}"
-            )
+        if default is not None and not (0 <= default < num_options):
+            raise StreamlitValueOutOfRangeError("default", default, 0, num_options - 1)
 
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
-        check_widget_policies(self.dg, key, on_change, default_value=default)
+        check_widget_policies(self.dg, key, on_change_callback, default_value=default)
 
         ctx = get_script_run_ctx()
         form_id = current_form_id(self.dg)
@@ -303,17 +321,21 @@ class FeedbackMixin:
         if default is not None:
             proto.default = default
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            proto.ignore_rerun = True
+
         serde = FeedbackSerde(default_value=default)
 
         widget_state = register_widget(
             proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
         )
 
         if widget_state.value_changed:

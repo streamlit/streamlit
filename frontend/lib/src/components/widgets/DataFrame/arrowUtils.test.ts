@@ -17,6 +17,7 @@ import { type CustomCell, GridCellKind } from "@glideapps/glide-data-grid"
 import {
   Binary,
   Bool as BoolType,
+  DateDay,
   Decimal,
   Dictionary,
   Field,
@@ -26,17 +27,24 @@ import {
   List,
   Null,
   Struct,
+  Time,
   Timestamp,
   TimeUnit,
   Uint8,
   Utf8,
 } from "apache-arrow"
 
-import { IArrowData } from "@streamlit/protobuf"
+import type { ArrowData } from "@streamlit/protobuf"
 
-import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
-import { getStyledCell, StyledCell } from "~lib/dataframes/pandasStylerUtils"
-import { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
+import {
+  type ArrowType,
+  DataFrameCellType,
+} from "~lib/dataframes/arrowTypeUtils"
+import {
+  getStyledCell,
+  type StyledCell,
+} from "~lib/dataframes/pandasStylerUtils"
+import { type DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { MULTI } from "~lib/mocks/arrow/multi"
 import { DISPLAY_VALUES, STYLER } from "~lib/mocks/arrow/styler"
@@ -56,7 +64,8 @@ import {
 } from "./arrowUtils"
 import {
   CheckboxColumn,
-  ColumnCreator,
+  type ColumnCreator,
+  DateColumn,
   DateTimeColumn,
   getTextCell,
   ListColumn,
@@ -355,7 +364,7 @@ describe("initEmptyIndexColumn", () => {
 
 describe("initIndexFromArrow", () => {
   it("returns a valid index", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: UNICODE,
     }
     const data = new Quiver(element)
@@ -386,7 +395,7 @@ describe("initIndexFromArrow", () => {
   })
 
   it("works with multi-index", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: MULTI,
     }
     const data = new Quiver(element)
@@ -445,7 +454,7 @@ describe("initIndexFromArrow", () => {
 
 describe("initColumnFromArrow", () => {
   it("returns a valid column", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: UNICODE,
     }
     const data = new Quiver(element)
@@ -476,7 +485,7 @@ describe("initColumnFromArrow", () => {
   })
 
   it("works with multi-index headers", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: MULTI,
     }
     const data = new Quiver(element)
@@ -509,7 +518,7 @@ describe("initColumnFromArrow", () => {
   })
 
   it("adds categorical options to type metadata", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: CATEGORICAL_COLUMN,
     }
     const data = new Quiver(element)
@@ -545,7 +554,7 @@ describe("initColumnFromArrow", () => {
 })
 describe("initAllColumnsFromArrow", () => {
   it("extracts all columns", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: UNICODE,
     }
     const data = new Quiver(element)
@@ -626,7 +635,7 @@ describe("initAllColumnsFromArrow", () => {
   })
 
   it("handles empty dataframes correctly", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: EMPTY,
     }
     const data = new Quiver(element)
@@ -661,7 +670,7 @@ describe("initAllColumnsFromArrow", () => {
 
 describe("getCellFromArrow", () => {
   it("creates a valid glide-compatible cell", () => {
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: UNICODE,
     }
     const data = new Quiver(element)
@@ -708,7 +717,7 @@ describe("getCellFromArrow", () => {
       },
     })
 
-    const element: IArrowData = {
+    const element: ArrowData.$Properties = {
       data: DECIMAL, // should be interpreted as object
     }
     const data = new Quiver(element)
@@ -1248,6 +1257,48 @@ describe("getColumnTypeFromArrow", () => {
   ])(
     "interprets %s as column type: %s",
     (arrowType: ArrowType, expectedType: ColumnCreator) => {
+      expect(getColumnTypeFromArrow(arrowType)).toEqual(expectedType)
+    }
+  )
+
+  // Time and date arrow types are kept in a separate it.each: unlike the other
+  // arrow types above, apache-arrow's Time/DateDay instances throw during
+  // vitest's it.each title serialization (%s), which would fail suite
+  // collection. Using an explicit string label avoids serializing them.
+  it.each([
+    [
+      "time",
+      {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("test", new Time(TimeUnit.SECOND, 64), true),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "time",
+          numpy_type: "object",
+          metadata: null,
+        },
+      },
+      TimeColumn,
+    ],
+    [
+      "date",
+      {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("test", new DateDay(), true),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "date",
+          numpy_type: "object",
+          metadata: null,
+        },
+      },
+      DateColumn,
+    ],
+  ])(
+    "interprets %s type as the correct column",
+    (_label: string, arrowType: ArrowType, expectedType: ColumnCreator) => {
       expect(getColumnTypeFromArrow(arrowType)).toEqual(expectedType)
     }
   )

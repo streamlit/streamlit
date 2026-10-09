@@ -14,15 +14,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform type checking tests for st.camera_input
 # The return type is always UploadedFile | None
 if TYPE_CHECKING:
     from streamlit.elements.widgets.camera_input import CameraInputMixin
-    from streamlit.runtime.uploaded_file_manager import UploadedFile
+    from streamlit.typing import UploadedFile
 
     camera_input = CameraInputMixin().camera_input
 
@@ -83,6 +81,8 @@ if TYPE_CHECKING:
         UploadedFile | None,
     )
     assert_type(camera_input("Take a picture", on_change=None), UploadedFile | None)
+    assert_type(camera_input("Take a picture", on_change="rerun"), UploadedFile | None)
+    assert_type(camera_input("Take a picture", on_change="ignore"), UploadedFile | None)
 
     # Camera input with resolution parameter
     assert_type(camera_input("Take a picture", resolution="480p"), UploadedFile | None)

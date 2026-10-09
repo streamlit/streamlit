@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -82,6 +80,8 @@ if TYPE_CHECKING:
             args=None,
             kwargs=None,
             disabled=False,
+            bind="query-params",
+            persist_state="session",
         ),
         int,
     )

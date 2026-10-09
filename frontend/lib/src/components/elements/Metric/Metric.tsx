@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useId, useRef } from "react"
+import { memo, type ReactElement, useEffect, useId, useRef } from "react"
 
 import { Global } from "@emotion/react"
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
+import { getLogger } from "loglevel"
 import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
-import { TopLevelSpec } from "vega-lite"
+import type { TopLevelSpec } from "vega-lite"
 
-import { convertRemToPx, EmotionTheme, useEmotionTheme } from "@streamlit/lib"
+import {
+  convertRemToPx,
+  type EmotionTheme,
+  useEmotionTheme,
+} from "@streamlit/lib"
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
@@ -44,9 +50,13 @@ import {
   StyledMetricContainer,
   StyledMetricContent,
   StyledMetricDeltaText,
+  StyledMetricIcon,
+  StyledMetricLabelRow,
   StyledMetricLabelText,
   StyledMetricValueText,
 } from "./styled-components"
+
+const LOG = getLogger("Metric")
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
 
@@ -145,7 +155,7 @@ export function getMetricChartSpec(
           }),
           ...(chartType === MetricProto.ChartType.BAR && {
             type: "bar",
-            cornerRadius: parseFloat(theme.radii.full),
+            cornerRadius: Number.parseFloat(theme.radii.full),
           }),
           ...(chartType === MetricProto.ChartType.AREA && {
             type: "area",
@@ -298,8 +308,6 @@ export interface MetricProps {
 function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
-  const { width: chartWidth, elementRef: chartContainerRef } =
-    useCalculatedDimensions()
 
   const { MetricDirection } = MetricProto
   const {
@@ -315,7 +323,14 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     chartType,
     format,
     deltaDescription,
+    icon,
   } = element
+
+  const hasChartData = Boolean(chartData?.length)
+  // Re-attach ResizeObserver when the chart container remounts. Otherwise an
+  // empty-to-data transition keeps width at the -1 fallback and vega-embed never runs.
+  const { width: chartWidth, elementRef: chartContainerRef } =
+    useCalculatedDimensions([hasChartData])
 
   // Apply number formatting if a format is specified and the value is numeric
   const formattedMetricValue =
@@ -348,36 +363,59 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
 
   useEffect(() => {
     if (
-      chartData &&
-      chartData.length > 0 &&
-      chartRef.current &&
+      !chartData?.length ||
+      !chartRef.current ||
       // Having a chart width <= 0 causes issues with vega-embed:
-      chartWidth > 0
+      chartWidth <= 0
     ) {
-      const spec = getMetricChartSpec(
-        chartData,
-        chartType,
-        chartWidth,
-        theme,
-        color
-      )
-
-      void embed(chartRef.current, spec, {
-        actions: false,
-        renderer: "svg",
-        ast: true,
-        expr: expressionInterpreter,
-        tooltip: {
-          theme: "custom",
-          formatTooltip: (value: { y: number }) => {
-            // Only show the y value in the tooltip since
-            // the x value is just the numeric index of the point:
-            return `${value.y}`
-          },
-        },
-      })
+      return
     }
-  }, [chartData, color, theme, chartWidth, chartType, chartRef])
+
+    const spec = getMetricChartSpec(
+      chartData,
+      chartType,
+      chartWidth,
+      theme,
+      color
+    )
+
+    let isCancelled = false
+    let finalizeEmbed: (() => void) | undefined
+
+    void embed(chartRef.current, spec, {
+      actions: false,
+      renderer: "svg",
+      ast: true,
+      expr: expressionInterpreter,
+      tooltip: {
+        theme: "custom",
+        formatTooltip: (value: { y: number }) => {
+          // Only show the y value in the tooltip since
+          // the x value is just the numeric index of the point:
+          return `${value.y}`
+        },
+      },
+    })
+      .then(result => {
+        if (isCancelled) {
+          // Embed resolved after this effect was cancelled; drop the view.
+          result.finalize()
+        } else {
+          finalizeEmbed = result.finalize
+        }
+        return
+      })
+      .catch((error: unknown) => {
+        // Ignore embed rejections so teardown races do not throw. LOG.debug
+        // records the error only when debug logging is enabled.
+        LOG.debug("Failed to embed metric chart:", error)
+      })
+
+    return () => {
+      isCancelled = true
+      finalizeEmbed?.()
+    }
+  }, [chartData, color, theme, chartWidth, chartType])
 
   return (
     <StyledMetricContainer
@@ -390,12 +428,23 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           data-testid="stMetricLabel"
           visibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
         >
-          <StreamlitMarkdown
-            source={label}
-            allowHTML={false}
-            isLabel
-            truncate
-          />
+          <StyledMetricLabelRow>
+            {icon && (
+              <StyledMetricIcon>
+                <DynamicIcon
+                  iconValue={icon}
+                  size="lg"
+                  testid="stMetricIcon"
+                />
+              </StyledMetricIcon>
+            )}
+            <StreamlitMarkdown
+              source={label}
+              allowHTML={false}
+              isLabel
+              truncate
+            />
+          </StyledMetricLabelRow>
           {help && (
             <WidgetLabelHelpIconInline
               content={help}
@@ -461,7 +510,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           </StyledDeltaContainer>
         )}
       </StyledMetricContent>
-      {chartData && chartData.length > 0 && (
+      {hasChartData && (
         <div ref={chartContainerRef}>
           <Global styles={StyledVegaLiteChartTooltips} />
           <StyledMetricChart

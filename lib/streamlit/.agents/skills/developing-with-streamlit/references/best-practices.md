@@ -46,31 +46,50 @@ query = st.text_input("", placeholder="Search")
 # GOOD: Accessible label, visually collapsed
 query = st.text_input(
     "Search",
+    type="search",
     placeholder="Search",
     label_visibility="collapsed",
 )
 ```
 
+Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short and specific; see [media-display.md](media-display.md) and [data-display.md](data-display.md).
+
+```python
+# BAD: Meaningful image with no alt
+st.image("revenue.png", caption="Q3 revenue")
+
+# GOOD: Short accessible name, independent of caption
+st.image(
+    "revenue.png",
+    caption="Q3 revenue",
+    alt="Bar chart of monthly Q3 revenue rising to $1.2M in September",
+)
+```
+
 ## HTML and iframes
 
-Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
+Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or deprecated `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
 
 Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` commands.
 
-- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command.
+- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command. Pass `alt=` to set the iframe `title`. The default is a shared `"st.iframe"` name on every embed.
 - Use `st.html` for static HTML or CSS that should render directly in the app instead of inside an iframe. JavaScript is ignored by default; only enable it with `unsafe_allow_javascript=True` when necessary, and never enable it for untrusted content.
 
 ## Layout
 
-Use `width` instead of deprecated `use_container_width`.
+Use `width` instead of deprecated `use_container_width`. Dataframes and most charts stretch by default; buttons default to `width="content"`.
 
 ```python
 # BAD: Deprecated
 st.dataframe(df, use_container_width=True)
+st.download_button("Download CSV", df.to_csv(), "orders.csv", use_container_width=True)
 
-# GOOD: Default is stretch; set content width only when needed
+# GOOD: Dataframes stretch by default; set content width only when needed
 st.dataframe(df)
 st.dataframe(df, width="content")
+
+# GOOD: Buttons fit their content by default; stretch them explicitly
+st.download_button("Download CSV", df.to_csv(), "orders.csv", width="stretch")
 ```
 
 Prefer horizontal containers for responsive rows, and reserve columns for fixed grids or specific width ratios.
@@ -97,7 +116,7 @@ with st.container(border=True):
 
 ## Navigation and pages
 
-Use `st.navigation` with an `app_pages/` directory. Avoid the legacy `pages/` auto-discovery pattern and app-body navigation built from `st.page_link`.
+Use `st.navigation` with an `app_pages/` directory. Give every `st.Page` a context-appropriate Material Symbols icon. Avoid the legacy `pages/` auto-discovery pattern and app-body navigation built from `st.page_link`.
 
 ```python
 # GOOD: streamlit_app.py
@@ -121,6 +140,7 @@ def render_page():
     st.title("Sales")
     st.line_chart(load_sales())
 
+
 render_page()
 ```
 
@@ -131,7 +151,7 @@ import streamlit as st
 from utils.data import load_sales
 
 st.title("Sales")
-st.line_chart(load_sales())
+st.line_chart(load_sales(), alt="Sales over time")
 ```
 
 ## Performance
@@ -171,7 +191,7 @@ def load_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 ```
 
-Render stable layout before slow calls. Streamlit emits UI updates top to bottom during each rerun, so slow code before downstream elements leaves faded stale content from the previous run on screen while it runs. Render fast UI first, reserve the slow result's position with `st.container()`, then fill that slot once the work completes — wrap the slow work in `with container.skeleton():` to show a loading placeholder, and write results explicitly to the container (e.g. `container.dataframe(...)`), since the block doesn't redirect bare `st.*` calls into it. Avoid standalone `st.empty()`/`st.skeleton()` placeholders that you fill after slow work: the delay unmounts the old element and resets stateful widgets (e.g. a dataframe's scroll, sort, and selection), whereas a reserved container keeps it mounted at a stable position. Give stateful elements a stable `key`.
+Render stable UI before slow calls. Streamlit emits UI updates top to bottom during each rerun, so slow code before downstream elements leaves faded stale content from the previous run on screen while it runs. Render fast UI first, reserve the slow result's position with `st.container()`, then fill that slot once the work completes — wrap the slow work in `with container.skeleton():` to show a loading placeholder, and write results explicitly to the container (e.g. `container.dataframe(...)`), since the block doesn't redirect bare `st.*` calls into it. Avoid standalone `st.empty()`/`st.skeleton()` placeholders that you fill after slow work: the delay unmounts the old element and resets stateful widgets (e.g. a dataframe's scroll, sort, and selection), whereas a reserved container keeps it mounted at a stable position. Give stateful elements a stable `key`.
 
 ```python
 # BAD: The whole page is stuck behind a slow load and greys out
@@ -221,6 +241,8 @@ if submitted:
     results = search(query, category)
 ```
 
+For as-you-type search, use `st.text_input(..., type="search", live=True)` inside a `@st.fragment` instead of a form. Keep expensive work out of that fragment, or use a longer delay such as `live="500ms"`.
+
 Do not put expensive work unguarded inside tabs or expanders. Hidden tab content and collapsed expander content still compute unless you opt into dynamic state and guard the work.
 
 ```python
@@ -246,21 +268,27 @@ if details.open:
 
 ## Data and charts
 
-Prefer Vega-based charts over pyplot and Plotly.
+Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description).
 
 ```python
 # GOOD: Native charts for common cases
-st.line_chart(df, x="date", y="revenue")
-st.bar_chart(df, x="category", y="orders")
-st.scatter_chart(df, x="revenue", y="margin", color="segment")
+st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
+st.bar_chart(df, x="category", y="orders", alt="Orders by category")
+st.scatter_chart(
+    df, x="revenue", y="margin", color="segment", alt="Margin versus revenue by segment"
+)
 
 # GOOD: Altair for complex charts
-chart = alt.Chart(df).mark_line().encode(
-    x=alt.X("date:T", title="Date"),
-    y=alt.Y("revenue:Q", title="Revenue"),
-    color="region:N",
+chart = (
+    alt.Chart(df)
+    .mark_line()
+    .encode(
+        x=alt.X("date:T", title="Date"),
+        y=alt.Y("revenue:Q", title="Revenue"),
+        color="region:N",
+    )
 )
-st.altair_chart(chart)
+st.altair_chart(chart, alt="Revenue by region over time")
 ```
 
 Keep sensitive data out of frontend payloads. Hiding a dataframe column only hides it visually; pre-filter sensitive columns before display.
@@ -312,6 +340,18 @@ query = st.text_input(f"Search {category}")
 
 # GOOD: Stable widget identity and session-state access
 query = st.text_input(f"Search {category}", key="search_query")
+```
+
+Sync a widget to the URL with `bind="query-params"` rather than hand-rolling `st.query_params`.
+
+```python
+# BAD: Manual read/write plumbing that crashes on an unexpected URL value
+default = st.query_params.get("sort", SORTS[0])
+sort = st.selectbox("Sort", SORTS, index=SORTS.index(default))
+st.query_params["sort"] = sort
+
+# GOOD: Streamlit keeps the widget and the URL in sync
+sort = st.selectbox("Sort", SORTS, key="sort", bind="query-params")
 ```
 
 ## Secrets and queries

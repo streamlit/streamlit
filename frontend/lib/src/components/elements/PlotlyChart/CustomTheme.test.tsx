@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+import { vi } from "vitest"
+
 import { mockTheme } from "~lib/mocks/mockTheme"
+import { getGray70 } from "~lib/theme/getColors"
 
 import {
   applyStreamlitTheme,
@@ -120,16 +124,256 @@ describe("PlotlyChart CustomTheme", () => {
       expect(spec.layout.template.layout).toHaveProperty("paper_bgcolor")
     })
 
-    it("handles missing template gracefully", () => {
-      const spec = {
+    it("bolds layout.title when it is a plain string", () => {
+      const spec: Record<string, unknown> = {
         layout: {
-          title: { text: "My Chart" },
-          // missing template
+          title: "My Chart",
+          template: {
+            layout: {},
+          },
         },
       }
 
-      // Should not throw
+      applyStreamlitTheme(spec, theme)
+
+      expect((spec.layout as { title: { text: string } }).title.text).toBe(
+        "<b>My Chart</b>"
+      )
+    })
+
+    it("creates a template when missing so Streamlit colors still apply", () => {
+      const errorSpy = vi
+        .spyOn(getLogger("PlotlyChart:CustomTheme"), "error")
+        .mockImplementation(() => {})
+      const spec: Record<string, unknown> = {
+        layout: {
+          title: { text: "My Chart" },
+          // missing template — raw figure JSON / plotly.js v4 defaults
+        },
+      }
+
       expect(() => applyStreamlitTheme(spec, theme)).not.toThrow()
+      const layout = spec.layout as {
+        title: { text: string }
+        template: { layout: { paper_bgcolor: string; plot_bgcolor: string } }
+      }
+      expect(layout.title.text).toBe("<b>My Chart</b>")
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
+      expect(layout.template.layout.plot_bgcolor).toBe(theme.colors.bgColor)
+      expect(errorSpy).not.toHaveBeenCalled()
+
+      errorSpy.mockRestore()
+    })
+
+    it("replaces a named string template with Streamlit layout colors", () => {
+      const spec: Record<string, unknown> = {
+        layout: {
+          template: "plotly",
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        template: { layout: { paper_bgcolor: string } }
+      }
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
+    })
+
+    it("creates layout and template when both are missing", () => {
+      const spec: Record<string, unknown> = {}
+
+      applyStreamlitTheme(spec, theme)
+
+      const layout = spec.layout as {
+        template: { layout: { paper_bgcolor: string } }
+      }
+      expect(layout.template.layout.paper_bgcolor).toBe(theme.colors.bgColor)
+    })
+
+    it("scrubs sankey template textfont.color when user set layout.font.color", () => {
+      // Reproduces https://github.com/streamlit/streamlit/issues/11031:
+      // fig.update_layout(font=dict(color="red")) must survive the Streamlit
+      // theme merge and win over Sankey's template `textfont.color` default.
+      // The realistic template shape only injects `textfont.color` (no
+      // `.family`) — see `streamlit_plotly_theme.py`.
+      const spec = {
+        layout: {
+          font: { family: "Times New Roman", color: "red", size: 18 },
+          template: {
+            layout: {},
+            data: {
+              sankey: [{ textfont: { color: getGray70(theme) } }],
+            },
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      // User's layout.font is untouched.
+      expect(spec.layout.font).toEqual({
+        family: "Times New Roman",
+        color: "red",
+        size: 18,
+      })
+      // The shadowing Streamlit default is removed so the user's color wins.
+      expect(spec.layout.template.data.sankey[0].textfont).not.toHaveProperty(
+        "color"
+      )
+    })
+
+    it("scrubs icicle template textfont.color when user set layout.font.color", () => {
+      const spec = {
+        layout: {
+          font: { color: "red" },
+          template: {
+            layout: {},
+            data: {
+              icicle: [{ textfont: { color: "white" } }],
+            },
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      expect(spec.layout.template.data.icicle[0].textfont).not.toHaveProperty(
+        "color"
+      )
+    })
+
+    it("leaves template textfont alone when user did not set font", () => {
+      const spec = {
+        layout: {
+          template: {
+            layout: {},
+            data: {
+              sankey: [{ textfont: { color: getGray70(theme) } }],
+            },
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      // Without a user-provided layout.font, the theme's Sankey textfont color
+      // must still be respected so charts pick up the Streamlit theme colors.
+      expect(spec.layout.template.data.sankey[0].textfont.color).toBe(
+        getGray70(theme)
+      )
+    })
+
+    it("does not scrub template textfont when only layout.font.family is set", () => {
+      // Streamlit does not inject `textfont.family` on any trace type, so
+      // `layout.font.family` inherits via Plotly's normal cascade; the
+      // frontend does not need to touch the template.
+      const sankeyColor = getGray70(theme)
+      const spec = {
+        layout: {
+          font: { family: "Times New Roman" },
+          template: {
+            layout: {},
+            data: {
+              sankey: [{ textfont: { color: sankeyColor } }],
+            },
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      expect(spec.layout.template.data.sankey[0].textfont.color).toBe(
+        sankeyColor
+      )
+    })
+
+    it("preserves user-owned custom sankey template textfont.color under theme=streamlit", () => {
+      // A user-supplied custom Plotly template may define its own `sankey`
+      // trace with a `textfont.color` that differs from Streamlit's injected
+      // default. In that case the user's color must win — matching Plotly's
+      // standard template precedence and `fig.show()`. Only Streamlit's own
+      // injected default (getGray70(theme)) is scrubbed.
+      const spec = {
+        layout: {
+          font: { color: "red" },
+          template: {
+            layout: {},
+            data: {
+              sankey: [
+                { textfont: { color: "#ABCDEF", family: "CustomFam" } },
+              ],
+            },
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      // Custom textfont is preserved verbatim.
+      expect(spec.layout.template.data.sankey[0].textfont).toEqual({
+        color: "#ABCDEF",
+        family: "CustomFam",
+      })
+    })
+
+    it("preserves user-owned custom icicle template textfont.color under theme=streamlit", () => {
+      const spec = {
+        layout: {
+          font: { color: "red" },
+          template: {
+            layout: {},
+            data: {
+              icicle: [{ textfont: { color: "#123456" } }],
+            },
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      expect(spec.layout.template.data.icicle[0].textfont).toEqual({
+        color: "#123456",
+      })
+    })
+
+    it("preserves textfont on non-Streamlit-owned custom template traces", () => {
+      // Trace types outside the Streamlit-owned set (scatter, bar, ...) must
+      // always have their custom `textfont` preserved, even when the user
+      // sets `layout.font`.
+      const spec = {
+        layout: {
+          font: { family: "Times New Roman", color: "red" },
+          template: {
+            layout: {},
+            data: {
+              scatter: [
+                { textfont: { family: "CustomFamily", color: "CustomColor" } },
+              ],
+              bar: [
+                { textfont: { family: "CustomFamily", color: "CustomColor" } },
+              ],
+              // Streamlit-owned trace with the injected default color — this
+              // one should still be scrubbed.
+              sankey: [{ textfont: { color: getGray70(theme) } }],
+            },
+          },
+        },
+      }
+
+      applyStreamlitTheme(spec, theme)
+
+      expect(spec.layout.template.data.scatter[0].textfont).toEqual({
+        family: "CustomFamily",
+        color: "CustomColor",
+      })
+      expect(spec.layout.template.data.bar[0].textfont).toEqual({
+        family: "CustomFamily",
+        color: "CustomColor",
+      })
+      expect(spec.layout.template.data.sankey[0].textfont).not.toHaveProperty(
+        "color"
+      )
     })
   })
 

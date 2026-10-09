@@ -24,15 +24,13 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
+    Final,
     Literal,
     TypeAlias,
-    TypedDict,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import Required
 
 from streamlit import dataframe_util, type_util
 from streamlit.deprecation_util import (
@@ -54,15 +52,31 @@ from streamlit.elements.lib.layout_utils import (
     validate_width,
 )
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
+from streamlit.logger import get_logger
 from streamlit.proto.VegaLiteChart_pb2 import (
     VegaLiteChart as VegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary, calc_hash
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+    validate_on_change_mode,
+)
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
+
+_LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -87,13 +101,15 @@ AltairChart: TypeAlias = Union[
 _altair_globals_lock = threading.Lock()
 
 
-class VegaLiteState(TypedDict, total=False):
+class VegaLiteState(ReadOnlyAttributeDictionary):
     """
     The schema for the Vega-Lite event state.
 
-    The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically
-    changed or set through Session State.
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -190,7 +206,29 @@ class VegaLiteState(TypedDict, total=False):
 
     """
 
-    selection: Required[AttributeDictionary]
+    # The selection payload is keyed by the user's Vega-Lite parameter names, so
+    # it has no fixed schema and is exposed as a plain (read-only) dictionary.
+    selection: ReadOnlyAttributeDictionary
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to keep `selection` typed. Use
+    # dict.__getitem__ for the selection key so the read-only base class does
+    # not re-wrap the already-wrapped nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> ReadOnlyAttributeDictionary: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, ReadOnlyAttributeDictionary):
+                item = ReadOnlyAttributeDictionary(item)
+                # Cache so repeated bracket/attribute access stays identity-stable.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -200,23 +238,26 @@ class VegaLiteStateSerde:
     selection_parameters: Sequence[str]
 
     def deserialize(self, ui_value: str | None) -> VegaLiteState:
-        empty_selection_state: VegaLiteState = {
-            "selection": AttributeDictionary(
-                # Initialize the select state with empty dictionaries for each selection parameter.
-                {param: {} for param in self.selection_parameters}
-            ),
-        }
-
-        selection_state = (
-            empty_selection_state
-            if ui_value is None
-            else cast("VegaLiteState", AttributeDictionary(json.loads(ui_value)))
+        empty_selection_state = VegaLiteState(
+            {
+                "selection": ReadOnlyAttributeDictionary(
+                    # Initialize the select state with empty dictionaries for each selection parameter.
+                    {param: {} for param in self.selection_parameters}
+                ),
+            }
         )
 
-        if "selection" not in selection_state:
-            selection_state = empty_selection_state  # type: ignore[unreachable]
+        if ui_value is None:
+            return empty_selection_state
 
-        return cast("VegaLiteState", AttributeDictionary(selection_state))
+        parsed = json.loads(ui_value)
+        if "selection" not in parsed:
+            return empty_selection_state
+
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        parsed["selection"] = ReadOnlyAttributeDictionary(parsed["selection"])
+        return VegaLiteState(parsed)
 
     def serialize(self, selection_state: VegaLiteState) -> str:
         return json.dumps(selection_state, default=str)
@@ -292,7 +333,10 @@ def _prepare_vega_lite_spec(
     spec = dict(spec)
 
     if len(spec) == 0:
-        raise StreamlitAPIException("Vega-Lite charts require a non-empty spec dict.")
+        raise StreamlitMissingRequiredParameterError(
+            "spec",
+            detail="Vega-Lite charts require a non-empty spec dict.",
+        )
 
     if "autosize" not in spec:
         # type fit does not work for many chart types. This change focuses
@@ -340,21 +384,76 @@ def _prepare_vega_lite_spec(
     return spec
 
 
+_GEOJSON_GEOMETRY_TYPES: Final[frozenset[str]] = frozenset(
+    {
+        "Point",
+        "MultiPoint",
+        "LineString",
+        "MultiLineString",
+        "Polygon",
+        "MultiPolygon",
+    }
+)
+
+
+def _is_geojson_or_topojson_payload(data: Any) -> bool:
+    """Return True when data is GeoJSON/TopoJSON geometry, not a table."""
+    if isinstance(data, dict):
+        geo_type = data.get("type")
+        if geo_type == "FeatureCollection" and "features" in data:
+            return True
+        if geo_type == "Feature" and "geometry" in data:
+            return True
+        if geo_type == "GeometryCollection" and "geometries" in data:
+            return True
+        if geo_type in _GEOJSON_GEOMETRY_TYPES and "coordinates" in data:
+            return True
+        # TopoJSON may omit type: Topology. Require a Topology-compatible
+        # shape so a columnar table with arcs/objects columns is not treated
+        # as geometry. Every other dict falls through as tabular.
+        if geo_type is None or geo_type == "Topology":
+            return isinstance(data.get("arcs"), list) and isinstance(
+                data.get("objects"), dict
+            )
+        return False
+
+    if isinstance(data, list) and data:
+        # Only inspect the first element: Vega-Lite requires a homogeneous
+        # array, so a leading Feature means the whole array is GeoJSON.
+        first = data[0]
+        return (
+            isinstance(first, dict)
+            and first.get("type") == "Feature"
+            and "geometry" in first
+        )
+
+    return False
+
+
 def _marshall_chart_data(
     proto: VegaLiteChartProto,
     spec: VegaLiteSpec,
     data: Data = None,
 ) -> None:
-    """Adds the data to the proto and removes it from the spec dict.
-    These operations will happen in-place.
+    """Move chart data onto the proto, in place.
+
+    Named tabular datasets are copied to ``proto.datasets`` as Arrow IPC bytes
+    and removed from the spec. Named GeoJSON/TopoJSON datasets stay in
+    ``spec["datasets"]`` so Vega-Lite can compile them on embed. Top-level
+    ``data.values`` / raw ``data`` are moved to ``proto.data`` unless the
+    values are GeoJSON/TopoJSON, which stay in the spec with their format.
     """
 
-    # Pull data out of spec dict when it's in a 'datasets' key:
-    #   datasets: {foo: df1_bytes, bar: df2_bytes}, ...}
     if "datasets" in spec:
+        remaining_datasets: dict[str, Any] = {}
         for dataset_name, dataset_data in spec["datasets"].items():
+            name = str(dataset_name)
+            if _is_geojson_or_topojson_payload(dataset_data):
+                remaining_datasets[name] = dataset_data
+                continue
+
             dataset = proto.datasets.add()
-            dataset.name = str(dataset_name)
+            dataset.name = name
             dataset.has_name = True
             # The ID transformer (_to_arrow_dataset function registered before conversion to dict)
             # already serializes the data into Arrow IPC format (bytes) when the Altair object
@@ -369,7 +468,11 @@ def _marshall_chart_data(
                 if isinstance(dataset_data, bytes)
                 else dataframe_util.convert_anything_to_arrow_bytes(dataset_data)
             )
-        del spec["datasets"]
+
+        if remaining_datasets:
+            spec["datasets"] = remaining_datasets
+        else:
+            del spec["datasets"]
 
     # Pull data out of spec dict when it's in a top-level 'data' key:
     # > {data: df}
@@ -381,9 +484,11 @@ def _marshall_chart_data(
 
         if isinstance(data_spec, dict):
             if "values" in data_spec:
-                data = data_spec["values"]
-                del spec["data"]
-        else:
+                values = data_spec["values"]
+                if not _is_geojson_or_topojson_payload(values):
+                    data = values
+                    del spec["data"]
+        elif not _is_geojson_or_topojson_payload(data_spec):
             data = data_spec
             del spec["data"]
 
@@ -438,8 +543,20 @@ def _convert_altair_to_vega_lite_spec(
             with data_transformer:  # ty: ignore[invalid-context-manager]
                 chart_dict = altair_chart.to_dict()
 
-    # Put datasets back into the chart dict:
-    chart_dict["datasets"] = datasets
+    # Merge the Arrow-serialized datasets we collected with any datasets the chart
+    # already carries, letting the Arrow-serialized datasets win on key collisions.
+    #
+    # Replacing outright would discard data — charts built with alt.Chart.from_json
+    # carry their data as inline datasets keyed by name, with the spec referencing
+    # them via {"data": {"name": ...}}. Our transformer never sees a dataframe for
+    # those, so `datasets` is empty and the chart would render with axes but no
+    # data. See https://github.com/streamlit/streamlit/issues/6269.
+    existing_datasets = chart_dict.get("datasets")
+    chart_dict["datasets"] = (
+        {**existing_datasets, **datasets}
+        if isinstance(existing_datasets, dict)
+        else datasets
+    )
     return chart_dict
 
 
@@ -517,7 +634,8 @@ def _parse_selection_mode(
             "have any selections defined. To add selections to `st.altair_chart`, check out the documentation "
             "[here](https://altair-viz.github.io/user_guide/interactions.html#selections-capturing-chart-interactions)."
             " For adding selections to `st.vega_lite_chart`, take a look "
-            "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html)."
+            "at the specification [here](https://vega.github.io/vega-lite/docs/selection.html).",
+            error_id="vega-on-select-without-spec-selections",
         )
 
     if selection_mode is None:
@@ -533,7 +651,8 @@ def _parse_selection_mode(
         if selection_name not in all_selection_params:
             raise StreamlitAPIException(
                 f"Selection parameter '{selection_name}' is not defined in the chart "
-                f"spec. Available selection parameters are: {all_selection_params}."
+                f"spec. Available selection parameters are: {all_selection_params}.",
+                error_id="vega-selection-parameter-not-defined",
             )
     return sorted(selection_mode)
 
@@ -574,6 +693,9 @@ def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
     return vega_spec
 
 
+_STABILIZE_UNSET: Final[Any] = object()
+
+
 def _stabilize_vega_json_spec(vega_spec: str) -> str:
     """Makes the chart spec stay stable across reruns and sessions.
 
@@ -604,6 +726,30 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
        between sessions
     """
 
+    # Geometry in datasets / data.values must not participate in param_/view_
+    # rewrites: a property named param_1 can break lookup joins, and a TopoJSON
+    # objects layer named "layer" would otherwise trip the composite-chart scan.
+    extracted_datasets: Any = _STABILIZE_UNSET
+    extracted_geo_values: Any = _STABILIZE_UNSET
+    try:
+        parsed_spec = json.loads(vega_spec)
+    except json.JSONDecodeError:
+        parsed_spec = None
+
+    if isinstance(parsed_spec, dict):
+        if "datasets" in parsed_spec:
+            extracted_datasets = parsed_spec.pop("datasets")
+        data_spec = parsed_spec.get("data")
+        if isinstance(data_spec, dict) and "values" in data_spec:
+            values = data_spec["values"]
+            if _is_geojson_or_topojson_payload(values):
+                extracted_geo_values = data_spec.pop("values")
+        if (
+            extracted_datasets is not _STABILIZE_UNSET
+            or extracted_geo_values is not _STABILIZE_UNSET
+        ):
+            vega_spec = json.dumps(parsed_spec)
+
     # We only want to apply these replacements if it is really necessary
     # since there is a risk that we replace names that where chosen by the user
     # and thereby introduce unwanted side effects.
@@ -621,6 +767,20 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     # so its better to not replace this pattern.
     if re.search(r'"(vconcat|hconcat|facet|layer|concat|repeat)"', vega_spec):
         vega_spec = _reset_counter_pattern("view_", vega_spec)
+
+    if (
+        extracted_datasets is not _STABILIZE_UNSET
+        or extracted_geo_values is not _STABILIZE_UNSET
+    ):
+        restored_spec = json.loads(vega_spec)
+        if extracted_datasets is not _STABILIZE_UNSET:
+            restored_spec["datasets"] = extracted_datasets
+        if extracted_geo_values is not _STABILIZE_UNSET:
+            restored_data = restored_spec.setdefault("data", {})
+            if isinstance(restored_data, dict):
+                restored_data["values"] = extracted_geo_values
+        vega_spec = json.dumps(restored_spec)
+
     return vega_spec
 
 
@@ -646,6 +806,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a line chart.
 
@@ -726,7 +887,7 @@ class VegaChartsMixin:
               for three lines). You can also use built-in color names in the
               list (e.g. ``color=["red", "blue", "green"]``).
 
-            You can set the default colors in the ``theme.chartCategoryColors``
+            You can set the default colors in the ``theme.chartCategoricalColors``
             configuration option.
 
         width : "stretch", "content", or int
@@ -770,6 +931,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic line chart from a dataframe**
@@ -800,7 +973,7 @@ class VegaChartsMixin:
         directly and the series will be unlabeled. If the column contains other
         values, those values will label each line, and the line colors will be
         selected from the default color palette. You can configure this color
-        palette in the ``theme.chartCategoryColors`` configuration option.
+        palette in the ``theme.chartCategoricalColors`` configuration option.
 
         >>> import pandas as pd
         >>> import streamlit as st
@@ -814,7 +987,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.line_chart(df, x="col1", y="col2", color="col3")
+        >>> st.line_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Three series over a shared x-axis",
+        ... )
 
         .. output::
            https://doc-line-chart1.streamlit.app/
@@ -866,6 +1045,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
@@ -883,6 +1063,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display an area chart.
 
@@ -963,7 +1144,7 @@ class VegaChartsMixin:
               for three lines). You can also use built-in color names in the
               list (e.g. ``color=["red", "blue", "green"]``).
 
-            You can set the default colors in the ``theme.chartCategoryColors``
+            You can set the default colors in the ``theme.chartCategoricalColors``
             configuration option.
 
         stack : bool, "normalize", "center", or None
@@ -1019,6 +1200,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic area chart from a dataframe**
@@ -1049,7 +1242,7 @@ class VegaChartsMixin:
         directly and the series will be unlabeled. If the column contains other
         values, those values will label each area, and the area colors will be
         selected from the default color palette. You can configure this color
-        palette in the ``theme.chartCategoryColors`` configuration option.
+        palette in the ``theme.chartCategoricalColors`` configuration option.
 
         >>> import pandas as pd
         >>> import streamlit as st
@@ -1063,7 +1256,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.area_chart(df, x="col1", y="col2", color="col3")
+        >>> st.area_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Three series over a shared x-axis",
+        ... )
 
         .. output::
            https://doc-area-chart1.streamlit.app/
@@ -1119,11 +1318,7 @@ class VegaChartsMixin:
 
         """
         # Check that the stack parameter is valid, raise more informative error message if not
-        maybe_raise_stack_warning(
-            stack,
-            "st.area_chart",
-            "https://docs.streamlit.io/develop/api-reference/charts/st.area_chart",
-        )
+        maybe_raise_stack_warning(stack)
 
         # st.area_chart's stack=False option translates to a "layered" area chart for
         # vega. We reserve stack=False for
@@ -1156,6 +1351,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
@@ -1175,6 +1371,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a bar chart.
 
@@ -1255,7 +1452,7 @@ class VegaChartsMixin:
               for three lines). You can also use built-in color names in the
               list (e.g. ``color=["red", "blue", "green"]``).
 
-            You can set the default colors in the ``theme.chartCategoryColors``
+            You can set the default colors in the ``theme.chartCategoricalColors``
             configuration option.
 
         horizontal : bool
@@ -1331,6 +1528,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic bar chart from a dataframe**
@@ -1361,7 +1570,7 @@ class VegaChartsMixin:
         directly and the series will be unlabeled. If the column contains other
         values, those values will label each series, and the bar colors will be
         selected from the default color palette. You can configure this color
-        palette in the ``theme.chartCategoryColors`` configuration option.
+        palette in the ``theme.chartCategoricalColors`` configuration option.
 
         >>> import pandas as pd
         >>> import streamlit as st
@@ -1375,7 +1584,13 @@ class VegaChartsMixin:
         ...     }
         ... )
         >>>
-        >>> st.bar_chart(df, x="col1", y="col2", color="col3")
+        >>> st.bar_chart(
+        ...     df,
+        ...     x="col1",
+        ...     y="col2",
+        ...     color="col3",
+        ...     alt="Values by group across the x-axis",
+        ... )
 
         .. output::
            https://doc-bar-chart1.streamlit.app/
@@ -1448,17 +1663,14 @@ class VegaChartsMixin:
 
         """
         # Check that the stack parameter is valid, raise more informative error message if not
-        maybe_raise_stack_warning(
-            stack,
-            "st.bar_chart",
-            "https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart",
-        )
+        maybe_raise_stack_warning(stack)
 
         # Offset encodings (used for non-stacked/grouped bar charts) are not supported in Altair < 5.0.0
         if type_util.is_altair_version_less_than("5.0.0") and stack is False:
             raise StreamlitAPIException(
                 "Streamlit does not support non-stacked (grouped) bar charts with "
-                "Altair 4.x. Please upgrade to Version 5."
+                "Altair 4.x. Please upgrade to Version 5.",
+                error_id="altair4-grouped-bar-not-supported",
             )
 
         bar_chart_type = (
@@ -1487,6 +1699,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
@@ -1504,6 +1717,7 @@ class VegaChartsMixin:
         width: Width = "stretch",
         height: Height = "content",
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a scatterplot chart.
 
@@ -1634,6 +1848,18 @@ class VegaChartsMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Examples
         --------
         **Example 1: Basic scatter chart from a dataframe**
@@ -1664,7 +1890,7 @@ class VegaChartsMixin:
         directly and each color group will be unlabeled. If the column contains
         other values, those values will label each group, and the scatter point
         colors will be selected from the default color palette. You can
-        configure this color palette in the ``theme.chartCategoryColors``
+        configure this color palette in the ``theme.chartCategoricalColors``
         configuration option.
 
         >>> import pandas as pd
@@ -1682,6 +1908,7 @@ class VegaChartsMixin:
         ...     y="col2",
         ...     color="col4",
         ...     size="col3",
+        ...     alt="col2 versus col1, sized by col3",
         ... )
 
         .. output::
@@ -1737,6 +1964,7 @@ class VegaChartsMixin:
                 theme="streamlit",
                 width=width,
                 height=height,
+                alt=alt,
             ),
         )
 
@@ -1753,6 +1981,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     # When on_select=rerun, return VegaLiteState.
@@ -1768,6 +1997,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> VegaLiteState: ...
 
     @gather_metrics("altair_chart")
@@ -1782,6 +2012,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Altair library.
 
@@ -1923,14 +2154,29 @@ class VegaChartsMixin:
 
             Selection parameters are identified by their ``name`` property.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name unless the spec sets a top-level
+            ``description``.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            When both ``alt`` and a top-level chart ``description`` are set,
+            ``alt`` overrides ``description`` for the accessible name. This is
+            a short description of the chart, not a full text alternative for
+            dense graphics.
+
         Returns
         -------
-        element or dict
+        element or VegaLiteState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element. Otherwise, this command
-            returns a dictionary-like object that supports both key and attribute
-            notation. The attributes are described by the ``VegaLiteState``
-            dictionary schema.
+            returns a ``VegaLiteState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -1947,7 +2193,7 @@ class VegaChartsMixin:
         ...     .encode(x="a", y="b", size="c", color="c", tooltip=["a", "b", "c"])
         ... )
         >>>
-        >>> st.altair_chart(chart)
+        >>> st.altair_chart(chart, alt="Scatter plot of a vs b sized by c")
 
         .. output::
            https://doc-vega-lite-chart.streamlit.app/
@@ -1963,6 +2209,7 @@ class VegaChartsMixin:
             key=key,
             on_select=on_select,
             selection_mode=selection_mode,
+            alt=alt,
         )
 
     # When on_select=Ignore, return DeltaGenerator.
@@ -1979,6 +2226,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     # When on_select=rerun, return VegaLiteState.
@@ -1995,6 +2243,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> VegaLiteState: ...
 
     @gather_metrics("vega_lite_chart")
@@ -2010,6 +2259,7 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Lite library.
 
@@ -2155,14 +2405,29 @@ class VegaChartsMixin:
 
             Selection parameters are identified by their ``name`` property.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), the chart keeps its
+            default Vega accessible name unless the spec sets a top-level
+            ``description``.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            When both ``alt`` and a top-level chart ``description`` are set,
+            ``alt`` overrides ``description`` for the accessible name. This is
+            a short description of the chart, not a full text alternative for
+            dense graphics.
+
         Returns
         -------
-        element or dict
+        element or VegaLiteState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element. Otherwise, this command
-            returns a dictionary-like object that supports both key and attribute
-            notation. The attributes are described by the ``VegaLiteState``
-            dictionary schema.
+            returns a ``VegaLiteState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -2183,6 +2448,7 @@ class VegaChartsMixin:
         ...             "color": {"field": "c", "type": "quantitative"},
         ...         },
         ...     },
+        ...     alt="Scatter plot of a vs b sized by c",
         ... )
 
         .. output::
@@ -2204,6 +2470,7 @@ class VegaChartsMixin:
             selection_mode=selection_mode,
             width=width,
             height=height,
+            alt=alt,
         )
 
     def _altair_chart(
@@ -2216,6 +2483,7 @@ class VegaChartsMixin:
         selection_mode: str | Iterable[str] | None = None,
         width: Width | None = None,
         height: Height = "content",
+        alt: str | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on an Altair chart.
 
@@ -2227,7 +2495,8 @@ class VegaChartsMixin:
                 "Streamlit does not support selections with Altair 4.x. Please upgrade "
                 "to Version 5. "
                 "If you would like to use Altair 4.x with selections, please upvote "
-                "this [Github issue](https://github.com/streamlit/streamlit/issues/8516)."
+                "this [Github issue](https://github.com/streamlit/streamlit/issues/8516).",
+                error_id="altair4-selections-not-supported",
             )
 
         vega_lite_spec = _convert_altair_to_vega_lite_spec(altair_chart)
@@ -2241,6 +2510,7 @@ class VegaChartsMixin:
             selection_mode=selection_mode,
             width=width,
             height=height,
+            alt=alt,
         )
 
     def _vega_lite_chart(
@@ -2254,23 +2524,21 @@ class VegaChartsMixin:
         selection_mode: str | Iterable[str] | None = None,
         width: Width | None = None,
         height: Height = "content",
+        alt: str | None = None,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on a vega-lite spec.
 
         See the `vega_lite_chart` method docstring for more information.
         """
         if theme not in {"streamlit", None}:
-            raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support '
-                "theme=”streamlit” or theme=None to fallback to the default "
-                "library theme."
-            )
+            raise StreamlitValueError("theme", ["'streamlit'", "None"])
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', "
-                "'rerun', or a callable is supported."
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
@@ -2278,11 +2546,11 @@ class VegaChartsMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -2291,7 +2559,7 @@ class VegaChartsMixin:
         # Support passing data inside spec['datasets'] and spec['data'].
         # (The data gets pulled out of the spec dict later on.)
         if isinstance(data, dict) and spec is None:
-            spec = data
+            spec = cast("VegaLiteSpec", data)
             data = None
 
         if spec is None:
@@ -2358,8 +2626,27 @@ class VegaChartsMixin:
         spec = _prepare_vega_lite_spec(spec, use_container_width_for_spec)
         _marshall_chart_data(vega_lite_proto, spec, data)
 
+        normalized_alt = normalize_alt(alt)
+        existing_description = spec.get("description")
+        # Warn when alt replaces an existing chart description. Truthiness
+        # covers None and empty strings and does not crash on invalid
+        # non-string values (e.g. a list).
+        if normalized_alt is not None and existing_description:
+            _LOGGER.warning(
+                "The Vega-Lite / Altair chart already sets description=%r. "
+                "The alt=%r parameter overrides it for the accessible name.",
+                existing_description,
+                normalized_alt,
+                stack_info=True,
+            )
+
         # Prevent the spec from changing across reruns:
         vega_lite_proto.spec = _stabilize_vega_json_spec(json.dumps(spec))
+
+        if normalized_alt is not None:
+            # Carry alt on its own proto field so it is not baked into the
+            # hashed spec JSON (applied on the frontend as description).
+            vega_lite_proto.alt = normalized_alt
 
         if use_container_width is not None:
             vega_lite_proto.use_container_width = use_container_width
@@ -2376,6 +2663,9 @@ class VegaChartsMixin:
             vega_lite_proto.form_id = current_form_id(self.dg)
 
             ctx = get_script_run_ctx()
+            # Include `alt` like other stable kwargs. Changing `alt` remounts an
+            # unkeyed selection chart. Keyed charts ignore it because
+            # key_as_main_identity stays {"selection_mode"}.
             vega_lite_proto.id = compute_and_register_element_id(
                 "vega_lite_chart",
                 user_key=key,
@@ -2394,13 +2684,14 @@ class VegaChartsMixin:
                 theme=theme,
                 use_container_width=use_container_width,
                 selection_mode=parsed_selection_modes,
+                alt=normalized_alt,
             )
 
             serde = VegaLiteStateSerde(parsed_selection_modes)
 
             widget_state = register_widget(
                 vega_lite_proto.id,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
@@ -2431,16 +2722,22 @@ class VegaChartsMixin:
 
 
 def _to_arrow_dataset(data: Any, datasets: dict[str, Any]) -> dict[str, str]:
-    """Altair data transformer that serializes the data,
-    creates a stable name based on the hash of the data,
-    stores the bytes into the datasets mapping and
-    returns this name to have it be used in Altair.
-    """
-    # Already serialize the data to be able to create a stable
-    # dataset name:
-    data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
-    # Use the content hash of the data as the name:
-    name = calc_hash(str(data_bytes))
+    """Altair data transformer that stores chart data under a stable hashed name.
 
-    datasets[name] = data_bytes
+    Tabular data is serialized to Arrow IPC bytes. GeoJSON/TopoJSON dicts are
+    stored as-is so geometry is not flattened. Returns ``{"name": name}`` for
+    Altair to reference the dataset.
+    """
+    # GeoPandas / ``__geo_interface__`` objects are not dict/list, so they
+    # still go through Arrow flattening (#1002).
+    if _is_geojson_or_topojson_payload(data):
+        # Match spec transport (json.dumps without default) so non-JSON
+        # values fail here instead of later when the spec is encoded.
+        name = calc_hash(json.dumps(data, sort_keys=True))
+        datasets[name] = data
+    else:
+        # Serialize first so the dataset name is a stable content hash.
+        data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
+        name = calc_hash(str(data_bytes))
+        datasets[name] = data_bytes
     return {"name": name}

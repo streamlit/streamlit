@@ -18,8 +18,9 @@ import contextlib
 import inspect
 import threading
 from abc import abstractmethod
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Container, Iterator, Sequence
 from copy import deepcopy
+from enum import Enum, auto
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
 
@@ -28,6 +29,8 @@ from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
     StreamlitAPIException,
+    StreamlitDuplicateElementKey,
+    StreamlitInvalidLayoutContextError,
 )
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -37,6 +40,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
@@ -53,28 +57,43 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 
+# ``st.rerun(scope=...)`` reads these two values as level names, so they cannot
+# double as fragment keys.
+_RESERVED_FRAGMENT_KEYS: Final = frozenset({"app", "fragment"})
+
 
 def _check_not_parallel_worker(api_name: str) -> None:
-    """Raise StreamlitAPIException if called from a parallel fragment worker."""
+    """Raise StreamlitInvalidLayoutContextError if called from a parallel fragment worker on initial load."""
     try:
         ts = ThreadState.get()
     except RuntimeError:
         return
 
     if ts.is_parallel_worker:
-        raise StreamlitAPIException(
+        raise StreamlitInvalidLayoutContextError(
             f"`{api_name}` cannot be called from a parallel fragment during "
             f"the initial page load, because parallel fragments run "
             f"concurrently on separate threads where `{api_name}` is not "
             f"safe.\n\n"
             f"To fix this, gate the call behind a widget interaction "
             f"(e.g., `if st.button(...):`) so it runs during a sequential "
-            f"fragment rerun instead."
+            f"fragment rerun instead.",
+            error_id="parallel-fragment-unsafe-api-on-initial-load",
         )
 
 
 F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
+
+
+class _FragmentLifetime(Enum):
+    """The rerun boundary that can remove a fragment."""
+
+    # Removed when its parent executes without re-registering it, or when its
+    # parent is itself removed.
+    PARENT_SCOPED = auto()
+    # Retained across fragment reruns and removed only by full-app cleanup.
+    FULL_APP_SCOPED = auto()
 
 
 class FragmentStorage(Protocol):
@@ -113,6 +132,8 @@ class FragmentStorage(Protocol):
         fragment: Fragment,
         *,
         parent_fragment_id: str | None = None,
+        target_key: str | None = None,
+        lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
     ) -> None:
         """Store a fragment definition.
 
@@ -122,6 +143,28 @@ class FragmentStorage(Protocol):
         parent_fragment_id
             The fragment id of the enclosing ``@st.fragment`` when this fragment is
             nested, or ``None`` for a top-level fragment.
+
+        target_key
+            The user-facing name from ``@st.fragment(key=...)``. When set, the
+            fragment id is indexed under this name so ``st.rerun(<key>)`` can
+            resolve it. A name may map to several ids if the fragment function is
+            called from multiple sites.
+
+        lifetime
+            The rerun boundary that can remove the fragment. Parent-scoped fragments
+            are removed when an enclosing fragment reruns without registering them.
+            Full-app-scoped fragments survive fragment reruns and are removed only
+            when a full app run does not register them.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def resolve_target(self, target: str | Sequence[str]) -> list[str]:
+        """Resolve one or more ``@st.fragment(key=...)`` names to fragment ids.
+
+        Returns the ids in a stable order, with each name expanding to every
+        registered call site of that fragment. Raises ``StreamlitAPIException`` if
+        any name has no registered fragment.
         """
         raise NotImplementedError
 
@@ -131,12 +174,15 @@ class FragmentStorage(Protocol):
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
     ) -> list[str]:
-        """Remove stored fragments that are strict descendants of ``root_fragment_id``
-        but were not re-registered during the latest run of that root.
+        """Remove stale parent-scoped descendants of ``root_fragment_id``.
 
-        Used after a fragment-only rerun so orphaned nested fragments (e.g. from a
-        removed ``run_every`` child) do not keep stale closures in storage. Returns
-        the list of removed fragment IDs.
+        Starting at the cleanup root, re-registered children are retained and
+        reconciled recursively. Missing parent-scoped children are removed along
+        with their stale parent-scoped descendants. A missing full-app-scoped
+        child and its previously registered subtree are retained.
+
+        Returns the removed fragment IDs so callers can react, such as cancelling
+        frontend auto-rerun timers.
         """
         raise NotImplementedError
 
@@ -153,6 +199,11 @@ class FragmentStorage(Protocol):
     @abstractmethod
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
         """Return a stable ordering that keeps queued ancestors before descendants."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: Container[str]) -> bool:
+        """Return whether any ancestor of ``fragment_id`` is in ``candidate_ids``."""
         raise NotImplementedError
 
     @abstractmethod
@@ -222,7 +273,7 @@ class MemoryFragmentStorage(FragmentStorage):
 
     MemoryFragmentStorage is just a wrapper around a plain Python dict that complies with
     the FragmentStorage protocol. A single lock guards the fragment closures plus the
-    ancestry and registration metadata that need to stay in sync with them.
+    ancestry, lifetime, and registration metadata that need to stay in sync with them.
     """
 
     def __init__(self) -> None:
@@ -230,9 +281,15 @@ class MemoryFragmentStorage(FragmentStorage):
         self._fragments: dict[str, Fragment] = {}
         # Enclosing fragment id for nested fragments; top-level fragments use None.
         self._parent_by_id: dict[str, str | None] = {}
+        # Rerun boundary that may remove each fragment.
+        self._lifetime_by_id: dict[str, _FragmentLifetime] = {}
         self._registration_sequence_by_id: dict[str, int] = {}
         self._registration_sequence = 0
         self._outside_wrappers: dict[tuple[str, str], OutsideContainerWrapper] = {}
+        # User-facing fragment name -> registered fragment ids (one per call site).
+        # Uses dict[str, None] for O(1) membership checks with stable insertion order.
+        self._ids_by_target_key: dict[str, dict[str, None]] = {}
+        self._target_key_by_id: dict[str, str] = {}
 
     def _iter_ancestor_ids(self, fragment_id: str) -> Iterator[str]:
         """Yield ancestors from the immediate parent outward.
@@ -251,10 +308,35 @@ class MemoryFragmentStorage(FragmentStorage):
             seen_ids.add(parent_id)
             current = parent_id
 
+    def _index_target_key(self, fragment_id: str, target_key: str | None) -> None:
+        """Add or update the mapping from ``target_key`` to ``fragment_id``.
+
+        If this fragment was previously indexed under a different key, the old
+        entry is removed first so each fragment id maps to at most one key.
+        """
+        if self._target_key_by_id.get(fragment_id) != target_key:
+            self._unindex_target_key(fragment_id)
+        if target_key is not None:
+            self._target_key_by_id[fragment_id] = target_key
+            self._ids_by_target_key.setdefault(target_key, {})[fragment_id] = None
+
+    def _unindex_target_key(self, fragment_id: str) -> None:
+        """Remove fragment_id from the key-to-id index."""
+        target_key = self._target_key_by_id.pop(fragment_id, None)
+        if target_key is None:
+            return
+        ids = self._ids_by_target_key.get(target_key)
+        if ids is not None and fragment_id in ids:
+            del ids[fragment_id]
+            if not ids:
+                del self._ids_by_target_key[target_key]
+
     def _remove(self, fragment_id: str, *, evict_wrappers: bool = True) -> None:
         del self._fragments[fragment_id]
         self._parent_by_id.pop(fragment_id, None)
+        self._lifetime_by_id.pop(fragment_id, None)
         self._registration_sequence_by_id.pop(fragment_id, None)
+        self._unindex_target_key(fragment_id)
         if evict_wrappers:
             self._outside_wrappers = {
                 key: wrapper
@@ -283,32 +365,85 @@ class MemoryFragmentStorage(FragmentStorage):
         fragment: Fragment,
         *,
         parent_fragment_id: str | None = None,
+        target_key: str | None = None,
+        lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
     ) -> None:
         with self._lock:
             self._registration_sequence += 1
             self._fragments[key] = fragment
             self._parent_by_id[key] = parent_fragment_id
+            self._lifetime_by_id[key] = lifetime
             self._registration_sequence_by_id[key] = self._registration_sequence
+            self._index_target_key(key, target_key)
+
+    def resolve_target(self, target: str | Sequence[str]) -> list[str]:
+        """Resolve one or more ``@st.fragment(key=...)`` names to fragment ids."""
+        names = [target] if isinstance(target, str) else list(target)
+        if not names:
+            raise StreamlitAPIException(
+                "st.rerun() was called with an empty scope. "
+                "Pass a fragment key, a list of keys, 'app', or 'fragment'.",
+                error_id="rerun-empty-scope",
+            )
+        with self._lock:
+            resolved: dict[str, None] = {}
+            for name in names:
+                ids = self._ids_by_target_key.get(name)
+                if not ids:
+                    raise StreamlitAPIException(
+                        f"No fragment found for target '{name}'. Pass the same "
+                        f"`key` you set on `@st.fragment(key=...)`, and make sure "
+                        f"that fragment has rendered at least once.",
+                        error_id="rerun-unknown-fragment-key",
+                    )
+                for fragment_id in ids:
+                    resolved[fragment_id] = None
+            return list(resolved)
 
     def clear_stale_descendants(
         self,
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
     ) -> list[str]:
-        """Drop descendant fragments under ``root_fragment_id`` not seen this run.
+        """Drop stale parent-scoped descendants under ``root_fragment_id``.
 
-        Returns the list of fragment IDs that were removed so the caller can, for
-        example, tell the frontend to cancel their auto-rerun timers.
+        Traverse from the cleanup root through children that executed or are being
+        removed. A retained full-app-scoped child stops traversal into its
+        previously registered subtree.
         """
 
         with self._lock:
-            to_remove = [
-                fragment_id
-                for fragment_id in self._fragments
-                if fragment_id != root_fragment_id
-                and fragment_id not in newly_registered_ids
-                and root_fragment_id in self._iter_ancestor_ids(fragment_id)
-            ]
+            children_by_parent: dict[str | None, list[str]] = {}
+            for fragment_id, parent_fragment_id in self._parent_by_id.items():
+                children_by_parent.setdefault(parent_fragment_id, []).append(
+                    fragment_id
+                )
+
+            parents_to_reconcile = [root_fragment_id]
+            visited_ids = {root_fragment_id}
+            to_remove: list[str] = []
+            parent_index = 0
+
+            while parent_index < len(parents_to_reconcile):
+                parent_fragment_id = parents_to_reconcile[parent_index]
+                parent_index += 1
+
+                for fragment_id in children_by_parent.get(parent_fragment_id, []):
+                    if fragment_id in visited_ids:
+                        continue
+                    visited_ids.add(fragment_id)
+
+                    if fragment_id in newly_registered_ids:
+                        parents_to_reconcile.append(fragment_id)
+                    elif (
+                        self._lifetime_by_id.get(
+                            fragment_id, _FragmentLifetime.PARENT_SCOPED
+                        )
+                        is not _FragmentLifetime.FULL_APP_SCOPED
+                    ):
+                        to_remove.append(fragment_id)
+                        parents_to_reconcile.append(fragment_id)
+
             for fragment_id in to_remove:
                 self._remove(fragment_id)
             return to_remove
@@ -330,15 +465,6 @@ class MemoryFragmentStorage(FragmentStorage):
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
         """Run queued ancestors before descendants while preserving FIFO otherwise."""
         with self._lock:
-
-            def has_queued_ancestor(
-                fragment_id: str, queued_fragment_ids: set[str]
-            ) -> bool:
-                return any(
-                    ancestor_id in queued_fragment_ids
-                    for ancestor_id in self._iter_ancestor_ids(fragment_id)
-                )
-
             remaining_fragment_ids = list(fragment_ids)
             ordered_fragment_ids = []
 
@@ -346,7 +472,9 @@ class MemoryFragmentStorage(FragmentStorage):
                 queued_fragment_ids = set(remaining_fragment_ids)
 
                 for index, fragment_id in enumerate(remaining_fragment_ids):
-                    if not has_queued_ancestor(fragment_id, queued_fragment_ids):
+                    if not self._has_ancestor_in_unlocked(
+                        fragment_id, queued_fragment_ids
+                    ):
                         ordered_fragment_ids.append(fragment_id)
                         del remaining_fragment_ids[index]
                         break
@@ -356,6 +484,25 @@ class MemoryFragmentStorage(FragmentStorage):
                     break
 
             return ordered_fragment_ids
+
+    def has_ancestor_in(self, fragment_id: str, candidate_ids: Container[str]) -> bool:
+        with self._lock:
+            return self._has_ancestor_in_unlocked(fragment_id, candidate_ids)
+
+    def _has_ancestor_in_unlocked(
+        self, fragment_id: str, candidate_ids: Container[str]
+    ) -> bool:
+        """Return whether any ancestor of ``fragment_id`` is in ``candidate_ids``.
+
+        Callers must hold ``self._lock``; use ``has_ancestor_in`` from outside
+        the lock. Extracted so ``order_fragment_ids`` (which already holds the
+        lock while walking the queue) and ``has_ancestor_in`` can share the
+        same predicate without deadlocking or drifting apart.
+        """
+        return any(
+            ancestor_id in candidate_ids
+            for ancestor_id in self._iter_ancestor_ids(fragment_id)
+        )
 
     def delete(self, key: str) -> None:
         with self._lock:
@@ -450,7 +597,9 @@ def _fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
+    key: str | int | None = None,
     additional_hash_info: str = "",
+    lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
@@ -459,6 +608,21 @@ def _fragment(
     (note that the @gather_metrics annotation is only on the publicly exposed function)
     """
 
+    if key is not None:
+        from streamlit.elements.lib.utils import to_key
+        from streamlit.runtime.state.common import require_valid_user_key
+
+        key = to_key(key)
+        require_valid_user_key(key)
+
+    if key in _RESERVED_FRAGMENT_KEYS:
+        raise StreamlitAPIException(
+            f"`{key}` is a reserved name and cannot be used as a fragment key, "
+            "because `st.rerun(scope=...)` reads it as a rerun level. Choose a "
+            "different key for `@st.fragment(key=...)`.",
+            error_id="fragment-reserved-key",
+        )
+
     if func is None:
         # Support passing the params via function decorator
         def wrapper(f: F) -> F:
@@ -466,6 +630,7 @@ def _fragment(
                 func=f,
                 run_every=run_every,
                 parallel=parallel,
+                key=key,
             )
 
         return wrapper
@@ -487,6 +652,15 @@ def _fragment(
             f"{non_optional_func.__module__}.{get_object_name(non_optional_func)}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}"
         )
 
+        fragment_definition_id: str | None = None
+        if key is not None:
+            fragment_definition_id = (
+                f"{non_optional_func.__module__}."
+                f"{get_object_name(non_optional_func)}{additional_hash_info}"
+            )
+            if not ctx.shared.register_fragment_user_key(key, fragment_definition_id):
+                raise StreamlitDuplicateElementKey(key)
+
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.
         initialized_active_script_hash = ThreadState.get().active_script_hash
@@ -502,13 +676,35 @@ def _fragment(
             if ctx is None:  # pragma: no cover - defensive
                 raise RuntimeError("ctx is None. This should never happen.")
 
-            if ctx.fragment_ids_this_run:
-                # This script run is a run of one or more fragments. We restore the
-                # state of ctx.cursors and dg_stack to the snapshots we took when this
-                # fragment was declared.
+            # True only when the ScriptRunner invokes this fragment directly as a
+            # queued top-level rerun. ``fragment_id is None`` distinguishes that
+            # from an inline call via ``wrap`` from an enclosing fragment, which
+            # matters when a parent and its own descendant are both queued: the
+            # descendant's id is still in ``fragment_ids_this_run`` while the
+            # parent runs it inline, so queue membership alone is not enough.
+            is_queued_toplevel_rerun = bool(
+                ctx.fragment_ids_this_run
+                and fragment_id in ctx.fragment_ids_this_run
+                and ThreadState.get().fragment_id is None
+            )
+
+            if is_queued_toplevel_rerun:
+                # Restore ctx.cursors and dg_stack to the snapshots taken when
+                # this fragment was declared. Nested fragments called via ``wrap``
+                # from an already-rerunning parent must keep the parent's
+                # already-advanced cursor state instead; replacing the dg_stack
+                # with deep copies would sever their writes from the enclosing
+                # scope, making sibling nested fragments compute colliding
+                # fragment ids and overwrite each other's deltas (see #12514).
                 ctx.cursors = deepcopy(cursors_snapshot)
                 context_dg_stack.set(deepcopy(dg_stack_snapshot))
 
+            if ctx.fragment_ids_this_run:
+                # Wrapper bookkeeping runs for every fragment executing during a
+                # fragment rerun, including nested ones reached via ``wrap``:
+                # their outside-container wrappers still need their cursors reset
+                # so writes overwrite in place rather than accumulate.
+                #
                 # Evict wrappers whose outside containers will be rebuilt by this
                 # fragment, then re-emit and reset the surviving wrappers. Order
                 # matters: eviction must happen first so we don't re-emit a wrapper
@@ -541,7 +737,11 @@ def _fragment(
             # is established below, this will be initialized with the fragment's
             # delta path. Without this, we would inherit the delta path from the
             # parent scope.
-            with ThreadState.scoped(fragment_id=fragment_id, delta_path=None):
+            with ThreadState.scoped(
+                fragment_id=fragment_id,
+                delta_path=None,
+                run_location=RunLocation.FRAGMENT,
+            ):
                 result = None
                 with active_hash_context:
                     container_ctx = (
@@ -586,6 +786,8 @@ def _fragment(
             fragment_id,
             wrapped_fragment,
             parent_fragment_id=parent_fragment_id_at_def,
+            target_key=key,
+            lifetime=lifetime,
         )
 
         if run_every:
@@ -616,6 +818,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
+    key: str | int | None = None,
 ) -> F: ...
 
 
@@ -627,6 +830,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
+    key: str | int | None = None,
 ) -> Callable[[F], F]: ...
 
 
@@ -636,6 +840,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
+    key: str | int | None = None,
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
     of the full app.
@@ -718,6 +923,18 @@ def fragment(
             unsynchronized mutations of shared mutable resources across fragments
             unless you coordinate access explicitly.
 
+    key : str, int, or None
+        An optional name for the fragment. If this is ``None`` (default),
+        the fragment cannot be targeted by ``st.rerun``. When set, a widget
+        callback can rerun this fragment with ``st.rerun("<key>")``.
+        Each fragment function rendered in a run must use a unique key;
+        multiple call sites of the same function share that key and rerun
+        together. An ``int`` key is normalized to its string representation.
+
+        A fragment key must be unique among the fragments that render in a
+        single run, just like a widget ``key``. The names ``"app"`` and
+        ``"fragment"`` are reserved and cannot be used as fragment keys.
+
     Examples
     --------
     The following example demonstrates basic usage of
@@ -798,8 +1015,25 @@ def fragment(
         https://doc-fragment-rerun.streamlit.app/
         height: 400px
 
+    Use ``key`` to let a widget callback outside the fragment trigger a
+    fragment-only rerun:
+
+    >>> import streamlit as st
+    >>>
+    >>> @st.fragment(key="charts")
+    >>> def show_charts():
+    >>>     st.write(f"Data: {st.session_state.get('filter', 'all')}")
+    >>>
+    >>> show_charts()
+    >>> st.selectbox(
+    >>>     "Filter",
+    >>>     ["all", "recent"],
+    >>>     key="filter",
+    >>>     on_change=lambda: st.rerun("charts"),
+    >>> )
+
     """
-    return _fragment(func, run_every=run_every, parallel=parallel)
+    return _fragment(func, run_every=run_every, parallel=parallel, key=key)
 
 
 def _prepare_dg_stack_for_worker(

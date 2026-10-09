@@ -19,12 +19,12 @@
  */
 
 import {
-  Schema as ArrowSchema,
+  type Schema as ArrowSchema,
   Dictionary,
   Field,
   Int,
   Null,
-  Table,
+  type Table,
   tableFromIPC,
   Vector,
 } from "apache-arrow"
@@ -33,12 +33,12 @@ import { range, unzip } from "lodash-es"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  ArrowType,
+  type ArrowType,
   convertVectorToList,
   DataFrameCellType,
-  PandasRangeIndex,
+  type PandasRangeIndex,
   PandasRangeIndexType,
-  PandasSchema,
+  type PandasSchema,
 } from "./arrowTypeUtils"
 
 /**
@@ -85,7 +85,7 @@ function parsePandasSchema(table: Table): PandasSchema | undefined {
     // did not touch Pandas during serialization.
     return undefined
   }
-  return JSON.parse(schema)
+  return JSON.parse(schema) as PandasSchema
 }
 
 /** Parse DataFrame's index data values. */
@@ -131,20 +131,32 @@ function parsePandasIndexData(
  * "foo" -> ["foo"]
  * "('1','foo (bar)')" -> ["1", "foo (bar)"]
  */
-function parseHeaderName(name: string, numLevels: number): string[] {
+export function parseHeaderName(name: string, numLevels: number): string[] {
   if (numLevels === 1) {
     return [name]
   }
 
+  const padLevels = (): string[] => [
+    ...Array.from({ length: numLevels - 1 }, () => ""),
+    name,
+  ]
+
   try {
-    return JSON.parse(
-      name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replace(/'/g, '"')
+    const parsed: unknown = JSON.parse(
+      name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replaceAll("'", '"')
     )
+    if (Array.isArray(parsed)) {
+      // pandas/pyarrow stringifies MultiIndex levels as tuple strings like
+      // "('1','red')". Convert non-string levels to display strings so each
+      // level stays a separate header.
+      return parsed.map(part => String(part))
+    }
+    return padLevels()
   } catch {
-    // Add empty strings for the missing levels
-    return [...Array(numLevels - 1).fill(""), name]
+    return padLevels()
   }
 }
+
 /** Parse DataFrame's column header names.
  *
  * This function is used to parse the column header names into a matrix of

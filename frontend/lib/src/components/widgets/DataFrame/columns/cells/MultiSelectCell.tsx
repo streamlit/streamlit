@@ -23,15 +23,17 @@
  * the fix.
  */
 
-import type {
-  ComponentPropsWithoutRef,
-  FC,
-  KeyboardEvent,
-  KeyboardEventHandler,
-  MouseEvent,
-  TouchEvent,
+import {
+  type ComponentPropsWithoutRef,
+  type FC,
+  type KeyboardEvent,
+  type KeyboardEventHandler,
+  type MouseEvent,
+  type TouchEvent,
+  useCallback,
+  useMemo,
+  useState,
 } from "react"
-import { useCallback, useMemo, useState } from "react"
 
 import styled from "@emotion/styled"
 import {

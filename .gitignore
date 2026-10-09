@@ -33,7 +33,6 @@ venv
 .venv
 Pipfile.lock
 Pipfile
-uv.lock
 
 # Others
 .pytype

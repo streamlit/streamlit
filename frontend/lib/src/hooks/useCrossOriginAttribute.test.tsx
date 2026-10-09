@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { useMemo } from "react"
+import { type JSX, useMemo } from "react"
 
 import { renderHook } from "@testing-library/react"
 
 import {
   LibConfigContext,
-  LibConfigContextProps,
+  type LibConfigContextProps,
   mockTheme,
   ThemeProvider,
   WindowDimensionsProvider,

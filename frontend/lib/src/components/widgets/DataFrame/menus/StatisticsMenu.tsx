@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useMemo } from "react"
+import { memo, type ReactElement, useMemo } from "react"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { useHoverSubmenu } from "~lib/hooks/useHoverSubmenu"
 
 import StatisticsChart from "./StatisticsChart"
 import {
-  ColumnStatistics,
+  type ColumnStatistics,
   computeEmptyPercentage,
   computeStatistics,
   formatCountWithPercent,
@@ -45,6 +45,9 @@ import {
   StyledSubMenuAnchor,
   StyledSubMenuPanel,
 } from "./styled-components"
+
+/** Marks the portal panel so ColumnMenu's outside-click detection can ignore it. */
+export const STATISTICS_MENU_CLASS = "stDataFrameStatisticsMenu"
 
 export interface StatisticsMenuProps {
   /** The column to show statistics for. */
@@ -279,10 +282,10 @@ function StatisticsMenu({
     onOpenChange,
   })
 
-  // Defensive fallback: parent ColumnMenu already guards this, but keep for safety.
-  // This ensures the component renders nothing if called directly without the guard.
+  // Defensive fallback: ColumnMenu already filters unsupported kinds. If this
+  // component is used directly, render the trigger without the statistics submenu.
   if (!supportsStatistics(column.kind)) {
-    return <>{children}</>
+    return children
   }
 
   return (
@@ -296,6 +299,7 @@ function StatisticsMenu({
               Allows keyboard users to navigate the parent column menu while
               viewing statistics. */}
           <StyledSubMenuPanel
+            className={STATISTICS_MENU_CLASS}
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDataFrameStatisticsMenu"

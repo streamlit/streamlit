@@ -18,9 +18,10 @@ from __future__ import annotations
 
 import unittest
 
+from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
-from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from tests.exception_capturing_thread import call_on_threads
 
 FILE_1 = UploadedFileRec(file_id="url1", name="file1", type="type", data=b"file1")
@@ -285,3 +286,28 @@ class UploadedFileManagerThreadingTest(unittest.TestCase):
         assert (
             self.mgr.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length == expected_bytes
         )
+
+
+def _make_uploaded_file(file_id: str, data: bytes = b"abc") -> UploadedFile:
+    rec = UploadedFileRec(
+        file_id=file_id, name="file.txt", type="text/plain", data=data
+    )
+    urls = FileURLsProto(file_id=file_id, upload_url="u", delete_url="d")
+    return UploadedFile(rec, urls)
+
+
+def test_uploaded_file_equality_is_based_on_file_id() -> None:
+    """UploadedFile instances compare equal when they share a file_id."""
+    first = _make_uploaded_file("id-1", b"aaa")
+    second = _make_uploaded_file("id-1", b"bbb")
+    other = _make_uploaded_file("id-2", b"aaa")
+
+    assert first == second
+    assert first != other
+    assert first.__eq__(object()) is NotImplemented
+
+
+def test_uploaded_file_repr_includes_class_name() -> None:
+    """repr() includes the class name."""
+    uploaded = _make_uploaded_file("id-1")
+    assert "UploadedFile" in repr(uploaded)

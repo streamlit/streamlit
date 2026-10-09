@@ -19,6 +19,7 @@ import {
   FileSize,
   formatTypeForDisplay,
   formatTypesForDisplay,
+  getRejectedFileInfo,
   getSizeDisplay,
   isFileTypeAllowed,
   isMimeType,
@@ -60,6 +61,10 @@ describe("getSizeDisplay", () => {
     expect(getSizeDisplay(BYTE_CONVERSION_SIZE, FileSize.Byte, 3)).toEqual(
       "1.000KB"
     )
+  })
+
+  it("falls back to bytes for an empty unit", () => {
+    expect(getSizeDisplay(10, "" as FileSize)).toEqual("10.0B")
   })
 
   it("rounds up to the next unit", () => {
@@ -115,6 +120,9 @@ describe("sizeConverter", () => {
     expect(() =>
       sizeConverter(-1, FileSize.Gigabyte, FileSize.Gigabyte)
     ).toThrow("Size must be 0 or greater")
+    expect(() => sizeConverter(1, "nope" as FileSize, FileSize.Byte)).toThrow(
+      "Unexpected byte unit provided"
+    )
   })
 })
 
@@ -331,5 +339,66 @@ describe("formatTypesForDisplay", () => {
 
   it("returns empty string for empty array", () => {
     expect(formatTypesForDisplay([])).toBe("")
+  })
+})
+
+describe("getRejectedFileInfo", () => {
+  const file = new File(["x"], "photo.jpg", { type: "image/jpeg" })
+
+  it("maps known error codes to user-facing messages", () => {
+    const info = getRejectedFileInfo(
+      {
+        file,
+        errors: [
+          { code: "file-too-large", message: "too large" },
+          { code: "file-invalid-type", message: "bad type" },
+          { code: "too-many-files", message: "too many" },
+        ],
+      },
+      1,
+      1000
+    )
+
+    expect(info.status.type).toBe("error")
+    const message = (info.status as { errorMessage: string }).errorMessage
+    expect(message).toContain("or smaller.")
+    expect(message).toContain("image/jpeg files are not allowed.")
+    expect(message).toContain("Only one file is allowed.")
+    expect(info.name).toBe("photo.jpg")
+  })
+
+  it("maps file-too-small and unknown codes to fallback messages", () => {
+    const info = getRejectedFileInfo(
+      {
+        file,
+        errors: [
+          { code: "file-too-small", message: "small" },
+          { code: "unknown-error", message: "???" },
+        ],
+      },
+      2,
+      1000
+    )
+
+    expect(info.status.type).toBe("error")
+    const message = (info.status as { errorMessage: string }).errorMessage
+    expect(message).toContain("File size is too small.")
+    expect(message).toContain("Unexpected error. Please try again.")
+  })
+
+  it("uses webkitRelativePath as the display name for directory uploads", () => {
+    const dirFile = new File(["x"], "photo.jpg", { type: "image/jpeg" })
+    Object.assign(dirFile, { webkitRelativePath: "album/photo.jpg" })
+
+    const info = getRejectedFileInfo(
+      {
+        file: dirFile,
+        errors: [{ code: "file-too-large", message: "" }],
+      },
+      3,
+      1000
+    )
+
+    expect(info.name).toBe("album/photo.jpg")
   })
 })

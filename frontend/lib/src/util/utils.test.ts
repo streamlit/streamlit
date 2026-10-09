@@ -20,7 +20,7 @@ import {
   describe,
   expect,
   it,
-  MockInstance,
+  type MockInstance,
   vi,
 } from "vitest"
 
@@ -70,10 +70,12 @@ import {
   makeAppSkeletonElement,
   makeElementWithErrorText,
   makeElementWithInfoText,
+  normalizeQueryString,
   notUndefined,
   preserveEmbedQueryParams,
   setCookie,
 } from "./utils"
+import type * as Utils from "./utils"
 
 describe("setCookie", () => {
   afterEach(() => {
@@ -85,7 +87,7 @@ describe("setCookie", () => {
     */
     document.cookie.split(";").forEach(cookie => {
       const eqPos = cookie.indexOf("=")
-      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
+      const name = eqPos > -1 ? cookie.slice(0, eqPos) : cookie
       document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT`
     })
   })
@@ -495,6 +497,17 @@ describe("keysToSnakeCase", () => {
     })
   })
 
+  it("should preserve consecutive uppercase letters", () => {
+    expect(keysToSnakeCase({ testGUILabel: 1, XMLHttpRequest: 2 })).toEqual({
+      test_GUI_label: 1,
+      XML_http_request: 2,
+    })
+  })
+
+  it("should decamelize Unicode letters", () => {
+    expect(keysToSnakeCase({ déjàVu: true })).toEqual({ déjà_vu: true })
+  })
+
   it("should return an empty dictionary when passed an empty dictionary", () => {
     expect(keysToSnakeCase({})).toEqual({})
   })
@@ -526,7 +539,7 @@ describe("keysToSnakeCase", () => {
 
 // Mock isInChildFrame since getUrl depends on it
 vi.mock("./utils", async importOriginal => {
-  const actual = await importOriginal<typeof import("./utils")>()
+  const actual = await importOriginal<typeof Utils>()
   return {
     ...actual,
     isInChildFrame: vi.fn(),
@@ -934,6 +947,13 @@ describe("getQueryString", () => {
       expected: "embed=true&embed_options=dark&page=1&sort=asc",
       description: "handles complex query strings",
     },
+    {
+      queryStringOverride: "?foo=bar",
+      preservedQueryParams: "embed=true",
+      expected: "embed=true&foo=bar",
+      description:
+        "normalizes queryStringOverride values with a leading question mark",
+    },
   ])(
     "$description",
     ({ queryStringOverride, preservedQueryParams, expected }) => {
@@ -942,6 +962,16 @@ describe("getQueryString", () => {
       )
     }
   )
+})
+
+describe("normalizeQueryString", () => {
+  it("strips a leading question mark", () => {
+    expect(normalizeQueryString("?foo=bar")).toBe("foo=bar")
+  })
+
+  it("returns an unchanged query string when there is no leading question mark", () => {
+    expect(normalizeQueryString("foo=bar")).toBe("foo=bar")
+  })
 })
 
 describe("debounce", () => {
@@ -1421,6 +1451,81 @@ describe("getIFrameEnclosingApp", () => {
     setWindowParent(fakeParent)
 
     expect(getIFrameEnclosingApp("parent-only")).toBe(iframe)
+  })
+
+  it("treats an iframe as inaccessible when reading contentWindow throws", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    const iframe = makeIframeWithEmbeddingClass(document, "throws", {
+      title: "streamlitApp",
+    })
+    Object.defineProperty(iframe, "contentWindow", {
+      get() {
+        throw new Error("cross-origin access denied")
+      },
+      configurable: true,
+    })
+
+    expect(getIFrameEnclosingApp("throws")).toBeNull()
+  })
+
+  it("returns null when a titled iframe on the parent document is inaccessible", () => {
+    const parentDocument = document.implementation.createHTMLDocument("parent")
+    makeIframeWithEmbeddingClass(parentDocument, "parent-blocked", {
+      title: "streamlitApp",
+      contentWindow: null,
+    })
+
+    const fakeParent = {
+      document: parentDocument,
+    } as Window & typeof globalThis
+    setWindowParent(fakeParent)
+
+    expect(getIFrameEnclosingApp("parent-blocked")).toBeNull()
+  })
+
+  it("returns null when an untitled iframe in the current document is inaccessible", () => {
+    const fakeParent = { document: window.document } as Window &
+      typeof globalThis
+    setWindowParent(fakeParent)
+
+    makeIframeWithEmbeddingClass(document, "current-blocked", {
+      contentWindow: null,
+    })
+
+    expect(getIFrameEnclosingApp("current-blocked")).toBeNull()
+  })
+
+  it("finds an untitled iframe on the parent document via getElementsByTagName", () => {
+    const parentDocument = document.implementation.createHTMLDocument("parent")
+    const iframe = makeIframeWithEmbeddingClass(
+      parentDocument,
+      "parent-tag",
+      {}
+    )
+
+    const fakeParent = {
+      document: parentDocument,
+    } as Window & typeof globalThis
+    setWindowParent(fakeParent)
+
+    expect(getIFrameEnclosingApp("parent-tag")).toBe(iframe)
+  })
+
+  it("returns null when the only parent iframe found by tag name is inaccessible", () => {
+    const parentDocument = document.implementation.createHTMLDocument("parent")
+    makeIframeWithEmbeddingClass(parentDocument, "parent-tag-blocked", {
+      contentWindow: null,
+    })
+
+    const fakeParent = {
+      document: parentDocument,
+    } as Window & typeof globalThis
+    setWindowParent(fakeParent)
+
+    expect(getIFrameEnclosingApp("parent-tag-blocked")).toBeNull()
   })
 })
 

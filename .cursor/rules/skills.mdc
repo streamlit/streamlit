@@ -14,7 +14,7 @@ This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, e
 
 This directory contains Agent Skills for developing the Streamlit library. Skills are instruction sets that enhance AI coding assistants' capabilities for specific tasks in the Streamlit codebase.
 
-These skills are for **Streamlit library development** (backend, frontend, protobufs), not for building Streamlit applications.
+These skills are for **Streamlit library development** (backend, frontend, protobufs), not for building Streamlit applications. User-facing skills that ship with the library live under `lib/streamlit/.agents/skills/`; follow that directory's `AGENTS.md` when editing them.
 
 ## Skill structure
 
@@ -73,6 +73,7 @@ For comprehensive guidance on writing effective skills, see the official [Agent 
 Key points:
 
 - **Be concise** - The context window is shared
+- **Keep instructions high-level** - Agents can handle ambiguity and figure out how to carry out a task. State the goal and the few constraints that matter. Do not add detailed code snippets or scripts for how to do a specific step.
 - **Write specific descriptions** - Include what the skill does AND when to use it
 - **Use third person** in descriptions (e.g., "Validates code changes" not "I validate code changes")
 - **Keep file references one level deep** from SKILL.md
@@ -86,6 +87,7 @@ Key points:
 1. Create a new directory in `.claude/skills/` with a descriptive name
 2. Add a `SKILL.md` file with the required frontmatter
 3. Write clear, actionable instructions for the AI agent
+4. Allowlist the skill directory in `.claude/.gitignore` (`!skills/<name>/`)
 
 ## Contributing
 
@@ -93,7 +95,7 @@ When adding or modifying skills:
 
 1. Follow the existing skill structure
 2. Ensure the skill is focused on a specific, well-defined task
-3. Include practical examples and commands
+3. Keep the instructions high-level. Do not add scripts that spell out every step.
 4. Read the [best practices for skill writing](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices.md)
 5. Review the skill against the best practices you just read
 6. **Update the overview table in `CONTRIBUTING.md`** under "AI Agent Skills and Subagents" to include the new or modified skill/subagent with a brief description of when to use it
