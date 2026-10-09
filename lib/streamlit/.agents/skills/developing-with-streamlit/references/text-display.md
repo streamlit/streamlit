@@ -44,7 +44,7 @@ st.badge("Active", icon=":material/check:", color="green")
 
 ## Streaming text: st.write_stream
 
-`st.write_stream` writes string chunks from a generator / iterable / stream with a typewriter effect (non-string chunks go through the matching element). It returns the concatenated result, so you can store or replay it, and it accepts OpenAI and LangChain streams directly.
+`st.write_stream` writes string chunks from a generator / iterable / stream with a typewriter effect (non-string chunks go through the matching element). It returns the full text (or a list of the chunks if any chunk isn't text), so you can store or replay it, and it accepts OpenAI and LangChain streams directly.
 
 ```python
 def token_stream():
