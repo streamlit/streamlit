@@ -49,7 +49,8 @@ export interface IFlexContext {
    * Whether this container gives its stretch-height children a definite
    * height to fill:
    * - true for pixel-height containers, and for stretch-height containers
-   *   whose own parent has a definite height.
+   *   whose own parent has a definite height. Tab panels follow the height
+   *   of their tab container.
    * - false (or unset) for the root and content-height containers, where
    *   stretch elements size to their content.
    */

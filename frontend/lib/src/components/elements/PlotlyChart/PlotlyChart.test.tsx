@@ -192,6 +192,17 @@ describe("PlotlyChart Component", () => {
       expect(chart).not.toHaveStyle("contain-intrinsic-height: 450px;")
     })
 
+    it("size-contains a pixel-width stretch-height chart", () => {
+      renderComponent({
+        widthConfig: { pixelWidth: 400 },
+        heightConfig: { useStretch: true },
+      })
+
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 450px;")
+    })
+
     it("claims no fallback height inside a container with a definite height", () => {
       const definiteHeightContext: IFlexContext = {
         direction: Direction.VERTICAL,

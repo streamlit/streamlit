@@ -154,9 +154,9 @@ const parseSpecObject = (
 }
 
 /**
- * Check if a spec is a single view rather than a facet, repeat, or concat
- * composition. A composition's width comes from its children, so it can't be
- * known before rendering.
+ * A single-view chart has one width, known before rendering. Facet, repeat,
+ * and concat compositions take their width from their children. Layered
+ * charts are still a single view.
  */
 // Exported for testing
 export function isSingleViewChart(spec: string | object): boolean {
@@ -260,32 +260,41 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const useStretchHeight = shouldHeightStretch(heightConfig)
   const hasFallbackHeight = hasStretchHeightFallback(useContext(FlexContext))
 
-  // Facet charts need the container element to have a width and also
-  // do not work well with stretch/container width
-  // so they cannot use the width from the StyledVegaLiteChartContainer.
-  const isFacet = isFacetChart(inputElement.spec)
-
-  // Nested compositions (vconcat containing hconcat/layer/etc.) also don't work
-  // well with forced stretch width, as it can cause "infinite extent" errors.
-  const hasNestedComp = hasNestedComposition(inputElement.spec)
+  // Parse the spec once per spec change instead of on every resize render.
+  // - Facet charts need the container element to have a width and also do not
+  //   work well with stretch/container width, so they cannot use the width
+  //   from the StyledVegaLiteChartContainer.
+  // - Nested compositions (vconcat containing hconcat/layer/etc.) also don't
+  //   work well with forced stretch width, as it can cause "infinite extent"
+  //   errors.
+  const { isFacet, hasNestedComp, isSingleView, specWidth } = useMemo(() => {
+    const parsedSpec = parseSpecObject(inputElement.spec)
+    if (parsedSpec === undefined) {
+      return {
+        isFacet: false,
+        hasNestedComp: false,
+        isSingleView: false,
+        specWidth: undefined,
+      }
+    }
+    return {
+      isFacet: isFacetChart(parsedSpec),
+      hasNestedComp: hasNestedComposition(parsedSpec),
+      isSingleView: isSingleViewChart(parsedSpec),
+      specWidth: getSpecWidth(parsedSpec),
+    }
+  }, [inputElement.spec])
 
   // Facet charts should only use container width in fullscreen mode.
   // Outside fullscreen, they use their natural size (determined by Vega-Lite).
   // This prevents the infinite loop caused by container-driven facet sizing.
   const useStretchWidth = isFacet && !isFullScreen ? false : baseStretchWidth
 
-  // A single-view, content-width chart with a container-driven height has a
-  // width known from its spec. It is sized like a stretch-width chart inside a
-  // box with that intrinsic width, so its rendered size can't feed back into
-  // the layout and collapse it.
-  const specWidth = useMemo(
-    () => getSpecWidth(inputElement.spec),
-    [inputElement.spec]
-  )
+  // A content-width chart with a container-driven height would otherwise
+  // collapse to 0×0. Single-view charts know their width from the spec, so
+  // size them like a stretch-width chart inside a box of that width.
   const hasContainedContentWidth =
-    useStretchHeight &&
-    !useStretchWidth &&
-    isSingleViewChart(inputElement.spec)
+    useStretchHeight && !useStretchWidth && isSingleView
   const isSizeContained =
     useStretchHeight && (useStretchWidth || hasContainedContentWidth)
 

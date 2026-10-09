@@ -266,6 +266,25 @@ describe("ArrowVegaLiteChart", () => {
       expect(chart).not.toHaveStyle("contain-intrinsic-width: 25rem;")
     })
 
+    it("size-contains a content-width chart with a pixel height", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            {},
+            {
+              widthConfig: { useContent: true },
+              heightConfig: { pixelHeight: 200 },
+            }
+          )}
+        />
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-width: 25rem;")
+      expect(chart).toHaveStyle("height: 100%;")
+    })
+
     it("does not size-contain a content-width composition", () => {
       render(
         <ArrowVegaLiteChart

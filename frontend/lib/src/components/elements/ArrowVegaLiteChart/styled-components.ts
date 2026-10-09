@@ -348,9 +348,8 @@ interface StyledVegaLiteChartContainerProps {
   useContainerWidth: boolean
   useContainerHeight: boolean
   /**
-   * Whether the chart is sized only by its parent. Size containment keeps the
-   * rendered chart from feeding its size back into the parent, so the chart
-   * can shrink again.
+   * Whether size containment keeps the rendered chart from contributing its
+   * dimensions back to the layout, so the chart can shrink with its parent.
    */
   isSizeContained: boolean
   /**

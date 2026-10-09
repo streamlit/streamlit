@@ -127,6 +127,11 @@ def test_stretch_chart_default_height_in_horizontal_container(app: Page):
     ).get_by_test_id("stVegaLiteChart")
     expect(content_width_chart).to_have_css("width", f"{DEFAULT_CHART_WIDTH_PX}px")
     expect(content_width_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
+    pixel_height_chart = get_element_by_key(
+        app, "container-horizontal-content-width-pixel-height-chart"
+    ).get_by_test_id("stVegaLiteChart")
+    expect(pixel_height_chart).to_have_css("width", f"{DEFAULT_CHART_WIDTH_PX}px")
+    expect(pixel_height_chart).to_have_css("height", "200px")
 
     # Plotly falls back to its default figure height.
     plotly_chart = get_element_by_key(
@@ -154,8 +159,11 @@ def _wraps_content(locator: Locator) -> bool:
 
 def test_stretch_charts_fit_containers_with_definite_height(app: Page):
     """Stretch charts shrink to fit their siblings in definite-height containers."""
-    for key in ("fixed-card-title-and-chart", "fixed-row-stretch-kpi-cards"):
-        container = get_element_by_key(app, key)
+    for container in (
+        get_element_by_key(app, "fixed-card-title-and-chart"),
+        get_element_by_key(app, "fixed-row-stretch-kpi-cards"),
+        get_element_by_key(app, "fixed-tabs-title-and-chart").get_by_role("tabpanel"),
+    ):
         charts = container.get_by_test_id("stVegaLiteChart")
         expect(charts.first).to_be_visible()
 

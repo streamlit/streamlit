@@ -166,6 +166,12 @@ interface ContainerContentsWrapperProps extends BaseBlockProps {
   isRoot?: boolean
   /** Extra in-flow space after the last widget. Used by side-drawer dialogs. */
   padContentEnd?: boolean
+  /**
+   * Height config that decides whether stretch-height children get a
+   * definite height. Defaults to the node's own config. Tab panels pass the
+   * tab container's config because the tab nodes have none.
+   */
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 export const ContainerContentsWrapper = (
@@ -196,7 +202,9 @@ export const ContainerContentsWrapper = (
       // tabs, …) are not columns, so the flag resets to false. Nested st.container
       // resets the same way because FlexBoxContainer omits this prop.
       isDirectlyInColumn={notNullOrUndefined(props.node.deltaBlock.column)}
-      {...getHeightContextProps(props.node.deltaBlock.heightConfig)}
+      {...getHeightContextProps(
+        props.heightConfig ?? props.node.deltaBlock.heightConfig
+      )}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -559,6 +567,7 @@ export const BlockNodeRenderer = (
         <ContainerContentsWrapper
           {...mappedChildProps}
           height={contentHeight}
+          heightConfig={heightConfig}
         />
       )
     }

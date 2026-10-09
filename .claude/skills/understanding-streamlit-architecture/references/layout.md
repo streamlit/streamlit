@@ -78,7 +78,7 @@ When the height on an element is set to "stretch", the element should expand to 
 
 - The element's display height should not exceed the height of its parent container.
 - Exception: stretch-height containers and forms fill the parent but grow to fit taller content instead of letting it spill past their border. Tabs keep the cap and scroll inside the active panel.
-- Without a definite parent height (top level, content-height containers, content-height rows), stretch charts fall back to a default height. Vega and Plotly charts only claim that fallback when `FlexContext.hasDefiniteHeight` is false (`hasStretchHeightFallback()` in `FlexContext.tsx`). Inside a pixel-height container, or a stretch-height container that fills one, they shrink to fit their siblings instead, so a title plus a stretch chart doesn't make a fixed-height card scroll.
+- Without a definite parent height (top level, content-height containers, content-height rows), stretch charts fall back to a default height. Vega and Plotly charts only claim that fallback when `FlexContext.hasDefiniteHeight` is false (`hasStretchHeightFallback()` in `FlexContext.tsx`). Inside a pixel-height container or tab panel, or a stretch-height container or tab panel that fills one, they shrink to fit their siblings instead, so a title plus a stretch chart doesn't make a fixed-height card scroll.
 
 Examples:
 
@@ -344,7 +344,12 @@ The `useLayoutStyles` hook (in `useLayoutStyles.ts`) converts proto config to CS
 | `heightConfig.useContent`  | `height: "auto"`                                                            | Element uses natural content height                   |
 | `heightConfig.pixelHeight` | `height: "${pixels}px"` + `overflow: "auto"`                                | Fixed height with scroll if needed                    |
 
-**Stretch-height blocks:** `BlockNodeRenderer` overrides the stretch styles for containers and forms that render through `StyledLayoutWrapper`. In vertical parents, the wrapper uses `flex: "0 1 100%"` with `height: "auto"`; in horizontal parents, it drops the `maxHeight` cap. The container's inner block and the form root use `height: "auto"` and fill the wrapper through flex. Without a percentage height, a flex item's automatic minimum size is its content height, so the block grows with its content. Its flexed size is still definite, so nested stretch children resolve their percentage heights. `min-height: min-content` isn't used because Firefox and WebKit treat it as `auto` in the block axis.
+**Stretch-height blocks:** Containers and forms grow to fit content that is taller than the parent. `BlockNodeRenderer` overrides stretch styles for blocks that render through `StyledLayoutWrapper`:
+
+- Vertical parents use `flex: "0 1 100%"` and `height: "auto"`.
+- Horizontal parents drop the `maxHeight` cap.
+
+The inner block and the form root use `height: "auto"` and fill the wrapper through flex. The flex item's automatic minimum is then its content height, so the block grows with its content, while the flexed size stays definite for nested stretch children. `min-height: min-content` is not used because Firefox and WebKit treat it as `auto` on the block axis.
 
 **Min-Width Protection in Content-Width Containers:**
 

@@ -231,6 +231,12 @@ with st.container(horizontal=True, key="container-horizontal-content-width-chart
     st.line_chart(df, x="x", y="y", width="content", height="stretch")
     st.button("Content-width chart neighbor")
 
+with st.container(
+    horizontal=True, key="container-horizontal-content-width-pixel-height-chart"
+):
+    st.line_chart(df, x="x", y="y", width="content", height=200)
+    st.button("Pixel-height chart neighbor")
+
 with st.container(horizontal=True, key="container-horizontal-stretch-plotly-fallback"):
     st.plotly_chart(px.line(df, x="x", y="y"), height="stretch")
     st.button("Plotly neighbor")
@@ -248,6 +254,11 @@ with st.container(horizontal=True, height=250, key="fixed-row-stretch-kpi-cards"
         ):
             st.metric(f"KPI {index}", index)
             st.line_chart(df, x="x", y="y", height="stretch")
+
+with st.container(key="fixed-tabs-title-and-chart"):
+    with st.tabs(["Revenue tab"], height=300)[0]:
+        st.subheader("Revenue")
+        st.line_chart(df, x="x", y="y", height="stretch")
 
 tall_card = st.toggle("Tall card", value=True)
 with st.container(horizontal=True, key="container-horizontal-stretch-chart-shrink"):
