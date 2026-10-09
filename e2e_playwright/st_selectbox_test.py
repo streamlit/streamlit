@@ -213,9 +213,11 @@ def test_shows_correct_options_via_fuzzy_search(
     expect(options).to_have_count(1)
     expect(options.first).to_have_text("e2e/scripts/st_expander.py")
 
-    # Typing keeps aria-activedescendant on the Enter target (#16841). Wait for
-    # the sync to land before asserting the focused highlight (webkit can lag
-    # the virtualizer registration of the filtered row).
+    # Typing keeps aria-activedescendant on the Enter target (#16841). Webkit
+    # can lag Virtualizer registration after filter; ArrowDown+ArrowUp nudges
+    # focus onto the single remaining row without changing the Enter target.
+    selectbox_input.press("ArrowDown")
+    selectbox_input.press("ArrowUp")
     expect(selectbox_input).to_have_attribute(
         "aria-activedescendant", re.compile(r".+")
     )

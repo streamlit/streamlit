@@ -275,6 +275,27 @@ describe("Selectbox widget", () => {
     expect(screen.getByDisplayValue("b")).toBeVisible()
   })
 
+  it("commits an exact typed match on Enter after opening", async () => {
+    // Regression: non-Enter onChange must not leave racHandledEnterRef stuck,
+    // or Enter after fill/type skips the enterTarget commit (e2e typing path).
+    const user = userEvent.setup()
+    props = getProps({
+      value: "components_iframe.py",
+      options: ["components_iframe.py", "st_warning.py", "st_expander.py"],
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.clear(input)
+    await user.type(input, "st_warning.py")
+    await expectActiveOption(input, "st_warning.py")
+    await user.keyboard("{Enter}")
+
+    expect(props.onChange).toHaveBeenCalledWith("st_warning.py")
+    expect(input).toHaveValue("st_warning.py")
+  })
+
   it("syncs activedescendant while typing and keeps a later ArrowDown focus", async () => {
     const user = userEvent.setup()
     props = getProps({
@@ -335,6 +356,7 @@ describe("Selectbox widget", () => {
 
   it("lists Add first so matches stay visible, and ArrowDown selects the first match", async () => {
     // Leading Add keeps best-ranked matches in view in a short dropdown.
+    // ArrowDown before sync (focusedKey still null) must also skip Add.
     const user = userEvent.setup()
     props = getProps({
       value: undefined,

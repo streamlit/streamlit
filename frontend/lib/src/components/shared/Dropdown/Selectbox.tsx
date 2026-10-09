@@ -96,6 +96,11 @@ type ComboOption = {
 
 const CREATABLE_ID = "__creatable__"
 
+/** Live ComboBox state pointer for capture-phase key handlers outside RAC. */
+type ComboBoxStateHandle = NonNullable<
+  React.ContextType<typeof ComboBoxStateContext>
+>
+
 /**
  * Pass-through filter for RAC's <ComboBox defaultFilter>. Streamlit's own
  * `filterSelectOptions` runs upstream and produces `displayOptions`, so RAC
@@ -147,9 +152,15 @@ export const getInsertedText = (
 const DropdownController = memo<{
   openRef: React.MutableRefObject<(() => void) | null>
   closeRef: React.MutableRefObject<(() => void) | null>
+  stateRef: React.MutableRefObject<ComboBoxStateHandle | null>
   enterTargetKey: Key | null
-}>(({ openRef, closeRef, enterTargetKey }) => {
+}>(({ openRef, closeRef, stateRef, enterTargetKey }) => {
   const state = useContext(ComboBoxStateContext)
+
+  // Sync read for keydown handlers. Do not clear this in the effect cleanup:
+  // focus updates recreate `state` and would leave a null window for capture-
+  // phase ArrowDown (null focusedKey → skip leading Add → first match).
+  stateRef.current = state ?? null
 
   useEffect(() => {
     if (state) {
@@ -277,6 +288,7 @@ const Selectbox: FC<Props> = ({
   // prevents auto-open on Tab-focus (which caused spurious reopens after reruns).
   const openDropdownRef = useRef<(() => void) | null>(null)
   const closeDropdownRef = useRef<(() => void) | null>(null)
+  const comboBoxStateRef = useRef<ComboBoxStateHandle | null>(null)
 
   // Always-current mirrors of state values, for use inside stale RAC closures
   // that capture their dependencies at registration time.
@@ -291,10 +303,15 @@ const Selectbox: FC<Props> = ({
   const inputValueRef = useRef(inputValue)
   inputValueRef.current = inputValue
 
-  // Set by handleSelectionChange when RAC's onChange commits a new selection
-  // (arrow-nav + Enter). Checked by handleInputKeyDown to avoid
-  // double-committing.
+  // Set by handleSelectionChange when RAC's onChange commits during Enter
+  // (arrow-nav + Enter, or re-commit of the already-selected focusedKey).
+  // Checked by handleInputKeyDown to avoid double-committing / creatable fallthrough.
   const racHandledEnterRef = useRef(false)
+
+  // True only for the current Enter keydown (capture → RAC → bubble). Stops
+  // non-Enter onChange (open/filter) from leaving racHandledEnterRef stuck so
+  // a later Enter would skip the enterTarget commit.
+  const enterKeyInProgressRef = useRef(false)
 
   // Tracks whether the dropdown is open. RAC can fire deferred ComboBox
   // onChange callbacks after the dropdown closes; those are discarded via
@@ -351,6 +368,9 @@ const Selectbox: FC<Props> = ({
       creatableItem ? [creatableItem, ...filteredOptions] : filteredOptions,
     [filteredOptions, creatableItem]
   )
+
+  const displayOptionsRef = useRef(displayOptions)
+  displayOptionsRef.current = displayOptions
 
   // Option Enter commits, and the row aria-activedescendant points to:
   // - accept_new_options with a non-exact query: the "Add: …" row (first)
@@ -430,10 +450,10 @@ const Selectbox: FC<Props> = ({
       // guard correctly lets them through.
       if (!isOpenRef.current) return
 
-      // Mark that RAC handled Enter (including re-commit of the already-
-      // selected focusedKey via commitSelection(true)). The bubble handler
-      // must skip its creatable / enterTarget fallbacks in every non-null case.
-      if (key !== null) {
+      // Only mark during Enter. Non-Enter onChange (open/filter) must not leave
+      // racHandledEnterRef stuck, or a later Enter skips the enterTarget commit.
+      // Still covers RAC re-committing the already-selected focusedKey on Enter.
+      if (key !== null && enterKeyInProgressRef.current) {
         racHandledEnterRef.current = true
       }
 
@@ -544,12 +564,33 @@ const Selectbox: FC<Props> = ({
       }
       if (e.key === "Enter") {
         wasOpenBeforeEnterRef.current = isOpenRef.current
+        enterKeyInProgressRef.current = true
       }
       if (
         (e.key === "ArrowDown" || e.key === "ArrowUp") &&
         !isOpenRef.current
       ) {
         openDropdownRef.current?.()
+      }
+      // Leading Add is the Enter target. While focusedKey is still null (RAC
+      // cleared it on the keystroke; sync may not have landed), ArrowDown would
+      // focus Add first — then Enter creates. Jump to the first match instead;
+      // once Add is focused, RAC ArrowDown already moves to that match.
+      if (e.key === "ArrowDown" && isOpenRef.current) {
+        const state = comboBoxStateRef.current
+        const focused = state?.selectionManager.focusedKey
+        if (state && isNullOrUndefined(focused)) {
+          const options = displayOptionsRef.current
+          if (options[0]?.isCreatable) {
+            const firstMatch = options.find(o => !o.isCreatable)
+            if (firstMatch) {
+              e.preventDefault()
+              e.stopPropagation()
+              state.selectionManager.setFocusedKey(firstMatch.id)
+              return
+            }
+          }
+        }
       }
       // Close before React Aria's Tab shortcut can commit() the synced
       // focusedKey. isOpenRef is cleared sync so handleSelectionChange drops
@@ -593,6 +634,8 @@ const Selectbox: FC<Props> = ({
   const handleInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
       if (e.key !== "Enter") return
+
+      enterKeyInProgressRef.current = false
 
       if (racHandledEnterRef.current) {
         racHandledEnterRef.current = false
@@ -657,6 +700,7 @@ const Selectbox: FC<Props> = ({
           <DropdownController
             openRef={openDropdownRef}
             closeRef={closeDropdownRef}
+            stateRef={comboBoxStateRef}
             enterTargetKey={enterTargetId}
           />
           <StyledGroup ref={setReference}>
