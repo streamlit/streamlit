@@ -111,8 +111,8 @@ dependencies = [
     "snowflake-connector-python>=3.0.0",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.0.0",
 ]
 ```
