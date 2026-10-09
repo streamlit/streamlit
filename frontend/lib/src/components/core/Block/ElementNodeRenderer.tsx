@@ -912,14 +912,17 @@ const RawElementNodeRenderer = (
       widgetProps.disabled = widgetProps.disabled || chatInputProto.disabled
 
       // Height configuration for chat input (same pattern as textArea):
-      // - stretch: fills parent (100% height), flex allows grow/shrink with 8rem min
+      // - stretch: fills parent (100% height), flex allows grow/shrink with 8rem min.
+      //   In horizontal layouts, the default layout styles stretch it to the row.
       // - pixel: container allows expansion, inner component handles height
       // - content (default): auto-expand with text
       const heightConfig = node.element.heightConfig
       const chatInputConfig = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
         styleOverrides: heightConfig?.useStretch
-          ? { height: "100%", flex: "1 1 8rem" }
+          ? isInHorizontalLayout
+            ? undefined
+            : { height: "100%", flex: "1 1 8rem" }
           : heightConfig?.pixelHeight
             ? {
                 height: "auto",
@@ -1197,12 +1200,16 @@ const RawElementNodeRenderer = (
       // The st.text_area element has a legacy implementation where the height
       // is measuring only the input box so the pixel height must be set in the element
       // and the container must be allowed to expand. Additionally, we don't want the
-      // flex with height to be set on the element container.
+      // flex with height to be set on the element container. In horizontal
+      // layouts, the default layout styles stretch a stretch-height text area
+      // to the row.
       const useStretchHeight = node.element.heightConfig?.useStretch
       const config = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
         styleOverrides: useStretchHeight
-          ? { height: "100%", flex: "1 1 8rem" }
+          ? isInHorizontalLayout
+            ? undefined
+            : { height: "100%", flex: "1 1 8rem" }
           : // Content height text area in vertical layout cannot have flex.
             { height: "auto", ...(isInHorizontalLayout ? {} : { flex: "" }) },
       })

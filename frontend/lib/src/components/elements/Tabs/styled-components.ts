@@ -30,10 +30,21 @@ interface StyledTabContainerProps {
   width: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex: React.CSSProperties["flex"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
 }
 
 export const StyledTabContainer = styled.div<StyledTabContainerProps>(
-  ({ isOverflowing, width, height, flex }) => ({
+  ({
+    isOverflowing,
+    width,
+    height,
+    flex,
+    alignSelf,
+    minHeight,
+    maxHeight,
+  }) => ({
     position: isOverflowing ? "relative" : undefined,
     width: width || undefined,
     height: height || undefined,
@@ -44,6 +55,9 @@ export const StyledTabContainer = styled.div<StyledTabContainerProps>(
       ? { display: "flex", flexDirection: "column", overflow: "hidden" }
       : {}),
     flex: flex || undefined,
+    alignSelf,
+    minHeight,
+    maxHeight,
   })
 )
 
