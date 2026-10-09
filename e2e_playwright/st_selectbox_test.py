@@ -192,6 +192,13 @@ def test_handles_option_selection_via_typing(app: Page):
     # Click to open dropdown, then fill to filter by the desired option:
     selectbox_input.click()
     selectbox_input.fill("e2e/scripts/st_warning.py")
+    # Wait for the filter to settle before Enter (fill can race the React update).
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(
+        selection_dropdown.get_by_role(
+            "option", name="e2e/scripts/st_warning.py", exact=True
+        )
+    ).to_be_visible()
     selectbox_input.press("Enter")
 
     # Check that selection worked:
@@ -213,13 +220,10 @@ def test_shows_correct_options_via_fuzzy_search(
     expect(options).to_have_count(1)
     expect(options.first).to_have_text("e2e/scripts/st_expander.py")
 
-    # Typing keeps aria-activedescendant on the Enter target (#16841). Webkit
-    # can lag Virtualizer registration after filter; ArrowDown+ArrowUp nudges
-    # focus onto the single remaining row without changing the Enter target.
-    selectbox_input.press("ArrowDown")
-    selectbox_input.press("ArrowUp")
+    # Typing alone must set aria-activedescendant on the Enter target (#16841).
+    # Assert without arrow keys so the check cannot pass via keyboard navigation.
     expect(selectbox_input).to_have_attribute(
-        "aria-activedescendant", re.compile(r".+")
+        "aria-activedescendant", re.compile(r".+"), timeout=10000
     )
     active_id = selectbox_input.get_attribute("aria-activedescendant")
     assert active_id is not None

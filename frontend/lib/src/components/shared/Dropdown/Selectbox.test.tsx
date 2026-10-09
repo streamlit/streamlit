@@ -276,8 +276,8 @@ describe("Selectbox widget", () => {
   })
 
   it("commits an exact typed match on Enter after opening", async () => {
-    // Regression: non-Enter onChange must not leave racHandledEnterRef stuck,
-    // or Enter after fill/type skips the enterTarget commit (e2e typing path).
+    // Regression: Enter right after type must commit the filtered match even
+    // when activedescendant sync has not landed yet (e2e fill+Enter path).
     const user = userEvent.setup()
     props = getProps({
       value: "components_iframe.py",
@@ -288,9 +288,7 @@ describe("Selectbox widget", () => {
 
     await user.click(input)
     await user.clear(input)
-    await user.type(input, "st_warning.py")
-    await expectActiveOption(input, "st_warning.py")
-    await user.keyboard("{Enter}")
+    await user.type(input, "st_warning.py{Enter}")
 
     expect(props.onChange).toHaveBeenCalledWith("st_warning.py")
     expect(input).toHaveValue("st_warning.py")

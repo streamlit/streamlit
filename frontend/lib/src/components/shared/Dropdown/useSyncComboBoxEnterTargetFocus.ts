@@ -21,7 +21,7 @@ import { ComboBoxStateContext, type Key } from "react-aria-components"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 /** Max time spent retrying setFocusedKey until Virtualizer registers the row. */
-const MAX_SYNC_RETRY_MS = 1000
+const MAX_SYNC_RETRY_MS = 3000
 
 /**
  * Keep ComboBox `selectionManager.focusedKey` on the Enter commit target while

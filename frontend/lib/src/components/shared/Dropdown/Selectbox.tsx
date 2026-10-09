@@ -387,6 +387,9 @@ const Selectbox: FC<Props> = ({
     return first?.id ?? null
   }, [creatableItem, displayOptions, inputValue])
 
+  const enterTargetIdRef = useRef(enterTargetId)
+  enterTargetIdRef.current = enterTargetId
+
   const virtualizerLayoutOptions = useMemo(
     () => ({
       rowSize: convertRemToPx(theme.sizes.dropdownItemHeight),
@@ -450,13 +453,6 @@ const Selectbox: FC<Props> = ({
       // guard correctly lets them through.
       if (!isOpenRef.current) return
 
-      // Only mark during Enter. Non-Enter onChange (open/filter) must not leave
-      // racHandledEnterRef stuck, or a later Enter skips the enterTarget commit.
-      // Still covers RAC re-committing the already-selected focusedKey on Enter.
-      if (key !== null && enterKeyInProgressRef.current) {
-        racHandledEnterRef.current = true
-      }
-
       if (key === null) {
         // RAC fires null when the typed text no longer matches the committed
         // item. Only revert display text when the user isn't actively typing.
@@ -465,6 +461,21 @@ const Selectbox: FC<Props> = ({
           setFilterActive(false)
         }
         return
+      }
+
+      // After filtering, focusedKey can still point at a row that left the
+      // collection. Ignore that stale key so Enter does not re-commit it and
+      // suppress the enterTarget bubble path (e2e fill+Enter).
+      const collection = comboBoxStateRef.current?.collection
+      if (collection && !collection.getItem(key)) {
+        return
+      }
+
+      // Only mark during Enter. Non-Enter onChange (open/filter) must not leave
+      // racHandledEnterRef stuck, or a later Enter skips the enterTarget commit.
+      // Still covers RAC re-committing the already-selected focusedKey on Enter.
+      if (enterKeyInProgressRef.current) {
+        racHandledEnterRef.current = true
       }
 
       const keyStr = String(key)
@@ -642,25 +653,25 @@ const Selectbox: FC<Props> = ({
         return
       }
 
-      if (creatableItem) {
-        commitSelection(inputValue)
+      // Prefer refs so fill/type + Enter in the same turn still sees the
+      // post-filter enter target, not a stale render closure.
+      const targetId = enterTargetIdRef.current
+      const options = displayOptionsRef.current
+      const target = targetId ? options.find(o => o.id === targetId) : null
+      if (target?.isCreatable) {
+        commitSelection(inputValueRef.current)
         closeDropdownRef.current?.()
         return
       }
 
       if (!wasOpenBeforeEnterRef.current) return
 
-      // Resolve via enterTargetId so the committed row matches the highlighted
-      // aria-activedescendant row (exact match, else first non-creatable).
-      const target = enterTargetId
-        ? displayOptions.find(o => o.id === enterTargetId)
-        : null
       if (target && !target.isCreatable) {
         commitSelection(target.value)
         closeDropdownRef.current?.()
       }
     },
-    [commitSelection, creatableItem, displayOptions, enterTargetId, inputValue]
+    [commitSelection]
   )
 
   const handleClearValue = useCallback((): void => {
@@ -747,10 +758,25 @@ const Selectbox: FC<Props> = ({
             offset={0}
             style={floatingStyles}
           >
-            <Virtualizer
-              layout={ListLayout}
-              layoutOptions={virtualizerLayoutOptions}
-            >
+            {/* Skip Virtualizer for short lists: setFocusedKey no-ops until
+                Virtualizer registers a row, which can lag after filtering and
+                leave aria-activedescendant unset (#16841). */}
+            {displayOptions.length > 25 ? (
+              <Virtualizer
+                layout={ListLayout}
+                layoutOptions={virtualizerLayoutOptions}
+              >
+                <StyledListBox
+                  aria-label={label ?? "Selectbox options"}
+                  items={displayOptions}
+                  renderEmptyState={() => (
+                    <StyledEmptyState>No results</StyledEmptyState>
+                  )}
+                >
+                  {renderOption}
+                </StyledListBox>
+              </Virtualizer>
+            ) : (
               <StyledListBox
                 aria-label={label ?? "Selectbox options"}
                 items={displayOptions}
@@ -760,7 +786,7 @@ const Selectbox: FC<Props> = ({
               >
                 {renderOption}
               </StyledListBox>
-            </Virtualizer>
+            )}
           </StyledPopover>
         </ComboBox>
       </I18nProvider>
