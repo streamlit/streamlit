@@ -34,7 +34,7 @@ secondaryBackgroundColor = "#f6f8fa"  # Widget backgrounds, code blocks
 textColor = "#1F2328"              # Body text
 
 # Optional refinements
-linkColor = "#0969da"              # Markdown links (defaults to primaryColor)
+linkColor = "#0969da"              # Markdown links (defaults to blueTextColor)
 codeTextColor = "#1F2328"          # Inline code text
 codeBackgroundColor = "#f6f8fa"    # Code block background
 borderColor = "#d0d7de"            # Widget borders
@@ -186,7 +186,7 @@ showWidgetBorder = true            # Show borders on unfocused widgets
 showSidebarBorder = true           # Show divider between sidebar and content
 ```
 
-**Radius keywords:** `"none"` (0), `"small"` (4px), `"medium"` (8px), `"large"` (12px), `"full"` (pill shape).
+**Radius keywords:** `"none"` (0), `"small"` (0.35rem), `"medium"` (0.5rem), `"large"` (1rem), `"full"` (1.4rem).
 
 ## Sidebar customization
 
@@ -228,7 +228,7 @@ backgroundColor = "#f6f8fa"
 backgroundColor = "#010409"
 ```
 
-Users can switch between modes in the app settings menu only if both `[theme.light]` and `[theme.dark]` are defined. A custom theme with just `[theme]` locks the app to a single mode.
+Users can switch between light and dark mode in the app settings menu when `[theme.light]` or `[theme.dark]` is defined; define both to control how each mode looks. A custom theme with just `[theme]` locks the app to a single mode.
 
 ## Detecting current theme
 
