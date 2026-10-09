@@ -20,12 +20,12 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Final
+from tempfile import TemporaryFile
+from typing import IO, Any, Final
 
 import pytest
 
@@ -188,19 +188,19 @@ def start_load_test_server(
     scenario_path: Path,
     *,
     extra_env: dict[str, str] | None = None,
-) -> tuple[subprocess.Popen[str], Path]:
+) -> tuple[subprocess.Popen[str], IO[str]]:
     """Start a Streamlit server for load testing.
 
-    Captures stdout and stderr to a file instead of a pipe so a large volume
-    of logs cannot deadlock the server. The log path is returned so a failed
-    health check can include a tail of the output.
+    Captures stdout and stderr to a temp file instead of a pipe so a large
+    volume of logs cannot deadlock the server. The caller keeps the file
+    handle and must close it after the process exits.
 
     Returns
     -------
     process
         The started Streamlit process.
-    log_path
-        File capturing combined stdout and stderr.
+    log_file
+        Combined stdout and stderr. Closing it deletes the temp file.
     """
     env = os.environ.copy()
     # Hung servers may be SIGKILLed; unbuffered stdout keeps the log tail complete.
@@ -222,35 +222,30 @@ def start_load_test_server(
         "--server.fileWatcherType=none",
     ]
 
-    fd, log_name = tempfile.mkstemp(
-        prefix=f"load-test-server-{port}-",
-        suffix=".log",
-    )
-    log_path = Path(log_name)
+    log_file = TemporaryFile("w+", encoding="utf-8")
     try:
-        # Close the parent's handle after Popen. The child keeps a duplicated
-        # descriptor, so later server output still reaches the file without a
-        # pipe that can fill and deadlock.
-        with os.fdopen(fd, "w", encoding="utf-8") as log_file:
-            process = subprocess.Popen(
-                args,
-                env=env,
-                stdout=log_file,
-                stderr=subprocess.STDOUT,
-                text=True,
-            )
+        process = subprocess.Popen(
+            args,
+            env=env,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
     except Exception:
-        unlink_server_log(log_path)
+        log_file.close()
         raise
-    return process, log_path
+    return process, log_file
 
 
-def _read_log_tail(log_path: Path, *, max_lines: int = _SERVER_LOG_TAIL_LINES) -> str:
-    """Return the last ``max_lines`` lines from a server log file."""
+def _read_log_tail(
+    log_file: IO[str], *, max_lines: int = _SERVER_LOG_TAIL_LINES
+) -> str:
+    """Return the last ``max_lines`` lines from a captured server log."""
     try:
-        text = log_path.read_text(encoding="utf-8", errors="replace")
+        log_file.seek(0)
+        text = log_file.read()
     except OSError as exc:
-        return f"(failed to read server log {log_path}: {exc})"
+        return f"(failed to read server log: {exc})"
     if not text.strip():
         return "(no output captured)"
     lines = text.splitlines()
@@ -264,26 +259,18 @@ def _server_process_status(returncode: int | None) -> str:
     return "process was still running"
 
 
-def unlink_server_log(log_path: Path) -> None:
-    """Remove a captured server log, ignoring missing files."""
-    try:
-        log_path.unlink(missing_ok=True)
-    except OSError:
-        pass
-
-
 def _format_server_startup_failure(
     port: int,
     returncode: int | None,
-    log_path: Path,
+    log_file: IO[str],
 ) -> str:
     """Build the failure message for a server that never became healthy."""
     status = _server_process_status(returncode)
-    log_tail = _read_log_tail(log_path)
+    log_tail = _read_log_tail(log_file)
     return (
         f"Server failed to start on port {port} ({status})\n"
         f"--- server stdout/stderr tail "
-        f"(up to {_SERVER_LOG_TAIL_LINES} lines, {log_path}) ---\n"
+        f"(up to {_SERVER_LOG_TAIL_LINES} lines) ---\n"
         f"{log_tail}"
     )
 
@@ -320,11 +307,11 @@ def start_healthy_load_test_server(
     scenario_path: Path,
     *,
     max_attempts: int = _LOAD_TEST_SERVER_START_ATTEMPTS,
-) -> tuple[subprocess.Popen[str], int, Path]:
+) -> tuple[subprocess.Popen[str], int, IO[str]]:
     """Start a load-test server, retrying on a new port if health never comes up.
 
-    Returns the process, the port that became healthy, and the log file path.
-    The caller should call ``unlink_server_log`` after terminating the process.
+    Returns the process, the port that became healthy, and the log file handle.
+    The caller must close the log file after terminating the process.
 
     Raises
     ------
@@ -337,20 +324,22 @@ def start_healthy_load_test_server(
     for attempt_index in range(max_attempts):
         port = find_available_port()
         tried_ports.append(port)
-        process, log_path = start_load_test_server(port, scenario_path)
+        process, log_file = start_load_test_server(port, scenario_path)
         if wait_for_server(port, process=process):
-            return process, port, log_path
-        returncode = process.poll()
-        terminate_process(process)
-        attempt_statuses.append(
-            f"Attempt {attempt_index + 1}: port {port} "
-            f"({_server_process_status(returncode)})"
-        )
-        if attempt_index == max_attempts - 1:
-            last_failure = _format_server_startup_failure(port, returncode, log_path)
-            # Leave the final attempt's log on disk so the path in the error stays readable.
-        else:
-            unlink_server_log(log_path)
+            return process, port, log_file
+        try:
+            returncode = process.poll()
+            terminate_process(process)
+            attempt_statuses.append(
+                f"Attempt {attempt_index + 1}: port {port} "
+                f"({_server_process_status(returncode)})"
+            )
+            if attempt_index == max_attempts - 1:
+                last_failure = _format_server_startup_failure(
+                    port, returncode, log_file
+                )
+        finally:
+            log_file.close()
 
     status_block = "\n".join(attempt_statuses)
     detail = f"\n{status_block}"
