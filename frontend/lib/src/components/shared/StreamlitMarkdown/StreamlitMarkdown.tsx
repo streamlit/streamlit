@@ -1057,7 +1057,9 @@ function createRemarkStreamlitLogo() {
         },
       }
     }
-    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit as () => Emphasis]])
+    findAndReplace(tree, [
+      [/:streamlit:/g, replaceStreamlit as () => Emphasis],
+    ])
     return tree
   }
 }
