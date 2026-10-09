@@ -38,6 +38,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ContextInfo
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.agent import fork as fork_module
 from streamlit.runtime.agent import snapshot as snapshot_module
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.agent.widget_patch import (
@@ -97,7 +98,11 @@ class AgentSessionClient(SessionClient):
     not advertise cached hashes, so every message arrives with its payload.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, client_context: ClientContext | None = None) -> None:
+        # What `st.context.headers`, `cookies`, and `ip_address` read. A fork
+        # starts with a copy of the browser connection's; any other session
+        # takes it from each request that drives it.
+        self.context = client_context
         # Deltas with the id of the run that produced them, in arrival order,
         # so a later write to the same position wins.
         self._deltas: list[tuple[str, ForwardMsg]] = []
@@ -201,7 +206,7 @@ class AgentSessionClient(SessionClient):
 
     @property
     def client_context(self) -> ClientContext | None:
-        return None
+        return self.context
 
     def begin_interaction(self) -> None:
         self._run_finished.clear()
@@ -286,6 +291,9 @@ class AgentSession:
     # The media files the last snapshot references, which are the only ones
     # the MCP `get_data` tool serves for this session.
     media_ids: frozenset[str] = frozenset()
+    # SPIKE: set for a session forked from a browser session, which keeps the
+    # browser connection's headers instead of taking each request's.
+    forked: bool = False
 
 
 class AgentSessionRegistry:
@@ -315,7 +323,16 @@ class AgentSessionRegistry:
         session.last_used = time.monotonic()
         return session
 
-    def create(self, user_info: dict[str, Any]) -> AgentSession:
+    def session_ids(self) -> set[str]:
+        """The runtime session ids of every agent session."""
+        return {session.session_id for session in self._sessions.values()}
+
+    def create(
+        self,
+        user_info: dict[str, Any],
+        *,
+        client_context: ClientContext | None = None,
+    ) -> AgentSession:
         self._reclaim_idle()
         max_sessions = int(config.get_option("server.agentMaxSessions"))
         if len(self._sessions) >= max_sessions:
@@ -326,7 +343,7 @@ class AgentSessionRegistry:
                 "expire.",
             )
 
-        client = AgentSessionClient()
+        client = AgentSessionClient(client_context)
         session_id = self._runtime.connect_session(
             client=client, user_info=dict(user_info)
         )
@@ -389,18 +406,25 @@ async def interact(
     request: dict[str, Any],
     *,
     user_info: dict[str, Any],
+    client_context: ClientContext | None = None,
 ) -> dict[str, Any]:
     """Run one interaction and return the resulting snapshot document.
 
     ``user_info`` is what the deployment's trusted identity headers say about
     the caller, mapped the way the WebSocket maps them for a browser.
+    ``client_context`` is the request's own connection context, which a
+    session that was not forked reads as ``st.context.headers``.
     """
     _validate_request_shape(request)
 
     handle = request.get("session_id")
     is_new_session = handle is None
+    fork_token = request.get("fork_token")
+    fork_source: fork_module.ForkSource | None = None
 
-    if is_new_session:
+    if fork_token is not None:
+        session, fork_source = _fork(runtime, registry, request, user_info)
+    elif is_new_session:
         # Both are rejected before a session exists, because element keys only
         # come from a snapshot and a creating call has not produced one yet.
         for field_name in ("widget_state", "trigger"):
@@ -417,6 +441,11 @@ async def interact(
             raise AgentRequestError("invalid_request", "`session_id` must be a string.")
         session = registry.get(handle, user_info)
 
+    if not session.forked:
+        # SPIKE: each request's headers, so a credential the deployment
+        # attaches per request (a caller's-rights token) is the current one.
+        session.client.context = client_context
+
     # Checked and claimed with no await in between, so a second request on the
     # event loop always sees the claim. A lock would wait instead of refusing,
     # and could start the second interaction after its client had given up.
@@ -428,9 +457,12 @@ async def interact(
     session.busy = True
 
     try:
-        document = await _run_interaction(
-            runtime, session, request, is_new_session=is_new_session
-        )
+        if fork_source is not None:
+            document = await _run_fork(runtime, session, fork_source)
+        else:
+            document = await _run_interaction(
+                runtime, session, request, is_new_session=is_new_session
+            )
         session.media_ids = snapshot_module.media_file_ids(
             document, media_path=registry.media_path
         )
@@ -569,6 +601,80 @@ async def _run_interaction(
     )
 
 
+def _fork(
+    runtime: Runtime,
+    registry: AgentSessionRegistry,
+    request: dict[str, Any],
+    user_info: dict[str, Any],
+) -> tuple[AgentSession, fork_module.ForkSource]:
+    """SPIKE: start a session from a copy of a browser session.
+
+    No await from checking the grant to installing the copy, so the browser
+    session cannot start a run in between and no other request can use the
+    grant twice.
+    """
+    if request.get("session_id") is not None:
+        raise AgentRequestError(
+            "invalid_request",
+            "`fork_token` starts a new session, so it cannot be sent with "
+            "`session_id`.",
+        )
+    extra = [name for name in _ACTION_FIELDS if request.get(name) is not None]
+    if extra:
+        raise AgentRequestError(
+            "invalid_request",
+            "A fork starts from the browser session's own page, query string, "
+            f"and widget values, so it cannot be sent with {', '.join(extra)}. "
+            "Act on the fork's keys in the next request.",
+        )
+    token = request["fork_token"]
+    if not isinstance(token, str):
+        raise AgentRequestError("invalid_request", "`fork_token` must be a string.")
+
+    source_session_id = fork_module.GRANTS.check(token, user_info)
+    source = fork_module.capture(
+        runtime,
+        source_session_id=source_session_id,
+        user_info=user_info,
+        agent_session_ids=registry.session_ids(),
+    )
+    fork_module.GRANTS.consume(token)
+    session = registry.create(source.user_info, client_context=source.client_context)
+    session.forked = True
+    session.query_string = source.query_string
+    session.context_info = source.context_info
+    fork_module.install(runtime, _app_session(runtime, session), source)
+    return session, source
+
+
+async def _run_fork(
+    runtime: Runtime, session: AgentSession, source: fork_module.ForkSource
+) -> dict[str, Any]:
+    """Run a forked session once, the way the browser's next rerun would."""
+    app_session = _app_session(runtime, session)
+    rerun = BackMsg().rerun_script
+    rerun.page_script_hash = source.page_script_hash
+    rerun.page_name = source.page_name
+    rerun.query_string = source.query_string
+    if source.context_info is not None:
+        rerun.context_info.CopyFrom(source.context_info)
+    # What the browser sends with every rerun: each widget's current value.
+    # They equal the copied state, so no callback fires.
+    rerun.widget_states.widgets.extend(app_session.session_state.get_widget_states())
+
+    back_msg = BackMsg()
+    back_msg.rerun_script.CopyFrom(rerun)
+    session.client.begin_interaction()
+    runtime.handle_backmsg(session.session_id, back_msg)
+    document = await _settle(
+        app_session,
+        session,
+        _Interaction(action={}, query_string=rerun.query_string, unverified_page=None),
+    )
+    document["fork"] = source.report.to_dict()
+    return document
+
+
 async def _settle(
     app_session: Any, session: AgentSession, interaction: _Interaction
 ) -> dict[str, Any]:
@@ -654,7 +760,15 @@ def _app_session(runtime: Runtime, session: AgentSession) -> Any:
 
 
 def _validate_request_shape(request: dict[str, Any]) -> None:
-    known = {"session_id", "widget_state", "trigger", "page", "query_params", "context"}
+    known = {
+        "session_id",
+        "widget_state",
+        "trigger",
+        "page",
+        "query_params",
+        "context",
+        "fork_token",
+    }
     unknown = set(request) - known
     if unknown:
         raise AgentRequestError(

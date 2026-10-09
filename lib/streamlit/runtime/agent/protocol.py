@@ -153,6 +153,18 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
             "run is still going. Collect that run by sending only `session_id`."
         ),
     ),
+    # SPIKE: session forking.
+    "unknown_fork": (
+        404,
+        (
+            "The `fork_token` does not exist, has expired, was already used, or "
+            "was issued to a different user."
+        ),
+    ),
+    "source_busy": (
+        409,
+        "The browser session being forked is running the app. Retry shortly.",
+    ),
     # 202 rather than 504: the request was accepted and its run is still going,
     # and gateways and HTTP clients retry 502-504 on their own. A retried
     # creating call would start another session and another run, and lose the

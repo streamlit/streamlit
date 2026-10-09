@@ -39,6 +39,7 @@ from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime.agent import data_access, mcp
 from streamlit.runtime.agent.errors import AgentRequestError
+from streamlit.runtime.agent.fork import FrozenClientContext
 from streamlit.runtime.agent.interaction import (
     AgentSessionRegistry,
     interact,
@@ -179,6 +180,25 @@ def _log_interaction(
     )
 
 
+# Request headers an agent session never sees: credentials for reaching this
+# endpoint, not facts about the user. The auth cookie in particular is only
+# honored on the WebSocket, behind an XSRF token.
+_WITHHELD_HEADERS: Final = frozenset({"cookie", "authorization"})
+
+
+def _request_client_context(request: Request) -> FrozenClientContext:
+    """SPIKE: the request's headers, as `st.context.headers` reads them."""
+    return FrozenClientContext(
+        headers=tuple(
+            (name, value)
+            for name, value in request.headers.items()
+            if name.lower() not in _WITHHELD_HEADERS
+        ),
+        cookies={},
+        remote_ip=request.client.host if request.client else None,
+    )
+
+
 def _error_body(
     code: str,
     message: str,
@@ -277,6 +297,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 # behind an XSRF token, which a cross-site request here could
                 # otherwise ride.
                 user_info=_gather_user_info(request.headers),
+                client_context=_request_client_context(request),
             )
         except AgentRequestError as exc:
             status = error_status(exc.code)
