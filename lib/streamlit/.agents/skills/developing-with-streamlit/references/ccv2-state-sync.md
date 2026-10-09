@@ -139,6 +139,7 @@ Safe patterns:
 
 - Update `st.session_state[key][...]` **before** mounting the component (e.g., in a button handler placed above the mount call).
 - Or update state in a different run (trigger a rerun after setting state).
+- If the mount passes any `on_<name>_change` callback, Python can only write state keys that have their own callback; writes to other keys are silently ignored. Pass a no-op callback (for example `on_value_change=lambda: None`) for every state key you set from Python.
 
 ### Troubleshooting checklist
 
