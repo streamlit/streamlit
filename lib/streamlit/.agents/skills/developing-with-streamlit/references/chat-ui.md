@@ -155,6 +155,8 @@ SUGGESTIONS = {
     ":green[:material/code:] Show me an example": "Show a simple Streamlit example",
 }
 
+prompt = st.chat_input("Ask a question")
+
 # Only show before first message - they disappear after
 if not st.session_state.messages:
     selected = st.pills(
@@ -163,11 +165,12 @@ if not st.session_state.messages:
     if selected:
         # Use the selection as the first prompt
         prompt = SUGGESTIONS[selected]
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.rerun()
+
+if prompt:
+    ...  # Same handling as typed input: append, display, and generate the reply
 ```
 
-The `if not st.session_state.messages` check ensures the suggestions only appear on an empty chat. Once a message is added, the pills vanish and the conversation takes over.
+The `if not st.session_state.messages` check ensures the suggestions only appear on an empty chat. Once a message is added, the pills vanish and the conversation takes over. Route the selected suggestion through the same `if prompt:` handler as typed input; appending it to the history and calling `st.rerun()` skips the reply, because the reply is only generated when `st.chat_input` returns a value.
 
 ## File uploads
 
