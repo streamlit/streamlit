@@ -321,7 +321,7 @@ function markUnavailableMonths(
 export function CalendarPopoverHeader(): ReactElement {
   const calendarState = useContext(CalendarStateContext)
   const rangeCalendarState = useContext(RangeCalendarStateContext)
-  const state = calendarState || rangeCalendarState
+  const state = calendarState ?? rangeCalendarState
   const { items: yearItems, value: yearValue } = useYearPickerItems(state)
 
   // Keys are year numbers, so picking one changes only the year and keeps the

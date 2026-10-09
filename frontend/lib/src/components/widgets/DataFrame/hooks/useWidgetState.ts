@@ -335,10 +335,8 @@ function useWidgetState({
       formId: element.formId ?? undefined,
     })
 
-    if (currentWidgetState === undefined) {
-      // Create an empty widget state
-      currentWidgetState = new EditingState(0).toJson([])
-    }
+    // Create an empty widget state when the manager has no value yet.
+    currentWidgetState ??= new EditingState(0).toJson([])
 
     // Only update if there is actually a difference between editing and widget state
     if (currentEditingState !== currentWidgetState) {

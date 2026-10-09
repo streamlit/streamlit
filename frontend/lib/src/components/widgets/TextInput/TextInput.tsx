@@ -332,11 +332,13 @@ function TextInput({
   // the displayed error defensively so it's never shown without an active
   // config. The user-error message is derived from the current
   // `element.validateMessage` so it stays in sync when only the message changes.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank validation message uses the generated fallback
+  const customMessage = element.validateMessage || undefined
   const userError = hasUserError
-    ? element.validateMessage ||
+    ? (customMessage ??
       (validateRegex
         ? getInvalidTextInputMessage(validateRegex)
-        : INVALID_TEXT_INPUT_MESSAGE)
+        : INVALID_TEXT_INPUT_MESSAGE))
     : null
   // Gate on the current proto flag and UI value: required is not part of
   // keyed widget identity, so hasRequiredError can survive a rerun that
