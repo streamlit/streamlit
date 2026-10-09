@@ -271,8 +271,8 @@ def test_pagination_on_change_ignore(app: Page):
     wait_for_app_run(app)
 
     expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
-    # has_text is a case-insensitive substring match, so
-    # "Applied ignore pagination value" would match this prefix too.
+    # exact=True: without it, "Ignore pagination value: 3" also matches
+    # "Applied ignore pagination value: 3".
     expect(app.get_by_text("Ignore pagination value: 3", exact=True)).to_be_visible()
     expect(
         app.get_by_text("Applied ignore pagination value: 3", exact=True)
