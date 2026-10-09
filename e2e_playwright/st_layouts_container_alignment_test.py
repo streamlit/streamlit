@@ -89,11 +89,16 @@ def test_stretch_height_in_horizontal_container(app: Page):
     expect(stretch_text_area).to_have_css("width", "200px")
 
     # Content-height siblings keep their own height.
-    content_height = _height(content_card)
-    tallest_height = _height(tallest)
-    assert content_height is not None
-    assert tallest_height is not None
-    assert content_height < tallest_height
+    def _content_card_is_shorter() -> bool:
+        content_height = _height(content_card)
+        tallest_height = _height(tallest)
+        return (
+            content_height is not None
+            and tallest_height is not None
+            and content_height < tallest_height
+        )
+
+    wait_until(app, _content_card_is_shorter)
 
 
 def test_checkbox_alignment_in_horizontal_container(app: Page):

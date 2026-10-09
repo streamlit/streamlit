@@ -291,7 +291,11 @@ case "textArea": {
       })
     : new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
-        styleOverrides: { height: "auto", flex: "" },
+        // Content height text area in vertical layout cannot have flex.
+        styleOverrides: {
+          height: "auto",
+          ...(isInHorizontalLayout ? {} : { flex: "" }),
+        },
       })
 
   return (

@@ -37,8 +37,11 @@ def _expect_equal_column_heights(app: Page, column_container: Locator) -> None:
     columns = column_container.get_by_test_id("stColumn")
 
     def _heights_are_equal() -> bool:
+        column_list = columns.all()
+        if len(column_list) < 2:
+            return False
         heights = set()
-        for column in columns.all():
+        for column in column_list:
             box = column.bounding_box()
             if box is None:
                 return False

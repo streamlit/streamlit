@@ -246,8 +246,9 @@ class LayoutsMixin:
 
               When ``horizontal`` is ``True``, ``"distribute"`` stretches
               each element to the height of its row. Elements that fill their
-              space, like bordered containers and metrics, visibly stretch.
-              Other elements keep their height and sit at the top of the row.
+              space, like bordered containers and bordered metrics, visibly
+              stretch. Other elements keep their height and sit at the top of
+              the row.
 
         gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The minimum gap size between the elements inside the container.
