@@ -130,6 +130,7 @@ class _AgentClient:
     def _apply_one_at_a_time(self, widget_state: dict[str, Any]) -> dict[str, Any]:
         pending = dict(widget_state)
         snapshot: dict[str, Any] = {}
+        last_refusal: dict[str, Any] = {}
         while pending:
             applied = False
             for key, value in list(pending.items()):
@@ -138,7 +139,9 @@ class _AgentClient:
                     snapshot = result
                     del pending[key]
                     applied = True
-            assert applied, f"Could not apply {pending}: {result}"
+                else:
+                    last_refusal = result
+            assert applied, f"Could not apply {pending}: {last_refusal}"
         return snapshot
 
 
