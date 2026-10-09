@@ -223,11 +223,17 @@ def test_graphviz_and_text_area_keep_usable_size_in_rows(app: Page):
         app, "container-horizontal-stretch-graphviz"
     ).get_by_test_id("stGraphVizChart")
 
-    def _graphviz_has_natural_width() -> bool:
+    def _graphviz_has_natural_size() -> bool:
         box = graphviz.bounding_box()
-        return box is not None and box["width"] > 100
+        svg_box = graphviz.locator("svg").bounding_box()
+        return (
+            box is not None
+            and box["width"] > 100
+            and svg_box is not None
+            and svg_box["height"] > 100
+        )
 
-    wait_until(app, _graphviz_has_natural_width)
+    wait_until(app, _graphviz_has_natural_size)
 
     # The field stays as tall as its textarea instead of stretching into an
     # empty box with the resize handle in the middle.
