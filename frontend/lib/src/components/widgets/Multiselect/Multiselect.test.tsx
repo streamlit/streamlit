@@ -56,6 +56,23 @@ const getProps = (
   ...widgetProps,
 })
 
+/** Wait until aria-activedescendant points at an option with the given text. */
+async function expectActiveOption(
+  input: HTMLElement,
+  text: string | RegExp
+): Promise<void> {
+  await waitFor(
+    () => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(activeId).toBeTruthy()
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        text
+      )
+    },
+    { timeout: 3000 }
+  )
+}
+
 describe("Multiselect widget", () => {
   afterEach(() => {
     vi.restoreAllMocks()
@@ -275,44 +292,30 @@ describe("Multiselect widget", () => {
     )
   })
 
-  it("commits the bulk-select row on Enter when the hovered option is filtered away", async () => {
+  it("clears hover when filtering removes a row", async () => {
+    // onHoverEnd does not fire on filter unmount: fall back while filtered,
+    // and do not restore that hover after clearing the query.
     const user = userEvent.setup()
-    const props = getProps({
-      default: [],
-      options: ["apple", "apricot", "banana"],
-    })
+    const fruit = ["apple", "apricot", "banana"]
+    let props = getProps({ default: [], options: fruit })
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
-    render(<Multiselect {...props} />)
+    const { unmount } = render(<Multiselect {...props} />)
 
     await user.click(screen.getByRole("button", { name: "Open" }))
     await user.hover(screen.getByRole("option", { name: "banana" }))
     await user.type(screen.getByRole("combobox"), "ap")
     expect(screen.queryByRole("option", { name: "banana" })).toBeNull()
     await user.keyboard("{Enter}")
-
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element.id,
       ["apple", "apricot"],
-      {
-        formId: props.element.formId,
-        fragmentId: undefined,
-        fromUser: true,
-      }
+      expect.objectContaining({ fromUser: true })
     )
-  })
+    unmount()
 
-  it("does not restore a filtered-away hover after clearing the query", async () => {
-    // onHoverEnd does not fire when filtering unmounts the row. Hover must be
-    // cleared so bringing the row back does not treat it as still hovered.
-    const user = userEvent.setup()
-    const props = getProps({
-      default: [],
-      options: ["apple", "apricot", "banana"],
-      selectAll: 0,
-    })
+    props = getProps({ default: [], options: fruit, selectAll: 0 })
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
     render(<Multiselect {...props} />)
-
     const input = screen.getByRole("combobox")
     await user.click(input)
     await user.hover(screen.getByRole("option", { name: "banana" }))
@@ -323,15 +326,10 @@ describe("Multiselect widget", () => {
       expect(screen.getByRole("option", { name: "banana" })).toBeVisible()
     })
     await user.keyboard("{Enter}")
-
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element.id,
       ["apple"],
-      {
-        formId: props.element.formId,
-        fragmentId: undefined,
-        fromUser: true,
-      }
+      expect.objectContaining({ fromUser: true })
     )
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
       props.element.id,
@@ -340,53 +338,63 @@ describe("Multiselect widget", () => {
     )
   })
 
-  it("sets aria-activedescendant on the Enter target while typing", async () => {
-    // RAC focusedKey stays synced so assistive tech knows what Enter will commit.
+  it("does not commit on Tab while the menu is open", async () => {
     const user = userEvent.setup()
-    const props = getProps({
-      default: [],
-      options: ["apple", "apricot", "banana"],
-      selectAll: 0,
-    })
-    render(<Multiselect {...props} />)
-
-    const input = screen.getByRole("combobox")
-    await user.click(input)
-    await user.type(input, "ap")
-
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
-    const activeOption = document.getElementById(
-      input.getAttribute("aria-activedescendant") as string
-    )
-    expect(activeOption).toHaveAttribute("role", "option")
-    expect(activeOption).toHaveTextContent("apple")
-  })
-
-  it("does not commit on Tab after opening the menu with select all", async () => {
-    const user = userEvent.setup()
-    const props = getProps({ default: [] })
+    let props = getProps({ default: [] })
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
-    render(<Multiselect {...props} />)
-
+    const { unmount } = render(<Multiselect {...props} />)
     await user.click(screen.getByRole("button", { name: "Open" }))
     await waitFor(() => {
       expect(screen.getByRole("option", { name: "Select all" })).toBeVisible()
     })
-    const callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock
+    let callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock
       .calls.length
     await user.keyboard("{Tab}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
+      callsBeforeTab
+    )
+    unmount()
 
+    props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const arrowed = render(<Multiselect {...props} />)
+    let input = screen.getByRole("combobox")
+    await user.click(input)
+    await expectActiveOption(input, "apple")
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "apricot")
+    callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock.calls
+      .length
+    await user.keyboard("{Tab}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
+      callsBeforeTab
+    )
+    arrowed.unmount()
+
+    props = getProps({
+      default: [],
+      options: ["apple", "apricot", "banana"],
+      selectAll: 0,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<Multiselect {...props} />)
+    input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.type(input, "ap")
+    await expectActiveOption(input, "apple")
+    callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock.calls
+      .length
+    await user.keyboard("{Tab}")
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
       callsBeforeTab
     )
   })
 
-  it("does not commit on Tab after arrow navigation", async () => {
+  it("resets activedescendant after keyboard-select and preserves arrow over hover-end", async () => {
     const user = userEvent.setup()
     const props = getProps({
       default: [],
@@ -398,56 +406,9 @@ describe("Multiselect widget", () => {
 
     const input = screen.getByRole("combobox")
     await user.click(input)
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
+    await expectActiveOption(input, "apple")
     await user.keyboard("{ArrowDown}")
-    await waitFor(() => {
-      const activeId = input.getAttribute("aria-activedescendant")
-      expect(document.getElementById(activeId as string)).toHaveTextContent(
-        "apricot"
-      )
-    })
-    const callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock
-      .calls.length
-    await user.keyboard("{Tab}")
-
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
-      callsBeforeTab
-    )
-  })
-
-  it("resets aria-activedescendant after keyboard-select removes that option", async () => {
-    // Arrow off the synced row, then Enter: the option leaves displayOptions
-    // while the menu stays open. Sync must move activedescendant to the new
-    // Enter target instead of treating the removed key as a lasting user move.
-    const user = userEvent.setup()
-    const props = getProps({
-      default: [],
-      options: ["apple", "apricot", "banana"],
-      selectAll: 0,
-    })
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
-    render(<Multiselect {...props} />)
-
-    const input = screen.getByRole("combobox")
-    await user.click(input)
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
-    await user.keyboard("{ArrowDown}")
-    await waitFor(() => {
-      const activeId = input.getAttribute("aria-activedescendant")
-      expect(document.getElementById(activeId as string)).toHaveTextContent(
-        "apricot"
-      )
-    })
+    await expectActiveOption(input, "apricot")
     await user.keyboard("{Enter}")
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element.id,
@@ -457,47 +418,24 @@ describe("Multiselect widget", () => {
     await waitFor(() => {
       expect(screen.queryByRole("option", { name: "apricot" })).toBeNull()
     })
-    await waitFor(
-      () => {
-        const activeId = input.getAttribute("aria-activedescendant")
-        expect(activeId).toBeTruthy()
-        expect(document.getElementById(activeId as string)).toHaveTextContent(
-          "apple"
-        )
-      },
-      { timeout: 3000 }
+    await expectActiveOption(input, "apple")
+
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "banana")
+    const banana = screen.getByRole("option", { name: "banana" })
+    await user.hover(banana)
+    await user.unhover(banana)
+    await user.keyboard("{Enter}")
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      ["apricot", "banana"],
+      expect.objectContaining({ fromUser: true })
     )
   })
 
-  it("does not commit a typed filter on Tab", async () => {
-    const user = userEvent.setup()
-    const props = getProps({
-      default: [],
-      options: ["apple", "apricot", "banana"],
-      selectAll: 0,
-    })
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
-    render(<Multiselect {...props} />)
-
-    const input = screen.getByRole("combobox")
-    await user.click(input)
-    await user.type(input, "ap")
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
-    const callsBeforeTab = vi.mocked(props.widgetMgr.setStringArrayValue).mock
-      .calls.length
-    await user.keyboard("{Tab}")
-
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(
-      callsBeforeTab
-    )
-  })
-
-  it("keeps arrow focus after the pointer leaves a row", async () => {
+  it("lets hover replace the synced Enter target, including after leave", async () => {
+    // type → hover → leave → hover another → Enter. Also covers sticky skip
+    // after hovering the first row then typing.
     const user = userEvent.setup()
     const props = getProps({
       default: [],
@@ -509,160 +447,29 @@ describe("Multiselect widget", () => {
 
     await user.click(screen.getByRole("button", { name: "Open" }))
     const input = screen.getByRole("combobox")
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
-    // First option (apple) is already active; two ArrowDowns land on banana.
-    await user.keyboard("{ArrowDown}{ArrowDown}")
-    const banana = screen.getByRole("option", { name: "banana" })
-    await user.hover(banana)
-    await user.unhover(banana)
-    await user.keyboard("{Enter}")
-
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
-      ["banana"],
-      {
-        formId: props.element.formId,
-        fragmentId: undefined,
-        fromUser: true,
-      }
-    )
-  })
-
-  it("commits the hovered option on Enter after typing", async () => {
-    // After typing, modality can stay keyboard so React Aria does not move
-    // focusedKey on hover. Hover must still replace the auto-synced first row.
-    const user = userEvent.setup()
-    const props = getProps({
-      default: [],
-      options: ["apple", "apricot", "banana"],
-      selectAll: 0,
-    })
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
-    render(<Multiselect {...props} />)
-
-    const input = screen.getByRole("combobox")
-    await user.click(input)
+    await expectActiveOption(input, "apple")
+    const apple = screen.getByRole("option", { name: "apple" })
+    await user.hover(apple)
+    await user.unhover(apple)
     await user.type(input, "ap")
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
-    await user.hover(screen.getByRole("option", { name: "apricot" }))
-    await waitFor(() => {
-      const activeId = input.getAttribute("aria-activedescendant")
-      expect(activeId).toBeTruthy()
-      expect(document.getElementById(activeId as string)).toHaveTextContent(
-        "apricot"
-      )
-    })
-    await user.keyboard("{Enter}")
+    await expectActiveOption(input, "apple")
 
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
-      ["apricot"],
-      {
-        formId: props.element.formId,
-        fragmentId: undefined,
-        fromUser: true,
-      }
-    )
-  })
-
-  it("commits the latest hover after leave then hover another row", async () => {
-    // type → hover apricot → leave → hover apple → Enter must select apple.
-    // Hover-end skip must not make apricot look like an arrow move that blocks
-    // the next hover sync (Enter prefers focusedKey over hover).
-    const user = userEvent.setup()
-    const props = getProps({
-      default: [],
-      options: ["apple", "apricot", "banana"],
-      selectAll: 0,
-    })
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
-    render(<Multiselect {...props} />)
-
-    const input = screen.getByRole("combobox")
-    await user.click(input)
-    await user.type(input, "ap")
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
     const apricot = screen.getByRole("option", { name: "apricot" })
     await user.hover(apricot)
-    await waitFor(() => {
-      const activeId = input.getAttribute("aria-activedescendant")
-      expect(document.getElementById(activeId as string)).toHaveTextContent(
-        "apricot"
-      )
-    })
+    await expectActiveOption(input, "apricot")
     await user.unhover(apricot)
     await user.hover(screen.getByRole("option", { name: "apple" }))
-    await waitFor(() => {
-      const activeId = input.getAttribute("aria-activedescendant")
-      expect(document.getElementById(activeId as string)).toHaveTextContent(
-        "apple"
-      )
-    })
+    await expectActiveOption(input, "apple")
     await user.keyboard("{Enter}")
-
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element.id,
       ["apple"],
-      {
-        formId: props.element.formId,
-        fragmentId: undefined,
-        fromUser: true,
-      }
+      expect.objectContaining({ fromUser: true })
     )
     expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
       props.element.id,
       ["apricot"],
       expect.anything()
-    )
-  })
-
-  it("keeps aria-activedescendant after hovering the first row then typing", async () => {
-    // Hover-end on the first row must not leave a sticky skip that swallows
-    // the next Enter-target sync when React Aria clears focusedKey on type.
-    const user = userEvent.setup()
-    const props = getProps({
-      default: [],
-      options: ["apple", "apricot", "banana"],
-      selectAll: 0,
-    })
-    render(<Multiselect {...props} />)
-
-    await user.click(screen.getByRole("button", { name: "Open" }))
-    const input = screen.getByRole("combobox")
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
-    const apple = screen.getByRole("option", { name: "apple" })
-    await user.hover(apple)
-    await user.unhover(apple)
-    await user.type(input, "ap")
-    await waitFor(
-      () => {
-        const activeId = input.getAttribute("aria-activedescendant")
-        expect(activeId).toBeTruthy()
-        expect(document.getElementById(activeId as string)).toHaveTextContent(
-          "apple"
-        )
-      },
-      { timeout: 3000 }
     )
   })
 

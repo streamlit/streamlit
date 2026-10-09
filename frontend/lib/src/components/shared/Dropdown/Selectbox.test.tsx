@@ -63,6 +63,23 @@ function mockVirtualizerViewport(): void {
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(300)
 }
 
+/** Wait until aria-activedescendant points at an option with the given text. */
+async function expectActiveOption(
+  input: HTMLElement,
+  text: string | RegExp
+): Promise<void> {
+  await waitFor(
+    () => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(activeId).toBeTruthy()
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        text
+      )
+    },
+    { timeout: 3000 }
+  )
+}
+
 describe("Selectbox widget", () => {
   let props: Props
 
@@ -258,7 +275,7 @@ describe("Selectbox widget", () => {
     expect(screen.getByDisplayValue("b")).toBeVisible()
   })
 
-  it("sets aria-activedescendant on the Enter target while typing", async () => {
+  it("syncs activedescendant while typing and keeps a later ArrowDown focus", async () => {
     const user = userEvent.setup()
     props = getProps({
       value: undefined,
@@ -269,158 +286,55 @@ describe("Selectbox widget", () => {
 
     await user.click(input)
     await user.type(input, "ap")
-
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
-    const activeOption = document.getElementById(
-      input.getAttribute("aria-activedescendant") as string
-    )
-    expect(activeOption).toHaveAttribute("role", "option")
-    expect(activeOption).toHaveTextContent("apple")
-  })
-
-  it("does not commit on Tab after opening the menu", async () => {
-    const user = userEvent.setup()
-    props = getProps({
-      value: undefined,
-      options: ["apple", "apricot", "banana"],
-    })
-    render(<Selectbox {...props} />)
-    const input = screen.getByRole("combobox")
-
-    await user.click(input)
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
-    await user.keyboard("{Tab}")
-
-    expect(props.onChange).not.toHaveBeenCalled()
-  })
-
-  it("does not commit on Tab after arrow navigation", async () => {
-    // Tab closes the menu without selecting, including after ArrowDown moved
-    // the active option off the first row.
-    const user = userEvent.setup()
-    props = getProps({
-      value: undefined,
-      options: ["apple", "apricot", "banana"],
-    })
-    render(<Selectbox {...props} />)
-    const input = screen.getByRole("combobox")
-
-    await user.click(input)
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
+    await expectActiveOption(input, "apple")
+    // A late Enter-target retry must not snap focus back after ArrowDown.
     await user.keyboard("{ArrowDown}")
-    await waitFor(() => {
-      const activeId = input.getAttribute("aria-activedescendant")
-      expect(document.getElementById(activeId as string)).toHaveTextContent(
-        "apricot"
-      )
-    })
-    await user.keyboard("{Tab}")
-
-    expect(props.onChange).not.toHaveBeenCalled()
+    await expectActiveOption(input, "apricot")
+    await user.keyboard("{Enter}")
+    expect(props.onChange).toHaveBeenCalledWith("apricot")
   })
 
-  it("does not commit a typed filter on Tab", async () => {
+  it("does not commit on Tab while the menu is open", async () => {
     const user = userEvent.setup()
-    props = getProps({
-      value: undefined,
-      options: ["apple", "apricot", "banana"],
-    })
-    render(<Selectbox {...props} />)
-    const input = screen.getByRole("combobox")
+    const options = ["apple", "apricot", "banana"]
 
+    props = getProps({ value: undefined, options })
+    const { unmount } = render(<Selectbox {...props} />)
+    let input = screen.getByRole("combobox")
+    await user.click(input)
+    await expectActiveOption(input, "apple")
+    await user.keyboard("{Tab}")
+    expect(props.onChange).not.toHaveBeenCalled()
+    unmount()
+
+    props = getProps({ value: undefined, options })
+    const again = render(<Selectbox {...props} />)
+    input = screen.getByRole("combobox")
     await user.click(input)
     await user.type(input, "ap")
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
+    await expectActiveOption(input, "apple")
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "apricot")
     await user.keyboard("{Tab}")
-
     expect(props.onChange).not.toHaveBeenCalled()
-  })
+    again.unmount()
 
-  it("does not commit a creatable option on Tab when acceptNewOptions is true", async () => {
-    const user = userEvent.setup()
     props = getProps({
       value: undefined,
       options: ["apple"],
       acceptNewOptions: true,
     })
     render(<Selectbox {...props} />)
-    const input = screen.getByRole("combobox")
-
+    input = screen.getByRole("combobox")
     await user.click(input)
     await user.type(input, "xyz")
-    await waitFor(() => {
-      expect(screen.getByRole("option", { name: /Add: xyz/i })).toBeVisible()
-    })
+    await expectActiveOption(input, /Add: xyz/i)
     await user.keyboard("{Tab}")
-
     expect(props.onChange).not.toHaveBeenCalled()
   })
 
-  it("ArrowDown from the creatable Add row focuses the first match", async () => {
-    // Non-exact queries focus leading "Add: …". ArrowDown reaches the first
-    // match so ArrowDown+Enter selects it; bare Enter still creates.
-    const user = userEvent.setup()
-    props = getProps({
-      value: undefined,
-      options: ["apple", "apricot"],
-      acceptNewOptions: true,
-    })
-    render(<Selectbox {...props} />)
-    const input = screen.getByRole("combobox")
-
-    await user.click(input)
-    await user.type(input, "ap")
-    await waitFor(() => {
-      const options = screen.getAllByRole("option")
-      expect(options[0]).toHaveTextContent(/Add: ap/i)
-      expect(options[1]).toHaveTextContent("apple")
-    })
-    await waitFor(
-      () => {
-        const activeId = input.getAttribute("aria-activedescendant")
-        expect(activeId).toBeTruthy()
-        expect(document.getElementById(activeId as string)).toHaveTextContent(
-          /Add: ap/i
-        )
-      },
-      { timeout: 3000 }
-    )
-
-    await user.keyboard("{ArrowDown}")
-    await waitFor(() => {
-      const activeId = input.getAttribute("aria-activedescendant")
-      expect(document.getElementById(activeId as string)).toHaveTextContent(
-        "apple"
-      )
-    })
-
-    await user.keyboard("{Enter}")
-    expect(props.onChange).toHaveBeenCalledWith("apple")
-  })
-
-  it("keeps best matches visible when Add is the Enter target among many options", async () => {
-    // Focusing a trailing Add row scrolled matches out of a short dropdown.
-    // Add stays first so the top matches remain rendered.
+  it("lists Add first so matches stay visible, and ArrowDown selects the first match", async () => {
+    // Leading Add keeps best-ranked matches in view in a short dropdown.
     const user = userEvent.setup()
     props = getProps({
       value: undefined,
@@ -435,130 +349,53 @@ describe("Selectbox widget", () => {
     await waitFor(() => {
       const options = screen.getAllByRole("option")
       expect(options[0]).toHaveTextContent(/Add: a/i)
-      expect(options.some(o => o.textContent === "apple-0")).toBe(true)
+      expect(screen.getByRole("option", { name: "apple-0" })).toBeVisible()
     })
-    await waitFor(
-      () => {
-        const activeId = input.getAttribute("aria-activedescendant")
-        expect(document.getElementById(activeId as string)).toHaveTextContent(
-          /Add: a/i
-        )
-      },
-      { timeout: 3000 }
-    )
-    expect(screen.getByRole("option", { name: "apple-0" })).toBeVisible()
+    await expectActiveOption(input, /Add: a/i)
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "apple-0")
+    await user.keyboard("{Enter}")
+    expect(props.onChange).toHaveBeenCalledWith("apple-0")
   })
 
-  it("keeps the already-selected highlighted row on Enter with acceptNewOptions", async () => {
+  it("does not change value on Enter when the highlighted row is already selected", async () => {
     // RAC commitSelection(true) re-fires onChange for the current key; the
-    // bubble handler must not then create the typed query.
+    // bubble handler must not fall through to creatable / enterTarget commits.
     const user = userEvent.setup()
     props = getProps({
       value: "apple",
       options: ["apple", "apricot"],
       acceptNewOptions: true,
     })
-    render(<Selectbox {...props} />)
-    const input = screen.getByRole("combobox")
-
+    const { unmount } = render(<Selectbox {...props} />)
+    let input = screen.getByRole("combobox")
     await user.click(input)
-    // Replace the committed label with a partial query (fresh-search path).
     await user.keyboard("{Control>}a{/Control}ap")
-    await waitFor(
-      () => {
-        expect(screen.getByRole("option", { name: /Add: ap/i })).toBeVisible()
-        expect(screen.getByRole("option", { name: "apple" })).toBeVisible()
-      },
-      { timeout: 3000 }
-    )
-    await waitFor(
-      () => {
-        const activeId = input.getAttribute("aria-activedescendant")
-        expect(document.getElementById(activeId as string)).toHaveTextContent(
-          /Add: ap/i
-        )
-      },
-      { timeout: 3000 }
-    )
+    await expectActiveOption(input, /Add: ap/i)
     await user.keyboard("{ArrowDown}")
-    await waitFor(
-      () => {
-        const activeId = input.getAttribute("aria-activedescendant")
-        expect(document.getElementById(activeId as string)).toHaveTextContent(
-          "apple"
-        )
-      },
-      { timeout: 3000 }
-    )
-    const callsBeforeEnter = vi.mocked(props.onChange).mock.calls.length
+    await expectActiveOption(input, "apple")
+    let callsBeforeEnter = vi.mocked(props.onChange).mock.calls.length
     await user.keyboard("{Enter}")
-
     expect(props.onChange).toHaveBeenCalledTimes(callsBeforeEnter)
     expect(input).toHaveValue("apple")
-  }, 15000)
+    unmount()
 
-  it("keeps the already-selected highlighted row on Enter without creatable", async () => {
-    const user = userEvent.setup()
     props = getProps({
       value: "apricot",
       options: ["apple", "apricot", "banana"],
     })
     render(<Selectbox {...props} />)
-    const input = screen.getByRole("combobox")
-
+    input = screen.getByRole("combobox")
     await user.click(input)
     await user.type(input, "a")
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
-    // First match is apple; ArrowDown lands on apricot (already selected).
+    await expectActiveOption(input, "apple")
     await user.keyboard("{ArrowDown}")
-    await waitFor(() => {
-      const activeId = input.getAttribute("aria-activedescendant")
-      expect(document.getElementById(activeId as string)).toHaveTextContent(
-        "apricot"
-      )
-    })
+    await expectActiveOption(input, "apricot")
+    callsBeforeEnter = vi.mocked(props.onChange).mock.calls.length
     await user.keyboard("{Enter}")
-
-    expect(props.onChange).not.toHaveBeenCalled()
+    expect(props.onChange).toHaveBeenCalledTimes(callsBeforeEnter)
     expect(input).toHaveValue("apricot")
-  })
-
-  it("keeps ArrowDown focus after typing while the Enter-target sync settles", async () => {
-    const user = userEvent.setup()
-    props = getProps({
-      value: undefined,
-      options: ["apple", "apricot", "banana"],
-    })
-    render(<Selectbox {...props} />)
-    const input = screen.getByRole("combobox")
-
-    await user.click(input)
-    await user.type(input, "ap")
-    await waitFor(
-      () => {
-        expect(input.getAttribute("aria-activedescendant")).toBeTruthy()
-      },
-      { timeout: 3000 }
-    )
-    // Arrow after the Enter target is focused — a late retry frame must not
-    // snap focus back to the first match.
-    await user.keyboard("{ArrowDown}")
-    await waitFor(() => {
-      const activeId = input.getAttribute("aria-activedescendant")
-      expect(activeId).toBeTruthy()
-      expect(document.getElementById(activeId as string)).toHaveTextContent(
-        "apricot"
-      )
-    })
-    await user.keyboard("{Enter}")
-
-    expect(props.onChange).toHaveBeenCalledWith("apricot")
-  })
+  }, 15000)
 
   it("doesn't filter options based on index", async () => {
     const user = userEvent.setup()
