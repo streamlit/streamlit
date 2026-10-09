@@ -174,7 +174,7 @@ st.write("submitted (trigger):", result.submitted)
 
 Notes:
 
-- **Inline JS/CSS should be multi-line**. CCv2 treats path-like strings as file references; a multi-line string is unambiguously inline content.
+- **Inline JS/CSS should be multi-line**. CCv2 treats path-like strings as file references; a string with a line break inside it (not just leading or trailing newlines) is unambiguously inline content.
 - Prefer querying under `parentElement` (not `document`) to avoid cross-instance leakage.
 
 ## State and triggers (how to think about keys)
