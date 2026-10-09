@@ -7,11 +7,12 @@ created: 2026-07-16
 
 ## Summary
 
-Coding agents increasingly write Streamlit apps, and an agent can only hand off an app it
-can verify. Most of that verification, and most of the test code it leaves behind, will
-be written by agents and reviewed by people. This spec makes every Streamlit app
-verifiable and testable for both. Two questions decide which tool to use: should the
-check outlive the session, and is it about the app's logic or its rendered UI?
+Coding agents increasingly write Streamlit apps, and the more of an app an agent writes,
+the more it matters that the agent can verify its own changes and leave tests behind.
+Most of that test code will be written by agents and reviewed by people. This spec makes
+every Streamlit app verifiable and testable for both. Two questions decide which tool to
+use: should the check outlive the session, and is it about the app's logic or its
+rendered UI?
 
 | | App logic, without a browser | Rendered UI, with a browser |
 |---|---|---|
