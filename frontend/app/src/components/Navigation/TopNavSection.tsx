@@ -123,8 +123,7 @@ const TopNavSection = ({
         setOpen(false)
       }
 
-      // Convert potentially null pageName to string safely
-      const pageName = String(item.pageName ?? "")
+      const pageName = item.pageName ?? ""
 
       return (
         <Fragment key={`${item.pageScriptHash}-${pageName}`}>

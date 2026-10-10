@@ -142,9 +142,9 @@ const getWidth = (
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false useContent still lets the sub-element flag count
     element?.widthConfig?.useContent || subElement?.widthConfig?.useContent
   const isPixel =
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- pixel width 0 is restored by the explicit check below
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- an element width of 0 is a real pixel width
     element?.widthConfig?.pixelWidth ||
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- pixel width 0 must not hide the explicit zero check
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- pixel width 0 must reach the element === 0 check below
     subElement?.widthConfig?.pixelWidth ||
     element.widthConfig?.pixelWidth === 0
   const isRem = element.widthConfig?.remWidth

@@ -122,6 +122,8 @@ const Image = ({
   const imgAlt: string | undefined = isNullOrUndefined(image.alt)
     ? undefined
     : image.alt
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt uses the link
+  const linkAccessibleName = imgAlt || safeLink
 
   // Watch the caption for text that arrives late: async Markdown plugins
   // (KaTeX, emoji) swap a loading skeleton for real content after the first
@@ -179,8 +181,7 @@ const Image = ({
           // Label by the caption node so markdown is announced as plain text.
           {...(captionHasText
             ? { "aria-labelledby": captionDomId }
-            : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt uses the link
-              { "aria-label": imgAlt || safeLink })}
+            : { "aria-label": linkAccessibleName })}
           data-testid="stImageLink"
         >
           {imageElement}

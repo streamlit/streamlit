@@ -408,10 +408,12 @@ export class App extends PureComponent<Props, State> {
   private inFlightSkillsInstall: Promise<string | undefined> | null = null
 
   private get skillsCalloutEnvEligible(): boolean {
-    this.cachedSkillsCalloutEnvEligible ??=
-      isLocalhost() && !isEmbed() && localStorageAvailable()
-    // False is a cached answer. ?? only covers the optional field type.
-    return this.cachedSkillsCalloutEnvEligible ?? false
+    // A stored false is a real cached answer, so only fill an unset value.
+    const eligible =
+      this.cachedSkillsCalloutEnvEligible ??
+      (isLocalhost() && !isEmbed() && localStorageAvailable())
+    this.cachedSkillsCalloutEnvEligible = eligible
+    return eligible
   }
 
   public constructor(props: Props) {

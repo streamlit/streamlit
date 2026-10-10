@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-// ??= would read the unbound Promise method and trip unbound-method.
-// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- feature-detect without taking the method as a value
+// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- ??= would read the unbound Promise.withResolvers method
 if (Promise.withResolvers === undefined) {
   Promise.withResolvers = <T>() => {
     let promiseResolve: PromiseWithResolvers<T>["resolve"]
