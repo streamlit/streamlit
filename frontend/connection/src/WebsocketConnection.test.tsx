@@ -1789,7 +1789,8 @@ describe("WebsocketConnection auth token handling", () => {
   it("uses the placeholder auth token when document.cookie throws", async () => {
     mockDocumentCookieReadFailure()
 
-    const ws = new WebsocketConnection(createMockArgs())
+    const resetHostAuthToken = vi.fn()
+    const ws = new WebsocketConnection(createMockArgs({ resetHostAuthToken }))
 
     // Set correct state for this action
     // @ts-expect-error - state is private
@@ -1801,6 +1802,7 @@ describe("WebsocketConnection auth token handling", () => {
       "ws://localhost:1234/_stcore/stream",
       ["streamlit", "PLACEHOLDER_AUTH_TOKEN"]
     )
+    expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
 
   it("prefers the host auth token when document.cookie throws", async () => {

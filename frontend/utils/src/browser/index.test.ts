@@ -99,6 +99,7 @@ describe("browser", () => {
     })
 
     it("returns undefined when reading document.cookie throws", () => {
+      document.cookie = "_streamlit_xsrf=token"
       vi.spyOn(document, "cookie", "get").mockImplementation(() => {
         throw new DOMException(
           "The document is sandboxed and lacks the 'allow-same-origin' flag.",
@@ -107,6 +108,12 @@ describe("browser", () => {
       })
 
       expect(getCookie("_streamlit_xsrf")).toBeUndefined()
+    })
+
+    it("throws SyntaxError when the cookie name is an invalid pattern", () => {
+      document.cookie = "flavor=chocolatechip"
+
+      expect(() => getCookie("(")).toThrow(SyntaxError)
     })
   })
 

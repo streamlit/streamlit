@@ -375,9 +375,8 @@ export function isFromWindows(): boolean {
 }
 
 /**
- * Sets a cookie value and ignores the write when `document.cookie` throws.
- *
- * A sandboxed iframe without `allow-same-origin` cannot write cookies.
+ * Sets a cookie value. Silently skips the write when the document cannot
+ * store cookies (for example, a sandboxed iframe without `allow-same-origin`).
  */
 export function setCookie(
   name: string,
@@ -391,8 +390,8 @@ export function setCookie(
   try {
     document.cookie = `${name}=${value};${expirationStr}path=/`
   } catch {
-    // Cookie writes are best-effort. Usage-stats setup already has an id
-    // and keeps running when this document cannot store cookies.
+    // Cookie writes are best-effort; callers must not rely on the value
+    // persisting.
   }
 }
 
