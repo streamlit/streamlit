@@ -1604,3 +1604,68 @@ def test_show_config_includes_deprecation_block(patched_echo: MagicMock) -> None
     assert "THIS IS DEPRECATED." in output
     assert "Use server.newOption instead." in output
     assert "This option will be removed on or after 2030-01-01" in output
+
+
+@patch("click.secho")
+def test_show_config_font_faces_stay_under_theme_header(
+    patched_echo: MagicMock,
+) -> None:
+    """A set font face stays an inline table under the printed ``[theme]`` header.
+
+    ``[[fontFaces]]`` would close that section when the printed text is parsed.
+    """
+    face = {
+        "family": "A very long family name that might exceed one line",
+        "url": "https://example.com/fonts/extremely/long/path/font_file.woff2",
+        "unicodeRange": "U+0000-00FF",
+        "style": "normal",
+        "weight": "400",
+    }
+    option = ConfigOption(
+        key="theme.fontFaces",
+        description="Font files for the theme.",
+        default_val=None,
+    )
+    option.set_value([face], "test")
+
+    config_util.show_config({"theme": "Theme settings."}, {"theme.fontFaces": option})
+
+    [(args, _)] = patched_echo.call_args_list
+    output = re.sub(r"\x1b[^m]*m", "", args[0])
+    assert "[[fontFaces]]" not in output
+
+    theme_output = "[theme]" + output.split("[theme]", 1)[1]
+    parsed = tomllib.loads(theme_output)
+    assert "fontFaces" not in parsed
+    assert parsed["theme"]["fontFaces"] == [face]
+
+
+def test_dump_toml_value_names_option_for_unsupported_value() -> None:
+    """An unsupported value names the option ``config show`` cannot print."""
+    with pytest.raises(TypeError, match="Cannot show config option 'fontFaces'"):
+        config_util._dump_toml_value("fontFaces", [{"family": ["sans", "serif"]}])
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    ["default_val", "value"],
+    ids=["default", "value"],
+)
+def test_dump_toml_value_round_trips_config_options(attribute: str) -> None:
+    """Values printed by ``streamlit config show`` parse back as the same type."""
+    for option in config._config_options_template.values():
+        # Unit tests register throwaway options in sections such as "_test".
+        # ``show_config`` skips that section. Some of those options call
+        # ``get_option`` for keys that are absent from the parsed config.
+        if option.section.startswith("_"):
+            continue
+        raw = getattr(option, attribute)
+        rendered = config_util._dump_toml_value(option.name, raw)
+        if raw is None:
+            assert rendered == "", option.key
+            continue
+
+        parsed = tomllib.loads(rendered)[option.name]
+        # isinstance() treats bool as int, so compare types directly.
+        assert type(parsed) is type(raw), option.key
+        assert parsed == raw, option.key
