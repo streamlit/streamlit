@@ -124,14 +124,14 @@ const TopNavSection = ({
       }
 
       // Convert potentially null pageName to string safely
-      const pageName = String(item.pageName || "")
+      const pageName = String(item.pageName ?? "")
 
       return (
         <Fragment key={`${item.pageScriptHash}-${pageName}`}>
           {index === 0 && showSections && (
             <StyledSectionName>
               <StreamlitMarkdown
-                source={sectionName || ""}
+                source={sectionName ?? ""}
                 allowHTML={false}
                 isLabel
                 disableLinks
@@ -142,6 +142,7 @@ const TopNavSection = ({
           )}
           <StyledTopNavSidebarNavLinkContainer>
             <SidebarNavLink
+              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank icon means no icon
               icon={item.icon || null}
               isTopNav={true}
               isInDropdown={true}

@@ -63,7 +63,7 @@ export function shouldShowNavigation(
 export function groupPagesBySection(
   appPages: AppPage.$Properties[]
 ): NavigationSections {
-  return groupBy(appPages, page => page.sectionHeader || "")
+  return groupBy(appPages, page => page.sectionHeader ?? "")
 }
 
 /**

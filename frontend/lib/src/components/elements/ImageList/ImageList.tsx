@@ -179,7 +179,8 @@ const Image = ({
           // Label by the caption node so markdown is announced as plain text.
           {...(captionHasText
             ? { "aria-labelledby": captionDomId }
-            : { "aria-label": imgAlt || safeLink })}
+            : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt uses the link
+              { "aria-label": imgAlt || safeLink })}
           data-testid="stImageLink"
         >
           {imageElement}
@@ -225,7 +226,7 @@ function ImageList({
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
   // The width of the container element, not necessarily the image.
-  const containerWidth = width || 0
+  const containerWidth = width ?? 0
 
   const imageWidth = getImageWidth(widthConfig, containerWidth)
 
@@ -272,6 +273,7 @@ function ImageList({
   // an arbitrary member. Prefer alt, else the caption's rendered plain text.
   // Gated on singleImage so a 1→N rerun cannot leak a stale caption.
   const singleImage = element.imgs.length === 1 ? element.imgs[0] : undefined
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const altContext = singleImage?.alt?.trim() || undefined
   const labelContext =
     altContext ?? (singleImage ? captionPlainText : undefined)

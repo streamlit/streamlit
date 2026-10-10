@@ -513,6 +513,7 @@ export function EChartsChart({
     element.theme,
   ])
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const labelContext = element.alt?.trim() || undefined
 
   return (

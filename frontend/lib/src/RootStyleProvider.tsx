@@ -31,7 +31,7 @@ interface RootStyleProviderProps {
   children: React.ReactNode
 }
 
-const nonce = document.currentScript?.nonce || ""
+const nonce = document.currentScript?.nonce ?? ""
 const cache = createCache({
   // The key field is required but only matters if there's more than one
   // emotion cache in use. This will probably never be true for us, so we just

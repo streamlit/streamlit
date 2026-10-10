@@ -585,7 +585,9 @@ const RawElementNodeRenderer = (
       // so it always renders at the default element height.
       const { heightConfig } = node.element
       const fillContainerHeight = Boolean(
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false useStretch still lets a pixel or rem height count
         heightConfig?.useStretch ||
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- pixel height 0 still lets a rem height count
         heightConfig?.pixelHeight ||
         heightConfig?.remHeight
       )
@@ -1313,7 +1315,7 @@ const ElementNodeRenderer = (
     useContext(ScriptRunContext)
   const { node } = props
 
-  const elementType = node.element.type || ""
+  const elementType = node.element.type ?? ""
 
   const enable = shouldComponentBeEnabled(elementType, scriptRunState)
   const isStale = isComponentStale(

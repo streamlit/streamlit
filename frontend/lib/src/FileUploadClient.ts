@@ -168,7 +168,7 @@ export class FileUploadClient {
       if (resp.errorMsg) {
         resolver.reject(resp.errorMsg)
       } else {
-        resolver.resolve(resp.fileUrls || [])
+        resolver.resolve(resp.fileUrls ?? [])
       }
       this.pendingFileURLsRequests.delete(id)
     } else {

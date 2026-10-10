@@ -400,6 +400,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     container: { height: fullScreenHeight, width: propsWidth },
     heightFallback:
       (viewState?.initialViewState as { height: number } | undefined)
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero height uses the default map height
         ?.height || theme.sizes.defaultMapHeight,
   })
 
@@ -532,7 +533,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
             // Without this, objects in layers will have stale colors when selection changes.
             // @see https://deck.gl/docs/api-reference/core/layer#updatetriggers
             [fillFunction]: [
-              ...(clonedLayer.updateTriggers?.[fillFunction] || []),
+              ...(clonedLayer.updateTriggers?.[fillFunction] ?? []),
               selectedIndices,
               anyLayersHaveSelection,
             ],

@@ -72,6 +72,7 @@ class BackendOperationError extends Error {
   constructor(message: string, reason?: string) {
     super(message)
     this.name = "BackendOperationError"
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank reason is omitted
     this.reason = reason || undefined
   }
 }

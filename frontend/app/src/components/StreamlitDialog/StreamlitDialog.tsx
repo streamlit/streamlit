@@ -156,6 +156,7 @@ function ScriptCompileErrorDialog(
       <ModalHeader>Script execution error</ModalHeader>
       <ModalBody>
         <StreamlitErrorCodeBlock>
+          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank exception message uses the fallback */}
           {props.exception?.message || "No message"}
         </StreamlitErrorCodeBlock>
       </ModalBody>

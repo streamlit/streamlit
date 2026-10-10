@@ -136,11 +136,15 @@ const getWidth = (
   // since some integrations cache the messages and we want to ensure that the FE
   // can still support old message formats.
   const isStretch =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false useStretch still lets the sub-element flag count
     element.widthConfig?.useStretch || subElement?.widthConfig?.useStretch
   const isContent =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false useContent still lets the sub-element flag count
     element?.widthConfig?.useContent || subElement?.widthConfig?.useContent
   const isPixel =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- pixel width 0 is restored by the explicit check below
     element?.widthConfig?.pixelWidth ||
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- pixel width 0 must not hide the explicit zero check
     subElement?.widthConfig?.pixelWidth ||
     element.widthConfig?.pixelWidth === 0
   const isRem = element.widthConfig?.remWidth

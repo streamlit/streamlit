@@ -193,8 +193,8 @@ export function useThemeManager(): [
 
       // Collect and process font sources from both main theme and sidebar theme
       const allFontSources = [
-        ...(themeInfo.fontSources || []),
-        ...(themeInfo.sidebar?.fontSources || []),
+        ...(themeInfo.fontSources ?? []),
+        ...(themeInfo.sidebar?.fontSources ?? []),
       ]
 
       const newFontSources: FontSources = {}

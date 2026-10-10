@@ -31,6 +31,7 @@ function withFullScreenWrapper<P extends object>(
     )
   }
   ComponentWithFullScreenWrapper.displayName = `withFullScreenWrapper(${
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank displayName falls through to the function name
     WrappedComponent.displayName || WrappedComponent.name
   })`
 

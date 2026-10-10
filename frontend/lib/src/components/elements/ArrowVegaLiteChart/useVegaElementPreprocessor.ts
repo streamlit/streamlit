@@ -320,6 +320,7 @@ const generateSpec = (
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- padding 0 is normalized to an object before bottom is set
   if (!spec.padding) {
     spec.padding = {}
   }

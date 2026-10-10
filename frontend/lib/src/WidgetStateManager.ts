@@ -567,10 +567,8 @@ export class WidgetStateManager {
     // If we already have a pending trigger for this widget in the current
     // macrotask, append to it instead of overwriting so multiple triggers are
     // delivered in a single backend message.
-    let widgetState = this.getWidgetState(widget)
-    if (widgetState === undefined) {
-      widgetState = this.createWidgetState(widget, update)
-    }
+    const widgetState =
+      this.getWidgetState(widget) ?? this.createWidgetState(widget, update)
 
     if (value === undefined) {
       // Simple boolean trigger.
@@ -1178,9 +1176,7 @@ export class WidgetStateManager {
     // Update the stored fragmentId if we don't have one yet. If multiple calls
     // happen and at least one of them specifies a fragmentId, we keep the
     // first non-undefined value.
-    if (this.scheduledFragmentId === undefined) {
-      this.scheduledFragmentId = fragmentId
-    }
+    this.scheduledFragmentId ??= fragmentId
 
     // If we already have a scheduled fragmentId and a new (different) one is
     // provided in the same macrotask, log a warning and proceed with the first

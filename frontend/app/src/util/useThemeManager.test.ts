@@ -91,7 +91,7 @@ describe("useThemeManager", () => {
     expect(updatedTheme.name).toBe("Dark")
 
     const updatedLocalStorage = JSON.parse(
-      window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
+      window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? ""
     )
 
     expect(updatedLocalStorage).toBe("Dark")
@@ -115,7 +115,7 @@ describe("useThemeManager", () => {
     })
 
     const updatedLocalStorage = JSON.parse(
-      window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
+      window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? ""
     )
 
     expect(updatedLocalStorage).toBe("System")
@@ -187,7 +187,7 @@ describe("useThemeManager", () => {
     })
 
     const initialSelection = JSON.parse(
-      window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
+      window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? ""
     )
     expect(initialSelection).toBe("System")
 
@@ -201,7 +201,7 @@ describe("useThemeManager", () => {
       customDark.emotion.colors.primary
     )
     expect(
-      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? "")
     ).toBe("System")
 
     prefersDark = false
@@ -214,7 +214,7 @@ describe("useThemeManager", () => {
       customLight.emotion.colors.primary
     )
     expect(
-      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? "")
     ).toBe("System")
   })
 
@@ -264,7 +264,7 @@ describe("useThemeManager", () => {
       customLight.emotion.colors.primary
     )
     expect(
-      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? "")
     ).toBe("System")
   })
 
@@ -286,7 +286,7 @@ describe("useThemeManager", () => {
     const [themeManager2] = result.current
     expect(themeManager2.activeTheme.name).toBe(AUTO_THEME_NAME)
     expect(
-      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? "")
     ).toBe("System")
   })
 
@@ -325,7 +325,7 @@ describe("useThemeManager", () => {
 
     expect(result.current[0].activeTheme.name).toBe(AUTO_THEME_NAME)
     expect(
-      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? "")
     ).toBe("System")
 
     prefersDark = true
@@ -338,7 +338,7 @@ describe("useThemeManager", () => {
       darkTheme.emotion.colors.primary
     )
     expect(
-      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? "")
     ).toBe("System")
 
     prefersDark = false
@@ -351,7 +351,7 @@ describe("useThemeManager", () => {
       lightTheme.emotion.colors.primary
     )
     expect(
-      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) || "")
+      JSON.parse(window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? "")
     ).toBe("System")
   })
 
@@ -477,7 +477,7 @@ describe("useThemeManager", () => {
       })
 
       const savedTheme = JSON.parse(
-        window.localStorage.getItem(LocalStore.ACTIVE_THEME) || ""
+        window.localStorage.getItem(LocalStore.ACTIVE_THEME) ?? ""
       )
 
       expect(savedTheme).toBe("System")

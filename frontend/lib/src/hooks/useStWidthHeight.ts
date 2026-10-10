@@ -54,7 +54,7 @@ export const useStWidthHeight = ({
     if (shouldUseContainerWidth || isFullScreen) {
       return "100%"
     }
-    return element.width || container.width || widthFallback
+    return element.width ?? container.width ?? widthFallback
   }, [
     container.width,
     element.width,
@@ -68,7 +68,7 @@ export const useStWidthHeight = ({
       return container.height
     }
 
-    return element.height || container.height || heightFallback
+    return element.height ?? container.height ?? heightFallback
   }, [isFullScreen, element.height, container.height, heightFallback])
 
   return { width, height }

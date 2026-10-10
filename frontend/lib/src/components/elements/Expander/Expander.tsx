@@ -182,6 +182,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // element.id is only set when the backend registers the expander as a
   // stateful widget (on_change="rerun" or bind="query-params"). block.id may
   // still be set for CSS key styling without implying widget mode.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank id means this is not a widget
   const widgetId = element.id || undefined
   const isWidget = Boolean(widgetMgr && widgetId)
   const isPassivelyKeyed = Boolean(blockId) && !isWidget

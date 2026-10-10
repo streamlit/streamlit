@@ -139,6 +139,7 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
     <StyledToolbarWrapper
       className="stElementToolbar"
       data-testid="stElementToolbar"
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false locked flag still locks in fullscreen
       locked={locked || isFullScreen}
       target={target}
     >

@@ -44,7 +44,7 @@ const handleRender: ProfilerOnRenderCallback = (
   startTime,
   commitTime
 ) => {
-  window.__streamlit_profiles__ = window.__streamlit_profiles__ || {}
+  window.__streamlit_profiles__ = window.__streamlit_profiles__ ?? {}
 
   window.__streamlit_profiles__[id] =
     window.__streamlit_profiles__[id] ||

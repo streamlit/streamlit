@@ -46,10 +46,10 @@ const BaseLinkButton = forwardRef<
     <ComponentType
       ref={ref}
       kind={kind}
-      size={size || BaseButtonSize.MEDIUM}
+      size={size ?? BaseButtonSize.MEDIUM}
       containerWidth={true}
-      disabled={disabled || false}
-      autoFocus={autoFocus || false}
+      disabled={disabled ?? false}
+      autoFocus={autoFocus ?? false}
       href={href}
       target={target}
       rel={rel}

@@ -94,12 +94,13 @@ const BaseButton = forwardRef(function BaseButton(
       ref={ref}
       kind={kind}
       size={size ?? BaseButtonSize.MEDIUM}
-      containerWidth={containerWidth || false}
-      disabled={disabled || false}
-      onClick={onClick || (() => {})}
-      autoFocus={autoFocus || false}
+      containerWidth={containerWidth ?? false}
+      disabled={disabled ?? false}
+      onClick={onClick ?? (() => {})}
+      autoFocus={autoFocus ?? false}
       data-testid={props["data-testid"] ?? `stBaseButton-${kind}`}
       // Omit an empty aria-label so visible button text remains the accessible name.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank aria-label is omitted
       aria-label={props["aria-label"] || undefined}
       aria-haspopup={props["aria-haspopup"]}
       aria-expanded={props["aria-expanded"]}

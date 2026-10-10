@@ -92,6 +92,27 @@ describe("#useStWidthHeight", () => {
         },
         "auto",
       ],
+      [
+        "should keep an explicit element width of 0",
+        {
+          container: { width: 200, height: 200 },
+          element: { width: 0, height: 100 },
+          isFullScreen: false,
+          shouldUseContainerWidth: false,
+        },
+        0,
+      ],
+      [
+        "should keep an explicit container width of 0 when the element width is missing",
+        {
+          container: { width: 0, height: 200 },
+          element: { height: 100 },
+          isFullScreen: false,
+          shouldUseContainerWidth: false,
+          widthFallback: 150,
+        },
+        0,
+      ],
     ])("%s", (_, props, expectedWidth) => {
       const { result } = renderHook(() => useStWidthHeight(props))
       expect(result.current.width).toBe(expectedWidth)
@@ -140,6 +161,27 @@ describe("#useStWidthHeight", () => {
           shouldUseContainerWidth: false,
         },
         "auto",
+      ],
+      [
+        "should keep an explicit element height of 0",
+        {
+          container: { height: 200 },
+          element: { height: 0 },
+          isFullScreen: false,
+          shouldUseContainerWidth: false,
+        },
+        0,
+      ],
+      [
+        "should keep an explicit container height of 0 when the element height is missing",
+        {
+          container: { height: 0 },
+          element: {},
+          isFullScreen: false,
+          shouldUseContainerWidth: false,
+          heightFallback: 150,
+        },
+        0,
       ],
     ])("%s", (_, props, expectedHeight) => {
       const { result } = renderHook(() => useStWidthHeight(props))

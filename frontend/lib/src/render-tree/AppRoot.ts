@@ -144,7 +144,7 @@ export class AppRoot {
     )
 
     const sidebar =
-      sidebarElements ||
+      sidebarElements ??
       new BlockNode(
         mainScriptHash,
         [],
