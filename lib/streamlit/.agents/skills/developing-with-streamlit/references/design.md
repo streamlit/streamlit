@@ -131,6 +131,8 @@ st.space(50)  # Custom pixels for fine-tuning
 
 **Don't** systematically replace dividers with `st.space()`—it can look weird too.
 
+To make the whole app denser or roomier without changing font size, set `theme.spacingScale` in `.streamlit/config.toml` (see `theme.md`). Values below `1.0` tighten spacing and control heights; values above `1.0` loosen them.
+
 ## Sentence casing
 
 Use sentence casing for titles and labels. Title Case Feels Shouty.

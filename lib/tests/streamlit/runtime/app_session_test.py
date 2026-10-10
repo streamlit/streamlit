@@ -994,6 +994,7 @@ def _mock_get_options_for_section(
         "base": "dark",
         "baseFontSize": 14,
         "baseFontWeight": 300,
+        "spacingScale": 0.75,
         "baseRadius": "1.2rem",
         "buttonRadius": "medium",
         "borderColor": "#ff0000",
@@ -1681,6 +1682,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "base": None,
                     "baseFontSize": None,
                     "baseFontWeight": None,
+                    "spacingScale": None,
                     "baseRadius": None,
                     "buttonRadius": None,
                     "borderColor": None,
@@ -1748,6 +1750,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "base": None,
                     "baseFontSize": None,
                     "baseFontWeight": None,
+                    "spacingScale": None,
                     "baseRadius": None,
                     "buttonRadius": None,
                     "borderColor": None,
@@ -1819,6 +1822,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "buttonRadius": None,
                     "baseFontSize": None,
                     "baseFontWeight": None,
+                    "spacingScale": None,
                     "borderColor": None,
                     "dataframeBorderColor": None,
                     "codeFont": None,
@@ -2037,6 +2041,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.link_underline is False
         assert new_session_msg.custom_theme.base_font_size == 14
         assert new_session_msg.custom_theme.base_font_weight == 300
+        assert new_session_msg.custom_theme.spacing_scale == 0.75
         assert new_session_msg.custom_theme.code_font_size == "12px"
         assert new_session_msg.custom_theme.code_font_weight == 300
         assert new_session_msg.custom_theme.show_sidebar_border is True
@@ -2211,6 +2216,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.font_faces
         assert not new_session_msg.custom_theme.sidebar.HasField("base_font_size")
         assert not new_session_msg.custom_theme.sidebar.HasField("base_font_weight")
+        assert not new_session_msg.custom_theme.sidebar.HasField("spacing_scale")
         assert not new_session_msg.custom_theme.sidebar.HasField("show_sidebar_border")
 
     @patch("streamlit.runtime.app_session.config")

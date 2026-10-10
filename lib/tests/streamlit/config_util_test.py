@@ -754,6 +754,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "baseFontWeight",
             "fontFaces",
             "showSidebarBorder",
+            "spacingScale",
         }
         assert main_only_options.isdisjoint(section_options)
 
@@ -967,6 +968,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "baseFontWeight": "bold",
             "fontFaces": "Arial, sans-serif",
             "showSidebarBorder": True,
+            "spacingScale": 0.75,
         }
 
         for main_only_option, option_value in main_only_options.items():
