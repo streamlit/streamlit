@@ -337,6 +337,34 @@ Caveats for `on_change="ignore"`:
 - Inside `st.form`, `on_change="ignore"` has no effect; the form already defers commits until submit.
 - `st.file_uploader`, `st.camera_input`, and `st.audio_input` still upload the file, photo, or recording immediately; only the rerun is deferred.
 
+## Client-side validation
+
+Check input in the browser whenever the widget already can. Invalid values are not submitted, so the script does not rerun, and the user sees the error immediately.
+
+- `st.text_input`: `validate` (a JavaScript-flavored regex, or a `(regex, message)` tuple), `required`, `max_chars`, and `type`. `type="email"` and `type="url"` apply a format check by default; `validate=""` turns that check off. `type="phone"` has no default pattern. Empty text skips `validate`, so use `required=True` when a blank value should be blocked. `max_chars` stops further typing at the limit.
+- `st.text_area` and `st.chat_input`: `max_chars`.
+- `st.number_input`: `min_value`, `max_value`, `step`, and `required`. Values outside the range show an inline error and are not committed. `step` is the increment for the +/- buttons and arrow keys. With `required=True`, pass `value=None` so the field starts empty.
+- `st.date_input` and `st.datetime_input`: `min_value` and `max_value` reject out-of-range values in the browser. On `st.datetime_input`, arrow keys snap to `step`; a typed time can still be any valid time inside the range. `st.time_input`'s `step` only controls which clock parts are shown and how arrow keys snap.
+- `st.data_editor` columns (`st.column_config`): `validate` and `max_chars` on text columns, `min_value` / `max_value` / `step` on number, date, time, and datetime columns, and `required` where the column supports it. Invalid edits are not submitted.
+- `st.file_uploader`: `type` rejects disallowed extensions before the file is uploaded.
+
+Inside `st.form`, these checks block submit until the values pass. `required` on `st.text_input` and `st.number_input` also skips the rerun when the field is cleared; the last committed value stays until the user enters a valid one.
+
+These checks are a UX guardrail. Re-validate anything security-relevant in your script. See [Widget input constraints are mostly client-side](session-state.md#widget-input-constraints-are-mostly-client-side).
+
+```python
+# BAD: Every blur reruns the app, then Python rejects the value
+email = st.text_input("Email")
+if email and "@" not in email:
+    st.error("Enter a valid email.")
+    st.stop()
+
+# GOOD: The browser blocks the commit and shows the error immediately
+email = st.text_input("Email", type="email", required=True)
+qty = st.number_input("Quantity", min_value=1, max_value=99, step=1)
+when = st.datetime_input("When", min_value="now", step=900)
+```
+
 ## Conditional rendering
 
 **This is critical and often missed.**
