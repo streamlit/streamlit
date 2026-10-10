@@ -147,7 +147,7 @@ with st.chat_message("user", avatar="https://example.com/avatar.png"):
 
 ## Suggestion chips
 
-Offer clickable suggestions before the first message. The pills disappear once the user sends a message, creating a clean onboarding experience:
+Offer clickable suggestions before the first message. A selected suggestion becomes the first prompt, and the pills disappear once the conversation starts:
 
 ```python
 SUGGESTIONS = {
@@ -155,22 +155,24 @@ SUGGESTIONS = {
     ":green[:material/code:] Show me an example": "Show a simple Streamlit example",
 }
 
+# Replaces the basic example's `if prompt := st.chat_input(...)`
 prompt = st.chat_input("Ask a question")
 
-# Only show before first message - they disappear after
 if not st.session_state.messages:
-    selected = st.pills(
+    suggestions = st.empty()
+    selected = suggestions.pills(
         "Try asking:", list(SUGGESTIONS.keys()), label_visibility="collapsed"
     )
     if selected:
-        # Use the selection as the first prompt
         prompt = SUGGESTIONS[selected]
+    if prompt:
+        suggestions.empty()  # Hide the pills before the first reply renders
 
 if prompt:
     ...  # Same handling as typed input: append, display, and generate the reply
 ```
 
-The `if not st.session_state.messages` check ensures the suggestions only appear on an empty chat. Once a message is added, the pills vanish and the conversation takes over. Route the selected suggestion through the same `if prompt:` handler as typed input; appending it to the history and calling `st.rerun()` skips the reply, because the reply is only generated when `st.chat_input` returns a value.
+Show suggestions only while `st.session_state.messages` is empty, and route the selected suggestion through the same `if prompt:` handler as typed input. Appending the suggestion and calling `st.rerun()` skips the reply, because on that rerun `st.chat_input` returns `None`. Render the pills in an `st.empty()` placeholder and clear it once there is a prompt; otherwise they stay on screen above the first reply until the next rerun.
 
 ## File uploads
 
