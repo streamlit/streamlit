@@ -3303,14 +3303,18 @@ def test_request_rerun_after_shutdown_is_discarded() -> None:
     create_scriptrunner.assert_not_called()
 
 
-def test_clear_user_info_empties_user_info() -> None:
-    """Test that clear_user_info removes all stored user info."""
+def test_clear_user_info_rejects_all_reconnect_identities() -> None:
+    """Test that clear_user_info empties user info and rejects every reconnect identity."""
     session = _create_test_session()
     assert session._user_info != {}
+    assert session.matches_user_info({"email": "test@example.com"}) is True
 
     session.clear_user_info()
 
     assert session._user_info == {}
+    assert session.matches_user_info({}) is False
+    assert session.matches_user_info({"email": "other@example.com"}) is False
+    assert session.is_resumable() is False
 
 
 def test_on_secrets_file_changed_triggers_source_change() -> None:

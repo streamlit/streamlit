@@ -310,15 +310,49 @@ class Runtime:
         return session_info.client
 
     def clear_user_info_for_session(self, session_id: str) -> None:
-        """Clear the user_info for the given session_id.
+        """Clear user info for ``session_id`` and prevent that session from resuming.
+
+        An active session stays connected so its client can still receive the
+        logout redirect. A session that exists only in storage is closed on
+        the event loop so a later connection cannot resume it.
 
         Notes
         -----
-        Threading: SAFE. May be called on any thread.
+        Threading: SAFE. May be called on any thread. Closing a stored
+        session is scheduled onto the event loop, because ``close_session``
+        mutates session storage.
         """
         session_info = self._session_mgr.get_session_info(session_id)
-        if session_info is not None:
-            session_info.session.clear_user_info()
+        if session_info is None:
+            return
+
+        session_info.session.clear_user_info()
+        if self.is_active_session(session_id):
+            return
+
+        self._close_inactive_session_on_event_loop(session_id)
+
+    def _close_inactive_session_on_event_loop(self, session_id: str) -> None:
+        """Close ``session_id`` on the event loop when it is not active.
+
+        ``clear_user_info`` has already marked the session non-resumable, so
+        a reconnect cannot adopt it before this close runs.
+        """
+        async_objs = self._get_async_objs()
+
+        def close_if_inactive() -> None:
+            if not self.is_active_session(session_id):
+                self.close_session(session_id)
+
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop is async_objs.eventloop:
+            close_if_inactive()
+        else:
+            async_objs.eventloop.call_soon_threadsafe(close_if_inactive)
 
     async def start(self) -> None:
         """Start the runtime. This must be called only once, before

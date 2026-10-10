@@ -263,6 +263,7 @@ class AppSession:
 
         self._session_state = SessionState()
         self._user_info = user_info
+        self._resumable = True
 
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
@@ -586,8 +587,16 @@ class AppSession:
         if self._scriptrunner is not None:
             self._scriptrunner.request_stop()
 
+    def is_resumable(self) -> bool:
+        """Return whether a later connection may resume this session."""
+        return self._resumable
+
     def clear_user_info(self) -> None:
-        """Clear the user info for this session."""
+        """Clear this session's user info so later connections cannot resume it."""
+        # Mark the session non-resumable before emptying the dict. A disconnect
+        # that runs in between would otherwise save an anonymous session that a
+        # reconnect can resume.
+        self._resumable = False
         self._user_info.clear()
 
     def matches_user_info(self, user_info: UserInfoType) -> bool:
@@ -600,7 +609,12 @@ class AppSession:
         merely by presenting its id. The comparison is intentionally strict
         (full equality) so any identity difference fails closed to a fresh
         session rather than allowing a takeover.
+
+        ``clear_user_info`` makes this session match no reconnect identity,
+        including ``{}``.
         """
+        if not self._resumable:
+            return False
         return self._user_info == user_info
 
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:

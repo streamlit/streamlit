@@ -19,6 +19,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.app_session import AppSessionState
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.session_manager import SessionStorage
 from streamlit.runtime.stats import CounterStat, GaugeStat, Stat
@@ -278,6 +280,200 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         # File watchers are registered on AppSession creation and again on AppSession
         # reconnect.
         assert reconnected_session_info.session.register_file_watchers.call_count == 2
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    @patch("streamlit.runtime.websocket_session_manager._LOGGER.warning")
+    def test_logged_out_active_session_is_not_resumed(
+        self, patched_warning: MagicMock
+    ) -> None:
+        """connect_session gives a new connection its own session after logout.
+
+        The original client stays attached and can still enqueue messages.
+        """
+        alice = {"email": "alice@example.com"}
+        original_client = MagicMock()
+        session_id = self.connect_session(client=original_client, user_info=alice)
+        original_session_info = self.session_mgr._active_session_info_by_id[session_id]
+        original_session = original_session_info.session
+        original_session_state = original_session.session_state
+
+        original_session.clear_user_info()
+
+        new_client = MagicMock()
+        new_session_id = self.connect_session(
+            existing_session_id=session_id, client=new_client, user_info={}
+        )
+
+        assert new_session_id != session_id
+        assert self.session_mgr._reconnect_count == 0
+        new_session_info = self.session_mgr.get_session_info(new_session_id)
+        assert new_session_info is not None
+        assert new_session_info.session.session_state is not original_session_state
+        assert new_session_info.client == new_client
+
+        assert session_id in self.session_mgr._active_session_info_by_id
+        assert (
+            self.session_mgr._active_session_info_by_id[session_id]
+            is original_session_info
+        )
+        assert original_session_info.client is original_client
+
+        original_session.request_script_stop.assert_not_called()
+        original_session.disconnect_file_watchers.assert_not_called()
+        assert self.session_mgr._session_storage.get(session_id) is None
+
+        assert self.session_mgr._connect_count == 2
+
+        patched_warning.assert_called_with(
+            "Ignoring reconnect to active session id %s: user identity "
+            "mismatch. Connecting to a new session instead.",
+            session_id,
+        )
+
+        # The original session stays open so logout can still flush messages.
+        msg = ForwardMsg()
+        original_session._enqueue_forward_msg(msg)
+        assert original_session.flush_browser_queue() == [msg]
+        assert original_session._state != AppSessionState.SHUTDOWN_REQUESTED
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    def test_disconnect_shuts_down_logged_out_session(self) -> None:
+        """disconnect_session shuts down a logged-out session instead of saving it."""
+        alice = {"email": "alice@example.com"}
+        session_id = self.connect_session(user_info=alice)
+        session_info = self.session_mgr.get_session_info(session_id)
+        assert session_info is not None
+        session = session_info.session
+        original_session_state = session.session_state
+
+        session.clear_user_info()
+        self.session_mgr.disconnect_session(session_id)
+
+        assert session_id not in self.session_mgr._active_session_info_by_id
+        assert self.session_mgr._session_storage.get(session_id) is None
+        assert self.session_mgr._disconnect_count == 1
+        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
+
+        new_session_id = self.connect_session(
+            existing_session_id=session_id, user_info={}
+        )
+        assert new_session_id != session_id
+        new_session_info = self.session_mgr.get_session_info(new_session_id)
+        assert new_session_info is not None
+        assert new_session_info.session.session_state is not original_session_state
+        assert self.session_mgr._reconnect_count == 0
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    def test_disconnect_drops_session_if_logout_wins_the_race(self) -> None:
+        """A logout that flips the flag during disconnect is not left in storage."""
+        alice = {"email": "alice@example.com"}
+        session_id = self.connect_session(user_info=alice)
+        session_info = self.session_mgr.get_session_info(session_id)
+        assert session_info is not None
+        session = session_info.session
+
+        # The first read still sees a resumable session, which is the window
+        # where disconnect would save it. Logout then clears the flag.
+        with patch.object(session, "is_resumable", side_effect=[True, False]):
+            self.session_mgr.disconnect_session(session_id)
+
+        assert session_id not in self.session_mgr._active_session_info_by_id
+        assert self.session_mgr._session_storage.get(session_id) is None
+        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    def test_close_session_removes_logged_out_stored_session(self) -> None:
+        """close_session deletes a logged-out session that is only in storage."""
+        alice = {"email": "alice@example.com"}
+        session_id = self.connect_session(user_info=alice)
+        self.session_mgr.disconnect_session(session_id)
+        assert self.session_mgr._session_storage.get(session_id) is not None
+
+        stored = self.session_mgr.get_session_info(session_id)
+        assert stored is not None
+        stored.session.clear_user_info()
+        assert not self.session_mgr.is_active_session(session_id)
+        self.session_mgr.close_session(session_id)
+
+        assert self.session_mgr.get_session_info(session_id) is None
+        new_session_id = self.connect_session(
+            existing_session_id=session_id, user_info={}
+        )
+        assert new_session_id != session_id
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    def test_same_logged_in_user_reconnects_to_same_session(self) -> None:
+        """The same logged-in user reconnects to the original session state."""
+        alice = {"email": "alice@example.com"}
+        session_id = self.connect_session(user_info=alice)
+        original = self.session_mgr.get_session_info(session_id)
+        assert original is not None
+        original_session_state = original.session.session_state
+
+        self.session_mgr.disconnect_session(session_id)
+        reconnected_id = self.connect_session(
+            existing_session_id=session_id, user_info=alice
+        )
+
+        assert reconnected_id == session_id
+        reconnected = self.session_mgr.get_session_info(reconnected_id)
+        assert reconnected is not None
+        assert reconnected.session.session_state is original_session_state
 
     def test_disconnect_session_on_invalid_session_id(self):
         # Just check that no error is thrown.
