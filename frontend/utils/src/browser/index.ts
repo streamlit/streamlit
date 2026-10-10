@@ -15,11 +15,18 @@
  */
 
 /**
- * Returns cookie value
+ * Returns the named cookie's value, or undefined when the cookie is missing
+ * or `document.cookie` throws.
+ *
+ * A sandboxed iframe without `allow-same-origin` cannot read cookies.
  */
 export function getCookie(name: string): string | undefined {
-  const r = document.cookie.match(`\\b${name}=([^;]*)\\b`)
-  return r ? r[1] : undefined
+  try {
+    const match = document.cookie.match(`\\b${name}=([^;]*)\\b`)
+    return match ? match[1] : undefined
+  } catch {
+    return undefined
+  }
 }
 
 // Method taken from

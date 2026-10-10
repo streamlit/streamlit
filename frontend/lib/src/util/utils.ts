@@ -375,7 +375,9 @@ export function isFromWindows(): boolean {
 }
 
 /**
- * Sets cookie value
+ * Sets a cookie value and ignores the write when `document.cookie` throws.
+ *
+ * A sandboxed iframe without `allow-same-origin` cannot write cookies.
  */
 export function setCookie(
   name: string,
@@ -386,7 +388,11 @@ export function setCookie(
   const expirationStr: string = expirationDate
     ? `expires=${expirationDate.toUTCString()};`
     : ""
-  document.cookie = `${name}=${value};${expirationStr}path=/`
+  try {
+    document.cookie = `${name}=${value};${expirationStr}path=/`
+  } catch {
+    // This document cannot store cookies.
+  }
 }
 
 export function isValidElementId(

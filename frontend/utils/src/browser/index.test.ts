@@ -52,6 +52,7 @@ describe("browser", () => {
 
   describe("getCookie", () => {
     afterEach(() => {
+      vi.restoreAllMocks()
       document.cookie.split(";").forEach(cookie => {
         const eqPos = cookie.indexOf("=")
         const name = eqPos > -1 ? cookie.slice(0, eqPos) : cookie
@@ -95,6 +96,18 @@ describe("browser", () => {
       document.cookie = "flavor=chocolatechip;"
       const cookie = getCookie("flavor")
       expect(cookie).toEqual("chocolatechip")
+    })
+
+    it("returns undefined when reading document.cookie throws", () => {
+      vi.spyOn(document, "cookie", "get").mockImplementation(() => {
+        throw new DOMException(
+          "The document is sandboxed and lacks the 'allow-same-origin' flag.",
+          "SecurityError"
+        )
+      })
+
+      expect(() => getCookie("_streamlit_xsrf")).not.toThrow()
+      expect(getCookie("_streamlit_xsrf")).toEqual(undefined)
     })
   })
 
