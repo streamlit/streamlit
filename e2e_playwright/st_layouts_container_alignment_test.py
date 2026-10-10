@@ -51,6 +51,13 @@ def _height(locator: Locator) -> int | None:
     return round(box["height"]) if box else None
 
 
+def _expect_chart_drawn(chart: Locator, width_px: int) -> None:
+    """Vega drew the chart across its box, not just reserved the space."""
+    drawing = chart.locator("canvas, svg").first
+    expect(drawing).to_be_visible()
+    expect(drawing).to_have_css("width", f"{width_px}px")
+
+
 def test_layouts_container_alignment(app: Page, assert_snapshot: ImageCompareFunction):
     """Snapshot test for each top-level container in st_layouts_container_alignment.py."""
     for key in CONTAINER_KEYS:
@@ -127,11 +134,13 @@ def test_stretch_chart_default_height_in_horizontal_container(app: Page):
     ).get_by_test_id("stVegaLiteChart")
     expect(content_width_chart).to_have_css("width", f"{DEFAULT_CHART_WIDTH_PX}px")
     expect(content_width_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
+    _expect_chart_drawn(content_width_chart, DEFAULT_CHART_WIDTH_PX)
     pixel_height_chart = get_element_by_key(
         app, "container-horizontal-content-width-pixel-height-chart"
     ).get_by_test_id("stVegaLiteChart")
     expect(pixel_height_chart).to_have_css("width", f"{DEFAULT_CHART_WIDTH_PX}px")
     expect(pixel_height_chart).to_have_css("height", "200px")
+    _expect_chart_drawn(pixel_height_chart, DEFAULT_CHART_WIDTH_PX)
 
     # Plotly falls back to its default figure height.
     plotly_chart = get_element_by_key(
