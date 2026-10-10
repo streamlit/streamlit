@@ -172,7 +172,9 @@ export function isSingleViewChart(spec: string | object): boolean {
 /**
  * Get the numeric top-level width of a spec, if it has one. With Streamlit's
  * "fit" autosizing, a single-view chart renders exactly this wide; without a
- * width, it uses the default chart width.
+ * numeric width, it uses the default chart width. This includes step widths
+ * such as `{"step": 20}` (`alt.Step(...)` in Altair), whose rendered width
+ * depends on the data domain.
  */
 export function getSpecWidth(spec: string | object): number | undefined {
   const width = parseSpecObject(spec)?.width
@@ -523,7 +525,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
 
     const observer = new ResizeObserver(entries => {
-      setBindingsHeight(entries[0]?.borderBoxSize[0]?.blockSize ?? 0)
+      const entry = entries[0]
+      setBindingsHeight(
+        entry?.borderBoxSize?.[0]?.blockSize ?? entry?.contentRect?.height ?? 0
+      )
     })
     observer.observe(bindingsForm)
     return () => {

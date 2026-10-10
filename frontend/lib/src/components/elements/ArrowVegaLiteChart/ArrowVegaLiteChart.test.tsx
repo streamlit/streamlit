@@ -370,6 +370,18 @@ describe("ArrowVegaLiteChart", () => {
         })
 
         expect(vegaEmbedMock.lastSpec?.height).toBe(332)
+
+        // Entries without borderBoxSize fall back to the content rect.
+        act(() => {
+          resizeBindings?.(
+            [
+              { contentRect: { height: 50 } },
+            ] as unknown as ResizeObserverEntry[],
+            {} as ResizeObserver
+          )
+        })
+
+        expect(vegaEmbedMock.lastSpec?.height).toBe(350)
       })
     })
   })
@@ -398,6 +410,7 @@ describe("ArrowVegaLiteChart", () => {
       [{ width: 250 }, 250],
       [{ width: 0 }, undefined],
       [{ width: "container" }, undefined],
+      [{ width: { step: 20 } }, undefined],
       [{ mark: "bar" }, undefined],
     ])("returns the numeric width for %j", (spec, expected) => {
       expect(getSpecWidth(JSON.stringify(spec))).toBe(expected)
