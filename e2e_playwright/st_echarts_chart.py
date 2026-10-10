@@ -33,6 +33,10 @@ import streamlit as st
 # Seed the RNG so any generated data is deterministic across runs.
 np.random.seed(0)
 
+if "echarts_script_runs" not in st.session_state:
+    st.session_state.echarts_script_runs = 0
+st.session_state.echarts_script_runs += 1
+
 # ECharts plays entry animations on init, which makes canvas snapshots
 # non-deterministic. Disable animations for the display charts we render.
 _NO_ANIM: dict[str, Any] = {"animation": False}
@@ -71,8 +75,9 @@ with st.container(key="c_basic_bar"):
 
 # An unrelated widget: clicking it reruns the app. Used to verify that a
 # display-only chart is not remounted / duplicated / reset by unrelated reruns.
-if st.button("rerun helper"):
-    st.write("rerun helper clicked")
+# Do not write extra markdown here: inserting a block above later charts
+# shifts them onto a fractional Y and makes snapshots 1px taller.
+st.button("rerun helper")
 
 # 2) A chart with theme=None (uses ECharts' built-in default theme; the spec is
 #    left untouched).
@@ -257,6 +262,73 @@ st.echarts_chart(
     height=_HEIGHT,
 )
 
+# 11) A selection chart (a widget). Point selection is enabled in the spec via
+#     `selectedMode`, with a `select` style so the selection is visible. A
+#     single, chart-filling bar makes a point-click land reliably on the item.
+selection_event = st.echarts_chart(
+    {
+        "xAxis": {"type": "category", "data": ["Selected"]},
+        "yAxis": {"type": "value", "max": 100},
+        "series": [
+            {
+                "type": "bar",
+                "data": [100],
+                "barWidth": "90%",
+                "selectedMode": "multiple",
+                "select": {"itemStyle": {"color": "#ff4b4b"}},
+            }
+        ],
+        **_NO_ANIM,
+    },
+    key="selection_chart",
+    on_select="rerun",
+    height=_HEIGHT,
+)
+selection_groups = selection_event["selection"]["selected"]
+selection_indices = selection_groups[0]["data_indices"] if selection_groups else []
+st.write(f"echarts selection groups: {len(selection_groups)}")
+st.write(f"echarts selection indices: {selection_indices}")
+
+# 11b) A brush-selection chart. Rect brush is enabled via the toolbox; the E2E
+#      test draws a box, checks persistence across rerun, then clears it.
+brush_event = st.echarts_chart(
+    {
+        "toolbox": {
+            "orient": "vertical",
+            "left": 8,
+            "top": "middle",
+            "itemSize": 32,
+            "feature": {"brush": {"type": ["rect"]}},
+        },
+        "brush": {
+            "xAxisIndex": "all",
+            "throttleType": "debounce",
+            "throttleDelay": 0,
+        },
+        "grid": {
+            "containLabel": True,
+            "left": 56,
+            "top": 24,
+            "bottom": 32,
+            "right": 16,
+        },
+        "xAxis": {"type": "category", "data": ["A", "B", "C", "D"]},
+        "yAxis": {"type": "value", "max": 100},
+        "series": [
+            {
+                "type": "bar",
+                "data": [80, 80, 80, 80],
+                "barWidth": "70%",
+            }
+        ],
+        **_NO_ANIM,
+    },
+    key="brush_chart",
+    on_select="rerun",
+    height=_HEIGHT,
+)
+st.write(f"echarts brush areas: {len(brush_event['selection']['areas'])}")
+
 # 12) A tooltip/label XSS payload: the data item name is an HTML/script payload.
 #     Under theme="streamlit" it must render as escaped text and never execute.
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
@@ -332,6 +404,33 @@ with st.expander("Chart in expander", expanded=False):
             key="expander_chart",
             height=_HEIGHT,
         )
+
+# 14) A selection chart inside a form. ``clear_on_submit=True`` so submit
+#     delivers the pending selection and then clears the overlay (Python still
+#     reports the last submitted value until the next submit).
+with st.form("echarts_form", clear_on_submit=True):
+    form_event = st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["Selected"]},
+            "yAxis": {"type": "value", "max": 100},
+            "series": [
+                {
+                    "type": "bar",
+                    "data": [100],
+                    "barWidth": "90%",
+                    "selectedMode": "multiple",
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="form_selection_chart",
+        on_select="rerun",
+        height=_HEIGHT,
+    )
+    st.form_submit_button("Submit selection")
+st.write(f"echarts form groups: {len(form_event['selection']['selected'])}")
+# Keep this out of the first block so chart snapshots stay 300px tall.
+st.write(f"echarts script runs: {st.session_state.echarts_script_runs}")
 
 # Stretch height outside a sized parent: the chart must still get the 350px
 # content-height floor so ECharts can initialize.

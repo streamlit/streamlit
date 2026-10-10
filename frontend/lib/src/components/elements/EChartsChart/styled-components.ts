@@ -51,10 +51,17 @@ export const StyledEChartsChartFill = styled.div<{
  * The container that ECharts renders its canvas/SVG into. It fills its parent so
  * ECharts can read valid, non-zero dimensions from the DOM element.
  */
-export const StyledEChartsChartContainer = styled.div({
+export const StyledEChartsChartContainer = styled.div<{
+  isDisabled?: boolean
+}>(({ isDisabled }) => ({
   width: "100%",
   height: "100%",
-})
+  // Block in-chart edits on a disabled selection widget (host-disabled
+  // inputs or a dropped connection) so they cannot leak into the first
+  // snapshot after re-enable. Display-only charts keep pointer events for
+  // tooltips, dataZoom, and toolbox.
+  ...(isDisabled ? { pointerEvents: "none" as const } : {}),
+}))
 
 /** Stacks the chart and an in-place render-error overlay at the same size. */
 export const StyledEChartsChartStack = styled.div({

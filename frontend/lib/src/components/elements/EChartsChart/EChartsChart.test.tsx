@@ -24,6 +24,7 @@ import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { EChartsChart } from "./EChartsChart"
 
@@ -35,6 +36,12 @@ const { mockInit, mockChart } = vi.hoisted(() => {
     dispose: vi.fn(),
     isDisposed: vi.fn(() => false),
     getDataURL: vi.fn(() => "data:image/png;base64,AAA"),
+    on: vi.fn(),
+    off: vi.fn(),
+    getZr: vi.fn(() => ({ on: vi.fn(), off: vi.fn() })),
+    dispatchAction: vi.fn(),
+    convertFromPixel: vi.fn(),
+    getOption: vi.fn(() => ({})),
   }
   return {
     mockInit: vi.fn(
@@ -75,6 +82,13 @@ vi.mock("~lib/hooks/useEmotionTheme", () => ({
   useEmotionTheme: () => themeHolder.override ?? mockTheme.emotion,
 }))
 
+vi.mock("~lib/components/widgets/Form/FormClearHelper", () => ({
+  FormClearHelper: vi.fn().mockImplementation(() => ({
+    manageFormClearListener: vi.fn(),
+    disconnect: vi.fn(),
+  })),
+}))
+
 const DEFAULT_SPEC = JSON.stringify({
   xAxis: { type: "category", data: ["A", "B", "C"] },
   yAxis: { type: "value" },
@@ -89,6 +103,7 @@ function createElement(
     theme: "streamlit",
     renderer: EChartsChartProto.Renderer.CANVAS,
     id: "",
+    formId: "",
     ...overrides,
   })
 }
@@ -136,12 +151,16 @@ function applyMockEchartsAria(option: Record<string, unknown>): void {
 }
 
 describe("EChartsChart", () => {
+  let widgetMgr: WidgetStateManager
+
   const Wrapper = ({
     element,
     isFullScreen = false,
+    disabled = false,
   }: {
     element: EChartsChartProto
     isFullScreen?: boolean
+    disabled?: boolean
   }): ReactElement => {
     const contextValue = useMemo(
       () => ({
@@ -155,7 +174,11 @@ describe("EChartsChart", () => {
     )
     return (
       <ElementFullscreenContext.Provider value={contextValue}>
-        <EChartsChart element={element} />
+        <EChartsChart
+          element={element}
+          widgetMgr={widgetMgr}
+          disabled={disabled}
+        />
       </ElementFullscreenContext.Provider>
     )
   }
@@ -174,6 +197,10 @@ describe("EChartsChart", () => {
         applyMockEchartsAria(option)
       }
     )
+    widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: vi.fn(),
+      formsDataChanged: vi.fn(),
+    })
   })
 
   it("initializes an ECharts instance and applies the option", () => {
@@ -204,6 +231,80 @@ describe("EChartsChart", () => {
     rerender(<Wrapper element={createElement()} />)
 
     expect(mockChart.resize).toHaveBeenCalledTimes(1)
+  })
+
+  it("prunes pixel-only brush when a new instance inits at a different size", () => {
+    const createIsolatedMockChart = (): typeof mockChart => {
+      const chart = {
+        setOption: vi.fn((option: Record<string, unknown>) => {
+          applyMockEchartsAria(option)
+        }),
+        setTheme: vi.fn(),
+        resize: vi.fn(),
+        dispose: vi.fn(() => {
+          chart.isDisposed.mockReturnValue(true)
+        }),
+        isDisposed: vi.fn(() => false),
+        getDataURL: vi.fn(() => "data:image/png;base64,AAA"),
+        on: vi.fn(),
+        off: vi.fn(),
+        getZr: vi.fn(() => ({ on: vi.fn(), off: vi.fn() })),
+        dispatchAction: vi.fn(),
+        convertFromPixel: vi.fn(),
+        getOption: vi.fn(() => ({})),
+      }
+      return chart
+    }
+    const firstChart = createIsolatedMockChart()
+    const secondChart = createIsolatedMockChart()
+    mockInit
+      .mockImplementationOnce(() => firstChart)
+      .mockImplementationOnce(() => secondChart)
+
+    const element = createElement({
+      id: "chart-id",
+      selectionActivated: true,
+    })
+    const { rerender } = render(<Wrapper element={element} />)
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(firstChart.resize).not.toHaveBeenCalled()
+
+    widgetMgr.setElementState("chart-id", "brushSelection", [
+      {
+        brushId: "brush-0",
+        brushIndex: 0,
+        areas: [
+          {
+            brushType: "rect",
+            range: [
+              [10, 20],
+              [30, 40],
+            ],
+          },
+        ],
+        selected: [],
+      },
+    ])
+
+    dimensionsHolder.width = 800
+    dimensionsHolder.height = 500
+    rerender(
+      <Wrapper
+        element={createElement({
+          id: "chart-id",
+          selectionActivated: true,
+          renderer: EChartsChartProto.Renderer.SVG,
+        })}
+      />
+    )
+
+    expect(mockInit).toHaveBeenCalledTimes(2)
+    expect(secondChart.resize).not.toHaveBeenCalled()
+    expect(secondChart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 0,
+      areas: [],
+    })
   })
 
   it("resizes on the first positive size after a 0x0 init", () => {
@@ -239,6 +340,104 @@ describe("EChartsChart", () => {
 
     expect(mockChart.dispose).toHaveBeenCalledTimes(disposeCalls)
     expect(mockChart.resize).not.toHaveBeenCalled()
+  })
+
+  it("does not bind selection handlers when disabled", () => {
+    widgetMgr.setElementState("chart-id", "selectedPoints", [
+      { seriesIndex: 0, dataIndex: [0] },
+    ])
+    widgetMgr.setElementState("chart-id", "brushSelection", [
+      {
+        brushId: "brush-0",
+        brushIndex: 0,
+        areas: [{ brushType: "lineX", coordRange: [0, 2] }],
+        selected: [],
+      },
+    ])
+
+    render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+        disabled={true}
+      />
+    )
+
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(mockChart.on).not.toHaveBeenCalled()
+    // Disabled bind still restores the overlay so a disconnect / setOption
+    // cannot drop the highlight. Handlers stay unbound.
+    expect(mockChart.dispatchAction).toHaveBeenCalledWith({
+      type: "select",
+      seriesIndex: 0,
+      dataIndex: [0],
+    })
+    expect(mockChart.dispatchAction).toHaveBeenCalledWith({
+      type: "brush",
+      brushIndex: 0,
+      areas: [{ brushType: "lineX", coordRange: [0, 2] }],
+    })
+  })
+
+  it("disables pointer events on a disabled selection widget", () => {
+    render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+        disabled={true}
+      />
+    )
+
+    expect(screen.getByTestId("stEChartsChart")).toHaveStyle({
+      pointerEvents: "none",
+    })
+  })
+
+  it("keeps pointer events on a display-only chart when the host is disabled", () => {
+    render(
+      <Wrapper
+        element={createElement({ id: "styled_chart" })}
+        disabled={true}
+      />
+    )
+
+    expect(screen.getByTestId("stEChartsChart")).not.toHaveStyle({
+      pointerEvents: "none",
+    })
+  })
+
+  it("does not bind selection handlers for a keyed display-only chart", () => {
+    render(
+      <Wrapper
+        element={createElement({
+          id: "styled_chart",
+          spec: JSON.stringify({
+            xAxis: { type: "category", data: ["A", "B", "C"] },
+            yAxis: { type: "value" },
+            series: [{ type: "bar", data: [1, 2, 3], selectedMode: true }],
+          }),
+        })}
+      />
+    )
+
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(mockChart.on).not.toHaveBeenCalled()
+  })
+
+  it("binds selection handlers when selection is activated", () => {
+    render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+      />
+    )
+
+    expect(mockChart.on).toHaveBeenCalled()
+  })
+
+  it("renders display-only charts (empty id) without binding selection handlers", () => {
+    render(<Wrapper element={createElement({ id: "" })} />)
+
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(mockChart.on).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
   })
 
   it("passes the SVG renderer through to echarts.init", () => {
