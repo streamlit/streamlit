@@ -697,7 +697,9 @@ class EChartsMixin:
             The ``"streamlit"`` theme can be partially customized through the
             configuration options ``theme.chartCategoricalColors`` and
             ``theme.chartSequentialColors``. Font configuration options are
-            also applied.
+            also applied. Tooltips use that font at normal weight, and long
+            numbers are shortened. Set ``tooltip.formatter`` to a string
+            template (for example ``"{b}: {c}"``) to use your own formatting.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this
