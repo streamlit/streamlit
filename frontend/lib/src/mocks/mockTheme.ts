@@ -93,6 +93,8 @@ const emotionMockTheme = {
   inSidebar: false,
   showSidebarBorder: false,
   linkUnderline: true,
+  paddingTop: undefined as string | undefined,
+  paddingBottom: undefined as string | undefined,
   breakpoints,
   colors: emotionColors,
   fonts,

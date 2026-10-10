@@ -1360,7 +1360,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         # and cannot directly be set on the protobuf.
         if (
             option_name
-            not in {
+            in {
                 "base",
                 "font",
                 "fontFaces",
@@ -1372,9 +1372,26 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 "chartSequentialColors",
                 "chartDivergingColors",
             }
-            and option_val is not None
+            or option_val is None
         ):
-            setattr(msg, to_snake_case(option_name), option_val)
+            continue
+
+        # paddingTop / paddingBottom are protobuf strings. Unquoted TOML numbers
+        # (e.g. paddingTop = 0) arrive as int/float and would raise TypeError on
+        # setattr — skip them so the app can still start (docs: leave unset).
+        if option_name in {"paddingTop", "paddingBottom"} and not isinstance(
+            option_val, str
+        ):
+            _LOGGER.warning(
+                'Theme option %s.%s must be a quoted string (for example "0" or '
+                '"1rem"), got %r. Ignoring.',
+                section,
+                option_name,
+                option_val,
+            )
+            continue
+
+        setattr(msg, to_snake_case(option_name), option_val)
 
     # NOTE: If unset, base will default to the protobuf enum zero value,
     # which is BaseTheme.LIGHT. This is why we don't handle the case

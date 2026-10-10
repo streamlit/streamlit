@@ -152,33 +152,55 @@ export const StyledAppViewBlockContainer =
       const littlePadding = getBareEmbedOverlayToolbarPadding(theme)
 
       // Top padding logic per specification:
-      let topPadding = littlePadding
+      let topPadding: string
+      let printPaddingTop: string
 
-      if (!embedded) {
-        // Non-embedded apps always get 6rem or 8rem
-        topPadding = hasTopNav ? "8rem" : "6rem"
-      } else if (showPadding || showToolbar) {
-        // 6rem if embedded with show_padding or show_toolbar
-        topPadding = "6rem"
-      } else if (hasHeader || hasSidebar) {
-        // 4.5rem if embedded with header but no padding/toolbar
-        topPadding = "4.5rem"
+      const configuredPaddingTop = theme.paddingTop
+
+      if (configuredPaddingTop !== undefined) {
+        // Configured value is the gap below the header. Add headerHeight when
+        // a header is shown so content clears the overlay. Embed options leave
+        // that value as-is; print uses the configured gap alone.
+        topPadding = hasHeader
+          ? `calc(${theme.sizes.headerHeight} + ${configuredPaddingTop})`
+          : configuredPaddingTop
+        printPaddingTop = configuredPaddingTop
+      } else {
+        // Unset — keep the built-in spacing, including the embed gates.
+        if (!embedded) {
+          // Non-embedded apps always get 6rem or 8rem
+          topPadding = hasTopNav ? "8rem" : "6rem"
+        } else if (showPadding || showToolbar) {
+          // 6rem if embedded with show_padding or show_toolbar
+          topPadding = "6rem"
+        } else if (hasHeader || hasSidebar) {
+          // 4.5rem if embedded with header but no padding/toolbar
+          topPadding = "4.5rem"
+        } else {
+          topPadding = littlePadding
+        }
+        printPaddingTop = littlePadding
       }
-      // Otherwise keep littlePadding: embedded with no header and no padding/toolbar
 
-      const bottomEmbedPadding =
-        showPadding && !hasBottom ? "10rem" : theme.spacing.lg
+      // Configured value replaces the aesthetic inset regardless of
+      // showPadding / hasBottom. Unset keeps the built-in spacing.
+      const bottomPadding =
+        theme.paddingBottom !== undefined
+          ? theme.paddingBottom
+          : showPadding && !hasBottom
+            ? "10rem"
+            : theme.spacing.lg
 
       return {
         width: theme.sizes.full,
         paddingLeft: theme.spacing.lg,
         paddingRight: theme.spacing.lg,
         paddingTop: topPadding,
-        paddingBottom: bottomEmbedPadding,
+        paddingBottom: bottomPadding,
         maxWidth: theme.sizes.contentMaxWidth,
         ...(isWideMode && applyWideModePadding(theme)),
         [`@media print`]: {
-          paddingTop: littlePadding,
+          paddingTop: printPaddingTop,
         },
       }
     }

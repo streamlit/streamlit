@@ -22,6 +22,7 @@ import {
   AppRoot,
   BlockNode,
   ComponentRegistry,
+  createTheme,
   ElementNode,
   FileUploadClient,
   makeElementWithInfoText,
@@ -29,6 +30,7 @@ import {
   mockSessionInfo,
   mockTheme,
   type NavigationContextProps,
+  ThemeProvider,
   toastQueue,
   TransientNode,
   WidgetStateManager,
@@ -848,6 +850,117 @@ describe("AppView element", () => {
         const style = getMainBlockContainerStyle()
         expect(style.paddingTop).toEqual("6rem")
       })
+    })
+  })
+
+  describe("configured padding (theme.paddingTop / theme.paddingBottom)", () => {
+    const getMainBlockContainerStyle = (): CSSStyleDeclaration => {
+      return window.getComputedStyle(
+        screen.getByTestId("stMainBlockContainer")
+      )
+    }
+
+    /** Render AppView with a custom Emotion theme so styled-components pick up paddingTop/Bottom. */
+    const renderWithPaddingTheme = (
+      themeOverrides: { paddingTop?: string; paddingBottom?: string },
+      appViewProps: Partial<AppViewProps> = {},
+      overrides?: {
+        navigationContext?: Partial<NavigationContextProps>
+      }
+    ): ReturnType<typeof renderWithContexts> => {
+      const customTheme = createTheme("Custom", themeOverrides)
+      return renderWithContexts(
+        <ThemeProvider theme={customTheme.emotion}>
+          <AppView {...getProps(appViewProps)} />
+        </ThemeProvider>,
+        {
+          sidebarConfigContext: getSidebarConfigContextOutput(),
+          navigationContext: getNavigationContextOutput(
+            overrides?.navigationContext
+          ),
+        }
+      )
+    }
+
+    it("applies configured paddingTop directly when no header chrome is shown", () => {
+      // showToolbar: false → hasHeader = false → author gap is used as-is
+      renderWithPaddingTheme(
+        { paddingTop: "2rem" },
+        { embedded: false, showToolbar: false }
+      )
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingTop).toEqual("2rem")
+    })
+
+    it("adds headerHeight to configured paddingTop when header chrome is shown", () => {
+      // showToolbar: true (default) → hasHeader = true → calc(headerHeight + authorGap)
+      renderWithPaddingTheme({ paddingTop: "1rem" }, { embedded: false })
+      const style = getMainBlockContainerStyle()
+      // headerHeight is 3.75rem from the base theme
+      expect(style.paddingTop).toEqual("calc(3.75rem + 1rem)")
+    })
+
+    it("keeps configured paddingTop as calc(headerHeight + value) with top nav", () => {
+      // Unset top-nav path is 8rem; configured path must stay headerHeight +
+      // value and must not pick up the legacy +2rem.
+      renderWithPaddingTheme(
+        { paddingTop: "1rem" },
+        {
+          embedded: false,
+          navigationPosition: Navigation.Position.TOP,
+        },
+        {
+          navigationContext: {
+            appPages: [
+              { pageName: "page1", pageScriptHash: "hash1" },
+              { pageName: "page2", pageScriptHash: "hash2" },
+            ],
+          },
+        }
+      )
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingTop).toEqual("calc(3.75rem + 1rem)")
+    })
+
+    it("preserves unset 6rem path when paddingTop is not configured", () => {
+      render(<AppView {...getProps({ embedded: false })} />)
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingTop).toEqual("6rem")
+    })
+
+    it("uses configured paddingBottom regardless of showPadding/hasBottom", () => {
+      renderWithPaddingTheme(
+        { paddingBottom: "4rem" },
+        { embedded: false, showPadding: true }
+      )
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingBottom).toEqual("4rem")
+    })
+
+    it("uses configured paddingBottom when showPadding=false", () => {
+      renderWithPaddingTheme(
+        { paddingBottom: "1rem" },
+        { embedded: false, showPadding: false }
+      )
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingBottom).toEqual("1rem")
+    })
+
+    it("preserves unset 10rem bottom path when paddingBottom is not configured", () => {
+      render(<AppView {...getProps({ embedded: false, showPadding: true })} />)
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingBottom).toEqual("10rem")
+    })
+
+    it("embed URL options do not clamp configured paddingTop", () => {
+      // Embedded with showPadding=true — unset path is 6rem; configured value
+      // must stay as-is (with headerHeight when the toolbar is shown).
+      renderWithPaddingTheme(
+        { paddingTop: "2rem" },
+        { embedded: true, showPadding: true, showToolbar: true }
+      )
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingTop).toEqual("calc(3.75rem + 2rem)")
     })
   })
 

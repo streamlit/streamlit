@@ -744,6 +744,8 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "greenColor",
             "greenBackgroundColor",
             "greenTextColor",
+            "paddingTop",
+            "paddingBottom",
         }
         assert expected_sidebar.issubset(section_options)
 
