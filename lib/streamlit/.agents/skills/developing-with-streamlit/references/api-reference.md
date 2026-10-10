@@ -90,7 +90,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.logout` | Logout the current user. Use it with Streamlit's authentication support. |
 | `st.map` | Display a map with a scatterplot overlaid onto it. Use it for latitude/longitude data when a simple geographic visualization is enough. |
 | `st.markdown` | Display string formatted as Markdown. It supports Streamlit-specific extensions such as colored text, badges, icons, and limited HTML when enabled. |
-| `st.menu_button` | Display a dropdown menu button widget. Use it when a compact button should expose a small set of actions or options. |
+| `st.menu_button` | Display a button that opens a short menu of one-shot actions. Like `st.button`, it returns the chosen option only on the rerun the click triggers. |
 | `st.mermaid_chart` | Display a Mermaid diagram. Use it for text-based diagram definitions such as flowcharts, sequence diagrams, class diagrams, and state diagrams. |
 | `st.metric` | Display a metric in big bold font, with an optional indicator of how the metric changed. Use it for KPIs, headline numbers, optional inline sparklines, and dashboard summaries. |
 | `st.multiselect` | Display a multiselect widget. Use it when users can choose multiple items from a list, optionally including new options they enter. |
