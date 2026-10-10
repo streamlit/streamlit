@@ -19,14 +19,19 @@
  * or `document.cookie` throws.
  *
  * A sandboxed iframe without `allow-same-origin` cannot read cookies.
+ * Matching runs outside that access so an invalid name still throws
+ * `SyntaxError`.
  */
 export function getCookie(name: string): string | undefined {
+  let cookie: string
   try {
-    const match = document.cookie.match(`\\b${name}=([^;]*)\\b`)
-    return match ? match[1] : undefined
+    cookie = document.cookie
   } catch {
     return undefined
   }
+
+  const match = cookie.match(`\\b${name}=([^;]*)\\b`)
+  return match ? match[1] : undefined
 }
 
 // Method taken from

@@ -1806,9 +1806,11 @@ describe("WebsocketConnection auth token handling", () => {
   it("prefers the host auth token when document.cookie throws", async () => {
     mockDocumentCookieReadFailure()
 
+    const resetHostAuthToken = vi.fn()
     const ws = new WebsocketConnection(
       createMockArgs({
         claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
+        resetHostAuthToken,
       })
     )
 
@@ -1822,6 +1824,7 @@ describe("WebsocketConnection auth token handling", () => {
       "ws://localhost:1234/_stcore/stream",
       ["streamlit", "iAmAnAuthToken"]
     )
+    expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
 })
 

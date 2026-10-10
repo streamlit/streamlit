@@ -391,7 +391,8 @@ export function setCookie(
   try {
     document.cookie = `${name}=${value};${expirationStr}path=/`
   } catch {
-    // This document cannot store cookies.
+    // Cookie writes are best-effort. Usage-stats setup already has an id
+    // and keeps running when this document cannot store cookies.
   }
 }
 

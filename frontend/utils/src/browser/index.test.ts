@@ -106,8 +106,7 @@ describe("browser", () => {
         )
       })
 
-      expect(() => getCookie("_streamlit_xsrf")).not.toThrow()
-      expect(getCookie("_streamlit_xsrf")).toEqual(undefined)
+      expect(getCookie("_streamlit_xsrf")).toBeUndefined()
     })
   })
 
