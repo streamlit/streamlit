@@ -58,7 +58,7 @@ df = conn.query("SELECT * FROM reference_data", ttl=3600)
 
 Store credentials in `.streamlit/secrets.toml` (never commit this file).
 
-**CRITICAL**: Derive the `account` and `host` values from the user's Snowflake CLI connection config. Run `snow connection list` and use the exact values. A wrong `account` will redirect to the wrong login page.
+If `snow connection list` shows a connection with `is_default` set to `True`, skip `[connections.snowflake]`: `st.connection("snowflake")` uses that default. To use a different connection from that list, see [Named connections](#named-connections-from-a-snowflake-config-file). Otherwise, or when the app runs on a host that doesn't have that default, copy `account` and `host` exactly from the user's connection details, because a wrong `account` redirects to the wrong login page.
 
 ```toml
 # .streamlit/secrets.toml
