@@ -766,6 +766,51 @@ describe("#useLayoutStyles", () => {
         expect(result.current.flex).toBeUndefined()
       })
 
+      it("uses a percentage height and no alignSelf for stretch height in vertical direction", () => {
+        const element = new MockElement({
+          heightConfig: new streamlit.HeightConfig({ useStretch: true }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.VERTICAL),
+        })
+        expect(result.current.height).toBe("100%")
+        expect(result.current.alignSelf).toBeUndefined()
+        expect(result.current.minHeight).toBeUndefined()
+        expect(result.current.maxHeight).toBeUndefined()
+      })
+
+      it("stretches along the cross axis for stretch height in horizontal direction", () => {
+        const element = new MockElement({
+          heightConfig: new streamlit.HeightConfig({ useStretch: true }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+        })
+        expect(result.current.alignSelf).toBe("stretch")
+        // A percentage height would block the cross-axis stretch.
+        expect(result.current.height).toBe("auto")
+        // Keep the element exactly as tall as a fixed-height row.
+        expect(result.current.minHeight).toBe("100%")
+        expect(result.current.maxHeight).toBe("100%")
+        expect(result.current.flex).toBeUndefined()
+      })
+
+      it.each([
+        ["pixel", { pixelHeight: 250 }],
+        ["content", { useContent: true }],
+      ])(
+        "does not set alignSelf for %s height in horizontal direction",
+        (_label, heightConfig) => {
+          const element = new MockElement({
+            heightConfig: new streamlit.HeightConfig(heightConfig),
+          })
+          const { result } = renderHook(() => useLayoutStyles({ element }), {
+            wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+          })
+          expect(result.current.alignSelf).toBeUndefined()
+        }
+      )
+
       it("should not include flex for horizontal direction with pixel height", () => {
         const element = new MockElement({
           heightConfig: new streamlit.HeightConfig({ pixelHeight: 250 }),

@@ -118,8 +118,10 @@ function BaseDateTimeColumn(
     // TODO(lukasmasuch): But this might not be correct for dates in the past or future
     // since the timezone offset might have changed based on a timezone name.
     try {
-      defaultTimezoneOffset =
-        applyTimezone(moment(), parameters.timezone)?.utcOffset() || undefined
+      defaultTimezoneOffset = applyTimezone(
+        moment(),
+        parameters.timezone
+      ).utcOffset()
     } catch {
       // Do nothing
     }
@@ -127,12 +129,12 @@ function BaseDateTimeColumn(
 
   let minDate: Date | undefined = undefined
   if (notNullOrUndefined(parameters.min_value)) {
-    minDate = toSafeDate(parameters.min_value) || undefined
+    minDate = toSafeDate(parameters.min_value) ?? undefined
   }
 
   let maxDate: Date | undefined = undefined
   if (notNullOrUndefined(parameters.max_value)) {
-    maxDate = toSafeDate(parameters.max_value) || undefined
+    maxDate = toSafeDate(parameters.max_value) ?? undefined
   }
 
   const cellTemplate: DatePickerType = {
@@ -147,7 +149,7 @@ function BaseDateTimeColumn(
       kind: "date-picker-cell",
       date: undefined,
       displayDate: "",
-      step: parameters.step?.toString() || "1",
+      step: parameters.step?.toString() ?? "1",
       format: inputType,
       min: minDate,
       max: maxDate,
@@ -258,6 +260,7 @@ function BaseDateTimeColumn(
         try {
           displayDate = formatMoment(
             momentDate,
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank format uses the default pattern
             parameters.format || defaultFormat,
             kind
           )

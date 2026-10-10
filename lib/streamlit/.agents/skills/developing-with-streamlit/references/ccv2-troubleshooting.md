@@ -15,7 +15,7 @@
 
 ### v1 contamination (most common failure)
 
-The single most common cause of broken CCv2 components is accidentally mixing in **v1 APIs** from outdated examples, blog posts, or training data. v1 is deprecated and will not work.
+The single most common cause of broken CCv2 components is accidentally mixing in **v1 APIs** from outdated examples, blog posts, or training data. v1 APIs don’t work inside a v2 component.
 
 Symptoms:
 - Component renders as blank/empty iframe
@@ -29,7 +29,7 @@ Check your code for these **banned patterns** and replace them:
 |------------------------------------------|-------------------------------------------------------|
 | `st.components.v1`                       | `st.components.v2.component(...)`                     |
 | `components.declare_component()`         | `st.components.v2.component(...)`                     |
-| `components.html()`                      | `st.components.v2.component(...)` with `html=`        |
+| `components.html()`                      | `st.iframe()` / `st.html()` for static HTML, or `st.components.v2.component(...)` with `html=` when it needs events |
 | `Streamlit.setComponentValue(val)`       | `setStateValue("key", val)` or `setTriggerValue(...)` |
 | `Streamlit.setFrameHeight()`             | Remove entirely (v2 handles sizing)                   |
 | `Streamlit.setComponentReady()`          | Remove entirely (v2 has no ready signal)              |

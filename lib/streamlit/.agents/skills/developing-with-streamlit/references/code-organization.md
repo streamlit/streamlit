@@ -41,7 +41,7 @@ When you do split, keep Streamlit files focused on UI and move complex logic to 
 import streamlit as st
 from utils.data import load_sales_data, compute_metrics
 
-st.title("Sales Dashboard")
+st.title("Sales dashboard")
 
 start = st.date_input("Start")
 end = st.date_input("End")
@@ -50,7 +50,7 @@ data = load_sales_data(start, end)
 metrics = compute_metrics(data)
 
 st.metric("Revenue", f"${metrics['revenue']:,.0f}")
-st.dataframe(data)
+st.dataframe(data, alt="Sales by day")
 ```
 
 ## Avoid if __name__ == "__main__"

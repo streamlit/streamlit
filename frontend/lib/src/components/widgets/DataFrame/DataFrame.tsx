@@ -799,7 +799,7 @@ function DataFrame({
     gridTheme,
     numRows,
     usesGroupRow,
-    containerWidth || 0,
+    containerWidth ?? 0,
     fullScreenHeight,
     isFullScreen,
     widthConfig,
@@ -836,7 +836,7 @@ function DataFrame({
   const { pinColumn, unpinColumn, freezeColumns } = useColumnPinning(
     columns,
     isEmptyTable,
-    containerWidth || 0,
+    containerWidth ?? 0,
     gridTheme.minColumnWidth,
     clearSelection,
     setColumnConfigMapping
@@ -944,6 +944,7 @@ function DataFrame({
   // Name the grid (not the toolbar wrapper) only when alt is non-blank.
   // role="region" (not "img") exposes the name without making Glide's
   // operable canvas presentational.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt must not become an accessible name
   const accessibleName = element.alt?.trim() || undefined
 
   return (

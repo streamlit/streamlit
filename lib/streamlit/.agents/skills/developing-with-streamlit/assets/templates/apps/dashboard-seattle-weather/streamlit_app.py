@@ -224,7 +224,7 @@ with cols[0].container(border=True, height="stretch"):
     wind_df["month_day"] = wind_df["date"].dt.strftime("%m-%d")
     wind_df["year"] = wind_df["date"].dt.year
 
-    # Calculate 14-day rolling average per year
+    # Pivot to one column per year (mean wind per calendar day)
     wind_pivot = wind_df.pivot_table(
         index="month_day", columns="year", values="wind", aggfunc="mean"
     ).sort_index()

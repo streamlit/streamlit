@@ -104,11 +104,12 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
     // when the payloads haven't changed, even if wrappers are re-instantiated.
     const parsedData = useMemo(() => {
       return parseBidiComponentData({
-        arrowBlobs: mixed?.arrowBlobs || undefined,
-        arrowData: arrowData?.data || undefined,
+        arrowBlobs: mixed?.arrowBlobs ?? undefined,
+        arrowData: arrowData?.data ?? undefined,
         bytes,
         data,
         json,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank JSON means no mixed payload, not an empty document
         mixedJson: mixed?.json || undefined,
       })
     }, [data, json, arrowData?.data, bytes, mixed?.json, mixed?.arrowBlobs])
@@ -123,14 +124,18 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
         componentName,
         componentRegistry,
         cssContent: cssContent?.trim(),
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank path means unset
         cssSourcePath: cssSourcePath || undefined,
         data: parsedData,
         fragmentId,
         getWidgetValue,
         htmlContent: htmlContent?.trim(),
         id,
+        // formId is a plain protobuf string. "" means the widget is not in a form.
         formId: element.formId || undefined,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank script means unset
         jsContent: jsContent || undefined,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank path means unset
         jsSourcePath: jsSourcePath || undefined,
         theme,
         widgetMgr,

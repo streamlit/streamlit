@@ -26,7 +26,7 @@ st.session_state["count"] = 5  # Bracket notation also works
 del st.session_state.count
 ```
 
-**Accessing uninitialized keys raises `KeyError`.** Use `st.session_state.get("key", default)` for safe access.
+**Accessing uninitialized keys raises an error:** `KeyError` for `st.session_state["key"]` and `AttributeError` for `st.session_state.key`. Use `st.session_state.get("key", default)` for safe access.
 
 ## Widget-state association
 

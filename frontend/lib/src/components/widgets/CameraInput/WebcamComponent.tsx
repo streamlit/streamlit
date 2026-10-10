@@ -100,7 +100,7 @@ const WebcamComponent = ({
   testOverride,
 }: Props): ReactElement => {
   const [webcamPermission, setWebcamPermissionState] = useState(
-    testOverride || WebcamPermission.PENDING
+    testOverride ?? WebcamPermission.PENDING
   )
   const videoRef = useRef<Webcam>(null)
 

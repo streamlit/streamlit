@@ -705,6 +705,7 @@ function ChatInput({
         // because it comes from a protobuf string field. Normalize falsy values
         // to null so the run-scope matcher treats them as full-script runs.
         setSubmittedRunScope({
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- protobuf "" means a full-script run
           fragmentId: fragmentId || null,
           scriptRunIdAtSubmit: scriptRunId,
           scriptRunFinishedSequence,

@@ -118,7 +118,7 @@ st.markdown(":green-badge[Active] :red-badge[Inactive]")  # Inline badges
 
 **Available colors:** `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `gray`/`grey`, `rainbow`, `primary`
 
-Note: `rainbow` is not supported for backgrounds or badges. Standalone badges also available via `st.badge()`.
+Note: `rainbow` is not supported for badges. Standalone badges also available via `st.badge()`.
 
 Stick to the predefined palette above whenever possible — it adapts to the theme. For an exact hex or CSS color when the design truly requires one, add a `{foreground="..." background="..."}` modifier to the `:color[...]` directive (both keys are optional; e.g. `:color[Important]{foreground="#E03131"}` or `:color[Note]{background="#FFF3BF"}`) rather than raw HTML / `unsafe_allow_html`.
 
@@ -236,7 +236,7 @@ Control layout with `text_alignment` and `width` parameters.
 st.markdown("Centered heading", text_alignment="center")  # left, center, right, justify
 st.markdown(
     "Content width only", width="content"
-)  # stretch, content, or pixels (e.g. 400)
+)  # "auto" (default), "stretch", "content", or pixels (e.g. 400)
 ```
 
 ## Keep text on one line with wrap

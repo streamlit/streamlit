@@ -102,10 +102,26 @@ function makeButton(label: string): ElementNode {
   )
 }
 
-function makeColumnsBlock(columnChildren: AppNode[]): BlockNode {
+function makeStretchSpace(): ElementNode {
+  const element = {
+    type: "space",
+    space: {},
+    widthConfig: { useStretch: true },
+    heightConfig: { useStretch: true },
+  } as unknown as Element
+
+  return new ElementNode(
+    element,
+    ForwardMsgMetadata.create(),
+    "",
+    FAKE_SCRIPT_HASH
+  )
+}
+
+function makeHorizontalBlock(children: AppNode[]): BlockNode {
   return new BlockNode(
     FAKE_SCRIPT_HASH,
-    [makeColumn(1, columnChildren)],
+    children,
     new BlockProto({
       allowEmpty: true,
       flexContainer: {
@@ -114,6 +130,10 @@ function makeColumnsBlock(columnChildren: AppNode[]): BlockNode {
       },
     })
   )
+}
+
+function makeColumnsBlock(columnChildren: AppNode[]): BlockNode {
+  return makeHorizontalBlock([makeColumn(1, columnChildren)])
 }
 
 function makeVerticalBlockComponent(node: BlockNode): ReactElement {
@@ -399,6 +419,104 @@ describe("FlexBoxContainer layout props", () => {
     expect(horizontalBlock).not.toHaveStyle("overflow-x: auto;")
     expect(horizontalBlock).toHaveStyle("flex-wrap: wrap;")
     expect(horizontalBlock).toHaveAttribute("data-test-wrap", "true")
+  })
+
+  it.each([
+    [
+      "top",
+      BlockProto.Column.VerticalAlignment.TOP,
+      "justify-content: start;",
+    ],
+    [
+      "center",
+      BlockProto.Column.VerticalAlignment.CENTER,
+      "justify-content: center;",
+    ],
+    [
+      "bottom",
+      BlockProto.Column.VerticalAlignment.BOTTOM,
+      "justify-content: end;",
+    ],
+  ])(
+    "aligns content inside a %s-aligned column instead of shrinking it",
+    (_label, verticalAlignment, expectedJustify) => {
+      const column = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [],
+        new BlockProto({
+          allowEmpty: true,
+          column: { weight: 1, verticalAlignment },
+        })
+      )
+      renderWithContexts(
+        makeVerticalBlockComponent(
+          makeVerticalBlock([makeHorizontalBlock([column])])
+        )
+      )
+
+      const columnElement = screen.getByTestId("stColumn")
+      // Auto margins would shrink the column and break equal-height borders.
+      expect(columnElement).not.toHaveStyle("margin-top: auto;")
+      expect(within(columnElement).getByTestId("stVerticalBlock")).toHaveStyle(
+        expectedJustify
+      )
+    }
+  )
+
+  it("stretches a stretch-height container to the row in a horizontal parent", () => {
+    const stretchChild = makeVerticalBlock([], {
+      heightConfig: { useStretch: true },
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+        border: true,
+      },
+    })
+    renderWithContexts(
+      makeVerticalBlockComponent(
+        makeVerticalBlock([makeHorizontalBlock([stretchChild])])
+      )
+    )
+
+    const layoutWrapper = within(
+      screen.getByTestId("stHorizontalBlock")
+    ).getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).toHaveStyle("align-self: stretch;")
+    expect(layoutWrapper).toHaveStyle("min-height: 100%;")
+    expect(layoutWrapper).toHaveStyle("max-height: 100%;")
+    expect(layoutWrapper).not.toHaveStyle("height: 100%;")
+    // The bordered block still fills its stretched wrapper.
+    expect(within(layoutWrapper).getByTestId("stVerticalBlock")).toHaveStyle(
+      "height: 100%;"
+    )
+  })
+
+  it("keeps a percentage height for a stretch-height container in a vertical parent", () => {
+    const stretchChild = makeVerticalBlock([], {
+      heightConfig: { useStretch: true },
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+      },
+    })
+    renderWithContexts(
+      makeVerticalBlockComponent(makeVerticalBlock([stretchChild]))
+    )
+
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).toHaveStyle("height: 100%;")
+    expect(layoutWrapper).not.toHaveStyle("align-self: stretch;")
+  })
+
+  it("does not stretch st.space along the cross axis of a horizontal parent", () => {
+    renderWithContexts(
+      makeVerticalBlockComponent(
+        makeVerticalBlock([makeHorizontalBlock([makeStretchSpace()])])
+      )
+    )
+
+    const spaceContainer = screen.getByTestId("stElementContainer")
+    expect(within(spaceContainer).getByTestId("stSpace")).toBeVisible()
+    expect(spaceContainer).not.toHaveStyle("align-self: stretch;")
+    expect(spaceContainer).not.toHaveStyle("max-height: 100%;")
   })
 
   it("does not enable horizontal scrolling for a vertical container with wrap=false", () => {
@@ -990,5 +1108,26 @@ describe("BlockNodeRenderer container types", () => {
     expect(screen.getByTestId("stTabs")).toBeVisible()
     expect(screen.getByRole("tab", { name: "Tab 0" })).toBeVisible()
     expect(screen.getByTestId("stTabs")).toHaveStyle({ height: "400px" })
+  })
+
+  it("stretches a stretch-height tab container to the row in a horizontal parent", () => {
+    const tab = makeVerticalBlock([text("tab body")], {
+      tab: { label: "Tab 0" },
+    })
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeHorizontalBlock([
+          makeVerticalBlock([tab], {
+            tabContainer: {},
+            heightConfig: { useStretch: true },
+          }),
+        ])
+      )
+    )
+
+    const tabs = screen.getByTestId("stTabs")
+    expect(tabs).toHaveStyle("align-self: stretch;")
+    expect(tabs).toHaveStyle("max-height: 100%;")
+    expect(tabs).not.toHaveStyle("height: 100%;")
   })
 })

@@ -30,17 +30,23 @@ from __future__ import annotations
 
 import multiprocessing
 import socket
+import subprocess
 import sys
 import time
 from dataclasses import dataclass
 from multiprocessing import Pool
-from typing import TYPE_CHECKING, Final
+from pathlib import Path
+from tempfile import TemporaryFile
+from typing import IO, TYPE_CHECKING, Final
+from unittest.mock import MagicMock
 
 import pytest
 
 from e2e_playwright.conftest import is_port_available
+from e2e_playwright.load_testing import conftest as load_conftest
 from e2e_playwright.load_testing.conftest import (
     ResultsCollector,
+    _format_server_startup_failure,
     get_scenario_path,
     start_healthy_load_test_server,
     terminate_process,
@@ -52,7 +58,6 @@ from e2e_playwright.load_testing.metrics_collector import (
 from e2e_playwright.load_testing.worker import run_worker_session
 
 if TYPE_CHECKING:
-    import subprocess
     from collections.abc import Generator
 
 
@@ -96,6 +101,147 @@ def test_port_availability_check_rejects_active_client_port() -> None:
             with connection:
                 client_port = client.getsockname()[1]
                 assert not is_port_available(client_port, "localhost")
+
+
+def _write_log(text: str) -> IO[str]:
+    log_file = TemporaryFile("w+", encoding="utf-8")
+    log_file.write(text)
+    log_file.flush()
+    return log_file
+
+
+def test_startup_failure_message_includes_returncode_and_log_tail() -> None:
+    """Startup failure text includes port, returncode, and a truncated log tail."""
+    log_file = _write_log(
+        "keep-me-out\n" + "\n".join(f"log-line-{i}" for i in range(100)) + "\n"
+    )
+    try:
+        message = _format_server_startup_failure(12345, 1, log_file)
+    finally:
+        log_file.close()
+
+    assert "port 12345" in message
+    assert "returncode=1" in message
+    assert "up to 80 lines" in message
+    assert "log-line-99" in message
+    assert "log-line-20" in message
+    assert "keep-me-out" not in message
+    assert "log-line-19" not in message
+
+
+def test_startup_failure_message_when_process_still_running() -> None:
+    """A hung server is reported as still running rather than a returncode."""
+    log_file = _write_log("still starting\n")
+    try:
+        message = _format_server_startup_failure(9999, None, log_file)
+    finally:
+        log_file.close()
+
+    assert "port 9999" in message
+    assert "process was still running" in message
+    assert "still starting" in message
+    assert "returncode=" not in message
+
+
+def test_startup_failure_message_replaces_invalid_utf8() -> None:
+    """Invalid UTF-8 in the captured log is replaced so the failure text still includes the port and return code."""
+    log_file = TemporaryFile("w+", encoding="utf-8", errors="replace")
+    try:
+        log_file.buffer.write(b"Address already in use\nPort \xff is busy\n")
+        log_file.flush()
+        message = _format_server_startup_failure(12345, 1, log_file)
+    finally:
+        log_file.close()
+
+    assert "port 12345" in message
+    assert "returncode=1" in message
+    assert "Address already in use" in message
+    assert "Port" in message
+    assert "\ufffd" in message
+
+
+def test_unhealthy_server_failure_includes_logs_and_returncode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed health check surfaces captured logs and the process returncode."""
+    log_file = _write_log("Address already in use\nPort 30000 is already in use\n")
+    fake_process = MagicMock()
+    fake_process.poll.return_value = 1
+
+    monkeypatch.setattr(load_conftest, "find_available_port", lambda: 30000)
+    monkeypatch.setattr(
+        load_conftest,
+        "start_load_test_server",
+        lambda *args, **kwargs: (fake_process, log_file),
+    )
+    monkeypatch.setattr(load_conftest, "wait_for_server", lambda *args, **kwargs: False)
+    monkeypatch.setattr(
+        load_conftest, "terminate_process", lambda *args, **kwargs: None
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        start_healthy_load_test_server(Path("app.py"), max_attempts=1)
+
+    message = str(exc_info.value)
+    assert "30000" in message
+    assert "Attempt 1: port 30000 (returncode=1)" in message
+    assert "returncode=1" in message
+    assert "Address already in use" in message
+    assert log_file.closed
+
+
+def test_unhealthy_server_failure_lists_each_attempt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Earlier failed logs are closed; the error includes the last attempt's tail."""
+    logs: list[IO[str]] = []
+
+    def _start_fake_server(
+        *_args: object, **_kwargs: object
+    ) -> tuple[MagicMock, IO[str]]:
+        log_file = _write_log(f"log-for-attempt-{len(logs)}\n")
+        fake_process = MagicMock()
+        fake_process.poll.return_value = 1 if len(logs) == 0 else None
+        logs.append(log_file)
+        return fake_process, log_file
+
+    monkeypatch.setattr(
+        load_conftest, "find_available_port", MagicMock(side_effect=[30000, 30001])
+    )
+    monkeypatch.setattr(load_conftest, "start_load_test_server", _start_fake_server)
+    monkeypatch.setattr(load_conftest, "wait_for_server", lambda *args, **kwargs: False)
+    monkeypatch.setattr(
+        load_conftest, "terminate_process", lambda *args, **kwargs: None
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        start_healthy_load_test_server(Path("app.py"), max_attempts=2)
+
+    message = str(exc_info.value)
+    assert "Attempt 1: port 30000 (returncode=1)" in message
+    assert "Attempt 2: port 30001 (process was still running)" in message
+    assert "log-for-attempt-1" in message
+    assert "log-for-attempt-0" not in message
+    assert logs[0].closed
+    assert logs[1].closed
+
+
+def test_start_load_test_server_closes_log_if_spawn_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed Popen closes the temp log so it is not leaked."""
+    log_file = MagicMock()
+    monkeypatch.setattr(load_conftest, "TemporaryFile", lambda *a, **k: log_file)
+    monkeypatch.setattr(
+        subprocess,
+        "Popen",
+        MagicMock(side_effect=OSError("process limit")),
+    )
+
+    with pytest.raises(OSError, match="process limit"):
+        load_conftest.start_load_test_server(12345, Path("app.py"))
+
+    log_file.close.assert_called_once()
 
 
 def _run_worker_with_args(args: tuple[str, int, str, int]) -> SessionMetrics:
@@ -169,7 +315,7 @@ def scenario_server(
     scenario_name = request.param
     scenario_path = get_scenario_path(scenario_name)
     try:
-        process, port = start_healthy_load_test_server(scenario_path)
+        process, port, log_file = start_healthy_load_test_server(scenario_path)
     except RuntimeError as exc:
         pytest.fail(str(exc))
 
@@ -177,7 +323,10 @@ def scenario_server(
     # their own server lifecycle outside the standard e2e fixtures (app_base_url, etc.)
     yield process, f"http://localhost:{port}", process.pid
 
-    terminate_process(process)
+    try:
+        terminate_process(process)
+    finally:
+        log_file.close()
 
 
 @pytest.mark.only_browser("chromium")

@@ -49,7 +49,7 @@ with st.container(horizontal=True):
     st.metric("Orders", "1.4k", "+5%", border=True)
 ```
 
-Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows.
+Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`). Otherwise, use `st.columns` with `height="stretch"` on each metric so the cards share a height and width (see "Aligning elements side by side" in `layouts.md`).
 
 ## Zero deltas
 
