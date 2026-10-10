@@ -108,7 +108,7 @@ Use built-in fonts, load from Google Fonts, or define custom fonts from font fil
 
 ```toml
 [theme]
-# Pick one `font` value.
+# Pick one `font` value; the commented-out lines are alternatives.
 # Built-in options
 font = "sans-serif"  # or "serif" or "monospace"
 
@@ -241,8 +241,8 @@ Use `st.context.theme.type` to adapt your app to the active theme. Useful for:
 - Applying conditional CSS or custom styling
 
 ```python
-if st.context.theme.type == "dark":
-    st.image("logo-dark.png", alt="Company logo")
+logo = "logo-light.png" if st.context.theme.type == "dark" else "logo-dark.png"
+st.image(logo, alt="Company logo")
 ```
 
 ## Design principles
