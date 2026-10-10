@@ -72,11 +72,14 @@ export function isFacetChart(spec: string | object): boolean {
     const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
 
     return !!(
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy facet still lets row or column encodings count
       parsedSpec.facet ||
       // TODO (lawilby): do some tests for row/column
       // shorthand facet charts to confirm they work with
       // sizing in the same way.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy row encoding still lets a column encoding count
       parsedSpec.encoding?.row ||
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy column encoding still lets a facet encoding count
       parsedSpec.encoding?.column ||
       parsedSpec.encoding?.facet
     )
@@ -443,6 +446,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
   }, [data, datasets])
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const labelContext = inputElement.alt?.trim() || undefined
 
   if (showData) {

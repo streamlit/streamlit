@@ -384,6 +384,7 @@ function AppView(props: AppViewProps): ReactElement {
     shouldShowNavigation(appPages)
 
   const hasHeaderUserContent =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false flag still lets later header content count
     shouldShowLogo || shouldShowExpandButton || shouldShowTopNav || showToolbar
 
   // The tabindex is required to support scrolling by arrow keys.

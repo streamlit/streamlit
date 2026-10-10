@@ -467,6 +467,44 @@ describe("useDeckGl", () => {
   })
 
   describe("selection sanitization", () => {
+    it("keeps a false update trigger when selection rewrites fill colors", () => {
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        },
+        {},
+        {
+          layers: [
+            {
+              "@@type": "ScatterplotLayer",
+              id: "points",
+              data: [{ lng: 1, lat: 1 }],
+              getPosition: "@@=[lng, lat]",
+              pickable: true,
+              // Scalar triggers such as 0 and false must be wrapped before
+              // selection state is added. getFillColor runs first, so 0 must
+              // not be spread as a non-array.
+              updateTriggers: { getFillColor: 0, getLineColor: false },
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { updateTriggers?: Record<string, unknown> }
+      }
+      expect(layer.props.updateTriggers?.getLineColor).toEqual([
+        false,
+        [],
+        false,
+      ])
+    })
+
     const getPropsWithArrayData = (
       data: unknown[],
       layerId: string | null = "test-layer"

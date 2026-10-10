@@ -36,6 +36,7 @@ const FontFaceDeclaration = ({
     const { family, weight, weightRange, url, style, unicodeRange } = font
     // weight is deprecated in favour of weightRange, but we support it for
     // backwards compatibility.
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank weightRange falls back to the legacy weight
     const resolvedWeight = weightRange || weight
     return `
       @font-face {

@@ -65,8 +65,10 @@ const Header = ({
 
   // Check if there's any content to display at all
   const hasAnyContent =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false flag still lets later header content count
     shouldShowLogo ||
     shouldShowExpandButton ||
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- missing navigation still lets right content count
     navigation ||
     shouldShowRightContent
 

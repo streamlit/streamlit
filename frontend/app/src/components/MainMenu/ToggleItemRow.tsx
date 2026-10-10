@@ -69,6 +69,7 @@ const ToggleItemRow = memo(function ToggleItemRow({
       isDisabled={disabled}
       role="menuitemcheckbox"
       aria-checked={checked}
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false omits aria-disabled
       aria-disabled={disabled || undefined}
       tabIndex={tabIndex}
       onClick={handleClick}

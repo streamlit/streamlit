@@ -64,6 +64,21 @@ import {
 const CARTO_STREAMLIT_API_KEY = "x7g2plm9yq8vfrc"
 
 /**
+ * Deck.gl update triggers are a list or a single value. Scalars such as `0`
+ * and `false` are real triggers, so they must not be dropped or spread as a
+ * non-array.
+ */
+function toUpdateTriggerList(trigger: unknown): unknown[] {
+  if (Array.isArray(trigger)) {
+    return trigger
+  }
+  if (isNullOrUndefined(trigger)) {
+    return []
+  }
+  return [trigger]
+}
+
+/**
  * Extracted type from the DeckGL library since it is not exported correctly.
  */
 type TooltipContent =
@@ -400,6 +415,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     container: { height: fullScreenHeight, width: propsWidth },
     heightFallback:
       (viewState?.initialViewState as { height: number } | undefined)
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero height uses the default map height
         ?.height || theme.sizes.defaultMapHeight,
   })
 
@@ -532,7 +548,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
             // Without this, objects in layers will have stale colors when selection changes.
             // @see https://deck.gl/docs/api-reference/core/layer#updatetriggers
             [fillFunction]: [
-              ...(clonedLayer.updateTriggers?.[fillFunction] || []),
+              ...toUpdateTriggerList(layer.updateTriggers?.[fillFunction]),
               selectedIndices,
               anyLayersHaveSelection,
             ],

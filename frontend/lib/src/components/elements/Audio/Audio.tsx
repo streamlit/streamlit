@@ -177,6 +177,7 @@ function Audio({
         // Only set an accessible name when the author provided one. Blank input
         // is treated as absent: aria-label=" " computes to an empty accessible
         // name, which is worse than having no aria-label at all.
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
         aria-label={alt?.trim() || undefined}
         autoPlay={autoplay && !preventAutoplay}
         src={uri}

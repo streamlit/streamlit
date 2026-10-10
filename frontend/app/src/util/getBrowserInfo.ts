@@ -25,9 +25,13 @@ function getBrowserInfo(): {
   const result = parseUserAgent(navigator.userAgent)
 
   return {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank browser name is unknown
     browserName: result.browserName || "Unknown",
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank browser version is unknown
     browserVersion: result.browserVersion || "Unknown",
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank device type falls back to desktop
     deviceType: result.deviceType || "desktop",
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank os is unknown
     os: result.os || "Unknown",
   }
 }

@@ -358,6 +358,7 @@ export class WebsocketConnection {
       // If we get a fatal error, we transition to DISCONNECTED_FOREVER
       // regardless of our current state.
       this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank error message uses the fallback
         message: errMsg || "Unknown error",
       })
       return

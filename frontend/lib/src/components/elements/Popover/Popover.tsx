@@ -342,7 +342,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       const targetElement =
         target instanceof Element ? target : target.parentElement
       return Boolean(
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false hit still lets the popover body count
         triggerRef.current?.contains(target) ||
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false hit still lets an overlay target count
         popoverBodyRef.current?.contains(target) ||
         targetElement?.closest('[data-st-overlay-root="true"]')
       )

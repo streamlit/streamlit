@@ -32,7 +32,7 @@ const getMetricsManager = (
   metricsConfig: string = DEFAULT_METRICS_CONFIG,
   mockRequestDefaultMetricsConfig = true
 ): MetricsManager => {
-  const mm = new MetricsManager(sessionInfo || mockSessionInfo())
+  const mm = new MetricsManager(sessionInfo ?? mockSessionInfo())
   if (mockRequestDefaultMetricsConfig) {
     mm.requestDefaultMetricsConfig = vi.fn()
   }
@@ -72,6 +72,7 @@ const DEFAULT_EVENT_DATA = {
   contextPagePath: window.location.pathname,
   contextPageReferrer: document.referrer,
   contextPageSearch: window.location.search,
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank userLanguage falls through to language
   contextLocale: window.navigator.userLanguage || window.navigator.language,
   contextUserAgent: window.navigator.userAgent,
 }

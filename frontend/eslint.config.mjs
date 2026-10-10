@@ -655,19 +655,11 @@ export default defineConfig([
       "streamlit-custom/enforce-memo": "error",
     },
   },
-  // `||` drops 0, "", and false. Enabled directory-by-directory.
-  // Keep `||` where a blank string or false means unset, and for boolean OR.
-  // Use `??` where 0 is a real value (for example a color channel).
+  // `||` drops 0, "", and false. Keep `||` where a blank string or false
+  // means unset, and where `||` combines booleans. Use `??` where only
+  // null and undefined mean missing, including an explicit 0.
   {
-    files: [
-      "**/components/widgets/**/*.{ts,tsx}",
-      "**/components/shared/StreamlitMarkdown/**/*.{ts,tsx}",
-      "**/components/shared/Icon/**/*.{ts,tsx}",
-      "**/theme/utils.ts",
-      "**/theme/utils.test.ts",
-      "**/DeckGlJsonChart/utils/colors.ts",
-      "**/DeckGlJsonChart/utils/colors.test.ts",
-    ],
+    files: ["**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/prefer-nullish-coalescing": "error",
     },

@@ -71,6 +71,7 @@ export const Member = memo(function Member({
           </StyledDocValue>
         ) : (
           <StyledDocValue data-testid="stHelpMemberDocString">
+            {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank docs use the fallback */}
             {docString || "No docs available"}
           </StyledDocValue>
         )}

@@ -277,6 +277,7 @@ export function shouldActivateScrollToBottom(blockNode: BlockNode): boolean {
 
 export function getBorderBackwardsCompatible(blockProto: BlockProto): boolean {
   return (
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false border still lets the other proto border count
     blockProto.flexContainer?.border || blockProto.vertical?.border || false
   )
 }

@@ -142,7 +142,7 @@ const TooltipIcon = memo(function TooltipIcon(
             style={{ fontSize: theme.fontSizes.sm }}
             source={content}
             allowHTML={false}
-            {...(markdownProps || {})}
+            {...(markdownProps ?? {})}
           />
         }
         placement={placement}

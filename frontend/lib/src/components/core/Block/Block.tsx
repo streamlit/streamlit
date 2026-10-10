@@ -340,6 +340,7 @@ export const BlockNodeRenderer = (
   // (e.g., via libConfig or ancestor dialog/popover),
   // or if this block itself is a dialog or popover
   const disableFullscreenMode =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false flag still lets a dialog or popover disable fullscreen
     props.disableFullscreenMode ||
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
@@ -431,6 +432,7 @@ export const BlockNodeRenderer = (
         element={node.deltaBlock.expandable as BlockProto.Expandable}
         empty={node.isEmpty}
         widgetMgr={props.widgetMgr}
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >
@@ -447,6 +449,7 @@ export const BlockNodeRenderer = (
         element={node.deltaBlock.popover as BlockProto.Popover}
         stretchWidth={shouldWidthStretch(node.deltaBlock.widthConfig)}
         widgetMgr={props.widgetMgr}
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >

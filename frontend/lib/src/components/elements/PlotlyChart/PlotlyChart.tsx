@@ -109,7 +109,7 @@ export function PlotlyChart({
   const { height: chartContainerHeight, elementRef: containerRef } =
     useCalculatedDimensions([], 0)
 
-  const width = elWidth || 0
+  const width = elWidth ?? 0
 
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
@@ -185,14 +185,10 @@ export function PlotlyChart({
     // plotly.js v4 adds `sendChartToCloud` when `showSendToCloud` is true.
     // Default the flag off, and also remove the button so layout.modebar.add
     // cannot put it back unless the app opts in with showSendToCloud: true.
-    if (config.showSendToCloud === undefined) {
-      config.showSendToCloud = false
-    }
+    config.showSendToCloud ??= false
 
-    if (config.displaylogo === undefined) {
-      // Hide the Plotly logo unless the user explicitly opts in.
-      config.displaylogo = false
-    }
+    // Hide the Plotly logo unless the user explicitly opts in.
+    config.displaylogo ??= false
 
     const modeBarButtonsToRemove: NonNullable<
       Plotly.Config["modeBarButtonsToRemove"]
@@ -506,6 +502,7 @@ export function PlotlyChart({
   // accessible name, which is worse than none. role="figure" (not "img")
   // is required to legally expose aria-label on this otherwise-generic div
   // without making Plotly's focusable modebar presentational.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const accessibleName = element.alt?.trim() || undefined
 
   return (

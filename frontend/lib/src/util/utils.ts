@@ -541,7 +541,7 @@ function findAnIFrameWithClassName(
 function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
   try {
     if (iframe.contentWindow === null) return false
-    const doc = iframe.contentDocument || iframe.contentWindow.document
+    const doc = iframe.contentDocument ?? iframe.contentWindow.document
     const html = doc.body.innerHTML
     return html !== null && html !== ""
   } catch {
