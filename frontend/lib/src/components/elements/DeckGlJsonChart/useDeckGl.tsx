@@ -64,8 +64,9 @@ import {
 const CARTO_STREAMLIT_API_KEY = "x7g2plm9yq8vfrc"
 
 /**
- * Deck.gl update triggers are a list or a single value. A numeric `0` is a
- * real trigger, so it must not be dropped or spread as a non-array.
+ * Deck.gl update triggers are a list or a single value. Scalars such as `0`
+ * and `false` are real triggers, so they must not be dropped or spread as a
+ * non-array.
  */
 function toUpdateTriggerList(trigger: unknown): unknown[] {
   if (Array.isArray(trigger)) {

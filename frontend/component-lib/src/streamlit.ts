@@ -103,9 +103,9 @@ export class Streamlit {
    * when it's first loaded, and any time it updates.
    */
   public static setFrameHeight = (height?: number): void => {
-    // `height` is optional. If undefined, it defaults to scrollHeight,
-    // which is the entire height of the element minus its border,
-    // scrollbar, and margin. An explicit 0 is a real height.
+    // Missing height (undefined or null) uses scrollHeight, which is the
+    // entire height of the element minus its border, scrollbar, and margin.
+    // An explicit 0 is reported as 0.
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access
     height ??= document.body.scrollHeight
 

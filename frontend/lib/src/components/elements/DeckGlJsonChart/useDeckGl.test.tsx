@@ -467,7 +467,7 @@ describe("useDeckGl", () => {
   })
 
   describe("selection sanitization", () => {
-    it("keeps a numeric update trigger of 0 when selection rewrites fill colors", () => {
+    it("keeps scalar update triggers of 0 and false when selection rewrites fill colors", () => {
       const props = getUseDeckGlProps(
         {
           id: "test-element-id",
@@ -482,9 +482,10 @@ describe("useDeckGl", () => {
               data: [{ lng: 1, lat: 1 }],
               getPosition: "@@=[lng, lat]",
               pickable: true,
-              // getFillColor is rewritten before getLineColor. A numeric 0
-              // must not be spread as a non-array while that happens.
-              updateTriggers: { getFillColor: 0, getLineColor: 0 },
+              // Scalar triggers such as 0 and false must be wrapped before
+              // selection state is added. getFillColor runs first, so 0 must
+              // not be spread as a non-array.
+              updateTriggers: { getFillColor: 0, getLineColor: false },
             },
           ],
         }
@@ -497,7 +498,11 @@ describe("useDeckGl", () => {
       const layer = result.current.deck.layers?.[0] as {
         props: { updateTriggers?: Record<string, unknown> }
       }
-      expect(layer.props.updateTriggers?.getLineColor).toEqual([0, [], false])
+      expect(layer.props.updateTriggers?.getLineColor).toEqual([
+        false,
+        [],
+        false,
+      ])
     })
 
     const getPropsWithArrayData = (

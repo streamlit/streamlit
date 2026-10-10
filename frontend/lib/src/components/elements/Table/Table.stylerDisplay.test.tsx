@@ -31,7 +31,7 @@ const { displayOverrides } = vi.hoisted(() => ({
 }))
 
 vi.mock("~lib/dataframes/pandasStylerUtils", async importOriginal => {
-  const actual = (await importOriginal()) as typeof PandasStylerUtils
+  const actual = await importOriginal<typeof PandasStylerUtils>()
 
   return {
     ...actual,

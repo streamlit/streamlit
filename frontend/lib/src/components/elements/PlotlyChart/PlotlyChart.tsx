@@ -185,7 +185,6 @@ export function PlotlyChart({
     // plotly.js v4 adds `sendChartToCloud` when `showSendToCloud` is true.
     // Default the flag off, and also remove the button so layout.modebar.add
     // cannot put it back unless the app opts in with showSendToCloud: true.
-    // An explicit false stays false.
     config.showSendToCloud ??= false
 
     // Hide the Plotly logo unless the user explicitly opts in.
