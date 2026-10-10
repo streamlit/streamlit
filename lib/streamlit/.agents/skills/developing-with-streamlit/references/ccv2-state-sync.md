@@ -139,7 +139,7 @@ Safe patterns:
 
 - Update `st.session_state[key][...]` **before** mounting the component (e.g., in a button handler placed above the mount call).
 - Or update state in a different run (trigger a rerun after setting state).
-- If the mount passes any `on_<name>_change` callback, Python can only write state keys that have their own callback; writes to other keys are silently ignored. Pass a no-op callback (for example `on_value_change=lambda: None`) for every state key you set from Python.
+- If the mount passes any `on_<name>_change` callback, Streamlit silently ignores Python writes to state keys that lack a matching `on_<key>_change` callback. Pass a no-op callback (for example, `on_value_change=lambda: None`) for every state key you set from Python.
 
 ### Troubleshooting checklist
 
@@ -147,3 +147,4 @@ Safe patterns:
 - **Python updates don’t reflect in UI**: confirm you pass the updated values via `data` every run; avoid initial-only hydration guards if you want true sync.
 - **`default` raises**: ensure every default key has a corresponding `on_<key>_change` callback parameter.
 - **Session state mutation error**: move `st.session_state[key][...] = ...` earlier in the script (before mount), or restructure into a two-run flow (set state then rerun).
+- **Python write to component state has no effect**: if the mount passes any `on_<name>_change` callback, also pass one (a no-op is fine) for each state key you set from Python.
