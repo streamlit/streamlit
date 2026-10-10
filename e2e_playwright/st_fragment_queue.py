@@ -16,6 +16,17 @@ import time
 
 import streamlit as st
 
+_TRIGGER_CMP = st.components.v2.component(
+    "fragment_queue_trigger",
+    html="<button id='fire'>fire component trigger</button>",
+    js="""
+export default function (component) {
+  const { parentElement, setTriggerValue } = component
+  parentElement.querySelector("#fire").onclick = () => setTriggerValue("fired", true)
+}
+""",
+)
+
 
 @st.fragment
 def my_fragment1():
@@ -37,9 +48,19 @@ def my_fragment3():
     st.write("fragment 3 done!")
 
 
+@st.fragment
+def my_fragment4():
+    result = _TRIGGER_CMP(key="trigger_cmp", on_fired_change=lambda: None)
+    if result.fired:
+        st.write("ran fragment 4 component")
+    st.write("fragment 4 done!")
+
+
 with st.container(border=True):
     my_fragment1()
 with st.container(border=True):
     my_fragment2()
 with st.container(border=True):
     my_fragment3()
+with st.container(border=True):
+    my_fragment4()
