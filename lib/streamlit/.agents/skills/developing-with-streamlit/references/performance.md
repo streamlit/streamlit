@@ -345,7 +345,7 @@ Check input in the browser whenever the widget already can. Invalid values are n
 - `st.text_area` and `st.chat_input`: `max_chars`.
 - `st.number_input`: `min_value`, `max_value`, `step`, and `required`. Values outside the range show an inline error and are not committed. `step` is the increment for the +/- buttons and arrow keys. With `required=True`, pass `value=None` so the field starts empty.
 - `st.date_input` and `st.datetime_input`: `min_value` and `max_value` reject out-of-range values in the browser. On `st.datetime_input`, arrow keys snap to `step`; a typed time can still be any valid time inside the range. `st.time_input`'s `step` only controls which clock parts are shown and how arrow keys snap.
-- `st.data_editor` columns (`st.column_config`): `validate` and `max_chars` on text columns, `min_value` / `max_value` / `step` on number, date, time, and datetime columns, and `required` where the column supports it. Invalid edits are not submitted.
+- `st.data_editor`: `st.column_config` has the same kind of checks (`required`, `validate`, `max_chars`, `min_value`, `max_value`, `step`, depending on the column type). Invalid edits are not submitted.
 - `st.file_uploader`: `type` rejects disallowed extensions before the file is uploaded.
 
 Inside `st.form`, these checks block submit until the values pass. `required` on `st.text_input` and `st.number_input` also skips the rerun when the field is cleared; the last committed value stays until the user enters a valid one.
