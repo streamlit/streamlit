@@ -53,7 +53,7 @@ which is just a masked text field with no identity behind it.
 
 All auth config lives in an `[auth]` section of `.streamlit/secrets.toml`.
 `redirect_uri` and `cookie_secret` are shared across every provider, along with
-the optional `expose_tokens`. Each provider also needs `client_id`,
+the optional `expose_tokens`. Each provider needs its own `client_id`,
 `client_secret`, and `server_metadata_url`.
 
 ```toml
