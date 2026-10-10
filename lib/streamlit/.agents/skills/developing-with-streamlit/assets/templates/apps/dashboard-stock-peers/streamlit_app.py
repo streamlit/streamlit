@@ -208,7 +208,6 @@ try:
     data = load_data(tickers, horizon_map[horizon])
 except yf.exceptions.YFRateLimitError:
     st.warning("YFinance is rate-limiting us :(\nTry again later.")
-    load_data.clear()  # Remove the bad cache entry.
     st.stop()
     raise  # Unreachable — st.stop() halts execution, but helps type checker.
 
