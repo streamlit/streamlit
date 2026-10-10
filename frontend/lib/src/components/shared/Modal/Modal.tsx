@@ -100,6 +100,13 @@ interface StreamlitModalProps {
   size?: "auto" | "default" | "medium" | "large"
   /** Explicit CSS width override, takes precedence over size. Used for non-standard widths like "80vw". */
   width?: string
+  /**
+   * Allow an explicit width to be narrower than the centered preset floor
+   * (`minPopupWidth`). The panel still cannot be narrower than
+   * `minSidebarWidth`, the side-drawer drag floor. Leave this false for
+   * presets and non-dialog modals so they keep the theme floor.
+   */
+  relaxMinWidth?: boolean
   /** Placement of the dialog. `"center"` is a modal; `"left"` / `"right"` are full-height drawers. */
   position?: ModalPosition
   children?: ReactNode
@@ -144,6 +151,7 @@ function Modal({
   closeable = true,
   size,
   width,
+  relaxMinWidth = false,
   position = "center",
   children,
 }: Readonly<StreamlitModalProps>): ReactElement {
@@ -176,7 +184,11 @@ function Modal({
       data-testid="stDialog"
       $position={position}
     >
-      <StyledDialogPanel $dialogWidth={dialogWidth} $position={position}>
+      <StyledDialogPanel
+        $dialogWidth={dialogWidth}
+        $position={position}
+        $relaxMinWidth={relaxMinWidth}
+      >
         {resizeSide !== null && (
           <StyledDialogResizeHandle
             $position={resizeSide}

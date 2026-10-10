@@ -62,7 +62,7 @@ from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.lib.dialog import Dialog
+    from streamlit.elements.lib.dialog import Dialog, DialogWidth
     from streamlit.elements.lib.mutable_expander_container import ExpanderContainer
     from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
@@ -2172,7 +2172,7 @@ class LayoutsMixin:
         self,
         title: str,
         *,
-        width: Literal["small", "large", "medium"] = "small",
+        width: DialogWidth = "small",
         position: Literal["left", "center", "right"] = "center",
         dismissible: bool = True,
         icon: str | None = None,

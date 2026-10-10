@@ -161,6 +161,10 @@ message Block {
 
     // Placement of the dialog. LEFT/RIGHT render it as a full-height side drawer.
     DialogPosition position = 7;
+
+    // Explicit dialog width in CSS pixels. When set, it overrides the `width`
+    // enum, which the backend keeps at SMALL for clients that ignore this field.
+    optional uint32 pixel_width = 8;
   }
 
   message Form {

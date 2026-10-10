@@ -31,6 +31,7 @@ import Modal, {
   ModalHeader,
 } from "~lib/components/shared/Modal/Modal"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { assertNever } from "~lib/util/assertNever"
 import { notNullOrUndefined } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -83,6 +84,21 @@ function mapDialogPositionToModalPosition(
   }
 }
 
+/**
+ * Convert an explicit pixel width to rem, or return `undefined` when it is
+ * unset or non-positive so the enum preset applies. The root font size is
+ * `baseFontSize` px, so the result renders at exactly `pixelWidth` CSS pixels.
+ */
+function pixelWidthToRem(
+  pixelWidth: number | null | undefined,
+  baseFontSize: number
+): string | undefined {
+  if (!notNullOrUndefined(pixelWidth) || pixelWidth <= 0) {
+    return undefined
+  }
+  return `${pixelWidth / baseFontSize}rem`
+}
+
 export interface Props {
   element: BlockProto.Dialog
   deltaMsgReceivedAt?: number
@@ -105,7 +121,9 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     id,
     icon,
     position,
+    pixelWidth,
   } = element
+  const { fontSizes } = useEmotionTheme()
   // Open on the first paint when the proto says so. Starting closed would
   // skip the drawer's CSS enter animation.
   const [isOpen, setIsOpen] = useState<boolean>(() => Boolean(initialIsOpen))
@@ -187,12 +205,16 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   if (!isOpen) {
     return null
   }
+
+  const cssWidth = pixelWidthToRem(pixelWidth, fontSizes.baseFontSize)
   return (
     <Modal
       isOpen
       closeable={dismissible}
       onClose={handleClose}
       size={mapDialogWidthToModalSize(width)}
+      width={cssWidth}
+      relaxMinWidth={cssWidth !== undefined}
       position={mapDialogPositionToModalPosition(position)}
     >
       <ModalHeader>

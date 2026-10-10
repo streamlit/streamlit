@@ -142,11 +142,11 @@ export const StyledDialogOverlay = styled(ModalOverlay, {
  */
 export const StyledDialogPanel = styled(RAModal, {
   shouldForwardProp: shouldForwardNonTransientProp,
-})<{ $dialogWidth?: string; $position?: ModalPosition }>(({
-  theme,
-  $dialogWidth,
-  $position = "center",
-}) => {
+})<{
+  $dialogWidth?: string
+  $position?: ModalPosition
+  $relaxMinWidth?: boolean
+}>(({ theme, $dialogWidth, $position = "center", $relaxMinWidth = false }) => {
   const isDrawer = isSideDrawer($position)
   // Centered dialogs keep a gutter on both sides. Drawers stay flush to the
   // attached edge but always leave a twoXL strip of the app visible on the
@@ -154,6 +154,12 @@ export const StyledDialogPanel = styled(RAModal, {
   const maxWidth = isDrawer
     ? `calc(100% - ${theme.spacing.twoXL})`
     : `calc(100% - ${theme.spacing.lg} - ${theme.spacing.lg})`
+  // Drawers and explicit pixel widths share the drag floor; centered presets
+  // keep minPopupWidth.
+  const minWidthFloor =
+    isDrawer || $relaxMinWidth
+      ? theme.sizes.minSidebarWidth
+      : theme.sizes.minPopupWidth
   return {
     outline: "none",
     background: theme.colors.bgColor,
@@ -163,10 +169,7 @@ export const StyledDialogPanel = styled(RAModal, {
     flexDirection: "column",
     position: "relative",
     margin: isDrawer ? theme.spacing.none : theme.spacing.lg,
-    // Cap minWidth so the panel can shrink below its theme floor on very
-    // narrow screens instead of overflowing the viewport. Drawers share the
-    // sidebar minimum; centered dialogs keep minPopupWidth.
-    minWidth: `min(${isDrawer ? theme.sizes.minSidebarWidth : theme.sizes.minPopupWidth}, ${maxWidth})`,
+    minWidth: `min(${minWidthFloor}, ${maxWidth})`,
     maxWidth,
     ...($dialogWidth !== undefined && { width: $dialogWidth }),
     ...(isDrawer
