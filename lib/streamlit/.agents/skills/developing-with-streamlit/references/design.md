@@ -172,7 +172,7 @@ Use `text_alignment` for text elements:
 
 ```python
 st.title("Centered title", text_alignment="center")
-st.write("Right aligned", text_alignment="right")
+st.markdown("Right aligned", text_alignment="right")
 st.caption("Justified text", text_alignment="justify")
 ```
 
