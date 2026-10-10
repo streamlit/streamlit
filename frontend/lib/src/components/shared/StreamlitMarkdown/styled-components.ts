@@ -213,7 +213,9 @@ export const StyledStreamlitMarkdown =
       // Some label contexts (e.g. alert titles, dialog titles, slider labels, metric values)
       // opt out of this sizing via inheritFont=true, which makes the font-size, font-family,
       // and font-weight inherit from their parent container instead.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- || combines the flags; a false flag still lets a later true flag win
       const useSmallerFontSize = isLabel || isToast || isCaption
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- || combines the flags; a false flag still lets a later true flag win
       const shouldInheritLineHeight = inheritFont || inheritLineHeight
 
       return {
