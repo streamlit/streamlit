@@ -608,24 +608,21 @@ def test_pixel_width_dialog(app: Page):
 
     open_pixel_width_400_dialog(app)
     box_400 = dialog_box()
-    assert box_400["width"] == pytest.approx(400, abs=2)
     # Must not fall back to the small preset (500px).
-    assert box_400["width"] != pytest.approx(500, abs=2)
+    assert box_400["width"] == pytest.approx(400, abs=2)
     close_dialog()
 
     open_pixel_width_200_dialog(app)
     box_200 = dialog_box()
-    assert box_200["width"] == pytest.approx(200, abs=2)
     # 200px is below the centered preset floor (20rem / 320px).
-    assert box_200["width"] != pytest.approx(320, abs=2)
+    assert box_200["width"] == pytest.approx(200, abs=2)
     close_dialog()
 
     open_pixel_width_100_dialog(app)
     box_100 = dialog_box()
     # Below the side-drawer drag floor (12.5rem / 200px), so the panel
-    # paints at that floor instead of the requested 100px.
+    # renders at that floor instead of the requested 100px.
     assert box_100["width"] == pytest.approx(200, abs=2)
-    assert box_100["width"] != pytest.approx(100, abs=2)
     close_dialog()
 
     app.set_viewport_size({"width": 600, "height": 600})
@@ -640,9 +637,17 @@ def test_pixel_width_dialog(app: Page):
     dialog = app.get_by_role("dialog")
     expect(dialog).to_be_visible()
     drawer_width = _drawer_width(dialog)
+    # Must not fall back to the small preset (500px) or stretch to the viewport.
     assert drawer_width == pytest.approx(420, abs=2)
-    assert drawer_width != pytest.approx(500, abs=2)
-    assert drawer_width != pytest.approx(1280, abs=2)
+
+    resize_handle = app.get_by_test_id("stDialogResizeHandle")
+    expect(resize_handle).to_be_attached()
+    # Drag well below the 420px start. The floor is the side-drawer minimum
+    # (12.5rem / 200px), not the requested width.
+    _drag_handle_horizontally(app, resize_handle, -400)
+    wait_until(app, lambda: abs(_drawer_width(dialog) - 200) <= 2)
+    resize_handle.dblclick()
+    wait_until(app, lambda: abs(_drawer_width(dialog) - 420) <= 2)
 
 
 # its enough to test this on one browser as showing the error inline is more a backend

@@ -156,13 +156,15 @@ export const StyledDialogPanel = styled(RAModal, {
     : `calc(100% - ${theme.spacing.lg} - ${theme.spacing.lg})`
   // Explicit pixel widths may sit below the centered preset floor
   // (minPopupWidth) but not below the drawer drag floor (minSidebarWidth).
+  // `width` is the requested size and `max-width` already caps the flex
+  // item at the viewport, so `min-width` only applies that floor.
   // Capping with maxWidth keeps the panel inside a narrow viewport.
   const presetMinWidth = isDrawer
     ? theme.sizes.minSidebarWidth
     : theme.sizes.minPopupWidth
   const minWidthFloor =
     $relaxMinWidth && $dialogWidth !== undefined
-      ? `max(${$dialogWidth}, ${theme.sizes.minSidebarWidth})`
+      ? theme.sizes.minSidebarWidth
       : presetMinWidth
   return {
     outline: "none",

@@ -100,8 +100,8 @@ Add `position` as a keyword-only parameter to `@st.dialog`, placed right after
 
 An invalid value raises `StreamlitValueError` (listing `'left'`, `'center'`,
 `'right'`), matching how `st.navigation(position=...)` and `on_dismiss` validate
-their arguments. Unlike `width`, which silently falls back to `"small"` for
-unrecognized values, `position` follows the stricter, fail-fast pattern.
+their arguments. `width` follows the same fail-fast pattern: a value that is
+not a preset or a positive integer raises `StreamlitValueError`.
 
 ### Behavior
 

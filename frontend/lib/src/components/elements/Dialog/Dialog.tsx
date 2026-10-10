@@ -87,9 +87,10 @@ function mapDialogPositionToModalPosition(
 /**
  * Convert an explicit pixel width to rem for dialog CSS.
  *
- * Dialog widths are rem so they follow the root font size. Dividing by that
- * size without rounding keeps the requested pixel count at the default 16px
- * root. An absent or non-positive field uses the enum preset instead.
+ * The root font size is `theme.fontSizes.baseFontSize` pixels, so
+ * `pixelWidth / baseFontSize` rem is `pixelWidth` CSS pixels at every base
+ * font size. Rem stays because frontend styles use rem. An absent or
+ * non-positive field uses the enum preset instead.
  */
 function pixelWidthToRem(
   pixelWidth: number | null | undefined,

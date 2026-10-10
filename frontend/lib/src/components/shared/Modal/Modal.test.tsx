@@ -278,7 +278,7 @@ describe("Modal subcomponents", () => {
     const panel = document.querySelector("[role='dialog']")?.parentElement
     expect(panel).toHaveStyle({
       width: "12.5rem",
-      minWidth: "min(max(12.5rem, 12.5rem), calc(100% - 1rem - 1rem))",
+      minWidth: "min(12.5rem, calc(100% - 1rem - 1rem))",
     })
   })
 
@@ -292,7 +292,7 @@ describe("Modal subcomponents", () => {
     const panel = document.querySelector("[role='dialog']")?.parentElement
     expect(panel).toHaveStyle({
       width: "6.25rem",
-      minWidth: "min(max(6.25rem, 12.5rem), calc(100% - 1rem - 1rem))",
+      minWidth: "min(12.5rem, calc(100% - 1rem - 1rem))",
     })
   })
 
@@ -306,7 +306,7 @@ describe("Modal subcomponents", () => {
     const panel = document.querySelector("[role='dialog']")?.parentElement
     expect(panel).toHaveStyle({
       width: "6.25rem",
-      minWidth: "min(max(6.25rem, 12.5rem), calc(100% - 1.5rem))",
+      minWidth: "min(12.5rem, calc(100% - 1.5rem))",
       maxWidth: "calc(100% - 1.5rem)",
     })
   })
