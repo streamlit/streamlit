@@ -74,7 +74,7 @@ st.metric(
     "+3.2%",
     border=True,
     chart_data=weekly_values,
-    chart_type="line",  # or "bar"
+    chart_type="line",  # or "bar" or "area"
 )
 ```
 

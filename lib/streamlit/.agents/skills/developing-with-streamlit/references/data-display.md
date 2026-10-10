@@ -405,7 +405,7 @@ st.metric(
     delta="-7.42% (MoM)",
     delta_color="inverse",
     chart_data=values,
-    chart_type="line",  # or "bar"
+    chart_type="line",  # or "bar" or "area"
 )
 ```
 
