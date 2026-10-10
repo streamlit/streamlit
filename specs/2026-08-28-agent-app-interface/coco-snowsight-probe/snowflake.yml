@@ -1,0 +1,26 @@
+# Deploy with:
+#   snow streamlit deploy probe --replace \
+#     --env database=<db> --env schema=<schema> --env app_name=<name> \
+#     --env warehouse=<warehouse> --env compute_pool=<pool> --env pypi_eai=<integration>
+definition_version: 2
+entities:
+  probe:
+    type: streamlit
+    identifier:
+      name: <% ctx.env.app_name %>
+      database: <% ctx.env.database %>
+      schema: <% ctx.env.schema %>
+    title: Agent API probe
+    query_warehouse: <% ctx.env.warehouse %>
+    compute_pool: <% ctx.env.compute_pool %>
+    runtime_name: SYSTEM$ST_CONTAINER_RUNTIME_PY3_11
+    external_access_integrations:
+      - <% ctx.env.pypi_eai %>
+    main_file: streamlit_app.py
+    artifacts:
+      - streamlit_app.py
+      - probe_data.py
+      - pyproject.toml
+      - uv.lock
+      - .streamlit/config.toml
+      - streamlit-1.65.0-py3-none-any.whl
