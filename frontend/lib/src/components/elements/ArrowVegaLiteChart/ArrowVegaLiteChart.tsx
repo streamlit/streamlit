@@ -135,6 +135,11 @@ export function hasNestedComposition(spec: string | object): boolean {
     return false
   }
 }
+
+/**
+ * Top-level Vega-Lite keys that make a spec a multi-view composition. Layer is
+ * intentionally absent.
+ */
 const COMPOSITION_KEYS = ["facet", "repeat", "concat", "hconcat", "vconcat"]
 
 const parseSpecObject = (
@@ -170,11 +175,13 @@ export function isSingleViewChart(spec: string | object): boolean {
 
 // Exported for testing
 /**
- * Get the numeric top-level width of a spec, if it has one. With Streamlit's
- * "fit" autosizing, a single-view chart renders exactly this wide; without a
- * numeric width, it uses the default chart width. This includes step widths
- * such as `{"step": 20}` (`alt.Step(...)` in Altair), whose rendered width
- * depends on the data domain.
+ * Fixed pixel `width` at the top of a spec, or `undefined` when the chart has
+ * none.
+ *
+ * Fit autosizing renders a single-view chart exactly this wide. A missing
+ * width, a non-numeric width, and a step width such as `{"step": 20}`
+ * (`alt.Step(...)`) all return `undefined`, so the chart uses the default
+ * chart width. Step width depends on the data domain and is not known yet.
  */
 export function getSpecWidth(spec: string | object): number | undefined {
   const width = parseSpecObject(spec)?.width

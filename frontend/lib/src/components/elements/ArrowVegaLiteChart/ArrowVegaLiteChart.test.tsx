@@ -266,6 +266,44 @@ describe("ArrowVegaLiteChart", () => {
       expect(chart).not.toHaveStyle("contain-intrinsic-width: 25rem;")
     })
 
+    it("uses the default chart width for a content-width chart with a step width", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            { spec: JSON.stringify({ mark: "bar", width: { step: 20 } }) },
+            contentWidthConfigs
+          )}
+        />
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain-intrinsic-width: 25rem;")
+      expect(chart).not.toHaveStyle("contain-intrinsic-width: 20px;")
+    })
+
+    it("gives a facet chart with a pixel height a full-height toolbar wrapper", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            {
+              spec: JSON.stringify({
+                facet: { row: { field: "group" } },
+                spec: { mark: "bar" },
+              }),
+            },
+            { heightConfig: { pixelHeight: 300 } }
+          )}
+        />
+      )
+
+      // The facet chart isn't size-contained, but it still needs a definite
+      // height to measure. A fit-content wrapper would leave it at 0px.
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).not.toHaveStyle("contain: size;")
+      expect(chart.parentElement).toHaveStyle("height: 100%;")
+      expect(chart.parentElement).not.toHaveStyle("height: fit-content;")
+    })
+
     it("size-contains a content-width chart with a pixel height", () => {
       render(
         <ArrowVegaLiteChart

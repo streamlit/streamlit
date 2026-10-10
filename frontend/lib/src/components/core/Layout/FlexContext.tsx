@@ -48,9 +48,9 @@ export interface IFlexContext {
   /**
    * Whether this container gives its stretch-height children a definite
    * height to fill:
-   * - true for pixel-height containers, and for stretch-height containers
-   *   whose own parent has a definite height. Tab panels follow the height
-   *   of their tab container.
+   * - true for pixel- and rem-height containers, and for stretch-height
+   *   containers whose own parent has a definite height. Tab panels use their
+   *   tab container's height.
    * - false (or unset) for the root and content-height containers, where
    *   stretch elements size to their content.
    */
@@ -61,11 +61,10 @@ export const FlexContext = createContext<IFlexContext | null>(null)
 FlexContext.displayName = "FlexContext"
 
 /**
- * Returns whether a stretch-height element claims a default height of its own.
- * It only does when its container has no definite height to fill. In a
- * container with a definite height, a default height would keep the element
- * from shrinking to fit its siblings, and would grow a stretch-height
- * container that sizes to its content.
+ * Whether a stretch-height element should use its default height. Only when
+ * its container has no definite height to fill. Inside a definite-height
+ * container, a default height would stop the element from shrinking to fit
+ * next to its siblings.
  */
 export function hasStretchHeightFallback(
   flexContext: IFlexContext | null
