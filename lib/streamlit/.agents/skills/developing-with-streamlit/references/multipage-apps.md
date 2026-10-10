@@ -135,18 +135,17 @@ st.line_chart(data)
 
 ## Global state
 
-Initialize state in the main module only if it's needed across multiple pages:
+Initialize state in the main module only if it's needed across multiple pages. Pages run in their own namespace, so a function defined in `streamlit_app.py` isn't visible to them; put shared cached helpers in a module and import them where needed:
 
 ```python
-# streamlit_app.py
-
-# Shared resources — use @st.cache_resource, NOT session_state
+# utils/clients.py — shared resources: use @st.cache_resource, NOT session_state
 @st.cache_resource
 def get_api_client():
     return init_client()
+```
 
-
-# User-specific state — use session_state
+```python
+# streamlit_app.py — user-specific state: use session_state
 st.session_state.user = get_user()
 st.session_state.settings = load_settings()
 ```
