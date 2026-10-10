@@ -5,15 +5,9 @@ Use whatever dependency management the project already has (pip, poetry, conda, 
 
 If uv is not installed, ask the user before installing it.
 
-## CRITICAL: Always Use Latest Streamlit
+## Streamlit version
 
-**Always specify the latest version of `streamlit`** in dependencies. Many Streamlit features and patterns in these skills require recent versions. Older streamlit versions will cause errors with:
-- Material icons (`:material/icon_name:`)
-- `st.pills()`, `st.segmented_control()`
-- Modern caching decorators
-- Navigation APIs
-
-When setting up a new project or fixing an existing one, **always check and update the streamlit version**.
+For a new project, depend on the latest `streamlit`; the patterns in these references assume a recent release. For an existing project, check the installed version (`streamlit version`) before you use an API it may not have, and upgrade Streamlit only with the user's agreement, since an upgrade can change behavior elsewhere in their app.
 
 ## Using uv
 
