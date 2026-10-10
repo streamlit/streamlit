@@ -1935,10 +1935,9 @@ describe("DateTimeInput widget", () => {
       await user.click(segments[0])
       await screen.findByTestId("stDateTimeInputCalendar")
 
-      // Close by tabbing through all segments, the calendar button, and out
-      for (let i = 0; i < segments.length + 1; i++) {
-        await user.tab()
-      }
+      // Close via the field's single Tab stop, then the calendar button.
+      await user.tab()
+      await user.tab()
       await waitFor(() => {
         expect(
           screen.queryByTestId("stDateTimeInputCalendar")

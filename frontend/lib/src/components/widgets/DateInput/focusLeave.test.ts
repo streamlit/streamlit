@@ -74,8 +74,10 @@ describe("focusLeave helpers", () => {
     const field = document.createElement("div")
     const first = document.createElement("span")
     first.setAttribute("data-type", "year")
+    first.tabIndex = 0
     const last = document.createElement("span")
     last.setAttribute("data-type", "day")
+    last.tabIndex = -1
     const button = document.createElement("button")
     const popover = document.createElement("div")
     const cell = document.createElement("div")
@@ -105,6 +107,11 @@ describe("focusLeave helpers", () => {
     ).toBe(true)
     expect(leave.immediate).toHaveBeenCalledOnce()
     leave.immediate.mockClear()
+
+    const outside = document.createElement("button")
+    document.body.appendChild(outside)
+
+    // Shift+Tab from the first segment leaves immediately.
     expect(
       handlePassivePreviewFieldTab(
         { key: "Tab", shiftKey: true, target: first },
@@ -113,9 +120,24 @@ describe("focusLeave helpers", () => {
       )
     ).toBe(true)
     expect(leave.immediate).toHaveBeenCalledOnce()
+    leave.immediate.mockClear()
 
-    const outside = document.createElement("button")
-    document.body.appendChild(outside)
+    // Tab from a non-first segment waits one frame. Range start → end stays
+    // open; leaving the widget closes.
+    expect(
+      handlePassivePreviewFieldTab(
+        { key: "Tab", shiftKey: false, target: first },
+        ctx,
+        leave
+      )
+    ).toBe(true)
+    last.focus()
+    await flushRaf()
+    expect(leave.focusStayedInside).toHaveBeenCalledOnce()
+    expect(leave.afterFocusSettles).not.toHaveBeenCalled()
+    leave.focusStayedInside.mockClear()
+    leave.beforeFocusSettles.mockClear()
+
     expect(
       handlePassivePreviewFieldTab(
         { key: "Tab", shiftKey: false, target: last },
