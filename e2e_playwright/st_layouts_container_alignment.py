@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import altair as alt
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -260,9 +261,61 @@ with st.container(key="fixed-tabs-title-and-chart"):
         st.subheader("Revenue")
         st.line_chart(df, x="x", y="y", height="stretch")
 
+# Vega renders parameter-binding controls inside the chart, below the plot.
+bindings_chart = (
+    alt.Chart(df)
+    .mark_line()
+    .encode(x="x", y="y")
+    .add_params(
+        alt.param(
+            name="line_width",
+            value=2,
+            bind=alt.binding_range(min=1, max=5, step=1, name="Line width"),
+        )
+    )
+)
+with st.container(height=300, border=True, key="fixed-card-chart-with-bindings"):
+    st.altair_chart(bindings_chart, height="stretch")
+
 tall_card = st.toggle("Tall card", value=True)
 with st.container(horizontal=True, key="container-horizontal-stretch-chart-shrink"):
     with st.container(border=True, key="stretch-chart-shrink-card"):
         for line in range(12 if tall_card else 2):
             st.write(f"Line {line}")
     st.line_chart(df, x="x", y="y", height="stretch")
+
+# Stretch containers and forms grow to fit content taller than their
+# fixed-height parent, while stretch tabs scroll inside their panel.
+with st.container(height=250, key="fixed-parent-stretch-form"):
+    with st.form("stretch_form", height="stretch"):
+        for index in range(5):
+            st.text_input(f"Form input {index}")
+        st.form_submit_button("Submit")
+
+with st.container(horizontal=True, height=250, key="fixed-row-stretch-card"):
+    with st.container(border=True, height="stretch", key="stretch-card-overflow"):
+        for line in range(12):
+            st.write(f"Line {line}")
+    st.write("Side")
+
+with st.container(height=250, key="fixed-parent-stretch-tabs"):
+    stretch_tabs = st.tabs(["Tab A", "Tab B"], height="stretch")
+    with stretch_tabs[0]:
+        for line in range(12):
+            st.write(f"Tab line {line}")
+
+with st.container(horizontal=True, key="container-horizontal-stretch-graphviz"):
+    st.graphviz_chart(
+        "digraph { run -> intr; intr -> runbl; runbl -> run }", height="stretch"
+    )
+    st.button("Graph neighbor")
+
+with st.container(
+    horizontal=True,
+    vertical_alignment="distribute",
+    key="container-horizontal-distribute-text-area",
+):
+    st.text_area("Distribute text area")
+    with st.container(border=True):
+        for line in range(8):
+            st.write(f"Line {line}")

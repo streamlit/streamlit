@@ -37,7 +37,7 @@ export const StyledDeployCard = styled.div(({ theme }) => ({
     borderRightStyle: "none",
     borderBottomRightRadius: theme.radii.xl,
   },
-  "&:first-child": { borderBottomLeftRadius: theme.radii.xl },
+  "&:first-of-type": { borderBottomLeftRadius: theme.radii.xl },
   [`@media (max-width: ${theme.breakpoints.md})`]: {
     padding: theme.spacing.xl,
     "&:last-child": { borderBottomLeftRadius: theme.radii.xl },

@@ -261,7 +261,10 @@ export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
 }))
 
 export const StyledNavSectionContainer = styled.div(({ theme }) => ({
-  "&:not(:first-child)": {
+  // Matches any section with a preceding sibling. Emotion flags :first-child
+  // as unsafe for server-side rendering, and :first-of-type would miss a
+  // section that follows individual page links (`li`) in the same list.
+  "* + &": {
     marginTop: theme.spacing.lg,
   },
 }))

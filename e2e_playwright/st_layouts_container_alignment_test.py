@@ -166,6 +166,15 @@ def _content_fits(locator: Locator) -> bool:
     return bool(locator.evaluate("el => el.scrollHeight - el.clientHeight <= 1"))
 
 
+def _scrolls(locator: Locator) -> bool:
+    """Whether the element overflows and lets users scroll to the rest."""
+    return not _content_fits(locator) and bool(
+        locator.evaluate(
+            "el => ['auto', 'scroll'].includes(getComputedStyle(el).overflowY)"
+        )
+    )
+
+
 def test_stretch_charts_fit_containers_with_definite_height(app: Page):
     """Stretch charts shrink to fit their siblings in definite-height containers."""
     for container in (
@@ -187,6 +196,84 @@ def test_stretch_charts_fit_containers_with_definite_height(app: Page):
 
         # The container must not scroll because of the chart's default height.
         wait_until(app, _charts_fit)
+
+    # Parameter-binding controls take part of the chart's height instead of
+    # overflowing the container.
+    bindings_card = get_element_by_key(app, "fixed-card-chart-with-bindings")
+    expect(bindings_card.locator("form.vega-bindings")).to_be_visible()
+    wait_until(app, lambda: _content_fits(bindings_card))
+
+
+def test_stretch_blocks_grow_in_fixed_height_parents(app: Page):
+    """Stretch containers and forms grow past a fixed-height parent; tabs scroll."""
+    form_parent = get_element_by_key(app, "fixed-parent-stretch-form")
+    for block, parent in (
+        (form_parent.get_by_test_id("stForm"), form_parent),
+        (
+            get_element_by_key(app, "stretch-card-overflow"),
+            get_element_by_key(app, "fixed-row-stretch-card"),
+        ),
+    ):
+        expect(block).to_be_visible()
+
+        def _grows_past_parent(
+            block: Locator = block, parent: Locator = parent
+        ) -> bool:
+            block_height = _height(block)
+            parent_height = _height(parent)
+            return (
+                _content_fits(block)
+                and _scrolls(parent)
+                and block_height is not None
+                and parent_height is not None
+                and block_height > parent_height
+            )
+
+        wait_until(app, _grows_past_parent)
+
+    # Stretch tabs stay capped at the parent and scroll inside the panel.
+    tab_panel = get_element_by_key(app, "fixed-parent-stretch-tabs").get_by_role(
+        "tabpanel"
+    )
+    expect(tab_panel).to_be_visible()
+    wait_until(app, lambda: _scrolls(tab_panel))
+
+
+def test_graphviz_and_text_area_keep_usable_size_in_rows(app: Page):
+    """Graphviz and text areas keep a usable size in stretched horizontal rows."""
+    graphviz = get_element_by_key(
+        app, "container-horizontal-stretch-graphviz"
+    ).get_by_test_id("stGraphVizChart")
+
+    def _graphviz_has_natural_size() -> bool:
+        box = graphviz.bounding_box()
+        svg_box = graphviz.locator("svg").bounding_box()
+        return (
+            box is not None
+            and box["width"] > 100
+            and svg_box is not None
+            and svg_box["height"] > 100
+        )
+
+    wait_until(app, _graphviz_has_natural_size)
+
+    # The field stays as tall as its textarea instead of stretching into an
+    # empty box with the resize handle in the middle.
+    text_area_root = get_text_area(app, "Distribute text area").get_by_test_id(
+        "stTextAreaRootElement"
+    )
+    textarea = text_area_root.locator("textarea")
+
+    def _root_hugs_textarea() -> bool:
+        root_height = _height(text_area_root)
+        textarea_height = _height(textarea)
+        return (
+            root_height is not None
+            and textarea_height is not None
+            and root_height - textarea_height <= 2
+        )
+
+    wait_until(app, _root_hugs_textarea)
 
 
 def test_checkbox_alignment_in_horizontal_container(app: Page):
