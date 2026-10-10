@@ -4,6 +4,17 @@ Opinionated examples for writing clean, performant, and maintainable Streamlit a
 
 Use this reference when reviewing an app, starting a new app, or applying the quick-reference rules from `SKILL.md`.
 
+## Contents
+
+- [Styling and copy](#styling-and-copy)
+- [HTML and iframes](#html-and-iframes)
+- [Layout](#layout)
+- [Navigation and pages](#navigation-and-pages)
+- [Performance](#performance)
+- [Data and charts](#data-and-charts)
+- [Widgets and state](#widgets-and-state)
+- [Secrets and queries](#secrets-and-queries)
+
 ## Styling and copy
 
 Do not use custom CSS for app styling unless the user actively requests it. Prefer native Streamlit APIs and `.streamlit/config.toml` to customize the appearance.
