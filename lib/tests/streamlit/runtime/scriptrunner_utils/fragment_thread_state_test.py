@@ -28,6 +28,8 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
     ScriptRunContext,
     ThreadState,
+    is_fragment_callback_warning_suppressed,
+    suppress_fragment_callback_warning,
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
 
@@ -196,3 +198,20 @@ class ThreadStateResetIntegrationTest(unittest.TestCase):
         assert ts.fragment_id is None
         assert ts.in_fragment_callback is False
         assert ts.delta_path is None
+
+
+class FragmentCallbackWarningSuppressionTest(unittest.TestCase):
+    def test_suppression_resets_after_exit_and_after_an_exception(self):
+        """The suppression flag is false again after the block exits, including when the block raises."""
+        assert is_fragment_callback_warning_suppressed() is False
+
+        with suppress_fragment_callback_warning():
+            assert is_fragment_callback_warning_suppressed() is True
+
+        assert is_fragment_callback_warning_suppressed() is False
+
+        with pytest.raises(RuntimeError):
+            with suppress_fragment_callback_warning():
+                raise RuntimeError
+
+        assert is_fragment_callback_warning_suppressed() is False

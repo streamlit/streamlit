@@ -28,7 +28,7 @@ import {
   mockEndpoints,
   mockSessionInfo,
   mockTheme,
-  NavigationContextProps,
+  type NavigationContextProps,
   toastQueue,
   TransientNode,
   WidgetStateManager,
@@ -36,7 +36,7 @@ import {
 import {
   render,
   renderWithContexts,
-  RenderWithContextsOptions,
+  type RenderWithContextsOptions,
 } from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
@@ -47,7 +47,7 @@ import {
   PageConfig,
 } from "@streamlit/protobuf"
 
-import AppView, { AppViewProps } from "./AppView"
+import AppView, { type AppViewProps } from "./AppView"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
@@ -661,7 +661,7 @@ describe("AppView element", () => {
       })
 
       describe("without show_padding or show_toolbar options", () => {
-        it("uses 2.25rem top padding when no header content", () => {
+        it("uses overlay-toolbar clearance padding when no header content", () => {
           render(
             <AppView
               {...getProps({
@@ -673,9 +673,13 @@ describe("AppView element", () => {
             />
           )
 
-          const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("2.25rem")
-          expect(style.paddingBottom).toEqual("1rem")
+          const mainBlock = screen.getByTestId("stMainBlockContainer")
+          // calc(...) keeps clearance at baseFontSize < 16; equals 2.35rem at 16px.
+          // Use toHaveStyle (not getComputedStyle): jsdom does not resolve max() in calc.
+          expect(mainBlock).toHaveStyle(
+            "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
+          )
+          expect(getMainBlockContainerStyle().paddingBottom).toEqual("1rem")
         })
 
         it("uses 4.5rem top padding when header content exists (logo)", () => {
@@ -1357,7 +1361,7 @@ describe("AppView element", () => {
       // Sidebar should be rendered and expanded when initialSidebarState is AUTO
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toBeInTheDocument()
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
 
       // Now simulate receiving page config with collapsed state
       rerenderWithContexts(<AppView {...props} />, {
@@ -1369,7 +1373,7 @@ describe("AppView element", () => {
       // Now sidebar should be rendered but collapsed
       const sidebarAfterConfig = screen.getByTestId("stSidebar")
       expect(sidebarAfterConfig).toBeInTheDocument()
-      expect(sidebarAfterConfig).toHaveAttribute("aria-expanded", "false")
+      expect(sidebarAfterConfig).toHaveAttribute("data-collapsed", "true")
     })
 
     it("renders sidebar immediately when initialSidebarState is COLLAPSED", () => {
@@ -1408,7 +1412,7 @@ describe("AppView element", () => {
       // Sidebar should be rendered immediately when state is known
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toBeInTheDocument()
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "false")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "true")
     })
 
     it("renders sidebar immediately when initialSidebarState is EXPANDED", () => {
@@ -1447,7 +1451,7 @@ describe("AppView element", () => {
       // Sidebar should be rendered immediately when state is known
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toBeInTheDocument()
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("shows sidebar when multiple pages exist even with AUTO state", () => {
@@ -1469,7 +1473,7 @@ describe("AppView element", () => {
       // Sidebar should be rendered and expanded initially
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toBeInTheDocument()
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("sidebar shows after first script run when no page config is set", () => {
@@ -1507,7 +1511,7 @@ describe("AppView element", () => {
       })
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toBeInTheDocument()
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
 
       // Simulate script finished event without page config change
       // This tests the showSidebarOverride logic would apply
@@ -1584,7 +1588,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("uses initial sidebar config for collapsed state when no localStorage value exists", () => {
@@ -1593,7 +1597,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.COLLAPSED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "false")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "true")
     })
 
     it("restores collapsed state from localStorage on initial load", () => {
@@ -1602,7 +1606,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "false")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "true")
     })
 
     it("restores expanded state from localStorage on initial load", () => {
@@ -1611,7 +1615,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.COLLAPSED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("handles invalid localStorage values gracefully", () => {
@@ -1620,7 +1624,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("ignores a stale collapsed localStorage value when sidebar is locked", () => {
@@ -1631,7 +1635,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.LOCKED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("renders locked sidebar open at desktop viewport width", () => {
@@ -1647,7 +1651,7 @@ describe("AppView element", () => {
       )
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
       // Collapse button must not exist in the DOM for a locked desktop sidebar
       expect(
         screen.queryByTestId("stSidebarCollapseButton")
@@ -1666,16 +1670,16 @@ describe("AppView element", () => {
       )
 
       expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-        "aria-expanded",
-        "false"
+        "data-collapsed",
+        "true"
       )
       expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("true")
 
       await user.click(screen.getByTestId("stExpandSidebarButton"))
 
       expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-        "aria-expanded",
-        "true"
+        "data-collapsed",
+        "false"
       )
       expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("false")
     })

@@ -31,29 +31,30 @@ import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
 
 import {
-  CameraInput as CameraInputProto,
+  type CameraInput as CameraInputProto,
   FileUploaderState as FileUploaderStateProto,
-  FileURLs as FileURLsProto,
+  type FileURLs as FileURLsProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
 import Icon from "~lib/components/shared/Icon/Icon"
 import {
-  UploadedStatus,
+  type UploadedStatus,
   UploadFileInfo,
-  UploadingStatus,
+  type UploadingStatus,
 } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import useTimeout from "~lib/hooks/useTimeout"
+import { formatRejectionMessage } from "~lib/util/ErrorHandling"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import CameraInputButton from "./CameraInputButton"
 import {
@@ -63,7 +64,7 @@ import {
   StyledSpan,
 } from "./styled-components"
 import { FacingMode } from "./SwitchFacingModeButton"
-import WebcamComponent, { WebcamPermission } from "./WebcamComponent"
+import WebcamComponent, { type WebcamPermission } from "./WebcamComponent"
 
 const RESTORED_FROM_WIDGET_STRING = "RESTORED_FROM_WIDGET"
 const MIN_SHUTTER_EFFECT_TIME_MS = 150
@@ -172,9 +173,7 @@ const CameraInput = ({
   const initialStateRef = useRef<ReturnType<typeof createInitialFiles> | null>(
     null
   )
-  if (initialStateRef.current === null) {
-    initialStateRef.current = createInitialFiles(element, widgetMgr)
-  }
+  initialStateRef.current ??= createInitialFiles(element, widgetMgr)
   const {
     files: initialFiles,
     nextLocalId: initialNextLocalId,
@@ -416,7 +415,7 @@ const CameraInput = ({
           abortController.signal
         )
         .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
-        .catch(err => {
+        .catch((err: unknown) => {
           // If this was an abort error, we don't show the user an error -
           // the cancellation was in response to an action they took.
           if (!(err instanceof DOMException && err.name === "AbortError")) {
@@ -424,7 +423,7 @@ const CameraInput = ({
               uploadingFileInfo.id,
               uploadingFileInfo.setStatus({
                 type: "error",
-                errorMessage: err ? err.toString() : "Unknown error",
+                errorMessage: formatRejectionMessage(err),
               })
             )
           }
@@ -503,7 +502,7 @@ const CameraInput = ({
           setMinShutterEffectPassed(true)
           return
         })
-        .catch(err => {
+        .catch((err: unknown) => {
           LOG.error(err)
         })
         .finally(() => {
@@ -575,6 +574,10 @@ const CameraInput = ({
         formId: element.formId,
         fragmentId,
         fromUser: true,
+        // on_change="ignore" buffers the value without scheduling a rerun.
+        // WidgetStateManager ignores triggerRerun inside forms (the form owns
+        // commit timing).
+        ...(element.ignoreRerun ? { triggerRerun: false } : {}),
       })
     }
   }, [status, files, widgetMgr, element, fragmentId])

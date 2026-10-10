@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect, useRef } from "react"
+import { memo, type ReactElement, useCallback, useEffect, useRef } from "react"
 
 import { FloatingPortal } from "@floating-ui/react"
 

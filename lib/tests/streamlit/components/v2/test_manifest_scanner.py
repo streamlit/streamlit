@@ -245,7 +245,9 @@ def test_process_single_package_no_streamlit_config() -> None:
 
     with (
         patch("builtins.open", mock_open(read_data=toml_content)),
-        patch("streamlit.components.v2.manifest_scanner.toml.load") as mock_toml_load,
+        patch(
+            "streamlit.components.v2.manifest_scanner.tomllib.load"
+        ) as mock_toml_load,
         patch("streamlit.components.v2.manifest_scanner.Path"),
     ):
         mock_toml_load.return_value = {
@@ -277,7 +279,9 @@ def test_process_single_package_valid_manifest() -> None:
 
     with (
         patch("builtins.open", mock_open()),
-        patch("streamlit.components.v2.manifest_scanner.toml.load") as mock_toml_load,
+        patch(
+            "streamlit.components.v2.manifest_scanner.tomllib.load"
+        ) as mock_toml_load,
         patch("streamlit.components.v2.manifest_scanner.Path") as mock_path,
     ):
         mock_toml_load.return_value = {
@@ -993,7 +997,9 @@ def test_process_single_package_editable_install_success() -> None:
             "streamlit.components.v2.manifest_scanner.importlib.util.find_spec"
         ) as mock_find_spec,
         patch("builtins.open", mock_open()),
-        patch("streamlit.components.v2.manifest_scanner.toml.load") as mock_toml_load,
+        patch(
+            "streamlit.components.v2.manifest_scanner.tomllib.load"
+        ) as mock_toml_load,
         tempfile.TemporaryDirectory() as temp_dir,
     ):
         # Create real directories for testing
@@ -1045,7 +1051,9 @@ def test_process_single_package_editable_install_fallback_to_pyproject_parent() 
             "streamlit.components.v2.manifest_scanner.importlib.util.find_spec"
         ) as mock_find_spec,
         patch("builtins.open", mock_open()),
-        patch("streamlit.components.v2.manifest_scanner.toml.load") as mock_toml_load,
+        patch(
+            "streamlit.components.v2.manifest_scanner.tomllib.load"
+        ) as mock_toml_load,
         tempfile.TemporaryDirectory() as temp_dir,
     ):
         # Create pyproject.toml in temp directory
@@ -1091,7 +1099,9 @@ def test_process_single_package_mixed_install_scenarios() -> None:
             "streamlit.components.v2.manifest_scanner.importlib.util.find_spec"
         ) as mock_find_spec,
         patch("builtins.open", mock_open()),
-        patch("streamlit.components.v2.manifest_scanner.toml.load") as mock_toml_load,
+        patch(
+            "streamlit.components.v2.manifest_scanner.tomllib.load"
+        ) as mock_toml_load,
         tempfile.TemporaryDirectory() as temp_dir,
     ):
         # Create real directories for testing

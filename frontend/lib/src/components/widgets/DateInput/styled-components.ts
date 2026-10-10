@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { ComponentType } from "react"
+import type { ComponentType } from "react"
 
 import styled from "@emotion/styled"
-import { CalendarDate } from "@internationalized/date"
+import type { CalendarDate } from "@internationalized/date"
 import { getLuminance, transparentize } from "color2k"
 import {
   Button,
@@ -25,14 +25,14 @@ import {
   CalendarCell,
   CalendarGrid,
   CalendarHeaderCell,
-  CalendarProps,
+  type CalendarProps,
   DateSegment,
   Group,
   ListBox,
   ListBoxItem,
   Popover,
   RangeCalendar,
-  RangeCalendarProps,
+  type RangeCalendarProps,
   Select,
 } from "react-aria-components"
 
@@ -40,6 +40,7 @@ import {
   getBorderColor,
   getOverlayZIndex,
   getPopoverContainerStyle,
+  getSecondaryIconButtonColorStyles,
 } from "~lib/components/shared/Base/styled-components"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
@@ -80,6 +81,14 @@ export const StyledDateInputWrapper = styled.div(({ theme }) => ({
   cursor: "text",
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.inputWidget,
+  // React Aria's `HiddenDateInput` is visually hidden, but Chromium and Firefox
+  // can still paint `::-webkit-calendar-picker-indicator` inside the field.
+  "& input[type='date'], & input[type='datetime-local']": {
+    appearance: "none",
+    "&::-webkit-calendar-picker-indicator": {
+      display: "none",
+    },
+  },
   "&:focus-within": {
     borderColor: getBorderColor(theme.colors, true),
     outline: "none",
@@ -195,19 +204,27 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   justifyContent: "center",
   background: "none",
   border: "none",
+  // Round the button so the focus ring follows its shape, matching the Multiselect clear button.
+  borderRadius: theme.radii.default,
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
   marginRight: theme.spacing.sm,
-  color: theme.colors.grayTextColor,
   flexShrink: 0,
-  "&:hover": {
-    color: theme.colors.bodyText,
+  ...getSecondaryIconButtonColorStyles(theme),
+  "&:focus": {
+    outline: "none",
   },
   "&:focus-visible": {
-    outline: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
-    borderRadius: theme.radii.sm,
+    boxShadow: theme.shadows.focusRing,
   },
 }))
+
+/**
+ * Calendar toggle button. Same icon-button styles as the clear control
+ * (including disabled); kept as a separate export so calendar and clear stay
+ * distinct components.
+ */
+export const StyledCalendarButton = styled(StyledClearButton)({})
 
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
 const visuallyHiddenStyle = {

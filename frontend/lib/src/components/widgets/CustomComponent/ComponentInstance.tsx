@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useEffect,
   useMemo,
   useRef,
@@ -27,9 +27,9 @@ import { getLogger } from "loglevel"
 import queryString from "query-string"
 import { flushSync } from "react-dom"
 
-import {
+import type {
   ComponentInstance as ComponentInstanceProto,
-  type SpecialArg,
+  SpecialArg,
 } from "@streamlit/protobuf"
 import { StreamlitConfig } from "@streamlit/utils"
 
@@ -47,14 +47,14 @@ import {
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "~lib/util/IFrameUtil"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { ComponentRegistry } from "./ComponentRegistry"
+import type { ComponentRegistry } from "./ComponentRegistry"
 import {
-  Args,
+  type Args,
   createIframeMessageHandler,
-  DataframeArg,
-  IframeMessageHandlerProps,
+  type DataframeArg,
+  type IframeMessageHandlerProps,
   parseArgs,
   sendRenderMessage,
 } from "./componentUtils"

@@ -59,7 +59,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.dataframe` | Display a dataframe as an interactive table. Supports column configuration, selection, sizing, sorting, and efficient data exploration. |
 | `st.date_input` | Display a date input widget. It can return a single date or a date range depending on the initial value. |
 | `st.datetime_input` | Display a date and time input widget. Use it when users need to choose precise timestamps rather than dates alone. |
-| `st.dialog` | Function decorator to create a modal dialog. Use it to isolate short workflows while preserving Streamlit's rerun model. |
+| `st.dialog` | Function decorator to create a modal dialog or a modal side drawer. Use it to isolate short workflows while preserving Streamlit's rerun model. |
 | `st.divider` | Display a horizontal rule. Use it to separate sections without adding a heavy layout container. |
 | `st.download_button` | Display a download button widget. Use it for generated files, reports, transformed data, or other app outputs. |
 | `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for ECharts-native visualizations. |
@@ -77,7 +77,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.graphviz_chart` | Display a graph using the d3-graphviz library and Graphviz WASM. Use it for directed graphs, diagrams, and node-edge visualizations. |
 | `st.header` | Display text in header formatting. Use it for major sections below the page title. |
 | `st.help` | Display help and other information for a given object. It renders docstrings, signatures, and related information inside the app. |
-| `st.html` | Insert HTML into your app. JavaScript is ignored by default (opt in with `unsafe_allow_javascript=True`); for interactive components that exchange data with Python, use `st.components.v2.component()` instead. |
+| `st.html` | Insert HTML into your app. JavaScript is ignored by default; for interactive components that exchange data with Python, use `st.components.v2.component()` instead. |
 | `st.iframe` | Embed content in an iframe. Use it to show an external page or embedded resource in a bounded frame. |
 | `st.image` | Display an image or list of images. Accepts paths, URLs, bytes, arrays, and image-like objects. |
 | `st.info` | Display an informational message. Use it for neutral guidance, context, or non-blocking status. |
@@ -92,9 +92,9 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.markdown` | Display string formatted as Markdown. It supports Streamlit-specific extensions such as colored text, badges, icons, and limited HTML when enabled. |
 | `st.menu_button` | Display a dropdown menu button widget. Use it when a compact button should expose a small set of actions or options. |
 | `st.mermaid_chart` | Display a Mermaid diagram. Use it for text-based diagram definitions such as flowcharts, sequence diagrams, class diagrams, and state diagrams. |
-| `st.metric` | Display a metric in big bold font, with an optional indicator of how the metric changed. Use it for KPIs, headline numbers, optional inline sparklines (`chart_data`), and dashboard summaries. |
+| `st.metric` | Display a metric in big bold font, with an optional indicator of how the metric changed. Use it for KPIs, headline numbers, optional inline sparklines, and dashboard summaries. |
 | `st.multiselect` | Display a multiselect widget. Use it when users can choose multiple items from a list, optionally including new options they enter. |
-| `st.navigation` | Configure the available pages in a multipage app and where the navigation menu appears (`sidebar`, `top`, or `hidden`). It returns the currently selected page object, which the app should run. |
+| `st.navigation` | Configure the available pages in a multipage app and where the navigation menu appears. It returns the currently selected page object, which the app should run. |
 | `st.number_input` | Display a numeric input widget. It supports integer and floating-point values, bounds, steps, and formatting. |
 | `st.page_link` | Display a link to another page in a multipage app or to an external page. Use it for explicit navigation elements. |
 | `st.pagination` | Display a pagination widget for navigating through pages of content. Use it when a dataset or workflow is split across numbered pages. |
@@ -140,7 +140,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | **Top-level objects** | |
 | `st.bottom` | Bottom-pinned container for the main app area. Use it as a container object, not as a function. |
 | `st.context` | Read-only access to user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. Attribute and bracket access are equivalent (`st.context.timezone` and `st.context["timezone"]`), but it is not a dict: no `.get()`, `.keys()`, or iteration. |
-| `st.query_params` | Mutable mapping for the browser URL query parameters. Use it to read or update URL state, but to sync a widget's value to the URL set `bind="query-params"` on the widget instead. |
+| `st.query_params` | Mutable mapping for the browser URL query parameters. Use it to read or update URL state; to sync a widget's value to the URL, bind the widget to query params instead. |
 | `st.secrets` | Dict-like access to secrets loaded from `secrets.toml`. Use it for credentials and configuration that should not be hard-coded. |
 | `st.session_state` | Per-session mutable mapping for app state. Use it to persist values across reruns and share state between widgets and app logic. |
 | `st.sidebar` | Sidebar container that exposes most element methods as `st.sidebar.<command>()` and supports `with st.sidebar:` blocks. |

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CSSObject, Theme } from "@emotion/react"
+import type { CSSObject, Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { StyledToolbar } from "~lib/components/shared/Toolbar/styled-components"

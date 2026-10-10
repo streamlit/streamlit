@@ -17,19 +17,22 @@
 import { parseToRgba, rgba, transparentize } from "color2k"
 import { describe, expect, it } from "vitest"
 
-import { darkTheme, lightTheme } from "@streamlit/lib"
+import { darkTheme, lightTheme, mockTheme } from "@streamlit/lib"
 import { PageConfig } from "@streamlit/protobuf"
 
 import {
   clampSidebarWidth,
-  DEFAULT_WIDTH,
   getSidebarResizeHandleBackgroundImage,
   getSidebarResizeHandleHoverBorderColor,
+  getSidebarWidthLimits,
   shouldCollapse,
 } from "./utils"
 
-const MIN_SIDEBAR_WIDTH = 200
-const MAX_SIDEBAR_WIDTH = 600
+const sidebarWidthLimits = getSidebarWidthLimits(
+  mockTheme.emotion.sizes,
+  mockTheme.emotion.fontSizes.baseFontSize
+)
+const { minWidthPx, maxWidthPx, defaultWidthPx } = sidebarWidthLimits
 
 describe("shouldCollapse", () => {
   it("should collapse given state is collapsed", () => {
@@ -73,23 +76,40 @@ describe("shouldCollapse", () => {
   })
 })
 
+describe("getSidebarWidthLimits", () => {
+  it("converts the theme rem tokens to pixels", () => {
+    expect(minWidthPx).toBe(200)
+    expect(defaultWidthPx).toBe(300)
+    expect(maxWidthPx).toBe(600)
+  })
+
+  it("scales the rem tokens with a custom baseFontSize", () => {
+    const limits = getSidebarWidthLimits(mockTheme.emotion.sizes, 14)
+    expect(limits.minWidthPx).toBe(175)
+    expect(limits.defaultWidthPx).toBe(262.5)
+    expect(limits.maxWidthPx).toBe(525)
+  })
+})
+
 describe("clampSidebarWidth", () => {
   describe("minimum width clamping", () => {
-    it("should clamp values below minimum to 200px", () => {
+    it("should clamp values below the theme minimum", () => {
       const testCases = [50, Number.NEGATIVE_INFINITY, Number.MIN_SAFE_INTEGER]
 
       testCases.forEach(width => {
-        expect(clampSidebarWidth(width)).toBe(MIN_SIDEBAR_WIDTH)
+        expect(clampSidebarWidth(width, sidebarWidthLimits)).toBe(minWidthPx)
       })
     })
 
     it("should handle exactly minimum width", () => {
-      expect(clampSidebarWidth(MIN_SIDEBAR_WIDTH)).toBe(MIN_SIDEBAR_WIDTH)
+      expect(clampSidebarWidth(minWidthPx, sidebarWidthLimits)).toBe(
+        minWidthPx
+      )
     })
   })
 
   describe("maximum width clamping", () => {
-    it("should clamp values above maximum to 600px", () => {
+    it("should clamp values above the theme maximum", () => {
       const testCases = [
         1000,
         Number.POSITIVE_INFINITY,
@@ -97,41 +117,47 @@ describe("clampSidebarWidth", () => {
       ]
 
       testCases.forEach(width => {
-        expect(clampSidebarWidth(width)).toBe(MAX_SIDEBAR_WIDTH)
+        expect(clampSidebarWidth(width, sidebarWidthLimits)).toBe(maxWidthPx)
       })
     })
 
     it("should handle exactly maximum width", () => {
-      expect(clampSidebarWidth(MAX_SIDEBAR_WIDTH)).toBe(MAX_SIDEBAR_WIDTH)
+      expect(clampSidebarWidth(maxWidthPx, sidebarWidthLimits)).toBe(
+        maxWidthPx
+      )
     })
   })
 
   describe("valid width range", () => {
     it("should return width unchanged when within valid bounds", () => {
-      const validWidths = [300, 250.5]
+      const validWidths = [defaultWidthPx, 250.5]
 
       validWidths.forEach(width => {
-        expect(clampSidebarWidth(width)).toBe(width)
+        expect(clampSidebarWidth(width, sidebarWidthLimits)).toBe(width)
       })
     })
   })
 
   describe("edge cases and error handling", () => {
     it("should handle boundary values correctly", () => {
-      // Just below minimum
-      expect(clampSidebarWidth(MIN_SIDEBAR_WIDTH - 1)).toBe(MIN_SIDEBAR_WIDTH)
-
-      // Just above maximum
-      expect(clampSidebarWidth(MAX_SIDEBAR_WIDTH + 1)).toBe(MAX_SIDEBAR_WIDTH)
+      expect(clampSidebarWidth(minWidthPx - 1, sidebarWidthLimits)).toBe(
+        minWidthPx
+      )
+      expect(clampSidebarWidth(maxWidthPx + 1, sidebarWidthLimits)).toBe(
+        maxWidthPx
+      )
     })
 
     it("should handle special numeric values", () => {
-      // These should be handled gracefully by Math.max/Math.min
-      expect(clampSidebarWidth(Number.NaN)).toBe(
-        Number.parseInt(DEFAULT_WIDTH, 10)
+      expect(clampSidebarWidth(Number.NaN, sidebarWidthLimits)).toBe(
+        defaultWidthPx
       )
-      expect(clampSidebarWidth(Number.MAX_VALUE)).toBe(MAX_SIDEBAR_WIDTH)
-      expect(clampSidebarWidth(Number.MIN_VALUE)).toBe(MIN_SIDEBAR_WIDTH)
+      expect(clampSidebarWidth(Number.MAX_VALUE, sidebarWidthLimits)).toBe(
+        maxWidthPx
+      )
+      expect(clampSidebarWidth(Number.MIN_VALUE, sidebarWidthLimits)).toBe(
+        minWidthPx
+      )
     })
   })
 })

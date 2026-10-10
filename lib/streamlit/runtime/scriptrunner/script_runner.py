@@ -1015,11 +1015,13 @@ class ScriptRunner:
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
-        # Both cleanups below assume the body re-registered whatever is still in use, so
-        # a run that never reached its body would make everything look orphaned. The
-        # session refs were already cleared before this run, so deleting now would take
-        # files the app still displays with it. The next run that renders collects them.
-        if ctx.has_script_started:
+        # Skip orphan cleanup when:
+        # - The body never ran: this run already cleared session refs and
+        #   registered nothing, so collecting now would delete files the app
+        #   still displays. The next run that renders re-registers them.
+        # - No Runtime singleton exists: get_instance() would raise on the
+        #   script thread. There is nothing registered to collect without a Runtime.
+        if ctx.has_script_started and runtime.exists():
             # Remove orphaned files now that the script has run and files in use
             # are marked as active.
             runtime.get_instance().media_file_mgr.remove_orphaned_files()

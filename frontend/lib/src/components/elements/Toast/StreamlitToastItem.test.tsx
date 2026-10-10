@@ -17,7 +17,7 @@
 import { act, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { UNSTABLE_ToastRegion as ToastRegion } from "react-aria-components/Toast"
-import { MockInstance, vi } from "vitest"
+import { type MockInstance, vi } from "vitest"
 
 import { render } from "~lib/test_util"
 

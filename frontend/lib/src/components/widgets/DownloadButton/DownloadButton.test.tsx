@@ -20,19 +20,20 @@ import { vi } from "vitest"
 
 import { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
 
-import { BackendOperationClient } from "~lib/BackendOperationClient"
+import type { BackendOperationClient } from "~lib/BackendOperationClient"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 import createDownloadLinkElement from "~lib/util/createDownloadLinkElement"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import DownloadButton, { Props } from "./DownloadButton"
+import DownloadButton, { type Props } from "./DownloadButton"
 
 vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
   formatShortcutForDisplay: vi.fn(
     (shortcut: string | null | undefined) =>
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty shortcut displays as nothing
       shortcut?.replaceAll("+", " + ") || undefined
   ),
 }))
@@ -238,6 +239,16 @@ describe("DownloadButton widget", () => {
       props.element.url,
       "Download Button"
     )
+  })
+
+  it("does not check the source url when a callable download has no url", () => {
+    const props = getProps({
+      url: "",
+      deferredFileId: undefined,
+    })
+    render(<DownloadButton {...props} />)
+
+    expect(props.endpoints.checkSourceUrlResponse).not.toHaveBeenCalled()
   })
 
   describe("Deferred downloads", () => {

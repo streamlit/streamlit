@@ -245,6 +245,44 @@ describe("MermaidChart", () => {
 
     it.each([
       {
+        name: "Streamlit stAlt marker before diagram type",
+        source: [
+          "%% stAlt: Streamlit taxonomy",
+          "mindmap",
+          "root((App))",
+        ].join("\n"),
+        expectedAlt: "Streamlit taxonomy",
+      },
+      {
+        name: "Streamlit stAlt marker after diagram type",
+        source: [
+          "mindmap",
+          "%% stAlt: Streamlit taxonomy",
+          "root((App))",
+        ].join("\n"),
+        expectedAlt: "Streamlit taxonomy",
+      },
+      {
+        name: "stAlt preferred over accTitle",
+        source: [
+          "flowchart TD",
+          "%% stAlt: From Streamlit",
+          "accTitle: From Mermaid",
+          "A-->B",
+        ].join("\n"),
+        expectedAlt: "From Streamlit",
+      },
+      {
+        name: "empty stAlt does not capture the next line",
+        source: [
+          "%% stAlt:",
+          "accTitle: Checkout",
+          "flowchart TD",
+          "A-->B",
+        ].join("\n"),
+        expectedAlt: "Checkout",
+      },
+      {
         name: "title and description",
         source: [
           "flowchart TD",
@@ -280,15 +318,12 @@ describe("MermaidChart", () => {
         ].join("\n"),
         expectedAlt: "First line Second line",
       },
-    ])(
-      "uses $name from accessibility directives",
-      async ({ source, expectedAlt }) => {
-        render(<MermaidChart source={source} />)
+    ])("uses $name for the image alt", async ({ source, expectedAlt }) => {
+      render(<MermaidChart source={source} />)
 
-        const img = await waitForChartImage()
-        expect(img).toHaveAttribute("alt", expectedAlt)
-      }
-    )
+      const img = await waitForChartImage()
+      expect(img).toHaveAttribute("alt", expectedAlt)
+    })
 
     it.each([
       {
@@ -344,7 +379,7 @@ describe("MermaidChart", () => {
       // Toolbar is opacity:0 until hover; fireEvent avoids userEvent visibility checks.
       // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
       fireEvent.click(
-        screen.getByRole("button", { name: "Copy to clipboard" })
+        screen.getByRole("button", { name: /Copy to clipboard/ })
       )
 
       await waitFor(() => {
@@ -357,12 +392,64 @@ describe("MermaidChart", () => {
       await waitForChartImage()
 
       // Toolbar is opacity:0 until hover — presence in the DOM is enough.
+      // Unlabeled diagrams keep generic chrome names (author alt only).
       expect(
-        screen.getByRole("button", { name: "Download as PNG" })
+        screen.getByRole("button", { name: /^Download as PNG$/ })
       ).toBeInTheDocument()
       expect(
-        screen.getByRole("button", { name: "Copy to clipboard" })
+        screen.getByRole("button", { name: /^Copy to clipboard$/ })
       ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+    })
+
+    it("composes an author-provided diagram name into toolbar aria-labels", async () => {
+      const source = ["flowchart TD", "%% stAlt: Checkout flow", "A-->B"].join(
+        "\n"
+      )
+      render(<MermaidChart source={source} />)
+      await waitForChartImage()
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Download as PNG: Checkout flow$/,
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Checkout flow$/,
+        })
+      ).toBeInTheDocument()
+    })
+
+    it("drops author context from the accessible name while showing Copied", async () => {
+      const source = ["flowchart TD", "%% stAlt: Checkout flow", "A-->B"].join(
+        "\n"
+      )
+      render(<MermaidChart source={source} />)
+      await waitForChartImage()
+
+      // Toolbar is opacity:0 until hover; fireEvent avoids userEvent visibility checks.
+      // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: /^Copy to clipboard: Checkout flow$/,
+        })
+      )
+
+      await waitFor(() => {
+        expect(mockWriteText).toHaveBeenCalledWith(source)
+      })
+
+      expect(
+        await screen.findByRole("button", { name: /^Copied$/ })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Copied: Checkout flow/,
+        })
+      ).not.toBeInTheDocument()
     })
 
     it("downloads a PNG when the download toolbar action succeeds", async () => {
@@ -386,7 +473,7 @@ describe("MermaidChart", () => {
       await waitForChartImage()
 
       // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
-      fireEvent.click(screen.getByRole("button", { name: "Download as PNG" }))
+      fireEvent.click(screen.getByRole("button", { name: /Download as PNG/ }))
 
       await waitFor(() => {
         expect(anchorClick).toHaveBeenCalled()
@@ -405,7 +492,7 @@ describe("MermaidChart", () => {
       await waitForChartImage()
 
       // eslint-disable-next-line testing-library/prefer-user-event -- opacity:0 toolbar blocks userEvent
-      fireEvent.click(screen.getByRole("button", { name: "Download as PNG" }))
+      fireEvent.click(screen.getByRole("button", { name: /Download as PNG/ }))
 
       // load/error listeners are synchronous via the MockImage setter; no download link click.
       expect(anchorClick).not.toHaveBeenCalled()

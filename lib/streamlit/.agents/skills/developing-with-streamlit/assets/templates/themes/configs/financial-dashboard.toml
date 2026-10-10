@@ -65,6 +65,7 @@ chartSequentialColors = [
 # Dataframe styling
 dataframeBorderColor = "#334155"
 dataframeHeaderBackgroundColor = "#1E293B"
+dataframeHeaderTextColor = "#F8FAFC"
 
 # Sidebar
 [theme.sidebar]

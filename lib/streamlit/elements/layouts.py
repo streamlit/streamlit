@@ -173,8 +173,10 @@ class LayoutsMixin:
               height of its content.
             - ``"stretch"``: The height of the container matches the height of
               its content or the height of the parent container, whichever is
-              larger. If the container is not in a parent container, the height
-              of the container matches the height of its content.
+              larger. In a horizontal container, the height of the container
+              matches the height of its row. If the container is not in a
+              parent container, the height of the container matches the height
+              of its content.
             - An integer specifying the height in pixels: The container has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -242,8 +244,11 @@ class LayoutsMixin:
               fill the height of the container. A standalone element is aligned
               to the top.
 
-              When ``horizontal`` is ``True``, ``"distribute"`` aligns the
-              elements the same as ``"top"``.
+              When ``horizontal`` is ``True``, ``"distribute"`` stretches
+              each element to the height of its row. Elements that fill their
+              space, like bordered containers and bordered metrics, visibly
+              stretch. Other elements keep their height and sit at the top of
+              the row.
 
         gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
             The minimum gap size between the elements inside the container.
@@ -805,9 +810,10 @@ class LayoutsMixin:
               height of its content.
             - ``"stretch"``: The height of the container matches the height
               of the parent container, and content that overflows scrolls
-              inside the active tab panel. If the container is not in a
-              fixed-height parent, the height of the container matches the
-              height of its content.
+              inside the active tab panel. In a horizontal container, the
+              height of the container matches the height of its row.
+              Otherwise, if the container is not in a fixed-height parent,
+              the height of the container matches the height of its content.
             - An integer specifying the height in pixels: The container has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled inside the active tab panel.
@@ -1745,9 +1751,9 @@ class LayoutsMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. The icon and chevron remain
-            visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. The icon and
+            chevron remain visible.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -2166,8 +2172,9 @@ class LayoutsMixin:
         self,
         title: str,
         *,
-        dismissible: bool = True,
         width: Literal["small", "large", "medium"] = "small",
+        position: Literal["left", "center", "right"] = "center",
+        dismissible: bool = True,
         icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
@@ -2179,8 +2186,9 @@ class LayoutsMixin:
         return get_dg_singleton_instance().dialog_container_cls._create(
             self.dg,
             title,
-            dismissible=dismissible,
             width=width,
+            position=position,
+            dismissible=dismissible,
             icon=icon,
             on_dismiss=on_dismiss,
         )

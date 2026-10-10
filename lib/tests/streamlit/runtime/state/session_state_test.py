@@ -496,6 +496,163 @@ class WStateTests(unittest.TestCase):
             # Verify no warning was logged
             mock_logger.warning.assert_not_called()
 
+    def test_fragment_callback_rerun_does_not_warn(self):
+        """st.rerun() from a fragment callback displays nothing, so it must not warn."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                @st.fragment
+                def frag():
+                    def cb():
+                        st.rerun()
+
+                    st.button("go", on_click=cb)
+
+                frag()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+
+            mock_logger.warning.assert_not_called()
+
+    def test_fragment_callback_switch_page_does_not_warn(self):
+        """st.switch_page() from a fragment callback must not warn about its yield point."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                def other():
+                    st.text("other page")
+
+                def home():
+                    @st.fragment
+                    def frag():
+                        def go():
+                            st.switch_page(
+                                st.Page(other, title="Other", url_path="other")
+                            )
+
+                        st.button("go", on_click=go)
+
+                    frag()
+
+                st.navigation(
+                    [
+                        st.Page(home, title="Home", url_path="home", default=True),
+                        st.Page(other, title="Other", url_path="other"),
+                    ]
+                ).run()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+            assert [text.value for text in at.text] == ["other page"]
+
+            mock_logger.warning.assert_not_called()
+
+    def test_fragment_callback_stop_does_not_warn(self):
+        """st.stop() from a fragment callback must not warn about its yield point."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                @st.fragment
+                def frag():
+                    def cb():
+                        st.stop()
+
+                    st.button("go", on_click=cb)
+                    st.text("after")
+
+                frag()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+            assert [text.value for text in at.text] == []
+            assert len(at.exception) == 0
+
+            mock_logger.warning.assert_not_called()
+
+    def test_fragment_callback_element_before_switch_page_still_warns(self):
+        """A real element write still warns when the callback then calls st.switch_page()."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                def other():
+                    st.text("other page")
+
+                def home():
+                    @st.fragment
+                    def frag():
+                        def go():
+                            st.write("from callback")
+                            st.switch_page(
+                                st.Page(other, title="Other", url_path="other")
+                            )
+
+                        st.button("go", on_click=go)
+
+                    frag()
+
+                st.navigation(
+                    [
+                        st.Page(home, title="Home", url_path="home", default=True),
+                        st.Page(other, title="Other", url_path="other"),
+                    ]
+                ).run()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+
+            mock_logger.warning.assert_called_once()
+            warning_msg = mock_logger.warning.call_args[0]
+            assert any(
+                "callback that displays one or more elements" in msg
+                for msg in warning_msg
+            )
+
+    def test_fragment_callback_element_before_rerun_still_warns(self):
+        """A real element write in a fragment callback still warns, even if it then reruns."""
+        with patch("streamlit.delta_generator.logger.get_logger") as mock_get_logger:
+            mock_logger = MagicMock()
+            mock_get_logger.return_value = mock_logger
+
+            def script():
+                import streamlit as st
+
+                @st.fragment
+                def frag():
+                    def cb():
+                        st.write("from callback")
+                        st.rerun()
+
+                    st.button("go", on_click=cb)
+
+                frag()
+
+            at = AppTest.from_function(script).run()
+            at.button[0].click().run()
+
+            mock_logger.warning.assert_called()
+            warning_msg = mock_logger.warning.call_args[0]
+            assert any(
+                "callback that displays one or more elements" in msg
+                for msg in warning_msg
+            )
+
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
 class SessionStateUpdateTest(DeltaGeneratorTestCase):
@@ -847,7 +1004,7 @@ def test_callback_switch_page_wins_over_a_competing_callback_rerun() -> None:
 
     assert len(at.exception) == 0
     assert [text.value for text in at.text] == ["other page"]
-    assert at.query_params == {"utm_source": ["home"]}
+    assert at.query_params == {"utm_source": "home"}
 
 
 def _state_with_unregistered_widgets() -> SessionState:
@@ -4760,10 +4917,12 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
     ) -> None:
         """On normal same-page rerun with param already present, value_changed
         should be False (no restore needed)."""
+        widget_id = "$$ID-hash-my_widget"
         self.session_state._old_state["my_widget"] = "custom_value"
-        self.session_state._set_key_widget_mapping("$$ID-hash-my_widget", "my_widget")
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
         self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
-        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+        metadata = _create_test_widget_metadata(widget_id)
 
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 
@@ -4793,19 +4952,20 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
-    def test_value_changed_false_for_non_persisted_remount(
+    def test_value_changed_true_when_widget_first_mounts_with_prior_run_session_state(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A plain (persist_state=None) widget does not signal value_changed
-        on remount, so the restore behavior is specific to persisted widgets."""
+        """A previous-run user-key value (setdefault / assignment while the
+        widget was unregistered) must set value_changed so the frontend adopts
+        it instead of the widget default. See issues #17093 and #9082."""
         widget_id = "$$ID-hash-my_widget"
         self.session_state._old_state["my_widget"] = "custom_value"
-        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
         metadata = _create_persist_state_metadata(widget_id, None)
 
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 
-        assert result.value_changed is False
+        assert result.value == "custom_value"
+        assert result.value_changed is True
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -4846,6 +5006,71 @@ class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
         result = self.session_state.register_widget(metadata, user_key="my_widget")
 
         assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_prior_run_user_key_survives_non_persisted_unmount(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A user key written before first registration stays in old state after
+        a persist_state=None unmount. Remount adopts that original value, not
+        the last widget edit or the element default."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None)
+
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "edited_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_false_after_non_persisted_unmount(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A persist_state=None widget that was registered then hidden resets
+        to the default on remount. Cleanup drops the widget id; no independent
+        user-key value remains, so the frontend is not told to restore."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None)
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(frozenset())
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "default"
+        assert result.value_changed is False
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_same_run_user_key_assignment_still_sets_value_changed(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """A same-run session_state write immediately before the widget still
+        sets value_changed, whether or not persist_state is set."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_persist_state_metadata(widget_id, None)
+        self.session_state._new_session_state["my_widget"] = "same_run_value"
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "same_run_value"
         assert result.value_changed is True
 
 
@@ -4910,6 +5135,7 @@ class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
 
         remounted = self.session_state.register_widget(metadata, user_key="my_widget")
         assert remounted.value == "default"
+        assert remounted.value_changed is False
         assert "my_widget" not in self.query_params._query_params
 
 

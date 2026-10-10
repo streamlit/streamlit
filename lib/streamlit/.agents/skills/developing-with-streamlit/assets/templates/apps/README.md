@@ -19,7 +19,7 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
-| **dashboard-metrics** | Core metrics dashboard with KPIs | `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
+| **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
 | **dashboard-feature-usage** | API endpoint usage analytics | Segmented control, starter kits, normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
 | **dashboard-companies** | Company leaderboard with drill-down | Interactive dataframe, sparkline columns, growth scores, custom cache spinner |
 | **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` with `st.skeleton`, `st.popover` filters, TIME_RANGES, line/bar toggle |
@@ -55,7 +55,7 @@ When creating new templates or adapting existing ones, follow these patterns for
 
 ### Page Configuration
 
-Always set page config as the first Streamlit call, with `layout="wide"` and a Material icon:
+Set page config near the top of the script, with `layout="wide"` and a Material icon:
 
 ```python
 st.set_page_config(
@@ -145,7 +145,7 @@ def metric_card(metric_name: str):
         st.markdown(f"**{metric_name}**")  # Stays stable while the body loads
         with st.skeleton(height=300):
             data = load_metric(metric_name)  # Cached; loads in parallel
-            st.line_chart(data)
+            st.line_chart(data, alt=f"{metric_name} over time")
 ```
 
 Keep `st.dialog` / `st.switch_page` and writes to containers created *outside*
@@ -176,7 +176,7 @@ parameterized loaders so per-argument entries stay bounded.
 
 ## Dependencies
 
-All templates require Python >=3.10 and use:
+All templates require Python >=3.11 and use:
 - `streamlit`
 - `altair>=5.5.0`
 - `pandas>=2.2.3`

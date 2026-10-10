@@ -16,11 +16,11 @@
 
 import styled from "@emotion/styled"
 
-import { Metric as MetricProto } from "@streamlit/protobuf"
+import type { Metric as MetricProto } from "@streamlit/protobuf"
 
 import {
   StyledWidgetLabel,
-  StyledWidgetProps,
+  type StyledWidgetProps,
 } from "~lib/components/widgets/BaseWidget/styled-components"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 

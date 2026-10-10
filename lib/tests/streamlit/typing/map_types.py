@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -92,9 +90,11 @@ if TYPE_CHECKING:
             width="stretch",
             height=400,
             use_container_width=True,
+            alt="Delivery hubs across the Pacific Northwest",
         ),
         DeltaGenerator,
     )
+    assert_type(st_map(df, alt=None), DeltaGenerator)
 
     # =====================================================================
     # Invalid usages - should NOT type check
@@ -113,6 +113,7 @@ if TYPE_CHECKING:
     st_map(df, width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     st_map(df, height="content")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     st_map(df, height=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    st_map(df, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # All parameters except data are keyword-only.
     st_map(df, "lat")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

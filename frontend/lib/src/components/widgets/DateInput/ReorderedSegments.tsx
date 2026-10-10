@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useContext } from "react"
+import { type ReactElement, useContext } from "react"
 
 import { DateFieldStateContext } from "react-aria-components"
 import type { DateSegment as IDateSegment } from "react-stately"

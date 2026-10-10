@@ -153,6 +153,17 @@ class ScriptRunnerTest(unittest.TestCase):
         finally:
             scriptrunner.join()
 
+    def test_start_raises_if_already_started(self) -> None:
+        """ScriptRunner.start() may be called only once."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_stop()
+        scriptrunner.start()
+        try:
+            with pytest.raises(RuntimeError, match="already started"):
+                scriptrunner.start()
+        finally:
+            scriptrunner.join()
+
     def test_yield_on_enqueue(self):
         """Make sure we try to handle execution control requests whenever
         our _enqueue_forward_msg function is called.
@@ -1572,6 +1583,26 @@ class ScriptRunnerTest(unittest.TestCase):
         Runtime._instance.media_file_mgr.remove_orphaned_files.assert_called_once()
         Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_called_once()
 
+    def test_orphan_cleanup_skipped_when_runtime_missing(self) -> None:
+        """Orphan cleanup is skipped when no Runtime singleton exists.
+
+        Without the gate, ``runtime.get_instance()`` raises ``RuntimeError`` on the
+        script thread, which surfaces as an unhandled thread exception rather than a
+        clean failure.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        Runtime._instance = None
+
+        # has_script_started=True so only the missing-Runtime gate is under test.
+        with patch("streamlit.runtime.get_instance") as mock_get_instance:
+            scriptrunner._on_script_finished(
+                _finished_run_ctx(has_script_started=True),
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                premature_stop=False,
+            )
+
+        mock_get_instance.assert_not_called()
+
     def test_stale_widget_removal_skipped_when_stopped_for_rerun(self):
         """A run stopped for rerun must reset triggers without dropping widgets.
 
@@ -1914,6 +1945,18 @@ class ScriptRunnerTest(unittest.TestCase):
         )
         assert scriptrunner.events == [ScriptRunnerEvent.SHUTDOWN]
         assert scriptrunner._event_loop is None
+
+    def test_missing_event_loop_fails_without_replacement(self) -> None:
+        """ScriptRunner raises when its caller-owned loop has been cleared."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._event_loop = None
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert len(scriptrunner.script_thread_exceptions) == 1
+        assert str(scriptrunner.script_thread_exceptions[0]) == (
+            "ScriptRunner event loop is no longer available"
+        )
 
     def test_event_loop_persists_across_reruns(self):
         """The same loop object is current on every rerun of a session."""

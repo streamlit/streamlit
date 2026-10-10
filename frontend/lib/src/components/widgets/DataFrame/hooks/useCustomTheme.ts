@@ -15,7 +15,10 @@
  */
 import { useMemo } from "react"
 
-import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
+import type {
+  Theme as GlideTheme,
+  SpriteMap,
+} from "@glideapps/glide-data-grid"
 import { lighten, mix, transparentize } from "color2k"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -108,15 +111,19 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       bgSearchResult: transparentize(theme.colors.primary, 0.9),
       resizeIndicatorColor: theme.colors.primary,
       // Header styling:
-      bgIconHeader: theme.colors.fadedText60,
+      bgIconHeader: theme.colors.dataframeHeaderTextColor,
+      // Keep selected header icons white so they stay readable on the
+      // selection highlight.
       fgIconHeader: theme.colors.white,
       bgHeader: flatHeaderBg,
       bgHeaderHasFocus: flatHeaderInteractionBg,
       bgHeaderHovered: flatHeaderInteractionBg,
       bgButtonHovered: buttonHoverBg,
-      textHeader: theme.colors.fadedText60,
+      textHeader: theme.colors.dataframeHeaderTextColor,
+      // Keep selected header text white so it stays readable on the
+      // selection highlight.
       textHeaderSelected: theme.colors.white,
-      textGroupHeader: theme.colors.fadedText60,
+      textGroupHeader: theme.colors.dataframeHeaderTextColor,
       headerIconSize: Math.round(convertRemToPx("1.125rem")),
       headerFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       // Cell styling:

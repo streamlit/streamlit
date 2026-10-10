@@ -19,7 +19,7 @@ import userEvent from "@testing-library/user-event"
 
 import { render } from "@streamlit/lib/testing"
 
-import SidebarNavLink, { SidebarNavLinkProps } from "./SidebarNavLink"
+import SidebarNavLink, { type SidebarNavLinkProps } from "./SidebarNavLink"
 
 const getProps = (
   props: Partial<SidebarNavLinkProps> = {}

@@ -29,6 +29,13 @@
     "eslint/no-promise-executor-return": "error",
     "oxc/no-accumulating-spread": "error",
     "typescript/no-dynamic-delete": "error",
+    "typescript/no-import-type-side-effects": "error",
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "fixStyle": "inline-type-imports"
+      }
+    ],
     "jsx-a11y/control-has-associated-label": "error",
     "jsx-a11y/lang": "off",
     "jsx-a11y/no-aria-hidden-on-focusable": "error",

@@ -17,8 +17,10 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import patch
+from typing import Any
+from unittest.mock import MagicMock, patch
 
+import pytest
 from parameterized import parameterized
 
 from streamlit import config
@@ -229,3 +231,30 @@ class ServerUtilTest(unittest.TestCase):
         """Verify non-wildcard addresses are returned unchanged."""
         for addr in ["10.0.0.1", "example.com", "my-other-host.local", "203.0.113.5"]:
             assert server_util.get_display_address(addr) == addr
+
+
+@pytest.mark.parametrize(
+    ("toml_exists", "auth_section", "expected"),
+    [
+        (True, {"cookie_secret": "from-secrets"}, "from-secrets"),
+        (True, {"client_id": "abc"}, "from-config"),
+        (False, None, "from-config"),
+    ],
+    ids=["auth-override", "auth-without-secret", "no-toml"],
+)
+def test_get_cookie_secret(
+    toml_exists: bool, auth_section: dict[str, Any] | None, expected: str
+) -> None:
+    """Auth ``cookie_secret`` overrides config only when a secrets TOML auth section provides it."""
+    secrets_mock = MagicMock()
+    secrets_mock.load_if_toml_exists.return_value = toml_exists
+    secrets_mock.get.return_value = auth_section
+
+    with (
+        patch("streamlit.web.server.server_util.secrets_singleton", secrets_mock),
+        testutil.patch_config_options({"server.cookieSecret": "from-config"}),
+    ):
+        assert server_util.get_cookie_secret() == expected
+
+    if not toml_exists:
+        secrets_mock.get.assert_not_called()

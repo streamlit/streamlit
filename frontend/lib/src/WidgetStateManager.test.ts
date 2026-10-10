@@ -18,23 +18,23 @@ import { waitFor } from "@testing-library/react"
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
 import { type Long, util } from "protobufjs/minimal"
-import { Mock } from "vitest"
+import type { Mock } from "vitest"
 
 import {
   ArrowTable as ArrowTableProto,
   Button as ButtonProto,
   FileUploaderState as FileUploaderStateProto,
   UploadedFileInfo as UploadedFileInfoProto,
-  WidgetState,
+  type WidgetState,
 } from "@streamlit/protobuf"
 
 import { makeTriggerAggregatorId } from "~lib/components/widgets/BidiComponent/utils/idBuilder"
 
 import {
   createFormsData,
-  FormsData,
+  type FormsData,
   microsToIsoString,
-  WidgetInfo,
+  type WidgetInfo,
   WidgetStateDict,
   WidgetStateManager,
 } from "./WidgetStateManager"
@@ -196,7 +196,7 @@ describe("Widget State Manager", () => {
       fromUser: true,
     })
 
-    // @ts-expect-error
+    // @ts-expect-error - getWidgetState is private
     expect(widgetMgr.getWidgetState(widget)).toBe(undefined)
     await assertCallbacks({ insideForm: false })
   })
@@ -586,7 +586,7 @@ describe("Widget State Manager", () => {
         value: MOCK_FILE_UPLOADER_STATE,
       },
     ])("%s", async ({ setterMethod, value }) => {
-      // @ts-expect-error
+      // @ts-expect-error - string cannot index WidgetStateManager
       await widgetMgr[setterMethod](MOCK_WIDGET.id, value, {
         formId: MOCK_WIDGET.formId,
         fragmentId: "myFragmentId",
@@ -1208,12 +1208,12 @@ describe("Widget State Manager", () => {
   describe("manages element state values", () => {
     it("sets extra widget information properly", () => {
       widgetMgr.setElementState("id", "color", "red")
-      // @ts-expect-error
+      // @ts-expect-error - elementStates is private
       expect(widgetMgr.elementStates.get("id")?.get("color")).toEqual("red")
     })
 
     it("returns extra widget information when id exists and key exists", () => {
-      // @ts-expect-error
+      // @ts-expect-error - elementStates is private
       widgetMgr.elementStates.set("id", new Map([["color", "red"]]))
       expect(widgetMgr.getElementState("id", "color")).toEqual("red")
     })
@@ -1223,13 +1223,13 @@ describe("Widget State Manager", () => {
     })
 
     it("returns undefined when when id exists and key does not exist", () => {
-      // @ts-expect-error
+      // @ts-expect-error - elementStates is private
       widgetMgr.elementStates.set("id", new Map([["text", "red"]]))
       expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)
     })
 
     it("deletes a value for the key if set", () => {
-      // @ts-expect-error
+      // @ts-expect-error - elementStates is private
       widgetMgr.elementStates.set("id", new Map([["text", "red"]]))
       widgetMgr.deleteElementState("id", "color")
       expect(widgetMgr.getElementState("id", "color")).toEqual(undefined)

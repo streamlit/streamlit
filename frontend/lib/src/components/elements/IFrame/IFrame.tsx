@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { memo, ReactElement, useEffect, useRef, useState } from "react"
+import { memo, type ReactElement, useEffect, useRef, useState } from "react"
 
-import { IFrame as IFrameProto, streamlit } from "@streamlit/protobuf"
+import type { IFrame as IFrameProto, streamlit } from "@streamlit/protobuf"
 
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,

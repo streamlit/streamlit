@@ -21,7 +21,7 @@ import { render } from "~lib/test_util"
 import { lightTheme } from "~lib/theme/themeConfigs"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import Radio, { Props } from "./Radio"
+import Radio, { type Props } from "./Radio"
 
 const { bodyText, fadedText40 } = lightTheme.emotion.colors
 
@@ -88,7 +88,7 @@ describe("Radio widget", () => {
     const radioOptions = screen.getAllByRole("radio")
     expect(radioOptions).toHaveLength(3)
 
-    // @ts-expect-error
+    // @ts-expect-error - value can be null, which is not an array index
     const checked = radioOptions[props.value]
     expect(checked).toBeChecked()
     // Remaining options must not be checked

@@ -249,6 +249,30 @@ class PyplotTest(DeltaGeneratorTestCase):
         assert savefig_kwargs["dpi"] == 200
         assert savefig_kwargs["format"] == "png"
 
+    def test_st_pyplot_marshals_alt(self) -> None:
+        """Non-empty alt is stored on the image proto; blank values follow image rules."""
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+        st.pyplot(fig, alt="Histogram of sample values")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == "Histogram of sample values"
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+        st.pyplot(fig, alt="")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == ""
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot([1, 2, 3], [1, 2, 3])
+        st.pyplot(fig)
+        assert not self.get_delta_from_queue().new_element.imgs.imgs[0].HasField("alt")
+
     @patch("streamlit.elements.pyplot.show_deprecation_warning")
     def test_st_pyplot_kwargs_override_defaults(self, _show_warning_mock: Mock):
         """Deprecated kwargs still override Streamlit's savefig defaults."""

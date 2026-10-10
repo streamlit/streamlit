@@ -118,6 +118,7 @@ class ConfigTest(unittest.TestCase):
             "codeTextColor",
             "codeBackgroundColor",
             "dataframeHeaderBackgroundColor",
+            "dataframeHeaderTextColor",
             "redColor",
             "orangeColor",
             "yellowColor",
@@ -558,7 +559,7 @@ class ConfigTest(unittest.TestCase):
             config._update_config_with_toml(toml_content, "test")
 
     def test_parsing_invalid_toml(self):
-        """Test that exceptions during toml.loads are caught and logged."""
+        """Test that invalid TOML is logged and leaves the current config unchanged."""
         # Create a dummy default option
         config._create_option(
             "_test.invalidTomlTest",
@@ -1241,6 +1242,7 @@ class ConfigTest(unittest.TestCase):
             "codeTextColor": None,
             "codeBackgroundColor": None,
             "dataframeHeaderBackgroundColor": None,
+            "dataframeHeaderTextColor": None,
             "showSidebarBorder": None,
             "headingFontSizes": None,
             "headingFontWeights": None,
@@ -1290,6 +1292,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.codeTextColor", "#158237", "test")
         config._set_option("theme.codeBackgroundColor", "#29361e", "test")
         config._set_option("theme.dataframeHeaderBackgroundColor", "#29361e", "test")
+        config._set_option("theme.dataframeHeaderTextColor", "#ffffff", "test")
         config._set_option("theme.font", "Inter", "test")
         config._set_option("theme.headingFont", "Inter", "test")
         config._set_option(
@@ -1378,6 +1381,7 @@ class ConfigTest(unittest.TestCase):
             "codeTextColor": "#158237",
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
+            "dataframeHeaderTextColor": "#ffffff",
             "fontFaces": [
                 {
                     "family": "Inter",
@@ -1446,6 +1450,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option(
             "theme.sidebar.dataframeHeaderBackgroundColor", "#29361e", "test"
         )
+        config._set_option("theme.sidebar.dataframeHeaderTextColor", "#ffffff", "test")
         config._set_option("theme.sidebar.redColor", "#7d353b", "test")
         config._set_option("theme.sidebar.orangeColor", "#d95a00", "test")
         config._set_option("theme.sidebar.yellowColor", "#916e10", "test")
@@ -1490,6 +1495,7 @@ class ConfigTest(unittest.TestCase):
             "codeTextColor": "#158237",
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
+            "dataframeHeaderTextColor": "#ffffff",
             "redColor": "#7d353b",
             "orangeColor": "#d95a00",
             "yellowColor": "#916e10",

@@ -15,25 +15,26 @@
  */
 
 import {
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
 
 import {
-  NumberSize,
+  type NumberSize,
   Resizable,
-  ResizeCallback,
-  ResizeDirection,
+  type ResizeCallback,
+  type ResizeDirection,
 } from "re-resizable"
 
 import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
 import SidebarNav from "@streamlit/app/src/components/Navigation/SidebarNav"
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   BaseButton,
   BaseButtonKind,
@@ -61,7 +62,8 @@ import {
 import {
   calculateMaxBreakpoint,
   clampSidebarWidth,
-  DEFAULT_WIDTH,
+  getSidebarWidthLimits,
+  SIDEBAR_ELEMENT_ID,
 } from "./utils"
 
 export interface SidebarProps {
@@ -83,6 +85,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 }): ReactElement => {
   const theme = useEmotionTheme()
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
+  const sidebarWidthLimits = useMemo(
+    () => getSidebarWidthLimits(theme.sizes, theme.fontSizes.baseFontSize),
+    [theme.sizes, theme.fontSizes.baseFontSize]
+  )
   const { innerWidth } = useWindowDimensionsContext()
 
   const { appPages } = useContext(NavigationContext)
@@ -101,32 +107,26 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const sidebarRef = useRef<HTMLDivElement>(null)
 
-  const cachedSidebarWidth = localStorageAvailable()
-    ? window.localStorage.getItem("sidebarWidth")
-    : undefined
-
   const [sidebarWidth, setSidebarWidth] = useState<string>(() => {
-    const getCachedWidth = (): string | null => {
-      if (cachedSidebarWidth) {
-        const cached = Number.parseInt(cachedSidebarWidth, 10)
-        return Number.isNaN(cached)
-          ? null
-          : clampSidebarWidth(cached).toString()
+    const cachedSidebarWidth = localStorageAvailable()
+      ? window.localStorage.getItem("sidebarWidth")
+      : undefined
+
+    if (cachedSidebarWidth) {
+      const cached = Number.parseInt(cachedSidebarWidth, 10)
+      if (!Number.isNaN(cached)) {
+        return clampSidebarWidth(cached, sidebarWidthLimits).toString()
       }
-      return null
-    }
-
-    const clampedCached = getCachedWidth()
-
-    if (clampedCached) {
-      return clampedCached
     }
 
     if (notNullOrUndefined(initialSidebarWidth)) {
-      return clampSidebarWidth(initialSidebarWidth).toString()
+      return clampSidebarWidth(
+        initialSidebarWidth,
+        sidebarWidthLimits
+      ).toString()
     }
 
-    return DEFAULT_WIDTH
+    return sidebarWidthLimits.defaultWidthPx.toString()
   })
 
   const [lastInnerWidth, setLastInnerWidth] = useState<number>(
@@ -145,16 +145,19 @@ const Sidebar: React.FC<SidebarProps> = ({
     setShowSidebarCollapse(false)
   }, [])
 
-  const initializeSidebarWidth = useCallback((width: number): void => {
-    const clampedWidth = clampSidebarWidth(width)
-    const newWidth = clampedWidth.toString()
+  const initializeSidebarWidth = useCallback(
+    (width: number): void => {
+      const clampedWidth = clampSidebarWidth(width, sidebarWidthLimits)
+      const newWidth = clampedWidth.toString()
 
-    setSidebarWidth(newWidth)
+      setSidebarWidth(newWidth)
 
-    if (localStorageAvailable()) {
-      window.localStorage.setItem("sidebarWidth", newWidth)
-    }
-  }, [])
+      if (localStorageAvailable()) {
+        window.localStorage.setItem("sidebarWidth", newWidth)
+      }
+    },
+    [sidebarWidthLimits]
+  )
 
   const onResizeStop = useCallback<ResizeCallback>(
     (
@@ -226,8 +229,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   function resetSidebarWidth(): void {
     // Double clicking on the resize handle resets sidebar to initial width or default
     const resetWidth = notNullOrUndefined(initialSidebarWidth)
-      ? clampSidebarWidth(initialSidebarWidth).toString()
-      : DEFAULT_WIDTH
+      ? clampSidebarWidth(initialSidebarWidth, sidebarWidthLimits).toString()
+      : sidebarWidthLimits.defaultWidthPx.toString()
     setSidebarWidth(resetWidth)
     if (localStorageAvailable()) {
       window.localStorage.setItem("sidebarWidth", resetWidth)
@@ -262,7 +265,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     <Resizable
       className="stSidebar"
       data-testid="stSidebar"
-      aria-expanded={!isCollapsed}
+      aria-label="Sidebar"
+      data-collapsed={isCollapsed ? "true" : "false"}
       enable={{
         top: false,
         right: true,
@@ -289,8 +293,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       }}
       as={StyledSidebar}
       onResizeStop={onResizeStop}
-      // Props part of StyledSidebar, but not Resizable component
-      // @ts-expect-error
+      // Resizable's types omit these StyledSidebar props (id, isCollapsed,
+      // sidebarWidth, windowInnerWidth), but it forwards extra props to the `as`
+      // component. The id is the target of the collapse/expand aria-controls.
+      // @ts-expect-error - Resizable types omit StyledSidebar props it still forwards
+      id={SIDEBAR_ELEMENT_ID}
       isCollapsed={isCollapsed}
       sidebarWidth={sidebarWidth}
       windowInnerWidth={innerWidth}
@@ -304,7 +311,10 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
           {renderLogoContent()}
-          {(!isSidebarLocked || isMobileViewport) && (
+          {/* Unmount while collapsed. The sidebar stays mounted offscreen, so on
+              small viewports (where this button stays visible) it would be a
+              focusable duplicate of the header expand button. */}
+          {(!isSidebarLocked || isMobileViewport) && !isCollapsed && (
             <StyledCollapseSidebarButton
               showSidebarCollapse={showSidebarCollapse}
               data-testid="stSidebarCollapseButton"
@@ -312,6 +322,9 @@ const Sidebar: React.FC<SidebarProps> = ({
               <BaseButton
                 kind={BaseButtonKind.HEADER_NO_PADDING}
                 onClick={toggleCollapse}
+                aria-label="Collapse sidebar"
+                aria-expanded={!isCollapsed}
+                aria-controls={SIDEBAR_ELEMENT_ID}
               >
                 <DynamicIcon
                   size="xl"

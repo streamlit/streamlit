@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATE_INPUTS = 29
+NUM_DATE_INPUTS = 30
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -1090,3 +1090,96 @@ def test_range_date_input_whole_range_paste(app: Page):
     expect(end_year).to_have_text("2024")
     expect(end_month).to_have_text("03")
     expect(end_day).to_have_text("08")
+
+
+def test_date_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on commit, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore date value:", "2025-01-15")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_date="))
+
+    date_field = get_date_input(app, "Ignore change date input").get_by_test_id(
+        "stDateInputField"
+    )
+
+    # Typing without committing must not update the URL or Python.
+    type_date(date_field, "2025", "02", "01", commit=False)
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore date value:", "2025-01-15")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_date="))
+
+    # Escape commits the buffered value without a rerun, and updates the URL.
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect_prefixed_markdown(app, "Ignore date value:", "2025-01-15")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-02-01"))
+    spinbuttons = date_field.get_by_role("spinbutton")
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("02")
+    expect(spinbuttons.nth(2)).to_have_text("01")
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore date", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore date value: 2025-02-01", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore date value: 2025-02-01", exact=True)
+    ).to_be_visible()
+
+    # Type-then-click: Apply lives in the sidebar so the calendar overlay cannot
+    # intercept it. Blur/close commits the dirty value, then the button reruns.
+    type_date(date_field, "2025", "02", "10", commit=False)
+    app.get_by_role("button", name="Apply ignore date", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore date value: 2025-02-10", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore date value: 2025-02-10", exact=True)
+    ).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-02-10"))
+
+    # Calendar selection commits immediately without a rerun, and updates the URL.
+    date_field.get_by_role("spinbutton").first.click()
+    app.get_by_test_id("stDateInputCalendar").get_by_label(
+        "Thursday, February 20, 2025"
+    ).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore date value: 2025-02-10", exact=True)).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-02-20"))
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("02")
+    expect(spinbuttons.nth(2)).to_have_text("20")
+
+    # Paste commits immediately without a rerun, and updates the URL.
+    date_field.get_by_role("spinbutton").first.click()
+    paste_into(date_field.get_by_role("spinbutton").first, "2025/03/05")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore date value: 2025-02-10", exact=True)).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-03-05"))
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("03")
+    expect(spinbuttons.nth(2)).to_have_text("05")
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect_prefixed_markdown(app, "Ignore date value:", "2025-03-05")
+    spinbuttons = date_field.get_by_role("spinbutton")
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("03")
+    expect(spinbuttons.nth(2)).to_have_text("05")

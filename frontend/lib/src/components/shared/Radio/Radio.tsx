@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect, useState } from "react"
+import {
+  memo,
+  type ReactElement,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
-import { LabelVisibilityOptions } from "~lib/util/utils"
+import type { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
   StyledRadioButton,

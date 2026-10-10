@@ -22,7 +22,7 @@ import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Selectbox, { Props } from "./Selectbox"
+import Selectbox, { type Props } from "./Selectbox"
 
 const getProps = (
   elementProps: Partial<SelectboxProto> = {},

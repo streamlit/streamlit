@@ -15,9 +15,17 @@
  */
 
 import { act, screen, waitFor } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, Mock, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from "vitest"
 
-import { IFrame as IFrameProto, streamlit } from "@streamlit/protobuf"
+import { IFrame as IFrameProto, type streamlit } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
 import {
@@ -25,7 +33,7 @@ import {
   DEFAULT_IFRAME_SANDBOX_POLICY,
 } from "~lib/util/IFrameUtil"
 
-import IFrame, { IFrameProps } from "./IFrame"
+import IFrame, { type IFrameProps } from "./IFrame"
 
 const getProps = ({
   elementProps = {},

@@ -17,7 +17,7 @@
 import {
   type JSX,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -27,10 +27,10 @@ import {
 } from "react"
 
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
-import { Key, SelectionIndicator } from "react-aria-components"
+import { type Key, SelectionIndicator } from "react-aria-components"
 
-import { AppNode, BlockNode } from "~lib/AppNode"
-import { BlockPropsWithoutWidth } from "~lib/components/core/Block/Block"
+import type { AppNode, BlockNode } from "~lib/AppNode"
+import type { BlockPropsWithoutWidth } from "~lib/components/core/Block/Block"
 import {
   convertKeyToClassName,
   getKeyFromId,
@@ -41,7 +41,7 @@ import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledScrollArrow,
@@ -80,6 +80,9 @@ export interface TabProps extends BlockPropsWithoutWidth {
   width: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex: React.CSSProperties["flex"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
   fragmentId?: string
 }
 
@@ -91,6 +94,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     width,
     height,
     flex,
+    alignSelf,
+    minHeight,
+    maxHeight,
     widgetMgr,
     fragmentId,
   } = props
@@ -345,6 +351,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       width={width}
       height={height}
       flex={flex}
+      alignSelf={alignSelf}
+      minHeight={minHeight}
+      maxHeight={maxHeight}
     >
       <StyledTabsRoot
         selectedKey={String(activeTabKey)}

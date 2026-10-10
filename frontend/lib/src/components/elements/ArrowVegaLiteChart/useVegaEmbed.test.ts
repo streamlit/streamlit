@@ -15,21 +15,21 @@
  */
 
 import { act, renderHook } from "@testing-library/react"
-import { View as VegaView } from "vega"
+import type { View as VegaView } from "vega"
 import embed, { type VisualizationSpec } from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
-import { Mock, Mocked } from "vitest"
+import type { Mock, Mocked } from "vitest"
 
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import { Quiver } from "~lib/dataframes/Quiver"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { Quiver } from "~lib/dataframes/Quiver"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   getDataArray,
   getDataArrays,
   getInlineData,
-  VegaLiteChartElement,
-  WrappedNamedDataset,
+  type VegaLiteChartElement,
+  type WrappedNamedDataset,
 } from "./arrowUtils"
 import { useVegaEmbed } from "./useVegaEmbed"
 import { useVegaLiteSelections } from "./useVegaLiteSelections"

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useRef } from "react"
+import { memo, type ReactElement, useEffect, useRef } from "react"
 
 import { FloatingFocusManager } from "@floating-ui/react"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import { useOverlayDismissal } from "~lib/hooks/useOverlayDismissal"
@@ -145,11 +145,12 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
 }): ReactElement => {
   const scrollbarGutterSize = useScrollbarGutterSize()
 
-  const { refs, floatingStyles, context } = useFloatingOverlay({
-    open: isOpen,
-    placement: "bottom-end",
-    offsetPx: COLUMN_MENU_OFFSET,
-  })
+  const { floatingStyles, context, setFloating, setReference } =
+    useFloatingOverlay({
+      open: isOpen,
+      placement: "bottom-end",
+      offsetPx: COLUMN_MENU_OFFSET,
+    })
 
   // useOverlayDismissal provides click-outside and Escape handlers.
   // setReferenceRef (passed to the wrapper div below) excludes the trigger from
@@ -157,8 +158,8 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   const { panelRef, setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen,
     onClose,
-    floatingSetFn: refs.setFloating,
-    referenceSetFn: refs.setReference,
+    floatingSetFn: setFloating,
+    referenceSetFn: setReference,
   })
 
   // Determine column visibility based on hidden property and column order:

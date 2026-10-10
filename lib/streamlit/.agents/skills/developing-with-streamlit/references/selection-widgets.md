@@ -13,6 +13,7 @@ Use `st.segmented_control` or `st.pills` when you want all options visible at on
 | `st.pills` | 2-5 options, multi-select, all visible |
 | `st.selectbox` | Many options, single select, dropdown |
 | `st.multiselect` | Many options, multi-select, dropdown |
+| `st.feedback` | Ratings: thumbs up/down, faces, or stars |
 
 For thousands of values, see [High-cardinality options](#high-cardinality-options).
 
@@ -64,6 +65,22 @@ Dropdowns scale better than radio/pills for long lists, but the whole option lis
 countries = st.multiselect(
     "Select countries", ["USA", "UK", "Canada", "Germany", "France", ...]
 )
+```
+
+## Feedback (ratings)
+
+Use `st.feedback` for thumbs, faces, or star ratings instead of building one from buttons or `st.segmented_control`. It returns an integer while an option is selected (including a `default` before any click) and `None` otherwise. Higher is more positive:
+
+- `"thumbs"`: `1` is thumbs-up and `0` is thumbs-down, even though thumbs-up is shown first.
+- `"faces"`: `0` (least satisfied) through `4` (most satisfied).
+- `"stars"`: `0` through `4`. The displayed star count is the value plus one.
+
+Check `rating is not None`, not `if rating`: `0` is a real selection, so a truthiness check skips it.
+
+```python
+rating = st.feedback("stars")
+if rating is not None:
+    st.caption(f"Thanks for the {rating + 1}-star rating!")
 ```
 
 ## Keep options on one row with `wrap`
@@ -210,6 +227,7 @@ country = st.selectbox(
 - [st.pills](https://docs.streamlit.io/develop/api-reference/widgets/st.pills)
 - [st.selectbox](https://docs.streamlit.io/develop/api-reference/widgets/st.selectbox)
 - [st.multiselect](https://docs.streamlit.io/develop/api-reference/widgets/st.multiselect)
+- [st.feedback](https://docs.streamlit.io/develop/api-reference/widgets/st.feedback)
 - [st.toggle](https://docs.streamlit.io/develop/api-reference/widgets/st.toggle)
 - [st.checkbox](https://docs.streamlit.io/develop/api-reference/widgets/st.checkbox)
 - [st.form](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)

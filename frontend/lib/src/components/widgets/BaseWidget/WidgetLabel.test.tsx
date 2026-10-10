@@ -21,7 +21,7 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import { LabelProps, WidgetLabel } from "./WidgetLabel"
+import { type LabelProps, WidgetLabel } from "./WidgetLabel"
 import { WidgetLabelHelpIconInline } from "./WidgetLabelHelpIconInline"
 
 const getProps = (props?: Partial<LabelProps>): LabelProps => ({

@@ -208,7 +208,6 @@ try:
     data = load_data(tickers, horizon_map[horizon])
 except yf.exceptions.YFRateLimitError:
     st.warning("YFinance is rate-limiting us :(\nTry again later.")
-    load_data.clear()  # Remove the bad cache entry.
     st.stop()
     raise  # Unreachable — st.stop() halts execution, but helps type checker.
 
@@ -263,7 +262,8 @@ with right_cell:
             alt.Y("Normalized price:Q").scale(zero=False),
             alt.Color("Stock:N"),
         )
-        .properties(height=400)
+        .properties(height=400),
+        alt="Normalized stock prices over time",
     )
 
 st.space("medium")
@@ -314,7 +314,7 @@ for i, ticker in enumerate(tickers):
     )
 
     cell = cols[(i * 2) % NUM_COLS].container(border=True)
-    cell.altair_chart(chart)
+    cell.altair_chart(chart, alt=f"{ticker} versus peer-average price")
 
     # Create Delta chart
     plot_data = pd.DataFrame(
@@ -335,7 +335,7 @@ for i, ticker in enumerate(tickers):
     )
 
     cell = cols[(i * 2 + 1) % NUM_COLS].container(border=True)
-    cell.altair_chart(chart)
+    cell.altair_chart(chart, alt=f"{ticker} price gap versus peer average")
 
 st.space("medium")
 
@@ -343,4 +343,4 @@ st.space("medium")
 ## Raw data
 """
 
-st.dataframe(data)
+st.dataframe(data, alt="Selected stock price history")

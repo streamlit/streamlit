@@ -26,6 +26,12 @@ export const sizes = {
   // Old header height to avoid addtl cascading visual/snapshot changes
   fullScreenHeaderHeight: "2.875rem",
   sidebarTopSpace: "6rem",
+  // Sidebar width bounds and default (200px / 300px / 600px at a 16px root).
+  // These rem tokens scale with theme.baseFontSize by design.
+  // minSidebarWidth is also the drag floor for st.dialog left/right drawers.
+  minSidebarWidth: "12.5rem",
+  defaultSidebarWidth: "18.75rem",
+  maxSidebarWidth: "37.5rem",
   toastWidth: "21rem",
   // Use px here since we want to keep the width the same
   // regardless of the root font size.

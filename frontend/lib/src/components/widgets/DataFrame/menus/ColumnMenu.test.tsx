@@ -28,7 +28,7 @@ import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
 import { sizes } from "~lib/theme/primitives/sizes"
 
-import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
+import ColumnMenu, { type ColumnMenuProps } from "./ColumnMenu"
 import { FORMATTING_MENU_CLASS } from "./FormattingMenu"
 import { STATISTICS_MENU_CLASS } from "./StatisticsMenu"
 

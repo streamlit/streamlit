@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 21
+NUM_TIME_INPUTS = 22
 
 
 def test_time_input_widget_rendering(
@@ -594,3 +594,95 @@ def test_form_enter_to_submit(app: Page):
 
     # Must NOT happen: the non-enter form must not have been submitted.
     expect(app.get_by_text("Form time:", exact=True)).not_to_be_visible()
+
+
+def test_time_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on commit, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore time value:", "08:45:00")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_time="))
+
+    time_input = get_time_input(app, "Ignore change time input")
+    time_display = time_input.get_by_test_id("stTimeInputTimeDisplay")
+    spinbuttons = time_display.get_by_role("spinbutton")
+    hour_segment = spinbuttons.first
+    minute_segment = spinbuttons.nth(1)
+
+    # Typing without committing must not update the URL or Python.
+    type_time(time_display, "14", "30", commit=False)
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore time value:", "08:45:00")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_time="))
+
+    # Enter commits the buffered value without a rerun, and updates the URL.
+    minute_segment.press("Enter")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect_prefixed_markdown(app, "Ignore time value:", "08:45:00")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_time=14%3A30"))
+    expect(hour_segment).to_have_text("14")
+    expect(minute_segment).to_have_text("30")
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore time", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore time value: 14:30:00", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore time value: 14:30:00", exact=True)
+    ).to_be_visible()
+
+    # Type-then-click: blur commits the dirty value, then the button reruns.
+    type_time(time_display, "16", "00", commit=False)
+    app.get_by_role("button", name="Apply ignore time", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore time value: 16:00:00", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore time value: 16:00:00", exact=True)
+    ).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_time=16%3A00"))
+
+    # Arrow keys commit immediately without a rerun, and update the URL.
+    # step=900 (default): ArrowUp from 16:00 → 16:15.
+    minute_segment.click()
+    minute_segment.press("ArrowUp")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore time value: 16:00:00", exact=True)).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_time=16%3A15"))
+    expect(hour_segment).to_have_text("16")
+    expect(minute_segment).to_have_text("15")
+
+    # Valid paste commits immediately without a rerun, and updates the URL.
+    hour_segment.click()
+    paste_into(hour_segment, "14:30")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore time value: 16:00:00", exact=True)).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_time=14%3A30"))
+    expect(hour_segment).to_have_text("14")
+    expect(minute_segment).to_have_text("30")
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect_prefixed_markdown(app, "Ignore time value:", "14:30:00")
+    time_display = get_time_input(app, "Ignore change time input").get_by_test_id(
+        "stTimeInputTimeDisplay"
+    )
+    spinbuttons = time_display.get_by_role("spinbutton")
+    expect(spinbuttons.first).to_have_text("14")
+    expect(spinbuttons.nth(1)).to_have_text("30")

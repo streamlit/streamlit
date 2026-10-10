@@ -16,11 +16,11 @@
 
 import { describe, expect, expectTypeOf, it } from "vitest"
 
-import {
+import type {
   StreamlitTheme,
   StreamlitThemeCssProperties,
 } from "@streamlit/component-v2-lib"
-import { type CustomThemeConfig } from "@streamlit/protobuf"
+import type { CustomThemeConfig } from "@streamlit/protobuf"
 
 import {
   extractComponentsV2Theme,
@@ -73,6 +73,7 @@ describe("BidiComponent/utils/theme", () => {
       borderColorLight: "#f5f5f5",
       dataframeBorderColor: "#f0f0f0",
       dataframeHeaderBackgroundColor: "#fafafa",
+      dataframeHeaderTextColor: "#111111",
       codeBackgroundColor: "#f7f7f7",
       codeTextColor: "#00aa00",
       headingColor: "#111111",
@@ -314,6 +315,7 @@ describe("BidiComponent/utils/theme", () => {
       borderColor: null,
       dataframeBorderColor: null,
       dataframeHeaderBackgroundColor: null,
+      dataframeHeaderTextColor: null,
       showWidgetBorder: null,
       redColor: null,
       orangeColor: null,

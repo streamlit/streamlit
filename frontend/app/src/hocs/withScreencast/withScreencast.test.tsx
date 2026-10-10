@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, PureComponent, ReactElement } from "react"
+import { type FC, PureComponent, type ReactElement } from "react"
 
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -22,7 +22,10 @@ import { userEvent } from "@testing-library/user-event"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import { render } from "@streamlit/lib/testing"
 
-import withScreencast, { ScreenCastHOC, Steps } from "./withScreencast"
+import withScreencast, {
+  type ScreenCastHOC,
+  type Steps,
+} from "./withScreencast"
 
 vi.mock("@streamlit/app/src/util/ScreenCastRecorder")
 

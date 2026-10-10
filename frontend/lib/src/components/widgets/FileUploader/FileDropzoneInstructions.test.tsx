@@ -18,7 +18,9 @@ import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import FileDropzoneInstructions, { Props } from "./FileDropzoneInstructions"
+import FileDropzoneInstructions, {
+  type Props,
+} from "./FileDropzoneInstructions"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
   acceptedTypes: [],

@@ -16,14 +16,14 @@
 
 import { useCallback, useRef, useState } from "react"
 
-import {
+import type {
   DataEditorProps,
   GridCell,
   GridMouseEventArgs,
 } from "@glideapps/glide-data-grid"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   hasTooltip,
   isErrorCell,
   isMissingValueCell,

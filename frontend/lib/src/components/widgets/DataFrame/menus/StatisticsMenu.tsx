@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useMemo } from "react"
+import { memo, type ReactElement, useMemo } from "react"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { useHoverSubmenu } from "~lib/hooks/useHoverSubmenu"
 
 import StatisticsChart from "./StatisticsChart"
 import {
-  ColumnStatistics,
+  type ColumnStatistics,
   computeEmptyPercentage,
   computeStatistics,
   formatCountWithPercent,

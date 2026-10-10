@@ -17,10 +17,10 @@ import { getLogger } from "loglevel"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
-import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
+import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
-import { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
+import type { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
 
 const LOG = getLogger("NumberInput")
 

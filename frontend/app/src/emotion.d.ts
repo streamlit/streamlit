@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { EmotionTheme as StreamlitTheme } from "@streamlit/lib"
+import type { EmotionTheme as StreamlitTheme } from "@streamlit/lib"
 
 // Outside imports make declarations not ambient, so we separate out from
 // the ambient declarations.d.ts

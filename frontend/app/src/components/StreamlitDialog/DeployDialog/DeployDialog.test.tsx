@@ -29,7 +29,7 @@ import { mockSessionInfo } from "@streamlit/lib"
 import { render } from "@streamlit/lib/testing"
 import { GitInfo } from "@streamlit/protobuf"
 
-import { DeployDialog, DeployDialogProps } from "./DeployDialog"
+import { DeployDialog, type DeployDialogProps } from "./DeployDialog"
 
 const { GitStates } = GitInfo
 
@@ -113,9 +113,17 @@ describe("DeployDialog", () => {
 
     expect(screen.getByText("Deploy this app using...")).toBeVisible()
 
-    expect(screen.getByAltText("Streamlit Logo")).toBeVisible()
-    expect(screen.getByAltText("Snowflake")).toBeVisible()
-    expect(screen.getByAltText("Rocket")).toBeVisible()
+    expect(
+      screen.getByTestId("stDeployDialogCommunityCloudIcon")
+    ).toBeVisible()
+    expect(
+      screen.getByTestId("stDeployDialogSnowflakeDeploymentIcon")
+    ).toBeVisible()
+    expect(
+      screen.getByTestId("stDeployDialogCustomDeploymentIcon")
+    ).toBeVisible()
+    // The adjacent heading names each card, so the illustrations stay decorative.
+    expect(screen.queryAllByRole("img")).toHaveLength(0)
 
     expect(screen.getByText("Streamlit Community Cloud")).toBeVisible()
     expect(screen.getByText("Snowflake")).toBeVisible()

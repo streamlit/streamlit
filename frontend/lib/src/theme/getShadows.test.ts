@@ -18,7 +18,7 @@ import { beforeAll, describe, expect, it } from "vitest"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
 
-import { createShadows, ThemeShadows } from "./getShadows"
+import { createShadows, type ThemeShadows } from "./getShadows"
 import { darkTheme } from "./themeConfigs"
 
 // Use mockTheme colors for light theme tests (has white bgColor)

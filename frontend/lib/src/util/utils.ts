@@ -409,8 +409,8 @@ export function getElementId(element: Element): string | undefined {
   const elementId = get(element as unknown as Record<string, unknown>, [
     requireNonNull(element.type),
     "id",
-  ])
-  if (elementId && isValidElementId(elementId)) {
+  ]) as unknown
+  if (typeof elementId === "string" && isValidElementId(elementId)) {
     // We only care about valid element IDs (with the correct prefix)
     return elementId
   }
@@ -674,7 +674,7 @@ export function keysToSnakeCase(
       }
 
       if (Array.isArray(value)) {
-        value = value.map(item =>
+        value = (value as unknown[]).map(item =>
           item !== null && typeof item === "object"
             ? keysToSnakeCase(item as Record<string, unknown>)
             : item

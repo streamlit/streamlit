@@ -23,8 +23,8 @@ import { render } from "~lib/test_util"
 import { TOP_DISTANCE } from "./styled-components"
 import Toolbar, {
   ToolbarAction,
-  ToolbarActionProps,
-  ToolbarProps,
+  type ToolbarActionProps,
+  type ToolbarProps,
 } from "./Toolbar"
 
 const onExpand = vi.fn()
@@ -162,6 +162,56 @@ describe("Toolbar element", () => {
     const toolbarButton = screen.getAllByTestId("stElementToolbarButton")
     expect(toolbarButton).toHaveLength(1)
   })
+
+  it("uses a plain Fullscreen aria-label when labelContext is omitted", () => {
+    render(<Toolbar {...getToolbarProps()} />)
+
+    expect(
+      screen.getByRole("button", { name: /^Fullscreen$/ })
+    ).toBeInTheDocument()
+  })
+
+  it("composes labelContext into the Fullscreen aria-label but not the tooltip", async () => {
+    vi.useFakeTimers()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    render(<Toolbar {...getToolbarProps({ labelContext: "Revenue table" })} />)
+
+    const fullscreen = screen.getByRole("button", {
+      name: /^Fullscreen: Revenue table$/,
+    })
+    expect(fullscreen).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /^Fullscreen$/ })
+    ).not.toBeInTheDocument()
+
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltipTarget)
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    // Tooltip stays the short action label.
+    expect(screen.getByTestId("stTooltipContent")).toHaveTextContent(
+      "Fullscreen"
+    )
+  })
+
+  it("composes labelContext into the Close fullscreen aria-label", () => {
+    render(
+      <Toolbar
+        {...getToolbarProps({
+          isFullScreen: true,
+          labelContext: "Revenue table",
+        })}
+      />
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: /^Close fullscreen: Revenue table$/,
+      })
+    ).toBeInTheDocument()
+  })
 })
 
 describe("ToolbarAction Button element", () => {
@@ -257,9 +307,48 @@ describe("ToolbarAction Button element", () => {
 
     expect(screen.getByTestId("stTooltipContent")).toHaveTextContent("info")
 
-    await user.click(screen.getByRole("button", { name: "info" }))
+    await user.click(screen.getByRole("button", { name: /^info$/ }))
 
     expect(onClickMock).toHaveBeenCalled()
     expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+  })
+
+  it("composes labelContext into aria-label while keeping the tooltip short", async () => {
+    vi.useFakeTimers()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    render(
+      <ToolbarAction
+        {...getToolbarActionsProps({
+          label: "Download as CSV",
+          labelContext: "Revenue table",
+        })}
+      />
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: /^Download as CSV: Revenue table$/,
+      })
+    ).toBeInTheDocument()
+
+    const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+    await user.hover(tooltipTarget)
+    act(() => {
+      vi.advanceTimersByTime(1000)
+    })
+    expect(screen.getByTestId("stTooltipContent")).toHaveTextContent(
+      "Download as CSV"
+    )
+  })
+
+  it("meets the 24px minimum target size", () => {
+    render(<ToolbarAction {...getToolbarActionsProps()} />)
+
+    // Asserts the CSS rule is present (jsdom does not resolve max() to a used
+    // pixel value). Playwright snapshots cover the rendered WCAG 2.5.8 size.
+    const button = screen.getByRole("button", { name: /^info$/ })
+    expect(button).toHaveStyle("min-width: max(1.5rem, 24px)")
+    expect(button).toHaveStyle("min-height: max(1.5rem, 24px)")
   })
 })

@@ -19,17 +19,24 @@ import userEvent from "@testing-library/user-event"
 
 import {
   mockEndpoints,
-  NavigationContextProps,
-  SidebarConfigContextProps,
+  mockTheme,
+  type NavigationContextProps,
+  type SidebarConfigContextProps,
 } from "@streamlit/lib"
 import {
   renderWithContexts,
-  RenderWithContextsOptions,
-  RenderWithContextsResult,
+  type RenderWithContextsOptions,
+  type RenderWithContextsResult,
 } from "@streamlit/lib/testing"
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
-import Sidebar, { SidebarProps } from "./Sidebar"
+import Sidebar, { type SidebarProps } from "./Sidebar"
+import { getSidebarWidthLimits } from "./utils"
+
+const { minWidthPx, maxWidthPx, defaultWidthPx } = getSidebarWidthLimits(
+  mockTheme.emotion.sizes,
+  mockTheme.emotion.fontSizes.baseFontSize
+)
 
 // Mock for controlling window dimensions in tests
 const mockWindowDimensions = {
@@ -133,62 +140,84 @@ describe("Sidebar Component", () => {
       {
         state: PageConfig.SidebarState.EXPANDED,
         isCollapsed: false,
-        expectedAria: "true",
+        expectedCollapsed: "false",
       },
       {
         state: PageConfig.SidebarState.COLLAPSED,
         isCollapsed: true,
-        expectedAria: "false",
+        expectedCollapsed: "true",
       },
     ])(
       "should render $state correctly",
-      ({ state, isCollapsed, expectedAria }) => {
+      ({ state, isCollapsed, expectedCollapsed }) => {
         renderSidebar(
           { isCollapsed },
           { sidebarConfigContext: { initialSidebarState: state } }
         )
 
-        expect(screen.getByTestId("stSidebar")).toHaveAttribute(
-          "aria-expanded",
-          expectedAria
-        )
+        const sidebar = screen.getByTestId("stSidebar")
+        expect(sidebar).toHaveAttribute("id", "stSidebar")
+        expect(sidebar).toHaveAttribute("aria-label", "Sidebar")
+        expect(sidebar).toHaveAttribute("data-collapsed", expectedCollapsed)
+        expect(sidebar).not.toHaveAttribute("aria-expanded")
       }
     )
 
-    it.each([
-      {
-        initialCollapsed: false,
-        expectedToggleValue: true,
-        description: "collapse when expanded",
-      },
-      {
-        initialCollapsed: true,
-        expectedToggleValue: false,
-        description: "expand when collapsed",
-      },
-    ])(
-      "should $description on toggle",
-      async ({ initialCollapsed, expectedToggleValue }) => {
-        const mockOnToggleCollapse = vi.fn()
-        const user = userEvent.setup()
+    it("collapse button exposes expanded state and controls the sidebar", () => {
+      renderSidebar(
+        { isCollapsed: false },
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.EXPANDED,
+          },
+        }
+      )
 
-        renderSidebar({
-          isCollapsed: initialCollapsed,
-          onToggleCollapse: mockOnToggleCollapse,
-        })
+      // Collapse control is visibility:hidden until header hover.
+      const collapseButton = within(
+        screen.getByTestId("stSidebarCollapseButton")
+      ).getByRole("button", { hidden: true })
+      expect(collapseButton).toHaveAttribute("aria-label", "Collapse sidebar")
+      expect(collapseButton).toHaveAttribute("aria-expanded", "true")
+      expect(collapseButton).toHaveAttribute("aria-controls", "stSidebar")
+    })
 
-        // Hover to show collapse button
-        await user.hover(screen.getByTestId("stSidebarHeader"))
+    it("omits the collapse button when the sidebar is collapsed", () => {
+      renderSidebar(
+        { isCollapsed: true },
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.COLLAPSED,
+          },
+        }
+      )
 
-        // Click the collapse button
-        const collapseButton = within(
-          screen.getByTestId("stSidebarCollapseButton")
-        ).getByRole("button")
-        await user.click(collapseButton)
+      // Avoid a focusable offscreen "Collapse sidebar" beside the header expand
+      // control (especially on small viewports where visibility stays visible).
+      expect(
+        screen.queryByTestId("stSidebarCollapseButton")
+      ).not.toBeInTheDocument()
+    })
 
-        expect(mockOnToggleCollapse).toHaveBeenCalledWith(expectedToggleValue)
-      }
-    )
+    it("should collapse when expanded on toggle", async () => {
+      const mockOnToggleCollapse = vi.fn()
+      const user = userEvent.setup()
+
+      renderSidebar({
+        isCollapsed: false,
+        onToggleCollapse: mockOnToggleCollapse,
+      })
+
+      // Hover to show collapse button
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+
+      const collapseButton = within(
+        screen.getByTestId("stSidebarCollapseButton")
+      ).getByRole("button", { name: "Collapse sidebar" })
+      await user.click(collapseButton)
+
+      expect(mockOnToggleCollapse).toHaveBeenCalledWith(true)
+    })
   })
 
   describe("Collapse Button Visibility", () => {
@@ -514,7 +543,7 @@ describe("Sidebar Component", () => {
       renderSidebar()
 
       const sidebar = screen.getByTestId("stSidebar")
-      expect(sidebar).toHaveStyle("width: 300px")
+      expect(sidebar).toHaveStyle(`width: ${defaultWidthPx}px`)
     })
 
     it("should initialize with saved width when localStorage value exists", () => {
@@ -538,7 +567,7 @@ describe("Sidebar Component", () => {
           description: "uses default when no cached and no initial",
           cached: null,
           initial: undefined,
-          expected: "300px",
+          expected: `${defaultWidthPx}px`,
         },
         {
           description: "uses cached when cached exists",
@@ -580,10 +609,22 @@ describe("Sidebar Component", () => {
 
     describe("Width Clamping", () => {
       it.each([
-        { initial: 150, expected: "200px", description: "clamps to minimum" },
-        { initial: 800, expected: "600px", description: "clamps to maximum" },
+        {
+          initial: 150,
+          expected: `${minWidthPx}px`,
+          description: "clamps to minimum",
+        },
+        {
+          initial: 800,
+          expected: `${maxWidthPx}px`,
+          description: "clamps to maximum",
+        },
         { initial: 400, expected: "400px", description: "uses value as-is" },
-        { initial: Number.NaN, expected: "300px", description: "handles NaN" },
+        {
+          initial: Number.NaN,
+          expected: `${defaultWidthPx}px`,
+          description: "handles NaN",
+        },
       ])("$description", ({ initial, expected }) => {
         renderSidebar(
           {},
@@ -600,12 +641,12 @@ describe("Sidebar Component", () => {
       it.each([
         {
           cached: "1000",
-          expected: "600px",
+          expected: `${maxWidthPx}px`,
           description: "clamps cached value exceeding maximum",
         },
         {
           cached: "100",
-          expected: "200px",
+          expected: `${minWidthPx}px`,
           description: "clamps cached value below minimum",
         },
         {
@@ -614,18 +655,18 @@ describe("Sidebar Component", () => {
           description: "uses cached value within valid range",
         },
         {
-          cached: "200",
-          expected: "200px",
+          cached: String(minWidthPx),
+          expected: `${minWidthPx}px`,
           description: "uses cached value at minimum boundary",
         },
         {
-          cached: "600",
-          expected: "600px",
+          cached: String(maxWidthPx),
+          expected: `${maxWidthPx}px`,
           description: "uses cached value at maximum boundary",
         },
         {
           cached: "invalid",
-          expected: "300px",
+          expected: `${defaultWidthPx}px`,
           description: "falls back to default when cached value is invalid",
         },
       ])("$description", ({ cached, expected }) => {
@@ -749,8 +790,12 @@ describe("Sidebar Component", () => {
 
       await user.dblClick(screen.getByTestId("stSidebarResizeHandle"))
 
-      expect(screen.getByTestId("stSidebar")).toHaveStyle("width: 300px")
-      expect(window.localStorage.getItem("sidebarWidth")).toBe("300")
+      expect(screen.getByTestId("stSidebar")).toHaveStyle(
+        `width: ${defaultWidthPx}px`
+      )
+      expect(window.localStorage.getItem("sidebarWidth")).toBe(
+        String(defaultWidthPx)
+      )
     })
 
     it("resets to the configured initial width on double-click", async () => {

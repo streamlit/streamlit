@@ -16,10 +16,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import {
-  type CellClickedEventArgs,
-  type DataEditorProps,
-  type Item,
+import type {
+  CellClickedEventArgs,
+  DataEditorProps,
+  Item,
 } from "@glideapps/glide-data-grid"
 
 import type { Dataframe as DataframeProto } from "@streamlit/protobuf"

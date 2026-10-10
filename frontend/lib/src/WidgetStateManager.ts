@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { Draft, produce } from "immer"
+import { type Draft, produce } from "immer"
 import { getLogger } from "loglevel"
 import { type Long, util } from "protobufjs/minimal"
 import queryString from "query-string"
-import { Signal, SignalConnection } from "typed-signals"
+import { Signal, type SignalConnection } from "typed-signals"
 
 import {
   type ArrowTable,
@@ -28,7 +28,7 @@ import {
   SInt64Array,
   StringArray,
   StringTriggerValue,
-  Button as SubmitButtonProto,
+  type Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
 } from "@streamlit/protobuf"

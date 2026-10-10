@@ -16,7 +16,7 @@
 
 import {
   type JSX,
-  ReactElement,
+  type ReactElement,
   type ReactNode,
   useContext,
   useMemo,
@@ -24,7 +24,7 @@ import {
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { BlockNode } from "~lib/AppNode"
+import type { BlockNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
@@ -37,7 +37,7 @@ import {
 import {
   Direction,
   getDirectionOfBlock,
-  MinFlexElementWidth,
+  type MinFlexElementWidth,
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
@@ -54,13 +54,14 @@ import { notNullOrUndefined } from "~lib/util/utils"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
   StyledColumn,
+  StyledDialogContentEndPad,
   StyledFlexContainerBlock,
-  StyledFlexContainerBlockProps,
+  type StyledFlexContainerBlockProps,
   StyledLayoutWrapper,
 } from "./styled-components"
 import {
   assignDividerColor,
-  BaseBlockProps,
+  type BaseBlockProps,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
   getBorderBackwardsCompatible,
@@ -116,16 +117,33 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactNode => {
   return elements
 }
 
+/**
+ * Maps a column's vertical alignment to the justify-content of its contents.
+ * The column itself stretches to the row height, so its contents are aligned
+ * inside it instead of shrinking the column.
+ */
+const COLUMN_CONTENT_JUSTIFY: Partial<
+  Record<BlockProto.Column.VerticalAlignment, BlockProto.FlexContainer.Justify>
+> = {
+  [BlockProto.Column.VerticalAlignment.CENTER]:
+    BlockProto.FlexContainer.Justify.JUSTIFY_CENTER,
+  [BlockProto.Column.VerticalAlignment.BOTTOM]:
+    BlockProto.FlexContainer.Justify.JUSTIFY_END,
+}
+
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
   isRoot?: boolean
+  /** Extra in-flow space after the last widget. Used by side-drawer dialogs. */
+  padContentEnd?: boolean
 }
 
 export const ContainerContentsWrapper = (
   props: ContainerContentsWrapperProps
 ): ReactElement => {
   const parentContext = useContext(FlexContext)
+  const columnAlignment = props.node.deltaBlock.column?.verticalAlignment
 
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
@@ -134,6 +152,9 @@ export const ContainerContentsWrapper = (
     height: props.height,
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
+    justify: notNullOrUndefined(columnAlignment)
+      ? COLUMN_CONTENT_JUSTIFY[columnAlignment]
+      : undefined,
   }
 
   return (
@@ -154,6 +175,12 @@ export const ContainerContentsWrapper = (
         data-testid={getClassnamePrefix(Direction.VERTICAL)}
       >
         <ChildRenderer {...props} />
+        {props.padContentEnd && (
+          <StyledDialogContentEndPad
+            aria-hidden="true"
+            data-testid="stDialogContentEndPad"
+          />
+        )}
       </StyledFlexContainerBlock>
     </FlexContextProvider>
   )
@@ -197,8 +224,14 @@ export const FlexBoxContainer = (
     overflow: layout_styles.overflow,
     overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
-    // We need the height on the container for scrolling.
-    height: layout_styles.height,
+    // Block height:
+    // - pixel: set here so the block can scroll.
+    // - stretch: always fill the LayoutWrapper, which does the sizing (in a
+    //   horizontal parent it stretches via align-self and layout_styles.height
+    //   is "auto").
+    height: props.node.deltaBlock.heightConfig?.useStretch
+      ? "100%"
+      : layout_styles.height,
     // Flex properties are set on the LayoutWrapper.
     flex: "1",
     align: props.node.deltaBlock.flexContainer?.align,
@@ -369,14 +402,23 @@ export const BlockNodeRenderer = (
       return null
     }
 
+    const dialog = node.deltaBlock.dialog as BlockProto.Dialog
+    const isDrawer =
+      dialog.position === BlockProto.Dialog.DialogPosition.LEFT ||
+      dialog.position === BlockProto.Dialog.DialogPosition.RIGHT
     return (
       <Dialog
-        element={node.deltaBlock.dialog as BlockProto.Dialog}
+        element={dialog}
         deltaMsgReceivedAt={node.deltaMsgReceivedAt}
         widgetMgr={props.widgetMgr}
         fragmentId={node.fragmentId}
       >
-        {child}
+        <ContainerContentsWrapper
+          {...childProps}
+          disableFullscreenMode={disableFullscreenMode}
+          height="100%"
+          padContentEnd={isDrawer}
+        />
       </Dialog>
     )
   }
@@ -491,6 +533,9 @@ export const BlockNodeRenderer = (
       width: styles.width,
       height: hasConstrainingHeight ? styles.height : undefined,
       flex: styles.flex,
+      alignSelf: styles.alignSelf,
+      minHeight: styles.minHeight,
+      maxHeight: styles.maxHeight,
       fragmentId: node.fragmentId,
     }
     return <Tabs {...tabsProps} />

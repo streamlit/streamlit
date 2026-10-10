@@ -41,7 +41,9 @@ export const StyledTextAreaInput = styled.textarea<{
   width: "100%",
   height: $height,
   maxHeight: $maxHeight,
-  minHeight: theme.sizes.largestElementHeight,
+  // The root's border adds to this, so subtract it to keep the minimum field
+  // height at largestElementHeight like other large widgets.
+  minHeight: `calc(${theme.sizes.largestElementHeight} - 2 * ${theme.sizes.borderWidth})`,
   resize: $resize,
   fontWeight: theme.fontWeights.normal,
   lineHeight: theme.lineHeights.inputWidget,

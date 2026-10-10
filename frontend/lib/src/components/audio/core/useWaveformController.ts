@@ -31,6 +31,7 @@ import {
 } from "~lib/components/audio/backends/WaveSurferPlayer"
 import { WaveSurferRecordBackend } from "~lib/components/audio/backends/WaveSurferRecordBackend"
 import { encodeToWav } from "~lib/components/audio/core/encodeToWav"
+import { loadWaveSurferModules } from "~lib/components/audio/core/loadWaveSurferModules"
 import type {
   AudioMeta,
   RecordingState,
@@ -80,7 +81,8 @@ export function useWaveformController({
   const playerRef = useRef<WaveSurferPlayer | null>(null)
   const eventsRef = useRef<WaveformControllerEvents>(events)
   const isInitializedRef = useRef(false)
-  const isInitializingRef = useRef(false)
+  const initPromiseRef = useRef<Promise<void> | null>(null)
+  const initGenerationRef = useRef(0)
   const readyResolversRef = useRef<Set<ReadyResolver>>(new Set())
   const isPlaybackModeRef = useRef(false)
 
@@ -109,6 +111,8 @@ export function useWaveformController({
     }
 
     isInitializedRef.current = false
+    initPromiseRef.current = null
+    initGenerationRef.current += 1
     isPlaybackModeRef.current = false
     setCurrentState("idle")
     setCurrentBlob(null)
@@ -173,76 +177,96 @@ export function useWaveformController({
     }
   }, [events, configurePlayerEvents])
 
-  const initializeWaveSurfer = useCallback(async (): Promise<void> => {
-    if (
-      isInitializedRef.current ||
-      isInitializingRef.current ||
-      !containerRef.current
-    ) {
-      return
+  const initializeWaveSurfer = useCallback((): Promise<void> => {
+    if (isInitializedRef.current) {
+      return Promise.resolve()
+    }
+    if (initPromiseRef.current) {
+      return initPromiseRef.current
+    }
+    const container = containerRef.current
+    if (!container) {
+      return Promise.resolve()
     }
 
-    isInitializingRef.current = true
+    const generation = initGenerationRef.current
+    const initPromise = (async (): Promise<void> => {
+      // destroy() drops this promise and starts a replacement when theme or
+      // sampleRate changes. start() and playback.load may still be awaiting
+      // this attempt, so follow the replacement instead of resolving with no
+      // backend (that throw is swallowed by AudioInput).
+      const waitForReplacementInit = async (): Promise<void> => {
+        const replacement = initPromiseRef.current
+        if (replacement && replacement !== initPromise) {
+          await replacement
+        }
+      }
 
-    try {
-      const [WaveSurferModule, RecordPluginModule] = await Promise.all([
-        import("wavesurfer.js"),
-        import("wavesurfer.js/dist/plugins/record"),
-      ])
-      const WaveSurfer = WaveSurferModule.default
-      const RecordPluginClass = RecordPluginModule.default
+      try {
+        const { WaveSurfer, RecordPluginClass } = await loadWaveSurferModules()
+        if (initGenerationRef.current !== generation) {
+          await waitForReplacementInit()
+          return
+        }
 
-      const ws = WaveSurfer.create({
-        container: containerRef.current,
-        waveColor: theme.colors.primary,
-        progressColor: theme.colors.bodyText,
-        height:
-          waveformPadding > 0
-            ? convertRemToPx(theme.sizes.largestElementHeight) -
-              2 * waveformPadding
-            : "auto",
-        barWidth: BAR_WIDTH,
-        barGap: BAR_GAP,
-        barRadius: BAR_RADIUS,
-        cursorWidth: CURSOR_WIDTH,
-        interact: true,
-      })
+        const ws = WaveSurfer.create({
+          container,
+          waveColor: theme.colors.primary,
+          progressColor: theme.colors.bodyText,
+          height:
+            waveformPadding > 0
+              ? convertRemToPx(theme.sizes.largestElementHeight) -
+                2 * waveformPadding
+              : "auto",
+          barWidth: BAR_WIDTH,
+          barGap: BAR_GAP,
+          barRadius: BAR_RADIUS,
+          cursorWidth: CURSOR_WIDTH,
+          interact: true,
+        })
 
-      wavesurferRef.current = ws
-      isPlaybackModeRef.current = false
+        wavesurferRef.current = ws
+        isPlaybackModeRef.current = false
 
-      const recordBackend = new WaveSurferRecordBackend({
-        sampleRate: effectiveSampleRate,
-      })
-      recordBackend.initialize(ws, RecordPluginClass)
-      recordBackend.setEventHandlers({
-        onRecordProgress: (ms: number) => {
-          void eventsRef.current.onProgressMs?.(ms)
-        },
-        onPermissionDenied: () => {
-          eventsRef.current.onPermissionDenied()
-          setCurrentState("idle")
-        },
-        onError: (error: Error) => {
-          eventsRef.current.onError(error)
-          setCurrentState("idle")
-        },
-      })
-      recordBackendRef.current = recordBackend
+        const recordBackend = new WaveSurferRecordBackend({
+          sampleRate: effectiveSampleRate,
+        })
+        recordBackend.initialize(ws, RecordPluginClass)
+        recordBackend.setEventHandlers({
+          onRecordProgress: (ms: number) => {
+            void eventsRef.current.onProgressMs?.(ms)
+          },
+          onPermissionDenied: () => {
+            eventsRef.current.onPermissionDenied()
+            setCurrentState("idle")
+          },
+          onError: (error: Error) => {
+            eventsRef.current.onError(error)
+            setCurrentState("idle")
+          },
+        })
+        recordBackendRef.current = recordBackend
 
-      const player = new WaveSurferPlayer()
-      player.initialize(ws)
-      playerRef.current = player
+        const player = new WaveSurferPlayer()
+        player.initialize(ws)
+        playerRef.current = player
 
-      configurePlayerEvents(player)
+        configurePlayerEvents(player)
 
-      isInitializedRef.current = true
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error))
-      void eventsRef.current.onError?.(err)
-    } finally {
-      isInitializingRef.current = false
-    }
+        isInitializedRef.current = true
+      } catch (error) {
+        if (initGenerationRef.current !== generation) {
+          await waitForReplacementInit()
+          return
+        }
+        initPromiseRef.current = null
+        const err = error instanceof Error ? error : new Error(String(error))
+        void eventsRef.current.onError?.(err)
+      }
+    })()
+
+    initPromiseRef.current = initPromise
+    return initPromise
   }, [
     containerRef,
     theme,
@@ -385,7 +409,7 @@ export function useWaveformController({
 
         readyResolversRef.current.add(resolver)
 
-        playerRef.current.load(rawBlob).catch(error => {
+        playerRef.current.load(rawBlob).catch((error: unknown) => {
           readyResolversRef.current.delete(resolver)
           reject(error instanceof Error ? error : new Error(String(error)))
         })

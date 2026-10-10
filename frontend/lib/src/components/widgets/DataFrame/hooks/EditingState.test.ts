@@ -14,11 +14,15 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind, TextCell } from "@glideapps/glide-data-grid"
+import {
+  type GridCell,
+  GridCellKind,
+  type TextCell,
+} from "@glideapps/glide-data-grid"
 import { Field, Utf8 } from "apache-arrow"
 
 import {
-  BaseColumnProps,
+  type BaseColumnProps,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"

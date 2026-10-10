@@ -16,7 +16,7 @@
 
 import { kebabCase } from "lodash-es"
 
-import {
+import type {
   StreamlitTheme,
   StreamlitThemeCssProperties,
 } from "@streamlit/component-v2-lib"
@@ -134,6 +134,7 @@ export const extractComponentsV2Theme = (
     dataframeBorderColor: theme.colors.dataframeBorderColor,
     dataframeHeaderBackgroundColor:
       theme.colors.dataframeHeaderBackgroundColor,
+    dataframeHeaderTextColor: theme.colors.dataframeHeaderTextColor,
     codeBackgroundColor: theme.colors.codeBackgroundColor,
     font: theme.genericFonts.bodyFont,
     chartCategoricalColors: theme.colors.chartCategoricalColors,
@@ -152,6 +153,7 @@ export const extractComponentsV2Theme = (
      *   transparent here)
      * - When showWidgetBorder=true: uses theme's borderColor
      */
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank border color renders as transparent
     widgetBorderColor: theme.colors.widgetBorderColor || "transparent",
 
     redColor: theme.colors.redColor,

@@ -16,7 +16,7 @@
 
 import { type CSSProperties, useCallback, useEffect, useRef } from "react"
 
-import { type Placement } from "@floating-ui/react"
+import type { Placement } from "@floating-ui/react"
 
 import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
 import useTimeout from "~lib/hooks/useTimeout"

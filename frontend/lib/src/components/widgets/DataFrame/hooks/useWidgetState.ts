@@ -15,21 +15,24 @@
  */
 
 import {
-  MutableRefObject,
+  type MutableRefObject,
   useCallback,
   useEffect,
   useRef,
   useState,
 } from "react"
 
-import { CompactSelection, GridSelection } from "@glideapps/glide-data-grid"
+import {
+  CompactSelection,
+  type GridSelection,
+} from "@glideapps/glide-data-grid"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import EditingState, { getColumnName } from "./EditingState"
 
@@ -332,10 +335,8 @@ function useWidgetState({
       formId: element.formId ?? undefined,
     })
 
-    if (currentWidgetState === undefined) {
-      // Create an empty widget state
-      currentWidgetState = new EditingState(0).toJson([])
-    }
+    // Create an empty widget state when the manager has no value yet.
+    currentWidgetState ??= new EditingState(0).toJson([])
 
     // Only update if there is actually a difference between editing and widget state
     if (currentEditingState !== currentWidgetState) {

@@ -421,6 +421,41 @@ if st.button("Open Dialog with JSON Path Tooltip"):
     dialog_with_json_path_tooltip()
 
 
+@st.dialog("Left drawer", position="left")
+def left_drawer_dialog() -> None:
+    st.write("Drawer content on the left")
+    if st.button("Submit", key="left-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open Left Drawer"):
+    left_drawer_dialog()
+
+
+@st.dialog("Right drawer", position="right")
+def right_drawer_dialog() -> None:
+    st.write("Drawer content on the right")
+    if st.button("Submit", key="right-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open Right Drawer"):
+    right_drawer_dialog()
+
+
+@st.dialog("Tall left drawer", position="left")
+def tall_left_drawer_dialog() -> None:
+    st.write("Top of tall drawer")
+    for i in range(40):
+        st.write(f"Row {i}")
+    if st.button("Submit", key="tall-left-dialog-btn"):
+        st.rerun()
+
+
+if st.button("Open Tall Left Drawer"):
+    tall_left_drawer_dialog()
+
+
 # Regression coverage for #9405: a dialog closed via st.rerun() must disappear
 # as soon as the next full-app run starts, even if that run then blocks.
 # Keep this longer than the hide-assertion window in
@@ -445,3 +480,51 @@ if st.session_state.get("block_after_dialog_close"):
     st.session_state.block_after_dialog_close = False
 elif st.button("Open dialog that blocks after close"):
     dialog_closed_before_blocking()
+
+
+# Regression coverage for #17011: a dialog and its nested fragment must remain
+# interactive when only the fragment that opened the dialog reruns.
+def rerun_dialog_parent() -> None:
+    st.rerun(scope="dialog_parent")
+
+
+@st.fragment
+def nested_dialog_fragment() -> None:
+    if st.button("Increment nested dialog fragment"):
+        st.session_state.nested_dialog_clicks = (
+            st.session_state.get("nested_dialog_clicks", 0) + 1
+        )
+    st.write(f"Nested dialog clicks: {st.session_state.get('nested_dialog_clicks', 0)}")
+
+
+@st.dialog("Parent fragment rerun dialog", dismissible=False)
+def parent_fragment_rerun_dialog() -> None:
+    if st.button("Increment parent fragment dialog"):
+        st.session_state.parent_fragment_dialog_clicks = (
+            st.session_state.get("parent_fragment_dialog_clicks", 0) + 1
+        )
+
+    st.write(
+        "Parent fragment dialog clicks: "
+        f"{st.session_state.get('parent_fragment_dialog_clicks', 0)}"
+    )
+
+    st.button("Rerun dialog parent", on_click=rerun_dialog_parent)
+    nested_dialog_fragment()
+
+    if st.button("Close parent fragment dialog"):
+        st.rerun()
+
+
+@st.fragment(key="dialog_parent")
+def dialog_parent_fragment() -> None:
+    st.session_state.dialog_parent_runs = (
+        st.session_state.get("dialog_parent_runs", 0) + 1
+    )
+    st.write(f"Dialog parent runs: {st.session_state.dialog_parent_runs}")
+
+    if st.button("Open parent fragment rerun dialog"):
+        parent_fragment_rerun_dialog()
+
+
+dialog_parent_fragment()

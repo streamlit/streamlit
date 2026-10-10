@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { AST_NODE_TYPES, TSESTree } from "@typescript-eslint/utils"
+import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils"
 
 import { createRule } from "./utils/createRule"
 

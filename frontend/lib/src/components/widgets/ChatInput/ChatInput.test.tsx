@@ -38,7 +38,7 @@ import {
 } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import ChatInput, { Props } from "./ChatInput"
+import ChatInput, { type Props } from "./ChatInput"
 
 const useWaveformControllerMock = vi.fn()
 
@@ -65,7 +65,7 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
-  // @ts-expect-error
+  // @ts-expect-error - upload client fixture does not implement FileUploadClient
   uploadClient: {
     uploadFile: vi.fn().mockImplementation(() => {
       return Promise.resolve()

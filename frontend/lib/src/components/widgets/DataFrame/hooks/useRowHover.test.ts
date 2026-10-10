@@ -17,7 +17,7 @@
 import type { GridMouseEventArgs } from "@glideapps/glide-data-grid"
 import { act, renderHook } from "@testing-library/react"
 
-import { CustomGridTheme } from "./useCustomTheme"
+import type { CustomGridTheme } from "./useCustomTheme"
 import useRowHover from "./useRowHover"
 
 const mockTheme = {

@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { memo, MouseEvent, ReactElement, ReactNode } from "react"
+import {
+  memo,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react"
 
 import ProgressBar, {
   Size as ProgressBarSize,
@@ -40,9 +45,9 @@ function CameraInputButton({
 }: CameraInputButtonProps): ReactElement {
   return (
     <StyledCameraInputBaseButton
-      disabled={disabled || false}
-      onClick={onClick || (() => {})}
-      progress={progress || null}
+      disabled={disabled ?? false}
+      onClick={onClick ?? (() => {})}
+      progress={progress ?? null}
       data-testid="stCameraInputButton"
     >
       {children}

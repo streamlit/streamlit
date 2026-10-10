@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect } from "react"
+import { memo, type ReactElement, useEffect } from "react"
 
-import { Toast as ToastProto } from "@streamlit/protobuf"
+import type { Toast as ToastProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"

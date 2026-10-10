@@ -5,6 +5,24 @@ Build professional, brand-aligned themes using `.streamlit/config.toml`. This sk
 
 Use `streamlit config show` to look up the full, current set of available theme configuration options and their descriptions before configuring a theme. The theme settings are grouped under `[theme]`, `[theme.sidebar]`, and the light and dark variants.
 
+## Contents
+
+- [Theme file setup](#theme-file-setup)
+- [Theme inheritance](#theme-inheritance)
+- [Color configuration](#color-configuration)
+- [Typography](#typography)
+- [Border and radius](#border-and-radius)
+- [Sidebar customization](#sidebar-customization)
+- [Light and dark modes](#light-and-dark-modes)
+- [Detecting current theme](#detecting-current-theme)
+- [Design principles](#design-principles)
+- [Example: VS Code dark theme](#example-vs-code-dark-theme)
+- [Common mistakes](#common-mistakes)
+- [IMPORTANT: No custom CSS unless explicitly requested](#important-no-custom-css-unless-explicitly-requested)
+- [Development workflow](#development-workflow)
+- [Theme templates](#theme-templates)
+- [References](#references)
+
 ## Theme file setup
 
 Theme options go in Streamlit's `config.toml` under the `[theme]` section:
@@ -80,6 +98,9 @@ chartCategoricalColors = ["#0969da", "#1a7f37", "#bf3989", "#8250df", "#cf222e",
 # Sequential/gradient data (heatmaps) - exactly 10 colors required
 chartSequentialColors = ["#f0f6fc", "#c8e1ff", "#79c0ff", "#58a6ff", "#388bfd", "#1f6feb", "#1158c7", "#0d419d", "#0a3069", "#04244a"]
 
+# Diverging data (midpoint scales) - exactly 10 colors; Plotly/Altair/Vega-Lite only
+chartDivergingColors = ["#67001f", "#b2182b", "#d6604d", "#f4a582", "#fddbc7", "#d1e5f0", "#92c5de", "#4393c3", "#2166ac", "#053061"]
+
 [theme.dark]
 # Brighter palette for dark backgrounds
 chartCategoricalColors = ["#58a6ff", "#3fb950", "#db61a2", "#a371f7", "#f85149", "#d29922", "#8b949e"]
@@ -90,10 +111,12 @@ chartCategoricalColors = ["#58a6ff", "#3fb950", "#db61a2", "#a371f7", "#f85149",
 ```toml
 [theme]
 dataframeBorderColor = "#d0d7de"
-dataframeHeaderBackgroundColor = "#f6f8fa"
+dataframeHeaderBackgroundColor = "#1f2937"
+dataframeHeaderTextColor = "#ffffff"
 ```
 
-Ensure `textColor` is readable against `dataframeHeaderBackgroundColor`—headers use the main text color.
+Set `dataframeHeaderTextColor` when the header background is dark or tinted.
+If unset, header text and icons use a faded `textColor`. A selected column's header text and icons stay white, including when `dataframeHeaderTextColor` is set.
 
 ## Typography
 
@@ -158,6 +181,10 @@ codeFontWeight = 400
 # Heading hierarchy (h1 through h6), or use a single value for all
 headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "12px"]
 headingFontWeights = [600, 600, 600, 500, 500, 500]
+
+# st.metric value. Size must be a string ("2.25rem", "36px", or "36"); a bare number is ignored.
+metricValueFontSize = "2.25rem"
+metricValueFontWeight = 700       # 100-900, multiple of 50; default 400 (ignores baseFontWeight)
 ```
 
 ### Link styling

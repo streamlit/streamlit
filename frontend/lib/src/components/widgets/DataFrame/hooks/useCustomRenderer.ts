@@ -17,12 +17,12 @@
 import { useCallback, useMemo } from "react"
 
 import {
-  BaseDrawArgs,
-  DataEditorProps,
-  DrawCellCallback,
+  type BaseDrawArgs,
+  type DataEditorProps,
+  type DrawCellCallback,
   drawTextCell,
-  Theme as GlideTheme,
-  Rectangle,
+  type Theme as GlideTheme,
+  type Rectangle,
 } from "@glideapps/glide-data-grid"
 import {
   DatePickerCell,
@@ -32,7 +32,7 @@ import {
 } from "@glideapps/glide-data-grid-cells"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   CustomCells,
   isErrorCell,
   isMissingValueCell,
@@ -86,8 +86,8 @@ const drawMissingPlaceholder = (
         baseFontFull: `${theme.baseFontStyle} ${theme.fontFamily}`,
         markerFontFull: `${theme.markerFontStyle} ${theme.fontFamily}`,
       },
-      // The following props are just added for technical reasons:
-      // @ts-expect-error
+      // drawTextCell only reads rect, ctx, and theme.
+      // @ts-expect-error - {} is not a SpriteManager
       spriteManager: {},
       hyperWrapping: false,
     },

@@ -4,6 +4,17 @@ Opinionated examples for writing clean, performant, and maintainable Streamlit a
 
 Use this reference when reviewing an app, starting a new app, or applying the quick-reference rules from `SKILL.md`.
 
+## Contents
+
+- [Styling and copy](#styling-and-copy)
+- [HTML and iframes](#html-and-iframes)
+- [Layout](#layout)
+- [Navigation and pages](#navigation-and-pages)
+- [Performance](#performance)
+- [Data and charts](#data-and-charts)
+- [Widgets and state](#widgets-and-state)
+- [Secrets and queries](#secrets-and-queries)
+
 ## Styling and copy
 
 Do not use custom CSS for app styling unless the user actively requests it. Prefer native Streamlit APIs and `.streamlit/config.toml` to customize the appearance.
@@ -52,29 +63,47 @@ query = st.text_input(
 )
 ```
 
+Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short and specific; see [media-display.md](media-display.md) and [data-display.md](data-display.md).
+
+```python
+# BAD: Meaningful image with no alt
+st.image("revenue.png", caption="Q3 revenue")
+
+# GOOD: Short accessible name, independent of caption
+st.image(
+    "revenue.png",
+    caption="Q3 revenue",
+    alt="Bar chart of monthly Q3 revenue rising to $1.2M in September",
+)
+```
+
 ## HTML and iframes
 
 Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or deprecated `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
 
 Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` commands.
 
-- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command.
+- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command. Pass `alt=` to set the iframe `title`. The default is a shared `"st.iframe"` name on every embed.
 - Use `st.html` for static HTML or CSS that should render directly in the app instead of inside an iframe. JavaScript is ignored by default; only enable it with `unsafe_allow_javascript=True` when necessary, and never enable it for untrusted content.
 
 ## Layout
 
-Use `width` instead of deprecated `use_container_width`.
+Use `width` instead of deprecated `use_container_width`. Dataframes and most charts stretch by default; buttons default to `width="content"`.
 
 ```python
 # BAD: Deprecated
 st.dataframe(df, use_container_width=True)
+st.download_button("Download CSV", df.to_csv(), "orders.csv", use_container_width=True)
 
-# GOOD: Default is stretch; set content width only when needed
+# GOOD: Dataframes stretch by default; set content width only when needed
 st.dataframe(df)
 st.dataframe(df, width="content")
+
+# GOOD: Buttons fit their content by default; stretch them explicitly
+st.download_button("Download CSV", df.to_csv(), "orders.csv", width="stretch")
 ```
 
-Prefer horizontal containers for responsive rows, and reserve columns for fixed grids or specific width ratios.
+Prefer horizontal containers for responsive rows, and reserve columns for fixed grids, specific width ratios, or cards that must share a width.
 
 ```python
 # BAD: Columns for a simple button row
@@ -86,6 +115,30 @@ right.button("Save", type="primary")
 with st.container(horizontal=True, horizontal_alignment="right"):
     st.button("Cancel")
     st.button("Save", type="primary")
+```
+
+Align elements placed side by side. Bottom-align rows that mix labeled inputs with buttons, checkboxes, or toggles, and give sibling cards consistent content or `height="stretch"`. See "Aligning elements side by side" in [layouts.md](layouts.md) for element sizes and more patterns.
+
+```python
+# BAD: The button and toggle sit above the input field; the cards have uneven heights
+with st.container(horizontal=True):
+    st.text_input("Customer")
+    st.toggle("Active only")
+    st.button("Search")
+
+revenue_col, orders_col = st.columns(2)
+revenue_col.metric("Revenue", "$1.2M", "+8%", border=True)
+orders_col.metric("Orders", "1.4k", border=True)
+
+# GOOD: Everything lines up with the input field, and the cards share a height
+with st.container(horizontal=True, vertical_alignment="bottom"):
+    st.text_input("Customer")
+    st.toggle("Active only")
+    st.button("Search")
+
+revenue_col, orders_col = st.columns(2)
+revenue_col.metric("Revenue", "$1.2M", "+8%", border=True, height="stretch")
+orders_col.metric("Orders", "1.4k", border=True, height="stretch")
 ```
 
 Use bordered containers for visual grouping.
@@ -133,7 +186,7 @@ import streamlit as st
 from utils.data import load_sales
 
 st.title("Sales")
-st.line_chart(load_sales())
+st.line_chart(load_sales(), alt="Sales over time")
 ```
 
 ## Performance
@@ -250,13 +303,15 @@ if details.open:
 
 ## Data and charts
 
-Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart rather than a third-party component.
+Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description).
 
 ```python
 # GOOD: Native charts for common cases
-st.line_chart(df, x="date", y="revenue")
-st.bar_chart(df, x="category", y="orders")
-st.scatter_chart(df, x="revenue", y="margin", color="segment")
+st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
+st.bar_chart(df, x="category", y="orders", alt="Orders by category")
+st.scatter_chart(
+    df, x="revenue", y="margin", color="segment", alt="Margin versus revenue by segment"
+)
 
 # GOOD: Altair for complex charts
 chart = (
@@ -268,7 +323,7 @@ chart = (
         color="region:N",
     )
 )
-st.altair_chart(chart)
+st.altair_chart(chart, alt="Revenue by region over time")
 ```
 
 Keep sensitive data out of frontend payloads. Hiding a dataframe column only hides it visually; pre-filter sensitive columns before display.

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import { cleanup, screen, within } from "@testing-library/react"
 import { transparentize } from "color2k"
@@ -33,7 +33,7 @@ import StreamlitMarkdown, {
   containsMathSyntax,
   createAnchorFromText,
   CustomCodeTag,
-  CustomCodeTagProps,
+  type CustomCodeTagProps,
   CustomMediaTag,
   CustomPreTag,
   HeadingWithActionElements,
@@ -752,6 +752,20 @@ describe("StreamlitMarkdown", () => {
     expect(image).toHaveStyle("user-select: none")
   })
 
+  it("keeps adjacent text when rendering a streamlit logo", () => {
+    render(
+      <StreamlitMarkdown
+        source={":streamlit: Rocks"}
+        allowHTML={false}
+        isLabel
+      />
+    )
+    const image = screen.getByRole("img", { name: "Streamlit logo" })
+    expect(image.tagName.toLowerCase()).toBe("img")
+    expect(image).not.toHaveTextContent("Rocks")
+    expect(image.parentElement).toHaveTextContent("Rocks")
+  })
+
   it("renders material icons with allowHTML=true", async () => {
     const source = `:material/search: Icon`
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
@@ -759,6 +773,8 @@ describe("StreamlitMarkdown", () => {
     const tagName = markdown.nodeName.toLowerCase()
     expect(tagName).toBe("span")
     expect(markdown).toHaveStyle("font-family: Material Symbols Rounded")
+    expect(markdown).not.toHaveTextContent("Icon")
+    expect(markdown.parentElement).toHaveTextContent("Icon")
   })
 
   // Typographical symbol replacements
@@ -1122,7 +1138,36 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toHaveStyle(`user-select: none`)
     expect(markdown).toHaveStyle(`vertical-align: bottom`)
     expect(markdown).toHaveAttribute("translate", "no")
+    expect(markdown).not.toHaveTextContent("Icon")
+    expect(markdown.parentElement).toHaveTextContent("Icon")
   })
+
+  it.each([
+    {
+      source: ":material/search: Icon",
+      adjacent: "Icon",
+      iconName: "search icon",
+    },
+    {
+      source: "Hello :material/search:",
+      adjacent: "Hello",
+      iconName: "search icon",
+    },
+    {
+      source: ":material/settings: Section",
+      adjacent: "Section",
+      iconName: "settings icon",
+    },
+  ])(
+    "keeps adjacent copy next to a material icon ($source)",
+    ({ source, adjacent, iconName }) => {
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const icon = screen.getByRole("img", { name: iconName })
+      expect(icon.tagName.toLowerCase()).toBe("span")
+      expect(icon).not.toHaveTextContent(adjacent)
+      expect(icon.parentElement).toHaveTextContent(adjacent)
+    }
+  )
 
   it("does not remove unknown directive", () => {
     const source = `test :foo test:test :`

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { getContextualFillColor, SerializedColorArray } from "./colors"
+import { getContextualFillColor, type SerializedColorArray } from "./colors"
 
 describe("#getContextualFillColor", () => {
   const object = { count: 10 }

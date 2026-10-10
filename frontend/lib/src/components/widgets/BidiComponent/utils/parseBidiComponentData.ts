@@ -56,7 +56,7 @@ export const parseBidiComponentData = ({
       return bytes ?? null
     case "mixed": {
       if (mixedJson && arrowBlobs) {
-        const jsonData = JSON.parse(mixedJson)
+        const jsonData: unknown = JSON.parse(mixedJson)
 
         const arrowBlobsMap: Record<string, Uint8Array> = {}
         Object.entries(arrowBlobs).forEach(([key, arrowProto]) => {

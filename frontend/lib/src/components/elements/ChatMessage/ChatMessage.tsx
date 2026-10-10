@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
 
 import {
   StyledAvatarBackground,
@@ -53,19 +53,26 @@ function ChatMessageAvatar(
       case BlockProto.ChatMessage.AvatarType.IMAGE:
         return (
           <StyledAvatarImage
+            data-testid="stChatMessageAvatarImage"
             src={endpoints.buildMediaURL(avatar)}
-            alt={`${name} avatar`}
+            // Decorative: speaker identity is on the content region (role=group).
+            alt=""
             crossOrigin={crossOrigin}
           />
         )
       case BlockProto.ChatMessage.AvatarType.EMOJI:
-        return <StyledAvatarBackground>{avatar}</StyledAvatarBackground>
+        return (
+          <StyledAvatarBackground aria-hidden="true">
+            {avatar}
+          </StyledAvatarBackground>
+        )
       case BlockProto.ChatMessage.AvatarType.ICON:
         if (avatar === "user") {
           return (
             <StyledAvatarIcon
               data-testid="stChatMessageAvatarUser"
               background={theme.colors.redColor}
+              aria-hidden="true"
             >
               <DynamicIcon size="lg" iconValue=":material/face:" />
             </StyledAvatarIcon>
@@ -75,13 +82,17 @@ function ChatMessageAvatar(
             <StyledAvatarIcon
               data-testid="stChatMessageAvatarAssistant"
               background={theme.colors.orangeColor}
+              aria-hidden="true"
             >
               <DynamicIcon size="lg" iconValue=":material/smart_toy:" />
             </StyledAvatarIcon>
           )
         } else if (avatar.startsWith(":material")) {
           return (
-            <StyledAvatarBackground data-testid="stChatMessageAvatarCustom">
+            <StyledAvatarBackground
+              data-testid="stChatMessageAvatarCustom"
+              aria-hidden="true"
+            >
               <DynamicIcon
                 size="lg"
                 iconValue={avatar}
@@ -95,7 +106,7 @@ function ChatMessageAvatar(
 
   // Fallback to first character of the name label if nothing else can be matched:
   return (
-    <StyledAvatarBackground>
+    <StyledAvatarBackground aria-hidden="true">
       {name ? name.charAt(0).toUpperCase() : "🧑‍💻"}
     </StyledAvatarBackground>
   )
@@ -127,6 +138,8 @@ const ChatMessage: React.FC<React.PropsWithChildren<ChatMessageProps>> = ({
       />
       <StyledMessageContent
         data-testid="stChatMessageContent"
+        // Screen readers ignore aria-label on a generic div; role="group" exposes "Chat message from {name}".
+        role="group"
         aria-label={`Chat message from ${name}`}
       >
         {children}

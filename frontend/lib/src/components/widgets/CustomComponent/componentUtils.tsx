@@ -19,14 +19,14 @@ import { getLogger } from "loglevel"
 import {
   ArrowDataframe,
   type ArrowTable,
-  ComponentInstance as ComponentInstanceProto,
-  SpecialArg as SpecialArgProto,
+  type ComponentInstance as ComponentInstanceProto,
+  type SpecialArg as SpecialArgProto,
 } from "@streamlit/protobuf"
 
 import type { EmotionTheme } from "~lib/theme/types"
 import { toExportedTheme } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
+import type { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 

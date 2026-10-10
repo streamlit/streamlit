@@ -39,7 +39,7 @@ import ObjectColumn from "./ObjectColumn"
 import ProgressColumn from "./ProgressColumn"
 import SelectboxColumn from "./SelectboxColumn"
 import TextColumn from "./TextColumn"
-import { ColumnCreator } from "./utils"
+import type { ColumnCreator } from "./utils"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
 

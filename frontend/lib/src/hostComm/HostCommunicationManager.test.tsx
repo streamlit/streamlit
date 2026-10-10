@@ -17,7 +17,7 @@
 import "../../../utils/src/polyfills/index"
 
 import { getLogger } from "loglevel"
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import HostCommunicationManager, {
   HOST_COMM_VERSION,
@@ -164,7 +164,7 @@ describe("HostCommunicationManager messaging", () => {
       allowedOrigins: ["https://devel.streamlit.test"],
       useExternalAuthToken: false,
     })
-    // @ts-expect-error
+    // @ts-expect-error - allowedOrigins is private
     expect(hostCommunicationMgr.allowedOrigins).toEqual([
       "https://devel.streamlit.test",
     ])

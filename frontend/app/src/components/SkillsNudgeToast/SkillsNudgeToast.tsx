@@ -15,8 +15,8 @@
  */
 
 import {
-  KeyboardEvent,
-  ReactElement,
+  type KeyboardEvent,
+  type ReactElement,
   useCallback,
   useEffect,
   useState,

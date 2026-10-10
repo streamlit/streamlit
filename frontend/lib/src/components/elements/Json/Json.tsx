@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, type ReactElement, useCallback } from "react"
 
 import JSON5 from "json5"
 
-import { Json as JsonProto } from "@streamlit/protobuf"
+import type { Json as JsonProto } from "@streamlit/protobuf"
 
 import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"

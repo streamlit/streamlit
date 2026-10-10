@@ -121,7 +121,8 @@ class CustomDataframe:
         return self._data.__dataframe__(allow_copy=allow_copy)
 
 
-class StrTestEnum(str, enum.Enum):
+# Models user enums that subclass ``str`` and ``Enum`` rather than ``StrEnum``.
+class StrTestEnum(str, enum.Enum):  # noqa: UP042
     NUMBER_INPUT = "st.number_input"
     TEXT_AREA = "st.text_area"
     TEXT_INPUT = "st.text_input"

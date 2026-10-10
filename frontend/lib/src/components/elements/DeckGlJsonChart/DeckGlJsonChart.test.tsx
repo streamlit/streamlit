@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { type ReactNode } from "react"
+import type { ReactNode } from "react"
 
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -22,6 +22,7 @@ import { userEvent } from "@testing-library/user-event"
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
 import { render } from "~lib/components/shared/ElementFullscreen/testUtils"
+import type * as GetColors from "~lib/theme/getColors"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { DeckGlJsonChart } from "./DeckGlJsonChart"
@@ -73,9 +74,7 @@ const mockInitialViewState = {
 const mockHasLightBackgroundColor = vi.fn(() => false)
 
 vi.mock("~lib/theme/getColors", async () => ({
-  ...(await vi.importActual<typeof import("~lib/theme/getColors")>(
-    "~lib/theme/getColors"
-  )),
+  ...(await vi.importActual<typeof GetColors>("~lib/theme/getColors")),
   hasLightBackgroundColor: () => mockHasLightBackgroundColor(),
 }))
 
@@ -130,6 +129,38 @@ describe("DeckGlJsonChart", () => {
     const element = screen.getByTestId("stDeckGlJsonChart")
     expect(element).toBeVisible()
     expect(element).toHaveClass("stDeckGlJsonChart")
+  })
+
+  describe("alt (accessible name)", () => {
+    it("sets role=figure with accessible name when alt is provided", () => {
+      const props = getProps({
+        alt: "Delivery hubs across the Pacific Northwest",
+      })
+      render(<DeckGlJsonChart {...props} />)
+      // figure (not img) keeps toolbar and Mapbox navigation controls operable.
+      expect(
+        screen.getByRole("figure", {
+          name: "Delivery hubs across the Pacific Northwest",
+        })
+      ).toBeVisible()
+    })
+
+    it("omits role and aria-label when alt is not provided", () => {
+      render(<DeckGlJsonChart {...getProps()} />)
+      const chart = screen.getByTestId("stDeckGlJsonChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits role and aria-label when alt is %s", (_label, alt) => {
+      render(<DeckGlJsonChart {...getProps({ alt })} />)
+      const chart = screen.getByTestId("stDeckGlJsonChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
   })
 
   describe("basemap chrome", () => {

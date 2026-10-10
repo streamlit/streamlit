@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CSSProperties } from "react"
+import type { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
 
@@ -30,9 +30,9 @@ import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
 
 /**
- * Column vertical-alignment rules target the wrapper class rather than the two
- * field styled-components, so both widgets stay covered if their inner React
- * Aria composition changes.
+ * Vertical-alignment rules for columns and horizontal containers target the
+ * wrapper class rather than the two field styled-components, so both widgets
+ * stay covered if their inner React Aria composition changes.
  */
 const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 
@@ -74,6 +74,9 @@ interface StyledElementContainerProps {
   flex?: React.CSSProperties["flex"]
   minWidth?: React.CSSProperties["minWidth"]
   textAlign?: React.CSSProperties["textAlign"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
 }
 
 export const StyledSpace = styled.div({
@@ -95,9 +98,15 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     flex,
     minWidth,
     textAlign,
+    alignSelf,
+    minHeight,
+    maxHeight,
   }) => ({
     width,
     height,
+    alignSelf,
+    minHeight,
+    maxHeight,
     textAlign,
     maxWidth: "100%",
     // Important so that individual elements don't take up too much space
@@ -178,6 +187,9 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         ? `${percentage}%`
         : `calc(${percentage}% - ${gapWidth})`
 
+    // Columns don't shift themselves for vertical alignment: the row stretches
+    // each column (so bordered columns match), and ContainerContentsWrapper
+    // aligns the content inside it.
     return {
       // Calculate width based on percentage, but fill all available space,
       // e.g. if it overflows to next row.
@@ -194,7 +206,6 @@ export const StyledColumn = styled.div<StyledColumnProps>(
             minWidth: theme.spacing.sixXL,
           }),
       ...(verticalAlignment === VerticalAlignment.BOTTOM && {
-        marginTop: "auto",
         // Align the last direct-child checkbox/toggle with other input widgets.
         // Scoped to the column's own stVerticalBlock so nested containers
         // (e.g. horizontal containers of checkboxes) do not also get matched
@@ -213,10 +224,6 @@ export const StyledColumn = styled.div<StyledColumnProps>(
           {
             marginTop: theme.spacing.sm,
           },
-      }),
-      ...(verticalAlignment === VerticalAlignment.CENTER && {
-        marginTop: "auto",
-        marginBottom: "auto",
       }),
       ...(showBorder && {
         border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
@@ -345,6 +352,14 @@ export const StyledFlexContainerBlock =
               }),
             }
           : { overflow }),
+        ...(direction === Direction.HORIZONTAL &&
+          align === BlockProto.FlexContainer.Align.ALIGN_END && {
+            // Align direct-child checkboxes/toggles with input widgets, matching
+            // bottom-aligned columns. Nested containers are not matched.
+            [`& > ${StyledElementContainer} > ${CHECKBOX_WRAPPER_SELECTOR}`]: {
+              marginBottom: theme.spacing.sm,
+            },
+          }),
         // Consecutive steps should read as one continuous timeline, so a step's
         // connector has to span the flex gap separating it from the next step.
         // The property holds a negative `bottom` offset for the connector, and
@@ -369,10 +384,27 @@ interface StyledLayoutWrapperProps {
   width?: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex?: React.CSSProperties["flex"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
 }
 
+/**
+ * In-flow spacer after the last dialog widget. Drawer bodies scroll a
+ * height:100% child, so padding on ModalBody never appears below that content.
+ * margin-top cancels the vertical-block SMALL gap so the pad is exactly
+ * threeXL below the last widget.
+ */
+export const StyledDialogContentEndPad = styled.div(({ theme }) => ({
+  flexShrink: 0,
+  marginTop: `-${theme.spacing.lg}`,
+  height: theme.spacing.threeXL,
+  width: "100%",
+  pointerEvents: "none",
+}))
+
 export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
-  ({ width, height, flex }) => ({
+  ({ width, height, flex, alignSelf, minHeight, maxHeight }) => ({
     display: "flex",
     // This shouldn't matter since this is a wrapper and should only have one child.
     // However, adding it here to be explicit.
@@ -382,5 +414,8 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     minWidth: "1rem",
     height,
     flex,
+    alignSelf,
+    minHeight,
+    maxHeight,
   })
 )

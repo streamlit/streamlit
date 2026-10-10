@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
+import {
+  Block as BlockProto,
+  type Element,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { BlockNode, ElementNode } from "~lib/AppNode"
 import { ElementsSetVisitor } from "~lib/render-tree/visitors/ElementsSetVisitor"
@@ -46,7 +50,7 @@ vi.mock("~lib/theme/getColors", () => ({
 
 describe("isElementStale", () => {
   const node = new ElementNode(
-    // @ts-expect-error
+    // @ts-expect-error - null is not assignable to Element
     null,
     null,
     "myScriptRunId",
@@ -129,7 +133,7 @@ describe("isElementStale", () => {
 
 describe("shouldHideStaleDialog", () => {
   const node = new ElementNode(
-    // @ts-expect-error
+    // @ts-expect-error - null is not assignable to Element
     null,
     null,
     "myScriptRunId",

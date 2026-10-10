@@ -14,8 +14,8 @@ def load_data(path):
     return pd.read_csv(path)
 
 
-# GOOD: Cached
-@st.cache_data
+# GOOD: Cached, bounded with max_entries
+@st.cache_data(max_entries=100)
 def load_data(path):
     return pd.read_csv(path)
 ```
@@ -330,6 +330,12 @@ if st.button("Apply"):
 ```
 
 Use this when a single control should not rerun the app until the user applies it. Use a form when several related inputs should commit together.
+
+Caveats for `on_change="ignore"`:
+
+- The browser holds the pending value until the next rerun. A page refresh before then loses it, unless the widget also sets `bind="query-params"`.
+- Inside `st.form`, `on_change="ignore"` has no effect; the form already defers commits until submit.
+- `st.file_uploader`, `st.camera_input`, and `st.audio_input` still upload the file, photo, or recording immediately; only the rerun is deferred.
 
 ## Conditional rendering
 

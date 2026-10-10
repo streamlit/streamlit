@@ -20,7 +20,7 @@ import {
   drawTextCell,
   GridCellKind,
   type ProvideEditorCallback,
-  TextCell,
+  type TextCell,
 } from "@glideapps/glide-data-grid"
 
 import { toJsonString } from "~lib/components/widgets/DataFrame/columns/utils"
@@ -50,7 +50,7 @@ const JsonCellEditor: ReturnType<ProvideEditorCallback<JsonCell>> = cell => {
 
   return (
     <JsonViewer
-      jsonValue={cellData.value || cellData.displayValue}
+      jsonValue={cellData.value ?? cellData.displayValue}
       theme={theme}
     />
   )

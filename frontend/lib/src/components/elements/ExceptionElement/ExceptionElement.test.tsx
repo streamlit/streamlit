@@ -16,13 +16,15 @@
 
 import { act, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import { Config, Exception as ExceptionProto } from "@streamlit/protobuf"
 
 import { render, renderWithContexts } from "~lib/test_util"
 
-import ExceptionElement, { ExceptionElementProps } from "./ExceptionElement"
+import ExceptionElement, {
+  type ExceptionElementProps,
+} from "./ExceptionElement"
 
 const getProps = (
   elementProps: Partial<ExceptionProto> = {}

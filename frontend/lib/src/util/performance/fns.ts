@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { StPerformanceMark, StPerformanceMetric } from "./types"
+import type { StPerformanceMark, StPerformanceMetric } from "./types"
 
 /**
  * Type-safe version of `performance.measure` for Streamlit usage.

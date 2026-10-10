@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform type checking tests for st.echarts_chart.
 if TYPE_CHECKING:
@@ -74,6 +72,13 @@ if TYPE_CHECKING:
     assert_type(echarts_chart(spec, renderer="svg"), DeltaGenerator)
 
     # =====================================================================
+    # Test alt parameter (str or None)
+    # =====================================================================
+
+    assert_type(echarts_chart(spec, alt="Bar chart of categories"), DeltaGenerator)
+    assert_type(echarts_chart(spec, alt=None), DeltaGenerator)
+
+    # =====================================================================
     # Test with all parameters combined
     # =====================================================================
 
@@ -85,6 +90,7 @@ if TYPE_CHECKING:
             theme="streamlit",
             key="full_chart",
             renderer="canvas",
+            alt="Full parameter chart",
         ),
         DeltaGenerator,
     )
@@ -102,3 +108,6 @@ if TYPE_CHECKING:
 
     # Invalid renderer value (only "canvas" or "svg")
     echarts_chart(spec, renderer="webgl")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid alt value (must be a string or None)
+    echarts_chart(spec, alt=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

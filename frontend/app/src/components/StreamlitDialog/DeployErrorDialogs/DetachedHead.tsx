@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { IDeployErrorDialog } from "./types"
+import type { IDeployErrorDialog } from "./types"
 
 function DetachedHead(): IDeployErrorDialog {
   return {

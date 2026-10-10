@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 
 import Snow, {
   NUM_FLAKES,
-  Props as SnowProps,
+  type Props as SnowProps,
 } from "~lib/components/elements/Snow/Snow"
 import { render, renderWithContexts } from "~lib/test_util"
 

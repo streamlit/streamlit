@@ -15,8 +15,8 @@
  */
 
 import {
-  Dispatch,
-  SetStateAction,
+  type Dispatch,
+  type SetStateAction,
   useCallback,
   useEffect,
   useMemo,
@@ -25,7 +25,7 @@ import {
 
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { isNullOrUndefined } from "~lib/util/utils"
-import {
+import type {
   DateType,
   Source,
   WidgetStateManager,

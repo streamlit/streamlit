@@ -28,7 +28,7 @@ import { getLogger } from "loglevel"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
-import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
+import type { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import { LocalStore } from "~lib/util/storageUtils"
 import {
   isDarkThemeInQueryParams,
@@ -587,7 +587,8 @@ const setHeadingFontSizes = (
 
       // If valid configured value, overwrite the default heading font size
       if (convertedSize) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font sizes have no index signature
         headingFontSizesOverrides[headingFontSizeKey] = convertedSize
       }
     })
@@ -666,7 +667,8 @@ const setFontWeights = (
           inSidebar
         )
       ) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font weights have no index signature
         fontWeightOverrides[headingFontWeightKey] = weight
       }
     })
@@ -726,7 +728,7 @@ export const createEmotionTheme = (
 
   const parsedColors = Object.entries(customColors).reduce(
     (colorsArg: Record<string, string>, [key, color]) => {
-      // @ts-expect-error
+      // @ts-expect-error - remaining theme values are not all typed as color strings
       const validatedColor = parseColor(color, key, inSidebar)
       if (validatedColor) {
         colorsArg[key] = validatedColor
@@ -745,6 +747,7 @@ export const createEmotionTheme = (
     textColor: bodyText,
     dataframeBorderColor,
     dataframeHeaderBackgroundColor,
+    dataframeHeaderTextColor,
     borderColor,
     linkColor,
     codeTextColor,
@@ -814,6 +817,13 @@ export const createEmotionTheme = (
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
     dataframeHeaderBackgroundColor ??
     conditionalOverrides.colors.dataframeHeaderBackgroundColor
+
+  // Use the configured header text color when set. Otherwise keep the
+  // fadedText60 default from createEmotionColors (which already tracks
+  // textColor).
+  conditionalOverrides.colors.dataframeHeaderTextColor =
+    dataframeHeaderTextColor ??
+    conditionalOverrides.colors.dataframeHeaderTextColor
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
@@ -1363,19 +1373,21 @@ export function blend(color: string, background: string | undefined): string {
 /**
  * Convert a CSS rem value to pixels.
  * @param cssValue: a string containing a value in rem units with or without the "rem" unit suffix
+ * @param rootFontSizePx: optional root font size. Prefer `theme.fontSizes.baseFontSize`
+ *   so the conversion matches the theme even before `html { font-size }` is applied.
  * @returns pixel value of the given rem value
  */
-export const convertRemToPx = (cssValue: string): number => {
+export const convertRemToPx = (
+  cssValue: string,
+  rootFontSizePx?: number
+): number => {
   const remValue = Number.parseFloat(cssValue.replace(/rem$/, ""))
-  return (
-    // TODO(lukasmasuch): We might want to somehow cache this value at some point.
-    // However, I did experimented with the performance of calling this, and
-    // it seems not like a big deal to call it many times.
-    remValue *
-    // We fallback to 16px if the fontSize is not defined (should only happen in tests)
+  const fontSize =
+    rootFontSizePx ??
+    // Fall back to the live root font size, then 16px (tests without a document style).
     (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) ||
       16)
-  )
+  return remValue * fontSize
 }
 
 /**

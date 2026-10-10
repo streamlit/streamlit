@@ -14,54 +14,59 @@
  * limitations under the License.
  */
 
-import { FC, PropsWithChildren, ReactElement, useRef } from "react"
+import {
+  type FC,
+  type PropsWithChildren,
+  type ReactElement,
+  useRef,
+} from "react"
 
 import {
   render as reactTestingLibraryRender,
-  RenderOptions,
-  RenderResult,
+  type RenderOptions,
+  type RenderResult,
 } from "@testing-library/react"
 
 import { Config, PageConfig } from "@streamlit/protobuf"
 
 import {
   BackendOperationContext,
-  BackendOperationContextProps,
+  type BackendOperationContextProps,
 } from "./components/core/BackendOperationContext"
 import {
   FormsContext,
-  FormsContextProps,
+  type FormsContextProps,
 } from "./components/core/FormsContext"
 import { FlexContext } from "./components/core/Layout/FlexContext"
 import { Direction } from "./components/core/Layout/utils"
 import {
   LibConfigContext,
-  LibConfigContextProps,
+  type LibConfigContextProps,
 } from "./components/core/LibConfigContext"
 import {
   NavigationContext,
-  NavigationContextProps,
+  type NavigationContextProps,
 } from "./components/core/NavigationContext"
 import {
   ScriptRunContext,
-  ScriptRunContextProps,
+  type ScriptRunContextProps,
 } from "./components/core/ScriptRunContext"
 import {
   SidebarConfigContext,
-  SidebarConfigContextProps,
+  type SidebarConfigContextProps,
 } from "./components/core/SidebarConfigContext"
 import {
   SkillsInstallContext,
-  SkillsInstallContextProps,
+  type SkillsInstallContextProps,
 } from "./components/core/SkillsInstallContext"
 import {
   ThemeContext,
-  ThemeContextProps,
+  type ThemeContextProps,
 } from "./components/core/ThemeContext"
 import ThemeProvider from "./components/core/ThemeProvider"
 import {
   ViewStateContext,
-  ViewStateContextProps,
+  type ViewStateContextProps,
 } from "./components/core/ViewStateContext"
 import { WindowDimensionsProvider } from "./components/shared/WindowDimensions/Provider"
 import { mockTheme } from "./mocks/mockTheme"
@@ -179,13 +184,13 @@ export function render(
 export function mockWindowLocation(hostname: string): void {
   // Mock window.location by creating a new object
   // Source: https://www.benmvp.com/blog/mocking-window-location-methods-jest-jsdom/
-  // @ts-expect-error
+  // @ts-expect-error - location is required, so delete is a type error
   delete window.location
 
   const hasScheme = /^https?:\/\//.test(hostname)
   const origin = hasScheme ? new URL(hostname).origin : `https://${hostname}`
 
-  // @ts-expect-error
+  // @ts-expect-error - partial Location is not assignable to string & Location
   window.location = {
     assign: vi.fn(),
     hostname: hasScheme ? new URL(hostname).hostname : hostname,
@@ -565,4 +570,79 @@ export function createDirectoryFiles(
     const fileName = path.split("/").pop() || "file"
     return createFileWithPath(content, fileName, path, mimeType)
   })
+}
+
+export interface EllipsizedLabelMock {
+  /** Replace the mocked content and viewport widths. Call before render. */
+  setWidths: (scrollWidth: number, clientWidth: number) => void
+}
+
+/**
+ * jsdom does not lay out text, so scrollWidth and clientWidth stay 0 and a
+ * label never looks ellipsized. Call this inside a `describe` whose tests
+ * expect a native title on a clipped label.
+ */
+export function mockEllipsizedLabels(
+  scrollWidth = 200,
+  clientWidth = 100
+): EllipsizedLabelMock {
+  const hooks = globalThis as Partial<{
+    beforeEach: (fn: () => void) => void
+    afterEach: (fn: () => void) => void
+  }>
+  if (!hooks.beforeEach || !hooks.afterEach) {
+    throw new Error(
+      "mockEllipsizedLabels() must run inside a vitest describe callback"
+    )
+  }
+
+  let restore: (() => void) | undefined
+  const setWidths = (
+    nextScrollWidth: number,
+    nextClientWidth: number
+  ): void => {
+    restore?.()
+    restore = mockElementWidths(nextScrollWidth, nextClientWidth)
+  }
+
+  hooks.beforeEach(() => {
+    setWidths(scrollWidth, clientWidth)
+  })
+  hooks.afterEach(() => {
+    restore?.()
+    restore = undefined
+  })
+
+  return { setWidths }
+}
+
+function mockElementWidths(
+  scrollWidth: number,
+  clientWidth: number
+): () => void {
+  const proto = HTMLElement.prototype
+  const previous = {
+    scrollWidth: Object.getOwnPropertyDescriptor(proto, "scrollWidth"),
+    clientWidth: Object.getOwnPropertyDescriptor(proto, "clientWidth"),
+  }
+
+  Object.defineProperty(proto, "scrollWidth", {
+    configurable: true,
+    get: () => scrollWidth,
+  })
+  Object.defineProperty(proto, "clientWidth", {
+    configurable: true,
+    get: () => clientWidth,
+  })
+
+  return () => {
+    for (const key of ["scrollWidth", "clientWidth"] as const) {
+      const descriptor = previous[key]
+      if (descriptor) {
+        Object.defineProperty(proto, key, descriptor)
+      } else {
+        Reflect.deleteProperty(proto, key)
+      }
+    }
+  }
 }

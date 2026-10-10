@@ -23,7 +23,7 @@ import * as useResizeObserverModule from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Pagination, { Props } from "./Pagination"
+import Pagination, { type Props } from "./Pagination"
 
 const getProps = (
   elementProps: Partial<PaginationProto> = {},

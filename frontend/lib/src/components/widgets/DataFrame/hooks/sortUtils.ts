@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { isListType, isObjectType } from "~lib/dataframes/arrowTypeUtils"
 
 /**

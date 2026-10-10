@@ -19,6 +19,9 @@ import { useEffect, useState } from "react"
 import type { Root as HastRoot } from "hast"
 import { once } from "lodash-es"
 import type { Root as MdastRoot } from "mdast"
+import type * as RehypeKatex from "rehype-katex"
+import type * as RehypeRaw from "rehype-raw"
+import type * as RemarkEmoji from "remark-emoji"
 import type { VFile } from "vfile"
 
 /**
@@ -106,7 +109,7 @@ const loadingPromises: Record<
 }
 
 /** Lazy load rehype-katex for math rendering */
-export const loadKatexPlugin = (): Promise<typeof import("rehype-katex")> =>
+export const loadKatexPlugin = (): Promise<typeof RehypeKatex> =>
   import("rehype-katex")
 
 /** Load KaTeX CSS styles (only once per app lifecycle) */
@@ -115,11 +118,11 @@ export const loadKatexStyles = once((): void => {
 })
 
 /** Lazy load rehype-raw for HTML parsing (pulls in parse5) */
-export const loadRehypeRaw = (): Promise<typeof import("rehype-raw")> =>
+export const loadRehypeRaw = (): Promise<typeof RehypeRaw> =>
   import("rehype-raw")
 
 /** Lazy load remark-emoji for emoji shortcode conversion */
-export const loadRemarkEmoji = (): Promise<typeof import("remark-emoji")> =>
+export const loadRemarkEmoji = (): Promise<typeof RemarkEmoji> =>
   import("remark-emoji")
 
 /**
