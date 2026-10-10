@@ -268,7 +268,7 @@ describe("Modal subcomponents", () => {
     })
   })
 
-  it("lets an explicit width under the centered floor set the min width", () => {
+  it("lowers the centered min-width floor to the sidebar width when relaxMinWidth is true", () => {
     render(
       <Modal isOpen size="default" width="12.5rem" relaxMinWidth>
         <ModalBody>content</ModalBody>

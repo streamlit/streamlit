@@ -239,13 +239,12 @@ def dialog_decorator(
           pixels wide.
         - ``"medium"``: The modal dialog will be up to 750 pixels wide.
         - ``"large"``: The modal dialog will be up to 1280 pixels wide.
-        - A positive integer: The width in pixels (for example, ``width=400``).
-          The dialog stays within the viewport. It does not render narrower
-          than the side-drawer minimum (200 pixels at the default font size,
-          scaling with the base font size). On a narrower viewport, it shrinks
-          to fit. For ``position="left"`` or ``"right"``, the integer is the
-          initial width. Dragging resizes the drawer, and double-clicking the
-          resize handle restores that width.
+        - An integer specifying the width in pixels: The modal dialog has a
+          fixed width. If the specified width is greater than the width of
+          the viewport, the dialog shrinks to fit. The dialog is never
+          narrower than 200 pixels (scaled by the theme's ``baseFontSize``)
+          unless the viewport is narrower. If ``position`` is ``"left"`` or
+          ``"right"``, this is the drawer's initial width.
 
     position : "center", "left", "right"
         The position of the modal dialog. This can be one of the following:

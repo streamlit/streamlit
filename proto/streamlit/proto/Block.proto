@@ -162,9 +162,8 @@ message Block {
     // Placement of the dialog. LEFT/RIGHT render it as a full-height side drawer.
     DialogPosition position = 7;
 
-    // CSS pixel width from a positive integer `width`. Unset means the `width`
-    // enum is the preset. Optional so proto3 does not use 0 for both "unset"
-    // and "0px".
+    // Explicit dialog width in CSS pixels. When set, it overrides the `width`
+    // enum, which the backend keeps at SMALL for clients that ignore this field.
     optional uint32 pixel_width = 8;
   }
 

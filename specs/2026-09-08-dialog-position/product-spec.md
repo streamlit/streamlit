@@ -86,7 +86,7 @@ Add `position` as a keyword-only parameter to `@st.dialog`, placed right after
 @st.dialog(
     title: str,
     *,
-    width: Literal["small", "medium", "large"] = "small",
+    width: Literal["small", "medium", "large"] | int = "small",
     position: Literal["center", "left", "right"] = "center",  # NEW
     # ... existing parameters (dismissible, icon, on_dismiss) ...
 )
@@ -119,17 +119,19 @@ centered dialog:
   When `dismissible=False`, the "**X**" is hidden and the drawer must be closed
   programmatically with `st.rerun()`. `on_dismiss` (`"ignore"` / `"rerun"` /
   callback) applies the same way.
-- **`width` sets the initial thickness.** The existing width caps apply to the
-  drawer's horizontal width: `"small"` ≈ 500px (default), `"medium"` ≈ 750px,
-  `"large"` ≈ 1280px. This is the drawer's starting width. The drawer always
-  spans the full viewport height.
+- **`width` sets the initial thickness.** `"small"` ≈ 500px (default),
+  `"medium"` ≈ 750px, and `"large"` ≈ 1280px. A positive integer is a CSS
+  pixel width, and the panel stays at least the drawer minimum (~200px at the
+  default font size). On a side drawer, the value is the starting width. The
+  drawer always spans the full viewport height.
 - **Resizable.** Left and right drawers can be resized by dragging their inner
   edge (the one facing the app). `width` sets the starting width; the drag
-  overrides it, and double-clicking the handle restores the preset (matching
-  `st.sidebar`). A dragged width persists for the currently open drawer,
-  including across fragment reruns triggered by widgets inside it. It resets to
-  the `width` preset when the drawer is dismissed, and does not persist across a
-  page reload. It is per-dialog (not shared across dialogs). Resizing is
+  overrides it, and double-clicking the handle restores the starting width
+  (matching `st.sidebar`). A dragged width persists for the currently open
+  drawer, including across fragment reruns triggered by widgets inside it. It
+  resets to the starting `width` when the drawer is dismissed, and does not
+  persist across a page reload. It is per-dialog (not shared across dialogs).
+  Resizing is
   pointer-based (matching `st.sidebar`) and handled entirely
   in the frontend — it does not rerun the app or change widget state — and does
   not apply to centered dialogs. Because the drawer overlays the page, resizing
@@ -138,7 +140,7 @@ centered dialog:
   handle stays available at every viewport size. Dragged width is clamped to a
   minimum of ≈ 200px (matching `st.sidebar`) so the drawer cannot collapse to a
   sliver, and to a maximum that always leaves a strip of the app visible; users
-  can still drag narrower than a `width` preset on small screens, down to that
+  can still drag narrower than the starting width on small screens, down to that
   minimum. A hover indicator on the resize handle (a visible line, not only a
   cursor change) is optional: include it if it can reuse the existing
   `st.sidebar` handle styling without extra overhead. The pointer-only tradeoff
