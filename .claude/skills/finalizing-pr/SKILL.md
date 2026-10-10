@@ -1,6 +1,7 @@
 ---
 name: finalizing-pr
 description: Finalizes branch changes for merging by simplifying code, running checks, reviewing changes, and creating a PR if needed. Use when ready to merge changes into the target branch.
+disable-model-invocation: true
 ---
 
 # Finalizing PR
