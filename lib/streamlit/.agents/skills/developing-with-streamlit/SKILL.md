@@ -105,7 +105,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Prefer Material Symbols icons (`:material/icon_name:`) over emojis for navigation, buttons, and labels. Use emojis sparingly, only when they add a special touch.
 - Prefer sentence casing over title casing, including titles and widget labels.
 - Do not use empty widget labels; use `label_visibility="collapsed"` or `label_visibility="hidden"` when a visible label is not desired.
-- Give an alert (`st.info`, `st.success`, `st.warning`, `st.error`) a headline with `title=` instead of bolding the first line of its body or adding a heading above it.
+- When an alert (`st.info`, `st.success`, `st.warning`, or `st.error`) needs a headline, pass keyword-only `title=` instead of bolding the first line of the body or adding a heading above it.
 - Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short; decorative `alt=""` is only for `st.image` / `st.pyplot`. See `references/media-display.md` and `references/data-display.md`.
 - Use `st.container(border=True)` for simple visual grouping. Prefer `st.container(horizontal=True)` over `st.columns` for responsive row layouts; use `st.columns` for fixed grids, precise width ratios, or side-by-side cards that must share a width.
 - Align elements placed side by side: use `vertical_alignment="bottom"` for rows that mix labeled inputs with buttons, checkboxes, or toggles, and give sibling cards consistent content (for example, all metrics with or all without `delta`) or `height="stretch"`. See "Aligning elements side by side" in `references/layouts.md`.
