@@ -15,7 +15,7 @@
 import re
 
 import pytest
-from playwright.sync_api import Locator, Page, Position, expect
+from playwright.sync_api import FloatRect, Locator, Page, Position, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
@@ -72,6 +72,27 @@ def open_large_width_dialog(app: Page):
 
 def open_medium_width_dialog(app: Page):
     click_button(app, "Open medium-width Dialog")
+
+
+def open_pixel_width_400_dialog(app: Page):
+    click_button(app, "Open 400px Dialog")
+
+
+def open_pixel_width_200_dialog(app: Page):
+    click_button(app, "Open 200px Dialog")
+
+
+def open_pixel_width_100_dialog(app: Page):
+    click_button(app, "Open 100px Dialog")
+
+
+def open_pixel_width_2000_dialog(app: Page):
+    click_button(app, "Open 2000px Dialog")
+
+
+def open_pixel_width_drawer_dialog(app: Page):
+    click_button(app, "Open 420px Left Drawer")
+    _wait_for_drawer_enter(app)
 
 
 def open_headings_dialogs(app: Page):
@@ -562,6 +583,66 @@ def test_medium_width_dialog_keeps_narrow_viewport_gutter(app: Page):
     # The right edge must stay within the viewport (left gutter + width + right
     # gutter should not exceed the viewport width).
     assert narrow_box["x"] + narrow_box["width"] == pytest.approx(304, abs=1)
+
+
+@pytest.mark.only_browser("chromium")
+def test_pixel_width_dialog(app: Page):
+    """Test that an integer width paints in pixels.
+
+    The panel stays inside the viewport and does not shrink below the
+    side-drawer minimum.
+    """
+
+    def dialog_box() -> FloatRect:
+        dialog = app.get_by_role("dialog")
+        expect(dialog).to_be_visible()
+        box = dialog.bounding_box()
+        assert box is not None
+        return box
+
+    def close_dialog() -> None:
+        app.keyboard.press("Escape")
+        expect(app.get_by_role("dialog")).not_to_be_attached()
+
+    app.set_viewport_size({"width": 1280, "height": 720})
+
+    open_pixel_width_400_dialog(app)
+    box_400 = dialog_box()
+    assert box_400["width"] == pytest.approx(400, abs=2)
+    # Must not fall back to the small preset (500px).
+    assert box_400["width"] != pytest.approx(500, abs=2)
+    close_dialog()
+
+    open_pixel_width_200_dialog(app)
+    box_200 = dialog_box()
+    assert box_200["width"] == pytest.approx(200, abs=2)
+    # 200px is below the centered preset floor (20rem / 320px).
+    assert box_200["width"] != pytest.approx(320, abs=2)
+    close_dialog()
+
+    open_pixel_width_100_dialog(app)
+    box_100 = dialog_box()
+    # Below the side-drawer drag floor (12.5rem / 200px), so the panel
+    # paints at that floor instead of the requested 100px.
+    assert box_100["width"] == pytest.approx(200, abs=2)
+    assert box_100["width"] != pytest.approx(100, abs=2)
+    close_dialog()
+
+    app.set_viewport_size({"width": 600, "height": 600})
+    open_pixel_width_2000_dialog(app)
+    box_2000 = dialog_box()
+    assert box_2000["width"] == pytest.approx(568, abs=1)
+    assert box_2000["x"] == pytest.approx(16, abs=1)
+    close_dialog()
+
+    app.set_viewport_size({"width": 1280, "height": 720})
+    open_pixel_width_drawer_dialog(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+    drawer_width = _drawer_width(dialog)
+    assert drawer_width == pytest.approx(420, abs=2)
+    assert drawer_width != pytest.approx(500, abs=2)
+    assert drawer_width != pytest.approx(1280, abs=2)
 
 
 # its enough to test this on one browser as showing the error inline is more a backend

@@ -272,7 +272,7 @@ if st.button("Delete item"):
     confirm_delete("My Document")
 ```
 
-`position="left"` / `"right"` shows the dialog as a user-resizable full-height modal side drawer. Dismissal and other parameters work the same way.
+`position="left"` / `"right"` shows the dialog as a user-resizable full-height modal side drawer. Dismissal and other parameters work the same way. `width` may be `"small"`, `"medium"`, `"large"`, or a positive integer pixel width. An integer below the side-drawer minimum (200 pixels at the default font size) paints at that minimum, unless the viewport is narrower, in which case the dialog shrinks to fit. On a side drawer, the integer is the initial width.
 
 **When to use dialogs:**
 

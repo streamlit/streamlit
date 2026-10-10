@@ -205,4 +205,31 @@ describe("useDrawerResize", () => {
     )
     addSpy.mockRestore()
   })
+
+  it("uses a narrow preset until drag, clamps below the sidebar minimum, and restores on double-click", () => {
+    const handle = createHandleWithPanel(100)
+    const { result } = renderHook(
+      () => useDrawerResize({ position: "left", presetWidth: "6.25rem" }),
+      { wrapper: TestAppWrapper }
+    )
+
+    expect(result.current.dialogWidth).toBe("6.25rem")
+
+    act(() => {
+      result.current.resizeHandleProps.onPointerDown(pointerEvent(handle, 100))
+      result.current.resizeHandleProps.onPointerMove(pointerEvent(handle, 0))
+    })
+
+    const minDrawerWidthPx = convertRemToPx(
+      mockTheme.emotion.sizes.minSidebarWidth,
+      mockTheme.emotion.fontSizes.baseFontSize
+    )
+    expect(result.current.dialogWidth).toBe(`${minDrawerWidthPx}px`)
+
+    act(() => {
+      result.current.resizeHandleProps.onDoubleClick()
+    })
+
+    expect(result.current.dialogWidth).toBe("6.25rem")
+  })
 })
