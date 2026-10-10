@@ -130,6 +130,45 @@ def get_expose_tokens_config() -> list[str]:
     return res
 
 
+def _coerce_logout_param_value(value: Any) -> str:
+    """Coerce a logout_params value to the string sent as a query parameter.
+
+    ``None`` becomes an empty string (which removes the param), and TOML
+    booleans use their lowercase form (``true``/``false``) since that is what
+    providers expect.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+def get_logout_params_config() -> dict[str, str]:
+    """Get the logout_params configuration from secrets.toml.
+
+    Returns a mapping of query parameters to merge into the OIDC logout URL.
+    Returns an empty dict when not configured.
+
+    Raises
+    ------
+    StreamlitAuthError
+        If ``logout_params`` is set but is not a table of query parameters.
+    """
+    auth_section = get_secrets_auth_section()
+    logout_params = auth_section.get("logout_params")
+    if logout_params is None:
+        return {}
+    if isinstance(logout_params, AttrDict):
+        logout_params = logout_params.to_dict()
+    if not isinstance(logout_params, Mapping):
+        raise StreamlitAuthError(
+            "Invalid auth.logout_params configuration. It must be a table of "
+            'query parameters, e.g. logout_params = { logout_hint = "{email}" }.'
+        )
+    return {str(k): _coerce_logout_param_value(v) for k, v in logout_params.items()}
+
+
 def get_redirect_uri(auth_section: AttrDict) -> str | None:
     """Get the redirect_uri from auth_section - filling in port number if needed."""
 
@@ -198,11 +237,47 @@ def get_origin_from_redirect_uri() -> str | None:
     return f"{redirect_uri_parsed.scheme}://{redirect_uri_parsed.netloc}"
 
 
+_LOGOUT_PARAM_FIELD_RE: Final = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+
+def _resolve_logout_param_template(
+    value: str, namespace: Mapping[str, Any]
+) -> str | None:
+    """Resolve ``{field}`` placeholders in a logout param value.
+
+    Returns the resolved string, or ``None`` if any referenced field is missing,
+    empty, or a non-scalar (list/object) value (signaling the whole param should
+    be omitted). A value without any ``{field}`` placeholder is returned
+    unchanged.
+    """
+    if "{" not in value:
+        return value
+
+    missing = False
+
+    def _replace(match: re.Match[str]) -> str:
+        nonlocal missing
+        resolved = namespace.get(match.group(1))
+        # Only scalar claims produce a meaningful query value. Missing, empty,
+        # or structured values (lists/objects) omit the whole param rather than
+        # emitting an empty string or a Python ``repr`` to the provider.
+        if not isinstance(resolved, (str, int, float)) or resolved == "":
+            missing = True
+            return ""
+        return str(resolved)
+
+    result = _LOGOUT_PARAM_FIELD_RE.sub(_replace, value)
+    return None if missing else result
+
+
 def build_logout_url(
     end_session_endpoint: str,
     client_id: str,
     post_logout_redirect_uri: str,
     id_token: str | None = None,
+    *,
+    logout_params: Mapping[str, str] | None = None,
+    user_claims: Mapping[str, Any] | None = None,
 ) -> str:
     """Build an OIDC logout URL with the required parameters.
 
@@ -216,6 +291,20 @@ def build_logout_url(
         The URI to redirect to after logout.
     id_token
         Optional ID token to include as id_token_hint for the logout request.
+    logout_params
+        Optional mapping of query parameters to merge on top of the default
+        params (``client_id``, ``post_logout_redirect_uri`` and, when available,
+        ``id_token_hint``). A non-empty value adds or overrides a param and
+        supports ``{field}`` template substitution; a value of ``""`` removes
+        the param; params not listed keep their defaults. A param whose template
+        references a missing, empty, or non-scalar field is skipped silently,
+        leaving any same-named default (or value baked into the endpoint) in
+        place rather than sending an empty value to the provider.
+    user_claims
+        Optional mapping of the current user's claims used to resolve ``{field}``
+        placeholders in ``logout_params`` values. Standard computed values
+        (``client_id``, ``post_logout_redirect_uri``, ``id_token_hint``) take
+        precedence over user claims of the same name.
 
     Returns
     -------
@@ -224,19 +313,53 @@ def build_logout_url(
     """
     from urllib.parse import parse_qsl
 
-    logout_params: dict[str, str] = {
+    resolved_params: dict[str, str] = {
         "client_id": client_id,
         "post_logout_redirect_uri": post_logout_redirect_uri,
     }
-
     if id_token:
-        logout_params["id_token_hint"] = id_token
+        resolved_params["id_token_hint"] = id_token
+
+    # Namespace for {field} substitution. User claims are shadowed by the
+    # standard computed values so that a template like {client_id} always
+    # resolves to Streamlit's value, never a same-named user claim. Standard
+    # values that are unavailable (e.g. id_token_hint without an ID token) map
+    # to "" so referencing them omits the param instead of leaking a same-named
+    # claim into the URL.
+    namespace: dict[str, Any] = {
+        **(user_claims or {}),
+        "client_id": client_id,
+        "post_logout_redirect_uri": post_logout_redirect_uri,
+        "id_token_hint": id_token or "",
+    }
+
+    # Keys the user explicitly removes with an empty value. These are dropped
+    # from the final URL even when the provider baked them into the
+    # end_session_endpoint query string.
+    removed_keys: set[str] = set()
+
+    for key, raw_value in (logout_params or {}).items():
+        resolved = _resolve_logout_param_template(str(raw_value), namespace)
+        if resolved == "":
+            # An explicit empty value removes the param entirely, including a
+            # default of the same name and any value baked into the endpoint.
+            resolved_params.pop(key, None)
+            removed_keys.add(key)
+        elif resolved is None:
+            # A template whose referenced field is missing, empty, or non-scalar
+            # leaves the entry unapplied: a same-named default (or endpoint
+            # value) keeps its value, and any other param is simply not added.
+            continue
+        else:
+            resolved_params[key] = resolved
 
     # Per OIDC spec, end_session_endpoint should be a clean URL without query params,
     # but we handle existing params defensively for non-standard providers.
     parsed = urlparse(end_session_endpoint)
-    existing_params = dict(parse_qsl(parsed.query))
-    merged_params = {**existing_params, **logout_params}
+    existing_params = {
+        key: value for key, value in parse_qsl(parsed.query) if key not in removed_keys
+    }
+    merged_params = {**existing_params, **resolved_params}
     new_query = urlencode(merged_params)
     return parsed._replace(query=new_query).geturl()
 
