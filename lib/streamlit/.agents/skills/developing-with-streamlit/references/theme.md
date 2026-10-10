@@ -38,7 +38,7 @@ base = "light"                         # or "dark"
 # base = "https://example.com/theme.toml"  # Remote URL
 ```
 
-When using `base`, you only need to override the values you want to change. Theme files referenced via `base` can only contain a single `[theme]` section—`[theme.light]` and `[theme.dark]` variants are not supported in external theme files.
+When using `base`, you only need to override the values you want to change. A theme file referenced via `base` can contain `[theme]` plus `[theme.sidebar]`, `[theme.light]`, and `[theme.dark]` (each light and dark section can have its own `.sidebar`). Its own `base` must be `"light"` or `"dark"`; it can't point to another theme file.
 
 ## Color configuration
 
