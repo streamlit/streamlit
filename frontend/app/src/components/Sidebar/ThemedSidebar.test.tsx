@@ -18,7 +18,6 @@ import { screen } from "@testing-library/react"
 
 import {
   createSidebarTheme,
-  emotionLightTheme,
   mockEndpoints,
   type ThemeConfig,
 } from "@streamlit/lib"
@@ -53,11 +52,11 @@ describe("ThemedSidebar Component", () => {
     expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
-  it("should switch bgColor and secondaryBgColor", () => {
+  it("uses stock sidebar background for the default light theme", () => {
     renderThemedSidebar()
 
     expect(screen.getByTestId("stSidebar")).toHaveStyle({
-      backgroundColor: emotionLightTheme.colors.secondaryBg,
+      backgroundColor: "#F8F8F7",
     })
   })
 })
@@ -113,7 +112,7 @@ describe("createSidebarTheme", () => {
     expect(sidebarTheme.themeInput?.backgroundColor).toBe("#FF0000")
   })
 
-  it("uses secondary background color as fallback when no sidebar background specified", () => {
+  it("uses stock sidebar background when no sidebar background specified", () => {
     const theme = createMockTheme({
       emotion: {
         colors: {
@@ -123,10 +122,10 @@ describe("createSidebarTheme", () => {
       },
     })
     const sidebarTheme = createSidebarTheme(theme)
-    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#CCCCCC")
+    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#F8F8F7")
   })
 
-  it("uses secondary background color as fallback when sidebar background is empty string", () => {
+  it("uses stock sidebar background when sidebar background is empty string", () => {
     const theme = createMockTheme({
       themeInput: {
         sidebar: {
@@ -141,7 +140,7 @@ describe("createSidebarTheme", () => {
       },
     })
     const sidebarTheme = createSidebarTheme(theme)
-    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#CCCCCC")
+    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#F8F8F7")
   })
 
   it("applies sidebar-specific overrides", () => {

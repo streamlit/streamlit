@@ -30,6 +30,7 @@ import {
 import { type AppNode, BlockNode, ElementNode } from "~lib/AppNode"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
+import { mockTheme } from "~lib/mocks/mockTheme"
 import { text } from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { mockEllipsizedLabels, renderWithContexts } from "~lib/test_util"
@@ -205,7 +206,7 @@ describe("FlexBoxContainer Block Component", () => {
     renderWithContexts(makeVerticalBlockComponent(block))
 
     expect(screen.getAllByTestId("stVerticalBlock")[0]).toHaveStyle(
-      "border: 1px solid rgba(49, 51, 63, 0.2);"
+      `border: 1px solid ${mockTheme.emotion.colors.borderColor};`
     )
   })
 

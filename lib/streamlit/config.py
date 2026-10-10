@@ -1504,6 +1504,8 @@ _create_theme_options(
     ],
     description="""
         Primary accent color.
+
+        Defaults to #D94A57 for the light theme and #F2919A for the dark theme.
     """,
 )
 
@@ -1519,6 +1521,10 @@ _create_theme_options(
     ],
     description="""
         Background color of the app.
+
+        Defaults to #FFFFFF for the light theme and #171614 for the dark theme.
+        When unset in ``[theme.sidebar]``, the stock sidebar defaults to
+        #F8F8F7 (light) or #21201D (dark).
     """,
 )
 
@@ -1534,6 +1540,10 @@ _create_theme_options(
     ],
     description="""
         Background color used for most interactive widgets.
+
+        Defaults to #F8F8F7 for the light theme and #2D2B27 for the dark theme.
+        When unset in ``[theme.sidebar]``, the stock sidebar defaults to
+        #F4F4F3 (light) or #34322E (dark).
     """,
 )
 
@@ -1549,6 +1559,8 @@ _create_theme_options(
     ],
     description="""
         Color used for almost all text.
+
+        Defaults to #2F2D2B for the light theme and #EDEBE8 for the dark theme.
     """,
 )
 
@@ -2426,6 +2438,9 @@ _create_theme_options(
     ],
     description="""
         The color of the border around elements.
+
+        Defaults to #DCD8D4 for the light theme and #4A4742 for the dark theme.
+        The stock sidebar uses the same border color as the main theme.
     """,
 )
 
@@ -2512,6 +2527,8 @@ _create_theme_options(
     description="""
         Whether to show a vertical separator between the sidebar and the main
         content area.
+
+        Defaults to true.
     """,
     type_=bool,
 )

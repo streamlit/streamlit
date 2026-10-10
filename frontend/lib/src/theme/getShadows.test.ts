@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { transparentize } from "color2k"
 import { beforeAll, describe, expect, it } from "vitest"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
@@ -45,11 +46,15 @@ describe("createShadows", () => {
 
     it("computes focus ring shadows from colors", () => {
       // Primary focus ring uses primary color with 0.5 alpha
-      expect(shadows.focusRing).toBe("0 0 0 0.2rem rgba(255, 75, 75, 0.5)")
+      expect(shadows.focusRing).toBe(
+        `0 0 0 0.2rem ${transparentize(lightThemeColors.primary, 0.5)}`
+      )
       // Subtle focus ring uses darkenedBgMix25 with 0.5 alpha
       expect(shadows.focusRingSubtle).toMatch(/^0 0 0 0\.2rem rgba\(/)
       // Outline focus ring - solid 1px outline
-      expect(shadows.focusRingOutline).toBe("0 0 0 1px #ff4b4b")
+      expect(shadows.focusRingOutline).toBe(
+        `0 0 0 1px ${lightThemeColors.primary}`
+      )
       // Muted focus ring uses gray90 with 0.8 alpha (0.2 opacity)
       expect(shadows.focusRingMuted).toBe("0 0 0 0.2rem rgba(38, 39, 48, 0.2)")
     })
@@ -76,11 +81,15 @@ describe("createShadows", () => {
 
     it("computes focus ring shadows from colors", () => {
       // Primary focus ring uses same primary color
-      expect(shadows.focusRing).toBe("0 0 0 0.2rem rgba(255, 75, 75, 0.5)")
+      expect(shadows.focusRing).toBe(
+        `0 0 0 0.2rem ${transparentize(darkThemeColors.primary, 0.5)}`
+      )
       // Subtle focus ring uses darkenedBgMix25 with 0.5 alpha
       expect(shadows.focusRingSubtle).toMatch(/^0 0 0 0\.2rem rgba\(/)
       // Outline focus ring - same across themes
-      expect(shadows.focusRingOutline).toBe("0 0 0 1px #ff4b4b")
+      expect(shadows.focusRingOutline).toBe(
+        `0 0 0 1px ${darkThemeColors.primary}`
+      )
       // Muted focus ring uses gray10 with 0.8 alpha (0.2 opacity)
       expect(shadows.focusRingMuted).toBe(
         "0 0 0 0.2rem rgba(250, 250, 250, 0.2)"
