@@ -854,6 +854,25 @@ _create_option(
 )
 
 _create_option(
+    "runner.connectionDefaultTTL",
+    description="""
+        Default time to live, in seconds, for ``st.connection`` when ``ttl``
+        is omitted or ``None``.
+
+        ``None`` (default) keeps the connection cached until it is cleared.
+        An explicit non-``None`` ``ttl`` argument overrides this value. Pass
+        ``float("inf")`` as an explicit ``ttl`` to keep one connection cached
+        indefinitely even when this default is set.
+
+        Set this in ``.streamlit/config.toml`` under ``[runner]`` as
+        ``connectionDefaultTTL``, or with the environment variable
+        ``STREAMLIT_RUNNER_CONNECTION_DEFAULT_TTL``.
+    """,
+    default_val=None,
+    type_=float,
+)
+
+_create_option(
     "runner.cacheHashSeed",
     description="""
         Escape hatch for an app whose @st.cache_data / @st.cache_resource cache
@@ -2785,6 +2804,44 @@ def _set_option(key: str, value: Any, where_defined: str) -> None:
         _config_options[key].set_value(value, where_defined)
 
 
+# These options must be readable from the environment when the process is not
+# started with ``streamlit run``. Click maps them for the CLI; ``st.App`` and
+# ASGI servers do not.
+_CONNECTION_DEFAULT_TTL_ENV_OPTIONS: Final = ("runner.connectionDefaultTTL",)
+
+
+def _parse_connection_default_ttl_env(raw: str) -> Any:
+    """Parse the connection-default-TTL environment variable value."""
+    try:
+        return float(raw)
+    except ValueError:
+        # st.connection reports this. Dropping it would silently keep ttl=None.
+        return raw
+
+
+def _update_connection_default_ttl_from_env(
+    config_options: dict[str, ConfigOption],
+) -> None:
+    """Apply connection-default TTL environment variables without the CLI.
+
+    Parameters
+    ----------
+    config_options : dict[str, ConfigOption]
+        The config options being populated. This should only be called from
+        ``get_config_options``.
+    """
+    for key in _CONNECTION_DEFAULT_TTL_ENV_OPTIONS:
+        option = config_options[key]
+        raw = os.environ.get(option.env_var)
+        if raw is None or raw.strip() == "":
+            continue
+        _set_option(
+            option.key,
+            _parse_connection_default_ttl_env(raw),
+            _DEFINED_BY_ENV_VAR,
+        )
+
+
 def _update_config_with_sensitive_env_var(
     config_options: dict[str, ConfigOption],
 ) -> None:
@@ -3058,6 +3115,10 @@ def get_config_options(
             _update_config_with_toml(file_contents, filename)
 
         _update_config_with_sensitive_env_var(_config_options)
+        # ``streamlit run`` maps env vars through Click, which then arrive as
+        # flags below. Entry points that never see Click (``st.App``, ASGI)
+        # still need these variables. Flags applied next keep precedence.
+        _update_connection_default_ttl_from_env(_config_options)
 
         for opt_name, opt_val in options_from_flags.items():
             _set_option(opt_name, opt_val, _DEFINED_BY_FLAG)

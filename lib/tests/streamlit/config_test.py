@@ -787,6 +787,7 @@ class ConfigTest(unittest.TestCase):
                 "runner.cacheBackgroundRefreshMaxWorkers",
                 "runner.cacheBackgroundRefreshTTLMultiplier",
                 "runner.cacheHashSeed",
+                "runner.connectionDefaultTTL",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
                 "runner.parallelMaxWorkers",
@@ -1082,6 +1083,83 @@ class ConfigTest(unittest.TestCase):
         assert option.type is float
         assert option.visibility == "visible"
         assert config.get_option("runner.cacheBackgroundRefreshTTLMultiplier") == 2.0
+
+    def test_connection_default_ttl_option_attrs(self) -> None:
+        """The connection TTL defaults to unset and is a float option."""
+        ttl_option = config._config_options_template["runner.connectionDefaultTTL"]
+        assert ttl_option.default_val is None
+        assert ttl_option.type is float
+        assert ttl_option.sensitive is False
+        assert ttl_option.env_var == "STREAMLIT_RUNNER_CONNECTION_DEFAULT_TTL"
+
+    def test_connection_default_ttl_env_overrides_toml(self) -> None:
+        """The env var overrides config.toml, and a flag overrides the env var."""
+        config._update_config_with_toml(
+            """
+            [runner]
+            connectionDefaultTTL = 10
+            """,
+            "test-toml",
+        )
+        assert config.get_option("runner.connectionDefaultTTL") == 10
+
+        os.environ["STREAMLIT_RUNNER_CONNECTION_DEFAULT_TTL"] = "25"
+        config._update_connection_default_ttl_from_env(config._config_options)
+        assert config.get_option("runner.connectionDefaultTTL") == 25.0
+        assert (
+            config.get_where_defined("runner.connectionDefaultTTL")
+            == config._DEFINED_BY_ENV_VAR
+        )
+
+        config.get_config_options(
+            force_reparse=True,
+            options_from_flags={"runner.connectionDefaultTTL": 7},
+        )
+        assert config.get_option("runner.connectionDefaultTTL") == 7
+        assert (
+            config.get_where_defined("runner.connectionDefaultTTL")
+            == config._DEFINED_BY_FLAG
+        )
+
+    def test_connection_default_ttl_blank_env_does_not_override_toml(self) -> None:
+        """Blank env vars leave the config.toml values in place."""
+        config._update_config_with_toml(
+            """
+            [runner]
+            connectionDefaultTTL = 10
+            """,
+            "test-toml",
+        )
+        os.environ["STREAMLIT_RUNNER_CONNECTION_DEFAULT_TTL"] = "  "
+        config._update_connection_default_ttl_from_env(config._config_options)
+        assert config.get_option("runner.connectionDefaultTTL") == 10
+        assert config.get_where_defined("runner.connectionDefaultTTL") == "test-toml"
+
+    def test_connection_default_ttl_env_var_applies_on_non_cli_reparse(self) -> None:
+        """The env var is picked up by a full reparse with no flags.
+
+        ``st.App`` and ASGI servers never go through Click, so they rely on
+        ``_update_connection_default_ttl_from_env`` running inside
+        ``get_config_options`` itself rather than on a CLI flag.
+        """
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".toml", delete=False, encoding="utf-8"
+        ) as toml_file:
+            toml_file.write("[runner]\nconnectionDefaultTTL = 10\n")
+            toml_path = toml_file.name
+
+        try:
+            os.environ["STREAMLIT_RUNNER_CONNECTION_DEFAULT_TTL"] = "25"
+            with patch("streamlit.config.get_config_files", return_value=[toml_path]):
+                config.get_config_options(force_reparse=True)
+        finally:
+            os.unlink(toml_path)
+
+        assert config.get_option("runner.connectionDefaultTTL") == 25.0
+        assert (
+            config.get_where_defined("runner.connectionDefaultTTL")
+            == config._DEFINED_BY_ENV_VAR
+        )
 
     def test_unsafe_metrics_user_attributes_parses_from_toml(self):
         toml_content = """
