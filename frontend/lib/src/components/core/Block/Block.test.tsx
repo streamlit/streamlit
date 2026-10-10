@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { ReactElement } from "react"
+import { type ReactElement, useContext } from "react"
 
 import { screen, within } from "@testing-library/react"
 import type * as ReactAriaComponents from "react-aria-components"
@@ -28,6 +28,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { type AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { text } from "~lib/render-tree/test-utils"
@@ -36,6 +37,7 @@ import { mockEllipsizedLabels, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
+import { RenderNodeVisitor } from "./RenderNodeVisitor"
 
 // SelectionIndicator uses SharedElementTransition which calls getAnimations() in an
 // async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
@@ -135,6 +137,12 @@ function makeHorizontalBlock(children: AppNode[]): BlockNode {
 function makeColumnsBlock(columnChildren: AppNode[]): BlockNode {
   return makeHorizontalBlock([makeColumn(1, columnChildren)])
 }
+
+const DefiniteHeightProbe = (): ReactElement => (
+  <div data-testid="definiteHeightProbe">
+    {String(useContext(FlexContext)?.hasDefiniteHeight)}
+  </div>
+)
 
 function makeVerticalBlockComponent(node: BlockNode): ReactElement {
   return (
@@ -1109,6 +1117,31 @@ describe("BlockNodeRenderer container types", () => {
     expect(screen.getByRole("tab", { name: "Tab 0" })).toBeVisible()
     expect(screen.getByTestId("stTabs")).toHaveStyle({ height: "400px" })
   })
+
+  it.each([
+    ["a pixel-height", { pixelHeight: 300 }, "true"],
+    ["a stretch-height root-level", { useStretch: true }, "false"],
+    ["a content-height", { useContent: true }, "false"],
+  ])(
+    "derives the panel's definite height from %s tab container",
+    (_label, heightConfig, expected) => {
+      vi.spyOn(RenderNodeVisitor, "collectReactElements").mockReturnValue([
+        <DefiniteHeightProbe key="probe" />,
+      ])
+      const tab = makeVerticalBlock([text("tab body")], {
+        tab: { label: "Tab 0" },
+      })
+      renderWithContexts(
+        makeBlockNodeComponent(
+          makeVerticalBlock([tab], { tabContainer: {}, heightConfig })
+        )
+      )
+
+      expect(screen.getByTestId("definiteHeightProbe")).toHaveTextContent(
+        expected
+      )
+    }
+  )
 
   it("stretches a stretch-height tab container to the row in a horizontal parent", () => {
     const tab = makeVerticalBlock([text("tab body")], {

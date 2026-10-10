@@ -43,14 +43,21 @@ vi.mock("./useVegaEmbed", () => ({
   },
 }))
 
+import {
+  FlexContext,
+  type IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 import { mockWindowLocation, render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ArrowVegaLiteChart, {
+  getSpecWidth,
   hasNestedComposition,
   isFacetChart,
+  isSingleViewChart,
   type Props,
 } from "./ArrowVegaLiteChart"
 
@@ -188,6 +195,154 @@ describe("ArrowVegaLiteChart", () => {
     expect(
       screen.queryByRole("button", { name: "Show data" })
     ).toBeInTheDocument()
+  })
+
+  describe("stretch height sizing", () => {
+    const stretchConfigs = {
+      widthConfig: { useStretch: true },
+      heightConfig: { useStretch: true },
+    }
+    const definiteHeightContext: IFlexContext = {
+      direction: Direction.VERTICAL,
+      isInHorizontalLayout: false,
+      isDirectlyInColumn: false,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+      hasDefiniteHeight: true,
+    }
+
+    it("size-contains a stretch chart and falls back to the default chart height", () => {
+      render(<ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />)
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 21.875rem;")
+      expect(chart).not.toHaveStyle("contain-intrinsic-height: none;")
+      // vega-embed adds this class. As an inline-block, the chart's baseline
+      // would still grow its parent.
+      chart.classList.add("vega-embed")
+      expect(chart).toHaveStyle("display: block;")
+    })
+
+    it("claims no fallback height inside a container with a definite height", () => {
+      render(
+        <FlexContext.Provider value={definiteHeightContext}>
+          <ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />
+        </FlexContext.Provider>
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: none;")
+      expect(chart).not.toHaveStyle("contain-intrinsic-height: 21.875rem;")
+    })
+
+    const contentWidthConfigs = {
+      widthConfig: { useContent: true },
+      heightConfig: { useStretch: true },
+    }
+
+    it("size-contains a content-width chart with the default chart width", () => {
+      render(<ArrowVegaLiteChart {...getProps({}, contentWidthConfigs)} />)
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-width: 25rem;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 21.875rem;")
+    })
+
+    it("uses the spec width as the intrinsic width of a content-width chart", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            { spec: JSON.stringify({ mark: "bar", width: 250 }) },
+            contentWidthConfigs
+          )}
+        />
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain-intrinsic-width: 250px;")
+      expect(chart).not.toHaveStyle("contain-intrinsic-width: 25rem;")
+    })
+
+    it("size-contains a content-width chart with a pixel height", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            {},
+            {
+              widthConfig: { useContent: true },
+              heightConfig: { pixelHeight: 200 },
+            }
+          )}
+        />
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-width: 25rem;")
+      expect(chart).toHaveStyle("height: 100%;")
+    })
+
+    it("does not size-contain a content-width composition", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            {
+              spec: JSON.stringify({
+                hconcat: [{ mark: "bar" }, { mark: "line" }],
+              }),
+            },
+            contentWidthConfigs
+          )}
+        />
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).not.toHaveStyle("contain: size;")
+      chart.classList.add("vega-embed")
+      expect(chart).toHaveStyle("display: inline-block;")
+    })
+
+    it("does not set an intrinsic width on a stretch-width chart", () => {
+      render(<ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />)
+
+      expect(screen.getByTestId("stVegaLiteChart")).not.toHaveStyle(
+        "contain-intrinsic-width: 25rem;"
+      )
+    })
+  })
+
+  describe("isSingleViewChart", () => {
+    it.each([
+      [{ mark: "bar" }, true],
+      [{ layer: [{ mark: "bar" }] }, true],
+      [{ facet: { row: { field: "a" } }, spec: { mark: "bar" } }, false],
+      [{ mark: "bar", encoding: { column: { field: "a" } } }, false],
+      [{ hconcat: [{ mark: "bar" }] }, false],
+      [{ vconcat: [{ mark: "bar" }] }, false],
+      [{ concat: [{ mark: "bar" }] }, false],
+      [{ repeat: ["a"], spec: { mark: "bar" } }, false],
+    ])("returns the expected result for %j", (spec, expected) => {
+      expect(isSingleViewChart(JSON.stringify(spec))).toBe(expected)
+    })
+
+    it("returns false for an invalid spec", () => {
+      expect(isSingleViewChart("not json")).toBe(false)
+    })
+  })
+
+  describe("getSpecWidth", () => {
+    it.each([
+      [{ width: 250 }, 250],
+      [{ width: 0 }, undefined],
+      [{ width: "container" }, undefined],
+      [{ width: { step: 20 } }, undefined],
+      [{ mark: "bar" }, undefined],
+    ])("returns the numeric width for %j", (spec, expected) => {
+      expect(getSpecWidth(JSON.stringify(spec))).toBe(expected)
+    })
   })
 
   it("does not show 'Show data' when neither data nor datasets are provided", () => {

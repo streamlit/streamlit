@@ -18,6 +18,7 @@ import {
   type FC,
   memo,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -42,6 +43,10 @@ import type {
 } from "@streamlit/protobuf"
 import { isLocalhost } from "@streamlit/utils"
 
+import {
+  FlexContext,
+  hasStretchHeightFallback,
+} from "~lib/components/core/Layout/FlexContext"
 import {
   shouldHeightStretch,
   shouldWidthStretch,
@@ -130,6 +135,52 @@ export function hasNestedComposition(spec: string | object): boolean {
     return false
   }
 }
+const COMPOSITION_KEYS = ["facet", "repeat", "concat", "hconcat", "vconcat"]
+
+const parseSpecObject = (
+  spec: string | object
+): Record<string, unknown> | undefined => {
+  try {
+    const parsedSpec: unknown =
+      typeof spec === "string" ? JSON.parse(spec) : spec
+    return parsedSpec !== null &&
+      typeof parsedSpec === "object" &&
+      !Array.isArray(parsedSpec)
+      ? (parsedSpec as Record<string, unknown>)
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
+// Exported for testing
+/**
+ * A single-view chart has one width, known before rendering. Facet, repeat,
+ * and concat compositions take their width from their children. Layered
+ * charts are still a single view.
+ */
+export function isSingleViewChart(spec: string | object): boolean {
+  const parsedSpec = parseSpecObject(spec)
+  return (
+    parsedSpec !== undefined &&
+    !COMPOSITION_KEYS.some(key => key in parsedSpec) &&
+    !isFacetChart(parsedSpec)
+  )
+}
+
+// Exported for testing
+/**
+ * Get the numeric top-level width of a spec, if it has one. With Streamlit's
+ * "fit" autosizing, a single-view chart renders exactly this wide; without a
+ * numeric width, it uses the default chart width. This includes step widths
+ * such as `{"step": 20}` (`alt.Step(...)` in Altair), whose rendered width
+ * depends on the data domain.
+ */
+export function getSpecWidth(spec: string | object): number | undefined {
+  const width = parseSpecObject(spec)?.width
+  return typeof width === "number" && width > 0 ? width : undefined
+}
+
 export interface Props {
   element: VegaLiteChartProto
   elementHash?: string
@@ -209,20 +260,45 @@ const ArrowVegaLiteChart: FC<Props> = ({
     shouldWidthStretch(widthConfig) || inputElement.useContainerWidth
 
   const useStretchHeight = shouldHeightStretch(heightConfig)
+  const hasFallbackHeight = hasStretchHeightFallback(useContext(FlexContext))
 
-  // Facet charts need the container element to have a width and also
-  // do not work well with stretch/container width
-  // so they cannot use the width from the StyledVegaLiteChartContainer.
-  const isFacet = isFacetChart(inputElement.spec)
-
-  // Nested compositions (vconcat containing hconcat/layer/etc.) also don't work
-  // well with forced stretch width, as it can cause "infinite extent" errors.
-  const hasNestedComp = hasNestedComposition(inputElement.spec)
+  // Parse the spec once per spec change instead of on every resize render.
+  // - Facet charts need the container element to have a width and also do not
+  //   work well with stretch/container width, so they cannot use the width
+  //   from the StyledVegaLiteChartContainer.
+  // - Nested compositions (vconcat containing hconcat/layer/etc.) also don't
+  //   work well with forced stretch width, as it can cause "infinite extent"
+  //   errors.
+  const { isFacet, hasNestedComp, isSingleView, specWidth } = useMemo(() => {
+    const parsedSpec = parseSpecObject(inputElement.spec)
+    if (parsedSpec === undefined) {
+      return {
+        isFacet: false,
+        hasNestedComp: false,
+        isSingleView: false,
+        specWidth: undefined,
+      }
+    }
+    return {
+      isFacet: isFacetChart(parsedSpec),
+      hasNestedComp: hasNestedComposition(parsedSpec),
+      isSingleView: isSingleViewChart(parsedSpec),
+      specWidth: getSpecWidth(parsedSpec),
+    }
+  }, [inputElement.spec])
 
   // Facet charts should only use container width in fullscreen mode.
   // Outside fullscreen, they use their natural size (determined by Vega-Lite).
   // This prevents the infinite loop caused by container-driven facet sizing.
   const useStretchWidth = isFacet && !isFullScreen ? false : baseStretchWidth
+
+  // A content-width chart with a container-driven height would otherwise
+  // collapse to 0×0. Single-view charts know their width from the spec, so
+  // size them like a stretch-width chart inside a box of that width.
+  const isContentWidthContained =
+    useStretchHeight && !useStretchWidth && isSingleView
+  const isSizeContained =
+    useStretchHeight && (useStretchWidth || isContentWidthContained)
 
   // The dimensions to apply to the chart. Facet charts in fullscreen use
   // fullScreenWidth; outside fullscreen they use natural sizing (0). Non-facet
@@ -242,7 +318,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // not be forced to container width in fullscreen to avoid "infinite extent"
   // layout errors (issues #13410, #14050).
   const forceStretchWidth =
-    isFullScreen && !hasNestedComp ? true : useStretchWidth
+    isFullScreen && !hasNestedComp
+      ? true
+      : useStretchWidth || isContentWidthContained
   const forceStretchHeight = isFullScreen ? true : useStretchHeight
 
   // We preprocess the input vega element to do a two things:
@@ -318,7 +396,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // the data-to-pixel mapping after the initial view creation.
   // For fixed-dimension charts, dimensions are in the spec, so we don't need
   // to wait for container measurements.
-  const needsContainerWidth = useStretchWidth || isFullScreen
+  const needsContainerWidth =
+    useStretchWidth || isContentWidthContained || isFullScreen
   const needsContainerHeight = useStretchHeight || isFullScreen
   const hasValidWidth = !needsContainerWidth || currentWidth > 0
   const hasValidHeight = !needsContainerHeight || currentHeight > 0
@@ -484,6 +563,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
           : fullScreenHeight
       }
       useContainerWidth={isFullScreen ? true : useStretchWidth}
+      useContainerHeight={useStretchHeight}
     >
       <Toolbar
         target={StyledToolbarElementContainer}
@@ -531,6 +611,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
         className="stVegaLiteChart"
         useContainerWidth={useStretchWidth}
         useContainerHeight={useStretchHeight}
+        isSizeContained={isSizeContained}
+        contentWidth={isContentWidthContained ? specWidth : undefined}
+        hasFallbackHeight={hasFallbackHeight}
         ref={containerRef}
       />
     </StyledToolbarElementContainer>

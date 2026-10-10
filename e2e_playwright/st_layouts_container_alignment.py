@@ -17,6 +17,7 @@ from __future__ import annotations
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+import plotly.express as px
 
 import streamlit as st
 
@@ -193,9 +194,11 @@ with st.container(horizontal=True, key="container-horizontal-stretch-height"):
     with st.container(border=True, key="stretch-height-content-card"):
         st.write("Content card")
 
+# The tallest card must be taller than the default chart height, which a
+# stretch chart uses as its minimum in a content-height row.
 with st.container(horizontal=True, key="container-horizontal-stretch-height-data"):
     with st.container(border=True, key="stretch-height-data-tallest"):
-        for line in range(6):
+        for line in range(10):
             st.write(f"Line {line}")
     st.line_chart(df, x="x", y="y", height="stretch")
     st.dataframe(df, height="stretch")
@@ -218,3 +221,48 @@ with st.container(
 with st.container(horizontal=True, key="container-horizontal-top-checkboxes"):
     st.text_input("Top-aligned input")
     st.checkbox("Top-aligned checkbox")
+
+# Without a taller sibling, a stretch chart uses its default height.
+with st.container(horizontal=True, key="container-horizontal-stretch-chart-fallback"):
+    st.line_chart(df, x="x", y="y", height="stretch")
+    st.button("Chart neighbor")
+
+with st.container(horizontal=True, key="container-horizontal-content-width-chart"):
+    st.line_chart(df, x="x", y="y", width="content", height="stretch")
+    st.button("Content-width chart neighbor")
+
+with st.container(
+    horizontal=True, key="container-horizontal-content-width-pixel-height-chart"
+):
+    st.line_chart(df, x="x", y="y", width="content", height=200)
+    st.button("Pixel-height chart neighbor")
+
+with st.container(horizontal=True, key="container-horizontal-stretch-plotly-fallback"):
+    st.plotly_chart(px.line(df, x="x", y="y"), height="stretch")
+    st.button("Plotly neighbor")
+
+# In a container with a definite height, stretch charts shrink to fit their
+# siblings instead of claiming their default height.
+with st.container(height=300, border=True, key="fixed-card-title-and-chart"):
+    st.subheader("Revenue")
+    st.line_chart(df, x="x", y="y", height="stretch")
+
+with st.container(horizontal=True, height=250, key="fixed-row-stretch-kpi-cards"):
+    for index in range(2):
+        with st.container(
+            border=True, height="stretch", key=f"stretch-kpi-card-{index}"
+        ):
+            st.metric(f"KPI {index}", index)
+            st.line_chart(df, x="x", y="y", height="stretch")
+
+with st.container(key="fixed-tabs-title-and-chart"):
+    with st.tabs(["Revenue tab"], height=300)[0]:
+        st.subheader("Revenue")
+        st.line_chart(df, x="x", y="y", height="stretch")
+
+tall_card = st.toggle("Tall card", value=True)
+with st.container(horizontal=True, key="container-horizontal-stretch-chart-shrink"):
+    with st.container(border=True, key="stretch-chart-shrink-card"):
+        for line in range(12 if tall_card else 2):
+            st.write(f"Line {line}")
+    st.line_chart(df, x="x", y="y", height="stretch")
