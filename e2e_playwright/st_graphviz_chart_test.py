@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
@@ -256,8 +255,6 @@ def test_height_content(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 # Test that it renders correctly with height='stretch'.
-# Note: Verified manually in Safari but webkit headless seems to handle width calculation incorrectly.
-@pytest.mark.skip_browser("webkit")
 def test_height_stretch(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that it renders correctly with height='stretch'."""
     height_stretch_chart = app.get_by_test_id("stGraphVizChart").nth(11)

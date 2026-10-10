@@ -146,7 +146,9 @@ const STRETCH_BLOCK_WRAPPER_STYLES = {
   [Direction.VERTICAL]: { height: "auto", flex: "0 1 100%" },
   /**
    * Drops the `maxHeight: 100%` from `useLayoutStyles`, so taller content can
-   * grow the block past a fixed-height row.
+   * grow the block past a fixed-height row. In a single-line row
+   * (`wrap=False`), `align-self: stretch` keeps the wrapper at the row height,
+   * so the inner block grows by overflowing it and the row scrolls to it.
    */
   [Direction.HORIZONTAL]: { maxHeight: undefined },
 } as const

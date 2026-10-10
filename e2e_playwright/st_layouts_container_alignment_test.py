@@ -166,6 +166,15 @@ def _content_fits(locator: Locator) -> bool:
     return bool(locator.evaluate("el => el.scrollHeight - el.clientHeight <= 1"))
 
 
+def _scrolls(locator: Locator) -> bool:
+    """Whether the element overflows and lets users scroll to the rest."""
+    return not _content_fits(locator) and bool(
+        locator.evaluate(
+            "el => ['auto', 'scroll'].includes(getComputedStyle(el).overflowY)"
+        )
+    )
+
+
 def test_stretch_charts_fit_containers_with_definite_height(app: Page):
     """Stretch charts shrink to fit their siblings in definite-height containers."""
     for container in (
@@ -214,6 +223,7 @@ def test_stretch_blocks_grow_in_fixed_height_parents(app: Page):
             parent_height = _height(parent)
             return (
                 _content_fits(block)
+                and _scrolls(parent)
                 and block_height is not None
                 and parent_height is not None
                 and block_height > parent_height
@@ -226,10 +236,7 @@ def test_stretch_blocks_grow_in_fixed_height_parents(app: Page):
         "tabpanel"
     )
     expect(tab_panel).to_be_visible()
-    wait_until(
-        app,
-        lambda: bool(tab_panel.evaluate("el => el.scrollHeight > el.clientHeight")),
-    )
+    wait_until(app, lambda: _scrolls(tab_panel))
 
 
 def test_graphviz_and_text_area_keep_usable_size_in_rows(app: Page):
