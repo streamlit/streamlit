@@ -46,6 +46,26 @@ def _init_state() -> None:
         st.session_state.catchup_df = pd.DataFrame({"a": [1, 2], "b": [10, 20]})
 
 
+def _cell_marker(value: object) -> str:
+    """Render a numeric cell as an int string, or "" for NaN/None."""
+    if isinstance(value, (float, np.floating)):
+        if np.isnan(value):
+            return ""
+        return str(int(value))
+    if isinstance(value, (int, np.integer)):
+        return str(int(value))
+    return ""
+
+
+def _frame_marker(frame: pd.DataFrame) -> str:
+    """Render a frame as "<rows>|<row cells>|..." for compact assertions."""
+    row_parts = [
+        ",".join(_cell_marker(row[column]) for column in frame.columns)
+        for _, row in frame.iterrows()
+    ]
+    return f"{len(frame)}|{'|'.join(row_parts)}"
+
+
 def _render_state_marker(test_id: str, key: str) -> None:
     state = st.session_state.get(key, EMPTY_EDITOR_STATE)
     state_json = json.dumps(state, sort_keys=True)
@@ -176,3 +196,56 @@ st.write(
     "Submitted value:",
     st.session_state.get("submitted_value", "not submitted"),
 )
+
+st.header("Ignore reruns")
+
+# Counts script runs so an ignored edit can be distinguished from a rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.markdown(
+    f"<div data-testid='ignore-runs'>{st.session_state.runs}</div>",
+    unsafe_allow_html=True,
+)
+
+# These frames are recreated every run and are not written back, so a rerun
+# shows the original values until the editor's pending edits are applied.
+IGNORE_FIXED_DF = pd.DataFrame({"a": [1, 2], "b": [10, 20]})
+IGNORE_DYNAMIC_DF = pd.DataFrame({"a": [1, 2], "b": [10, 20]})
+
+ignore_fixed_result = st.data_editor(
+    IGNORE_FIXED_DF,
+    key="ignore_fixed_editor",
+    num_rows="fixed",
+    on_change="ignore",
+    hide_index=True,
+    width="content",
+    column_config=COLUMN_CONFIG,
+)
+st.markdown(
+    "<div data-testid='ignore-fixed-a0'>"
+    f"{_cell_marker(ignore_fixed_result.loc[0, 'a'])}</div>",
+    unsafe_allow_html=True,
+)
+st.markdown(
+    "<div data-testid='ignore-fixed-b0'>"
+    f"{_cell_marker(ignore_fixed_result.loc[0, 'b'])}</div>",
+    unsafe_allow_html=True,
+)
+
+ignore_dynamic_result = st.data_editor(
+    IGNORE_DYNAMIC_DF,
+    key="ignore_dynamic_editor",
+    num_rows="dynamic",
+    on_change="ignore",
+    hide_index=True,
+    width="content",
+    column_config=COLUMN_CONFIG,
+)
+st.markdown(
+    "<div data-testid='ignore-dynamic-result'>"
+    f"{_frame_marker(ignore_dynamic_result)}</div>",
+    unsafe_allow_html=True,
+)
+
+st.button("Apply")
