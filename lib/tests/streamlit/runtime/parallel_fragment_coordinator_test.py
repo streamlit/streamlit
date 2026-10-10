@@ -29,6 +29,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.parallel_coordinator import (
     ParallelFragmentCoordinator,
     _scoped_ctx_attach,
@@ -332,6 +333,63 @@ def test_drain_sets_stop_event():
     assert not c.should_stop()
     c.drain()
     assert c.should_stop()
+
+
+def test_drain_stops_worker_waiting_for_compute_lock():
+    """drain() stops a worker waiting for a compute lock owned elsewhere."""
+    compute_lock = threading.Lock()
+    compute_lock.acquire()
+    worker_started = threading.Event()
+    worker_finished = threading.Event()
+    yield_checked = threading.Event()
+    worker_acquired = threading.Event()
+    drain_finished = threading.Event()
+    drain_errors: list[BaseException] = []
+    coordinator = ParallelFragmentCoordinator(yield_check=lambda: None)
+
+    def worker_yield_check() -> None:
+        yield_checked.set()
+        if coordinator.should_stop():
+            raise StopException()
+
+    worker_ctx = MagicMock()
+    worker_ctx.yield_check = worker_yield_check
+
+    def worker() -> None:
+        worker_started.set()
+        try:
+            with cache_utils._hold_compute_lock(compute_lock):
+                worker_acquired.set()
+        except StopException:
+            pass
+        finally:
+            worker_finished.set()
+
+    def drain_coordinator() -> None:
+        try:
+            coordinator.drain()
+        except BaseException as ex:
+            drain_errors.append(ex)
+        finally:
+            drain_finished.set()
+
+    coordinator.submit(worker, worker_ctx)
+    assert worker_started.wait(timeout=1)
+    drain_thread = threading.Thread(target=drain_coordinator)
+    drain_thread.start()
+    try:
+        assert drain_finished.wait(timeout=1)
+        assert yield_checked.is_set()
+        assert worker_finished.is_set()
+        assert not worker_acquired.is_set()
+        assert compute_lock.locked()
+    finally:
+        if compute_lock.locked():
+            compute_lock.release()
+        drain_thread.join(timeout=1)
+
+    assert not drain_thread.is_alive()
+    assert drain_errors == []
 
 
 # --- submit() propagation ---

@@ -26,7 +26,7 @@ import threading
 import time
 from abc import abstractmethod
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -71,6 +71,7 @@ from streamlit.runtime.caching.cached_message_replay import (
 )
 from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    get_run_yield_check,
     in_cached_function,
 )
 
@@ -112,6 +113,34 @@ _warned_background_refresh_ttl_multipliers: Final[set[str]] = set()
 # How long (in seconds) to wait before retrying a background refresh after a failure,
 # so a persistently failing upstream isn't retried on every rerun.
 _FAILURE_COOLDOWN_SECONDS: Final = 60.0
+
+# How often a cache miss waiting on another thread checks whether its run
+# should stop or rerun.
+_COMPUTE_LOCK_POLL_SECONDS: Final = 0.1
+
+
+@contextlib.contextmanager
+def _hold_compute_lock(lock: threading.Lock) -> Generator[None, None, None]:
+    """Acquire a compute lock while allowing a waiting run to stop or rerun."""
+    yield_check = None
+    if not lock.acquire(blocking=False):
+        # Stopping inside a cached function would discard its outer computation.
+        # A thread without a script run has no stop/rerun callback.
+        yield_check = None if in_cached_function.get() else get_run_yield_check()
+        if yield_check is None:
+            lock.acquire()
+        else:
+            while not lock.acquire(timeout=_COMPUTE_LOCK_POLL_SECONDS):
+                yield_check()
+
+    try:
+        # A stop or rerun may arrive during the timed acquire just before the
+        # lock becomes available.
+        if yield_check is not None:
+            yield_check()
+        yield
+    finally:
+        lock.release()
 
 
 @dataclass
@@ -826,7 +855,7 @@ class CachedFunc(Generic[P, R]):
         #   no lock is acquired. But the unhappy path ("cache entry needs to be recomputed") is
         #   a wee bit slower, because we do two lookups for the entry.
 
-        with cache.compute_value_lock(value_key):
+        with _hold_compute_lock(cache.compute_value_lock(value_key)):
             # We've acquired the lock - but another thread may have acquired it first
             # and already computed the value. So we need to test for a cache hit again,
             # before computing.
