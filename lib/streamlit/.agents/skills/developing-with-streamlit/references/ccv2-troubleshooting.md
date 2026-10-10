@@ -60,12 +60,12 @@ Important context:
 
 ### Inline strings vs file-backed assets (path heuristic)
 
-CCv2 uses a heuristic: strings that “look like” paths are treated as file references. A multi-line string is always treated as inline content.
+CCv2 uses a heuristic: strings that “look like” paths are treated as file references. A string with a line break inside it is always treated as inline content. Leading and trailing newlines are stripped first, so they don't count.
 
 Fix:
 
 - Prefer triple-quoted multi-line strings for inline `html`/`css`/`js`.
-- Avoid single-line minified JS/CSS in `js=`/`css=`; add a newline if you must.
+- Avoid single-line minified JS/CSS in `js=`/`css=`; if you must use it, put a line break inside the code.
 
 ### Globs (0 matches or multiple matches)
 
