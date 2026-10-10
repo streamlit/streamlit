@@ -47,3 +47,15 @@ class ScriptDataTest(unittest.TestCase):
 
         with pytest.raises(FrozenInstanceError):
             script_data.name = "bob"
+
+    def test_script_entrypoint_is_retained(self):
+        """ScriptData keeps an optional callable entrypoint alongside the path."""
+
+        def main() -> None:
+            pass
+
+        script_data = ScriptData("/path/to/some/script.py", script_entrypoint=main)
+
+        assert script_data.script_entrypoint is main
+        assert script_data.script_folder == "/path/to/some"
+        assert script_data.name == "script"

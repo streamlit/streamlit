@@ -64,6 +64,9 @@ if TYPE_CHECKING:
 
     def maybe_suppress_error(exc: Exception) -> bool | None: ...
 
+    def main() -> None:
+        pass
+
     @asynccontextmanager
     async def lifespan_with_state(app: App) -> AsyncGenerator[dict[str, Any], None]:
         yield {"ready": True}
@@ -78,7 +81,9 @@ if TYPE_CHECKING:
 
     assert_type(App("main.py"), App)
     assert_type(App(Path("main.py")), App)
+    assert_type(App(main), App)
     assert_type(st.App("main.py"), App)
+    assert_type(st.App(main), App)
 
     # =====================================================================
     # secrets
@@ -207,7 +212,7 @@ if TYPE_CHECKING:
     # script_path is required
     App()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
 
-    # script_path must be str or Path
+    # script_path must be str, Path, or Callable[[], None]
     App(None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     App(123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
