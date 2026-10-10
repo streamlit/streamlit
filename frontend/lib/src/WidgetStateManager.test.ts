@@ -29,6 +29,10 @@ import {
 } from "@streamlit/protobuf"
 
 import { makeTriggerAggregatorId } from "~lib/components/widgets/BidiComponent/utils/idBuilder"
+import {
+  claimFormLabelRefresh,
+  resetFormLabelRefreshClaims,
+} from "~lib/formLabelRefreshClaims"
 
 import {
   createFormsData,
@@ -1378,6 +1382,24 @@ describe("Widget State Manager", () => {
     widgetMgr.removeInactive(new Set(["myComponent"]))
 
     expect(widgetMgr.getStringValue({ id: aggregatorId })).toBeUndefined()
+  })
+
+  it("drops a form label claim when the widget leaves the app", () => {
+    resetFormLabelRefreshClaims()
+    expect(
+      claimFormLabelRefresh("widget", ["A", "B"], ["B", "A"], false)
+    ).toBe(true)
+
+    widgetMgr.removeInactive(new Set(["widget"]))
+    expect(
+      claimFormLabelRefresh("widget", ["A", "B"], ["B", "A"], false)
+    ).toBe(false)
+
+    widgetMgr.removeInactive(new Set())
+    expect(
+      claimFormLabelRefresh("widget", ["A", "B"], ["B", "A"], false)
+    ).toBe(true)
+    resetFormLabelRefreshClaims()
   })
 
   it("cleans up inactive form widget states on removeInactive", () => {

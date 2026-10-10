@@ -33,6 +33,7 @@ import {
   WidgetStates,
 } from "@streamlit/protobuf"
 
+import { releaseInactiveFormLabelRefreshClaims } from "~lib/formLabelRefreshClaims"
 import { assertNever } from "~lib/util/assertNever"
 import {
   isNullOrUndefined,
@@ -964,6 +965,8 @@ export class WidgetStateManager {
 
     this.widgetStates.removeInactive(retainedIds)
     this.forms.forEach(form => form.widgetStates.removeInactive(retainedIds))
+    // A recreated widget must be allowed to refresh the same label pair.
+    releaseInactiveFormLabelRefreshClaims(retainedIds)
     this.elementStates.forEach((_, elementId) => {
       if (!activeIds.has(elementId)) {
         this.deleteElementState(elementId)

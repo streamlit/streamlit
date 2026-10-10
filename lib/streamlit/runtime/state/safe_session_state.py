@@ -19,7 +19,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Mapping
+    from collections.abc import Callable, Generator, Mapping, Sequence
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
@@ -102,6 +102,34 @@ class SafeSessionState:
     def is_new_state_value(self, user_key: str) -> bool:
         with self._lock:
             return self._state.is_new_state_value(user_key)
+
+    def note_formatted_labels(
+        self,
+        widget_id: str,
+        options: Sequence[Any],
+        formatted_options: Sequence[str],
+        *,
+        first_match: bool = False,
+    ) -> tuple[dict[str, int], tuple[str, ...]]:
+        """Remember this run's option labels and return earlier ones.
+
+        See ``apply_formatted_label_memory``. The returned index is a copy, so
+        later runs can extend the stored history without changing a serde that
+        already captured it.
+        """
+        from streamlit.elements.lib.options_selector_utils import (
+            apply_formatted_label_memory,
+        )
+
+        self._yield_callback()
+        with self._lock:
+            return apply_formatted_label_memory(
+                self._state._new_widget_state.formatted_label_memory,
+                widget_id,
+                options,
+                formatted_options,
+                first_match=first_match,
+            )
 
     def reset_state_value(self, user_key: str, value: Any | None) -> None:
         """Reset a new session state value to a given value

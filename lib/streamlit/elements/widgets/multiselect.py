@@ -37,7 +37,9 @@ from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
     create_mappings,
     get_default_indices,
+    is_option_value,
     maybe_coerce_enum_sequence,
+    remember_option_labels,
     validate_and_sync_multiselect_value_with_options,
     validate_select_widget_filter_mode,
 )
@@ -95,6 +97,8 @@ class MultiSelectSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_options_indices: list[int]
     format_func: Callable[[Any], str]
+    # Set by deserialize: one flag per browser string, True when it was a label.
+    formatted_label_match: list[bool]
 
     def __init__(
         self,
@@ -104,6 +108,7 @@ class MultiSelectSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_options_indices: list[int] | None = None,
         format_func: Callable[[Any], str] = str,
+        prior_label_to_index: dict[str, int] | None = None,
     ) -> None:
         """Initialize the MultiSelectSerde.
 
@@ -136,6 +141,8 @@ class MultiSelectSerde(Generic[T]):
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_options_indices = default_options_indices or []
         self.format_func = format_func
+        self.formatted_label_match = []
+        self.prior_label_to_index = prior_label_to_index or {}
 
     def serialize(self, value: list[T | str] | list[T]) -> list[str]:
         converted_value = convert_anything_to_list(value)
@@ -167,15 +174,30 @@ class MultiSelectSerde(Generic[T]):
 
     def deserialize(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
         if ui_value is None:
+            # Defaults are not a browser selection.
+            self.formatted_label_match = []
             return [self.options[i] for i in self.default_options_indices]
 
         values: list[T | str] = []
+        # One flag per incoming string. Equality with an option cannot tell a
+        # selection from typed text that happens to equal that option's value.
+        matched_labels: list[bool] = []
         for v in ui_value:
             try:
+                # First match. The index map keeps the last duplicate label,
+                # and multiselect has always deserialized the first one.
                 option_index = self.formatted_options.index(v)
                 values.append(self.options[option_index])
+                matched_labels.append(True)
             except ValueError:
-                values.append(v)
+                prior_index = self.prior_label_to_index.get(v)
+                if prior_index is not None and 0 <= prior_index < len(self.options):
+                    values.append(self.options[prior_index])
+                    matched_labels.append(True)
+                else:
+                    values.append(v)
+                    matched_labels.append(False)
+        self.formatted_label_match = matched_labels
         return values
 
 
@@ -827,12 +849,24 @@ class MultiSelectMixin:
         if isinstance(on_change, str) and on_change == "ignore":
             proto.ignore_rerun = True
 
+        prior_label_to_index, previous_labels = remember_option_labels(
+            element_id,
+            indexable_options,
+            formatted_options,
+            form_id=form_id,
+            allow_stale_labels=not accept_new_options,
+            # deserialize() uses the first duplicate label, not the last.
+            first_match=True,
+        )
+        if previous_labels:
+            proto.previous_labels[:] = previous_labels
         serde = MultiSelectSerde(
             indexable_options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_options_indices=default_values,
             format_func=format_func,
+            prior_label_to_index=prior_label_to_index,
         )
 
         widget_state = register_widget(
@@ -880,8 +914,62 @@ class MultiSelectMixin:
                 )
             )
 
-        if value_needs_reset or widget_state.value_changed:
-            proto.raw_values[:] = serde.serialize(current_values)
+        serialized_values = serde.serialize(current_values)
+        # The frontend tracks each selection by the label it was sent. Push the
+        # new label for a real option when format_func changes it, and keep the
+        # browser's own string for typed text (gh-17175). Skipping the whole
+        # refresh would leave the real options on stale labels. A later rerun
+        # can then drop them.
+        incoming_values = widget_state.incoming_serialized_values
+        label_matches = widget_state.incoming_formatted_label_matches
+        refreshed_labels: list[str] | None = None
+        if (
+            incoming_values is not None
+            and len(incoming_values) == len(current_values)
+            and incoming_values != serialized_values
+        ):
+            if label_matches is None or len(label_matches) != len(current_values):
+                per_value_match: list[bool | None] = [None] * len(current_values)
+            else:
+                per_value_match = list(label_matches)
+            merged_labels: list[str] = []
+            for value, new_label, old_label, matched in zip(
+                current_values,
+                serialized_values,
+                incoming_values,
+                per_value_match,
+                strict=False,
+            ):
+                if is_option_value(
+                    value,
+                    new_label,
+                    indexable_options,
+                    formatted_option_to_option_index,
+                    formatted_options=formatted_options,
+                    from_formatted_label=matched,
+                ):
+                    merged_labels.append(new_label)
+                else:
+                    merged_labels.append(old_label)
+            if merged_labels != incoming_values:
+                refreshed_labels = merged_labels
+        # A programmatic change still sends the serialized values. The merged
+        # list is only for a label refresh that must not rewrite typed text.
+        labels_changed = (
+            refreshed_labels is not None
+            and not value_needs_reset
+            and not widget_state.value_changed
+        )
+        should_set_value = (
+            value_needs_reset or widget_state.value_changed or labels_changed
+        )
+
+        if should_set_value:
+            proto.raw_values[:] = (
+                refreshed_labels
+                if labels_changed and refreshed_labels is not None
+                else serialized_values
+            )
             proto.set_value = True
 
         layout_config = create_layout_config(width=width)
@@ -893,7 +981,7 @@ class MultiSelectMixin:
             widget_name,
             proto,
             layout_config=layout_config,
-            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            has_one_shot_effect=should_set_value,
         )
 
         return current_values

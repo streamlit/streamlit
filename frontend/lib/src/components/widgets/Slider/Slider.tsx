@@ -40,6 +40,10 @@ import {
   arrayComparator,
   useExecuteWhenChanged,
 } from "~lib/hooks/useExecuteWhenChanged"
+import {
+  claimFormLabelRefresh,
+  remapFormStrings,
+} from "~lib/hooks/useFormLabelRefresh"
 import { formatMoment, type MomentKind } from "~lib/util/formatMoment"
 import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
@@ -112,12 +116,23 @@ function isSelectSlider(element: SliderProto): boolean {
 function stringValuesToIndices(
   stringValues: string[],
   options: string[],
-  defaultIndices: number[]
+  defaultIndices: number[],
+  previousLabels: readonly string[] = []
 ): number[] {
   return stringValues.map((str, i) => {
     const index = options.indexOf(str)
-    // If not found, fall back to default index for this position
-    return index >= 0 ? index : (defaultIndices[i] ?? 0)
+    if (index >= 0) {
+      return index
+    }
+    // A form can still hold the previous run's label. The option sequence
+    // is unchanged, so that label's index is still the selection.
+    if (previousLabels.length === options.length) {
+      const prior = previousLabels.lastIndexOf(str)
+      if (prior >= 0) {
+        return prior
+      }
+    }
+    return defaultIndices[i] ?? 0
   })
 }
 
@@ -175,6 +190,42 @@ function Slider({
     queryParamBinding,
   })
 
+  // Read this during render. The basic-widget effect clears element.setValue
+  // before the effect below runs.
+  const serverSetValue = Boolean(element.setValue)
+  // select_slider stores indices in React and labels in the form. After a
+  // label change the index is still right, but submit would send the old
+  // label. Rewrite that stored label without moving the thumb. A server
+  // setValue wins, and each label generation is rewritten once.
+  useEffect(() => {
+    if (!isSelectSlider(element) || !element.formId) {
+      return
+    }
+    if (
+      !claimFormLabelRefresh(
+        element.id,
+        element.previousLabels,
+        element.options,
+        serverSetValue
+      )
+    ) {
+      return
+    }
+    const stored = widgetMgr.getStringArrayValue(element)
+    if (!stored) {
+      return
+    }
+    const next = remapFormStrings(
+      stored,
+      element.options,
+      element.previousLabels
+    )
+    if (!next) {
+      return
+    }
+    setValueWithSource({ value, fromUser: true })
+  }, [element, value, widgetMgr, setValueWithSource, serverSetValue])
+
   // We tie the UI to `uiValue` rather than `value` because `value` only
   // updates when the user is done interacting with the slider. If we tied
   // the UI to `value` then the UI would only update when the user is done
@@ -215,7 +266,8 @@ function Slider({
       const newIndices = stringValuesToIndices(
         stringValues,
         element.options,
-        element.default
+        element.default,
+        element.previousLabels
       )
       setUiValue(newIndices)
     },
@@ -374,7 +426,8 @@ function getStateFromWidgetMgr(
     return stringValuesToIndices(
       stringValues,
       element.options,
-      element.default
+      element.default,
+      element.previousLabels
     )
   }
   // For regular slider, get numeric values directly
@@ -390,7 +443,12 @@ function getCurrStateFromProto(element: SliderProto): number[] {
     // For select_slider, read string values from rawValue and convert to indices
     const rawValues = element.rawValue
     if (rawValues && rawValues.length > 0) {
-      return stringValuesToIndices(rawValues, element.options, element.default)
+      return stringValuesToIndices(
+        rawValues,
+        element.options,
+        element.default,
+        element.previousLabels
+      )
     }
     // Fall back to default indices
     return element.default

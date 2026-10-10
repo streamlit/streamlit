@@ -890,3 +890,52 @@ def test_radio_serde_serialize_returns_formatted_value(
         format_func=str.upper,
     )
     assert serde.serialize(value) == expected
+
+
+def test_radio_resends_new_label_when_format_func_output_changes():
+    """A label change re-sends the fresh label instead of losing the selection.
+
+    Regression test for gh-17175.
+    """
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+
+        def on_change() -> None:
+            st.session_state["callback_count"] = (
+                st.session_state.get("callback_count", 0) + 1
+            )
+
+        st.radio(
+            "Pick one",
+            ["D", "E"],
+            format_func=lambda x: f"{x} ({count})",
+            index=None,
+            key="picker",
+            on_change=on_change,
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.radio(key="picker").set_value("E").run()
+    assert at.radio(key="picker").value == "E"
+    assert at.session_state["callback_count"] == 1
+
+    # The count behind the label changes without the user touching the widget.
+    at.session_state["callback_count"] = 0
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.radio(key="picker")
+    assert picker.value == "E"
+    assert picker.proto.set_value is True
+    assert picker.proto.raw_value == "E (3)"
+    # Only the display string changed, so on_change must not fire.
+    assert at.session_state["callback_count"] == 0
+
+    # With the labels unchanged, nothing is re-sent.
+    at = at.run()
+    assert at.radio(key="picker").value == "E"
+    assert at.radio(key="picker").proto.set_value is False
+    assert at.session_state["callback_count"] == 0

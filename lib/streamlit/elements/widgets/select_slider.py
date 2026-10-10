@@ -30,8 +30,10 @@ from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
     index_,
+    index_for_option_label,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
+    remember_option_labels,
     validate_and_sync_range_value_with_options,
     validate_and_sync_value_with_options,
 )
@@ -91,11 +93,13 @@ class SelectSliderSerde(Generic[T]):
         formatted_option_to_index: dict[str, int],
         default_indices: list[int],
         format_func: Callable[[Any], str] = str,
+        prior_label_to_index: dict[str, int] | None = None,
     ) -> None:
         self.options = options
         self.formatted_option_to_index = formatted_option_to_index
         self.default_indices = default_indices
         self.format_func = format_func
+        self.prior_label_to_index = prior_label_to_index or {}
 
     def _get_default(self, is_range: bool) -> T | tuple[T, T]:
         """Return the default value based on default_indices."""
@@ -140,8 +144,13 @@ class SelectSliderSerde(Generic[T]):
         # Look up each string value
         results: list[tuple[int, T]] = []
         for i, s in enumerate(ui_value):
-            idx = self.formatted_option_to_index.get(s)
-            if idx is not None and idx < len(self.options):
+            idx = index_for_option_label(
+                s,
+                self.formatted_option_to_index,
+                self.prior_label_to_index,
+                len(self.options),
+            )
+            if idx is not None:
                 results.append((idx, self.options[idx]))
             else:
                 # Fallback to default for this position
@@ -563,11 +572,21 @@ class SelectSliderMixin:
 
         layout_config = create_layout_config(width=width)
 
+        prior_label_to_index, previous_labels = remember_option_labels(
+            element_id,
+            opt,
+            formatted_options,
+            form_id=slider_proto.form_id,
+            allow_stale_labels=True,
+        )
+        if previous_labels:
+            slider_proto.previous_labels[:] = previous_labels
         serde = SelectSliderSerde(
             opt,
             formatted_option_to_index=formatted_option_to_option_index,
             default_indices=slider_value,
             format_func=format_func,
+            prior_label_to_index=prior_label_to_index,
         )
 
         widget_state = register_widget(
@@ -630,9 +649,20 @@ class SelectSliderMixin:
             # deserialize() always returns a default value, never None.
             current_value = cast("T", validated_single)
 
-        if value_needs_reset or widget_state.value_changed:
-            serialized_value = serde.serialize(current_value)
-            slider_proto.raw_value[:] = serialized_value
+        serialized_values = serde.serialize(current_value)
+        # The frontend tracks the selection by the labels it was sent. Push new
+        # labels when format_func changes them, or a later rerun resets the
+        # slider (gh-17175).
+        labels_changed = (
+            widget_state.incoming_serialized_values is not None
+            and widget_state.incoming_serialized_values != serialized_values
+        )
+        should_set_value = (
+            value_needs_reset or widget_state.value_changed or labels_changed
+        )
+
+        if should_set_value:
+            slider_proto.raw_value[:] = serialized_values
             slider_proto.set_value = True
 
         if ctx:
@@ -642,7 +672,7 @@ class SelectSliderMixin:
             "slider",
             slider_proto,
             layout_config=layout_config,
-            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            has_one_shot_effect=should_set_value,
         )
         return current_value
 
