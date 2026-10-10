@@ -174,14 +174,21 @@ a hot section:
 ```python
 st.set_page_config(run_every="60s")  # refresh the whole page every minute
 
+if "price" not in st.session_state:
+    st.session_state.price = 100.0
+if "page_refreshes" not in st.session_state:
+    st.session_state.page_refreshes = 0
+st.session_state.page_refreshes += 1
+
 
 @st.fragment(run_every="2s")  # this section refreshes faster
 def live_ticker():
-    st.metric("Price", get_price())
+    st.session_state.price += 0.1
+    st.metric("Price", round(st.session_state.price, 2))
 
 
 live_ticker()
-st.dataframe(get_daily_summary())  # refreshed by the page-level interval
+st.metric("Page refreshes", st.session_state.page_refreshes)
 ```
 
 > [!NOTE]
@@ -192,9 +199,10 @@ st.dataframe(get_daily_summary())  # refreshed by the page-level interval
 > `run_every` when the whole page genuinely needs to refresh, and prefer wrapping the
 > live section in a fragment otherwise. The docstring will link to `@st.fragment` and
 > show the composition pattern above. It should also note that auto-rerun ticks pause while
-> an `st.dialog` is open (so a modal isn't dismissed mid-interaction) but that, because each
-> tick is otherwise a full rerun, a tick still resets an unsubmitted `st.form` — a reason to
-> prefer a fragment (or to pause auto-refresh) for multi-step form flows.
+> an `st.dialog` is open (so a modal isn't dismissed mid-interaction) but that an unsubmitted
+> `st.form` does not pause ticks. In-progress form values stay on screen, the same as any
+> other full rerun. The rest of the page still reruns, so prefer a fragment (or pause
+> auto-refresh) for multi-step form flows.
 
 ### Behavior
 
@@ -210,15 +218,15 @@ st.dataframe(get_daily_summary())  # refreshed by the page-level interval
   destination page re-establishes its own timer if it sets `run_every`. This mirrors how
   fragment auto-reruns are cleared on page change.
 - **Concurrent reruns (a tick coinciding with a user interaction, `st.rerun`, or a
-  fragment rerun).** No special handling is needed — page-level auto-rerun uses the same
-  rerun request path as everything else, and the existing machinery resolves overlaps:
-  - *No lost input.* Every rerun request (auto or user) carries the browser's latest full
-    widget-state snapshot, and the server coalesces pending rerun requests, so the newest
-    state always wins — a concurrent tick never drops a user's edit.
-  - *Bounded work.* A tick that arrives while a run is in flight is coalesced/preempted by
-    the server rather than queued without limit (at most one extra run). Full reruns are
-    deterministic for the same state, so a preempted or duplicated run simply restarts —
-    correct, at worst slightly redundant.
+  fragment rerun).** The client holds at most one page tick that fires during an active
+  run, then sends that tick once the run finishes on its own. Stop and a user full rerun
+  drop the held tick. A fragment rerun keeps it until that fragment run finishes. A page
+  tick does not replace a fragment request that has not been acknowledged yet.
+  - *No lost input.* Widget edits ride on the rerun that the interaction already sent.
+    A page tick waits instead of sending a second full rerun that would stop that
+    request and drop its trigger.
+  - *Bounded work.* At most one held tick is replayed when the run finishes. A slow run
+    is not preempted into a loop, and ticks do not queue up without limit.
   - *Natural debounce.* Every full rerun (including user-triggered ones) clears and re-arms
     the page timer, so the interval countdown restarts after each interaction. Active users
     effectively reset the timer instead of stacking a tick on top of their own rerun —
@@ -238,14 +246,15 @@ st.dataframe(get_daily_summary())  # refreshed by the page-level interval
   are app-shell state, not part of the script's element tree, so reruns don't disrupt them.
   Fragment `run_every` reruns are scoped and aren't affected.
 - **Unsubmitted forms.** Unlike an open `st.dialog` (which pauses ticks, see above), a
-  top-level `st.form` does not pause auto-rerun: a tick is a full rerun, so — exactly like
-  pressing "Rerun" — it re-executes the script and resets an unsubmitted `st.form`. (A form
-  rendered *inside* an open `st.dialog` is protected, since ticks pause while the dialog is
-  open; this bullet is about a top-level form outside any dialog.) The natural debounce
-  above softens this for active users (each interaction restarts the interval), but a tick
-  can still interrupt a form a user is slowly filling out. For multi-step form flows, prefer
-  pausing auto-refresh (pass `run_every=None`) or scoping the live updates to a
-  `@st.fragment(run_every=...)` rather than refreshing the whole page.
+  top-level `st.form` does not pause auto-rerun. A tick is a full rerun, so — exactly like
+  pressing "Rerun" — in-progress values stay on screen and are sent when the form is
+  submitted. (A form rendered *inside* an open `st.dialog` is protected, since ticks pause
+  while the dialog is open; this bullet is about a top-level form outside any dialog.) The
+  natural debounce above softens this for active users (each rerun-triggering interaction
+  restarts the interval), but a tick still reruns the rest of the page while someone is filling out a
+  form. For multi-step form flows, prefer pausing auto-refresh (pass `run_every=None`) or
+  scoping the live updates to a `@st.fragment(run_every=...)` rather than refreshing the
+  whole page.
 - **Resolution / disabling (multiple `set_page_config` calls in one run).** The timer is
   re-derived on every rerun from the value of the *last* call that **passed** `run_every`.
   Like the visual parameters, a call that **omits** `run_every` leaves the current setting

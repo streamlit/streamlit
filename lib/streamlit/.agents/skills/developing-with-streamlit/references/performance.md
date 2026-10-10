@@ -189,6 +189,28 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
 
+Use `st.set_page_config(run_every=...)` only when the whole page must refresh; each tick reruns the full script (minimum 1 second, `None` disables it, and it pauses while an `st.dialog` is open). Page and fragment intervals can be combined:
+
+```python
+st.set_page_config(run_every="30s")
+
+if "price" not in st.session_state:
+    st.session_state.price = 100.0
+if "page_refreshes" not in st.session_state:
+    st.session_state.page_refreshes = 0
+st.session_state.page_refreshes += 1
+
+
+@st.fragment(run_every="2s")
+def ticker():
+    st.session_state.price += 0.1
+    st.metric("Price", round(st.session_state.price, 2))
+
+
+ticker()
+st.metric("Page refreshes", st.session_state.page_refreshes)
+```
+
 
 ### Keyed reruns — target a fragment from a callback
 

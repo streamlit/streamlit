@@ -103,6 +103,7 @@ import {
   HostCommunicationManager,
   type IMenuItem,
   INITIAL_SCRIPT_RUN_ID,
+  isElementDialogOpen,
   isEmbed,
   isInChildFrame,
   isKeyboardEventFromEditableTarget,
@@ -272,6 +273,12 @@ interface State {
 
 export const LOG = getLogger("App")
 
+/**
+ * Largest delay `setTimeout` / `setInterval` accept. The Web IDL `long` type
+ * is a signed 32-bit integer, so a bigger delay wraps and can fire immediately.
+ */
+const MAX_TIMER_DELAY_MS = 2_147_483_647
+
 declare global {
   interface Window {
     streamlitDebug: {
@@ -359,16 +366,27 @@ export class App extends PureComponent<Props, State> {
   private rerunEpoch: number = 0
   private historyNavigationEpoch: number | null = null
 
-  // Active `run_every` auto-rerun timers, keyed by fragment id. These are
-  // imperative resources (setInterval handles), so they live outside of React
-  // state. Keying by fragment id lets us keep a single timer per fragment: we
-  // reuse the running timer when a fragment re-registers with the same interval
-  // (so frequent ancestor reruns don't reset its countdown), and only restart
-  // it when the interval changes. The stored `interval` (in seconds) is what we
-  // compare against on re-registration.
+  // Active `run_every` auto-rerun timers. Fragment timers are keyed by fragment
+  // id. These are imperative timer handles, so they live outside of React
+  // state. Re-registering the same interval leaves the countdown alone. Full
+  // reruns still restart the page countdown because `handleNewSession` clears
+  // these timers first. The stored `interval` (in seconds) is what
+  // re-registration compares against.
+  /**
+   * Timer id for `st.set_page_config(run_every=...)`. Protobuf sends an unset
+   * `fragment_id` as "", which no real fragment uses.
+   */
+  private static readonly PAGE_AUTO_RERUN_ID = ""
   private readonly autoRerunIntervals: Map<
     string,
-    { timer: ReturnType<typeof setInterval>; interval: number }
+    {
+      timer: ReturnType<typeof setInterval>
+      interval: number
+      /** False when `timer` is a chained `setTimeout` for a delay above the 32-bit limit. */
+      repeating: boolean
+      /** Identifies this registration. A queued callback must not fire after a clear or replace. */
+      generation: object
+    }
   > = new Map()
 
   // Whether the skills-install nudge has been shown this page load.
@@ -377,6 +395,51 @@ export class App extends PureComponent<Props, State> {
   // `skillsNudgeShown` events (which would inflate the adoption funnel). Reset
   // only by a full page reload (a new App instance).
   private skillsNudgeShown: boolean = false
+
+  // A page tick that arrived while a script run was still active. It is sent
+  // once that run finishes on its own, so a slow page is not preempted and
+  // does not wait another full interval. Stop and a non-auto full rerun clear
+  // it. An interrupted run does not send it in the idle gap before the
+  // replacement: a full NewSession drops it, and a fragment replacement keeps
+  // it until that fragment run finishes.
+  private pageAutoRerunDeferred = false
+
+  // Set while a replacement run is expected and the server has not reported
+  // it yet: after an interrupt, a user or fragment rerun, or a page auto-rerun
+  // that was just sent. Page ticks are dropped until that request is
+  // acknowledged. A fragment rerun leaves the page timer and any held tick in
+  // place. A user full rerun, and a deferred page-tick replay that was queued,
+  // also clear the page timer.
+  private pageAutoRerunAwaitingNextRun = false
+
+  // Set only after a deferred page replay is queued. Reconnect retries that
+  // replay. An ordinary widget rerun must not set this: retrying it would
+  // stop the in-flight run and drop the click. That includes a widget rerun
+  // that cleared the page timer. The script re-arms `run_every` when that
+  // run is acknowledged.
+  private pageAutoRerunReplayQueued = false
+
+  // The BackMsg that set `pageAutoRerunAwaitingNextRun`. A full `NewSession`
+  // for an older run must not drop a fragment guard at this epoch.
+  private pageAutoRerunGuardEpoch: number | null = null
+
+  // Set when the pending request is fragment-scoped. Empty for a full rerun.
+  private pageAutoRerunGuardFragmentId: string | undefined = undefined
+
+  // True after a `NewSession` lists `pageAutoRerunGuardFragmentId`. The next
+  // `scriptIsRunning` then belongs to that fragment request.
+  private pageAutoRerunGuardAcked = false
+
+  // `Date.now()` when the script became idle with this guard set. Null while a
+  // run is still active: time spent inside that run does not age the guard, so
+  // a slow script cannot be replaced by a page tick. Once idle, one full page
+  // interval without acknowledgement expires a fragment request.
+  private pageAutoRerunGuardIdleSince: number | null = null
+  private pageAutoRerunGuardIntervalMs = 0
+
+  // Kept after the page timer is cleared. A fragment click in that gap still
+  // needs an interval, or the guard would never expire.
+  private lastPageAutoRerunIntervalMs = 0
 
   // Whether a suppression reason has been reported this page load. Tracked
   // separately from `skillsNudgeShown` so recording a suppression does NOT
@@ -856,6 +919,22 @@ export class App extends PureComponent<Props, State> {
         } catch {
           // It's okay if this fails, the `measure` call is for debugging/profiling
         }
+        if (prevState.scriptRunState === ScriptRunState.RUNNING) {
+          if (
+            this.pageAutoRerunGuardFragmentId &&
+            !this.pageAutoRerunGuardAcked &&
+            this.pageAutoRerunGuardIdleSince === null
+          ) {
+            // Idle time starts now. A fragment request queued behind this run
+            // is not stale just because the run itself was long.
+            this.pageAutoRerunGuardIdleSince = Date.now()
+          }
+          // Send a page tick held during the run that just finished, unless that run
+          // was interrupted and a replacement run is still pending.
+          if (!this.pageAutoRerunAwaitingNextRun) {
+            this.flushDeferredPageAutoRerun()
+          }
+        }
       }
 
       this.hostCommunicationMgr.sendMessageToHost({
@@ -1035,7 +1114,13 @@ export class App extends PureComponent<Props, State> {
         // Script is using fragments (fragments in last run or
         // fragment auto-reruns configured):
         this.state.fragmentIdsThisRun.length > 0 ||
-        this.autoRerunIntervals.size > 0
+        this.autoRerunIntervals.size > 0 ||
+        // A deferred page replay was queued and cleared the timer before the
+        // server acknowledged it. Reconnect must rerun so the page can re-arm.
+        // Do not also retry a widget rerun that cleared the page timer: that
+        // message already consumed the trigger, and a second full rerun would
+        // stop the in-flight click.
+        this.pageAutoRerunReplayQueued
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
@@ -1361,37 +1446,153 @@ export class App extends PureComponent<Props, State> {
   }
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
-    const { fragmentId } = autoRerun
+    const { fragmentId, interval } = autoRerun
+    const timerId = fragmentId || App.PAGE_AUTO_RERUN_ID
 
-    // Auto-reruns are always scoped to a fragment, so we expect a non-empty
-    // fragment id. Guard against an empty id (which protobuf produces when the
-    // field is unset): using it as a map key would collide, so a second empty-id
-    // registration would silently cancel the first. Skip it instead.
-    if (!fragmentId) {
-      LOG.warn("Ignoring auto-rerun message without a fragment id.")
+    // Re-registering the same interval must not restart the countdown.
+    // Ancestor reruns would otherwise starve a fragment timer, and a fragment
+    // tick that repeats the current page interval would reset that countdown.
+    // Full reruns still restart the page timer: handleNewSession clears it
+    // before this message arrives. A changed interval replaces the timer.
+    if (this.autoRerunIntervals.get(timerId)?.interval === interval) {
       return
     }
 
-    const { interval } = autoRerun
+    this.startAutoRerunTimer(timerId, interval, () => {
+      // Page ticks are full reruns. Skip one while an st.dialog is open.
+      // A tick during an active run is held until that run finishes on its
+      // own. Stop and a user rerun clear it. An interrupted run delays it
+      // until the replacement is known.
+      if (!fragmentId) {
+        // A callback queued before the page timer was cleared must not send.
+        if (!this.autoRerunIntervals.has(App.PAGE_AUTO_RERUN_ID)) {
+          return
+        }
+        if (
+          isElementDialogOpen() ||
+          this.state.scriptRunState === ScriptRunState.STOP_REQUESTED
+        ) {
+          return
+        }
+        if (this.pageAutoRerunAwaitingNextRun) {
+          // A fragment request the server never starts must not stall the
+          // page. One full interval of idle time releases the guard so a
+          // later tick can run. This tick does not send: the server may
+          // still acknowledge the fragment, and a full rerun here would
+          // stop that run and drop its trigger. Time inside an active run
+          // does not count.
+          if (!this.isFragmentAutoRerunGuardStale()) {
+            return
+          }
+          this.clearPageAutoRerunGuard()
+          return
+        }
+        if (this.isScriptRunActive()) {
+          this.pageAutoRerunDeferred = true
+          return
+        }
+        // This tick is sent now, so a later finish must not send it again.
+        this.pageAutoRerunDeferred = false
+      }
+      this.widgetMgr.sendUpdateWidgetsMessage(fragmentId || undefined, true)
+    })
+  }
 
-    // A `run_every` fragment re-registers its auto-rerun every time an ancestor
-    // re-renders it (a fragment-only rerun doesn't reset timers). If a timer for
-    // this fragment is already running with the same interval, leave it alone:
-    // restarting it would reset the countdown, so ancestor reruns firing more
-    // often than `run_every` could delay or starve the fragment's auto-rerun.
-    // We only (re)start the timer when there isn't one yet or the interval
-    // changed, which also avoids stacking duplicate intervals.
-    if (this.autoRerunIntervals.get(fragmentId)?.interval === interval) {
+  /**
+   * Arm an auto-rerun timer, replacing any timer already stored for `id`.
+   *
+   * Intervals that fit in a signed 32-bit millisecond delay use `setInterval`.
+   * Longer intervals are chained `setTimeout`s. Passing the raw delay to the
+   * browser wraps it and can fire on every turn.
+   */
+  private startAutoRerunTimer(
+    id: string,
+    intervalSeconds: number,
+    onTick: () => void,
+    preserveDeferredPageTick = false
+  ): void {
+    this.clearAutoRerunInterval(id)
+    // Replacing the page timer drops a held tick. Chaining the next cycle of
+    // the same long interval must not, because that tick is still waiting for
+    // the current run to finish. Do not clear pageAutoRerunAwaitingNextRun:
+    // navigation clears the timer and then sets that guard, and an autoRerun
+    // still in flight from the previous page must not drop it.
+    if (id === App.PAGE_AUTO_RERUN_ID && !preserveDeferredPageTick) {
+      this.pageAutoRerunDeferred = false
+    }
+
+    const intervalMs = intervalSeconds * 1000
+    if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
       return
     }
 
-    this.clearAutoRerunInterval(fragmentId)
+    if (id === App.PAGE_AUTO_RERUN_ID) {
+      this.lastPageAutoRerunIntervalMs = intervalMs
+      // The timer was already gone when the fragment request was sent, so the
+      // guard has no interval yet. The one being armed is the window.
+      if (
+        this.pageAutoRerunGuardFragmentId &&
+        !this.pageAutoRerunGuardAcked &&
+        this.pageAutoRerunGuardIntervalMs <= 0
+      ) {
+        this.pageAutoRerunGuardIntervalMs = intervalMs
+        if (!this.isScriptRunActive()) {
+          this.pageAutoRerunGuardIdleSince = Date.now()
+        }
+      }
+    }
 
-    const timer = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(fragmentId, true)
-    }, interval * 1000)
+    // A callback queued before clearInterval/clearTimeout can still run.
+    // NewSession may clear this timer and arm another before that happens,
+    // so identity — not map membership alone — decides.
+    const generation = {}
+    const guardedOnTick = (): void => {
+      if (this.autoRerunIntervals.get(id)?.generation !== generation) {
+        return
+      }
+      onTick()
+    }
 
-    this.autoRerunIntervals.set(fragmentId, { timer, interval })
+    if (intervalMs <= MAX_TIMER_DELAY_MS) {
+      const timer = setInterval(guardedOnTick, intervalMs)
+      this.autoRerunIntervals.set(id, {
+        timer,
+        interval: intervalSeconds,
+        repeating: true,
+        generation,
+      })
+      return
+    }
+
+    const cycleStartedAt = performance.now()
+    const scheduleChunk = (): void => {
+      const remaining = intervalMs - (performance.now() - cycleStartedAt)
+      if (remaining <= 0) {
+        guardedOnTick()
+        this.startAutoRerunTimer(id, intervalSeconds, onTick, true)
+        return
+      }
+
+      // eslint-disable-next-line no-restricted-globals -- Class-owned auto-rerun timers cannot use the useTimeout hook.
+      const timer = setTimeout(
+        () => {
+          // The initial call below runs before this entry exists. Later chunks
+          // must not reschedule after the timer was cleared or replaced.
+          if (this.autoRerunIntervals.get(id)?.generation !== generation) {
+            return
+          }
+          scheduleChunk()
+        },
+        Math.min(remaining, MAX_TIMER_DELAY_MS)
+      )
+      this.autoRerunIntervals.set(id, {
+        timer,
+        interval: intervalSeconds,
+        repeating: false,
+        generation,
+      })
+    }
+    scheduleChunk()
   }
 
   /**
@@ -1402,6 +1603,9 @@ export class App extends PureComponent<Props, State> {
   handleStopAutoRerun = (stopAutoRerun: StopAutoRerun): void => {
     stopAutoRerun.fragmentIds.forEach(fragmentId => {
       this.clearAutoRerunInterval(fragmentId)
+      if (!fragmentId) {
+        this.clearHeldPageAutoRerun()
+      }
     })
   }
 
@@ -1410,6 +1614,23 @@ export class App extends PureComponent<Props, State> {
    * @param statusChangeProto a SessionStatus protobuf
    */
   handleSessionStatusChanged = (statusChangeProto: SessionStatus): void => {
+    if (
+      statusChangeProto.scriptIsRunning &&
+      this.state.scriptRunState !== ScriptRunState.STOP_REQUESTED
+    ) {
+      // `scriptIsRunning` is not tied to the BackMsg that set the guard. A
+      // fragment click can land before this status for an older full run.
+      // Only an acknowledged fragment request, or a non-fragment guard, ends
+      // here. A later finish may replay a tick that a fragment interrupt kept.
+      if (!this.pageAutoRerunGuardFragmentId || this.pageAutoRerunGuardAcked) {
+        this.clearPageAutoRerunGuard()
+      } else {
+        // This status belongs to an older run. Pause the idle clock so that
+        // run's duration cannot expire the fragment request.
+        this.pageAutoRerunGuardIdleSince = null
+      }
+    }
+
     this.setState((prevState: State) => {
       // Determine our new ScriptRunState
       let { scriptRunState } = prevState
@@ -1578,8 +1799,14 @@ export class App extends PureComponent<Props, State> {
     } = newSessionProto
 
     if (!fragmentIdsThisRun.length) {
-      // This is a normal rerun, remove all the auto reruns intervals
-      this.cleanupAutoReruns()
+      // This is a normal rerun, remove all the auto reruns intervals.
+      // A fragment request sent before this full session arrived is still
+      // waiting. Keep that guard so a page tick cannot replace it.
+      const keepFragmentGuard =
+        Boolean(this.pageAutoRerunGuardFragmentId) &&
+        !this.pageAutoRerunGuardAcked &&
+        this.pageAutoRerunGuardEpoch === this.rerunEpoch
+      this.cleanupAutoReruns(keepFragmentGuard)
 
       const config = newSessionProto.config as Config
       const themeInput = newSessionProto.customTheme as CustomThemeConfig
@@ -1608,6 +1835,15 @@ export class App extends PureComponent<Props, State> {
         this.onPageIconChanged(`${import.meta.env.BASE_URL}favicon.png`)
       }
     } else {
+      // Fragment reruns keep the page timer. A page tick held across the
+      // interrupt is sent when this fragment run finishes. This NewSession
+      // acknowledges a fragment request only when it names that fragment.
+      if (
+        this.pageAutoRerunGuardFragmentId &&
+        fragmentIdsThisRun.includes(this.pageAutoRerunGuardFragmentId)
+      ) {
+        this.pageAutoRerunGuardAcked = true
+      }
       this.setState({
         fragmentIdsThisRun,
         latestRunTime: performance.now(),
@@ -2037,6 +2273,18 @@ export class App extends PureComponent<Props, State> {
    * @param status the ScriptFinishedStatus that the script finished with
    */
   handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+    // An interrupted run is replaced by another execution. The server reports
+    // that stop before the next NewSession. Skip the idle gap so a held page
+    // tick is not sent there. A full NewSession drops the tick; a fragment
+    // replacement keeps it until that run finishes.
+    if (status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN) {
+      this.pageAutoRerunAwaitingNextRun = true
+      // This status does not say whether the replacement is a full rerun or a
+      // fragment. The next NewSession or scriptIsRunning resolves the guard.
+      this.pageAutoRerunGuardFragmentId = undefined
+      this.pageAutoRerunGuardAcked = false
+    }
+
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
     // just finished, so widgets (e.g. ChatInput) can react to the completion of
     // the specific full-script or fragment run they triggered. This runs before
@@ -2287,11 +2535,16 @@ export class App extends PureComponent<Props, State> {
    * the content of the auto rerun function might not be valid anymore and could
    * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
    */
-  cleanupAutoReruns = (): void => {
-    this.autoRerunIntervals.forEach(({ timer }) => {
-      clearInterval(timer)
+  cleanupAutoReruns = (keepFragmentGuard = false): void => {
+    this.autoRerunIntervals.forEach(entry => {
+      this.clearStoredAutoRerunTimer(entry)
     })
     this.autoRerunIntervals.clear()
+    if (keepFragmentGuard) {
+      this.pageAutoRerunDeferred = false
+    } else {
+      this.clearHeldPageAutoRerun()
+    }
   }
 
   /**
@@ -2300,9 +2553,115 @@ export class App extends PureComponent<Props, State> {
   private clearAutoRerunInterval(fragmentId: string): void {
     const existing = this.autoRerunIntervals.get(fragmentId)
     if (existing !== undefined) {
-      clearInterval(existing.timer)
+      this.clearStoredAutoRerunTimer(existing)
       this.autoRerunIntervals.delete(fragmentId)
     }
+  }
+
+  private isScriptRunActive(): boolean {
+    return (
+      this.state.scriptRunState === ScriptRunState.RUNNING ||
+      this.state.scriptRunState === ScriptRunState.RERUN_REQUESTED
+    )
+  }
+
+  /**
+   * Drop a held page tick and forget that a run is awaiting acknowledgement.
+   * The page timer itself stays armed.
+   */
+  private clearHeldPageAutoRerun(): void {
+    this.pageAutoRerunDeferred = false
+    this.clearPageAutoRerunGuard()
+  }
+
+  private markPageAutoRerunPending(fragmentId?: string): void {
+    const intervalSeconds = this.autoRerunIntervals.get(
+      App.PAGE_AUTO_RERUN_ID
+    )?.interval
+    this.pageAutoRerunAwaitingNextRun = true
+    this.pageAutoRerunGuardEpoch = this.rerunEpoch
+    this.pageAutoRerunGuardFragmentId = fragmentId
+    this.pageAutoRerunGuardAcked = false
+    this.pageAutoRerunGuardIntervalMs =
+      intervalSeconds !== undefined
+        ? intervalSeconds * 1000
+        : this.lastPageAutoRerunIntervalMs
+    this.pageAutoRerunGuardIdleSince = this.isScriptRunActive()
+      ? null
+      : Date.now()
+  }
+
+  private clearPageAutoRerunGuard(): void {
+    this.pageAutoRerunAwaitingNextRun = false
+    this.pageAutoRerunGuardEpoch = null
+    this.pageAutoRerunGuardFragmentId = undefined
+    this.pageAutoRerunGuardAcked = false
+    this.pageAutoRerunGuardIntervalMs = 0
+    this.pageAutoRerunGuardIdleSince = null
+    this.pageAutoRerunReplayQueued = false
+  }
+
+  private isFragmentAutoRerunGuardStale(): boolean {
+    if (
+      !this.pageAutoRerunGuardFragmentId ||
+      this.pageAutoRerunGuardAcked ||
+      this.pageAutoRerunGuardIntervalMs <= 0 ||
+      this.isScriptRunActive() ||
+      this.pageAutoRerunGuardIdleSince === null
+    ) {
+      return false
+    }
+    return (
+      Date.now() - this.pageAutoRerunGuardIdleSince >=
+      this.pageAutoRerunGuardIntervalMs
+    )
+  }
+
+  /**
+   * Send one page tick that was skipped while a script run was active.
+   * Stop, a non-auto full rerun, and clearing the page timer drop it.
+   * The idle gap after an interrupted run does not call this.
+   */
+  private flushDeferredPageAutoRerun(): void {
+    if (!this.pageAutoRerunDeferred) {
+      return
+    }
+    if (
+      isElementDialogOpen() ||
+      !this.autoRerunIntervals.has(App.PAGE_AUTO_RERUN_ID)
+    ) {
+      this.pageAutoRerunDeferred = false
+      return
+    }
+    // A fragment request is still unacknowledged. Replaying a full tick here
+    // would replace it and drop the widget trigger already sent.
+    if (this.pageAutoRerunGuardFragmentId && !this.pageAutoRerunGuardAcked) {
+      return
+    }
+    const queued = this.widgetMgr.sendUpdateWidgetsMessage(undefined, true)
+    if (!queued) {
+      // The websocket was already gone. Leave the timer and the held tick so
+      // reconnect can retry. Do not record a pending run that was never sent.
+      return
+    }
+    this.pageAutoRerunDeferred = false
+    // The message is queued. Suspend the page timer so the interval cannot
+    // send a second full rerun before the server reports this one. Remember
+    // the replay itself so a reconnect can retry it without retrying every
+    // widget click.
+    this.pageAutoRerunReplayQueued = true
+    this.clearAutoRerunInterval(App.PAGE_AUTO_RERUN_ID)
+  }
+
+  private clearStoredAutoRerunTimer(entry: {
+    timer: ReturnType<typeof setInterval>
+    repeating: boolean
+  }): void {
+    if (entry.repeating) {
+      clearInterval(entry.timer)
+      return
+    }
+    clearTimeout(entry.timer)
   }
 
   /**
@@ -2410,7 +2769,7 @@ export class App extends PureComponent<Props, State> {
     queryStringOverride?: string,
     preserveQueryParams?: boolean,
     isHistoryNavigation?: boolean
-  ): void => {
+  ): boolean => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
       // If we don't have a connectionManager or if it doesn't have an active
@@ -2418,7 +2777,7 @@ export class App extends PureComponent<Props, State> {
       // connectionManager.getBaseUriParts() returns undefined), we can't send a
       // rerun backMessage so just return early.
       LOG.error("Cannot send rerun backMessage when disconnected from server.")
-      return
+      return false
     }
 
     const { currentPageScriptHash } = this.state
@@ -2496,6 +2855,21 @@ export class App extends PureComponent<Props, State> {
       this.historyNavigationEpoch = this.rerunEpoch
     }
 
+    // scriptRunState stays idle until the server reports the new run. Record
+    // that a run is pending so a page tick in that gap cannot preempt this
+    // request. A user full rerun also suspends the page timer until the next
+    // run re-arms it. A fragment rerun keeps the countdown and any held tick,
+    // because set_page_config outside the fragment does not run again. A page
+    // auto-rerun leaves the timer armed; a deferred replay clears it after
+    // this message is queued.
+    if (fragmentId || isAutoRerun) {
+      this.markPageAutoRerunPending(fragmentId || undefined)
+    } else {
+      this.clearAutoRerunInterval(App.PAGE_AUTO_RERUN_ID)
+      this.clearHeldPageAutoRerun()
+      this.markPageAutoRerunPending()
+    }
+
     this.sendBackMsg(
       new BackMsg({
         rerunScript: {
@@ -2514,6 +2888,7 @@ export class App extends PureComponent<Props, State> {
     // Reset hasReceivedNewSession to false to ensure that we are aware
     // if a finished message is from a previous script run.
     this.hasReceivedNewSession = false
+    return true
   }
 
   /** Requests that the server stop running the script */
@@ -2534,6 +2909,8 @@ export class App extends PureComponent<Props, State> {
     const backMsg = new BackMsg({ stopScript: true })
     backMsg.type = "stopScript"
     this.sendBackMsg(backMsg)
+    // Drop a tick held during this run. The timer stays armed for the next interval.
+    this.clearHeldPageAutoRerun()
     this.setState({ scriptRunState: ScriptRunState.STOP_REQUESTED })
   }
 

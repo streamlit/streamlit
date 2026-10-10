@@ -19,6 +19,7 @@ import {
   type ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useState,
 } from "react"
 
@@ -35,6 +36,7 @@ import { assertNever } from "~lib/util/assertNever"
 import { notNullOrUndefined } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { markElementDialogOpen } from "./elementDialogOpen"
 import { StyledDialogIcon, StyledDialogTitle } from "./styled-components"
 
 /**
@@ -167,6 +169,16 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     },
     [isOpen, element.dismissible]
   )
+
+  // Page-level run_every skips ticks while any st.dialog is open. Chrome
+  // dialogs do not call this, so About/Settings/Deploy do not pause refresh.
+  // Layout effect so the counter is set before App flushes a deferred tick.
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      return undefined
+    }
+    return markElementDialogOpen()
+  }, [isOpen])
 
   // Set up keyboard event listeners when dialog is open
   useEffect(() => {
