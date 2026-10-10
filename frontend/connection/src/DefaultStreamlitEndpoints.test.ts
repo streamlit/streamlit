@@ -620,6 +620,29 @@ describe("DefaultStreamlitEndpoints", () => {
       })
     })
 
+    it("omits the XSRF header when document.cookie throws", async () => {
+      vi.spyOn(document, "cookie", "get").mockImplementation(() => {
+        throw new DOMException(
+          "The document is sandboxed and lacks the 'allow-same-origin' flag.",
+          "SecurityError"
+        )
+      })
+
+      const endpoints = new DefaultStreamlitEndpoints({
+        getServerUri: () => MOCK_SERVER_URI,
+        csrfEnabled: true,
+        sendClientError: vi.fn(),
+      })
+
+      const url = buildHttpUri(MOCK_SERVER_URI, "mockUrl")
+      // @ts-expect-error - csrfRequest is private
+      await endpoints.csrfRequest(url, {})
+
+      expect(mockRequest).toHaveBeenCalledWith({
+        url,
+      })
+    })
+
     it("merges xsrf token with existing AxiosHeaders", async () => {
       const endpoints = new DefaultStreamlitEndpoints({
         getServerUri: () => MOCK_SERVER_URI,

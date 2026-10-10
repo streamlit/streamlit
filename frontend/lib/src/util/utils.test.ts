@@ -79,6 +79,7 @@ import type * as Utils from "./utils"
 
 describe("setCookie", () => {
   afterEach(() => {
+    vi.restoreAllMocks()
     /*
       Setting a cookie with document.cookie = "key=value" will append or modify "key"
       with "value". It does not overwrite the existing list of cookies in document.cookie.
@@ -107,6 +108,17 @@ describe("setCookie", () => {
     document.cookie = "flavor=chocolatechip"
     setCookie("flavor")
     expect(document.cookie).toEqual("")
+  })
+
+  it("does not throw when document.cookie cannot be written", () => {
+    vi.spyOn(document, "cookie", "set").mockImplementation(() => {
+      throw new DOMException(
+        "The document is sandboxed and lacks the 'allow-same-origin' flag.",
+        "SecurityError"
+      )
+    })
+
+    expect(() => setCookie("ajs_anonymous_id", "abc")).not.toThrow()
   })
 })
 
