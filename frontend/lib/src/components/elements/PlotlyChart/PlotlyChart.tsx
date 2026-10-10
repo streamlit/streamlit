@@ -19,6 +19,7 @@ import {
   memo,
   type ReactElement,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useState,
@@ -26,8 +27,19 @@ import {
 
 import type * as Plotly from "plotly.js"
 
-import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
+import {
+  PlotlyChart as PlotlyChartProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  hasStretchHeightFallback,
+} from "~lib/components/core/Layout/FlexContext"
+import {
+  shouldHeightStretch,
+  shouldWidthStretch,
+} from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
@@ -88,6 +100,8 @@ interface PlotlyChartProps {
   fragmentId?: string
   disableFullscreenMode?: boolean
   width: number
+  widthConfig?: streamlit.WidthConfig.$Properties | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 export function PlotlyChart({
@@ -96,6 +110,8 @@ export function PlotlyChart({
   disabled,
   fragmentId,
   disableFullscreenMode,
+  widthConfig,
+  heightConfig,
 }: Readonly<PlotlyChartProps>): ReactElement {
   const theme = useEmotionTheme()
   const {
@@ -127,6 +143,20 @@ export function PlotlyChart({
     // We want to reload the initialFigureSpec object whenever the element id changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [element.id, element.spec])
+
+  // A container-sized chart takes its height only from its parent. Without a
+  // definite parent height, it falls back to the figure's height or the
+  // default height. Fullscreen already provides a definite size.
+  const isSizeContained =
+    !isFullScreen &&
+    shouldWidthStretch(widthConfig) &&
+    shouldHeightStretch(heightConfig)
+  const hasFallbackHeight = hasStretchHeightFallback(useContext(FlexContext))
+  const figureHeight = initialFigureSpec.layout?.height
+  const fallbackHeight =
+    typeof figureHeight === "number" && figureHeight > 0
+      ? figureHeight
+      : DEFAULT_PLOTLY_HEIGHT
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
     // If there was already a state with a figure using the same id,
@@ -511,6 +541,8 @@ export function PlotlyChart({
   return (
     <StyledPlotlyChartContainer
       ref={containerRef}
+      isSizeContained={isSizeContained}
+      fallbackHeight={hasFallbackHeight ? fallbackHeight : undefined}
       className="stPlotlyChart"
       data-testid="stPlotlyChart"
       role={accessibleName ? "figure" : undefined}

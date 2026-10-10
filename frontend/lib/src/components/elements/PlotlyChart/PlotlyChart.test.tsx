@@ -18,6 +18,11 @@ import { act, render, screen } from "@testing-library/react"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  type IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import type { PlotParams } from "~lib/util/reactPlotlyCompat"
@@ -115,7 +120,8 @@ describe("PlotlyChart Component", () => {
 
   const renderComponent = (
     props: Partial<React.ComponentProps<typeof PlotlyChart>> = {},
-    contextValue: Record<string, unknown> = {}
+    contextValue: Record<string, unknown> = {},
+    flexContext: IFlexContext | null = null
   ): ReturnType<typeof render> => {
     const finalContext = {
       expanded: false,
@@ -127,21 +133,23 @@ describe("PlotlyChart Component", () => {
     }
 
     return render(
-      <ElementFullscreenContext.Provider
-        value={
-          finalContext as React.ComponentProps<
-            typeof ElementFullscreenContext.Provider
-          >["value"]
-        }
-      >
-        <PlotlyChart
-          element={DEFAULT_ELEMENT}
-          widgetMgr={widgetMgr}
-          disabled={false}
-          width={600}
-          {...props}
-        />
-      </ElementFullscreenContext.Provider>
+      <FlexContext.Provider value={flexContext}>
+        <ElementFullscreenContext.Provider
+          value={
+            finalContext as React.ComponentProps<
+              typeof ElementFullscreenContext.Provider
+            >["value"]
+          }
+        >
+          <PlotlyChart
+            element={DEFAULT_ELEMENT}
+            widgetMgr={widgetMgr}
+            disabled={false}
+            width={600}
+            {...props}
+          />
+        </ElementFullscreenContext.Provider>
+      </FlexContext.Provider>
     )
   }
 
@@ -154,6 +162,79 @@ describe("PlotlyChart Component", () => {
     renderComponent()
     expect(screen.getByTestId("stPlotlyChart")).toBeVisible()
     expect(MockPlot).toHaveBeenCalled()
+  })
+
+  describe("stretch height sizing", () => {
+    const stretchConfigs = {
+      widthConfig: { useStretch: true },
+      heightConfig: { useStretch: true },
+    }
+
+    it("size-contains a stretch chart and falls back to the default height", () => {
+      renderComponent(stretchConfigs)
+
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 450px;")
+    })
+
+    it("falls back to the figure's own height when it has one", () => {
+      renderComponent({
+        ...stretchConfigs,
+        element: new PlotlyChartProto({
+          ...DEFAULT_ELEMENT,
+          spec: JSON.stringify({ data: [], layout: { height: 300 } }),
+        }),
+      })
+
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 300px;")
+      expect(chart).not.toHaveStyle("contain-intrinsic-height: 450px;")
+    })
+
+    it("size-contains a pixel-width stretch-height chart", () => {
+      renderComponent({
+        widthConfig: { pixelWidth: 400 },
+        heightConfig: { useStretch: true },
+      })
+
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 450px;")
+    })
+
+    it("claims no fallback height inside a container with a definite height", () => {
+      const definiteHeightContext: IFlexContext = {
+        direction: Direction.VERTICAL,
+        isInHorizontalLayout: false,
+        isDirectlyInColumn: false,
+        isInRoot: false,
+        isInContentWidthContainer: false,
+        hasDefiniteHeight: true,
+      }
+      renderComponent(stretchConfigs, {}, definiteHeightContext)
+
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: none;")
+    })
+
+    it.each([
+      ["content height", { heightConfig: { useContent: true } }, {}],
+      ["fullscreen", stretchConfigs, { expanded: true }],
+    ])(
+      "does not size-contain the chart with %s",
+      (_label, props, contextValue) => {
+        renderComponent(
+          { widthConfig: { useStretch: true }, ...props },
+          contextValue
+        )
+
+        expect(screen.getByTestId("stPlotlyChart")).not.toHaveStyle(
+          "contain: size;"
+        )
+      }
+    )
   })
 
   describe("alt (accessible name)", () => {
