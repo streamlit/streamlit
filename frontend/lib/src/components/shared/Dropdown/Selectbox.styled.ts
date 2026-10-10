@@ -226,8 +226,8 @@ interface StyledListBoxItemProps {
  * `StyledItemHighlight` pill (via the `[data-item-hl]` attribute selector)
  * to match the rounded-pill style of the Multiselect dropdown.
  *
- * The `$isCreatable` variant adds a top separator line to visually separate
- * the "Add: …" option from the normal list.
+ * The `$isCreatable` variant adds a bottom separator under the leading
+ * "Add: …" row so it stays visually distinct from the matches below.
  */
 export const StyledListBoxItem = styled(ListBoxItem, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
@@ -253,15 +253,15 @@ export const StyledListBoxItem = styled(ListBoxItem, {
     color: theme.colors.fadedText40,
   },
   ...($isCreatable && {
-    "&::before": {
+    "&::after": {
       content: '""',
       position: "absolute",
-      top: 0,
+      bottom: 0,
       left: theme.sizes.tagMarginInsideBorder,
       right: theme.sizes.tagMarginInsideBorder,
       height: theme.sizes.borderWidth,
       backgroundColor: theme.colors.fadedText10,
-      transform: "translateY(-50%)",
+      transform: "translateY(50%)",
     },
   }),
 }))

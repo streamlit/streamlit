@@ -192,6 +192,13 @@ def test_handles_option_selection_via_typing(app: Page):
     # Click to open dropdown, then fill to filter by the desired option:
     selectbox_input.click()
     selectbox_input.fill("e2e/scripts/st_warning.py")
+    # Wait for the filter to settle before Enter (fill can race the React update).
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(
+        selection_dropdown.get_by_role(
+            "option", name="e2e/scripts/st_warning.py", exact=True
+        )
+    ).to_be_visible()
     selectbox_input.press("Enter")
 
     # Check that selection worked:
@@ -204,12 +211,27 @@ def test_shows_correct_options_via_fuzzy_search(
     """Test that the fuzzy matching of options via typing works correctly."""
     selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
 
-    # Click to open dropdown, then fill to filter:
+    # Click to open dropdown, then type to filter:
     selectbox_input.click()
-    selectbox_input.fill("exp")
+    selectbox_input.press_sequentially("exp")
 
-    # Check filtered options
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(1)
+    expect(options.first).to_have_text("e2e/scripts/st_expander.py")
+
+    # Typing alone must set aria-activedescendant on the Enter target (#16841).
+    # Assert without arrow keys so the check cannot pass via keyboard navigation.
+    expect(selectbox_input).to_have_attribute(
+        "aria-activedescendant", re.compile(r".+"), timeout=10000
+    )
+    active_id = selectbox_input.get_attribute("aria-activedescendant")
+    assert active_id is not None
+    expect(app.locator(f'[id="{active_id}"]')).to_have_text(
+        "e2e/scripts/st_expander.py"
+    )
+    expect(options.first).to_have_attribute("data-focused", "true")
+
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
 
@@ -615,13 +637,20 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     selectbox_input.click()
     expect(selectbox_input).to_be_focused()
 
-    # ArrowDown reliably opens the dropdown (backup for pointer-triggered open,
-    # matching select_selectbox_option) and highlights the first option.
+    # Backup open when click alone does not open the menu in CI. If the
+    # Enter-target sync has already focused the first option, this ArrowDown
+    # moves to the second option; wait for data-focused on the first row below.
     selectbox_input.press("ArrowDown")
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
+    # Re-anchor on the first option. ArrowDown before the sync lands focuses
+    # row 1; after it lands, the same key moves to row 2. React Aria does not
+    # wrap, so a few ArrowUps clamp at the first row either way.
+    for _ in range(3):
+        selectbox_input.press("ArrowUp")
+    expect(options.first).to_have_attribute("data-focused", "true")
 
     # Typing must NOT filter the list: character input is blocked, so all
     # options stay visible.
@@ -634,8 +663,9 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     # toHaveValue("")).
     expect(selectbox_input).to_have_value("")
 
-    # Keyboard navigation still selects: a second ArrowDown reaches "No" and
-    # Enter commits it, proving Arrow/Enter work after focusing via click.
+    # Wait until the Enter-target sync has focused the first option, then one
+    # ArrowDown moves to "No" and Enter commits it.
+    expect(options.first).to_have_attribute("data-focused", "true")
     selectbox_input.press("ArrowDown")
     selectbox_input.press("Enter")
     expect_markdown(app, "value 23: No")

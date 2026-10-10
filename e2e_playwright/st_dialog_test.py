@@ -30,6 +30,7 @@ from e2e_playwright.shared.app_utils import (
     get_button,
     get_color_picker,
     get_markdown,
+    get_selectbox,
     is_child_bounding_box_inside_parent,
     open_json_path_tooltip,
     select_selectbox_option,
@@ -267,6 +268,41 @@ def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
     wait_for_app_run(app)
 
     expect_markdown(dialog, "Tags Value: ['Utilities']")
+
+
+def test_dialog_keeps_tab_focus_with_open_select_menus(app: Page):
+    """Tab with an open selectbox/multiselect menu must stay inside the dialog.
+
+    Closing the menu on Tab must not stopPropagation, or React Aria FocusScope
+    containment would miss the key and focus could leave the dialog.
+    """
+    open_dialog_with_date_input(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    selectbox_input = get_selectbox(dialog, "Status").locator("input").first
+    selectbox_input.click()
+    selectbox_input.press("ArrowDown")
+    selectbox_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(selectbox_dropdown).to_be_visible()
+
+    selectbox_input.press("Tab")
+    expect(selectbox_dropdown).not_to_be_visible()
+    # Default "Draft" must not have been committed by Tab.
+    expect_markdown(dialog, "Status Value: Draft")
+    expect(dialog.get_by_role("combobox", name="Tags")).to_be_focused()
+
+    tags_input = dialog.get_by_role("combobox", name="Tags")
+    tags_input.press("ArrowDown")
+    multiselect_dropdown = app.get_by_test_id("stMultiSelectDropdown")
+    expect(multiselect_dropdown).to_be_visible()
+
+    tags_input.press("Tab")
+    expect(multiselect_dropdown).not_to_be_visible()
+    expect_markdown(dialog, "Tags Value: []")
+    # Tab must move focus past Tags while staying inside the dialog.
+    expect(tags_input).not_to_be_focused()
+    expect(dialog.locator(":focus")).to_be_visible()
 
 
 def test_dialog_allows_interacting_with_widget_in_popover(app: Page):
