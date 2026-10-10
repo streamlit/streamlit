@@ -467,7 +467,7 @@ describe("useDeckGl", () => {
   })
 
   describe("selection sanitization", () => {
-    it("keeps scalar update triggers of 0 and false when selection rewrites fill colors", () => {
+    it("keeps a false update trigger when selection rewrites fill colors", () => {
       const props = getUseDeckGlProps(
         {
           id: "test-element-id",
