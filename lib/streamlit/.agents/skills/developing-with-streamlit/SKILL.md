@@ -179,7 +179,7 @@ When creating a **new dashboard app**, prefer starting from a template in `asset
   - `dashboard-metrics` — KPI cards with time-series charts
   - `dashboard-companies` — company/entity comparison
   - `dashboard-compute` — resource/credit monitoring
-  - `dashboard-feature-usage` — feature adoption tracking
+  - `dashboard-feature-usage` — API endpoint usage analytics
   - `dashboard-seattle-weather` — public dataset exploration
   - `dashboard-stock-peers` — financial peer analysis
 - If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
