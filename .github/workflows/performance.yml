@@ -116,13 +116,13 @@ jobs:
       - name: Set MY_DATE_TIME env var
         run: echo "MY_DATE_TIME=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
       - name: Upload failed test results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: playwright_test_results_${{ needs.prepare.outputs.sha_short }}
           path: e2e_playwright/test-results
       - name: Upload Performance results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: performance_results_${{ env.MY_DATE_TIME }}
