@@ -626,7 +626,6 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
                 data["unavailable"] = "lazy_loading"
                 if payload.lazy_data.HasField("row_count"):
                     data["row_count"] = payload.lazy_data.row_count
-                data["preview"]["truncated"] = True
             return data
         return summarize_arrow(payload.arrow_data.data)
 
@@ -820,8 +819,9 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
 
     columns = arrow_columns(table)
     # `complete` is whether `preview.rows` is the whole dataset. It sits at
-    # the top of `data` because that is the first question a client asks.
-    # `truncated` is the inverse, for readers that look inside `preview`.
+    # the top of `data` because that is the first question a client asks, and
+    # it is the only flag: a second one inside `preview` would only ever be its
+    # inverse.
     complete = table.num_rows <= limit
     return {
         "columns": columns,
@@ -829,7 +829,6 @@ def summarize_arrow(arrow_bytes: bytes) -> dict[str, Any] | None:
         "column_count": len(columns),
         "complete": complete,
         "preview": {
-            "truncated": not complete,
             # Rows are values in `columns` order rather than objects, because
             # repeating the column names on every row is most of a preview's
             # size once it gets long. Types and nested cells survive, which a

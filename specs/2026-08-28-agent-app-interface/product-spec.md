@@ -468,7 +468,6 @@ right now. Naming follows the public API, for the reason above:
               "column_count": 2,
               "complete": true,
               "preview": {
-                "truncated": false,
                 "rows": [
                   ["2026-Q1", 284000],
                   ["2026-Q2", 301500],
@@ -764,9 +763,9 @@ dialog's part first.
 
 Two details about the overlay:
 
-- **The dialog node is the wrapper, not the fragment.** Its body is the child container,
-  so `fragment` appears on the contents. A client reads the scope from the node it intends
-  to act on.
+- **The dialog node is the wrapper, not the fragment.** Its own `fragment`, if any, is that
+  of the code that opened it; its body is the child container, which carries the
+  dialog's. A client reads the scope from the node it intends to act on.
 - **The overlay is addressable only when `on_dismiss` registered a widget for it**, and
   then firing it is how a client closes the dialog deliberately. With the default
   `on_dismiss="ignore"` nothing is registered, so the overlay carries no key rather than
@@ -812,7 +811,7 @@ without introducing a new authorization surface.
 
 | Output                         | v1 representation                                                                                                                                                                                                                                          |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, a bounded typed `preview` marked `truncated`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order rather than objects, since repeating the column names per row is most of a long preview's size. |
+| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, `complete`, a bounded typed `preview`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order rather than objects, since repeating the column names per row is most of a long preview's size. Values are the data as stored, not as displayed, and an unnamed pandas index stays a column even under `hide_index`, as a column `column_config` hides does. |
 | Lazy dataframe                 | The same shape, with the chunk already emitted as the preview, `complete: false`, and `unavailable: "lazy_loading"` in place of a `url`: serving the chunk would pass part of the table off as all of it. Fetching row ranges is a follow-up.                |
 | Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped and its base64 typed arrays expanded into numbers, and chart data under `data` exactly as a dataframe's.                                     |
 | Map                            | `st.map`'s plotted table under `data`, exactly as a dataframe's, without the Deck.gl specification generated from it. `st.pydeck_chart` reports its specification like any chart.                                                                          |

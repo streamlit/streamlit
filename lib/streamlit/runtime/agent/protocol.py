@@ -230,7 +230,9 @@ omitted rather than sent as null.
 
 Values are plain JSON, here and in table previews: dates, times, and datetimes \
 are ISO 8601 text, decimals are strings, durations are seconds, non-finite \
-numbers are `null`, and binary data is `{"bytes": <length>}`.
+numbers are `null`, and binary data is `{"bytes": <length>}`. Table values are \
+the data as stored, not as displayed: no `format` applied and no time zone \
+conversion, so a timestamp carries an offset only if the data has one.
 """
 
 _KEY_DESCRIPTION: Final = """\
@@ -949,9 +951,11 @@ def schemas() -> dict[str, Any]:
                         "regions rerun the whole app, which closes an open "
                         "dialog without running its contents, so a dialog's "
                         "keys must be sent on their own.\n\n"
-                        "A dialog node itself has no `fragment`: it is the "
-                        "overlay, and its body is the child container. Read "
-                        "the scope from the node you intend to act on."
+                        "A dialog node is the overlay, not the dialog's "
+                        "fragment: its own `fragment`, if any, is that of the "
+                        "code that opened it, and its contents carry the "
+                        "dialog's. Read the scope from the node you intend to "
+                        "act on."
                     ),
                 },
             },
@@ -975,8 +979,11 @@ def schemas() -> dict[str, Any]:
                     "type": "array",
                     "description": (
                         "Column names with their Arrow types (`int64`, "
-                        "`large_string`, `timestamp[ns]`), the schema of the "
-                        "bytes `url` serves."
+                        "`large_string`, `timestamp[ns, tz=UTC]`), the schema of "
+                        "the bytes `url` serves. An unnamed pandas index is a "
+                        "column named `__index_level_0__`, also when "
+                        "`hide_index` hides it in the browser, as a column "
+                        "`column_config` hides is still here."
                     ),
                     "items": {
                         "type": "object",
@@ -996,11 +1003,10 @@ def schemas() -> dict[str, Any]:
                 },
                 "preview": {
                     "type": "object",
+                    "description": (
+                        "The first rows. Whether more exist is `complete`."
+                    ),
                     "properties": {
-                        "truncated": {
-                            "type": "boolean",
-                            "description": "Whether rows exist beyond these.",
-                        },
                         "rows": {
                             "type": "array",
                             "items": {"type": "array"},
