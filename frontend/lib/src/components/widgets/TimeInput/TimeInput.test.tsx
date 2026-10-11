@@ -254,25 +254,45 @@ describe("TimeInput widget", () => {
 
   it("preserves pending edit when external value changes before blur", async () => {
     const user = userEvent.setup()
-    const props = getProps({ default: "12:45" })
-    const { rerender } = render(<TimeInput {...props} />)
-
-    // Type a new hour (not committed — deferred to blur)
-    const [hourSegment] = screen.getAllByRole("spinbutton")
-    await user.click(hourSegment)
-    await user.keyboard("1")
-    await user.keyboard("1")
-
-    // Simulate external value change (e.g. fragment rerun)
-    const updatedElement = TimeInputProto.create({
-      ...props.element,
-      default: "10:00",
-      value: "10:00",
+    // jsdom has no layout, so mock a width above the instructions breakpoint.
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
     })
-    rerender(<TimeInput {...props} element={updatedElement} />)
+    try {
+      const props = getProps({ default: "12:45" })
+      const { rerender } = render(<TimeInput {...props} />)
 
-    // Pending edit should be preserved, not overwritten by external update
-    expect(hourSegment).toHaveAttribute("aria-valuenow", "11")
+      // Type a new hour (not committed — deferred to blur)
+      const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+      await user.click(hourSegment)
+      await user.keyboard("1")
+      await user.keyboard("1")
+
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+        "Press Enter to apply"
+      )
+
+      // setValue is what makes useBasicWidgetState replace the committed value.
+      rerender(
+        <TimeInput
+          {...props}
+          element={TimeInputProto.create({
+            ...props.element,
+            setValue: true,
+            value: "10:00",
+          })}
+        />
+      )
+
+      expect(hourSegment).toHaveAttribute("aria-valuenow", "11")
+      expect(minuteSegment).toHaveAttribute("aria-valuenow", "45")
+      expect(screen.getByTestId("InputInstructions")).toHaveTextContent(
+        "Press Enter to apply"
+      )
+    } finally {
+      vi.restoreAllMocks()
+    }
   })
 
   it("snaps minute ArrowUp to next step boundary (on-step value)", async () => {

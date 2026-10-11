@@ -1114,10 +1114,9 @@ class TimeWidgetsMixin:
         element_id = compute_and_register_element_id(
             "time_input",
             user_key=key,
-            # Keyed widgets keep their id when `required` toggles, because that
-            # cannot make a stored time illegal. Only `step` stays in the keyed
-            # identity, because it changes the selection granularity.
-            # Unkeyed widgets hash `required` with the other parameters.
+            # `required` is hashed only for unkeyed widgets: toggling it cannot
+            # make a stored time illegal. `step` stays in the keyed identity
+            # because it changes which fields the widget edits.
             key_as_main_identity={"step"},
             dg=self.dg,
             label=label,

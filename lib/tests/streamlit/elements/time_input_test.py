@@ -79,7 +79,7 @@ class TimeInputTest(DeltaGeneratorTestCase):
             ("keyed", "time_input_key", True),
         ]
     )
-    def test_required_widget_id(
+    def test_required_changes_widget_id_only_without_key(
         self, _: str, key: str | None, expect_same_id: bool
     ) -> None:
         """Toggling required changes the widget id only when it has no key."""

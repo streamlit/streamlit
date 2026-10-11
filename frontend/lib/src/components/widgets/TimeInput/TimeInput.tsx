@@ -177,32 +177,47 @@ function TimeInput({
     setHasRequiredError(false)
   }
 
-  // Value that commitDisplayValue just wrote. A blocked required commit
-  // leaves this unset. Cleared after paint so a later session-state update
-  // is not mistaken for that commit.
+  // Separate this component's own commit from a later session-state update.
+  // commitDisplayValue records the value it wrote; a blocked required commit
+  // leaves the ref unset. The effect clears it after paint.
   const pendingUserCommitRef = useRef<string | null | undefined>(undefined)
   useEffect(() => {
     pendingUserCommitRef.current = undefined
   }, [value])
 
-  // Apply backend value changes to the display, including over a dirty empty
-  // edit. An unchanged value keeps that edit, so a blocked required commit
-  // stays empty when another widget reruns.
+  // Apply a new committed value to the display. Skip that when the user
+  // has a non-empty uncommitted edit, so a session-state or fragment update
+  // does not drop those keystrokes. Still apply it over a dirty empty
+  // display (a programmatic refill) and over this component's own commit.
+  // An unchanged value is left alone, so a blocked required clear stays
+  // empty when another widget reruns.
   const [prevValue, setPrevValue] = useState(value)
   if (prevValue !== value) {
     setPrevValue(value)
-    setDisplayValue(value)
     setValidationError(null)
     setPasteOverride(null)
-    // An in-form empty commit updates `value` in the same turn the submit
-    // validator paints the required error. Keep that error. Other value
-    // changes, including a programmatic None, clear it.
+
     const userCommittedThisValue = pendingUserCommitRef.current === value
-    if (
-      !(userCommittedThisValue && hasRequiredError && isNullOrUndefined(value))
-    ) {
-      setDirty(false)
-      setHasRequiredError(false)
+    const keepUncommittedEdit =
+      displayValue !== prevValue &&
+      !isNullOrUndefined(displayValue) &&
+      !userCommittedThisValue
+
+    if (!keepUncommittedEdit) {
+      setDisplayValue(value)
+      // An in-form empty commit updates `value` in the same turn the submit
+      // validator paints the required error. Keep that error. Other value
+      // changes, including a programmatic None, clear it.
+      if (
+        !(
+          userCommittedThisValue &&
+          hasRequiredError &&
+          isNullOrUndefined(value)
+        )
+      ) {
+        setDirty(false)
+        setHasRequiredError(false)
+      }
     }
   }
 
@@ -229,8 +244,8 @@ function TimeInput({
   const theme = useEmotionTheme()
   const { locale } = useContext(LibConfigContext)
   const step = element.step ? Number(element.step) : 900
-  // Keyboard emptying follows the default. The clear button is the explicit
-  // empty-commit control, so required hides only that button.
+  // The field can be emptied only when its default is empty. Required fields
+  // hide the clear button; users can still clear eligible fields with the keyboard.
   const allowEmptyDisplay = isNullOrUndefined(element.default) && !disabled
   const showClearButton = allowEmptyDisplay && !element.required
   const inForm = isInForm({ formId: element.formId })
@@ -314,9 +329,11 @@ function TimeInput({
    * Commits the display value on blur or Enter. Returns false when required
    * blocks an empty commit, so Enter does not submit the form.
    *
-   * - Unchanged display: no write, so an unedited blur does not rerun.
-   * - Dirty empty display that is already null: still commits so required paints.
-   * - Inside a form: stage the empty value and let the submit validator paint.
+   * - Clean, unchanged display: no write, so an unedited blur does not rerun.
+   * - Outside a form, a dirty empty display still runs the required check.
+   *   The check paints the error and keeps the last committed value.
+   * - Inside a form, an empty display is staged. The submit validator paints
+   *   the error.
    */
   const commitChangedDisplay = useCallback((): boolean => {
     const next = displayValueRef.current
@@ -391,14 +408,14 @@ function TimeInput({
     setDisplayValue(null)
     setPasteOverride(null)
     setValidationError(null)
-    // Already empty and optional: dismiss a paste error without writing null again.
-    if (!element.required && valueRef.current === null) {
+    // Already empty: dismiss a paste error without writing null again.
+    if (valueRef.current === null) {
       setDirty(false)
       setHasRequiredError(false)
       return
     }
-    commitDisplayValue(null, { skipRequired: inForm })
-  }, [commitDisplayValue, element.required, inForm])
+    commitDisplayValue(null)
+  }, [commitDisplayValue])
 
   const handlePaste = useCallback(
     (e: ClipboardEvent<HTMLDivElement>): void => {
@@ -698,7 +715,9 @@ function TimeInput({
    *
    * A dirty field commits first, and that commit does not skip required.
    * A clean empty required field paints the error without writing.
-   * A paste error blocks the click only when the field is clean.
+   * A visible paste error blocks submit. A submit-button click blurs
+   * first, which clears that error, so the click still submits the last
+   * committed value.
    */
   formSubmitValidatorRef.current = () => {
     if (dirtyRef.current) {
