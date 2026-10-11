@@ -667,44 +667,36 @@ stays usable, so an agent can correct its input and interact again.
 
 ### Actions in v1
 
-An element's `key` is the author's `key` when one was set, and otherwise Streamlit's
-internal element ID. That is deliberately the same addressing rule `st.session_state`
-uses, so `widget_state` reads like session state an agent already knows how to write, and
-it introduces no new identity scheme: the element ID is already unique, already registered
-during the run, and already the identity on `WidgetState.id`. The two forms cannot
-collide, because keys beginning with the element-ID prefix are reserved.
+How elements are addressed:
 
-**A client acts only on keys from the snapshot it just received.** That is the whole
-addressing contract, and it is what makes the rest safe: a generated element ID is an
-opaque, session-scoped handle whose string format is not public and may change, so nothing
-outside Streamlit should construct, parse, or persist one. Since every response is a fresh
-snapshot, a client never needs to.
+- **An element's `key` is the author's `key` when set, and otherwise Streamlit's element
+  ID.** That is the addressing rule `st.session_state` already uses, so `widget_state`
+  reads like session state and introduces no new identity scheme. The two forms cannot
+  collide, because keys beginning with the element-ID prefix are reserved.
+- **A client acts only on keys from the snapshot it just received.** A generated element
+  ID is an opaque, session-scoped handle whose format may change, so nothing outside
+  Streamlit should construct, parse, or persist one, and since every response is a fresh
+  snapshot, a client never needs to.
+- **An authored `key` adds durability for text a human writes.** `{"region": "Europe"}`
+  survives runs and releases and reads well in a PR, so authored keys are what make a
+  saved request or a verification script survive a redeploy. An agent driving an app
+  interactively needs nothing beyond the latest snapshot, and authoring guidance should
+  say so in those terms.
+- **Identity is not authorization.** Every request is validated so a stale, guessed, or
+  forged key cannot set a disabled widget or a control that no longer exists, and an
+  invalid request is rejected whole before anything is applied.
 
-An authored `key` adds one thing on top: durability for text a *human* writes. `{"region":
-"Europe"}` stays valid across runs and releases and is reviewable in a PR, where
-`{"$$ID-8f2c...-None": "Europe"}` is neither. So authored keys are what make a
-verification script or a saved request survive a redeploy, while an agent driving an app
-interactively needs nothing beyond the latest snapshot. Authoring guidance should say so
-in those terms, because it is the difference between the two use cases rather than a
-general prerequisite.
-
-Identity is not authorization. Every request is validated so that a stale, guessed, or
-forged key cannot set a disabled widget or a control that no longer exists, and
-validation rejects the whole request before anything is applied.
-
-**Validation is against the last snapshot, not against live widget state**, which is not
-the obvious implementation. `WidgetMetadata` survives a page switch and a collapsed
-conditional branch — only the *value* is cleaned up — so a validator built on the widget
-registry accepts a key for a control that is no longer on the page, runs the script,
-changes nothing, and returns `200`: a silent no-op that reads as success. The registry
-also does not record which `st.form` an element belongs to. The document the client was
-given has both facts, which is the deeper point: **the snapshot is the contract, so the
-snapshot is what a write is judged against.** The server keeps, per session, what each
-addressable element advertised — actionable, disabled, `support`, form, options, fragment,
-and whether it is in a dialog — and checks the next request against that, so rejections
-name the actual problem: `disabled_widget` for a disabled control, `unsupported_element`
-for one this interface cannot drive, including a keyed display element, and
-`not_on_page` only when the key really is absent.
+**Validation is against the last snapshot, not against live widget state.** The widget
+registry is the obvious choice but the wrong one: `WidgetMetadata` survives a page switch
+and a collapsed conditional branch, so a validator built on it accepts a key for a control
+that is no longer on the page, runs the script, changes nothing, and returns `200`. It
+also does not record which `st.form` an element belongs to. The snapshot has both facts,
+which is the deeper point: **the snapshot is the contract, so it is what a write is judged
+against.** The server keeps, per session, what each element advertised — actionable,
+disabled, `support`, form, options, fragment, and whether it is in a dialog — so a
+rejection names the actual problem: `disabled_widget` for a disabled control,
+`unsupported_element` for one this interface cannot drive, including a keyed display
+element, and `not_on_page` only when the key really is absent.
 
 **Widget constraints are a separate layer, and they belong to the widgets.** Whether a
 value is one of a selectbox's `options`, inside a slider's bounds, or a well-formed
@@ -744,45 +736,33 @@ A per-key note saying how each value landed is a potential follow-up.
 | Widget inside a fragment         | Interactive, and the rerun is **scoped to that fragment**, as in the browser. A batch spanning regions reruns the whole app, except that an open dialog's widgets are sent on their own. See below.                                                                                                                                                                                                                                                                                                                             |
 | Widget with `on_change="ignore"` | Interactive, like any other widget. The mode only tells the browser not to rerun on change; it carries no backend meaning, so the endpoint applies the value and reruns. An agent that wants browser-equivalent deferral batches the value with whatever trigger should cause the rerun.                                                                                                                                      |
 
-**Reruns are scoped the way the browser scopes them.** Acting on a widget inside an
-`st.fragment` reruns that fragment alone, which costs less per turn and is also the only
-way `st.dialog` works at all: a dialog body *is* a fragment, which is why a dialog
-survives interaction inside it and closes on a full rerun. The rule a client learns is
-therefore the browser's rule — finish inside a dialog before touching anything else,
-because anything else closes it. None of this needs new plumbing:
-`Delta.fragment_id` already tags every emitted delta with its owning fragment and
-`ClientState.fragment_id` already carries the scope into a rerun.
+**Reruns are scoped the way the browser scopes them.** None of this needs new plumbing:
+`Delta.fragment_id` already tags every delta with its fragment, and
+`ClientState.fragment_id` carries the scope into a rerun.
 
-A batch is the one thing a browser cannot produce — a person changes one widget at a
-time — so its scope needs a rule of its own. The wire carries one fragment id, so a batch
-confined to one fragment reruns that fragment, and a batch spanning several regions
-requests a normal full rerun, as a browser's would. The exception is an
-open dialog. A full rerun does not call the dialog function, so its widgets never
-render: a `Confirm` click sent with an outside filter would never be read, and the
-response would show a closed dialog that looks the same whether the confirm ran or not.
-Mixing a dialog's widgets with anything outside it is therefore `cross_dialog_batch`,
-rejected before anything runs, so the dialog stays open and the client sends the
-dialog's part first.
-
-Two details about the overlay:
-
+- **A widget inside an `st.fragment` reruns that fragment alone.** A dialog body is a
+  fragment, which is why a dialog survives interaction inside it and closes on a full
+  rerun. So the rule a client learns is the browser's: finish inside a dialog before
+  touching anything else.
+- **A batch, which a browser never sends, reruns one fragment only if all its keys share
+  it**, and requests a normal full rerun otherwise. The exception is an open dialog: a full
+  rerun does not call the dialog function, so a `Confirm` click sent together with an
+  outside filter would never be read, and the response would look the same whether it ran
+  or not. Mixing a dialog's widgets with anything outside it is `cross_dialog_batch`,
+  refused before anything runs.
 - **The dialog node is the wrapper, not the fragment.** Its own `fragment`, if any, is that
-  of the code that opened it; its body is the child container, which carries the
-  dialog's. A client reads the scope from the node it intends to act on.
+  of the code that opened it; its body, the child container, carries the dialog's. A
+  client reads the scope from the node it intends to act on.
 - **The overlay is addressable only when `on_dismiss` registered a widget for it**, and
-  then firing it is how a client closes the dialog deliberately. With the default
-  `on_dismiss="ignore"` nothing is registered, so the overlay carries no key rather than
-  one that resolves to nothing. Without a registered dismissal, closing is any full rerun,
-  including an empty interaction, which is heavier than clicking an X in a browser.
-
-**A scoped rerun still returns the whole page, with nothing marked stale.** The rest of
-the tree is as the last run left it, which is exactly where a browser is after the same
-interaction: keeping fragments coherent is the app's job, and `st.rerun("<key>")` is the
-supported way for one fragment to refresh another. A staleness signal would report on an
-app's internal coherence that no other client receives. Returning only the fragment's
-subtree would be worse: it pushes the delta merge onto every client and breaks `actions`,
-which a client needs whole to choose its next move. `observed_at` is when the snapshot was
-assembled, and nodes carry their `fragment`, so a client knows what a write will re-run.
+  firing it closes the dialog deliberately. With the default `on_dismiss="ignore"` the
+  overlay carries no key, and closing is any full rerun, such as an interaction with no
+  changes.
+- **A scoped rerun still returns the whole page, with nothing marked stale.** The rest of
+  the tree is as the last run left it, which is where a browser is too: keeping fragments
+  coherent is the app's job, and `st.rerun("<key>")` is how one fragment refreshes
+  another. Returning only the fragment's subtree would push the delta merge onto every
+  client and break `actions`. Nodes carry their `fragment`, so a client knows what a write
+  will rerun.
 
 **A headless client inherits the frontend's responsibilities.** Any behavior Streamlit
 implements in React rather than in Python is absent for a non-browser client unless the
@@ -822,88 +802,65 @@ without introducing a new authorization surface.
 | HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML is fully readable. A URL iframe reports its `src`; the page it embeds is not observed. |
 | Download                       | Label, `file_name`, `mime` when the author set it, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, and its click — a rerun or the `on_click` callback — is an ordinary trigger, unless `on_click="ignore"` makes it a no-op. Only deferred generation, which carries a file ID instead of a URL, is unsupported. |
 
-Arrow bytes are registered in the existing media-file storage and served from the
-existing `/media/...` endpoint, which is the agent-session half of
-[#16378](https://github.com/streamlit/streamlit/issues/16378). Images, media, and eager
-download buttons already have such a URL because the app registered it for the browser,
-so those are forwarded. Every one of these URLs is relative to the request that returned
-the snapshot, for the reason in [Enablement](#enablement).
+**`data.complete` is the field a client branches on, and it always resolves:**
 
-**Media URLs are fetch-now handles, not durable references.** A client fetches what it
-needs while working with the snapshot that produced the URL, and must not store, share, or
-re-resolve it later, because that is all the implementation promises. Media files are
-reference-counted against the sessions that render them and collected once nothing does,
-so a URL from an earlier snapshot may already be gone.
+- `complete: true`: the data here is everything.
+- `complete: false` with a `url`: the URL serves all of the element's data, never a chunk.
+- `complete: false` with `unavailable`: the data could not be served, and why.
 
-**They are protected exactly as the app's other media is, which is as bearer handles, not
-user authorization.** Anyone holding a URL can fetch the file while it resolves. A file
-ID is a content hash, so it is unguessable only to someone who does not already know the
-content, and it stops resolving once no session renders the element. That is the
-protection every image, video, and eager
-`st.download_button` has today — and a download button already serves arbitrary app data
-this way — so a table behind the same kind of URL is not a new class of exposure and needs
-no scheme of its own. Two properties hold for all media storage and are worth knowing
-rather than fixing here. Identical bytes share one URL across sessions, so an identical URL
-means identical content. And in an app with per-user data, a user who learns another
-user's URL can fetch it while it is still rendered. Either would be changed in media
-storage for every client, not in this interface ([open question 3](#open-questions)).
-
-Serving full data has a cost worth bounding, since media storage is in memory: v1
-externalizes each element's data up to `server.maxMessageSize` (200 MB by default) and
-marks anything larger unavailable on the node rather than registering it. That reuses
-the bound the app's own WebSocket messages have, so an agent is served no more than the
-app could send its browser, and an operator who raises the limit for large dataframes
-raises both. The session also keeps the page's messages between interactions, so a
-fragment rerun can return the whole page, which means it holds what the app last sent its
-client: a 50,000-row table is 1.7 MB per session. v1 bounds that with the same limit, the
-session cap, and the idle TTL. Keeping only the summary a snapshot reads would cut that
-table to 38 KB, and is a potential follow-up if profiling asks for it.
-
-Truncation is always explicit. **A preview must never look like the complete answer to
-an aggregate question.** Should a response budget be added
+It is about row count, not payload size: an eagerly sent 5,000-row table is incomplete
+because only its first 100 rows are inlined, so every truncated preview gets a URL,
+however small the table is in bytes. The cap is a row count set high enough that most
+filtered tables come back complete. **A preview must never look like the complete answer
+to an aggregate question**: should a response budget be added
 ([open question 6](#open-questions)), a document over it fails the request rather than
 being truncated silently.
 
-**`data.complete` is the field a client branches on, and it resolves three ways, never
-none.** Either the data here is everything (`complete: true`), or a `url` serves the rest,
-or an explicit `unavailable` says why the data could not be served. A `url` always serves
-all of the element's data, never a chunk, so a client that fetched it has everything the
-element shows. It is not a
-lazy-loading flag: an eagerly sent 5,000-row table is incomplete too, because only its
-first 100 rows are inlined. So every truncated preview gets a URL, however small the table
-is in bytes: whether a client needs one is a question about row count, not payload size.
-The only size limit is the ceiling above which the copy is refused and declared.
+Charts and maps:
 
-Two consequences of that framing are easy to get wrong:
-
-- **A chart that was given a specification rather than a dataframe is `complete`.**
-  `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification, so
-  there is no table to serve and a client should stop looking for one. Serving an
+- **A chart given a specification rather than a dataframe is `complete`.**
+  `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification,
+  so there is no table to serve and a client should stop looking for one. Plotly's theme
+  styling is about nine tenths of a small figure, so it is dropped and named in
+  `spec_omitted`; content a template adds, such as a "DRAFT" annotation, a shape, or an
+  image, is kept, since removing decoration must not remove meaning. Base64 typed arrays
+  (`bdata`), which a model cannot read, are expanded into numbers. Nothing that holds data
+  is dropped at any size: the traces are the figure's data, and serving a large
+  specification behind `data.url` is the answer open question 6 points to. Serving an
   ECharts `dataset.source` as Arrow, as `st.map` serves its table, is a potential
-  follow-up. This is different
-  from having no data contract at all. It does not mean the specification is worth its
-  weight: about nine tenths of a small Plotly figure is `layout.template`, the theme, and
-  a dashboard page of them reaches hundreds of kilobytes while answering nothing. Report
-  the figure with the theme's styling dropped and name what was dropped, so a trimmed
-  figure is distinguishable from one the app never configured. A template can also carry
-  content — an annotation such as "DRAFT", a shape, an image — and that is kept, since
-  removing decoration must not remove meaning. Plotly writes NumPy arrays as base64
-  typed arrays (`bdata`), which a model cannot read, so those are expanded into lists of
-  numbers: they are exactly the values that make the figure `complete`.
-
-  **Nothing that holds data is dropped, at any size.** The traces are the only part worth
-  reading, and a figure is large precisely because it plots a lot of points — the same
-  bytes the app already sends its own client. Whether large figures need a budget is
-  [open question 6](#open-questions), and the answer would be serving the specification
-  behind `data.url`, not truncating it.
+  follow-up.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
-  a Deck.gl layer, and an agent should not be mining coordinates out of layer JSON, so a
-  map's `data` is the columns it plots from the author's table, which is all its browser
-  receives, described like a dataframe's — columns,
-  preview, `complete`, and `url` — and the generated specification is left out.
+  a Deck.gl layer, so a map's `data` is the columns it plots from the author's table,
+  which is all its browser receives, described like a dataframe's, and the generated
+  specification is left out.
 
-The preview cap is a row count rather than a byte budget, set high enough — 100 rows —
-that most filtered tables come back complete and need no second request.
+`data.url` and media URLs:
+
+- **They reuse the app's media storage.** Arrow bytes are registered in the existing
+  media-file storage and served from the existing `/media/...` endpoint, the
+  agent-session half of [#16378](https://github.com/streamlit/streamlit/issues/16378).
+  Images, media, and eager downloads already have such a URL, which is forwarded. Every
+  one is relative to the request that returned the snapshot, for the reason in
+  [Enablement](#enablement).
+- **They are fetch-now handles, not durable references.** Media files are
+  reference-counted against the sessions that render them and collected once nothing
+  does, so a client fetches what it needs while working with the snapshot, and never
+  stores, shares, or re-resolves a URL.
+- **They are bearer handles, not user authorization**, exactly as every image, video, and
+  eager download is today, and a download button already serves arbitrary app data this
+  way, so a table behind one is not a new class of exposure. Anyone holding a URL can
+  fetch the file while it resolves; a file ID is a content hash, unguessable only to
+  someone who does not know the content. Identical bytes share one URL across sessions,
+  and in an app with per-user data, a user who learns another user's URL can fetch it
+  while it is rendered. Both belong to media storage for every client
+  ([open question 3](#open-questions)), not to this interface.
+- **They are bounded by `server.maxMessageSize`** (200 MB by default) per element, the
+  bound the app's own WebSocket messages have, so an agent is served no more than the app
+  could send its browser; anything larger is marked unavailable rather than registered.
+  The session also keeps the page's messages so a fragment rerun can return the whole
+  page: a 50,000-row table is 1.7 MB per session, bounded by the same limit, the session
+  cap, and the idle TTL. Keeping only the summaries a snapshot reads, 38 KB for that
+  table, is a potential follow-up if profiling asks for it.
 
 ### What v1 does not support
 
@@ -1008,61 +965,39 @@ One setting covers both `streamlit run app.py` and `st.App`, and respects
 `server.baseUrlPath`. There is no `st.App(agent=...)` object: whether non-browser clients
 can reach an app is a deployment property, not app behavior.
 
-**Discovery is part of the feature, not documentation around it.** The workflow people
-ask for is "point an agent at an app and ask it a question", which only works if fetching
-the app's URL says the interface exists. The served `index.html` is about 7 KB of module
-preloads whose only human-readable text is *"You need to enable JavaScript to run this
-app."* — the entire payload an HTML-to-text extraction keeps, and therefore the only place
-a naive fetch will look. It should also say that the app can be read and driven as JSON
-over HTTP, that this is the recommended way to use a Streamlit app without a browser, that
-scraping the page is pointless because it carries no app content, and where to start, with
-a machine-readable `<link rel="service-desc">`
-([RFC 8631](https://www.rfc-editor.org/rfc/rfc8631)) alongside.
+**Discovery is part of the feature, not documentation around it.** "Point an agent at an
+app and ask it a question" only works if fetching the app's URL says the interface exists.
+The served `index.html` carries no app content: its only readable text is *"You need to
+enable JavaScript to run this app."*, which is all an HTML-to-text extraction keeps. So it
+also says that the app can be read and driven as JSON over HTTP, that this is the
+recommended way to use it without a browser, and where to start, with a machine-readable
+`<link rel="service-desc">` ([RFC 8631](https://www.rfc-editor.org/rfc/rfc8631)).
 
-**The hint is unconditional and the endpoint answers.** Injecting it only when the API is
-enabled would mean rewriting a static file at serve time and would make the HTML's
-correctness depend on a runtime setting. Advertising always and answering dynamically is
-better on every axis: the HTML stays a plain cacheable file, enabling the API later needs
-no HTML change and no cache invalidation, and the link is never a dead end. That requires
-the schema route to be registered even when the API is off — otherwise the path falls
-through to the single-page-app fallback and returns *the app's own HTML with a `200`*,
-which is a failure that reads as success.
+- **The hint is unconditional, and the endpoint answers.** The HTML stays a plain,
+  cacheable file that needs no change when the API is turned on, and the link is never a
+  dead end: the schema route is registered even with the API off and reports `available`
+  or `disabled`, the disabled document omitting the exact Streamlit version. Without that
+  route, the path would fall through to the app's own HTML with a `200`, a failure that
+  reads as success.
+- **Discovery is not capability.** Most agent harnesses' web tools only send GET requests,
+  so an agent can find the protocol and still be unable to `POST` to it. That needs a
+  general HTTP tool, or the MCP endpoint in follow-up #6.
+- **Discovery is the one part that needs the hosting platform.** On Community Cloud the
+  public URL serves the platform's own page, the app's `index.html` sits behind `/~/+/`,
+  and the platform strips `Link: rel="service-desc"` headers, which is why the document is
+  self-describing rather than relying on the header. Until the platform carries the hint
+  or routes the agent paths to the app, discovery there works only for a client told the
+  prefix.
 
-The document says which state the app is in: `available`, or `disabled`, which tells an
-operator which setting to change. A disabled document is the one agent API response an
-app that never opted in serves, so it omits the exact Streamlit version.
-
-What this does *not* solve is worth stating: discovery is not capability. Most agent
-harnesses' web tools only issue GET requests, so an agent can find the protocol and still
-be unable to `POST` to it. Closing that gap needs a caller with a general HTTP tool, or
-the MCP endpoint in follow-up #6.
-
-**Discovery is the one part that needs the hosting platform.** On Community Cloud the
-public URL serves the platform's own page, and the app's `index.html`, with its hint,
-sits behind `/~/+/`. An agent that fetches the URL a person would share never sees the
-hint, and joining that origin with `/_stcore/agent/v1/...` reaches a login redirect.
-Community Cloud also strips `Link: rel="service-desc"` from responses, which is the
-argument for keeping the document self-describing rather than relying on the header.
-Until the platform carries the same hint and link on its page, or routes the agent paths
-from the public origin to the app, "point an agent at an app URL" works there only for a
-client told the prefix.
-
-**Every URL the API hands out is relative to the request that returned it, because a
-hosted app is not at the root a client would guess, and cannot always tell where it is.**
-Community Cloud strips its `/~/+/` prefix before forwarding and announces nothing, and
-terminates TLS without saying so: the app sees
-`http://example.streamlit.app/_stcore/...` for a request to
-`https://example.streamlit.app/~/+/_stcore/...`. Any URL built from what the app sees —
-absolute or root-relative — points at the platform instead of the app, and no forwarded
-header fixes a proxy that sends none.
-
-The one base that is always right is the URL the client called. So the OpenAPI `servers`
-entry is a relative reference such as `../../..`, resolved against the document's own
-URL, and every `data.url` and media URL in a snapshot is relative to the request that
-returned it, such as `../../../media/<id>`. Resolved with ordinary URL joining, they climb
-out of `_stcore/agent/v1/` to the app's root, whatever prefix sits in front of it and
-whether or not the app can see it. The MCP endpoint uses the same form, resolved against
-the MCP server's URL, and so do the `index.html` hint's links, resolved against the page.
+**Every URL the API hands out is relative to the request that returned it.** A hosted app
+cannot always tell where it is: Community Cloud strips its `/~/+/` prefix and terminates
+TLS without saying so, so the app sees `http://example.streamlit.app/_stcore/...` for a
+request to `https://example.streamlit.app/~/+/_stcore/...`, and any URL built from that
+points at the platform. The URL the client called is the one base that is always right.
+So the OpenAPI `servers` entry is `../../..`, resolved against the document's own URL, and
+every `data.url` and media URL is relative to the request, such as `../../../media/<id>`:
+ordinary URL joining climbs out of `_stcore/agent/v1/` to the app's root, whatever prefix
+sits in front. The MCP endpoint and the `index.html` links use the same form.
 
 **The intended end state is on by default, with a deployment or platform opt-out.** The
 governing invariant is that a caller gets **no more authority and no more information than
