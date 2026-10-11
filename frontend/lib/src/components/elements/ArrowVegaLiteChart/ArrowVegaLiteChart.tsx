@@ -304,8 +304,22 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // size them like a stretch-width chart inside a box of that width.
   const isContentWidthContained =
     useStretchHeight && !useStretchWidth && isSingleView
+  // Facet, repeat, and concat charts are not size-contained. Vega applies a
+  // container height to every child view, so a fallback box would reserve one
+  // panel and paint the rest over the elements that follow.
   const isSizeContained =
-    useStretchHeight && (useStretchWidth || isContentWidthContained)
+    useStretchHeight &&
+    isSingleView &&
+    (useStretchWidth || isContentWidthContained)
+  // A container height feeds back into a content-height row unless the chart
+  // is size-contained, already has a pixel height, or sits in a container
+  // with a definite height. Fullscreen measures its own frame.
+  const passesContainerHeight =
+    useStretchHeight &&
+    (isFullScreen ||
+      isSizeContained ||
+      !hasFallbackHeight ||
+      Boolean(heightConfig?.pixelHeight))
 
   // The dimensions to apply to the chart. Facet charts in fullscreen use
   // fullScreenWidth; outside fullscreen they use natural sizing (0). Non-facet
@@ -328,7 +342,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     isFullScreen && !hasNestedComp
       ? true
       : useStretchWidth || isContentWidthContained
-  const forceStretchHeight = isFullScreen ? true : useStretchHeight
+  const forceStretchHeight = isFullScreen || passesContainerHeight
 
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
@@ -570,7 +584,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
           : fullScreenHeight
       }
       useContainerWidth={isFullScreen ? true : useStretchWidth}
-      useContainerHeight={useStretchHeight}
+      useContainerHeight={passesContainerHeight}
     >
       <Toolbar
         target={StyledToolbarElementContainer}
@@ -617,7 +631,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         data-testid="stVegaLiteChart"
         className="stVegaLiteChart"
         useContainerWidth={useStretchWidth}
-        useContainerHeight={useStretchHeight}
+        useContainerHeight={passesContainerHeight}
         isSizeContained={isSizeContained}
         contentWidth={isContentWidthContained ? specWidth : undefined}
         hasFallbackHeight={hasFallbackHeight}

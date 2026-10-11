@@ -241,6 +241,34 @@ with st.container(horizontal=True, key="container-horizontal-stretch-plotly-fall
     st.plotly_chart(px.line(df, x="x", y="y"), height="stretch")
     st.button("Plotly neighbor")
 
+# A multi-view chart has no single height to fall back to. In a content-height
+# row it must stay empty instead of reserving one panel and painting the rest
+# over the elements below.
+_vconcat_spec = {
+    "vconcat": [
+        {
+            "mark": "bar",
+            "encoding": {
+                "x": {"field": "x", "type": "quantitative"},
+                "y": {"field": "y", "type": "quantitative"},
+            },
+        },
+        {
+            "mark": "line",
+            "encoding": {
+                "x": {"field": "x", "type": "quantitative"},
+                "y": {"field": "y", "type": "quantitative"},
+            },
+        },
+    ]
+}
+with st.container(horizontal=True, key="container-horizontal-stretch-composition"):
+    st.vega_lite_chart(df, _vconcat_spec, height="stretch")
+    st.button("Composition neighbor")
+
+with st.container(key="below-stretch-composition"):
+    st.markdown("Below the composition")
+
 # In a container with a definite height, stretch charts shrink to fit their
 # siblings instead of claiming their default height.
 with st.container(height=300, border=True, key="fixed-card-title-and-chart"):

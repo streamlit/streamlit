@@ -158,6 +158,30 @@ def test_stretch_chart_default_height_in_horizontal_container(app: Page):
     # of the tall card it rendered at.
     expect(shrink_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
 
+    # A vconcat chart has no single-view fallback. It must not reserve the
+    # default chart height or paint over the element below the row.
+    composition_row = get_element_by_key(
+        app, "container-horizontal-stretch-composition"
+    )
+    composition_chart = composition_row.get_by_test_id("stVegaLiteChart")
+    below_composition = get_element_by_key(app, "below-stretch-composition")
+    expect(composition_chart).not_to_have_css("contain", "size")
+
+    def _composition_stays_in_row() -> bool:
+        chart_height = _height(composition_chart)
+        row_box = composition_row.bounding_box()
+        below_box = below_composition.bounding_box()
+        return (
+            chart_height is not None
+            and chart_height < DEFAULT_CHART_HEIGHT_PX
+            and row_box is not None
+            and below_box is not None
+            and below_box["y"] + 1 >= row_box["y"] + row_box["height"]
+        )
+
+    wait_until(app, _composition_stays_in_row)
+    expect(composition_chart.locator("canvas, svg")).to_have_count(0)
+
 
 def _content_fits(locator: Locator) -> bool:
     """Whether the element's content fits without overflowing it."""
