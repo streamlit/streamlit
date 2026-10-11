@@ -111,9 +111,11 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
         Parameters
         ----------
-        params: mapping or iterable of pairs
-            Query parameters to merge into the current values.
-        **kwds: str or iterable of str
+        params : mapping or iterable of pairs
+            Query parameters to merge into the current values. Values are
+            strings, or iterables of strings for repeated keys. If omitted
+            (default), only the keyword arguments are applied.
+        **kwds : str or iterable of str
             Additional query parameters, passed as keyword arguments.
 
         Examples
@@ -214,7 +216,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
         Parameters
         ----------
-        params: mapping or iterable of pairs
+        params : mapping or iterable of pairs
             Query parameters that replace the current values. Values are
             strings, or iterables of strings for repeated keys.
 

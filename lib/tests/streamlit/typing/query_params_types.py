@@ -133,8 +133,9 @@ if TYPE_CHECKING:
     # Invalid usages - should NOT type check
     # =====================================================================
 
-    # These values are outside the public contract: strings, or iterables of
-    # strings for repeated keys. The runtime still stringifies some of them.
+    # The public write contract accepts only strings or iterables of strings;
+    # runtime coercion keeps some other values working for backwards
+    # compatibility.
     st.query_params.get_all(1)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     st.query_params["count"] = 1  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
     st.query_params.count = 1  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
