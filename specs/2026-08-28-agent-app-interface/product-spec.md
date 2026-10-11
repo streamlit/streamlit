@@ -731,7 +731,7 @@ is reset to the default, a fraction sent to an integer input is truncated, and t
 `max_chars` is cut. A reversed slider range and a date range of any length are stored as
 sent, so a client sends two values, lowest first.
 [Potential follow-ups](potential-follow-ups.md) ranks the validations by how much apps
-rely on them.
+rely on them, and proposes a per-key note saying how each value landed.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -878,7 +878,9 @@ Two consequences of that framing are easy to get wrong:
 
 - **A chart that was given a specification rather than a dataframe is `complete`.**
   `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification, so
-  there is no table to serve and a client should stop looking for one. This is different
+  there is no table to serve and a client should stop looking for one. Serving an
+  ECharts `dataset.source` as Arrow, as `st.map` serves its table, is a
+  [potential follow-up](potential-follow-ups.md#side-load-echarts-datasets-as-arrow). This is different
   from having no data contract at all. It does not mean the specification is worth its
   weight: about nine tenths of a small Plotly figure is `layout.template`, the theme, and
   a dashboard page of them reaches hundreds of kilobytes while answering nothing. Report
@@ -1159,13 +1161,35 @@ The cost is honest: the description lives next to each command instead of in one
 adding a command or a parameter means adding a line there. The coverage test in
 [Success criteria](#success-criteria) fails when that line is missing. In exchange, the
 description reads like the command's own signature and stays next to the code that would
-change it.
+change it. Generating the names from `gather_metrics`, which already wraps every command,
+is a [potential follow-up](potential-follow-ups.md#generate-descriptions-at-the-public-api-boundary)
+if hand-written descriptions drift despite the test.
 
 ## Follow-ups
 
 Each of these is additive to the v1 contract and independently shippable. They are
 ordered roughly by expected value. Smaller implementation follow-ups and alternatives
-considered while building the prototype are in [potential-follow-ups.md](potential-follow-ups.md).
+considered while building the prototype are in [potential-follow-ups.md](potential-follow-ups.md),
+each with what would make it worth doing:
+
+- Generating descriptions at the public API boundary instead of per command.
+- Widget constraints checked server-side
+  ([#16203](https://github.com/streamlit/streamlit/issues/16203)), ranked by how much
+  apps rely on each.
+- Keeping only summaries in the session's message buffer.
+- One headless client shared by `AppTest` and this interface.
+- More of the browser's form and URL behavior: applying `clear_on_submit` and rewriting
+  bound parameters (part of follow-up #8).
+- A browser-versus-agent fidelity harness.
+- Building the snapshot's values on the script thread.
+- Running queries over a large table on the server instead of paging it to the model.
+- Serving ECharts datasets as Arrow, and recommending dataframe-backed charts for apps
+  agents read.
+- A per-key note on how each sent value landed.
+- A non-executing read of the last snapshot (part of follow-up #4).
+
+Settling on the script runner's shutdown instead of the 50 ms quiet period is also
+listed there, and the [implementation plan](implementation-plan.md) does it for v1.
 
 1. **On by default.** A credential flow that maps an `st.login` user to an agent, the
    response and rate budgets and per-caller quotas that make bulk access and request
@@ -1280,7 +1304,9 @@ agent access alone.
   numbers, ranges, nulls, and object-valued options, each with a codec test fixture,
   including options that share a label.
 - Every advertised interaction runs through Streamlit's production execution path, and
-  conformance tests show it matches an equivalent browser session on callback order,
+  conformance tests, such as the
+  [fidelity harness](potential-follow-ups.md#browser-versus-agent-fidelity-harness),
+  show it matches an equivalent browser session on callback order,
   resulting widget value, and emitted output, outside the deviations
   [What v1 does not support](#what-v1-does-not-support) lists.
 - Whatever the snapshot reports as the value of an element in `actions` can be sent
