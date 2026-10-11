@@ -107,9 +107,9 @@ stays current until you act.
 element's `type` is the Streamlit command that produced it, and its `props` \
 are that command's parameters, so the Streamlit API reference documents them; \
 a widget's current value is `value`, beside `props`. A table or chart carries \
-`data` with a preview: read the rest at `data.url`, and any image, PDF, or \
-download, with the `get_data` tool, before your next `interact` call replaces \
-the result.
+`data` with a preview, and `complete: false` means there is more: read it at \
+`data.url`, and any image, PDF, or download, with the `get_data` tool, before \
+your next `interact` call replaces the result.
 
 **Fields worth a note.**
 - `status` is `ready`, or `error` when the app raised; the tree then stops at \
