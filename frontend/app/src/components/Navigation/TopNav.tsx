@@ -162,14 +162,16 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   )
 
   return (
-    <Overflow<OverflowNavItem>
-      component={StyledOverflowContainer}
-      itemKey={itemKey}
-      data={data}
-      maxCount={"responsive"}
-      renderItem={renderItem}
-      renderRest={renderRest}
-    />
+    <nav aria-label="App pages" data-testid="stTopNav">
+      <Overflow<OverflowNavItem>
+        component={StyledOverflowContainer}
+        itemKey={itemKey}
+        data={data}
+        maxCount={"responsive"}
+        renderItem={renderItem}
+        renderRest={renderRest}
+      />
+    </nav>
   )
 }
 

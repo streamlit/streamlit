@@ -46,6 +46,33 @@ def test_sidebar_navigation_mode_shows_sidebar_nav_only(app: Page) -> None:
     expect(app.get_by_test_id("stTopNavLink")).not_to_be_visible()
 
 
+def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
+    """Shell exposes main/nav landmarks and a skip link into main (WCAG 2.4.1)."""
+    main = app.get_by_role("main")
+    expect(main).to_be_attached()
+    expect(main).to_have_attribute("id", "stMain")
+
+    expect(app.get_by_role("navigation", name="App pages")).to_be_visible()
+    # Top nav landmark is absent in sidebar mode.
+    expect(app.get_by_test_id("stTopNav")).not_to_be_attached()
+
+    skip_link = app.get_by_role("link", name="Skip to main content")
+    expect(skip_link).to_be_attached()
+    expect(skip_link).to_have_attribute("href", "#stMain")
+
+    # From a cleared focus state, the first Tab should land on the skip link.
+    app.evaluate(
+        "() => document.activeElement instanceof HTMLElement && document.activeElement.blur()"
+    )
+    app.keyboard.press("Tab")
+    expect(skip_link).to_be_focused()
+
+    app.keyboard.press("Enter")
+    expect(main).to_be_focused()
+    # Keyboard focus on the main scroll region must show a visible ring (#17338).
+    expect(main).not_to_have_css("box-shadow", "none")
+
+
 def test_top_navigation_mode_shows_top_nav_only(app: Page) -> None:
     """Top position: top navigation is visible, sidebar navigation is hidden."""
     # Switch navigation position to top.

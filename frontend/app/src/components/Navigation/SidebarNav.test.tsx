@@ -209,6 +209,13 @@ describe("SidebarNav", () => {
     expect(screen.getByText("my other page")).toBeInTheDocument()
   })
 
+  it("exposes a named navigation landmark", () => {
+    renderSidebarNav()
+
+    const nav = screen.getByRole("navigation", { name: "App pages" })
+    expect(nav).toHaveAttribute("data-testid", "stSidebarNav")
+  })
+
   describe("page links", () => {
     const { location: originalLocation } = window
 

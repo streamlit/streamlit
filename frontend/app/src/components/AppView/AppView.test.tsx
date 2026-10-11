@@ -189,6 +189,20 @@ describe("AppView element", () => {
     expect(appViewContainer).toHaveClass("stAppViewContainer")
   })
 
+  it("exposes a main landmark targeted by the skip link", () => {
+    render(<AppView {...getProps()} />)
+
+    const main = screen.getByRole("main")
+    expect(main).toHaveAttribute("id", "stMain")
+    expect(main).toHaveAttribute("data-testid", "stMain")
+
+    const skipLink = screen.getByRole("link", { name: "Skip to main content" })
+    expect(skipLink).toHaveAttribute("href", "#stMain")
+    expect(skipLink).toHaveAttribute("data-testid", "stSkipToContent")
+    // Skip link is the first focusable control in the app shell.
+    expect(screen.getByTestId("stAppViewContainer").firstChild).toBe(skipLink)
+  })
+
   it("renders the toast container when toasts are present", () => {
     render(<AppView {...getProps()} />)
 

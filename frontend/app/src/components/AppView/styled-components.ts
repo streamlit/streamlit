@@ -40,12 +40,60 @@ export const StyledAppViewContainer = styled.div({
   },
 })
 
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values --
+ * Visually-hidden until :focus-visible uses the standard clip pattern
+ * (hardcoded px values required). Focused styles use theme tokens.
+ */
+/**
+ * Visually hidden until keyboard focus, then shown above app chrome so users
+ * can bypass repeated header/sidebar controls (WCAG 2.4.1).
+ */
+export const StyledSkipToContentLink = styled.a(({ theme }) => ({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+
+  "&:focus-visible": {
+    position: "fixed",
+    top: theme.spacing.sm,
+    left: theme.spacing.sm,
+    width: "auto",
+    height: "auto",
+    margin: 0,
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    overflow: "visible",
+    clip: "auto",
+    whiteSpace: "normal",
+    zIndex: theme.zIndices.popup,
+    backgroundColor: theme.colors.bgColor,
+    color: theme.colors.bodyText,
+    borderRadius: theme.radii.default,
+    textDecoration: "none",
+    fontSize: theme.fontSizes.sm,
+    fontWeight: theme.fontWeights.bold,
+    fontFamily: theme.genericFonts.bodyFont,
+    outline: "none",
+    boxShadow: theme.shadows.focusRing,
+  },
+
+  "@media print": {
+    display: "none",
+  },
+}))
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
+
 interface StyledAppViewMainProps {
   isEmbedded: boolean
   disableScrolling: boolean
 }
 
-export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
+export const StyledAppViewMain = styled.main<StyledAppViewMainProps>(
   ({ disableScrolling, theme }) => ({
     display: "flex",
     flexDirection: "column",
@@ -56,6 +104,13 @@ export const StyledAppViewMain = styled.section<StyledAppViewMainProps>(
 
     "&:focus": {
       outline: "none",
+    },
+
+    // Inset so the ring stays visible inside the overflow:hidden app shell
+    // (same muted token as other app chrome: MainMenu, top nav, etc.).
+    "&:focus-visible": {
+      outline: "none",
+      boxShadow: `inset ${theme.shadows.focusRingMuted}`,
     },
 
     // Added so sidebar overlays main app content on
