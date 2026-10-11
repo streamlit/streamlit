@@ -242,68 +242,57 @@ Later calls reference keys from the snapshot they just read:
 | `query_params` | Optional replacement mapping of name → list of strings; omission preserves. A widget bound to a parameter keeps its value for the session, so `{}` clears only the unbound ones, and a parameter cannot move it back to its default; see [The snapshot](#the-snapshot).    |
 | `context`      | Optional `timezone` and `locale`, read by the app as `st.context`. What a browser reports about itself without authentication, so accepting it grants nothing. Held for the session; omission preserves, and a new one replaces it. |
 
-The request blocks until the run chain settles, then returns the snapshot. An accepted
-interaction may cause more than one script run through callbacks, `st.rerun()`, or a page
-redirect; "one interaction" means one client submission, not one execution. What comes
-back is the end state, so output a browser shows only while a run is in progress — a
-spinner, `st.write_stream` arriving chunk by chunk — never appears, while a toast the run
-raised does, even though a browser hides it after a few seconds.
+**The request blocks until the app settles, and returns its end state.** One interaction
+is one client submission, which can cause several script runs through callbacks,
+`st.rerun()`, or a page redirect. The response shows the state once they finish, so
+output a browser shows only mid-run, such as a spinner or `st.write_stream` arriving
+chunk by chunk, never appears, while a toast the run raised does.
 
-**A run that outlasts `server.agentRunTimeout` keeps going, and a retry collects it.** The
-request returns `202 Accepted` with `run_timed_out`, and nothing is lost: the same request
-again, or an empty one with only `session_id`, waits for that run instead of starting
-another, or returns its result at once if it has finished. The obvious behavior is a trap:
-a retry that starts a new run interrupts the one doing the work, so a script whose
-uncached first load always outlasts the timeout could never finish, and a retried click
-would fire twice. With collection, a slow run completes over several retries, each within
-the client's own timeout, and a trigger fires once. A result is collected once; after
-that the same request is a new interaction. A different request while the run is still
-going gets `session_busy`, where a browser interaction would interrupt the run: replacing
-a run whose result the client may still come back for is where the hard cases are, so v1
-has the client collect it first.
+**A slow run is collected, not restarted.** If the run outlasts `server.agentRunTimeout`,
+the request returns `202 Accepted` with `run_timed_out`, and the run keeps going.
+Restarting it on retry would be a trap: a script whose uncached first load always
+outlasts the timeout could never finish, and a retried click would fire twice. What a
+request gets depends on the session's state:
 
-**A client that gives up first is treated as timed out.** A client's own timeout can be
-shorter than the server's, and then the server is still waiting on a request nobody
-will read when the retry arrives: the retry would be told the session is busy until the
-server's timeout passed. So a request whose client disconnects stops waiting at once and
-leaves the run collectable, exactly as a `202` would. That only works when the
-disconnect reaches the server, and a proxy that keeps the upstream connection open hides
-it. So the run timeout should stay below the timeouts of the clients a deployment
-expects: then a `202` always arrives first, with or without a proxy.
+| Session state                                | The same request, or only `session_id` | Any other request                           |
+| -------------------------------------------- | -------------------------------------- | ------------------------------------------- |
+| Idle                                         | Runs                                   | Runs                                        |
+| Serving a request                            | `session_busy`                         | `session_busy`                              |
+| Running a timed-out interaction              | Waits for it and returns its result    | `session_busy`                              |
+| Holding a timed-out interaction's result     | Returns that result at once            | Discards it and runs as a new interaction   |
 
-That makes four session states: idle; serving a request; running a timed-out interaction
-that no request is waiting on, which a retry collects and any other request finds busy;
-and holding the finished result of one, which a retry collects and any other request
-discards by starting a new interaction. The guarantee is narrower than retry idempotency:
-it covers a `202` the client received. A lost final response, or a lost response to a
-creating call, leaves nothing to collect, so a retry is a new interaction and can repeat
-its side effects. Retry idempotency in general is the `request_id` of follow-up #4.
+A result is collected once; after that, the same request is a new interaction. A client
+that disconnects while waiting is treated as timed out, so its retry collects the run
+too. Where a browser interaction would interrupt a running run, v1 answers
+`session_busy`, because the client may still come back for the result.
 
-Collection belongs to the session, not to a client: whichever request asks first gets
-the result. A session is meant for one client's sequence of interactions, and the rules
-keep two clients that share one from interfering more than that. A request never
-interrupts another that is still waiting; it gets `session_busy`. Letting a retry take
-over a wait still in flight would cover the proxy case above without a short timeout,
-but a second client could then cut off the first mid-wait, so v1 does not.
+The limits of that guarantee:
 
-It is a 202 rather than a 504 because the request was accepted and its run is still
-going, and because gateways and HTTP client libraries retry 502–504 on their own. A
-retried creating call starts another session and another full run, drops the
-`session_id` the first response carried, and on a slow page adds to the load that caused
-the timeout.
+- **It covers a `202` the client received.** A lost final response, or a lost response to
+  a creating call, leaves nothing to collect, so a retry is a new interaction and can
+  repeat side effects. General retry idempotency is the `request_id` of follow-up #4.
+- **A disconnect only helps if it reaches the server**, and a proxy that keeps the
+  upstream connection open hides it. So the run timeout should stay below the timeouts
+  of the clients a deployment expects; then the `202` always arrives first.
+- **Collection belongs to the session**: whichever request asks first gets the result. A
+  session is meant for one client, and a request never interrupts another that is still
+  waiting. Letting a retry take over a wait in flight would cover the proxy case without
+  a short timeout, but a second client could then cut off the first, so v1 does not.
 
-Sessions are reclaimed after `server.agentSessionTTL` of inactivity, so there is nothing
-to close. A client should still reuse one: every creating call runs the app from the start
-and holds a session until it idles out, so a client that creates one per request multiplies
-the server's work and memory by the number of requests it makes.
+**Why `202`, not `504`:** the request was accepted and its run is still going, and
+gateways and HTTP client libraries retry 502–504 on their own. A retried creating call
+would start another session and another full run, and drop the `session_id` the first
+response carried.
 
-There is no separate read or delete route in v1: **an `interact` with no changes is an
-explicit rerun, not a read**, apart from collecting a timed-out run. It executes the
-script again and can repeat side effects exactly as any other Streamlit rerun does. A
-client rarely needs a read, because nothing changes an agent session between
-interactions — `run_every` timers belong to the browser, and no other client shares the
-session — so the last snapshot stays current until the client acts. A non-executing read
-arrives with the polling work in follow-up #4.
+**Sessions are reclaimed after `server.agentSessionTTL` of inactivity**, so there is
+nothing to close. A client should still reuse one: every creating call runs the app from
+the start and holds a session until it idles out.
+
+**There is no read or delete route.** An `interact` with no changes is an explicit rerun,
+apart from collecting a timed-out run, and can repeat side effects like any rerun. A
+client rarely needs a read: nothing changes an agent session between interactions, since
+`run_every` timers belong to the browser and no other client shares the session, so the
+last snapshot stays current. A non-executing read arrives with follow-up #4.
 
 **An agent session is an ordinary Streamlit session with a different client.** The
 runtime treats it as one more browser tab, which settles what it shares and what it does
