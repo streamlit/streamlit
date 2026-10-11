@@ -1,10 +1,10 @@
 # Creating Streamlit themes
 
-Build brand-aligned themes with `.streamlit/config.toml`. Prefer config (and optional shared `theme.base` files) over CLI/env for persistent branding, and over CSS unless the user explicitly asks for CSS.
+Configure themes in `.streamlit/config.toml`, optionally sharing a `theme.base` file across apps. Use CLI flags or env vars only for temporary overrides, and use CSS only when the user explicitly asks for it.
 
 Use `streamlit config show` for the full option list and descriptions. Do not invent option names.
 
-Theme options can't be changed from the script (`st.set_option` rejects them). Set them in TOML, flags, or env vars. TOML edits apply on the next rerun, except `fontFaces`, which needs a restart.
+Theme options can't be changed from the script (`st.set_option` rejects them). Set them in TOML, flags, or env vars. TOML edits—including `fontFaces`—apply on the next rerun. Restart the server when you newly enable `[server] enableStaticServing` so static font routes register.
 
 ## Choose a config shape
 
@@ -69,7 +69,7 @@ Most other theme keys may be set in any of the six sections:
 5. Global `~/.streamlit/config.toml`
 6. Built-in defaults
 
-Values already set in config, environment variables, or CLI flags override a `theme.base` file or URL. Keys the file leaves unset still use the built-in light or dark theme. General precedence is in `cli.md`.
+Values already set in config, environment variables, or CLI flags override a `theme.base` file or URL. Keys that file leaves unset fall back to the built-in light or dark theme. General precedence is in `cli.md`.
 
 ### CLI and env naming
 
@@ -97,7 +97,11 @@ Dark mode uses `[theme.dark]` / `[theme.dark.sidebar]` the same way.
 
 Unset sidebar `backgroundColor` falls back to the resolved main `secondaryBackgroundColor`, and unset sidebar `secondaryBackgroundColor` falls back to the main `backgroundColor` (they swap). Leave both unset to keep that swap. Set both explicitly only when the sidebar should use the main pairing or another custom pair.
 
-**Sidebar headings:** `headingFontSizes` start from the sidebar defaults unless a sidebar section sets them. `headingFontWeights` follow the normal merge (resolved main, then sidebar sections). `[theme]`-only keys are never read from nested tables.
+**Sidebar headings:**
+
+- `headingFontSizes` start from the sidebar defaults unless a sidebar section sets them.
+- `headingFontWeights` follow the normal merge (resolved main, then sidebar sections).
+- `[theme]`-only keys are never read from nested tables.
 
 ### Appearance toggle rules
 
@@ -112,7 +116,7 @@ Host one brand file (path or URL). Each app points `theme.base` at it and overri
 
 Use approved HTTPS sources for remote `theme.base` and Google Fonts URLs; self-host the theme file or fonts when external disclosure or availability matters.
 
-**`brand-theme.toml`** — root `[theme]` holds the light look; `[theme.dark]` overrides it for dark mode:
+**`brand-theme.toml`** — `[theme]` is the shared layer and supplies the light colors; `[theme.dark]` overrides those keys in dark mode. A key set only on `[theme]` still applies in dark mode:
 
 ```toml
 [theme]
@@ -146,10 +150,13 @@ textColor = "#e5e7eb"
 # Relative to the directory where you run `streamlit run`, not to config.toml.
 base = "shared/brand-theme.toml"
 # Or: base = "https://example.com/brand-theme.toml"
-primaryColor = "#0969da"   # app-only override
+primaryColor = "#0969da"   # Light mode only; the file's [theme.dark] still wins in dark mode
+
+[theme.dark]
+primaryColor = "#1f6feb"   # Override dark mode separately
 ```
 
-Shared-file rules: may include all valid theme sections; if it sets `base`, that value must be `"light"` or `"dark"` (no file chains; omitted `base` defaults to light); app/env/CLI override the file. For a single machine only, `~/.streamlit/config.toml` also works; prefer `theme.base` when apps are deployed separately.
+A shared file may use all valid theme sections. App config, environment variables, and CLI flags override it. For a single machine, `~/.streamlit/config.toml` also works; prefer `theme.base` when apps are deployed separately.
 
 ## Options agents often miss
 
@@ -236,7 +243,7 @@ font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:w
 
 ### Self-hosting custom fonts
 
-Place files under `static/`, enable `[server] enableStaticServing = true`, and declare `[[theme.fontFaces]]` (`family`, `url`, optional `weight` / `style` / `unicodeRange`). Restart required after `fontFaces` changes.
+Place files under `static/`, enable `[server] enableStaticServing = true`, and declare `[[theme.fontFaces]]` (`family`, `url`, optional `weight` / `style` / `unicodeRange`). Restart only when you newly enable static serving so routes register; `fontFaces` edits apply on the next rerun.
 
 ```toml
 [[theme.fontFaces]]
@@ -260,7 +267,7 @@ codeFontSize = "0.875rem"
 codeFontWeight = 400
 headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "12px"]
 headingFontWeights = [600, 600, 600, 500, 500, 500]
-metricValueFontSize = "2.25rem"    # string with px/rem (unitless string = px); [theme]-only
+metricValueFontSize = "2.25rem"    # quoted px/rem string; unquoted numbers are ignored; a unitless numeric string is pixels; [theme]-only
 metricValueFontWeight = 700        # unset → inherit from parent; [theme]-only
 linkUnderline = false
 ```
@@ -299,18 +306,13 @@ When the sidebar contrast differs from main, set a full color set (`textColor`, 
 
 ## Light and dark modes
 
-| Goal | Config |
-|------|--------|
-| Locked single look | `[theme]` only |
-| Toggle + control both | `[theme]` + `[theme.light]` + `[theme.dark]` |
-| Tweak one mode | `[theme]` + only `[theme.dark]` (or only light) |
-| Sidebars per mode | Add `[theme.*.sidebar]` |
+See [Choose a config shape](#choose-a-config-shape) for locked vs toggle layouts. Add `[theme.*.sidebar]` when sidebars should differ per mode.
 
-`base` is `[theme]`-only. In dual mode, each variant starts from its matching built-in theme (`[theme] base` does not pick the built-in for light vs dark); `[theme]` color keys still apply to both.
+`base` is `[theme]`-only. Dual mode uses the merge order above: each variant starts from its matching built-in theme, and `[theme]` color keys still apply to both.
 
 **Per mode, set at least:** `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `primaryColor` (contrast with white button text), `borderColor`, and chart palettes if you use charts.
 
-**Runtime:** `st.context.theme.type` is `"light"` or `"dark"`—use for logos or third-party pieces that ignore theme tokens; keep colors/fonts in config. The value is inferred from the painted background and can be wrong on the first run of a session and immediately after a Settings appearance change until the next rerun.
+**Runtime:** `st.context.theme.type` is `"light"` or `"dark"`—use for logos or third-party pieces that ignore theme tokens; keep colors/fonts in config. The value comes from the active theme's background color (CSS does not change it) and can be wrong on the first run of a session and right after a Settings appearance change, until the next rerun.
 
 ```python
 if st.context.theme.type == "dark":
@@ -346,12 +348,13 @@ codeBackgroundColor = "#f6f8fa"
 chartCategoricalColors = ["#0969da", "#1a7f37", "#bf3989", "#8250df", "#cf222e", "#bf8700", "#57606a"]
 
 [theme.dark]
-primaryColor = "#58a6ff"
+primaryColor = "#1f6feb"
 backgroundColor = "#0d1117"
 secondaryBackgroundColor = "#161b22"
 textColor = "#e6edf3"
 borderColor = "#30363d"
 codeBackgroundColor = "#161b22"
+linkColor = "#58a6ff"
 chartCategoricalColors = ["#58a6ff", "#3fb950", "#db61a2", "#a371f7", "#f85149", "#d29922", "#8b949e"]
 
 [theme.light.sidebar]
@@ -366,7 +369,8 @@ backgroundColor = "#010409"
 secondaryBackgroundColor = "#161b22"
 textColor = "#e6edf3"
 borderColor = "#30363d"
-primaryColor = "#58a6ff"
+primaryColor = "#1f6feb"
+linkColor = "#58a6ff"
 ```
 
 For a single locked dark theme, see the **vscode** template under `assets/templates/themes/configs/`.
@@ -435,7 +439,7 @@ primaryColor = "#0969da"
 [theme.light]
 primaryColor = "#0969da"
 [theme.dark]
-primaryColor = "#58a6ff"
+primaryColor = "#1f6feb"
 ```
 
 Also avoid: light primary on white button text; gray-on-white body text; secondary that is not distinct from main (wrong direction for light or dark); branding only via CLI/env.
@@ -448,7 +452,7 @@ If they ask for CSS, target `key=` classes (e.g. `.st-key-submit`), never privat
 
 ## Development workflow
 
-Most options hot-reload on save + rerun; `fontFaces` need a server restart. Verify with buttons, forms, dataframes, code, charts, sidebar, and (if dual-mode) the settings appearance toggle. Inspect effective config: `streamlit config show`.
+Most options—including `fontFaces`—hot-reload on save + rerun. Restart when you newly enable `[server] enableStaticServing`. Verify with buttons, forms, dataframes, code, charts, sidebar, and (if dual-mode) the settings appearance toggle. Inspect effective config: `streamlit config show`.
 
 ## Theme templates
 
@@ -469,7 +473,7 @@ Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config
 | **ubuntu** | Light | `#E95420` | Ubuntu, Ubuntu Mono |
 | **vscode** | Dark | `#0078D4` | Segoe UI, Fira Code |
 
-See `assets/templates/themes/README.md`. Most templates are single-mode; adapt into light/dark (+ sidebars) using the dual-mode example above when the app should toggle.
+See `assets/templates/themes/README.md`. All templates are single-mode; to support the appearance toggle, split them into `[theme.light]` / `[theme.dark]` (plus sidebars) following the dual-mode example above.
 
 ## References
 
