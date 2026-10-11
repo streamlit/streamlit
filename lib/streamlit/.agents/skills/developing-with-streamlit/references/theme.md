@@ -4,7 +4,7 @@ Configure themes in `.streamlit/config.toml`, optionally sharing a `theme.base` 
 
 Use `streamlit config show` for the full option list and descriptions. Do not invent option names.
 
-Theme options can't be changed from the script (`st.set_option` rejects them). Set them in TOML, flags, or env vars. TOML edits—including `fontFaces`—apply on the next rerun. Restart the server when you newly enable `[server] enableStaticServing` so static font routes register.
+Theme options can't be changed from the script (`st.set_option` rejects them). Set them in TOML, flags, or env vars. TOML edits apply on the next rerun. `fontFaces` additions and updates apply on the next rerun; after removing the last `fontFaces` entry, refresh the page so old `@font-face` rules clear. Restart the server when you newly enable `[server] enableStaticServing` so static font routes register.
 
 ## Choose a config shape
 
@@ -133,14 +133,15 @@ secondaryBackgroundColor = "#1e293b"
 codeBackgroundColor = "#1e293b"
 textColor = "#f8fafc"
 borderColor = "#334155"
-primaryColor = "#a5b4fc"
-linkColor = "#c7d2fe"
+primaryColor = "#4f46e5"
+linkColor = "#a5b4fc"
 
 [theme.dark]
-primaryColor = "#a5b4fc"
+primaryColor = "#4f46e5"
 backgroundColor = "#0b1220"
 secondaryBackgroundColor = "#111827"
 textColor = "#e5e7eb"
+linkColor = "#a5b4fc"
 ```
 
 **App** `.streamlit/config.toml`:
@@ -237,13 +238,13 @@ If unset, header text/icons use a faded `textColor`. Selected-column header text
 ```toml
 [theme]
 font = "sans-serif"  # or "serif" / "monospace"
-font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+# font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+# font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
 ```
 
 ### Self-hosting custom fonts
 
-Place files under `static/`, enable `[server] enableStaticServing = true`, and declare `[[theme.fontFaces]]` (`family`, `url`, optional `weight` / `style` / `unicodeRange`). Restart only when you newly enable static serving so routes register; `fontFaces` edits apply on the next rerun.
+Place files under `static/`, enable `[server] enableStaticServing = true`, and declare `[[theme.fontFaces]]` (`family`, `url`, optional `weight` / `style` / `unicodeRange`). Restart only when you newly enable static serving so routes register. `fontFaces` additions and updates apply on the next rerun; after removing the last entry, refresh the page.
 
 ```toml
 [[theme.fontFaces]]
@@ -295,8 +296,8 @@ secondaryBackgroundColor = "#1e293b"
 codeBackgroundColor = "#1e293b"
 textColor = "#f8fafc"
 borderColor = "#334155"
-primaryColor = "#38bdf8"
-linkColor = "#7dd3fc"
+primaryColor = "#0284c7"
+linkColor = "#38bdf8"
 showWidgetBorder = true
 ```
 
@@ -422,7 +423,8 @@ backgroundColor = "#11567F"
 secondaryBackgroundColor = "#174D6A"
 textColor = "#ffffff"
 borderColor = "#1E6D94"
-primaryColor = "#79c0ff"
+primaryColor = "#0969da"
+linkColor = "#79c0ff"
 ```
 
 Locked look vs settings toggle:
@@ -452,7 +454,7 @@ If they ask for CSS, target `key=` classes (e.g. `.st-key-submit`), never privat
 
 ## Development workflow
 
-Most options—including `fontFaces`—hot-reload on save + rerun. Restart when you newly enable `[server] enableStaticServing`. Verify with buttons, forms, dataframes, code, charts, sidebar, and (if dual-mode) the settings appearance toggle. Inspect effective config: `streamlit config show`.
+Most options hot-reload on save + rerun. `fontFaces` additions and updates apply on the next rerun; after removing the last entry, refresh the page. Restart when you newly enable `[server] enableStaticServing`. Verify with buttons, forms, dataframes, code, charts, sidebar, and (if dual-mode) the settings appearance toggle. Inspect effective config: `streamlit config show`.
 
 ## Theme templates
 
