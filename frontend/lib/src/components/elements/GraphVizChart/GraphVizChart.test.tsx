@@ -115,7 +115,7 @@ describe("GraphVizChart Element", () => {
   })
 
   afterEach(() => {
-    // @ts-expect-error
+    // @ts-expect-error - graphviz is not typed as a vitest mock
     graphviz.mockClear()
   })
 

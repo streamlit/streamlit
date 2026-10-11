@@ -347,11 +347,12 @@ export default defineConfig([
         "warn",
         { allowExpressions: true },
       ],
-      // Disallow the @ts-ignore directive in favor of the more strict @ts-expect-error.
+      // Ban @ts-ignore: it stays silent after the error is fixed. @ts-expect-error
+      // fails once unused, and must describe the type mismatch it hides.
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {
-          "ts-expect-error": false,
+          "ts-expect-error": "allow-with-description",
           "ts-nocheck": false,
           "ts-check": false,
           "ts-ignore": true,
@@ -526,6 +527,17 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-misused-spread": "error",
       "@typescript-eslint/unbound-method": "error",
+      // Suppressions must name the type mismatch. Options replace the base
+      // rule, so keep ts-ignore banned and ts-expect-error described.
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        {
+          "ts-expect-error": "allow-with-description",
+          "ts-nocheck": false,
+          "ts-check": false,
+          "ts-ignore": true,
+        },
+      ],
     },
   },
   {
@@ -641,6 +653,23 @@ export default defineConfig([
     files: ["**/components/elements/**/*", "**/components/widgets/**/*"],
     rules: {
       "streamlit-custom/enforce-memo": "error",
+    },
+  },
+  // `||` drops 0, "", and false. Enabled directory-by-directory.
+  // Keep `||` where a blank string or false means unset, and for boolean OR.
+  // Use `??` where 0 is a real value (for example a color channel).
+  {
+    files: [
+      "**/components/widgets/**/*.{ts,tsx}",
+      "**/components/shared/StreamlitMarkdown/**/*.{ts,tsx}",
+      "**/components/shared/Icon/**/*.{ts,tsx}",
+      "**/theme/utils.ts",
+      "**/theme/utils.test.ts",
+      "**/DeckGlJsonChart/utils/colors.ts",
+      "**/DeckGlJsonChart/utils/colors.test.ts",
+    ],
+    rules: {
+      "@typescript-eslint/prefer-nullish-coalescing": "error",
     },
   },
   // Styled components files

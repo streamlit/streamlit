@@ -30,7 +30,7 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Final
 
@@ -56,7 +56,7 @@ def _fetch_successful_workflow_runs(
     days: int = 4, limit: int = 100
 ) -> list[dict[str, Any]]:
     """Fetch successful playwright.yml workflow runs from the last N days."""
-    since_date = datetime.now(timezone.utc) - timedelta(days=days)
+    since_date = datetime.now(UTC) - timedelta(days=days)
 
     output = _run_gh_command(
         [
@@ -72,9 +72,7 @@ def _fetch_successful_workflow_runs(
     runs = json.loads(output)
 
     return [
-        run
-        for run in runs
-        if datetime.fromisoformat(run["createdAt"].replace("Z", "+00:00")) >= since_date
+        run for run in runs if datetime.fromisoformat(run["createdAt"]) >= since_date
     ]
 
 

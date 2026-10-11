@@ -587,7 +587,8 @@ const setHeadingFontSizes = (
 
       // If valid configured value, overwrite the default heading font size
       if (convertedSize) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font sizes have no index signature
         headingFontSizesOverrides[headingFontSizeKey] = convertedSize
       }
     })
@@ -666,7 +667,8 @@ const setFontWeights = (
           inSidebar
         )
       ) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font weights have no index signature
         fontWeightOverrides[headingFontWeightKey] = weight
       }
     })
@@ -726,7 +728,7 @@ export const createEmotionTheme = (
 
   const parsedColors = Object.entries(customColors).reduce(
     (colorsArg: Record<string, string>, [key, color]) => {
-      // @ts-expect-error
+      // @ts-expect-error - remaining theme values are not all typed as color strings
       const validatedColor = parseColor(color, key, inSidebar)
       if (validatedColor) {
         colorsArg[key] = validatedColor
@@ -1164,7 +1166,7 @@ export const createTheme = (
   const bgColor = completedThemeInput.backgroundColor
   const startingTheme = merge(
     cloneDeep(
-      baseThemeConfig || (getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme)
+      baseThemeConfig ?? (getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme)
     ),
     { emotion: { inSidebar } }
   )
@@ -1436,7 +1438,7 @@ export const handleSectionInheritance = (
   // and light or dark variant sections
   const { light, dark, sidebar: baseSidebar, ...commonTheme } = themeInput
   const variantSection = isLightTheme ? light : dark
-  const { sidebar: variantSidebar, ...variantTheme } = variantSection || {}
+  const { sidebar: variantSidebar, ...variantTheme } = variantSection ?? {}
 
   // Merge common theme properties with variant overrides (excluding sidebars for now)
   // Note: base is set explicitly based on variant and is merged last to ensure it overrides
@@ -1566,7 +1568,7 @@ const setSidebarHeadingFontSizes = (
   ]
 
   // Merge config overrides with sidebar defaults (for arrays, merge replaces at each index)
-  return merge([], defaultHeadingFontSizes, configHeadingFontSizes || [])
+  return merge([], defaultHeadingFontSizes, configHeadingFontSizes ?? [])
 }
 
 /**
@@ -1580,10 +1582,12 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   const { bgColor, secondaryBg } = activeTheme.emotion.colors
 
   // Either use the configured background color or secondary background from main theme:
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank background color means unset
   const sidebarBackground = sidebarThemeInput?.backgroundColor || secondaryBg
 
   // Either use the configured secondary background color or background from main theme:
   const secondaryBackgroundColor =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank secondary background color means unset
     sidebarThemeInput?.secondaryBackgroundColor || bgColor
 
   // Handle configured vs. default header font sizes for sidebar

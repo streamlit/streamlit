@@ -4250,14 +4250,16 @@ class TestMetaSkillPackaging:
         not match files outside the published skill trees.
         """
         import glob as globmod
-
-        import toml
+        import tomllib
 
         pyproject = Path(__file__).resolve().parents[3] / "pyproject.toml"
         if not pyproject.is_file():  # pragma: no cover - unusual layout
             pytest.skip("lib/pyproject.toml not found in this layout")
 
-        globs = toml.load(pyproject)["tool"]["setuptools"]["package-data"]["streamlit"]
+        with pyproject.open("rb") as pyproject_file:
+            globs = tomllib.load(pyproject_file)["tool"]["setuptools"]["package-data"][
+                "streamlit"
+            ]
         # <streamlit pkg>/.agents/skills -> <streamlit pkg>
         pkg_dir = skills._get_source_skills_dir().parents[1]
 

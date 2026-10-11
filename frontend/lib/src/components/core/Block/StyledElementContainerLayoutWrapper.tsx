@@ -30,7 +30,14 @@ import type { ElementContainerConfig } from "./ElementContainerConfig"
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<
     Parameters<typeof StyledElementContainer>[0],
-    "width" | "height" | "overflow" | "minWidth" | "flex"
+    | "width"
+    | "height"
+    | "overflow"
+    | "minWidth"
+    | "flex"
+    | "alignSelf"
+    | "minHeight"
+    | "maxHeight"
   > & {
     node: ElementNode
     config: ElementContainerConfig
@@ -63,6 +70,9 @@ export const StyledElementContainerLayoutWrapper: FC<
       styles = {
         ...styles,
         height: "auto",
+        alignSelf: undefined,
+        minHeight: undefined,
+        maxHeight: undefined,
       }
     } else {
       // In vertical layout (default): keep height, clear width

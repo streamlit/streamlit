@@ -73,7 +73,7 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
       }
     },
     getCellValue(cell: TextCell): string | null {
-      return cell.data === undefined ? null : cell.data
+      return cell.data ?? null
     },
   }
 }

@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Literal, Self, TypeAlias, cast
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib.utils import compute_and_register_element_id

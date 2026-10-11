@@ -14,6 +14,7 @@
 
 """page_link unit tests."""
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -59,6 +60,86 @@ class PageLinkTest(DeltaGeneratorTestCase):
         """Test that page_link throws on external link with no label."""
         with pytest.raises(StreamlitMissingRequiredParameterError):
             st.page_link(page="http://example.com")
+
+    @parameterized.expand(
+        [
+            ("backslash_unc", "\\\\server\\share\\page.py"),
+            ("forward_slash_unc", "//server/share/page.py"),
+            ("forward_then_backslash_unc", "/\\server\\share\\page.py"),
+            ("backslash_then_forward_unc", "\\/server/share/page.py"),
+            ("extended_unc", "\\\\?\\UNC\\server\\share\\page.py"),
+            ("extended_local", "\\\\?\\C:\\app\\page.py"),
+            ("device_namespace", "\\\\.\\device\\page.py"),
+            ("path_object", Path("\\\\server\\share\\page.py")),
+        ]
+    )
+    @patch("streamlit.env_util.IS_WINDOWS", True)
+    def test_rejects_unsafe_windows_paths_before_resolving(
+        self, _name: str, page: str | Path
+    ) -> None:
+        """Windows network/device paths are rejected before filesystem access."""
+        with (
+            patch("os.path.realpath") as realpath,
+            pytest.raises(StreamlitAPIException, match="Network paths"),
+        ):
+            st.page_link(page)
+
+        realpath.assert_not_called()
+
+    @parameterized.expand(
+        [
+            ("string", "page\x00.py"),
+            ("path_object", Path("page\x00.py")),
+        ]
+    )
+    def test_rejects_null_bytes_before_resolving(
+        self, _name: str, page: str | Path
+    ) -> None:
+        """Null-byte page paths are rejected before filesystem access."""
+        with (
+            patch("os.path.realpath") as realpath,
+            pytest.raises(StreamlitAPIException, match="null bytes"),
+        ):
+            st.page_link(page)
+
+        realpath.assert_not_called()
+
+    @parameterized.expand(
+        [
+            ("windows_drive", True, "C:\\app\\page.py"),
+            ("parent_relative", True, "../shared/page.py"),
+            ("non_windows_double_slash", False, "//server/share/page.py"),
+        ]
+    )
+    def test_allows_paths_accepted_by_the_public_api(
+        self, _name: str, is_windows: bool, page: str
+    ) -> None:
+        """Relative, drive-absolute, and non-Windows double-slash paths resolve."""
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {
+            "page": {
+                "script_path": "/resolved/page.py",
+                "page_name": "Page",
+                "page_script_hash": "page-hash",
+            }
+        }
+
+        with (
+            patch("streamlit.env_util.IS_WINDOWS", is_windows),
+            patch(
+                "streamlit.elements.widgets.button.get_script_run_ctx",
+                return_value=ctx,
+            ),
+            patch(
+                "streamlit.elements.widgets.button.normalize_path_join",
+                return_value="/unresolved/page.py",
+            ),
+            patch("os.path.realpath", return_value="/resolved/page.py") as realpath,
+        ):
+            st.page_link(page)
+
+        realpath.assert_called_once_with("/unresolved/page.py")
 
     def test_icon(self):
         """Test that it can be called with icon param."""

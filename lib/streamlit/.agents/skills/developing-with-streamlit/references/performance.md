@@ -14,8 +14,8 @@ def load_data(path):
     return pd.read_csv(path)
 
 
-# GOOD: Cached
-@st.cache_data
+# GOOD: Cached, bounded with max_entries
+@st.cache_data(max_entries=100)
 def load_data(path):
     return pd.read_csv(path)
 ```
@@ -335,7 +335,7 @@ Caveats for `on_change="ignore"`:
 
 - The browser holds the pending value until the next rerun. A page refresh before then loses it, unless the widget also sets `bind="query-params"`.
 - Inside `st.form`, `on_change="ignore"` has no effect; the form already defers commits until submit.
-- `st.file_uploader` and `st.camera_input` still upload the file or photo immediately; only the rerun is deferred.
+- `st.file_uploader`, `st.camera_input`, and `st.audio_input` still upload the file, photo, or recording immediately; only the rerun is deferred.
 
 ## Conditional rendering
 
@@ -472,7 +472,7 @@ with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work r
 
 Avoid standalone `st.empty()`/`st.skeleton()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
 
-For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes. Keep fragment writes inside the fragment body; if a fragment must write to an outside container, claim that slot during the initial full-app run.
+For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes. Keep a parallel fragment's output inside its own body: during a full-app run it runs on a separate thread, and writing to a container created outside it raises an error, even if that container was created earlier in the run.
 
 ## Perceived performance (loading states)
 

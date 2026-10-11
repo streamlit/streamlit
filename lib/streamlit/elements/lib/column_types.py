@@ -20,9 +20,7 @@ from __future__ import annotations
 import datetime
 import itertools
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict, overload
-
-from typing_extensions import NotRequired
+from typing import TYPE_CHECKING, Literal, NotRequired, TypeAlias, TypedDict, overload
 
 from streamlit.elements.lib.color_util import is_css_color_like
 from streamlit.errors import (

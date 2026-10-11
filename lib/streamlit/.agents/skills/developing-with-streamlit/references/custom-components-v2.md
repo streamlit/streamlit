@@ -174,7 +174,7 @@ st.write("submitted (trigger):", result.submitted)
 
 Notes:
 
-- **Inline JS/CSS should be multi-line**. CCv2 treats path-like strings as file references; a multi-line string is unambiguously inline content.
+- **Inline JS/CSS should be multi-line**. CCv2 treats path-like strings as file references; a string with a line break inside it (not just leading or trailing newlines) is unambiguously inline content.
 - Prefer querying under `parentElement` (not `document`) to avoid cross-instance leakage.
 
 ## State and triggers (how to think about keys)
@@ -215,6 +215,7 @@ Your frontend entrypoint is the **default export** function. A few rules keep co
 - Render under `parentElement` (not `document`) so instances don’t collide.
 - If you create per-instance resources (React roots, observers, subscriptions), key them by `parentElement` (e.g. `WeakMap`) so multiple instances don’t overwrite each other.
 - Return a cleanup function to tear down event listeners / UI roots / observers when Streamlit unmounts the component.
+- Expect the default export to run again whenever `data` or the theme changes. Cleanup runs only once, at unmount, using the function returned by the last run, so make each run idempotent: assign handlers (`el.onclick = ...`) instead of stacking `addEventListener` calls, and guard one-time setup with the `WeakMap`.
 
 ## Styling and theming
 

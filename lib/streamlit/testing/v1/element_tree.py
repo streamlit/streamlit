@@ -31,13 +31,12 @@ from typing import (
     Final,
     Generic,
     NoReturn,
+    Self,
     TypeAlias,
     TypeVar,
     cast,
     overload,
 )
-
-from typing_extensions import Self
 
 from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
@@ -64,6 +63,7 @@ from streamlit.testing.v1.errors import AppTestError
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
 
+    from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
     from streamlit.proto.Block_pb2 import Block as BlockProto
     from streamlit.proto.Button_pb2 import Button as ButtonProto
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
@@ -91,6 +91,7 @@ if TYPE_CHECKING:
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
     from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
+    from streamlit.proto.Pagination_pb2 import Pagination as PaginationProto
     from streamlit.proto.Progress_pb2 import Progress as ProgressProto
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
@@ -103,6 +104,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Toast_pb2 import Toast as ToastProto
     from streamlit.proto.WidthConfig_pb2 import WidthConfig
     from streamlit.runtime.state.safe_session_state import SafeSessionState
+    from streamlit.runtime.uploaded_file_manager import UploadedFile
     from streamlit.testing.v1.app_test import AppTest
     from streamlit.typing import ChatInputValue
 
@@ -1508,6 +1510,224 @@ class Feedback(Widget):
         return super().set_value(v)
 
 
+_AUDIO_INPUT_MIME: Final = "audio/wav"
+
+
+def _parse_audio_input_file(file: object) -> tuple[str, bytes, str]:
+    """Return one ``(filename, content, mime_type)`` WAV recording.
+
+    ``st.audio_input`` records a single ``audio/wav`` file. Sequences and
+    other types are rejected so a test cannot stage a payload the browser
+    widget cannot produce.
+    """
+    if (
+        isinstance(file, tuple)
+        and len(file) == 3
+        and isinstance(file[0], str)
+        and isinstance(file[1], (bytes, bytearray))
+        and isinstance(file[2], str)
+    ):
+        filename, content, mime_type = file
+        if not filename.lower().endswith(".wav"):
+            raise AppTestError(
+                f"st.audio_input only records .wav files. Got filename {filename!r}."
+            )
+        if mime_type.lower() != _AUDIO_INPUT_MIME:
+            raise AppTestError(
+                f"st.audio_input recordings use MIME type {_AUDIO_INPUT_MIME!r}. "
+                f"Got {mime_type!r}."
+            )
+        # Normalize case-variants such as "Audio/WAV" to the MIME type the
+        # browser widget reports.
+        return filename, bytes(content), _AUDIO_INPUT_MIME
+    if isinstance(file, list):
+        raise AppTestError(
+            "st.audio_input records one recording. A list is not accepted."
+        )
+    raise AppTestError(
+        "st.audio_input records one recording. "
+        "Pass one (filename, content, mime_type) tuple whose content is bytes, "
+        f"or None to clear. Got {type(file).__name__}."
+    )
+
+
+@dataclass(repr=False)
+class AudioInput(Widget):
+    r"""A representation of ``st.audio_input``.
+
+    The recording is one WAV file, ``(filename, content, mime_type)``, with
+    MIME type ``audio/wav``. ``.upload()`` replaces any staged recording.
+    Unlike ``FileUploader``, this widget does not accept a list or append
+    files.
+
+    ``sample_rate`` is the value passed to ``st.audio_input``.
+    The widget default is ``16000``. ``None`` means the script passed
+    ``sample_rate=None``, so the browser chooses the rate.
+
+    Example
+    -------
+    >>> at = AppTest.from_string('''
+    ...     import streamlit as st
+    ...     audio = st.audio_input("Record")
+    ...     if audio:
+    ...         st.write(audio.name)
+    ... ''')
+    >>> at.run()
+    >>> at.audio_input[0].set_value(("clip.wav", b"RIFF", "audio/wav"))
+    >>> at.run()
+    >>> at.markdown[0].value
+    'clip.wav'
+    """
+
+    # (file_id, filename, content, mime_type). InitialValue means the test
+    # has not called set_value/upload/clear. None means the recording was cleared.
+    _files: list[tuple[str, str, bytes, str]] | InitialValue | None
+
+    proto: AudioInputProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+    sample_rate: int | None
+
+    def __init__(self, proto: AudioInputProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._files = InitialValue()
+        self.type = "audio_input"
+        # None means the script passed sample_rate=None. An unset proto
+        # field reads as 0, which is not that signal.
+        self.sample_rate = proto.sample_rate if proto.HasField("sample_rate") else None
+
+    def set_value(  # ty: ignore[invalid-method-override]
+        self,
+        file: tuple[str, bytes, str] | None,
+    ) -> Self:
+        """Set the recording, or ``None`` to clear it.
+
+        Parameters
+        ----------
+        file
+            ``(filename, content, mime_type)`` for one WAV recording.
+            ``filename`` must end in ``.wav`` and ``mime_type`` must be
+            ``audio/wav``. ``None`` clears the recording.
+
+        Returns
+        -------
+        AudioInput
+            The AudioInput instance for method chaining.
+        """
+        from uuid import uuid4
+
+        self._assert_can_interact()
+        if file is None:
+            self._files = None
+            return self
+        filename, content, mime_type = _parse_audio_input_file(file)
+        self._files = [(str(uuid4()), filename, content, mime_type)]
+        return self
+
+    def upload(
+        self,
+        filename: str,
+        content: bytes,
+        mime_type: str = _AUDIO_INPUT_MIME,
+    ) -> Self:
+        """Stage one recording, replacing any recording already staged.
+
+        Parameters
+        ----------
+        filename
+            The file name. Must end in ``.wav``.
+        content
+            The file content as bytes.
+        mime_type
+            MIME type of the recording. Defaults to ``audio/wav``. Any other
+            value raises ``AppTestError``.
+
+        Returns
+        -------
+        AudioInput
+            The AudioInput instance for method chaining.
+        """
+        return self.set_value((filename, content, mime_type))
+
+    def clear(self) -> Self:
+        """Clear the recording.
+
+        Returns
+        -------
+        AudioInput
+            The AudioInput instance for method chaining.
+        """
+        return self.set_value(None)
+
+    def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
+        """Return the recording to register, if any.
+
+        When the test has not staged a change, reuse the ``UploadedFile``
+        already in session state so the recording survives later ``run()``
+        calls.
+        """
+        if not isinstance(self._files, InitialValue):
+            return self._files or []
+
+        from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+        state = self.root.session_state
+        if not state:
+            return []
+        try:
+            current_value = state[self.id]
+        except KeyError:
+            return []
+        if not isinstance(current_value, UploadedFile):
+            return []
+        return [
+            (
+                current_value.file_id,
+                current_value.name,
+                current_value.getvalue(),
+                current_value.type,
+            )
+        ]
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget."""
+        from streamlit.proto.Common_pb2 import (
+            FileUploaderState as FileUploaderStateProto,
+        )
+
+        ws = WidgetState()
+        ws.id = self.id
+        files_to_use = self._get_files_to_register()
+        if not files_to_use:
+            return ws
+
+        state_proto = FileUploaderStateProto()
+        for file_id, filename, content, _mime_type in files_to_use:
+            file_info = state_proto.uploaded_file_info.add()
+            file_info.file_id = file_id
+            file_info.name = filename
+            file_info.size = len(content)
+            file_info.file_urls.file_id = file_id
+            file_info.file_urls.upload_url = f"/mock/upload/test session id/{file_id}"
+            file_info.file_urls.delete_url = f"/mock/upload/test session id/{file_id}"
+        ws.file_uploader_state_value.CopyFrom(state_proto)
+        return ws
+
+    @property
+    def value(self) -> UploadedFile | None:
+        """The current recording.
+
+        Returns the ``UploadedFile`` or ``None`` committed by the last
+        ``run()``. A recording staged with ``set_value`` is not visible
+        here until ``run()``.
+        """
+        state = self.root.session_state
+        assert state
+        return cast("UploadedFile | None", state[self.id])
+
+
 @dataclass(repr=False)
 class FileUploader(Widget):
     r"""A representation of ``st.file_uploader``.
@@ -1939,6 +2159,83 @@ class NumberInput(Widget):
 
         v = max(self.value - self.step, self.min or float("-inf"))
         return self.set_value(v)
+
+
+@dataclass(repr=False)
+class Pagination(Widget):
+    """A representation of ``st.pagination``.
+
+    ``.value`` is the current page (1-indexed). ``set_value`` and ``select``
+    choose a page and raise ``AppTestError`` if:
+
+    - the widget is disabled
+    - the page is not an int from 1 through ``num_pages`` (``bool`` is invalid)
+    """
+
+    _value: int | InitialValue
+
+    proto: PaginationProto = field(repr=False)
+    form_id: str
+    num_pages: int
+    default: int
+
+    def __init__(self, proto: PaginationProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = InitialValue()
+        self.type = "pagination"
+        self.num_pages = proto.num_pages
+        self.default = proto.default
+
+    def set_value(self, v: int) -> Pagination:
+        """Set the current page (1-indexed)."""
+        self._assert_can_interact()
+        num_pages = self.num_pages
+        # bool is a subclass of int, but True/False are not page numbers.
+        if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= num_pages:
+            key_part = f" (key={self.key!r})" if self.key else ""
+            raise AppTestError(
+                f"Cannot set pagination{key_part} to {v!r}. "
+                f"Page must be an int between 1 and {num_pages}."
+            )
+        return super().set_value(v)
+
+    def select(self, page: int) -> Pagination:
+        """Select ``page`` as if the user clicked that page button."""
+        return self.set_value(page)
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        ws = WidgetState()
+        ws.id = self.id
+        # Send only a real int so a bad session-state value cannot break the run
+        # before st.pagination restores its default:
+        # - Leave a missing key, bool, or other non-int unset. deserialize(None)
+        #   returns the declared default. Writing a bool into int_value would turn
+        #   it into 0 or 1.
+        # - Leave ints outside protobuf sint64 unset. Assigning them raises
+        #   ValueError.
+        # - Still send other out-of-range ints. PaginationSerde maps them to that
+        #   same default.
+        try:
+            value = self.value
+        except KeyError:
+            value = None
+        if isinstance(value, int) and not isinstance(value, bool):
+            try:
+                ws.int_value = value
+            except ValueError:
+                # Outside protobuf sint64; leave the oneof unset.
+                pass
+        return ws
+
+    @property
+    def value(self) -> int:
+        """The current page, starting at 1."""
+        if not isinstance(self._value, InitialValue):
+            return self._value
+        state = self.root.session_state
+        assert state
+        return cast("int", state[self.id])
 
 
 @dataclass(repr=False)
@@ -2587,6 +2884,10 @@ class Block:
     # We could implement these using __getattr__ but that would have
     # much worse type information.
     @property
+    def audio_input(self) -> WidgetList[AudioInput]:
+        return WidgetList(self.get("audio_input"))  # type: ignore
+
+    @property
     def button(self) -> WidgetList[Button]:
         return WidgetList(self.get("button"))  # type: ignore
 
@@ -2784,6 +3085,10 @@ class Block:
     @property
     def page_link(self) -> ElementList[PageLink]:
         return ElementList(self.get("page_link"))  # type: ignore
+
+    @property
+    def pagination(self) -> WidgetList[Pagination]:
+        return WidgetList(self.get("pagination"))  # type: ignore
 
     @property
     def progress(self) -> ElementList[Progress]:
@@ -3135,7 +3440,7 @@ def _unset_value_marker(node: Widget) -> tuple[str, Any]:
     Each widget class uses a different "not staged" marker: ``InitialValue``,
     ``None``, or ``False`` for buttons.
     """
-    if isinstance(node, FileUploader):
+    if isinstance(node, (AudioInput, FileUploader)):
         return ("_files", InitialValue())
     if isinstance(node, (Button, DownloadButton)):
         return ("_value", False)
@@ -3146,6 +3451,7 @@ def _unset_value_marker(node: Widget) -> tuple[str, Any]:
             DateTimeInput,
             Feedback,
             NumberInput,
+            Pagination,
             Radio,
             Selectbox,
             TextArea,
@@ -3405,6 +3711,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Exception(elt.exception, root=root)
             elif ty == "feedback":
                 new_node = Feedback(elt.feedback, root=root)
+            elif ty == "audio_input":
+                new_node = AudioInput(elt.audio_input, root=root)
             elif ty == "file_uploader":
                 new_node = FileUploader(elt.file_uploader, root=root)
             elif ty == "heading":
@@ -3447,6 +3755,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = NumberInput(elt.number_input, root=root)
             elif ty == "page_link":
                 new_node = PageLink(elt.page_link, root=root)
+            elif ty == "pagination":
+                new_node = Pagination(elt.pagination, root=root)
             elif ty == "progress":
                 new_node = Progress(elt.progress, root=root)
             elif ty == "radio":

@@ -87,6 +87,7 @@ export const StyledIcon = styled("span", {
 })<StyledIconProps>(({ color, size, margin, padding, theme }) => {
   const iconCssSize = getIconCssSize(size, theme.iconSizes)
   return {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank color inherits
     color: color || "inherit",
     fill: "currentColor",
     display: "inline-flex",

@@ -1154,9 +1154,9 @@ describe("WebsocketConnection", () => {
   afterEach(async () => {
     globalThis.fetch = originalFetch
 
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     if (client.websocket) {
-      // @ts-expect-error
+      // @ts-expect-error - websocket is private
       client.websocket.close()
     }
     client.disconnect()
@@ -1171,9 +1171,9 @@ describe("WebsocketConnection", () => {
   it("disconnect closes connection and sets state to DISCONNECTED_FOREVER", () => {
     client.disconnect()
 
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.DISCONNECTED_FOREVER)
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     expect(client.websocket).toBe(undefined)
   })
 
@@ -1181,7 +1181,7 @@ describe("WebsocketConnection", () => {
     // @ts-expect-error - accessing private property for testing
     client.state = ConnectionState.CONNECTED
     client.reconnect()
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
   })
 
@@ -1336,7 +1336,7 @@ describe("WebsocketConnection", () => {
     // @ts-expect-error - accessing private property for testing
     client.state = ConnectionState.PINGING_SERVER
     client.reconnect()
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
   })
 
@@ -1509,7 +1509,7 @@ describe("WebsocketConnection", () => {
 
   it("increments message cache run count", () => {
     const incrementRunCountSpy = vi.spyOn(
-      // @ts-expect-error
+      // @ts-expect-error - cache is private
       client.cache,
       "incrementRunCount"
     )
@@ -1525,7 +1525,7 @@ describe("WebsocketConnection", () => {
   it("gets cached message hashes from cache", () => {
     const getCachedMessageHashesSpy = vi
       .spyOn(
-        // @ts-expect-error
+        // @ts-expect-error - cache is private
         client.cache,
         "getCachedMessageHashes"
       )
@@ -1542,7 +1542,7 @@ describe("WebsocketConnection", () => {
     await vi.runAllTimersAsync()
     await server.connected
 
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     const sendSpy = vi.spyOn(client.websocket, "send")
 
     const TEST_BACK_MSG = {}
@@ -1611,7 +1611,7 @@ describe("WebsocketConnection", () => {
 
   describe("getBaseUriParts", () => {
     it("returns correct base uri parts when ConnectionState == Connected", () => {
-      // @ts-expect-error
+      // @ts-expect-error - state is private
       client.state = ConnectionState.CONNECTED
 
       expect(client.getBaseUriParts()).toEqual(
@@ -1701,9 +1701,9 @@ describe("WebsocketConnection auth token handling", () => {
     const ws = new WebsocketConnection(createMockArgs({ resetHostAuthToken }))
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
@@ -1723,9 +1723,9 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
@@ -1740,9 +1740,9 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     // "lastSessionId" should be the WebSocket's session token
@@ -1763,10 +1763,10 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
 
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(

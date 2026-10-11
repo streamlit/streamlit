@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import numpy as np
@@ -1773,27 +1773,31 @@ def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
     assert nodes[1].value == "Section"
     assert nodes[2].value == "unused format"
 
+    # Slider proto has ``set_value: bool``. Without the Element.__getattr__
+    # guard that field would be returned as a non-callable.
+    with pytest.raises(
+        AppTestError, match=r"set_value\(\) is not supported for slider"
+    ):
+        nodes[3].set_value(1)
+
 
 def test_inspectable_elements_reject_unsupported_interactions() -> None:
-    """Inspectable-only nodes reject set_value/click with AppTestError.
+    """Inspectable-only nodes reject set_value and click with AppTestError.
 
-    ``st.pagination`` is inspectable (key and current page) but has no typed
-    wrapper. Its proto field ``set_value: bool`` must not leak through
-    ``Element.__getattr__`` as a callable. Typed ``Markdown`` is covered too.
+    ``st.camera_input`` is an untyped element. Typed ``Markdown`` is covered
+    too.
     """
 
     def script():
         import streamlit as st
 
-        st.pagination(5, key="pager")
+        st.camera_input("Cam", key="cam")
         st.markdown("hi")
 
     at = AppTest.from_function(script).run()
-    node = at.get("pagination")[0]
+    node = at.get("camera_input")[0]
     assert isinstance(node, UnknownElement)
-    assert node.key == "pager"
-    assert node.value == 1
-    assert node.proto.set_value is False
+    assert node.key == "cam"
 
     inspectable_guidance = (
         "AppTest can inspect this element but does not implement "
@@ -1801,21 +1805,343 @@ def test_inspectable_elements_reject_unsupported_interactions() -> None:
         "has a key, or use a Playwright e2e test."
     )
     with pytest.raises(AppTestError) as set_value_info:
-        node.set_value(2)
+        node.set_value(b"jpg")
     assert str(set_value_info.value) == (
-        "set_value() is not supported for pagination (key='pager'). "
+        "set_value() is not supported for camera_input (key='cam'). "
         f"{inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as click_info:
         node.click()
     assert str(click_info.value) == (
-        f"click() is not supported for pagination (key='pager'). {inspectable_guidance}"
+        f"click() is not supported for camera_input (key='cam'). {inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as markdown_info:
         at.markdown[0].set_value("nope")
     assert str(markdown_info.value) == (
         f"set_value() is not supported for markdown. {inspectable_guidance}"
     )
+
+
+def test_audio_input_records_one_wav() -> None:
+    """``st.audio_input`` accepts one WAV and keeps it across reruns."""
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("changes", 0)
+
+        def on_change() -> None:
+            st.session_state.changes += 1
+
+        audio = st.audio_input("Mic", key="mic", sample_rate=48000, on_change=on_change)
+        st.sidebar.audio_input("Side", key="side", sample_rate=None)
+        if audio is None:
+            st.text("empty")
+        else:
+            st.text(f"name={audio.name}")
+            st.text(f"type={audio.type}")
+            st.text(f"bytes={audio.getvalue()!r}")
+
+    at = AppTest.from_function(script).run()
+    mic = at.audio_input(key="mic")
+    assert mic.value is None
+    assert mic.label == "Mic"
+    assert mic.sample_rate == 48000
+    assert at.sidebar.audio_input(key="side").sample_rate is None
+    assert at.session_state["mic"] is None
+    assert at.text[0].value == "empty"
+    assert at.get("audio_input")[0] is mic
+
+    at = mic.set_value(("clip.wav", b"RIFF", "audio/wav")).run()
+    recorded = at.audio_input(key="mic").value
+    assert recorded is not None
+    assert recorded.name == "clip.wav"
+    assert recorded.type == "audio/wav"
+    assert recorded.getvalue() == b"RIFF"
+    assert at.session_state["mic"].getvalue() == b"RIFF"
+    assert at.session_state["changes"] == 1
+    assert at.text[0].value == "name=clip.wav"
+    assert at.text[2].value == "bytes=b'RIFF'"
+
+    recorder = at.audio_input(key="mic")
+    committed = recorder.value
+    assert committed is not None
+    assert committed.getvalue() == b"RIFF"
+    recorder.upload("first.wav", b"one")
+    recorder.upload("other.WAV", b"more", mime_type="Audio/WAV")
+    assert recorder.value is committed
+    recorder.run()
+    assert at.audio_input(key="mic").value.name == "other.WAV"
+    assert at.audio_input(key="mic").value.type == "audio/wav"
+    assert at.audio_input(key="mic").value.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    at.run()
+    assert at.audio_input(key="mic").value.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    recorder = at.audio_input(key="mic")
+    recorder_repr = repr(recorder)
+    assert recorder_repr.startswith("AudioInput(")
+    assert "sample_rate=48000" in recorder_repr
+    with pytest.raises(
+        AppTestError, match=r"click\(\) is not supported for audio_input \(key='mic'\)"
+    ):
+        recorder.click()
+
+    at.audio_input(key="mic").clear().run()
+    assert at.audio_input(key="mic").value is None
+    assert at.session_state["mic"] is None
+    assert at.text[0].value == "empty"
+    assert at.session_state["changes"] == 3
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        (("notes.txt", b"hi", "audio/wav"), r"\.wav"),
+        (("clip.wav", b"hi", "text/plain"), "audio/wav"),
+        (
+            [("a.wav", b"a", "audio/wav"), ("b.wav", b"b", "audio/wav")],
+            "list is not accepted",
+        ),
+        (("clip.wav", "RIFF", "audio/wav"), "Got tuple"),
+        (b"raw-bytes", "Got bytes"),
+    ],
+    ids=["wrong_extension", "wrong_mime", "multiple_files", "str_content", "raw_bytes"],
+)
+def test_audio_input_rejects_invalid_recordings(value: Any, match: str) -> None:
+    """Invalid recordings raise AppTestError and leave the widget empty."""
+
+    def script():
+        import streamlit as st
+
+        st.audio_input("Mic", key="mic")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=match):
+        at.audio_input(key="mic").set_value(value)
+    assert at.audio_input(key="mic").value is None
+
+
+def test_audio_input_disabled_rejects_update() -> None:
+    """A disabled audio_input widget cannot accept a recording or be cleared."""
+
+    at = AppTest.from_string(
+        "import streamlit as st\nst.audio_input('Mic', disabled=True, key='mic')\n"
+    ).run()
+    with pytest.raises(AppTestError, match="disabled"):
+        at.audio_input(key="mic").upload("clip.wav", b"hi")
+    with pytest.raises(AppTestError, match="disabled"):
+        at.audio_input(key="mic").clear()
+
+
+def test_audio_input_form_applies_only_on_submit() -> None:
+    """A form recording stays uncommitted until submit.
+
+    ``clear_on_submit`` clears it on the next submit.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("rec-form", clear_on_submit=True):
+            audio = st.audio_input("Mic")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text("yes" if audio is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.audio_input[0].set_value(("a.wav", b"hi", "audio/wav")).run()
+    assert at.text[0].value == "no"
+
+    at.audio_input[0].set_value(("a.wav", b"hi", "audio/wav"))
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+    assert at.audio_input[0].value.getvalue() == b"hi"
+
+    at.button[1].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
+
+
+def test_pagination_set_value_selects_page() -> None:
+    """``st.pagination`` is a typed widget: page changes apply on ``.run()``."""
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("changes", 0)
+
+        def on_change() -> None:
+            st.session_state.changes += 1
+
+        page = st.pagination(5, key="pager", on_change=on_change)
+        st.pagination(3, default=2, key="other")
+        st.sidebar.pagination(4, key="side")
+        st.text(f"page={page}")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    pager = at.pagination(key="pager")
+    assert pager.value == 1
+    assert pager.key == "pager"
+    assert at.pagination(key="other").value == 2
+    assert at.sidebar.pagination(key="side").value == 1
+    assert at.session_state["pager"] == 1
+    assert at.get("pagination")[0].value == 1
+
+    at = pager.select(3).run()
+    assert at.pagination(key="pager").value == 3
+    assert at.session_state["pager"] == 3
+    assert at.session_state["changes"] == 1
+    assert at.text[0].value == "page=3"
+
+    at = at.pagination(key="pager").set_value(5).run()
+    assert at.pagination(key="pager").value == 5
+    assert at.session_state["changes"] == 2
+
+    at.pagination(key="pager").set_value(5).run()
+    assert at.session_state["changes"] == 2
+
+    with pytest.raises(
+        AppTestError,
+        match=(
+            r"click\(\) is not supported for pagination \(key='pager'\)\. "
+            r"Use set_value\(\) or one of this widget's typed interaction methods\."
+        ),
+    ):
+        at.pagination(key="pager").click()
+
+    pager = at.pagination(key="pager")
+    pager_repr = repr(pager)
+    assert pager_repr.startswith("Pagination(")
+    assert "num_pages=5" in pager_repr
+    assert "default=1" in pager_repr
+    assert pager.num_pages == 5
+    assert pager.default == 1
+
+
+@pytest.mark.parametrize("page", [6, 0, True, 2.0])
+def test_pagination_rejects_invalid_page(page: Any) -> None:
+    """Out-of-range pages, bools, and non-ints raise AppTestError."""
+
+    def script():
+        import streamlit as st
+
+        st.pagination(5, key="pager")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=r"between 1 and 5"):
+        at.pagination(key="pager").set_value(page)
+    assert at.pagination(key="pager").value == 1
+
+
+def test_pagination_invalid_session_state_restores_default() -> None:
+    """A non-page in session state runs and lands on the declared default."""
+
+    def script():
+        import streamlit as st
+
+        page = st.pagination(5, default=2, key="pager")
+        st.text(f"page={page}")
+
+    at = AppTest.from_function(script).run()
+    assert at.pagination(key="pager").value == 2
+
+    at.session_state["pager"] = 4
+    at = at.run()
+    assert at.pagination(key="pager").value == 4
+
+    at.session_state["pager"] = "nope"
+    at = at.run()
+    assert not at.exception
+    assert at.pagination(key="pager").value == 2
+    assert at.text[0].value == "page=2"
+
+    at.session_state["pager"] = True
+    at = at.run()
+    assert not at.exception
+    assert at.pagination(key="pager").value == 2
+    assert at.session_state["pager"] == 2
+
+    at.session_state["pager"] = 10**100
+    at = at.run()
+    assert not at.exception
+    assert at.pagination(key="pager").value == 2
+
+    at.session_state["pager"] = 4
+    at = at.run()
+    del at.session_state["pager"]
+    at = at.run()
+    assert not at.exception
+    assert at.pagination(key="pager").value == 2
+    assert at.session_state["pager"] == 2
+
+
+def test_pagination_disabled_rejects_update() -> None:
+    """A disabled pagination widget cannot change pages."""
+
+    def script():
+        import streamlit as st
+
+        st.pagination(5, disabled=True, key="pager")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match="disabled"):
+        at.pagination(key="pager").set_value(2)
+    with pytest.raises(AppTestError, match="disabled"):
+        at.pagination(key="pager").select(2)
+    at = at.run()
+    assert at.pagination(key="pager").value == 1
+
+
+def test_pagination_in_form_applies_on_submit() -> None:
+    """Form pagination stays uncommitted until that form's submit button runs."""
+
+    def script():
+        import streamlit as st
+
+        with st.form("pages"):
+            page = st.pagination(5, key="pager")
+            st.form_submit_button("Go")
+        st.text(f"page={page}")
+
+    at = AppTest.from_function(script).run()
+    at.pagination(key="pager").set_value(4)
+    assert at.pagination(key="pager").value == 4
+    at = at.run()
+    assert at.pagination(key="pager").value == 1
+    assert at.text[0].value == "page=1"
+
+    at.pagination(key="pager").set_value(4)
+    at = at.form_submit_button[0].click().run()
+    assert at.pagination(key="pager").value == 4
+    assert at.text[0].value == "page=4"
+
+
+def test_pagination_form_clear_on_submit_resets_to_default() -> None:
+    """The next submit after clear_on_submit restores the declared default page."""
+
+    def script():
+        import streamlit as st
+
+        with st.form("pages", clear_on_submit=True):
+            page = st.pagination(5, default=2, key="pager")
+            st.form_submit_button("Go")
+        st.text(f"page={page}")
+
+    at = AppTest.from_function(script).run()
+    assert at.pagination(key="pager").value == 2
+    at.pagination(key="pager").set_value(4)
+    at = at.form_submit_button[0].click().run()
+    assert at.text[0].value == "page=4"
+
+    at = at.form_submit_button[0].click().run()
+    assert at.pagination(key="pager").value == 2
+    assert at.text[0].value == "page=2"
 
 
 def test_typed_widget_without_click_raises_app_test_error() -> None:

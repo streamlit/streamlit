@@ -176,7 +176,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
       return {
         ...cellTemplate,
         isMissingValue: cellData === null,
-        copyData: cellData || "", // Column sorting is done via the copyData value
+        copyData: cellData ?? "", // Column sorting is done via the copyData value
         data: {
           ...cellTemplate.data,
           value: cellData,
