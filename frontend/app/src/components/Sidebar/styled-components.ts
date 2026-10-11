@@ -115,7 +115,7 @@ export const StyledSidebarUserContent =
       // Set + no nav:   gap goes onto header marginBottom (see StyledSidebarHeaderContainer)
       paddingTop = hasPageNavAbove ? configuredTop : 0
     } else {
-      // Unset — today's paths
+      // Unset keeps the built-in gap: twoXL under page nav, otherwise none.
       paddingTop = hasPageNavAbove ? theme.spacing.twoXL : 0
     }
 

@@ -928,7 +928,7 @@ describe("AppView element", () => {
       expect(style.paddingTop).toEqual("6rem")
     })
 
-    it("uses configured paddingBottom regardless of showPadding/hasBottom", () => {
+    it("uses configured paddingBottom regardless of showPadding", () => {
       renderWithPaddingTheme(
         { paddingBottom: "4rem" },
         { embedded: false, showPadding: true }

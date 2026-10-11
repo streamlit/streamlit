@@ -2450,11 +2450,12 @@ _create_theme_options(
         reservation. If unset, Streamlit uses its built-in defaults
         (typically 6rem, or 8rem with top nav).
 
-        Sidebar: The same gap under the sidebar's own chrome. With page
-        navigation that is nav to first widget (user-content paddingTop);
-        without page navigation it is header/logo row to first widget
-        (header marginBottom). Sidebar spacing is not added to headerHeight.
-        If unset, Streamlit uses its built-in sidebar spacing.
+        Sidebar: The same gap under the sidebar's own chrome (the logo and
+        collapse row, plus page navigation when it is shown). Streamlit does
+        not add the main header height on top of this value. With page
+        navigation, the gap is from the nav to the first widget. Without page
+        navigation, the gap is from the header row to the first widget. If
+        unset, Streamlit uses its built-in sidebar spacing.
     """,
     type_=str,
 )

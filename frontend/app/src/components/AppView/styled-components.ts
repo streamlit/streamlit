@@ -166,7 +166,7 @@ export const StyledAppViewBlockContainer =
           : configuredPaddingTop
         printPaddingTop = configuredPaddingTop
       } else {
-        // Unset — keep the built-in spacing, including the embed gates.
+        // Unset: use the built-in spacing, which varies with embed options.
         if (!embedded) {
           // Non-embedded apps always get 6rem or 8rem
           topPadding = hasTopNav ? "8rem" : "6rem"

@@ -498,13 +498,14 @@ export const parseFontSize = (
  * so the caller keeps the built-in spacing.
  *
  * @param configName - The config key name, used in the warning message.
- * @param value - The raw config string to validate.
+ * @param value - The raw config string to validate. Host theme payloads may
+ *   send a non-string; those warn and fall back like invalid strings.
  * @param inSidebar - When true, the warning message cites "theme.sidebar".
  * @returns The normalised CSS length string, or `undefined` if invalid.
  */
 export const parsePadding = (
   configName: string,
-  value: string | null | undefined,
+  value: string | null | undefined | number | boolean,
   inSidebar: boolean
 ): string | undefined => {
   if (!notNullOrUndefined(value)) {
@@ -512,6 +513,15 @@ export const parsePadding = (
   }
 
   const themeSection = inSidebar ? "theme.sidebar" : "theme"
+
+  // Host SET_CUSTOM_THEME_CONFIG can deliver a bare number; do not call trim().
+  if (typeof value !== "string") {
+    LOG.warn(
+      `Invalid ${configName} in ${themeSection}: ${String(value)}. Use a quoted rem or px value. Falling back to default.`
+    )
+    return undefined
+  }
+
   const trimmed = value.trim().toLowerCase()
 
   // Only allow rem and px units (or unitless numbers → treated as px)
@@ -877,7 +887,7 @@ export const createEmotionTheme = (
     radii: { ...baseThemeConfig.emotion.radii },
     fontSizes: { ...baseThemeConfig.emotion.fontSizes },
     fontWeights: { ...baseThemeConfig.emotion.fontWeights },
-    // Page content padding — parsed below; defaults to undefined (use hardcoded paths)
+    // Page content padding: parsed below. Undefined keeps the built-in spacing.
     paddingTop: baseThemeConfig.emotion.paddingTop,
     paddingBottom: baseThemeConfig.emotion.paddingBottom,
   }

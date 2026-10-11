@@ -192,7 +192,15 @@ showSidebarBorder = true           # Show divider between sidebar and content
 
 Control the gap between Streamlit chrome and the first/last author widgets.
 
-Values must be **quoted strings** in `rem` or `px` (for example `"1rem"`, `"16px"`). A numeric string without a unit is treated as pixels (`"16"` → `16px`; `"1.5"` → `1.5px`). Zero is valid (`"0"`, `"0rem"`, `"0px"`). Bare integers/floats in TOML are ignored. Negatives and other units log a warning and fall back to built-in spacing. Prefer rem so spacing scales with font size. `paddingLeft` and `paddingRight` are not recognized. Different `[theme.light]` and `[theme.dark]` values change page height when the user toggles modes.
+Values are quoted strings:
+
+- `"1rem"` or `"16px"` — prefer rem so spacing scales with font size
+- `"16"` — a unitless number is pixels (`"1.5"` → `1.5px`)
+- `"0"`, `"0rem"`, and `"0px"` — zero is valid
+- Unquoted TOML numbers (`paddingTop = 0`) are ignored
+- Negatives, `%`, and other CSS units log a warning and fall back to the built-in spacing
+
+`paddingLeft` and `paddingRight` are not recognized. Different `[theme.light]` and `[theme.dark]` values change page height when the user toggles modes.
 
 ```toml
 [theme]

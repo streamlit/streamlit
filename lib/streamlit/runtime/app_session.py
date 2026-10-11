@@ -1376,9 +1376,9 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         ):
             continue
 
-        # paddingTop / paddingBottom are protobuf strings. Unquoted TOML numbers
-        # (e.g. paddingTop = 0) arrive as int/float and would raise TypeError on
-        # setattr — skip them so the app can still start (docs: leave unset).
+        # Protobuf string fields reject non-string values, so an unquoted TOML
+        # number (e.g. `paddingTop = 0`) would raise TypeError and break
+        # session startup.
         if option_name in {"paddingTop", "paddingBottom"} and not isinstance(
             option_val, str
         ):

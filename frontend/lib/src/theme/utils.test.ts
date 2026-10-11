@@ -937,6 +937,24 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  it.each([
+    [16, "paddingTop"],
+    [0, "paddingBottom"],
+    [true, "paddingTop"],
+  ] as const)(
+    "logs a warning and falls back for non-string host %s value %s",
+    (invalidValue, configName) => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const theme = createEmotionTheme({
+        [configName]: invalidValue,
+      })
+      expect(theme[configName]).toBeUndefined()
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        expect.stringContaining(configName)
+      )
+    }
+  )
+
   // == Theme color properties ==
 
   // Handled in newGenericColors
