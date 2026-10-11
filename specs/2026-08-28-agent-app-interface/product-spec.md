@@ -813,7 +813,7 @@ because only its first 100 rows are inlined, so every truncated preview gets a U
 however small the table is in bytes. The cap is a row count set high enough that most
 filtered tables come back complete. **A preview must never look like the complete answer
 to an aggregate question**: should a response budget be added
-([open question 6](#open-questions)), a document over it fails the request rather than
+([open question 5](#open-questions)), a document over it fails the request rather than
 being truncated silently.
 
 Charts and maps:
@@ -826,7 +826,7 @@ Charts and maps:
   image, is kept, since removing decoration must not remove meaning. Base64 typed arrays
   (`bdata`), which a model cannot read, are expanded into numbers. Nothing that holds data
   is dropped at any size: the traces are the figure's data, and serving a large
-  specification behind `data.url` is the answer open question 6 points to. Serving an
+  specification behind `data.url` is the answer open question 5 points to. Serving an
   ECharts `dataset.source` as Arrow, as `st.map` serves its table, is a potential
   follow-up.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
@@ -853,7 +853,7 @@ Charts and maps:
   someone who does not know the content. Identical bytes share one URL across sessions,
   and in an app with per-user data, a user who learns another user's URL can fetch it
   while it is rendered. Both belong to media storage for every client
-  ([open question 3](#open-questions)), not to this interface.
+  ([open question 2](#open-questions)), not to this interface.
 - **They are bounded by `server.maxMessageSize`** (200 MB by default) per element, the
   bound the app's own WebSocket messages have, so an agent is served no more than the app
   could send its browser; anything larger is marked unavailable rather than registered.
@@ -892,7 +892,7 @@ back to a browser rather than mistake it for missing content:
 ### Limits and configuration
 
 Every bound v1 applies, in one place. The session, timeout, and TTL options are public,
-and their defaults are still open ([open question 4](#open-questions)). The preview size
+and their defaults are still open ([open question 3](#open-questions)). The preview size
 is a hidden option: the default is meant to be right, and the setting is there for
 operators and tests rather than for tuning per app.
 
@@ -906,8 +906,8 @@ operators and tests rather than for tuning per app.
 | Request body                           | 25 MB, then `request_too_large`; the same bound as a WebSocket message | `server.maxWidgetStateSize`                                  |
 | Preview rows per table                 | 100                                                   | `server.agentPreviewRows` (hidden)                                            |
 | Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
-| Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 6](#open-questions))                                    |
-| Response size                          | No cap                                                | [Open question 6](#open-questions)                                            |
+| Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 5](#open-questions))                                    |
+| Response size                          | No cap                                                | [Open question 5](#open-questions)                                            |
 | Wait for a follow-up run to start      | 50 ms after a run finishes: a quiet-period heuristic, not proof the chain settled | Fixed; to be replaced by the script runner's shutdown signal before v1 ships |
 | `data.url` lifetime                    | While the element that produced it is still rendered  | Fixed; a fetch-now handle, never persisted                                    |
 | Who may call                           | The WebSocket's Host allow-list; no web page unless its origin is listed | `server.allowedHosts`, `server.corsAllowedOrigins`              |
@@ -1019,7 +1019,7 @@ and the rest of it is what stands between opt-in and on-by-default:
 | Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | A response budget, and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
 | Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits, and per-caller session quotas, so one anonymous client cannot hold every slot. |
 | Cross-origin requests | A page on another site can make a visitor's browser send a request to any app that browser can reach, including, through DNS rebinding, an app on the visitor's own machine. | No cookie is read, and any request carrying an `Origin` not listed in `server.corsAllowedOrigins` is refused. A same-origin rule would not stop rebinding, since a rebound page is same-origin with the `Host` it sends, but browsers send `Origin` on every POST and programmatic clients send none, so this refuses web pages without turning away an agent. No browser caller loses anything: the route sends no CORS headers, so no other origin could read a response. | —                                                                                                  |
-| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here. | A credential flow that maps an `st.login` user to an agent ([open question 2](#open-questions)). |
+| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here. | A credential flow that maps an `st.login` user to an agent ([open question 1](#open-questions)). |
 
 That keeps the decision reversible. An app opts in, deployments that authenticate every
 path — an auth proxy, a private Community Cloud app, SiS — gate the route exactly as they
@@ -1143,8 +1143,8 @@ this list: it is a correctness fix that v1 makes.
 1. **On by default.** A credential flow that maps an `st.login` user to an agent, the
    response and rate budgets and per-caller quotas that make bulk access and request
    volume safe, per-platform routing, and session affinity for multi-worker deployments
-   — then flip the flag to opt-out. Brings use cases 2–4 to apps whose authors never
-   opted in.
+   — then flip the default for all of Streamlit at once, with `server.enableAgentApi`
+   as the opt-out. Brings use cases 2–4 to apps whose authors never opted in.
 2. **Authored descriptions** — a standalone project worth doing on its own accessibility
    merits. Element-level alternative text has landed
    ([#8563](https://github.com/streamlit/streamlit/issues/8563)): `alt` exists on
@@ -1294,17 +1294,14 @@ v1 ships when:
 
 ## Open questions
 
-1. What has to be true to make the interface opt-out rather than opt-in, and should
-   the default flip everywhere at once or per platform? Hosted platforms may want to
-   keep their own policy override regardless.
-2. Which hosted credential flow can map an agent to the correct `st.user` without
+1. Which hosted credential flow can map an agent to the correct `st.user` without
    introducing a second identity system? A browser's signed auth cookie is not a general
    agent credential.
-3. **Should media storage as a whole move to session-scoped URLs?** Content-hash URLs let
+2. **Should media storage as a whole move to session-scoped URLs?** Content-hash URLs let
    a user of a per-user app who learns another user's URL fetch it while it is still
    rendered. That holds for every image and eager download today, so it is a decision for
    media storage and every client, not a prerequisite for this interface.
-4. **What run timeout and session budgets should ship?** The preview is settled: 100 rows
+3. **What run timeout and session budgets should ship?** The preview is settled: 100 rows
    keeps most filtered tables complete. The run timeout bounds how long one request
    waits, not how long the run may take, since a retry collects the run in progress, so
    its default should sit below the clients' own request timeouts rather than grow to fit
@@ -1314,14 +1311,14 @@ v1 ships when:
    the retries unnecessary. The session cap and idle TTL need defaults chosen against
    real memory use. A chat client's turns can be minutes apart, which argues for a
    longer idle TTL than 15 minutes if memory allows. The response size is
-   [open question 6](#open-questions).
-5. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
+   [open question 5](#open-questions).
+4. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
    times, and datetimes as ISO 8601 text, decimals as strings, durations as seconds,
    non-finite numbers as `null`, ranges as two-item lists, and object-valued options as
    their `format_func` labels. Integers beyond 2^53 are still plain JSON numbers, which
    JavaScript parsers round. These must be settled before v1 ships, with or without
    per-action schemas.
-6. **Does the response need a budget, and how should it be met?** The response document
+5. **Does the response need a budget, and how should it be met?** The response document
    is unbounded, and two things dominate a large one: a selectbox over a few thousand
    values puts all of them in every snapshot of its page, and a figure carries its traces,
    so a 20,000-point scatter or a page of a dozen Plotly figures is half a megabyte.
@@ -1333,7 +1330,7 @@ v1 ships when:
    `get_data` — rather than to cap and discard. The cost is real for chat clients: a
    page of a few Plotly charts can reach a megabyte per response, and a selectbox of a
    few hundred options adds tens of kilobytes to every call on its page.
-7. **What stability does the snapshot promise, and where does a public contract live?**
+6. **What stability does the snapshot promise, and where does a public contract live?**
    The document is a compatibility surface from its first release: clients will key on
    element types, `props` names, and error codes, and every command's description becomes
    part of it. That needs a written policy before v1 ships — what `schema_version`
