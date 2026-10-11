@@ -270,14 +270,11 @@ const Multiselect: FC<Props> = props => {
   >(null)
   const closeDropdownRef = useRef<(() => void) | null>(null)
   const focusedKeyRef = useRef<Key | null>(null)
-  // Hover is state so the active row can follow the pointer. Arrow-key
-  // focus stays put when the pointer leaves a row.
+  // Hover drives the Enter target; arrow focus is kept on pointer leave.
   const [hoveredKey, setHoveredKey] = useState<Key | null>(null)
   const hoveredKeyRef = useRef<Key | null>(null)
   hoveredKeyRef.current = hoveredKey
-  // Set in onHoverEnd so pointer-leave does not focus the first row and
-  // overwrite an ArrowUp/Down selection. The sync effect clears the flag
-  // after it sees it (and on menu close).
+  // onHoverEnd: skip one sync so leave does not focus the first row.
   const skipEnterTargetFocusSyncRef = useRef(false)
 
   // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
@@ -311,15 +308,14 @@ const Multiselect: FC<Props> = props => {
 
   const displayOptionsRef = useRef(displayOptions)
   displayOptionsRef.current = displayOptions
-  // Filtering unmounts the hovered row without onHoverEnd. Clear so a later
-  // filter that brings the row back does not treat it as still hovered.
+  // Filter unmount skips onHoverEnd — clear stale hover.
   if (
     notNullOrUndefined(hoveredKey) &&
     !displayOptions.some(o => o.id === hoveredKey)
   ) {
     setHoveredKey(null)
   }
-  // Hovered row when it is still listed; otherwise the first visible row.
+  // Hovered row if still listed; otherwise first visible row.
   const enterTargetKey = useMemo((): string | null => {
     if (
       notNullOrUndefined(hoveredKey) &&

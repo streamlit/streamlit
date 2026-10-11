@@ -271,11 +271,7 @@ def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
 
 
 def test_dialog_keeps_tab_focus_with_open_select_menus(app: Page):
-    """Tab with an open selectbox/multiselect menu must stay inside the dialog.
-
-    Closing the menu on Tab must not stopPropagation, or React Aria FocusScope
-    containment would miss the key and focus could leave the dialog.
-    """
+    """Tab with an open select menu must stay in the dialog (no stopPropagation)."""
     open_dialog_with_date_input(app)
     dialog = app.get_by_role("dialog")
     expect(dialog).to_be_visible()
@@ -288,7 +284,6 @@ def test_dialog_keeps_tab_focus_with_open_select_menus(app: Page):
 
     selectbox_input.press("Tab")
     expect(selectbox_dropdown).not_to_be_visible()
-    # Default "Draft" must not have been committed by Tab.
     expect_markdown(dialog, "Status Value: Draft")
     expect(dialog.get_by_role("combobox", name="Tags")).to_be_focused()
 
@@ -300,7 +295,6 @@ def test_dialog_keeps_tab_focus_with_open_select_menus(app: Page):
     tags_input.press("Tab")
     expect(multiselect_dropdown).not_to_be_visible()
     expect_markdown(dialog, "Tags Value: []")
-    # Tab must move focus past Tags while staying inside the dialog.
     expect(tags_input).not_to_be_focused()
     expect(dialog.locator(":focus")).to_be_visible()
 

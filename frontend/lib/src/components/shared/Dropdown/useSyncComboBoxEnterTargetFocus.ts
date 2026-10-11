@@ -25,73 +25,33 @@ import { ComboBoxStateContext, type Key } from "react-aria-components"
 
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
-/** Max time spent retrying setFocusedKey until the row is in the collection. */
 const MAX_SYNC_RETRY_MS = 5000
-
-/**
- * Consecutive frames where focusedKey must match the Enter target before the
- * retry loop stops. React Aria clears focusedKey in a useEffect after each
- * inputValue change; one successful layout/rAF apply can run before that clear
- * and then stop retrying, leaving aria-activedescendant unset.
- */
+/** Survive RAC's post-paint focusedKey clear after inputValue changes. */
 const STABLE_MATCH_FRAMES = 3
 
 /**
- * Keep ComboBox `selectionManager.focusedKey` on the Enter commit target while
- * the menu is open so `aria-activedescendant` names that row (#16841).
- *
- * React Aria clears `focusedKey` on every `inputValue` change. This effect
- * re-applies the target from inside ComboBox (where the collection is visible).
- * `setFocusedKey` no-ops until Virtualizer has registered the row, so we retry
- * on animation frames for up to {@link MAX_SYNC_RETRY_MS}.
- *
- * Ownership rules (multiselect Enter prefers focusedKey over hover):
- * - A key this hook last wrote may be replaced when `enterTargetKey` changes
- *   (hover after typing).
- * - A key the user arrowed to must not be overwritten by sync or hover-end
- *   falling back to the first row (`skipApplyRef`).
- * - Do not clear `lastSyncedKeyRef` on skip: the preserved row is still
- *   hook-owned, so a later hover can replace it. Clearing it makes that row
- *   look like an arrow move and blocks the next hover sync.
- * - Restart when the focused key leaves the collection (multiselect commit),
- *   not on every filter membership change.
- * - Restart when focusedKey is null or not the Enter target (RAC clear after
- *   typing), so a finished retry window cannot strand activedescendant.
- *
- * @param enterTargetKey - Option id Enter will commit, or null when none.
- * @param skipApplyRef - When `.current` is true, leave `focusedKey` alone for
- *   this run and clear the flag (e.g. multiselect hover-end must not fall back
- *   to the first row after ArrowUp/Down). Set from an event handler, not render.
+ * Keep ComboBox focusedKey on the Enter target for aria-activedescendant
+ * (#16841). RAC clears focusedKey on inputValue changes; rAF-retry until the
+ * row registers (up to {@link MAX_SYNC_RETRY_MS}). Hook-written keys may be
+ * replaced on hover; arrow moves must not (skipApplyRef / clear lastSynced).
  */
 export function useSyncComboBoxEnterTargetFocus(
   enterTargetKey: Key | null,
   skipApplyRef?: MutableRefObject<boolean>
 ): void {
   const state = useContext(ComboBoxStateContext)
-  // Keep a live state pointer for rAF retries — focusedKey updates recreate
-  // the context value, and a stale closure would call a detached manager.
   const stateRef = useRef(state)
   stateRef.current = state
-  // Last key this hook successfully wrote. Hover (and other enterTargetKey
-  // changes) may replace that auto-synced row; ArrowUp/Down to a different
-  // row must not be overwritten.
   const lastSyncedKeyRef = useRef<Key | null>(null)
-  // Multiselect Enter removes the committed option while the menu stays open.
-  // enterTargetKey / inputValue often stay the same, so restart only when the
-  // current focusedKey is missing from the collection — not on every filter
-  // membership change (that cancelled in-flight retries and could overwrite a
-  // hover-end-preserved row once skipApplyRef was spent).
+  const prevFocusedKeyRef = useRef<Key | null>(null)
+
   const focusedKey = state?.selectionManager.focusedKey ?? null
-  // Missing focused key string (or null) — effect dependency only, not a boolean.
   const absentFocusedKey =
     state?.isOpen &&
     notNullOrUndefined(focusedKey) &&
     !state.collection.getItem(focusedKey)
       ? String(focusedKey)
       : null
-  // Restart when RAC clears focusedKey (or leaves it on another row) after
-  // typing. A prior retry can stop on a brief successful apply before RAC's
-  // post-paint clear; without this dep, activedescendant never comes back.
   const focusMismatchToken =
     state?.isOpen &&
     notNullOrUndefined(enterTargetKey) &&
@@ -99,13 +59,29 @@ export function useSyncComboBoxEnterTargetFocus(
       String(focusedKey) !== String(enterTargetKey))
       ? `${String(enterTargetKey)}:${isNullOrUndefined(focusedKey) ? "" : String(focusedKey)}`
       : null
-  // Restart when the filtered collection finishes registering rows. Otherwise
-  // a retry window can end while ListBox/Virtualizer is still empty, and
-  // aria-activedescendant never lands after typing settles.
   const collectionVersion =
     state?.isOpen && state.collection
       ? `${state.collection.size}:${String(state.collection.getFirstKey() ?? "")}`
       : ""
+
+  // Arrow moved focus off the Enter target: drop lastSynced so returning to
+  // that key is user-owned (focusMismatchToken must not snap to the first row).
+  useLayoutEffect(() => {
+    const prev = prevFocusedKeyRef.current
+    prevFocusedKeyRef.current = focusedKey
+    if (!state?.isOpen) {
+      lastSyncedKeyRef.current = null
+      return
+    }
+    if (
+      notNullOrUndefined(prev) &&
+      notNullOrUndefined(focusedKey) &&
+      String(prev) !== String(focusedKey) &&
+      String(focusedKey) !== String(enterTargetKey)
+    ) {
+      lastSyncedKeyRef.current = null
+    }
+  }, [focusedKey, state?.isOpen, enterTargetKey])
 
   useLayoutEffect(() => {
     if (!state?.isOpen) {
@@ -113,10 +89,6 @@ export function useSyncComboBoxEnterTargetFocus(
       return
     }
     if (skipApplyRef?.current) {
-      // Keep lastSyncedKeyRef: the preserved focusedKey is still the hook's
-      // last write (or an arrow row that already differs from it). Clearing
-      // it would make a hover-synced row look like an arrow move and block
-      // the next hover from updating activedescendant / Enter.
       skipApplyRef.current = false
       return
     }
@@ -126,11 +98,6 @@ export function useSyncComboBoxEnterTargetFocus(
     let stableMatchFrames = 0
     const startedAt = performance.now()
 
-    // True when focusedKey is a listed row this hook must not replace.
-    // - null: React Aria cleared focus after a query change, so keep syncing
-    // - same as the last key this hook wrote: a later hover may replace it
-    // - missing from the collection: the row was removed (multiselect commit),
-    //   so keep syncing
     const shouldKeepCurrentFocus = (): boolean => {
       const current = stateRef.current
       if (!current) return false
@@ -169,10 +136,7 @@ export function useSyncComboBoxEnterTargetFocus(
     const applyEnterTargetFocus = (): boolean => {
       const current = stateRef.current
       if (!current) return false
-      // Read first: once focus sits on a row this hook did not write, stop.
       if (shouldKeepCurrentFocus()) return true
-      // SelectionManager.setFocusedKey no-ops when the key is missing from the
-      // collection, so it is safe to call before Virtualizer registers items.
       if (
         notNullOrUndefined(enterTargetKey) &&
         !current.collection.getItem(enterTargetKey)
@@ -187,13 +151,7 @@ export function useSyncComboBoxEnterTargetFocus(
       return false
     }
 
-    // Always schedule one more frame so this hook runs after ComboBox clears
-    // focusedKey. Retry until:
-    // - the Enter target stays focused for STABLE_MATCH_FRAMES;
-    // - focus sits on a row this hook did not write; or
-    // - the retry window ends.
-    // `state` stays out of the dependency list: focus updates replace that
-    // object and would pull arrow navigation back to the Enter target.
+    // Omit `state` from deps so focus updates do not reset arrow navigation.
     const schedule = (): void => {
       rafId = requestAnimationFrame(() => {
         if (cancelled) return

@@ -160,9 +160,8 @@ const DropdownController = memo<{
 }>(({ openRef, closeRef, stateRef, enterTargetKey }) => {
   const state = useContext(ComboBoxStateContext)
 
-  // Sync read for keydown handlers. Do not clear this in the effect cleanup:
-  // focus updates recreate `state` and would leave a null window for capture-
-  // phase ArrowDown (null focusedKey → skip leading Add → first match).
+  // Sync read for keydown. Do not clear in effect cleanup — focus updates
+  // recreate `state` and would null this during capture-phase ArrowDown.
   stateRef.current = state ?? null
 
   useEffect(() => {
@@ -306,14 +305,10 @@ const Selectbox: FC<Props> = ({
   const inputValueRef = useRef(inputValue)
   inputValueRef.current = inputValue
 
-  // Set by handleSelectionChange when RAC's onChange commits during Enter
-  // (arrow-nav + Enter, or re-commit of the already-selected focusedKey).
-  // Checked by handleInputKeyDown to avoid double-committing / creatable fallthrough.
+  // Set when RAC onChange commits during Enter; bubble handler skips fallthrough.
   const racHandledEnterRef = useRef(false)
 
-  // True only for the current Enter keydown (capture → RAC → bubble). Stops
-  // non-Enter onChange (open/filter) from leaving racHandledEnterRef stuck so
-  // a later Enter would skip the enterTarget commit.
+  // True only for the current Enter keydown (capture → RAC → bubble).
   const enterKeyInProgressRef = useRef(false)
 
   // Tracks whether the dropdown is open. RAC can fire deferred ComboBox
@@ -364,8 +359,7 @@ const Selectbox: FC<Props> = ({
         }
   }, [acceptNewOptions, filterActive, inputValue, selectOptions])
 
-  // Put "Add: …" first when it is the Enter target so focusing it does not
-  // scroll best-ranked matches out of a short dropdown (list does not wrap).
+  // Leading Add keeps best-ranked matches visible in a short dropdown.
   const displayOptions = useMemo<ComboOption[]>(
     () =>
       creatableItem ? [creatableItem, ...filteredOptions] : filteredOptions,
@@ -375,11 +369,7 @@ const Selectbox: FC<Props> = ({
   const displayOptionsRef = useRef(displayOptions)
   displayOptionsRef.current = displayOptions
 
-  // Option Enter commits, and the row aria-activedescendant points to:
-  // - accept_new_options with a non-exact query: the "Add: …" row (first)
-  // - an option whose value exactly matches the input (including the committed
-  //   label on an unfiltered open)
-  // - otherwise the first matching option
+  // Enter / activedescendant target: Add row, exact match, or first match.
   const enterTargetId = useMemo((): string | null => {
     if (creatableItem) return CREATABLE_ID
     const exactMatch = displayOptions.find(
@@ -466,32 +456,26 @@ const Selectbox: FC<Props> = ({
         return
       }
 
-      // After filtering, focusedKey can still name a row that left the
-      // collection. Ignore it so Enter commits the current Enter target.
+      // Ignore stale focusedKey left over after filtering.
       const collection = comboBoxStateRef.current?.collection
       if (collection && !collection.getItem(key)) {
         return
       }
 
-      // Only mark during Enter. Non-Enter onChange (open/filter) must not leave
-      // racHandledEnterRef stuck, or a later Enter skips the enterTarget commit.
-      // Still covers RAC re-committing the already-selected focusedKey on Enter.
+      // Only mark during Enter so open/filter onChange cannot stick the flag.
       if (enterKeyInProgressRef.current) {
         racHandledEnterRef.current = true
       }
 
       const keyStr = String(key)
       const found = selectOptions.find(o => o.id === keyStr)
-      // Read inputValue via ref for creatable items to avoid a stale closure.
       const selected =
         keyStr === CREATABLE_ID
           ? inputValueRef.current
           : (found?.value ?? null)
 
       commitSelection(selected)
-      // Custom values stay outside localSelectedKey (null), so RAC commit()
-      // does not auto-close. Close explicitly or a second Enter re-commits
-      // the first option after filter resets.
+      // CREATABLE_ID is outside localSelectedKey; RAC will not auto-close.
       if (keyStr === CREATABLE_ID) {
         closeDropdownRef.current?.()
       }
@@ -591,10 +575,7 @@ const Selectbox: FC<Props> = ({
       ) {
         openDropdownRef.current?.()
       }
-      // Leading Add is the Enter target. While focusedKey is still null (RAC
-      // cleared it on the keystroke; sync may not have landed), ArrowDown would
-      // focus Add first — then Enter creates. Jump to the first match instead;
-      // once Add is focused, RAC ArrowDown already moves to that match.
+      // With focusedKey still null, ArrowDown would land on leading Add first.
       if (e.key === "ArrowDown" && isOpenRef.current) {
         const state = comboBoxStateRef.current
         const focused = state?.selectionManager.focusedKey
@@ -611,10 +592,7 @@ const Selectbox: FC<Props> = ({
           }
         }
       }
-      // Close before React Aria's Tab shortcut can commit() the synced
-      // focusedKey. isOpenRef is cleared sync so handleSelectionChange drops
-      // any late selection callback from close. Do not stopPropagation — dialog
-      // FocusScope needs to see Tab for containment.
+      // Close on Tab before RAC commit(); do not stopPropagation (FocusScope).
       if (e.key === "Tab" && isOpenRef.current) {
         isOpenRef.current = false
         closeDropdownRef.current?.()
@@ -661,8 +639,7 @@ const Selectbox: FC<Props> = ({
         return
       }
 
-      // Prefer refs so fill/type + Enter in the same turn still sees the
-      // post-filter enter target, not a stale render closure.
+      // Refs: same-turn fill/type + Enter sees the post-filter target.
       const targetId = enterTargetIdRef.current
       const options = displayOptionsRef.current
       const target = targetId ? options.find(o => o.id === targetId) : null
@@ -776,9 +753,7 @@ const Selectbox: FC<Props> = ({
             offset={0}
             style={floatingStyles}
           >
-            {/* Skip Virtualizer for short lists: setFocusedKey no-ops until
-                Virtualizer registers a row, which can lag after filtering and
-                leave aria-activedescendant unset (#16841). */}
+            {/* Short lists skip Virtualizer so setFocusedKey can land (#16841). */}
             {displayOptions.length > SELECTBOX_VIRTUALIZE_MIN_OPTIONS ? (
               <Virtualizer
                 layout={ListLayout}

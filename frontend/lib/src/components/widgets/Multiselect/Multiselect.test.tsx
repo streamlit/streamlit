@@ -425,6 +425,9 @@ describe("Multiselect widget", () => {
     const banana = screen.getByRole("option", { name: "banana" })
     await user.hover(banana)
     await user.unhover(banana)
+    // Arrow away and back onto lastSynced must stay user-owned (not first row).
+    await user.keyboard("{ArrowUp}{ArrowDown}")
+    await expectActiveOption(input, "banana")
     await user.keyboard("{Enter}")
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element.id,
