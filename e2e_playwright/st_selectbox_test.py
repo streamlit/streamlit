@@ -484,6 +484,11 @@ def test_accept_new_options_feature(app: Page):
     # Check that the new option was accepted and selected
     expect_markdown(app, "value 15: new_custom_option")
     expect_markdown(app, "value 15 (session_state): new_custom_option")
+    # Custom-value Enter must close the menu; otherwise a second Enter can
+    # re-commit the first option after the filter resets.
+    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).not_to_be_visible()
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 15: new_custom_option")
 
 
 def test_does_not_accept_new_options_feature(app: Page):
@@ -637,19 +642,15 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     selectbox_input.click()
     expect(selectbox_input).to_be_focused()
 
-    # Backup open when click alone does not open the menu in CI. If the
-    # Enter-target sync has already focused the first option, this ArrowDown
-    # moves to the second option; wait for data-focused on the first row below.
-    selectbox_input.press("ArrowDown")
+    # Click opens the menu; wait for Enter-target sync on the first option
+    # before the one-ArrowDown contract below. ArrowDown alone is only a
+    # backup when click does not open in CI.
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    if selectbox_input.get_attribute("aria-expanded") != "true":
+        selectbox_input.press("ArrowDown")
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
-    # Re-anchor on the first option. ArrowDown before the sync lands focuses
-    # row 1; after it lands, the same key moves to row 2. React Aria does not
-    # wrap, so a few ArrowUps clamp at the first row either way.
-    for _ in range(3):
-        selectbox_input.press("ArrowUp")
     expect(options.first).to_have_attribute("data-focused", "true")
 
     # Typing must NOT filter the list: character input is blocked, so all
@@ -663,9 +664,7 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     # toHaveValue("")).
     expect(selectbox_input).to_have_value("")
 
-    # Wait until the Enter-target sync has focused the first option, then one
-    # ArrowDown moves to "No" and Enter commits it.
-    expect(options.first).to_have_attribute("data-focused", "true")
+    # One ArrowDown from the synced first option moves to "No"; Enter commits.
     selectbox_input.press("ArrowDown")
     selectbox_input.press("Enter")
     expect_markdown(app, "value 23: No")

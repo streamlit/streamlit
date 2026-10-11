@@ -67,7 +67,8 @@ export function useSyncComboBoxEnterTargetFocus(
   // membership change (that cancelled in-flight retries and could overwrite a
   // hover-end-preserved row once skipApplyRef was spent).
   const focusedKey = state?.selectionManager.focusedKey ?? null
-  const focusedKeyAbsent =
+  // Missing focused key string (or null) — effect dependency only, not a boolean.
+  const absentFocusedKey =
     state?.isOpen &&
     notNullOrUndefined(focusedKey) &&
     !state.collection.getItem(focusedKey)
@@ -92,13 +93,12 @@ export function useSyncComboBoxEnterTargetFocus(
     let rafId = 0
     const startedAt = performance.now()
 
-    // True when focusedKey is a listed row this hook did not write, so a retry
-    // must leave it alone.
+    // True when focusedKey is a listed row this hook must not replace.
     // - null: React Aria cleared focus after a query change, so keep syncing
     // - same as the last key this hook wrote: a later hover may replace it
     // - missing from the collection: the row was removed (multiselect commit),
     //   so keep syncing
-    const userMovedOffEnterTarget = (): boolean => {
+    const shouldKeepCurrentFocus = (): boolean => {
       const current = stateRef.current
       if (!current) return false
       const focused = current.selectionManager.focusedKey
@@ -137,7 +137,7 @@ export function useSyncComboBoxEnterTargetFocus(
       const current = stateRef.current
       if (!current) return false
       // Read first: once focus sits on a row this hook did not write, stop.
-      if (userMovedOffEnterTarget()) return true
+      if (shouldKeepCurrentFocus()) return true
       // SelectionManager.setFocusedKey no-ops when the key is missing from the
       // collection, so it is safe to call before Virtualizer registers items.
       current.selectionManager.setFocusedKey(enterTargetKey)
@@ -175,6 +175,6 @@ export function useSyncComboBoxEnterTargetFocus(
     state?.inputValue,
     enterTargetKey,
     skipApplyRef,
-    focusedKeyAbsent,
+    absentFocusedKey,
   ])
 }

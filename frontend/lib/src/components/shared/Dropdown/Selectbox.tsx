@@ -96,6 +96,9 @@ type ComboOption = {
 
 const CREATABLE_ID = "__creatable__"
 
+/** Lists at or below this size skip Virtualizer so setFocusedKey can land. */
+const SELECTBOX_VIRTUALIZE_MIN_OPTIONS = 25
+
 /** Live ComboBox state pointer for capture-phase key handlers outside RAC. */
 type ComboBoxStateHandle = NonNullable<
   React.ContextType<typeof ComboBoxStateContext>
@@ -463,9 +466,8 @@ const Selectbox: FC<Props> = ({
         return
       }
 
-      // After filtering, focusedKey can still point at a row that left the
-      // collection. Ignore that stale key so Enter does not re-commit it and
-      // suppress the enterTarget bubble path (e2e fill+Enter).
+      // After filtering, focusedKey can still name a row that left the
+      // collection. Ignore it so Enter commits the current Enter target.
       const collection = comboBoxStateRef.current?.collection
       if (collection && !collection.getItem(key)) {
         return
@@ -487,6 +489,12 @@ const Selectbox: FC<Props> = ({
           : (found?.value ?? null)
 
       commitSelection(selected)
+      // Custom values stay outside localSelectedKey (null), so RAC commit()
+      // does not auto-close. Close explicitly or a second Enter re-commits
+      // the first option after filter resets.
+      if (keyStr === CREATABLE_ID) {
+        closeDropdownRef.current?.()
+      }
     },
     [commitSelection, selectOptions]
   )
@@ -679,6 +687,16 @@ const Selectbox: FC<Props> = ({
     closeDropdownRef.current?.()
   }, [commitSelection])
 
+  const listBox = (
+    <StyledListBox
+      aria-label={label ?? "Selectbox options"}
+      items={displayOptions}
+      renderEmptyState={() => <StyledEmptyState>No results</StyledEmptyState>}
+    >
+      {renderOption}
+    </StyledListBox>
+  )
+
   return (
     <div className="stSelectbox" data-testid="stSelectbox">
       <WidgetLabel
@@ -761,31 +779,15 @@ const Selectbox: FC<Props> = ({
             {/* Skip Virtualizer for short lists: setFocusedKey no-ops until
                 Virtualizer registers a row, which can lag after filtering and
                 leave aria-activedescendant unset (#16841). */}
-            {displayOptions.length > 25 ? (
+            {displayOptions.length > SELECTBOX_VIRTUALIZE_MIN_OPTIONS ? (
               <Virtualizer
                 layout={ListLayout}
                 layoutOptions={virtualizerLayoutOptions}
               >
-                <StyledListBox
-                  aria-label={label ?? "Selectbox options"}
-                  items={displayOptions}
-                  renderEmptyState={() => (
-                    <StyledEmptyState>No results</StyledEmptyState>
-                  )}
-                >
-                  {renderOption}
-                </StyledListBox>
+                {listBox}
               </Virtualizer>
             ) : (
-              <StyledListBox
-                aria-label={label ?? "Selectbox options"}
-                items={displayOptions}
-                renderEmptyState={() => (
-                  <StyledEmptyState>No results</StyledEmptyState>
-                )}
-              >
-                {renderOption}
-              </StyledListBox>
+              listBox
             )}
           </StyledPopover>
         </ComboBox>

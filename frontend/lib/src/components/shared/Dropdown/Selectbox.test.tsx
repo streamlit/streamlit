@@ -976,6 +976,14 @@ describe("Selectbox widget", () => {
     expect(props.onChange).toHaveBeenCalledTimes(1)
     expect(props.onChange).toHaveBeenCalledWith("hello world!")
     expect(screen.getByDisplayValue("hello world!")).toBeVisible()
+    // Custom values stay outside localSelectedKey; RAC does not auto-close.
+    await waitFor(() => {
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+    })
+    // A second Enter must not replace the created value with the first option.
+    await user.keyboard("{Enter}")
+    expect(props.onChange).toHaveBeenCalledTimes(1)
+    expect(selectboxInput).toHaveValue("hello world!")
   })
 
   it("allows new options when acceptNewOptions is true via clicking Add option", async () => {
