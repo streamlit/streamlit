@@ -14,14 +14,19 @@
  * limitations under the License.
  */
 
-import { type MutableRefObject, useContext, useEffect, useRef } from "react"
+import {
+  type MutableRefObject,
+  useContext,
+  useLayoutEffect,
+  useRef,
+} from "react"
 
 import { ComboBoxStateContext, type Key } from "react-aria-components"
 
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
-/** Max time spent retrying setFocusedKey until Virtualizer registers the row. */
-const MAX_SYNC_RETRY_MS = 3000
+/** Max time spent retrying setFocusedKey until the row is in the collection. */
+const MAX_SYNC_RETRY_MS = 5000
 
 /**
  * Keep ComboBox `selectionManager.focusedKey` on the Enter commit target while
@@ -74,8 +79,15 @@ export function useSyncComboBoxEnterTargetFocus(
     !state.collection.getItem(focusedKey)
       ? String(focusedKey)
       : null
+  // Restart when the filtered collection finishes registering rows. Otherwise
+  // a retry window can end while ListBox/Virtualizer is still empty, and
+  // aria-activedescendant never lands after typing settles.
+  const collectionVersion =
+    state?.isOpen && state.collection
+      ? `${state.collection.size}:${String(state.collection.getFirstKey() ?? "")}`
+      : ""
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!state?.isOpen) {
       lastSyncedKeyRef.current = null
       return
@@ -140,6 +152,12 @@ export function useSyncComboBoxEnterTargetFocus(
       if (shouldKeepCurrentFocus()) return true
       // SelectionManager.setFocusedKey no-ops when the key is missing from the
       // collection, so it is safe to call before Virtualizer registers items.
+      if (
+        notNullOrUndefined(enterTargetKey) &&
+        !current.collection.getItem(enterTargetKey)
+      ) {
+        return false
+      }
       current.selectionManager.setFocusedKey(enterTargetKey)
       if (focusedMatchesEnterTarget()) {
         lastSyncedKeyRef.current = enterTargetKey
@@ -176,5 +194,6 @@ export function useSyncComboBoxEnterTargetFocus(
     enterTargetKey,
     skipApplyRef,
     absentFocusedKey,
+    collectionVersion,
   ])
 }

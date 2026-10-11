@@ -222,15 +222,17 @@ def test_shows_correct_options_via_fuzzy_search(
 
     # Typing alone must set aria-activedescendant on the Enter target (#16841).
     # Assert without arrow keys so the check cannot pass via keyboard navigation.
+    # Prefer data-focused on the filtered option (same focus state); then confirm
+    # the combobox activedescendant id points at that row.
+    expect(options.first).to_have_attribute("data-focused", "true", timeout=10000)
     expect(selectbox_input).to_have_attribute(
-        "aria-activedescendant", re.compile(r".+"), timeout=10000
+        "aria-activedescendant", re.compile(r".+")
     )
     active_id = selectbox_input.get_attribute("aria-activedescendant")
     assert active_id is not None
     expect(app.locator(f'[id="{active_id}"]')).to_have_text(
         "e2e/scripts/st_expander.py"
     )
-    expect(options.first).to_have_attribute("data-focused", "true")
 
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
