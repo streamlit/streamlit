@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  type ComponentPropsWithoutRef,
-  type ReactElement,
-  useCallback,
-  useContext,
-  useMemo,
-} from "react"
+import { useCallback, useContext, useMemo } from "react"
 
 import Overflow from "rc-overflow"
 
@@ -52,21 +46,9 @@ export interface Props {
 type OverflowNavItem = AppPage.$Properties | AppPage.$Properties[]
 
 /**
- * rc-overflow root: keep landmark attrs on the measured flex host so wrapping
- * an extra element does not shrink the overflow width and force a false "N more".
+ * Top-nav overflow root. Landmark attributes live on this measured flex host;
+ * an extra wrapper shrinks the measured width and shows a false "N more".
  */
-function TopNavOverflowContainer(
-  props: ComponentPropsWithoutRef<"nav">
-): ReactElement {
-  return (
-    <StyledOverflowContainer
-      {...props}
-      aria-label="App pages"
-      data-testid="stTopNav"
-    />
-  )
-}
-
 const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =
     useContext(NavigationContext)
@@ -185,7 +167,11 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
 
   return (
     <Overflow<OverflowNavItem>
-      component={TopNavOverflowContainer}
+      // StyledOverflowContainer forwards refs; landmark attrs are spread onto
+      // that measured host via Overflow's rest props (no wrapper component).
+      component={StyledOverflowContainer}
+      aria-label="App pages"
+      data-testid="stTopNav"
       itemKey={itemKey}
       data={data}
       maxCount={"responsive"}

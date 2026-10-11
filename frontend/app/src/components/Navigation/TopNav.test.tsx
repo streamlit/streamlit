@@ -30,13 +30,15 @@ vi.mock("rc-overflow", () => ({
     renderItem,
     itemKey,
     component: Component = "div",
+    ...rest
   }: {
     data: unknown[]
     renderItem: (item: unknown, info: unknown) => React.ReactNode
     itemKey: (item: unknown) => string
     component?: React.ElementType
+    [key: string]: unknown
   }) => (
-    <Component>
+    <Component {...rest}>
       {data.map(item => (
         <div key={itemKey(item)}>{renderItem(item, {})}</div>
       ))}

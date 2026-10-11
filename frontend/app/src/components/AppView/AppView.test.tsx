@@ -189,7 +189,9 @@ describe("AppView element", () => {
     expect(appViewContainer).toHaveClass("stAppViewContainer")
   })
 
-  it("exposes a main landmark targeted by the skip link", () => {
+  it("exposes a main landmark targeted by the skip link", async () => {
+    const user = userEvent.setup()
+    const hashBefore = window.location.hash
     render(<AppView {...getProps()} />)
 
     const main = screen.getByRole("main")
@@ -201,6 +203,12 @@ describe("AppView element", () => {
     expect(skipLink).toHaveAttribute("data-testid", "stSkipToContent")
     // Skip link is the first focusable control in the app shell.
     expect(screen.getByTestId("stAppViewContainer").firstChild).toBe(skipLink)
+
+    // Activation focuses main without writing location.hash (embed hosts
+    // mirror hashchange as UPDATE_HASH).
+    await user.click(skipLink)
+    expect(main).toHaveFocus()
+    expect(window.location.hash).toBe(hashBefore)
   })
 
   it("renders the toast container when toasts are present", () => {

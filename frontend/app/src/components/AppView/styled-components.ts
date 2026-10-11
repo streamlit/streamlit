@@ -41,8 +41,7 @@ export const StyledAppViewContainer = styled.div({
 })
 
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values --
- * Visually-hidden until :focus-visible uses the standard clip pattern
- * (hardcoded px values required). Focused styles use theme tokens.
+ * The visually hidden clip pattern needs literal px values. Focused styles use theme tokens.
  */
 /**
  * Visually hidden until keyboard focus, then shown above app chrome so users
@@ -94,61 +93,67 @@ interface StyledAppViewMainProps {
 }
 
 export const StyledAppViewMain = styled.main<StyledAppViewMainProps>(
-  ({ disableScrolling, theme }) => ({
-    display: "flex",
-    flexDirection: "column",
-    width: theme.sizes.full,
-    overflow: disableScrolling ? "hidden" : "auto",
-    alignItems: "center",
-    height: `100dvh`,
-    // Positioning context for the focus-visible ring pseudo-element.
-    position: "relative",
+  ({ disableScrolling, theme }) => {
+    // Visible scrollport below the absolutely positioned header.
+    const focusRingHeight = `calc(100dvh - ${theme.sizes.headerHeight})`
 
-    "&:focus": {
-      outline: "none",
-    },
+    return {
+      display: "flex",
+      flexDirection: "column",
+      width: theme.sizes.full,
+      overflow: disableScrolling ? "hidden" : "auto",
+      alignItems: "center",
+      height: `100dvh`,
 
-    "&:focus-visible": {
-      outline: "none",
-    },
-
-    // Muted ring on a pseudo so it frames the visible area below the
-    // absolutely positioned header (stMain itself extends under the header).
-    // Not primary: stMain is a scroll region, not an actionable control.
-    "&:focus-visible::after": {
-      content: '""',
-      pointerEvents: "none",
-      position: "absolute",
-      top: theme.sizes.headerHeight,
-      right: 0,
-      bottom: 0,
-      left: 0,
-      // Above main content, below header (header z-index is much higher).
-      zIndex: theme.zIndices.priority,
-      boxShadow: `inset ${theme.shadows.focusRingMuted}`,
-    },
-
-    // Added so sidebar overlays main app content on
-    // smaller screen sizes, except when printing
-    "@media not print": {
-      [`@media (max-width: ${theme.breakpoints.md})`]: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        height: `100dvh`,
+      "&:focus": {
+        outline: "none",
       },
-    },
 
-    "@media print": {
-      // print multiple pages if app is scrollable in Safari
-      overflow: "visible",
-      "&:focus-visible::after": {
-        content: "none",
+      "&:focus-visible": {
+        outline: "none",
       },
-    },
-  })
+
+      // Inset ring frames the area below the absolutely positioned header.
+      // Use the muted ring because stMain is a scroll region, not an actionable control.
+      // Sticky + negative margin pins the ring to the scrollport so it does not
+      // scroll away with content; z-index keeps it above the sticky bottom container.
+      "&:focus-visible::before": {
+        content: '""',
+        pointerEvents: "none",
+        position: "sticky",
+        top: theme.sizes.headerHeight,
+        flexShrink: 0,
+        alignSelf: "stretch",
+        width: theme.sizes.full,
+        height: focusRingHeight,
+        marginBottom: `calc(-1 * (${focusRingHeight}))`,
+        // Above main content and sticky bottom; header (sibling) still paints over the top.
+        zIndex: theme.zIndices.bottom + 1,
+        boxShadow: `inset ${theme.shadows.focusRingMuted}`,
+      },
+
+      // Added so sidebar overlays main app content on
+      // smaller screen sizes, except when printing
+      "@media not print": {
+        [`@media (max-width: ${theme.breakpoints.md})`]: {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: `100dvh`,
+        },
+      },
+
+      "@media print": {
+        // print multiple pages if app is scrollable in Safari
+        overflow: "visible",
+        "&:focus-visible::before": {
+          content: "none",
+        },
+      },
+    }
+  }
 )
 
 export const StyledStickyBottomContainer = styled.div(({ theme }) => ({

@@ -60,6 +60,8 @@ def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
     expect(skip_link).to_be_attached()
     expect(skip_link).to_have_attribute("href", "#stMain")
 
+    hash_before = app.evaluate("() => window.location.hash")
+
     # From a cleared focus state, the first Tab should land on the skip link.
     app.evaluate(
         "() => document.activeElement instanceof HTMLElement && document.activeElement.blur()"
@@ -69,10 +71,27 @@ def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
 
     app.keyboard.press("Enter")
     expect(main).to_be_focused()
-    # Ring is on ::after below the header (not under the absolute header).
-    ring_shadow = main.evaluate("el => getComputedStyle(el, '::after').boxShadow")
+    # Skip activation must not write #stMain (embed hosts mirror hashchange).
+    expect(app).not_to_have_url(re.compile(r"#stMain"))
+    assert app.evaluate("() => window.location.hash") == hash_before
+
+    # Focus ring is an inset box-shadow on sticky ::before below the header.
+    ring_shadow = main.evaluate("el => getComputedStyle(el, '::before').boxShadow")
     assert ring_shadow != "none"
     assert "inset" in ring_shadow
+    ring_top = main.evaluate("el => getComputedStyle(el, '::before').top")
+    header_height = app.get_by_test_id("stHeader").evaluate(
+        "el => `${el.getBoundingClientRect().height}px`"
+    )
+    assert ring_top == header_height
+
+    # Ring stays pinned to the scrollport after main scrolls.
+    main.evaluate("el => { el.scrollTop = Math.min(el.scrollHeight, 400) }")
+    scrolled_top = main.evaluate("el => getComputedStyle(el, '::before').top")
+    scrolled_shadow = main.evaluate("el => getComputedStyle(el, '::before').boxShadow")
+    assert scrolled_shadow != "none"
+    assert "inset" in scrolled_shadow
+    assert scrolled_top == ring_top
 
 
 def test_top_navigation_mode_shows_top_nav_only(app: Page) -> None:
@@ -84,6 +103,10 @@ def test_top_navigation_mode_shows_top_nav_only(app: Page) -> None:
     # but the sidebar navigation menu should be hidden.
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
     expect(app.get_by_test_id("stSidebarNav")).not_to_be_visible()
+
+    # Named top-nav landmark on the measured overflow host.
+    expect(app.get_by_role("navigation", name="App pages")).to_be_visible()
+    expect(app.get_by_test_id("stTopNav")).to_be_visible()
 
     # Top navigation should be visible with links for both pages.
     nav_links = app.get_by_test_id("stTopNavLink")

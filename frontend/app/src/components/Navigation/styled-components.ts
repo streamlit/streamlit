@@ -266,8 +266,8 @@ export const StyledNavSectionContainer = styled.div(({ theme }) => ({
   },
 }))
 
-// TopNav styled components — <nav> (not a wrapping element) so rc-overflow
-// keeps measuring the same flex container width for responsive collapse.
+// TopNav styled components. The rc-overflow root is the <nav> landmark itself,
+// so responsive collapse measures the correct width.
 export const StyledOverflowContainer = styled.nav(({ theme }) => ({
   display: "flex",
   alignItems: "center",
