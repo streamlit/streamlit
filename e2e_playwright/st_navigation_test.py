@@ -69,8 +69,10 @@ def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
 
     app.keyboard.press("Enter")
     expect(main).to_be_focused()
-    # Keyboard focus on the main scroll region must show a visible ring (#17338).
-    expect(main).not_to_have_css("box-shadow", "none")
+    # Ring is on ::after below the header (not under the absolute header).
+    ring_shadow = main.evaluate("el => getComputedStyle(el, '::after').boxShadow")
+    assert ring_shadow != "none"
+    assert "inset" in ring_shadow
 
 
 def test_top_navigation_mode_shows_top_nav_only(app: Page) -> None:

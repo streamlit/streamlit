@@ -101,15 +101,30 @@ export const StyledAppViewMain = styled.main<StyledAppViewMainProps>(
     overflow: disableScrolling ? "hidden" : "auto",
     alignItems: "center",
     height: `100dvh`,
+    // Positioning context for the focus-visible ring pseudo-element.
+    position: "relative",
 
     "&:focus": {
       outline: "none",
     },
 
-    // Inset so the ring stays visible inside the overflow:hidden app shell
-    // (same muted token as other app chrome: MainMenu, top nav, etc.).
     "&:focus-visible": {
       outline: "none",
+    },
+
+    // Muted ring on a pseudo so it frames the visible area below the
+    // absolutely positioned header (stMain itself extends under the header).
+    // Not primary: stMain is a scroll region, not an actionable control.
+    "&:focus-visible::after": {
+      content: '""',
+      pointerEvents: "none",
+      position: "absolute",
+      top: theme.sizes.headerHeight,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      // Above main content, below header (header z-index is much higher).
+      zIndex: theme.zIndices.priority,
       boxShadow: `inset ${theme.shadows.focusRingMuted}`,
     },
 
@@ -129,6 +144,9 @@ export const StyledAppViewMain = styled.main<StyledAppViewMainProps>(
     "@media print": {
       // print multiple pages if app is scrollable in Safari
       overflow: "visible",
+      "&:focus-visible::after": {
+        content: "none",
+      },
     },
   })
 )
