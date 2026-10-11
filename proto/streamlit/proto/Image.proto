@@ -21,6 +21,10 @@ message Image {
   string url = 3;
   string caption = 2;
 
+  // Author-provided accessible name for the <img>.
+  // Unset means no alt attribute. Empty string means decorative (alt="").
+  optional string alt = 5;
+
   reserved 1, 4;
 }
 

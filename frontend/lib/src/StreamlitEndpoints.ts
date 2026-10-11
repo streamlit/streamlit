@@ -16,7 +16,7 @@
 
 import type { AxiosProgressEvent } from "axios"
 
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 
 type FileUploadClientConfig = {
   prefix: string

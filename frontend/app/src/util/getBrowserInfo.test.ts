@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import getBrowserInfo from "./getBrowserInfo"
 

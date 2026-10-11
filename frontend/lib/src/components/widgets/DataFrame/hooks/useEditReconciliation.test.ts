@@ -18,11 +18,11 @@ import { renderHook } from "@testing-library/react"
 import { Field, Utf8 } from "apache-arrow"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 
 import EditingState from "./EditingState"
 import useEditReconciliation from "./useEditReconciliation"

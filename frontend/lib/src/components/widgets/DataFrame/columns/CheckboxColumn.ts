@@ -15,8 +15,8 @@
  */
 
 import {
-  BooleanCell,
-  GridCell,
+  type BooleanCell,
+  type GridCell,
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
@@ -25,8 +25,8 @@ import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   toSafeBoolean,
   toSafeString,

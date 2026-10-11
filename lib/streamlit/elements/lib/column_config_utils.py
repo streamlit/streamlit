@@ -18,7 +18,7 @@ import copy
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -41,7 +41,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
 )
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
@@ -65,7 +65,7 @@ NUMERICAL_POSITION_PREFIX = "_pos:"
 
 
 # The column data kind is used to describe the type of the data within the column.
-class ColumnDataKind(str, Enum):
+class ColumnDataKind(StrEnum):
     INTEGER = "integer"
     FLOAT = "float"
     DATE = "date"
@@ -549,10 +549,15 @@ def register_button_column_widgets(
     """Register widgets for interactive button columns and attach them to a dataframe proto."""
     button_serde = ButtonClickSerde()
     for col_name, button_col in button_columns.items():
+        on_click = validate_on_change_mode(
+            button_col.on_click,
+            supported_modes=(),
+            param_name="on_click",
+        )
         check_widget_policies(
             dg,
             button_col.key,
-            on_change=button_col.on_click,
+            on_change=on_click,
             default_value=None,
             writes_allowed=False,
         )
@@ -564,7 +569,7 @@ def register_button_column_widgets(
         )
         register_widget(
             widget_id,
-            on_change_handler=button_col.on_click,
+            on_change_handler=on_click,
             args=button_col.args,
             kwargs=button_col.kwargs,
             deserializer=button_serde.deserialize,

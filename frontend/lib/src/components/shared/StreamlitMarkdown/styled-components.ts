@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { keyframes, Theme } from "@emotion/react"
+import { keyframes, type Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
@@ -89,7 +89,7 @@ function convertFontSizes(
     // Dialogs also reduce the font size of the headings to 65% of the base font size
     // Round the font size to the nearest eighth of a rem to try to keep to round px values
     const roundedFontSize = roundFontSizeToNearestEighth(
-      parseFloat(fontSize) * 0.65
+      Number.parseFloat(fontSize) * 0.65
     )
 
     // Ensure the font size is at least 0.75rem
@@ -213,7 +213,9 @@ export const StyledStreamlitMarkdown =
       // Some label contexts (e.g. alert titles, dialog titles, slider labels, metric values)
       // opt out of this sizing via inheritFont=true, which makes the font-size, font-family,
       // and font-weight inherit from their parent container instead.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- || combines the flags; a false flag still lets a later true flag win
       const useSmallerFontSize = isLabel || isToast || isCaption
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- || combines the flags; a false flag still lets a later true flag win
       const shouldInheritLineHeight = inheritFont || inheritLineHeight
 
       return {

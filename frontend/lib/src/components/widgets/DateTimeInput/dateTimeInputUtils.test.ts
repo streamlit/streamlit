@@ -17,10 +17,10 @@
 import { CalendarDateTime } from "@internationalized/date"
 import { describe, expect, it, vi } from "vitest"
 
-import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
+import type { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
-import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   calendarDateTimeToIso,
@@ -241,6 +241,32 @@ describe("updateWidgetMgrState", () => {
     updateWidgetMgrState(element, widgetMgr, vws, undefined)
 
     expect(widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when ignoreRerun is set", () => {
+    const widgetMgr = makeWidgetMgr()
+    const vws: ValueWithSource<string | null> = {
+      value: "2024-06-01T12:00",
+      fromUser: true,
+    }
+
+    updateWidgetMgrState(
+      { ...element, ignoreRerun: true } as DateTimeInputProto,
+      widgetMgr,
+      vws,
+      "fragment"
+    )
+
+    expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      element.id,
+      ["2024-06-01T12:00"],
+      {
+        formId: element.formId,
+        fragmentId: "fragment",
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
   })
 
   it("allows null values", () => {

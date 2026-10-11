@@ -94,10 +94,9 @@ def _get_uvloop_loop_factory() -> Callable[[], asyncio.AbstractEventLoop] | None
 def _try_install_uvloop() -> None:
     """Install uvloop as the process event-loop policy if that API exists.
 
-    Used on Python 3.10 (no ``asyncio.Runner``) and as a fallback when
-    ``uvloop.new_event_loop`` is missing. ``install()`` relies on the asyncio
-    policy APIs, which are deprecated from Python 3.14 and removed in 3.16.
-    Python 3.11+ takes the Runner path instead.
+    Used when uvloop is present but too old to provide ``new_event_loop``.
+    ``install()`` relies on the asyncio policy APIs, which are deprecated
+    from Python 3.14 and removed in 3.16.
     """
     if env_util.IS_WINDOWS:
         return
@@ -124,19 +123,17 @@ def _try_install_uvloop() -> None:
 def _run_server_loop(main: Coroutine[Any, Any, None]) -> None:
     """Run ``main`` on a new event loop, using uvloop when available.
 
-    Preferred path (Python 3.11+ and uvloop with ``new_event_loop``):
-    ``asyncio.Runner(loop_factory=...)``. That avoids the deprecated
-    ``uvloop.install()`` / event-loop policy APIs.
-
-    Fallback (Python 3.10, or uvloop too old for ``new_event_loop``):
-    ``uvloop.install()`` when present, then ``asyncio.run()``. If creating
-    the uvloop loop fails, skip ``install()`` and use the stdlib loop.
+    - uvloop provides ``new_event_loop``: run on ``asyncio.Runner`` so we
+      avoid the deprecated event-loop policy APIs.
+    - uvloop is missing or too old: call ``uvloop.install()`` when it exists,
+      then ``asyncio.run()``.
+    - Creating the uvloop loop fails: skip ``install()`` and use the stdlib
+      loop.
     """
     loop_factory = _get_uvloop_loop_factory()
-    # Runner was added in 3.11 and is the supported way to pick a loop
-    # implementation. getattr keeps this importable on 3.10.
-    runner_cls = getattr(asyncio, "Runner", None)
-    if loop_factory is not None and runner_cls is not None:
+    if loop_factory is None:
+        _try_install_uvloop()
+    else:
         try:
             # Create the loop before Runner.run so a factory failure can
             # fall back without wrapping the server coroutine itself.
@@ -150,11 +147,9 @@ def _run_server_loop(main: Coroutine[Any, Any, None]) -> None:
             )
         else:
             _LOGGER.debug("Starting new uvloop event loop for server")
-            with runner_cls(loop_factory=lambda: loop) as runner:
+            with asyncio.Runner(loop_factory=lambda: loop) as runner:
                 runner.run(main)
             return
-    else:
-        _try_install_uvloop()
 
     _LOGGER.debug("Starting new event loop for server")
     asyncio.run(main)

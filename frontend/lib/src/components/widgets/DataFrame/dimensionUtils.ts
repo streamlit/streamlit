@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { streamlit } from "@streamlit/protobuf"
+import type { streamlit } from "@streamlit/protobuf"
 
 /**
  * Helper function to determine if we should use container width based on the widthConfig.

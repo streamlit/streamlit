@@ -127,27 +127,42 @@ describe("browser", () => {
     it.each([
       [
         "Android phone",
-        "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/123.0 Mobile Safari/537.36",
         "mobile",
+        "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/123.0 Mobile Safari/537.36",
       ],
       [
         "Android tablet",
-        "Mozilla/5.0 (Linux; Android 14; Tablet) AppleWebKit/537.36 Chrome/123.0 Safari/537.36",
         "tablet",
+        "Mozilla/5.0 (Linux; Android 14; Tablet) AppleWebKit/537.36 Chrome/123.0 Safari/537.36",
       ],
       [
         "Web0S TV",
-        "Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36 DMOST/2.0.0 (; LGE; webOS TV)",
         "smarttv",
+        "Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36 DMOST/2.0.0 (; LGE; webOS TV)",
       ],
       [
         // Palm Pre phone; the coarse `webOS` token wins over mobile, unlike
         // historical ua-parser-js which reported this as `mobile`.
         "legacy webOS device",
-        "Mozilla/5.0 (webOS/1.4.2; U; en-US) AppleWebKit/532.2 (KHTML, like Gecko) Version/1.0 Safari/532.2 Pre/1.1",
         "smarttv",
+        "Mozilla/5.0 (webOS/1.4.2; U; en-US) AppleWebKit/532.2 (KHTML, like Gecko) Version/1.0 Safari/532.2 Pre/1.1",
       ],
-    ])("classifies an %s as %s", (_label, userAgent, deviceType) => {
+      [
+        "Galaxy Watch",
+        "wearable",
+        "Mozilla/5.0 (Linux; Android 11; Galaxy Watch) AppleWebKit/537.36 Chrome/123.0 Mobile Safari/537.36 Wear OS",
+      ],
+      [
+        "PlayStation",
+        "console",
+        "Mozilla/5.0 (PlayStation 5) AppleWebKit/537.36 Chrome/123.0 Safari/537.36",
+      ],
+      [
+        "Chromecast",
+        "embedded",
+        "Mozilla/5.0 (CrKey armv7l) AppleWebKit/537.36 Chrome/123.0 Safari/537.36",
+      ],
+    ])("classifies %s as %s", (_label, deviceType, userAgent) => {
       expect(parseUserAgent(userAgent).deviceType).toBe(deviceType)
     })
 
@@ -174,6 +189,19 @@ describe("browser", () => {
         browserVersion: "121.0",
         deviceType: undefined,
         os: "Ubuntu",
+      })
+    })
+
+    it("reports Mobile Safari for an iPhone Safari user agent", () => {
+      expect(
+        parseUserAgent(
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        )
+      ).toEqual({
+        browserName: "Mobile Safari",
+        browserVersion: "17.0",
+        deviceType: "mobile",
+        os: "iOS",
       })
     })
 

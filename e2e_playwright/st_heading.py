@@ -153,4 +153,8 @@ with st.container(key="wrap_true_headings", width=200):
     st.subheader(_WRAP_TEXT, wrap=True)
 
 with st.container(key="wrap_false_heading_extra_lines", width=200):
-    st.title("First line\nSecond line that must not appear", wrap=False)
+    st.title(
+        "First line versus plan for the complete fiscal year dashboard\n"
+        "Second line that must not appear",
+        wrap=False,
+    )

@@ -16,7 +16,7 @@
 
 import { createContext } from "react"
 
-import { FormsData } from "~lib/WidgetStateManager"
+import type { FormsData } from "~lib/WidgetStateManager"
 
 export interface FormsContextProps {
   /**

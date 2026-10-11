@@ -205,3 +205,9 @@ with st.container(key="columns_wrap_true"):
     wrap_true_cols = st.columns(3, wrap=True, border=True)
     for i, col in enumerate(wrap_true_cols):
         col.write(f"Wrap true {i + 1}")
+
+with st.container(key="columns_bordered_bottom"):
+    tall_col, short_col = st.columns(2, border=True, vertical_alignment="bottom")
+    for line in range(4):
+        tall_col.write(f"Tall column line {line}")
+    short_col.write("Short column content")

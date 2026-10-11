@@ -43,6 +43,8 @@ class DeferredCallableEntry(TypedDict):
     mimetype: str | None
     filename: str | None
     coordinates: str
+    session_id: str
+    element_id: str
 
 
 def _get_session_id() -> str:
@@ -113,6 +115,12 @@ class MediaFileManager:
         # Used for deferred download button execution
         self._deferred_callables: dict[str, DeferredCallableEntry] = {}
 
+        # Dict[session ID] -> set of deferred file_ids. remove_deferred() scans
+        # only the active session's callables.
+        self._deferred_ids_by_session: dict[str, set[str]] = collections.defaultdict(
+            set
+        )
+
         # MediaFileManager is used from multiple threads, so all operations
         # need to be protected with a Lock. (This is not an RLock, which
         # means taking it multiple times from the same thread will deadlock.)
@@ -175,7 +183,7 @@ class MediaFileManager:
         ]
         for file_id in deferred_ids_to_remove:
             _LOGGER.debug("Removing deferred callable: %s", file_id)
-            del self._deferred_callables[file_id]
+            self._drop_deferred_id(file_id)
 
     def _delete_file(self, file_id: str) -> None:
         """Delete the given file from storage, and remove its metadata from
@@ -290,6 +298,8 @@ class MediaFileManager:
         mimetype: str | None,
         coordinates: str,
         file_name: str | None = None,
+        *,
+        element_id: str = "",
     ) -> str:
         """Register a callable for deferred execution. Returns placeholder file_id.
 
@@ -310,6 +320,9 @@ class MediaFileManager:
             Unique string identifying an element's location.
         file_name : str or None
             Optional file_name. Used to set the filename in the response header.
+        element_id : str
+            Stable widget id. Empty when the caller has no element id. Used to
+            revoke the callable if a later run renders the button at a new path.
 
         Returns
         -------
@@ -331,13 +344,80 @@ class MediaFileManager:
                     "mimetype": mimetype,
                     "filename": file_name,
                     "coordinates": coordinates,
+                    "session_id": session_id,
+                    "element_id": element_id,
                 },
             )
+            self._deferred_ids_by_session[session_id].add(file_id)
 
             # Track this deferred file by session and coordinate
             self._files_by_session_and_coord[session_id][coordinates] = file_id
 
             return file_id
+
+    def remove_deferred(self, coordinates: str, *, element_id: str = "") -> None:
+        """Revoke this session's deferred callables for one download button.
+
+        Drops entries at ``coordinates`` and, when ``element_id`` is set, every
+        entry with that id. The id stays stable across a move. A user ``key``
+        also keeps it stable when the label changes. Also drops entries that
+        ``clear_session_refs`` already unmapped. Does nothing when nothing matches.
+
+        Parameters
+        ----------
+        coordinates : str
+            Delta path of the button on this run.
+        element_id : str
+            Stable widget id. Empty when the caller has no element id.
+
+        Safe to call from any thread.
+        """
+        session_id = _get_session_id()
+
+        with self._lock:
+            candidate_ids = self._deferred_ids_by_session.get(session_id)
+            if not candidate_ids:
+                return
+
+            # Also drop a different button's callable from the previous run when
+            # this button now uses that path. If that button renders later in
+            # this run, it registers a new file id. A click that still holds the
+            # old id fails until the browser receives the new delta.
+            removed: list[tuple[str, str]] = []
+            for file_id in list(candidate_ids):
+                entry = self._deferred_callables.get(file_id)
+                if entry is None:
+                    continue
+                same_element = bool(element_id) and entry["element_id"] == element_id
+                if entry["coordinates"] == coordinates or same_element:
+                    removed.append((file_id, entry["coordinates"]))
+
+            for file_id, _coord in removed:
+                self._drop_deferred_id(file_id)
+
+            session_files = self._files_by_session_and_coord.get(session_id)
+            if session_files is None:
+                return
+            for file_id, coord in removed:
+                # Only unmap a deferred id this call removed. A static file at
+                # these coordinates is unrelated and stays referenced.
+                if session_files.get(coord) == file_id:
+                    del session_files[coord]
+
+    def _drop_deferred_id(self, file_id: str) -> None:
+        """Remove one deferred callable and its session index entry.
+
+        Thread safety: callers must hold `self._lock`.
+        """
+        entry = self._deferred_callables.pop(file_id, None)
+        if entry is None:
+            return
+        deferred_ids = self._deferred_ids_by_session.get(entry["session_id"])
+        if deferred_ids is None:
+            return
+        deferred_ids.discard(file_id)
+        if not deferred_ids:
+            del self._deferred_ids_by_session[entry["session_id"]]
 
     def execute_deferred(self, file_id: str) -> str:
         """Execute a deferred callable and return the URL to the generated file.
@@ -399,8 +479,9 @@ class MediaFileManager:
             metadata = MediaFileMetadata(kind=MediaFileKind.DOWNLOADABLE)
             self._file_metadata[actual_file_id] = metadata
 
-            # Keep the deferred callable so users can download multiple times
-            # It will be cleaned up when clear_session_refs() is called on rerun
+            # Keep the callable so the user can download more than once.
+            # remove_orphaned_files() drops it once no session references it.
+            # remove_deferred() drops it when the button renders disabled.
 
             # We leave actual_file_id unmapped so repeat clicks rerun the callable.
             # Cleanup prunes the stored file once no session references it.

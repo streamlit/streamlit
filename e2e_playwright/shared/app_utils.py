@@ -100,7 +100,12 @@ def get_time_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
 
 
 def type_time(
-    time_display: Locator, hour: str, minute: str, second: str | None = None
+    time_display: Locator,
+    hour: str,
+    minute: str,
+    second: str | None = None,
+    *,
+    commit: bool = True,
 ) -> None:
     """Type a time into a TimeInput's spinbutton segments.
 
@@ -110,7 +115,8 @@ def type_time(
 
     After typing, blurs the last segment so the widget commits the value
     to the backend (commit is deferred to blur, matching st.number_input
-    semantics).
+    semantics). Pass ``commit=False`` to leave the last segment focused
+    without committing.
 
     Parameters
     ----------
@@ -127,14 +133,20 @@ def type_time(
         Two-digit second string (e.g. "30"). Only applicable when the widget
         has sub-minute step (seconds granularity). If None, the seconds segment
         is not interacted with.
+
+    commit : bool
+        If True (default), blur the last typed segment so the widget commits
+        the value. Set to False to keep the edit uncommitted (e.g. to test
+        typing without a rerun).
     """
     spinbuttons = time_display.get_by_role("spinbutton")
     spinbuttons.first.press_sequentially(hour)
     spinbuttons.nth(1).press_sequentially(minute)
     if second is not None:
         spinbuttons.nth(2).press_sequentially(second)
-        spinbuttons.nth(2).blur()
-    else:
+        if commit:
+            spinbuttons.nth(2).blur()
+    elif commit:
         spinbuttons.nth(1).blur()
     # Blur triggers the deferred commit to the backend.
 
@@ -298,9 +310,9 @@ def select_selectbox_option(
     # Wait for the React component to be fully initialized before interacting
     selectbox_input.wait_for(state="visible")
     selectbox_input.click()
-    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
-    # Note: this shifts focus to the first option, so the initially-selected item
-    # will not be highlighted when the dropdown first opens.
+    # ArrowDown is a backup open. The Enter target is already active (the
+    # current value, or the first option when the input is empty), so this
+    # key moves to the next row. The helper then filters and clicks by name.
     selectbox_input.press("ArrowDown")
 
     # Wait for dropdown to be visible before typing
@@ -413,6 +425,36 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
         spinbuttons.nth(i).press_sequentially(part)
     if commit:
         date_input_field.page.keyboard.press("Escape")
+
+
+def paste_into(locator: Locator, text: str) -> None:
+    """Dispatch a synthetic ``paste`` event carrying ``text`` on the given element.
+
+    Playwright's ``fill``/``press_sequentially`` never produce a ``paste``
+    event, so segmented widgets (``st.date_input``, ``st.time_input``) that
+    implement an ``onPaste`` handler need the event synthesized directly.
+
+    Parameters
+    ----------
+    locator : Locator
+        The element to dispatch the paste event on.
+
+    text : str
+        The clipboard text to paste.
+    """
+    locator.evaluate(
+        """(el, text) => {
+            const dt = new DataTransfer();
+            dt.setData('text/plain', text);
+            const event = new ClipboardEvent('paste', {
+                bubbles: true,
+                cancelable: true,
+            });
+            Object.defineProperty(event, 'clipboardData', { value: dt });
+            el.dispatchEvent(event);
+        }""",
+        text,
+    )
 
 
 def get_slider(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:

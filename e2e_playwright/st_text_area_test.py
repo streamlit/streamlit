@@ -22,6 +22,7 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -33,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     get_text_area,
 )
 
-NUM_TEXT_AREAS = 28
+NUM_TEXT_AREAS = 29
 
 
 def test_text_area_widget_rendering(
@@ -97,10 +98,17 @@ def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         get_text_area(app, "text area 12 (height=75)"), name="st_text_area-height_75"
     )
-    # Expect this to default to the minimum height of 68px
-    assert_snapshot(
-        get_text_area(app, "text area 13 (height=60)"), name="st_text_area-height_60"
-    )
+    # The requested height is clamped to the 68px minimum.
+    min_height_text_area = get_text_area(app, "text area 13 (height=60)")
+    assert_snapshot(min_height_text_area, name="st_text_area-height_60")
+    # The 68px minimum includes the field border, matching other large widgets.
+    min_height_field = min_height_text_area.get_by_test_id("stTextAreaRootElement")
+
+    def _field_has_min_height() -> bool:
+        box = min_height_field.bounding_box()
+        return box is not None and round(box["height"]) == 68
+
+    wait_until(app, _field_has_min_height)
     # gh-12867: Test very small height that produces negative calculation
     # Should clamp to 0px and use minHeight (68px)
     assert_snapshot(
@@ -465,3 +473,66 @@ def test_text_area_query_param_max_chars_truncation(page: Page, app_port: int):
 
     # Should be truncated to 5 characters
     expect_prefixed_markdown(page, "bound area max value:", "veryl")
+
+
+def test_text_area_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore text area value:", "hello")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_text_area="))
+
+    text_area_field = (
+        get_text_area(app, "Ignore change text area").locator("textarea").first
+    )
+
+    # Fill without committing - URL should not update until Control+Enter.
+    text_area_field.fill("world")
+    expect(text_area_field).to_have_value("world")
+    # Wait long enough that a keystroke-triggered rerun would have landed.
+    wait_for_app_run(app)
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_text_area="))
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore text area value:", "hello")
+
+    # Commit with Control+Enter - should NOT trigger a rerun, but should update the URL
+    text_area_field.press("Control+Enter")
+
+    # Give a spurious rerun a chance to land before asserting the counter.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(text_area_field).to_have_value("world")
+    expect_prefixed_markdown(app, "Ignore text area value:", "hello")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_text_area=world"))
+
+    # Click button to trigger a rerun - buffered value should be sent
+    app.get_by_role("button", name="Apply ignore text area", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore text area value: world", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore text area value: world", exact=True)
+    ).to_be_visible()
+
+    # Type-then-click: blur commits the dirty value, then the button reruns.
+    text_area_field.fill("blurred")
+    expect(text_area_field).to_have_value("blurred")
+    app.get_by_role("button", name="Apply ignore text area", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(
+        app.get_by_text("Ignore text area value: blurred", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore text area value: blurred", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(
+        get_text_area(app, "Ignore change text area").locator("textarea").first
+    ).to_have_value("blurred")
+    expect_prefixed_markdown(app, "Ignore text area value:", "blurred")

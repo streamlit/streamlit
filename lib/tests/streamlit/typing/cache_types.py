@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     import streamlit as st
@@ -53,6 +51,13 @@ if TYPE_CHECKING:
     assert_type(cached_data_fn_with_decorator_args.clear(arg2="2"), None)
     assert_type(cached_data_fn_with_decorator_args.clear(arg1=1, arg2="2"), None)
 
+    @st.cache_data
+    async def cached_async_data_fn(arg1: int, arg2: str) -> bool:
+        return True
+
+    async def check_cached_async_data_fn() -> None:
+        assert_type(await cached_async_data_fn(1, "2"), bool)
+
     @st.cache_resource
     def cached_resource_fn(arg1: int, arg2: str) -> bool:
         return True
@@ -84,3 +89,10 @@ if TYPE_CHECKING:
     assert_type(cached_resource_fn_with_decorator_args.clear(arg1=1), None)
     assert_type(cached_resource_fn_with_decorator_args.clear(arg2="2"), None)
     assert_type(cached_resource_fn_with_decorator_args.clear(arg1=1, arg2="2"), None)
+
+    @st.cache_resource
+    async def cached_async_resource_fn(arg1: int, arg2: str) -> bool:
+        return True
+
+    async def check_cached_async_resource_fn() -> None:
+        assert_type(await cached_async_resource_fn(1, "2"), bool)

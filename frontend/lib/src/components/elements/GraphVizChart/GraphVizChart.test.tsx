@@ -16,7 +16,7 @@
 
 import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
-import { Mock, MockInstance } from "vitest"
+import type { Mock, MockInstance } from "vitest"
 
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/protobuf"
 
@@ -24,7 +24,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 
 import GraphVizChart, {
-  GraphVizChartProps,
+  type GraphVizChartProps,
   LOG,
   sanitizeGraphVizLinkUris,
 } from "./GraphVizChart"
@@ -115,7 +115,7 @@ describe("GraphVizChart Element", () => {
   })
 
   afterEach(() => {
-    // @ts-expect-error
+    // @ts-expect-error - graphviz is not typed as a vitest mock
     graphviz.mockClear()
   })
 
@@ -164,6 +164,44 @@ describe("GraphVizChart Element", () => {
     expect(screen.getByTestId("stGraphVizChart")).toHaveStyle(
       "height: auto; width: auto"
     )
+  })
+
+  describe("alt (accessible name)", () => {
+    it("sets role=figure with accessible name when alt is provided", () => {
+      render(
+        <GraphVizChart
+          {...getProps({ alt: "Directed graph of Hello to World" })}
+        />
+      )
+      // figure (not img) keeps SVG link descendants non-presentational.
+      expect(
+        screen.getByRole("figure", {
+          name: "Directed graph of Hello to World",
+        })
+      ).toBeVisible()
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Directed graph of Hello to World$/,
+        })
+      ).toBeInTheDocument()
+    })
+
+    it("omits role and aria-label when alt is not provided", () => {
+      render(<GraphVizChart {...getProps()} />)
+      const chart = screen.getByTestId("stGraphVizChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits role and aria-label when alt is %s", (_label, alt) => {
+      render(<GraphVizChart {...getProps({ alt })} />)
+      const chart = screen.getByTestId("stGraphVizChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
   })
 
   const renderWithSvgLink = (

@@ -531,6 +531,23 @@ class RuntimeTest(RuntimeTestCase):
         with pytest.raises(RuntimeStoppedError):
             self.runtime.handle_backmsg("not_a_session_id", MagicMock())
 
+    async def test_handle_backmsg_deserialization_exception_after_stop(self):
+        """After Runtime.stop is called, BackMsg exception handling is an error."""
+        await self.runtime.start()
+        self.runtime.stop()
+        await self.tick_runtime_loop()
+
+        with pytest.raises(RuntimeStoppedError):
+            self.runtime.handle_backmsg_deserialization_exception(
+                "not_a_session_id", MagicMock()
+            )
+
+    async def test_is_ready_for_browser_connection_when_unavailable(self):
+        """The runtime is unavailable for browser connections before start."""
+        ready, message = await self.runtime.is_ready_for_browser_connection
+        assert ready is False
+        assert message == "unavailable"
+
     async def test_handle_session_client_disconnected(self):
         """Runtime should gracefully handle `SessionClient.write_forward_msg`
         raising a `SessionClientDisconnectedError`.

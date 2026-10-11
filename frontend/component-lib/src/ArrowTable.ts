@@ -15,12 +15,12 @@
  */
 
 import {
-  StructRow,
-  Table,
+  type StructRow,
+  type Table,
   tableFromIPC,
   tableToIPC,
   Type,
-  Vector,
+  type Vector,
 } from "apache-arrow"
 
 export type CellType = "blank" | "index" | "columns" | "data"
@@ -223,10 +223,12 @@ export class ArrowTable {
     const columnTypeId = this.getColumnTypeId(table, columnIndex)
     switch (columnTypeId) {
       case Type.Timestamp: {
-        return this.nanosToDate(column.get(rowIndex))
+        // Untyped Arrow tables leave Vector.get() as any; timestamps are nanos.
+        return this.nanosToDate(column.get(rowIndex) as number)
       }
       default: {
-        return column.get(rowIndex)
+        // Untyped Arrow tables leave Vector.get() as any; assert DataType here.
+        return column.get(rowIndex) as DataType
       }
     }
   }
@@ -246,7 +248,8 @@ export class ArrowTable {
    * Returns apache-arrow specific typeId of column.
    */
   private getColumnTypeId(table: Table, columnIndex: number): Type {
-    return table.schema.fields[columnIndex].type.typeId
+    // Untyped Arrow tables leave Field.type as any; assert the enum typeId.
+    return table.schema.fields[columnIndex].type.typeId as Type
   }
 
   private nanosToDate(nanos: number): Date {

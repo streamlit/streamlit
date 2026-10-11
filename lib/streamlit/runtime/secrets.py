@@ -216,11 +216,11 @@ class Secrets(Mapping[str, Any]):
             # the default config for secrets contains two paths. It's likely one of will not have secrets file.
             return {}, False
 
-        import toml
+        import tomllib
 
         try:
-            secrets.update(toml.loads(secrets_file_str))
-        except (TypeError, toml.TomlDecodeError) as ex:
+            secrets.update(tomllib.loads(secrets_file_str))
+        except (TypeError, tomllib.TOMLDecodeError) as ex:
             raise StreamlitSecretNotFoundError(
                 "Error parsing secrets file at {path}: {error}",
                 path=path,
@@ -448,7 +448,7 @@ class Secrets(Mapping[str, Any]):
                             self._on_secrets_changed,
                             watcher_type="poll",
                         )
-                except (StreamlitMaxRetriesError, FileNotFoundError):  # noqa: PERF203
+                except (StreamlitMaxRetriesError, FileNotFoundError):
                     # A user may only have one secrets.toml file defined, so we'd expect
                     # exceptions to be raised here when attempting to install a
                     # watcher on the nonexistent ones.

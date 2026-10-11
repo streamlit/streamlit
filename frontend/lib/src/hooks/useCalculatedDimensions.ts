@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { MutableRefObject, useMemo } from "react"
+import { type MutableRefObject, useMemo } from "react"
 
 import { useResizeObserver } from "./useResizeObserver"
 

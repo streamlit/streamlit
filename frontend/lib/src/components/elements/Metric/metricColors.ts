@@ -19,7 +19,7 @@ import { transparentize } from "color2k"
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
-import { EmotionTheme } from "~lib/theme/types"
+import type { EmotionTheme } from "~lib/theme/types"
 
 /**
  * Returns the main color for a metric based on the MetricColor enum.

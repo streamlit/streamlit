@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 30
+NUM_SELECTBOXES = 31
 
 
 def get_selectbox_input(
@@ -192,6 +192,13 @@ def test_handles_option_selection_via_typing(app: Page):
     # Click to open dropdown, then fill to filter by the desired option:
     selectbox_input.click()
     selectbox_input.fill("e2e/scripts/st_warning.py")
+    # Wait for the filter to settle before Enter (fill can race the React update).
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(
+        selection_dropdown.get_by_role(
+            "option", name="e2e/scripts/st_warning.py", exact=True
+        )
+    ).to_be_visible()
     selectbox_input.press("Enter")
 
     # Check that selection worked:
@@ -204,12 +211,27 @@ def test_shows_correct_options_via_fuzzy_search(
     """Test that the fuzzy matching of options via typing works correctly."""
     selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
 
-    # Click to open dropdown, then fill to filter:
+    # Click to open dropdown, then type to filter:
     selectbox_input.click()
-    selectbox_input.fill("exp")
+    selectbox_input.press_sequentially("exp")
 
-    # Check filtered options
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(1)
+    expect(options.first).to_have_text("e2e/scripts/st_expander.py")
+
+    # Typing alone must set aria-activedescendant on the Enter target (#16841).
+    # Assert without arrow keys so the check cannot pass via keyboard navigation.
+    expect(options.first).to_have_attribute("data-focused", "true")
+    expect(selectbox_input).to_have_attribute(
+        "aria-activedescendant", re.compile(r".+")
+    )
+    active_id = selectbox_input.get_attribute("aria-activedescendant")
+    assert active_id is not None
+    expect(app.locator(f'[id="{active_id}"]')).to_have_text(
+        "e2e/scripts/st_expander.py"
+    )
+
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
 
@@ -462,6 +484,11 @@ def test_accept_new_options_feature(app: Page):
     # Check that the new option was accepted and selected
     expect_markdown(app, "value 15: new_custom_option")
     expect_markdown(app, "value 15 (session_state): new_custom_option")
+    # Custom-value Enter must close the menu; otherwise a second Enter can
+    # re-commit the first option after the filter resets.
+    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).not_to_be_visible()
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 15: new_custom_option")
 
 
 def test_does_not_accept_new_options_feature(app: Page):
@@ -615,13 +642,16 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     selectbox_input.click()
     expect(selectbox_input).to_be_focused()
 
-    # ArrowDown reliably opens the dropdown (backup for pointer-triggered open,
-    # matching select_selectbox_option) and highlights the first option.
-    selectbox_input.press("ArrowDown")
+    # ArrowDown opens if click did not; ArrowUp clamps to first for one-ArrowDown→No.
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    if selectbox_input.get_attribute("aria-expanded") != "true":
+        selectbox_input.press("ArrowDown")
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
+    for _ in range(3):
+        selectbox_input.press("ArrowUp")
+    expect(options.first).to_have_attribute("data-focused", "true")
 
     # Typing must NOT filter the list: character input is blocked, so all
     # options stay visible.
@@ -634,8 +664,7 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     # toHaveValue("")).
     expect(selectbox_input).to_have_value("")
 
-    # Keyboard navigation still selects: a second ArrowDown reaches "No" and
-    # Enter commits it, proving Arrow/Enter work after focusing via click.
+    # One ArrowDown from the first option moves to "No"; Enter commits.
     selectbox_input.press("ArrowDown")
     selectbox_input.press("Enter")
     expect_markdown(app, "value 23: No")
@@ -853,3 +882,55 @@ def test_selectbox_in_sidebar_flips_up_within_viewport(app: Page):
     assert dropdown_box["y"] < trigger_box["y"], (
         f"dropdown did not flip up: dropdown={dropdown_box}, trigger={trigger_box}"
     )
+
+
+def test_selectbox_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "alpha")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_select="))
+
+    ignore_input = get_selectbox_input(app, "Ignore change selectbox")
+
+    # Filtering does not commit the value, so Python and the URL remain unchanged.
+    ignore_input.click()
+    ignore_input.fill("be")
+    expect(ignore_input).to_have_value("be")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "alpha")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_select="))
+
+    # Reset the combobox so the later option click does not toggle an already-open dropdown.
+    ignore_input.press("Escape")
+    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).not_to_be_visible()
+
+    # Choosing an option updates the URL without rerunning the app.
+    select_selectbox_option(app, "Ignore change selectbox", "beta")
+
+    # Extra settle on top of select_selectbox_option's wait_for_app_run, to catch a delayed rerun.
+    wait_for_app_run(app)
+
+    # Verify no rerun occurred (run count should still be 1)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(ignore_input).to_have_value("beta")
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "alpha")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_select=beta"))
+
+    # Click button to trigger a rerun - buffered value should be sent
+    app.get_by_role("button", name="Apply ignore selectbox", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore selectbox value: beta", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore selectbox value: beta", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(get_selectbox_input(app, "Ignore change selectbox")).to_have_value("beta")
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "beta")

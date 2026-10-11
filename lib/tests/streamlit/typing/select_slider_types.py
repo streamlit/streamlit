@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 if TYPE_CHECKING:
@@ -71,6 +69,16 @@ if TYPE_CHECKING:
     assert_type(select_slider("foo", [1, 2, 3], bind=None), int)
     assert_type(
         select_slider("foo", [1, 2, 3], value=(1, 3), bind="query-params"),
+        tuple[int, int],
+    )
+
+    # Check on_change parameter modes
+    assert_type(select_slider("foo", [1, 2, 3], on_change=None), int)
+    assert_type(select_slider("foo", [1, 2, 3], on_change="rerun"), int)
+    assert_type(select_slider("foo", [1, 2, 3], on_change="ignore"), int)
+    assert_type(select_slider("foo", [1, 2, 3], on_change=lambda: None), int)
+    assert_type(
+        select_slider("foo", [1, 2, 3], value=(1, 3), on_change="ignore"),
         tuple[int, int],
     )
 

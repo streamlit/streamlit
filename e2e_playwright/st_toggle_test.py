@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-TOGGLE_ELEMENTS = 23
+TOGGLE_ELEMENTS = 24
 
 WRAP_LABEL = "Enable live updates for every connected data source right now"
 
@@ -294,3 +294,43 @@ def test_toggle_query_param_invalid_value(page: Page, app_base_url: str):
     # Toggle should use default (False), and invalid param should be cleared
     expect_prefixed_markdown(page, "bound toggle value:", "False")
     expect(page).not_to_have_url(re.compile(r"bound_toggle="))
+
+
+def test_toggle_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on click, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore toggle value:", "False")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_toggle="))
+
+    ignore_toggle = get_toggle(app, "Ignore change toggle")
+
+    # Clicking the toggle updates the URL without rerunning the app.
+    click_toggle(app, "Ignore change toggle")
+
+    # Catch a delayed rerun that click_toggle's wait might miss.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(ignore_toggle.get_by_role("switch")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore toggle value:", "False")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_toggle=true"))
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore toggle", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore toggle value: True", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore toggle value: True", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(ignore_toggle.get_by_role("switch")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore toggle value:", "True")

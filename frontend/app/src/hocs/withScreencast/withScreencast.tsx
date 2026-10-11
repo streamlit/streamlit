@@ -15,9 +15,9 @@
  */
 
 import {
-  ComponentType,
-  FC,
-  PropsWithChildren,
+  type ComponentType,
+  type FC,
+  type PropsWithChildren,
   useCallback,
   useRef,
   useState,
@@ -113,8 +113,10 @@ function withScreencast<P extends InjectedProps>(
       recorderRef.current = new ScreenCastRecorder({
         recordAudio,
         onErrorOrStop: () => {
-          stopRecording().catch(err =>
-            LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
+          stopRecording().catch((err: unknown) =>
+            LOG.warn(
+              `withScreencast.stopRecording threw an error: ${String(err)}`
+            )
           )
         },
       })
@@ -145,8 +147,10 @@ function withScreencast<P extends InjectedProps>(
         }
 
         // If we are currently in any other state, stop any ongoing recording
-        stopRecording().catch(err =>
-          LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
+        stopRecording().catch((err: unknown) =>
+          LOG.warn(
+            `withScreencast.stopRecording threw an error: ${String(err)}`
+          )
         )
       },
       [currentState, stopRecording]
@@ -162,8 +166,10 @@ function withScreencast<P extends InjectedProps>(
       if (hasStarted) {
         setCurrentState("RECORDING")
       } else {
-        stopRecording().catch(err =>
-          LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
+        stopRecording().catch((err: unknown) =>
+          LOG.warn(
+            `withScreencast.stopRecording threw an error: ${String(err)}`
+          )
         )
       }
     }, [stopRecording])

@@ -20,6 +20,7 @@ import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import {
+  applyAltToOption,
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
   type EChartsOptionObject,
@@ -884,6 +885,132 @@ describe("applyStreamlitOptionDefaults", () => {
     const series = result.series as Array<Record<string, unknown>>
     const data = series[0].data as Array<Record<string, unknown>>
     expect(data[0].name).toBe("<img src=x onerror=alert(1)>")
+  })
+})
+
+describe("applyAltToOption", () => {
+  it("forces aria.enabled and sets label.description", () => {
+    const result = applyAltToOption(
+      { aria: { enabled: false }, series: [] },
+      "Accessible chart name"
+    )
+
+    expect(result.aria).toEqual({
+      enabled: true,
+      label: { enabled: true, description: "Accessible chart name" },
+    })
+  })
+
+  it("forces label.enabled when an author disables it", () => {
+    const result = applyAltToOption(
+      {
+        series: [],
+        aria: { label: { enabled: false, description: "Author silenced" } },
+      },
+      "Streamlit alt"
+    )
+
+    expect(result.aria).toEqual({
+      enabled: true,
+      label: { enabled: true, description: "Streamlit alt" },
+    })
+  })
+
+  it("writes aria onto baseOption for timeline specs", () => {
+    const result = applyAltToOption(
+      {
+        baseOption: { series: [] },
+        options: [{ series: [] }],
+      },
+      "Timeline chart name"
+    )
+
+    expect(result.baseOption).toEqual({
+      series: [],
+      aria: {
+        enabled: true,
+        label: { enabled: true, description: "Timeline chart name" },
+      },
+    })
+    expect(result.aria).toBeUndefined()
+    expect(result.options).toEqual([
+      {
+        series: [],
+        aria: {
+          enabled: true,
+          label: { enabled: true, description: "Timeline chart name" },
+        },
+      },
+    ])
+  })
+
+  it("overrides aria on timeline option ticks", () => {
+    const result = applyAltToOption(
+      {
+        baseOption: {
+          series: [],
+          aria: { enabled: false, label: { description: "Base author" } },
+        },
+        options: [
+          {
+            series: [],
+            aria: {
+              enabled: false,
+              label: { description: "Tick author" },
+            },
+          },
+        ],
+      },
+      "Streamlit alt"
+    )
+
+    expect((result.baseOption as Record<string, unknown>).aria).toEqual({
+      enabled: true,
+      label: { enabled: true, description: "Streamlit alt" },
+    })
+    expect((result.options as Array<Record<string, unknown>>)[0].aria).toEqual(
+      {
+        enabled: true,
+        label: { enabled: true, description: "Streamlit alt" },
+      }
+    )
+  })
+
+  it("overrides aria on media option overlays", () => {
+    const result = applyAltToOption(
+      {
+        series: [],
+        media: [
+          {
+            query: { maxWidth: 500 },
+            option: {
+              series: [],
+              aria: {
+                enabled: false,
+                label: { description: "Narrow author" },
+              },
+            },
+          },
+        ],
+      },
+      "Streamlit alt"
+    )
+
+    expect(result.aria).toEqual({
+      enabled: true,
+      label: { enabled: true, description: "Streamlit alt" },
+    })
+    expect(
+      (
+        (result.media as Array<Record<string, unknown>>)[0].option as Record<
+          string,
+          unknown
+        >
+      ).aria
+    ).toEqual({
+      enabled: true,
+      label: { enabled: true, description: "Streamlit alt" },
+    })
   })
 })
 

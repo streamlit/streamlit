@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { FC } from "react"
+import type { FC } from "react"
 
 import {
   MapView,
   OrbitView,
-  PickingInfo,
-  ViewStateChangeParameters,
+  type PickingInfo,
+  type ViewStateChangeParameters,
 } from "@deck.gl/core"
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -40,7 +40,7 @@ import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
+import { useDeckGl, type UseDeckGlProps } from "./useDeckGl"
 import { PYDECK_UNSET_MAP_STYLE } from "./utils/mapShell"
 
 /** Test component that wires useDeckGl to the ElementFullscreenContext expand button. */
@@ -157,6 +157,11 @@ describe("useDeckGl", () => {
         props: { tooltip: "" },
         info: { object: { elevationValue: 10 } } as PickingInfo,
       },
+      {
+        description: "tooltip has neither html nor text",
+        props: { tooltip: JSON.stringify({ style: { color: "red" } }) },
+        info: { object: { elevationValue: 10 } } as PickingInfo,
+      },
     ])("should return null when $description", ({ props, info }) => {
       const {
         result: { current },
@@ -181,6 +186,15 @@ describe("useDeckGl", () => {
       {
         description: "unexpected schema (no interpolation)",
         object: { unexpectedSchema: { elevationValue: 10 } },
+        expected: "<b>Elevation Value:</b> {elevationValue}",
+      },
+      {
+        description: "inherited properties getter (no interpolation)",
+        object: Object.create({
+          get properties() {
+            throw new Error("inherited properties should not be read")
+          },
+        }),
         expected: "<b>Elevation Value:</b> {elevationValue}",
       },
     ])(

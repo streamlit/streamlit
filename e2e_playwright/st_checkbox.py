@@ -160,3 +160,21 @@ else:
     unbind_val = st.checkbox("Unbindable checkbox", key="unbindable")
 st.write("unbindable value:", unbind_val)
 st.write("bind active:", use_bind)
+
+# --- on_change="ignore" checkbox ---
+# Run counter so test_checkbox_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_checkbox = st.checkbox(
+    "Ignore change checkbox",
+    key="ignore_checkbox",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore checkbox value:", ignore_checkbox)
+
+if st.button("Apply ignore checkbox", key="apply_ignore_checkbox"):
+    st.write("Applied ignore checkbox value:", ignore_checkbox)

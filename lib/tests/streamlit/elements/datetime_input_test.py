@@ -16,7 +16,8 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -337,7 +338,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
     def test_timezone_handling(self):
         """Test that timezone-aware datetimes are normalized to naive."""
         # Create a timezone-aware datetime
-        dt_aware = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+        dt_aware = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
 
         st.datetime_input("Label", value=dt_aware)
 
@@ -781,3 +782,50 @@ class TestDateTimeInputSerdeISO:
         )
         result = serde.deserialize(["2026-01-01T00:00"])
         assert result == datetime(2025, 6, 15, 12, 0)
+
+
+class DateTimeInputOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.datetime_input("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.date_time_input
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.datetime_input("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.datetime_input("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.datetime_input("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.date_time_input
+        assert c.ignore_rerun is True

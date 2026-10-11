@@ -15,16 +15,19 @@
  */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
+import type { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 import { Bool, Field, Int8 } from "apache-arrow"
 
-import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import {
+  type ArrowType,
+  DataFrameCellType,
+} from "~lib/dataframes/arrowTypeUtils"
 
 import SelectboxColumn, {
   prepareOptions,
-  SelectboxColumnParams,
+  type SelectboxColumnParams,
 } from "./SelectboxColumn"
-import { BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
+import { type BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
 
 const MOCK_CATEGORICAL_TYPE: ArrowType = {
   type: DataFrameCellType.DATA,

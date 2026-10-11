@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useMemo } from "react"
+import { memo, type ReactElement, useMemo } from "react"
 
 import dompurify, { SANITIZE_HTML_BASE_OPTIONS } from "./dompurifyHooks"
 import HtmlContainer from "./HtmlContainer"

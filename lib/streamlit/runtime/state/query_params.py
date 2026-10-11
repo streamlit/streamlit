@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping
 from dataclasses import dataclass, field
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib import parse
 
@@ -124,7 +124,7 @@ def is_empty_url_value(value: str | list[str]) -> bool:
     return value == ""
 
 
-_UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=timezone.utc)
+_UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
 _SECONDS_TO_MICROS: Final = 1000 * 1000
 _DAYS_TO_MICROS: Final = 24 * 60 * 60 * _SECONDS_TO_MICROS
 
@@ -159,7 +159,7 @@ def _try_parse_iso_to_micros(s: str) -> float | None:
             dt = datetime.fromisoformat(s)
             if dt.tzinfo is not None:
                 return None
-            return float(_delta_to_micros(dt.replace(tzinfo=timezone.utc) - _UTC_EPOCH))
+            return float(_delta_to_micros(dt.replace(tzinfo=UTC) - _UTC_EPOCH))
         except ValueError:
             return None
 
@@ -167,7 +167,7 @@ def _try_parse_iso_to_micros(s: str) -> float | None:
     if "-" in s:
         try:
             d = date.fromisoformat(s)
-            dt = datetime.combine(d, time(), tzinfo=timezone.utc)
+            dt = datetime.combine(d, time(), tzinfo=UTC)
             return float(_delta_to_micros(dt - _UTC_EPOCH))
         except ValueError:
             return None
@@ -178,7 +178,7 @@ def _try_parse_iso_to_micros(s: str) -> float | None:
             t = time.fromisoformat(s)
             if t.tzinfo is not None:
                 return None
-            dt = datetime.combine(_TIME_BASE_DATE, t, tzinfo=timezone.utc)
+            dt = datetime.combine(_TIME_BASE_DATE, t, tzinfo=UTC)
             return float(_delta_to_micros(dt - _UTC_EPOCH))
         except ValueError:
             return None
@@ -257,7 +257,7 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             for part in _to_non_empty_list(value):
                 try:
                     result_double.append(float(part))
-                except ValueError:  # noqa: PERF203
+                except ValueError:
                     # Try ISO date/time/datetime parsing for date/time sliders.
                     # Converts human-readable ISO strings to microsecond floats.
                     micros = _try_parse_iso_to_micros(part)
@@ -273,7 +273,7 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             for part in _to_non_empty_list(value):
                 try:
                     result_int.append(int(part))
-                except ValueError:  # noqa: PERF203
+                except ValueError:
                     result_int.append(part)
             return result_int
         case _:

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
-import { Html as HtmlProto } from "@streamlit/protobuf"
+import type { Html as HtmlProto } from "@streamlit/protobuf"
 
 import HtmlWithJs from "./HtmlWithJs"
 import SanitizedHtml from "./SanitizedHtml"

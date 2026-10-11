@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-import { ComponentSelector } from "@emotion/serialize"
+import type { ComponentSelector } from "@emotion/serialize"
 import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
-export const TOP_DISTANCE = "-2.65rem"
+import { getOverlayToolbarTopDistance } from "./overlayToolbarSpacing"
+
+export { TOP_DISTANCE } from "./overlayToolbarSpacing"
 
 /** A styled component usable as a CSS selector in template literals. */
 type StyledComponentSelector = ComponentSelector & { toString(): string }
@@ -30,28 +32,32 @@ export interface StyledToolbarWrapperProps {
 }
 
 export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
-  ({ theme, locked, target }) => ({
-    padding: `${theme.spacing.sm} 0 ${theme.spacing.sm} ${theme.spacing.sm}`,
-    position: "absolute",
-    top: locked ? TOP_DISTANCE : "-1rem",
-    right: theme.spacing.none,
-    transition: "none",
-    ...(!locked && {
-      opacity: 0,
-      "&:active, &:focus-visible, &:hover": {
-        transition: "opacity 150ms 100ms, top 100ms 100ms",
-        opacity: 1,
-        top: TOP_DISTANCE,
-      },
-      ...(target && {
-        [`${target}:hover &, ${target}:active &, ${target}:focus-visible &`]: {
+  ({ theme, locked, target }) => {
+    const topDistance = getOverlayToolbarTopDistance(theme)
+    return {
+      padding: `${theme.spacing.sm} 0 ${theme.spacing.sm} ${theme.spacing.sm}`,
+      position: "absolute",
+      top: locked ? topDistance : "-1rem",
+      right: theme.spacing.none,
+      transition: "none",
+      ...(!locked && {
+        opacity: 0,
+        "&:active, &:focus-visible, &:hover": {
           transition: "opacity 150ms 100ms, top 100ms 100ms",
           opacity: 1,
-          top: TOP_DISTANCE,
+          top: topDistance,
         },
+        ...(target && {
+          [`${target}:hover &, ${target}:active &, ${target}:focus-visible &`]:
+            {
+              transition: "opacity 150ms 100ms, top 100ms 100ms",
+              opacity: 1,
+              top: topDistance,
+            },
+        }),
       }),
-    }),
-  })
+    }
+  }
 )
 
 export const StyledToolbar = styled.div(({ theme }) => ({

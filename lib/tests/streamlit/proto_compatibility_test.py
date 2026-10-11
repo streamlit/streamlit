@@ -136,6 +136,11 @@ pytestmark = pytest.mark.filterwarnings(
                     FD.LABEL_OPTIONAL,
                     FD.TYPE_STRING,
                 ),
+                (
+                    "dataframe_header_text_color",
+                    FD.LABEL_OPTIONAL,
+                    FD.TYPE_STRING,
+                ),
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("chart_categorical_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("chart_sequential_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),

@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-import styled, { CSSObject } from "@emotion/styled"
+import styled, { type CSSObject } from "@emotion/styled"
 
-import { EmotionTheme } from "@streamlit/lib"
+import {
+  type EmotionTheme,
+  getBareEmbedOverlayToolbarPadding,
+} from "@streamlit/lib"
 
 export const StyledAppViewContainer = styled.div({
   display: "flex",
@@ -142,10 +145,14 @@ export const StyledAppViewBlockContainer =
       embedded,
       theme,
     }) => {
-      const littlePadding = "2.25rem"
+      // Clears the first element's overlay toolbar in a bare embed / print.
+      // Derived from the same button-min + padding formula as the toolbar's
+      // getOverlayToolbarTopDistance, so the gap holds at every supported
+      // baseFontSize.
+      const littlePadding = getBareEmbedOverlayToolbarPadding(theme)
 
       // Top padding logic per specification:
-      let topPadding = littlePadding // Default: 2.25rem
+      let topPadding = littlePadding
 
       if (!embedded) {
         // Non-embedded apps always get 6rem or 8rem
@@ -157,7 +164,7 @@ export const StyledAppViewBlockContainer =
         // 4.5rem if embedded with header but no padding/toolbar
         topPadding = "4.5rem"
       }
-      // Otherwise use default: 2.25rem if embedded with no header and no padding/toolbar
+      // Otherwise keep littlePadding: embedded with no header and no padding/toolbar
 
       const bottomEmbedPadding =
         showPadding && !hasBottom ? "10rem" : theme.spacing.lg

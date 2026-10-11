@@ -20,7 +20,7 @@ import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
 
-import Spinner, { SpinnerProps } from "./Spinner"
+import Spinner, { type SpinnerProps } from "./Spinner"
 
 const getProps = (
   propOverrides: Partial<SpinnerProps> = {},

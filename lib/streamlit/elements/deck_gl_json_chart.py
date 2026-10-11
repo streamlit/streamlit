@@ -40,7 +40,12 @@ from streamlit.elements.lib.layout_utils import (
     create_layout_config,
 )
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import (
     StreamlitIncompatibleParametersError,
     StreamlitInvalidParameterTypeError,
@@ -52,6 +57,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 from streamlit.runtime.state import (
     WidgetCallback,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.util import ReadOnlyAttributeDictionary
 
@@ -329,6 +335,7 @@ class PydeckMixin:
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["ignore"] = "ignore",
         key: Key | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -343,6 +350,7 @@ class PydeckMixin:
         # No default: omitted on_select must match the "ignore" overload.
         on_select: Literal["rerun"] | WidgetCallback,
         key: Key | None = None,
+        alt: str | None = None,
     ) -> PydeckState: ...
 
     @gather_metrics("pydeck_chart")
@@ -356,6 +364,7 @@ class PydeckMixin:
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         key: Key | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | PydeckState:
         """Draw a chart using the PyDeck library.
 
@@ -484,6 +493,18 @@ class PydeckMixin:
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the chart.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Keep this to a short description of the visual; it is not a full
+            text alternative for dense graphics.
+
         Returns
         -------
         element or PydeckState
@@ -536,7 +557,8 @@ class PydeckMixin:
         ...                 get_radius=200,
         ...             ),
         ...         ],
-        ...     )
+        ...     ),
+        ...     alt="Hexagon and scatter map of sample points near San Francisco",
         ... )
 
         .. output::
@@ -589,26 +611,32 @@ class PydeckMixin:
         if mapbox_token:
             pydeck_proto.mapbox_token = mapbox_token
 
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            # Carry alt on its own proto field. The pydeck JSON is hashed into the
+            # element ID, and alt must never be written into a hashed spec.
+            pydeck_proto.alt = normalized_alt
+
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitValueError(
-                "on_select", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         if is_selection_activated:
             # Selections are activated, treat Pydeck as a widget:
             pydeck_proto.selection_mode.extend(parse_selection_mode(selection_mode))
 
             # Run some checks that are only relevant when selections are activated
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -618,16 +646,17 @@ class PydeckMixin:
             pydeck_proto.id = compute_and_register_element_id(
                 "deck_gl_json_chart",
                 user_key=key,
-                # When a key is provided, only selection_mode affects the element ID.
-                # This allows selection state to persist across data/spec changes.
-                # Note: This can lead to orphaned selections if data length shrinks,
-                # but the frontend handles this by sanitizing invalid indices.
+                # Only selection_mode is hashed when a key is given, so alt changes never
+                # reset selection state; unkeyed charts hash alt like any other stable kwarg.
+                # Spec/data are also omitted from that keyed hash, which can leave orphaned
+                # selections if data length shrinks; the frontend sanitizes invalid indices.
                 key_as_main_identity={"selection_mode"},
                 dg=self.dg,
                 is_selection_activated=is_selection_activated,
                 selection_mode=selection_mode,
                 use_container_width=use_container_width,
                 spec=spec,
+                alt=normalized_alt,
             )
 
             serde = PydeckSelectionSerde()
@@ -636,7 +665,7 @@ class PydeckMixin:
                 pydeck_proto.id,
                 ctx=ctx,
                 deserializer=serde.deserialize,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 serializer=serde.serialize,
                 value_type="string_value",
             )

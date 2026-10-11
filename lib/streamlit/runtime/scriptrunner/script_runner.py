@@ -123,6 +123,16 @@ Streamlit functions. We restrict the ScriptRunner's execution control to the
 script thread. Calling Streamlit functions from other threads is unlikely to
 work correctly due to lack of ScriptRunContext, so we may add a guard against
 it in the future.
+Script threads are daemons so the process can exit even when a user script is
+stuck in a loop with no st.* interrupt points. Consequences:
+- Threads the script starts inherit daemon=True, so they no longer keep the
+  process alive at interpreter shutdown. A thread that must block shutdown has
+  to set daemon=False explicitly.
+- ThreadPoolExecutor workers inherit it too, but concurrent.futures joins its
+  workers at interpreter shutdown, so a task hung in an executor still blocks
+  exit.
+- Cooperative stop is unchanged: it only takes effect once the script reaches
+  an st.* call.
 """
 
 
@@ -343,6 +353,9 @@ class ScriptRunner:
         self._script_thread = threading.Thread(
             target=self._run_script_thread,
             name="ScriptRunner.scriptThread",
+            # Daemon so a hung script cannot block process exit.
+            # See Note [Threading] above for the full consequences.
+            daemon=True,
         )
         self._script_thread.start()
 
@@ -692,6 +705,7 @@ class ScriptRunner:
                 fragment_ids_this_run=fragment_ids_this_run,
                 cached_message_hashes=rerun_data.cached_message_hashes,
                 context_info=rerun_data.context_info,
+                is_history_navigation=rerun_data.is_history_navigation,
                 yield_check=self._maybe_handle_execution_control_request,
             )
             with self._join_wake_lock:
@@ -775,17 +789,22 @@ class ScriptRunner:
                     self._set_execing_flag(),
                 ):
                     # Run callbacks for widgets whose values have changed.
-                    if rerun_data.widget_states is not None:
+                    if (
+                        rerun_data.widget_states is not None
+                        or rerun_data.replay_trigger_states is not None
+                        or rerun_data.replay_trigger_values is not None
+                    ):
                         self._session_state.on_script_will_rerun(
                             rerun_data.widget_states,
-                            suppress_callbacks=rerun_data.suppress_callbacks,
+                            replay_trigger_states=rerun_data.replay_trigger_states,
+                            replay_trigger_values=rerun_data.replay_trigger_values,
+                            is_history_navigation=rerun_data.is_history_navigation,
                         )
                         # Check for pending rerun/stop requests while
                         # has_script_started is still False so on_script_finished
                         # preserves this run's widget values.  On the normal path a
-                        # callback may have queued st.rerun(); on the suppressed path
-                        # an external request (e.g. new client interaction) may have
-                        # arrived during state application.
+                        # callback may have queued st.rerun(); an external request
+                        # may also have arrived during state application.
                         self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()
@@ -933,8 +952,7 @@ class ScriptRunner:
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = run_without_errors
 
             if rerun_exception_data:
-                # The handling for when a full script run or a fragment is stopped early
-                # is the same, so we only have one ScriptRunnerEvent for this scenario.
+                # A rerun request stops full scripts and fragments with the same event.
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
             elif rerun_data.fragment_id_queue:
                 finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
@@ -997,11 +1015,13 @@ class ScriptRunner:
         # even if we were stopped with an exception.)
         self.on_event.send(self, event=event)
 
-        # Both cleanups below assume the body re-registered whatever is still in use, so
-        # a run that never reached its body would make everything look orphaned. The
-        # session refs were already cleared before this run, so deleting now would take
-        # files the app still displays with it. The next run that renders collects them.
-        if ctx.has_script_started:
+        # Skip orphan cleanup when:
+        # - The body never ran: this run already cleared session refs and
+        #   registered nothing, so collecting now would delete files the app
+        #   still displays. The next run that renders re-registers them.
+        # - No Runtime singleton exists: get_instance() would raise on the
+        #   script thread. There is nothing registered to collect without a Runtime.
+        if ctx.has_script_started and runtime.exists():
             # Remove orphaned files now that the script has run and files in use
             # are marked as active.
             runtime.get_instance().media_file_mgr.remove_orphaned_files()

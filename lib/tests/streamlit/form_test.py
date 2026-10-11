@@ -26,6 +26,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementKey,
     StreamlitInvalidLayoutContextError,
+    StreamlitValueAssignmentNotAllowedError,
     StreamlitValueError,
 )
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
@@ -427,6 +428,12 @@ class FormSubmitButtonTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError, match=r"Invalid `icon_position` value"):
             form.form_submit_button(icon_position="center")  # type: ignore[arg-type]
 
+    def test_submit_button_invalid_type(self) -> None:
+        """An unknown submit-button type raises StreamlitValueError."""
+        form = st.form("foo")
+        with pytest.raises(StreamlitValueError, match=r"Invalid `type` value"):
+            form.form_submit_button(type="magic")  # type: ignore[arg-type]
+
     def test_return_false_when_not_submitted(self):
         with st.form("form1"):
             submitted = st.form_submit_button("Submit")
@@ -531,6 +538,19 @@ class FormStateInteractionTest(DeltaGeneratorTestCase):
         with st.form("form"):
             st.radio("radio", ["a", "b", "c"], 0)
             st.form_submit_button(on_click=lambda x: x)
+
+    def test_form_rejects_session_state_assignment(self) -> None:
+        """Creating a form after assigning its key raises StreamlitValueAssignmentNotAllowedError."""
+        st.session_state["my_form"] = True
+
+        with pytest.raises(StreamlitValueAssignmentNotAllowedError) as ctx:
+            st.form(key="my_form")
+
+        message = str(ctx.value)
+        assert "`st.session_state['my_form']`" in message
+        assert "read-only" in message
+        assert "event widget" not in message.lower()
+        assert "different session state key" in message
 
 
 @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))

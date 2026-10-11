@@ -524,7 +524,7 @@ update-material-icons:
 	uv run python ./scripts/update_material_icon_font_and_names.py
 
 .PHONY: update-emojis
-# Update emojis based on latest emoji version.
+# Update emojis from Unicode's latest emoji-test.txt.
 update-emojis:
 	uv run python ./scripts/update_emojis.py
 
@@ -535,6 +535,11 @@ update-notices:
 		yarn licenses generate-disclaimer --production --recursive > ../NOTICES
 	# Normalize line endings to LF (yarn output may contain CRLF from some packages)
 	perl -i -pe 's/\r$$//' NOTICES
+
+	# yarn-plugin-licenses can omit transitive dependencies reached through a
+	# patched virtual package. Each fallback fails when it is no longer needed.
+	node ./scripts/append_missing_dependency_license.mjs NOTICES frontend/node_modules/@linaria/react
+	node ./scripts/append_missing_dependency_license.mjs NOTICES frontend/node_modules/react-number-format
 
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code/Source-Code.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans/Source-Sans.LICENSE

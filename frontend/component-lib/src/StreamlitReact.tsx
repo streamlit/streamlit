@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { ComponentType, PureComponent, ReactNode } from "react"
+import { type ComponentType, PureComponent, type ReactNode } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
 
-import { RenderData, Streamlit, Theme } from "./streamlit"
+import { type RenderData, Streamlit, type Theme } from "./streamlit"
 
 /**
  * Props passed to custom Streamlit components.

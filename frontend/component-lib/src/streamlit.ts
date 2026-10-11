@@ -15,7 +15,7 @@
  */
 
 // Safari doesn't support the EventTarget class, so we use a shim.
-import { ArrowDataframeProto, ArrowTable } from "./ArrowTable"
+import { type ArrowDataframeProto, ArrowTable } from "./ArrowTable"
 
 /** Object defining the currently set theme. */
 export interface Theme {
@@ -160,10 +160,14 @@ export class Streamlit {
 
   /** Receive a ForwardMsg from the Streamlit app */
   private static readonly onMessageEvent = (event: MessageEvent): void => {
-    const type = event.data["type"]
+    const data: unknown = event.data
+    if (typeof data !== "object" || data === null) {
+      return
+    }
+    const type = (data as { type?: unknown }).type
     switch (type) {
       case Streamlit.RENDER_EVENT:
-        Streamlit.onRenderMessage(event.data)
+        Streamlit.onRenderMessage(data as RenderEventData)
         break
     }
   }
@@ -173,12 +177,9 @@ export class Streamlit {
    * StreamlitRenderEvent.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for implicit component args typing.
-  private static readonly onRenderMessage = <ArgType = any>(data: {
-    args: ArgType
-    dfs?: ArgsDataframe[]
-    disabled?: boolean
-    theme?: Theme
-  }): void => {
+  private static readonly onRenderMessage = <ArgType = any>(
+    data: RenderEventData<ArgType>
+  ): void => {
     let args = data["args"]
     if (args === undefined || args === null) {
       args = {} as ArgType
@@ -214,11 +215,15 @@ export class Streamlit {
 
   private static readonly argsDataframeToObject = (
     argsDataframe: ArgsDataframe[]
-  ): object => {
-    const argsDataframeArrow = argsDataframe.map(
-      ({ key, value }: ArgsDataframe) => [key, Streamlit.toArrowTable(value)]
+  ): Record<string, ArrowTable> => {
+    // Build with Object.fromEntries so keys such as "__proto__" stay own
+    // properties; plain assignment would hit the prototype setter instead.
+    return Object.fromEntries(
+      argsDataframe.map(({ key, value }): [string, ArrowTable] => [
+        key,
+        Streamlit.toArrowTable(value),
+      ])
     )
-    return Object.fromEntries(argsDataframeArrow)
   }
 
   private static readonly toArrowTable = (
@@ -271,6 +276,15 @@ function injectTheme(theme: Theme): void {
 interface ArgsDataframe {
   key: string
   value: ArrowDataframeProto
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Use `any` to maintain existing library semantics for implicit component args typing.
+type RenderEventData<ArgType = any> = {
+  type?: unknown
+  args: ArgType
+  dfs?: ArgsDataframe[]
+  disabled?: boolean
+  theme?: Theme
 }
 
 // The TypedArray JavaScript types

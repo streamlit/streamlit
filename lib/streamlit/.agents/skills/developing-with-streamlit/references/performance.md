@@ -14,8 +14,8 @@ def load_data(path):
     return pd.read_csv(path)
 
 
-# GOOD: Cached
-@st.cache_data
+# GOOD: Cached, bounded with max_entries
+@st.cache_data(max_entries=100)
 def load_data(path):
     return pd.read_csv(path)
 ```
@@ -73,7 +73,8 @@ def get_metrics():
 Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be
 combined with `persist`. The function can't use session-specific features (e.g.
 `st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
-with both `st.cache_data` and `st.cache_resource`.
+with both `st.cache_data` and `st.cache_resource`. Combining it with an `async def` cached
+function raises an error at decoration time; use `refresh_mode="foreground"` instead.
 
 By default Streamlit hard-expires a background-refresh entry at `2 × ttl`, serving
 it stale for one extra `ttl`. Set `runner.cacheBackgroundRefreshTTLMultiplier` to a
@@ -95,6 +96,31 @@ initiate background refreshes for specific global cache keys even without user t
 an `st.App` lifespan task to periodically call the cached function with those arguments. See
 [Scheduled background refresh for specific
 keys](server-asgi.md#scheduled-background-refresh-for-specific-keys).
+
+### Async functions
+
+`@st.cache_data` and `@st.cache_resource` can decorate `async def` functions. The decorated
+call returns an awaitable; you must await it (for example with `asyncio.run()` in a Streamlit
+script). Streamlit caches the awaited return value, not the coroutine.
+
+```python
+import asyncio
+
+import streamlit as st
+
+
+@st.cache_data
+async def load_config():
+    return await fetch_config()
+
+
+config = asyncio.run(load_config())
+```
+
+Do not cache live async clients or connections bound to the event loop that created
+them — that loop may already be closed on a later rerun, and the object will raise
+`Event loop closed`. Cache results that stay valid across loops, such as API payloads,
+dataframes, and config.
 
 ### Prevent unbounded cache growth
 
@@ -293,6 +319,24 @@ with st.form("invite", border=False):
 
 **When NOT to use forms:** If inputs depend on each other (e.g., selecting a country should update available cities), forms won't work since there's no rerun until submit.
 
+## Skip reruns on individual widgets
+
+Some input widgets accept `on_change="ignore"` instead of a callback or `"rerun"`. The widget still updates in the UI, but Streamlit does not rerun the script. Python sees the new value only on the next rerun triggered by something else (a button, another widget, and so on).
+
+```python
+threshold = st.slider("Threshold", 0.0, 1.0, 0.5, on_change="ignore")
+if st.button("Apply"):
+    run_model(threshold)
+```
+
+Use this when a single control should not rerun the app until the user applies it. Use a form when several related inputs should commit together.
+
+Caveats for `on_change="ignore"`:
+
+- The browser holds the pending value until the next rerun. A page refresh before then loses it, unless the widget also sets `bind="query-params"`.
+- Inside `st.form`, `on_change="ignore"` has no effect; the form already defers commits until submit.
+- `st.file_uploader`, `st.camera_input`, and `st.audio_input` still upload the file, photo, or recording immediately; only the rerun is deferred.
+
 ## Conditional rendering
 
 **This is critical and often missed.**
@@ -428,7 +472,7 @@ with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work r
 
 Avoid standalone `st.empty()`/`st.skeleton()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
 
-For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes. Keep fragment writes inside the fragment body; if a fragment must write to an outside container, claim that slot during the initial full-app run.
+For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes. Keep a parallel fragment's output inside its own body: during a full-app run it runs on a separate thread, and writing to a container created outside it raises an error, even if that container was created earlier in the run.
 
 ## Perceived performance (loading states)
 

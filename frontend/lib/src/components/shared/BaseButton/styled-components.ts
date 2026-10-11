@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-import { MouseEvent, ReactNode } from "react"
+import type { MouseEvent, ReactNode } from "react"
 
-import styled, { CSSObject } from "@emotion/styled"
+import styled, { type CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
 import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
+import { VISUALLY_HIDDEN_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 
 export enum BaseButtonKind {
@@ -63,14 +64,21 @@ export interface BaseButtonProps {
   "aria-label"?: string
   "aria-haspopup"?: "menu" | "true" | "dialog" | "listbox" | "tree" | "grid"
   "aria-expanded"?: boolean
+  "aria-controls"?: string
 }
 
-// Most props become required via defaults in BaseButton, but ARIA popup
-// attributes stay optional so they only appear in the DOM when explicitly set.
+// Most props become required via defaults in BaseButton, but ARIA attributes
+// stay optional so they only appear in the DOM when explicitly set.
 type RequiredBaseButtonProps = Required<
-  Omit<BaseButtonProps, "aria-haspopup" | "aria-expanded">
+  Omit<
+    BaseButtonProps,
+    "aria-haspopup" | "aria-expanded" | "aria-controls" | "aria-label"
+  >
 > &
-  Pick<BaseButtonProps, "aria-haspopup" | "aria-expanded">
+  Pick<
+    BaseButtonProps,
+    "aria-haspopup" | "aria-expanded" | "aria-controls" | "aria-label"
+  >
 
 function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   switch (size) {
@@ -521,6 +529,12 @@ export const StyledTooltipMobile = styled.div(({ theme }) => ({
   },
 }))
 
+/**
+ * Absolute CSS px floor for element-toolbar hit targets (WCAG 2.2 SC 2.5.8).
+ * Overlay toolbar offsets import this so a floor change cannot drift from spacing.
+ */
+export const ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX = "24px"
+
 export const StyledElementToolbarButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
@@ -534,7 +548,12 @@ export const StyledElementToolbarButton = styled(
     display: "flex",
     gap: theme.spacing.xs,
     alignItems: "center",
-    minHeight: "unset",
+    // WCAG 2.2 SC 2.5.8 Target Size (Minimum): ≥24×24 CSS px for every
+    // supported root font size. Prefer the rem token so targets grow with
+    // theme.baseFontSize; floor so a smaller root (e.g. 14) cannot shrink
+    // below the criterion.
+    minWidth: `max(${theme.sizes.smallElementHeight}, ${ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX})`,
+    minHeight: `max(${theme.sizes.smallElementHeight}, ${ELEMENT_TOOLBAR_BUTTON_MIN_SIZE_PX})`,
     // line height should be the same as the icon size
     lineHeight: theme.iconSizes.md,
     width: "auto",
@@ -596,6 +615,9 @@ export const StyledButtonMainLabel = styled.span<{ $truncate?: boolean }>(
     ...($truncate && { maxWidth: "100%" }),
   })
 )
+
+/** Screen-reader-only text used to name icon-only buttons. */
+export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
 
 export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   display: "inline-flex",

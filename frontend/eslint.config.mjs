@@ -270,6 +270,18 @@ export default defineConfig([
       "no-console": "error",
       // Prevent unintentional use of `debugger`
       "no-debugger": "error",
+      // Correctness rules that eslint.configs.recommended does not enable
+      "no-self-compare": "error",
+      "no-return-assign": ["error", "always"],
+      "no-sequences": ["error", { allowInParentheses: false }],
+      "no-template-curly-in-string": "error",
+      "no-extend-native": "error",
+      // Keep default as the last switch clause
+      "default-case-last": "error",
+      // Safety net if the ForInStatement ban in no-restricted-syntax is relaxed
+      "guard-for-in": "error",
+      // Safety net if the LabeledStatement ban in no-restricted-syntax is relaxed
+      "no-labels": "error",
       // Oxlint eslint/preserve-caught-error owns this check.
       "preserve-caught-error": "off",
       // We do want to discourage the usage of flushSync
@@ -280,17 +292,26 @@ export default defineConfig([
       "@eslint-react/use-state": "off",
       // Turning off for now until we have clearer guidance on how to fix existing usages
       "@eslint-react/set-state-in-effect": "off",
-      // We don't want to warn about empty fragments
+      // Oxlint react/jsx-no-useless-fragment owns this check.
       "@eslint-react/jsx-no-useless-fragment": "off",
       // Prevent context values from being recreated on every render
       "@eslint-react/no-unstable-context-value": "error",
+      // Default-arg object/array literals are a new reference each render
+      "@eslint-react/no-unstable-default-props": "error",
+      // Require sandbox on raw <iframe> JSX, and rel=noopener on raw <a target=_blank>.
+      // Intrinsic elements only — styled.iframe / styled anchors are not checked.
+      "@eslint-react/dom-no-missing-iframe-sandbox": "error",
+      "@eslint-react/dom-no-unsafe-target-blank": "error",
       // We want to enforce display names for context providers for better debugging
       "@eslint-react/no-missing-context-display-name": "error",
       // New rules in @eslint-react v4/v5 — disable until existing violations are addressed
       "@eslint-react/exhaustive-deps": "off",
       // TypeScript rules with type-checking
-      // We want to use these, but we have far too many instances of these rules
-      // for it to be realistic right now. Over time, we should fix these.
+      // Production src enables no-unsafe-call / return / argument, no-misused-spread,
+      // and unbound-method (see the overlay below). This block leaves those rules
+      // off so tests, which that overlay ignores, stay exempt. Assignment and
+      // member access stay off here. A later overlay enables them for an
+      // explicit file list that already satisfies both rules.
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
@@ -326,11 +347,12 @@ export default defineConfig([
         "warn",
         { allowExpressions: true },
       ],
-      // Disallow the @ts-ignore directive in favor of the more strict @ts-expect-error.
+      // Ban @ts-ignore: it stays silent after the error is fixed. @ts-expect-error
+      // fails once unused, and must describe the type mismatch it hides.
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {
-          "ts-expect-error": false,
+          "ts-expect-error": "allow-with-description",
           "ts-nocheck": false,
           "ts-check": false,
           "ts-ignore": true,
@@ -353,6 +375,11 @@ export default defineConfig([
       "@typescript-eslint/return-await": ["error", "in-try-catch"],
       // Treat @deprecated API usage as errors
       "@typescript-eslint/no-deprecated": "error",
+      // Require Promise .catch/.then rejection params to be unknown so callers must narrow before use
+      "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
+      // Mixed string/numeric members compare and reverse-map inconsistently;
+      // keep hand-written enums single-typed like generated protobuf ones.
+      "@typescript-eslint/no-mixed-enums": "error",
       // Permit for-of loops
       "no-restricted-syntax": [
         "error",
@@ -382,6 +409,11 @@ export default defineConfig([
         },
       ],
       "import-x/prefer-default-export": "off",
+      // Catch import specifiers that resolve to nothing useful: self-imports,
+      // redundant path segments, empty named blocks.
+      "import-x/no-self-import": "error",
+      "import-x/no-useless-path-segments": "error",
+      "import-x/no-empty-named-blocks": "error",
       "max-classes-per-file": "off",
       "no-shadow": "off",
       "no-param-reassign": "off",
@@ -459,6 +491,8 @@ export default defineConfig([
       "react-hooks/set-state-in-effect": "off",
       // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
       "react-hooks/no-deriving-state-in-effects": "error",
+      // useMemo must return a value; side-effect-only memos belong in useEffect
+      "react-hooks/void-use-memo": "error",
     },
     settings: {
       "import-x/resolver": {
@@ -479,6 +513,51 @@ export default defineConfig([
       "no-restricted-properties": getNoRestrictedProperties({
         includeUseTimeout: true,
       }),
+      // Require type on raw <button> JSX (not styled.button); omitted type submits the enclosing form.
+      // Tests still use <button> fixtures without type, so this stays production-only.
+      "@eslint-react/dom-no-missing-button-type": "error",
+      // Calling, returning, or passing `any` infects typed APIs. Spreading a
+      // class instance (protobuf, AxiosHeaders) copies enumerable own fields
+      // and drops methods. Extracting a class method without binding drops
+      // `this`. Tests stay exempt. Assignment and member access on `any` are
+      // enabled only for the explicit file list in the next overlay. Other
+      // production files can still read untyped values.
+      "@typescript-eslint/no-unsafe-call": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
+      "@typescript-eslint/no-unsafe-argument": "error",
+      "@typescript-eslint/no-misused-spread": "error",
+      "@typescript-eslint/unbound-method": "error",
+      // Suppressions must name the type mismatch. Options replace the base
+      // rule, so keep ts-ignore banned and ts-expect-error described.
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        {
+          "ts-expect-error": "allow-with-description",
+          "ts-nocheck": false,
+          "ts-check": false,
+          "ts-ignore": true,
+        },
+      ],
+    },
+  },
+  {
+    // Error when these files assign or read `any`. They satisfy both rules
+    // today (`unknown` annotations, `as` assertions, or `JSON5.parse<T>()`).
+    // Assertions and `JSON5.parse<T>()` still bypass these rules. Add a
+    // sibling module only after it satisfies them the same way.
+    files: [
+      "**/ArrowVegaLiteChart/useVegaElementPreprocessor.ts",
+      "**/dataframes/arrowFormatUtils.ts",
+      "**/dataframes/arrowParseUtils.ts",
+      "**/dataframes/arrowTypeUtils.ts",
+      "**/dataframes/Quiver.ts",
+      "**/PlotlyChart/PlotlyChart.tsx",
+      "**/DeckGlJsonChart/useDeckGl.tsx",
+      "**/DataFrame/hooks/EditingState.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
     },
   },
   // Test files specific configuration
@@ -516,9 +595,12 @@ export default defineConfig([
       "testing-library/prefer-find-by": "error",
       // Enforce consistent use of it() over test()
       "vitest/consistent-test-it": ["error", { fn: "it" }],
-      // Oxlint vitest/no-focused-tests and no-commented-out-tests own these.
+      // Oxlint owns these vitest checks. Keep ESLint copies off so
+      // suppressions do not fork if the recommended preset grows.
       "vitest/no-focused-tests": "off",
       "vitest/no-commented-out-tests": "off",
+      "vitest/no-duplicate-hooks": "off",
+      "vitest/require-to-throw-message": "off",
       "no-restricted-imports": getNoRestrictedImports([], true),
     },
   },
@@ -532,6 +614,8 @@ export default defineConfig([
       "preserve-caught-error": "error",
       "vitest/no-focused-tests": "error",
       "vitest/no-commented-out-tests": "error",
+      "vitest/no-duplicate-hooks": "error",
+      "vitest/require-to-throw-message": "error",
     },
   },
   // Specific test files that need to access window.__streamlit for testing the config module itself
@@ -569,6 +653,23 @@ export default defineConfig([
     files: ["**/components/elements/**/*", "**/components/widgets/**/*"],
     rules: {
       "streamlit-custom/enforce-memo": "error",
+    },
+  },
+  // `||` drops 0, "", and false. Enabled directory-by-directory.
+  // Keep `||` where a blank string or false means unset, and for boolean OR.
+  // Use `??` where 0 is a real value (for example a color channel).
+  {
+    files: [
+      "**/components/widgets/**/*.{ts,tsx}",
+      "**/components/shared/StreamlitMarkdown/**/*.{ts,tsx}",
+      "**/components/shared/Icon/**/*.{ts,tsx}",
+      "**/theme/utils.ts",
+      "**/theme/utils.test.ts",
+      "**/DeckGlJsonChart/utils/colors.ts",
+      "**/DeckGlJsonChart/utils/colors.test.ts",
+    ],
+    rules: {
+      "@typescript-eslint/prefer-nullish-coalescing": "error",
     },
   },
   // Styled components files

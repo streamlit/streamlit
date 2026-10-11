@@ -31,6 +31,9 @@ from streamlit.elements.widgets.slider import (
     _MAX_SAFE_DAY,
     _MIN_SAFE_DAY,
     SliderSerde,
+    _date_to_datetime,
+    _datetime_to_micros,
+    _delta_to_micros,
 )
 from streamlit.errors import (
     StreamlitAPIException,
@@ -227,6 +230,108 @@ class SliderTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidMinMaxError, match="must not be equal"):
             date = datetime(2024, 4, 3)
             st.slider("datetime", min_value=date, max_value=date)
+
+    @parameterized.expand(
+        [
+            ("omitted", None, 10, 1, 10),
+            ("at_swapped_min", 1, 1, 1, 10),
+            ("inside", 5, 5, 1, 10),
+            ("at_swapped_max", 10, 10, 1, 10),
+            ("below_swapped_min", 0, 0, 0, 10),
+            ("above_swapped_max", 20, 20, 1, 20),
+        ]
+    )
+    def test_reversed_int_bounds(
+        self,
+        _name: str,
+        value: int | None,
+        expected_return: int,
+        expected_min: int,
+        expected_max: int,
+    ) -> None:
+        """Reversed int min/max are swapped; out-of-range values widen the proto range."""
+        if value is None:
+            ret = st.slider("the label", 10, 1)
+        else:
+            ret = st.slider("the label", min_value=10, max_value=1, value=value)
+
+        assert ret == expected_return
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.min == expected_min
+        assert c.max == expected_max
+        assert c.default == [expected_return]
+
+    def test_reversed_float_bounds(self) -> None:
+        """Reversed float min/max are swapped so the proto range is [1.0, 10.0]."""
+        ret = st.slider("the label", min_value=10.0, max_value=1.0, value=1.0)
+
+        assert ret == 1.0
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.min == 1.0
+        assert c.max == 10.0
+
+    def test_reversed_range_bounds(self) -> None:
+        """Reversed outer bounds are swapped so a range value keeps max at 10."""
+        ret = st.slider("the label", min_value=10, max_value=1, value=(5, 8))
+
+        assert ret == (5, 8)
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.min == 1
+        assert c.max == 10
+        assert list(c.default) == [5, 8]
+
+    @parameterized.expand(
+        [
+            (
+                "date",
+                date(2024, 1, 10),
+                date(2024, 1, 1),
+                date(2024, 1, 5),
+                date(2024, 1, 1),
+                date(2024, 1, 10),
+            ),
+            (
+                "datetime",
+                datetime(2024, 1, 10),
+                datetime(2024, 1, 1),
+                datetime(2024, 1, 5),
+                datetime(2024, 1, 1),
+                datetime(2024, 1, 10),
+            ),
+        ]
+    )
+    def test_reversed_timelike_bounds(
+        self,
+        _name: str,
+        min_value: date | datetime,
+        max_value: date | datetime,
+        value: date | datetime,
+        expected_min: date | datetime,
+        expected_max: date | datetime,
+    ) -> None:
+        """Reversed date and datetime bounds are swapped; the value is unchanged."""
+        ret = st.slider(
+            "the label",
+            min_value=min_value,
+            max_value=max_value,
+            value=value,
+        )
+
+        def to_micros(v: date | datetime) -> int:
+            # Check datetime first; date is a parent type, and
+            # _date_to_datetime would drop the time.
+            return _datetime_to_micros(
+                v if isinstance(v, datetime) else _date_to_datetime(v)
+            )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert ret == value
+        assert c.min == to_micros(expected_min)
+        assert c.max == to_micros(expected_max)
+        assert c.step == _delta_to_micros(timedelta(days=1))
 
     def test_value_out_of_bounds(self):
         # Max int

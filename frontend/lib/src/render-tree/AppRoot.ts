@@ -16,11 +16,11 @@
 
 import {
   Block as BlockProto,
-  Delta,
-  Element,
+  type Delta,
+  type Element,
   ForwardMsgMetadata,
-  Logo,
-  Transient as TransientProto,
+  type Logo,
+  type Transient as TransientProto,
 } from "@streamlit/protobuf"
 
 import {
@@ -31,7 +31,7 @@ import {
   makeElementWithInfoText,
 } from "~lib/util/utils"
 
-import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
+import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import { TransientNode } from "./TransientNode"

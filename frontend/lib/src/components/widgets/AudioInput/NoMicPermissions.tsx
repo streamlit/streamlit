@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
 import { ENABLE_PERIPHERALS_DOCS_URL } from "~lib/urls"
 

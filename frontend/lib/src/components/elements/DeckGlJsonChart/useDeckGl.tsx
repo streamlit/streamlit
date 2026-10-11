@@ -16,8 +16,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import {
-  type DeckProps,
+import type {
+  DeckProps,
   PickingInfo,
   ViewStateChangeParameters,
 } from "@deck.gl/core"
@@ -25,20 +25,20 @@ import { parseToRgba } from "color2k"
 import JSON5 from "json5"
 import { isEqual } from "lodash-es"
 
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
+import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import {
   useBasicWidgetClientState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useStWidthHeight } from "~lib/hooks/useStWidthHeight"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type {
   DeckGlElementState,
@@ -47,7 +47,7 @@ import type {
   ParsedDeckGlConfig,
 } from "./types"
 import {
-  FillFunction,
+  type FillFunction,
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
 } from "./utils/colors"
@@ -78,7 +78,9 @@ type UseDeckGlShape = {
   hasActiveSelection: boolean
   height: number | string
   isSelectionModeActivated: boolean
-  onViewStateChange: (params: ViewStateChangeParameters) => void
+  onViewStateChange: (
+    params: ViewStateChangeParameters<Record<string, unknown>>
+  ) => void
   selectionMode: DeckGlJsonChartProto.SelectionMode | undefined
   setSelection: React.Dispatch<
     React.SetStateAction<ValueWithSource<DeckGlElementState> | null>
@@ -109,7 +111,7 @@ const HTML_ESCAPE_MAP: Record<string, string> = {
  * @returns {string} - The HTML-escaped string.
  */
 const escapeHtml = (value: unknown): string =>
-  String(value).replace(/[&<>"']/g, char => HTML_ESCAPE_MAP[char])
+  String(value).replaceAll(/[&<>"']/g, char => HTML_ESCAPE_MAP[char])
 
 export type UseDeckGlProps = Omit<DeckGLProps, "width"> & {
   isLightTheme: boolean
@@ -145,19 +147,30 @@ const interpolate = (
 ): string => {
   const matchedVariables = body.match(/{(.*?)}/g)
   if (matchedVariables) {
+    const pickedObject = info.object as Record<string, unknown> | undefined
+    if (!pickedObject) {
+      return body
+    }
+
     matchedVariables.forEach((match: string) => {
-      const variable = match.substring(1, match.length - 1)
+      const variable = match.slice(1, match.length - 1)
 
       let rawValue: unknown
-      if (Object.hasOwn(info.object, variable)) {
-        rawValue = info.object[variable]
-      } else if (
-        Object.hasOwn(info.object, "properties") &&
-        Object.hasOwn(info.object.properties, variable)
-      ) {
-        rawValue = info.object.properties[variable]
-      } else {
+      if (Object.hasOwn(pickedObject, variable)) {
+        rawValue = pickedObject[variable]
+      } else if (!Object.hasOwn(pickedObject, "properties")) {
         return
+      } else {
+        const properties = pickedObject.properties
+        if (
+          typeof properties === "object" &&
+          properties !== null &&
+          Object.hasOwn(properties, variable)
+        ) {
+          rawValue = (properties as Record<string, unknown>)[variable]
+        } else {
+          return
+        }
       }
 
       const value = shouldEscapeHtml ? escapeHtml(rawValue) : String(rawValue)
@@ -450,8 +463,8 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     const isUsingCarto =
-      jsonCopy?.mapProvider == "carto" ||
-      (jsonCopy?.mapStyle && jsonCopy.mapStyle?.indexOf("cartocdn") >= 0)
+      jsonCopy?.mapProvider === "carto" ||
+      (jsonCopy?.mapStyle && jsonCopy.mapStyle?.includes("cartocdn") === true)
 
     if (isUsingCarto && !jsonCopy.cartoKey) {
       jsonCopy.cartoKey = CARTO_STREAMLIT_API_KEY
@@ -593,7 +606,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     if (
       !cartoKey &&
       typeof mapStyle === "string" &&
-      mapStyle.indexOf("cartocdn") >= 0
+      mapStyle.includes("cartocdn")
     ) {
       cartoKey = CARTO_STREAMLIT_API_KEY
     }
@@ -626,10 +639,8 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
           return diffArg
         }
 
-        return {
-          ...diffArg,
-          [key]: deck.initialViewState[key],
-        }
+        diffArg[key] = deck.initialViewState[key]
+        return diffArg
       }, {})
 
       setViewState(existing => ({ ...existing, ...diff }))
@@ -643,12 +654,18 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         return null
       }
 
-      const parsedTooltip = JSON5.parse(tooltip)
+      const parsedTooltip = JSON5.parse<{ html?: string; text?: string }>(
+        tooltip
+      )
 
       if (parsedTooltip.html) {
         parsedTooltip.html = interpolate(info, parsedTooltip.html, true)
-      } else {
+      } else if (parsedTooltip.text) {
         parsedTooltip.text = interpolate(info, parsedTooltip.text)
+      } else {
+        // A tooltip with neither html nor text has nothing to render; returning
+        // null also avoids interpolating an undefined body.
+        return null
       }
 
       return parsedTooltip
@@ -657,7 +674,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   )
 
   const onViewStateChange = useCallback(
-    ({ viewState: viewStateArg }: ViewStateChangeParameters) => {
+    ({
+      viewState: viewStateArg,
+    }: ViewStateChangeParameters<Record<string, unknown>>) => {
       setViewState(viewStateArg)
     },
     [setViewState]

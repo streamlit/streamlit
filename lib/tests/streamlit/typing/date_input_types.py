@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -139,6 +137,14 @@ if TYPE_CHECKING:
             kwargs={"key": "value"},
         ),
         date,
+    )
+    assert_type(date_input("foo", date(2024, 1, 1), on_change=None), date)
+    assert_type(date_input("foo", date(2024, 1, 1), on_change="rerun"), date)
+    assert_type(date_input("foo", date(2024, 1, 1), on_change="ignore"), date)
+    assert_type(date_input("foo", value=None, on_change="ignore"), date | None)
+    assert_type(
+        date_input("foo", (date(2024, 1, 1), date(2024, 1, 31)), on_change="ignore"),
+        DateWidgetRangeReturn,
     )
 
     # Test with key

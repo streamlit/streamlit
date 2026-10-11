@@ -15,7 +15,7 @@
  */
 
 import { render } from "@streamlit/lib/testing"
-import { type FontFace as FontFaceProto } from "@streamlit/protobuf"
+import type { FontFace as FontFaceProto } from "@streamlit/protobuf"
 
 import FontFaceDeclaration from "./FontFaceDeclaration"
 

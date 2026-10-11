@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
 import AlertContainer, {
-  Kind,
+  type Kind,
 } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"

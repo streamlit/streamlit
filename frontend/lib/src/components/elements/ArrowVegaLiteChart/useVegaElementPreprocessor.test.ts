@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-import { compile } from "vega-lite"
-import type { TopLevelSpec } from "vega-lite"
+import { compile, type TopLevelSpec } from "vega-lite"
 
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
 import { lightTheme } from "~lib/theme/themeConfigs"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import type { VegaLiteChartElement } from "./arrowUtils"
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 
 type VegaLiteSpec = {
@@ -1068,6 +1067,7 @@ describe("useVegaElementPreprocessor", () => {
       overrides: {
         vegaLiteTheme?: string
         useWidth?: boolean
+        alt?: string
       } = {}
     ): Record<string, unknown> => {
       const useWidth = overrides.useWidth ?? useContainerWidth
@@ -1085,6 +1085,7 @@ describe("useVegaElementPreprocessor", () => {
             vegaLiteTheme: overrides.vegaLiteTheme ?? "streamlit",
             useContainerWidth: useWidth,
             spec: JSON.stringify(specInput),
+            alt: overrides.alt,
           }),
         }
       )
@@ -1227,10 +1228,39 @@ describe("useVegaElementPreprocessor", () => {
       expect((second as { width?: number }).width).toBe(containerWidth)
     })
 
-    it("throws when datasets are included in the spec", () => {
-      expect(() => renderSpec({ mark: "bar", datasets: { foo: [] } })).toThrow(
-        "Datasets should not be passed as part of the spec"
+    it("preserves datasets included in the spec", () => {
+      const datasets = {
+        foo: { type: "FeatureCollection", features: [] },
+      }
+      const spec = renderSpec({ mark: "bar", datasets })
+      expect(spec.datasets).toEqual(datasets)
+
+      const specWithoutDatasets = renderSpec({ mark: "bar" })
+      expect(specWithoutDatasets).not.toHaveProperty("datasets")
+    })
+
+    it("sets description from alt when alt is non-empty", () => {
+      const spec = renderSpec(
+        { mark: "bar" },
+        { alt: "Accessible chart name" }
       )
+      expect(spec.description).toBe("Accessible chart name")
+    })
+
+    it("preserves author description when alt is unset", () => {
+      const spec = renderSpec({
+        mark: "bar",
+        description: "Author description",
+      })
+      expect(spec.description).toBe("Author description")
+    })
+
+    it("overrides author description when alt is set", () => {
+      const spec = renderSpec(
+        { mark: "bar", description: "Author description" },
+        { alt: "Streamlit alt" }
+      )
+      expect(spec.description).toBe("Streamlit alt")
     })
   })
 })

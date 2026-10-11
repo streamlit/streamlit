@@ -51,7 +51,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import ArrowVegaLiteChart, {
   hasNestedComposition,
   isFacetChart,
-  Props,
+  type Props,
 } from "./ArrowVegaLiteChart"
 
 const getProps = (
@@ -253,6 +253,39 @@ describe("ArrowVegaLiteChart", () => {
     expect(
       screen.queryByRole("button", { name: "Download as CSV" })
     ).not.toBeInTheDocument()
+  })
+
+  it("keeps alt context on Show data and Show chart toolbar actions", async () => {
+    const user = userEvent.setup()
+    vegaEmbedMock.isViewReady = true
+
+    render(
+      <ArrowVegaLiteChart
+        {...getProps({
+          alt: "Revenue by product",
+          data: { data: UNICODE },
+          datasets: [],
+        })}
+      />
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: /^Show data: Revenue by product$/,
+      })
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /^Show data: Revenue by product$/,
+      })
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: /^Show chart: Revenue by product$/,
+      })
+    ).toBeInTheDocument()
   })
 
   it("downloads the chart as a PNG when the toolbar action is clicked", async () => {

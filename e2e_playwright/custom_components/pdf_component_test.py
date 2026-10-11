@@ -19,7 +19,11 @@ import re
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
-from e2e_playwright.shared.app_utils import reset_hovering, select_selectbox_option
+from e2e_playwright.shared.app_utils import (
+    get_element_by_key,
+    reset_hovering,
+    select_selectbox_option,
+)
 
 
 def _select_pdf_scenario(app: Page, scenario: str):
@@ -385,3 +389,20 @@ def test_st_pdf_different_heights_snapshots(
     wait_until(app, _is_max_height_reached, timeout=7000)
 
     assert_snapshot(pdf_container, name="st_pdf-height_maximum")
+
+
+def test_st_pdf_alt_sets_accessible_name(app: Page):
+    """Verify authored and omitted alt map to the viewer accessible name."""
+    _select_pdf_scenario(app, "altText")
+    wait_for_app_run(app)
+
+    labeled = get_element_by_key(app, "pdf_with_alt").get_by_test_id("pdf-container")
+    unlabeled = get_element_by_key(app, "pdf_without_alt").get_by_test_id(
+        "pdf-container"
+    )
+
+    expect(labeled).to_have_accessible_name("Q3 2026 financial report")
+    expect(labeled).to_have_attribute("role", "region")
+    expect(unlabeled).to_have_accessible_name("")
+    expect(unlabeled).not_to_have_attribute("aria-label")
+    expect(unlabeled).not_to_have_attribute("role")

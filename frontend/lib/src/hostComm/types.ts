@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import {
-  type AppPage,
-  type CustomThemeConfig,
+import type {
+  AppPage,
+  CustomThemeConfig,
   MetricsEvent,
 } from "@streamlit/protobuf"
 
-import { ScriptRunState } from "~lib/ScriptRunState"
+import type { ScriptRunState } from "~lib/ScriptRunState"
 import type { PresetThemeName } from "~lib/theme/types"
 import type { ExportedTheme } from "~lib/theme/utils"
 

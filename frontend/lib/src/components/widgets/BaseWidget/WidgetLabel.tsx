@@ -17,7 +17,7 @@
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { isNullOrUndefined, LabelVisibilityOptions } from "~lib/util/utils"
 
-import { StyledWidgetLabel } from "./styled-components"
+import { StyledRequiredMarker, StyledWidgetLabel } from "./styled-components"
 
 export interface LabelProps {
   // Label body text. If nullsy, WidgetLabel won't show. But if empty string it will.
@@ -34,6 +34,17 @@ export interface LabelProps {
 
   // Associates the label with the input field programmatically. Makes it possible to focus input by clicking on label.
   htmlFor?: string
+
+  // Visible-label hint that the field must be filled. Keep this out of the
+  // Python label so toggling required does not change widget identity.
+  // Omitted for hidden/collapsed labels.
+  required?: boolean
+
+  /**
+   * Ref to the aria-hidden label text node so callers can read rendered
+   * Markdown as plain text (for example toolbar names).
+   */
+  labelTextRef?: React.Ref<HTMLSpanElement>
 }
 
 export function WidgetLabel({
@@ -42,10 +53,17 @@ export function WidgetLabel({
   disabled,
   labelVisibility,
   htmlFor,
-}: LabelProps): React.ReactElement {
+  required,
+  labelTextRef,
+}: LabelProps): React.ReactElement | null {
   if (isNullOrUndefined(label)) {
-    return <></>
+    return null
   }
+
+  const labelIsVisible =
+    isNullOrUndefined(labelVisibility) ||
+    labelVisibility === LabelVisibilityOptions.Visible
+  const showRequiredMarker = Boolean(required) && labelIsVisible
 
   return (
     <StyledWidgetLabel
@@ -59,9 +77,18 @@ export function WidgetLabel({
           and/or aria-labelledby). We hide the visual label text from assistive tech
           to avoid duplicate announcements, while keeping any children (e.g. help
           icons) accessible. */}
-      <span aria-hidden="true">
+      <span aria-hidden="true" ref={labelTextRef}>
         <StreamlitMarkdown source={label} allowHTML={false} isLabel />
       </span>
+      {showRequiredMarker && (
+        <StyledRequiredMarker
+          data-testid="stWidgetLabelRequired"
+          aria-hidden="true"
+          $disabled={disabled}
+        >
+          (required)
+        </StyledRequiredMarker>
+      )}
       {children}
     </StyledWidgetLabel>
   )

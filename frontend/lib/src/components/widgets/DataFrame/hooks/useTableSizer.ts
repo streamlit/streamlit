@@ -19,9 +19,12 @@
 
 import { useLayoutEffect, useState } from "react"
 
-import { Size as ResizableSize } from "re-resizable"
+import type { Size as ResizableSize } from "re-resizable"
 
-import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe as DataframeProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
 import {
   calculateTableHeight,
@@ -34,7 +37,7 @@ import {
 } from "~lib/components/widgets/DataFrame/dimensionUtils"
 import { notNullOrUndefined } from "~lib/util/utils"
 
-import { CustomGridTheme } from "./useCustomTheme"
+import type { CustomGridTheme } from "./useCustomTheme"
 
 type AutoSizerReturn = {
   // The minimum height that the data grid can be resized to
@@ -239,7 +242,7 @@ function useTableSizer(
     // If user hasn't specified a width via `width` or `use_container_width`,
     // we configure the table to 100%. Which will cause the data grid to
     // calculate the best size on the content and use that.
-    width: initialWidth || "100%",
+    width: initialWidth ?? "100%",
     height: useStretchHeight ? "100%" : initialHeight,
   })
 
@@ -258,7 +261,7 @@ function useTableSizer(
   useLayoutEffect(() => {
     setResizableSize(prev => ({
       ...prev,
-      width: initialWidth || "100%",
+      width: initialWidth ?? "100%",
     }))
   }, [initialWidth])
 
@@ -289,7 +292,7 @@ function useTableSizer(
       })
     } else {
       setResizableSize({
-        width: initialWidth || "100%",
+        width: initialWidth ?? "100%",
         height: initialHeight,
       })
     }

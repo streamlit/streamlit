@@ -18,7 +18,7 @@ import { act, createEvent, screen, waitFor } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import FileDropzone, { Props } from "./FileDropzone"
+import FileDropzone, { type Props } from "./FileDropzone"
 import { STREAMLIT_MIME_TYPE } from "./utils"
 
 const getProps = (props: Partial<Props> = {}): Props => ({

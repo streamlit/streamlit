@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { CSSProperties } from "react"
+import type { CSSProperties } from "react"
 
+import type { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
@@ -105,4 +106,66 @@ export const getBorderColor = (
     borderColor = colors.primary
   }
   return borderColor
+}
+
+type SecondaryIconButtonColorOptions = {
+  /** Override resting color (defaults to `fadedText60`). */
+  restColor?: string
+  /**
+   * Override hover, keyboard-focus, and React Aria `data-hovered` color
+   * (defaults to `bodyText`).
+   */
+  hoverColor?: string
+  /** Override disabled color (defaults to `fadedText40`). */
+  disabledColor?: string
+}
+
+/** Hover / focus-visible / React Aria hovered selector for secondary icon buttons. */
+export const SECONDARY_ICON_HOVER_SELECTOR =
+  "&:hover:not(:disabled):not([data-disabled]), &:focus-visible:not(:disabled):not([data-disabled]), &[data-hovered]:not(:disabled):not([data-disabled])"
+
+/** Native `:disabled` and React Aria `[data-disabled]` states for secondary icon buttons. */
+export const SECONDARY_ICON_DISABLED_SELECTOR =
+  "&:disabled, &:disabled:hover, &:disabled:active, &:disabled:focus-visible, &[data-disabled], &[data-disabled]:hover, &[data-disabled]:active, &[data-disabled]:focus-visible"
+
+/**
+ * Shared colors for muted icon buttons in widgets (clear, mic, play, chat add).
+ * Rest uses `fadedText60`, hover/focus-visible uses `bodyText`, and disabled uses
+ * `fadedText40`. Avoid `grayTextColor` — that token is for gray text content.
+ *
+ * Callers that also set `&:active` must use
+ * `&:active:not(:disabled):not([data-disabled])` and place that rule after
+ * spreading these styles so equal specificity + source order keeps press color
+ * on top while hovered.
+ *
+ * @see NumberInput StyledClearButton
+ * @see TextInput StyledClearButton
+ * @see DateInput StyledClearButton
+ * @see TimeInput StyledClearButton
+ * @see Multiselect StyledClearButton
+ * @see Selectbox StyledClearButton
+ * @see AudioInput StyledSecondaryIconActionButton
+ * @see ChatInput StyledSendIconButton (non-primary)
+ */
+export function getSecondaryIconButtonColorStyles(
+  theme: EmotionTheme,
+  {
+    restColor = theme.colors.fadedText60,
+    hoverColor = theme.colors.bodyText,
+    disabledColor = theme.colors.fadedText40,
+  }: SecondaryIconButtonColorOptions = {}
+): CSSObject {
+  return {
+    color: restColor,
+    // React Aria `data-*` attributes are included unconditionally; they are inert
+    // on plain <button> elements. `:focus-visible` rather than `:focus` so the
+    // hover color does not stick after a pointer click.
+    [SECONDARY_ICON_HOVER_SELECTOR]: {
+      color: hoverColor,
+    },
+    [SECONDARY_ICON_DISABLED_SELECTOR]: {
+      color: disabledColor,
+      cursor: "not-allowed",
+    },
+  }
 }

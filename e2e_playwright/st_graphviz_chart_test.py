@@ -15,7 +15,11 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
-from e2e_playwright.shared.app_utils import check_top_level_class, get_radio_option
+from e2e_playwright.shared.app_utils import (
+    check_top_level_class,
+    get_element_by_key,
+    get_radio_option,
+)
 
 
 def get_first_graph_svg(app: Page) -> Locator:
@@ -64,9 +68,45 @@ def exit_fullscreen(app: Page) -> None:
 
 def test_initial_setup(app: Page):
     """Initial setup: ensure charts are loaded."""
+    # 15 baseline + 3 alt fixtures (both SIMPLE_ALT_DOT digraphs are named
+    # AltHelloWorld, plus the linked chart) = 18 titled SVGs.
     expect(
         app.get_by_test_id("stGraphVizChart").locator("svg > g > title")
-    ).to_have_count(15)
+    ).to_have_count(18)
+
+
+def test_graphviz_chart_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the GraphViz chart container's accessible name."""
+    labeled_container = get_element_by_key(app, "c_graphviz_alt")
+    labeled = labeled_container.get_by_test_id("stGraphVizChart")
+    expect(labeled).to_have_attribute("role", "figure")
+    expect(labeled).to_have_accessible_name("Directed graph of Hello to World")
+    # Toolbar is a sibling of the chart node, not a descendant.
+    labeled_container.hover()
+    expect(
+        labeled_container.get_by_role(
+            "button",
+            name="Fullscreen: Directed graph of Hello to World",
+            exact=True,
+        )
+    ).to_be_visible()
+
+    unlabeled_container = get_element_by_key(app, "c_graphviz_no_alt")
+    unlabeled = unlabeled_container.get_by_test_id("stGraphVizChart")
+    expect(unlabeled).not_to_have_attribute("role")
+    expect(unlabeled).not_to_have_attribute("aria-label")
+    expect(unlabeled).to_have_accessible_name("")
+    unlabeled_container.hover()
+    expect(
+        unlabeled_container.get_by_role("button", name="Fullscreen", exact=True)
+    ).to_be_visible()
+
+    # role=figure (not img) keeps GraphViz URL nodes in the a11y tree.
+    linked = get_element_by_key(app, "c_graphviz_alt_link").get_by_test_id(
+        "stGraphVizChart"
+    )
+    expect(linked).to_have_attribute("role", "figure")
+    expect(linked.get_by_role("link")).to_be_visible()
 
 
 def test_shows_left_and_right_graph(app: Page):

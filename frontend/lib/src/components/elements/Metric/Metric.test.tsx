@@ -16,7 +16,7 @@
 
 import { screen, waitFor } from "@testing-library/react"
 import embed from "vega-embed"
-import { TopLevelSpec } from "vega-lite"
+import type { TopLevelSpec } from "vega-lite"
 
 import {
   LabelVisibility as LabelVisibilityProto,
@@ -27,7 +27,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
-import Metric, { getMetricChartSpec, MetricProps } from "./Metric"
+import Metric, { getMetricChartSpec, type MetricProps } from "./Metric"
 
 // Mock vega-embed
 vi.mock("vega-embed", () => ({

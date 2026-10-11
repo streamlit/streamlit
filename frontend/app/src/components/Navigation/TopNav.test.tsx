@@ -17,11 +17,11 @@
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { mockEndpoints, NavigationContextProps } from "@streamlit/lib"
+import { mockEndpoints, type NavigationContextProps } from "@streamlit/lib"
 import { renderWithContexts } from "@streamlit/lib/testing"
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 
-import TopNav, { Props } from "./TopNav"
+import TopNav, { type Props } from "./TopNav"
 
 // Mock rc-overflow to render all items without responsive behavior
 vi.mock("rc-overflow", () => ({

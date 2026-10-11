@@ -17,7 +17,10 @@
 import styled from "@emotion/styled"
 import { Input as RAInput } from "react-aria-components"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getSecondaryIconButtonColorStyles,
+} from "~lib/components/shared/Base/styled-components"
 
 export const StyledTextInput = styled.div`
   position: relative;
@@ -147,14 +150,8 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   // Match the password toggle's horizontal padding so trailing controls sit a
   // consistent distance from the input's right edge.
   padding: `0 ${theme.spacing.sm}`,
-  color: theme.colors.grayTextColor,
   flexShrink: 0,
-  "&:hover:not(:disabled)": {
-    color: theme.colors.bodyText,
-  },
-  "&:disabled": {
-    cursor: "not-allowed",
-  },
+  ...getSecondaryIconButtonColorStyles(theme),
 }))
 
 interface StyledInputInstructionsContainerProps {

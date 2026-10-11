@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone, tzinfo
+from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from numbers import Integral, Real
 from typing import (
     TYPE_CHECKING,
@@ -117,7 +117,7 @@ SliderReturn: TypeAlias = (
 SECONDS_TO_MICROS: Final = 1000 * 1000
 DAYS_TO_MICROS: Final = 24 * 60 * 60 * SECONDS_TO_MICROS
 
-UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=timezone.utc)
+UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
 
 SUPPORTED_TYPES: Final = {
     Integral: SliderProto.INT,
@@ -212,7 +212,7 @@ def _datetime_to_micros(dt: datetime) -> int:
     # as it is in the given datetime object, we just set the tzinfo to UTC and
     # do not do any timezone conversions. Only the backend knows about
     # original timezone and will replace the UTC timestamp in the deserialization.
-    utc_dt = dt.replace(tzinfo=timezone.utc)
+    utc_dt = dt.replace(tzinfo=UTC)
     return _delta_to_micros(utc_dt - UTC_EPOCH)
 
 
@@ -879,10 +879,9 @@ class SliderMixin:
     ) -> SliderReturn:
         key = to_key(key)
 
-        validate_on_change_mode(on_change)
-
-        on_change_callback: WidgetCallback | None = (
-            on_change if callable(on_change) else None
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
         )
 
         check_widget_policies(
@@ -1039,10 +1038,12 @@ class SliderMixin:
             max_value = defaults[data_type]["max_value"]
         if step is None:
             step = defaults[data_type]["step"]
+            # Use the absolute span so reversed date/datetime bounds still get
+            # a one-day step when the range is a day or more.
             if data_type in {
                 SliderProto.DATETIME,
                 SliderProto.DATE,
-            } and max_value - min_value < timedelta(days=1):
+            } and abs(max_value - min_value) < timedelta(days=1):
                 step = timedelta(minutes=15)
         if format is None:
             format = cast("str", defaults[data_type]["format"])  # noqa: A001
@@ -1097,8 +1098,9 @@ class SliderMixin:
             )
 
         # Ensure that min <= value(s) <= max, adjusting the bounds as necessary.
-        min_value = min(min_value, max_value)
-        max_value = max(min_value, max_value)
+        # Swap min and max when the caller passed them reversed.
+        if min_value > max_value:
+            min_value, max_value = max_value, min_value
         if len(prepared_value) == 1:
             min_value = min(prepared_value[0], min_value)
             max_value = max(prepared_value[0], max_value)

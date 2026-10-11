@@ -15,9 +15,9 @@
  */
 
 import { waitFor } from "@testing-library/react"
-import Plotly from "plotly.js"
+import type Plotly from "plotly.js"
 
-import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
+import type { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -150,7 +150,7 @@ describe("PlotlyChart utils", () => {
       const widgetMgr = getWidgetMgr()
       vi.spyOn(widgetMgr, "setStringValue")
 
-      // @ts-expect-error
+      // @ts-expect-error - selection event argument is required
       handleSelection(undefined, widgetMgr, proto, mockFragmentId)
       expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
     })
@@ -248,7 +248,7 @@ describe("PlotlyChart utils", () => {
       handleSelection(
         event,
         widgetMgr,
-        // @ts-expect-error
+        // @ts-expect-error - spread object is not a PlotlyChartProto
         { ...proto, selectionMode: [] },
         mockFragmentId
       )
@@ -276,7 +276,7 @@ describe("PlotlyChart utils", () => {
       handleSelection(
         event,
         widgetMgr,
-        // @ts-expect-error
+        // @ts-expect-error - spread object is not a PlotlyChartProto
         { ...proto, selectionMode: [] },
         mockFragmentId
       )

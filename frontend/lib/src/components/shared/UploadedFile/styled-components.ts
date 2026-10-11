@@ -15,7 +15,7 @@
  */
 import styled from "@emotion/styled"
 
-import { FileStatus } from "./UploadFileInfo"
+import type { FileStatus } from "./UploadFileInfo"
 
 export const StyledFileChips = styled.div(({ theme }) => ({
   display: "flex",

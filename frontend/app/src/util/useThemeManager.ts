@@ -30,7 +30,7 @@ import {
   getSystemThemePreference,
   isPresetTheme,
   setCachedThemeSelection,
-  ThemeConfig,
+  type ThemeConfig,
 } from "@streamlit/lib"
 import {
   CustomThemeConfig,

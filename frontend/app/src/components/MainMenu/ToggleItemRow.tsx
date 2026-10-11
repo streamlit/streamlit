@@ -21,7 +21,7 @@
  * focus/hover styling.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, type ReactElement, useCallback } from "react"
 
 import type { MenuToggleItem } from "./MainMenu"
 import {

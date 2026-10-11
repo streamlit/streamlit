@@ -16,7 +16,7 @@
 
 import { createContext } from "react"
 
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 
 export interface NavigationContextProps {
   /**

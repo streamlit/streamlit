@@ -250,7 +250,8 @@ class MarkdownMixin:
               markers such as ``#`` and ``-`` are shown as literal text
               rather than headings or lists. This cannot be combined with
               ``unsafe_allow_html=True``. Truncation only appears when the
-              element is narrower than its text.
+              element is narrower than its text. Hovering truncated text
+              reveals the full text, including when ``help`` is set.
 
         Examples
         --------
@@ -374,7 +375,8 @@ class MarkdownMixin:
               (the same subset used in widget labels). Leading block
               markers such as ``#`` and ``-`` are shown as literal text
               rather than headings or lists. This cannot be combined with
-              ``unsafe_allow_html=True``.
+              ``unsafe_allow_html=True``. Hovering truncated text reveals
+              the full text, including when ``help`` is set.
 
         Examples
         --------
@@ -618,7 +620,8 @@ class MarkdownMixin:
             height: 220px
 
         """
-        icon_str = validate_icon_or_emoji(icon) + " " if icon is not None else ""
+        validated_icon = validate_icon_or_emoji(icon)
+        icon_str = f"{validated_icon} " if validated_icon else ""
 
         # Escape [ and ] characters in the label to prevent breaking the directive syntax
         escaped_label = label.replace("[", "\\[").replace("]", "\\]")

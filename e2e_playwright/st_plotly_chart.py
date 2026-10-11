@@ -261,3 +261,20 @@ fig.update_layout(
     title_font_size=30,
 )
 st.plotly_chart(fig, theme="streamlit")
+
+# Differ only in `alt`; keyed so the e2e test can target them directly.
+SIMPLE_ALT_FIG = go.Figure(
+    data=[go.Scatter(x=[1, 2, 3], y=[1, 3, 2], mode="markers")],
+    layout={
+        "height": 300,
+        "width": 400,
+        "margin": {"l": 40, "r": 20, "t": 20, "b": 40},
+    },
+)
+
+st.plotly_chart(
+    SIMPLE_ALT_FIG,
+    key="plotly_alt",
+    alt="Scatter plot of three sample points",
+)
+st.plotly_chart(SIMPLE_ALT_FIG, key="plotly_no_alt")

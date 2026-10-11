@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { FC, PropsWithChildren, ReactElement } from "react"
+import type { FC, PropsWithChildren, ReactElement } from "react"
 
 import {
   renderHook as reactTestingLibraryRenderHook,
-  RenderHookOptions,
-  RenderOptions,
-  RenderResult,
+  type RenderHookOptions,
+  type RenderOptions,
+  type RenderResult,
 } from "@testing-library/react"
 
 import ElementFullscreenWrapper from "~lib/components/shared/ElementFullscreen/ElementFullscreenWrapper"

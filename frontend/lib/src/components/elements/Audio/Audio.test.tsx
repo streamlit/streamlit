@@ -21,9 +21,9 @@ import { Audio as AudioProto } from "@streamlit/protobuf"
 
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
-import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
-import Audio, { AudioProps } from "./Audio"
+import Audio, { type AudioProps } from "./Audio"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -296,6 +296,31 @@ describe("Audio Element", () => {
       "onerror triggered",
       "https://mock.media.url/"
     )
+  })
+
+  describe("alt (accessible description)", () => {
+    it("sets aria-label when alt is provided", () => {
+      render(<Audio {...getProps({ alt: "A cat purring" })} />)
+      expect(screen.getByTestId("stAudio")).toHaveAttribute(
+        "aria-label",
+        "A cat purring"
+      )
+    })
+
+    it("omits aria-label entirely when alt is not provided", () => {
+      render(<Audio {...getProps()} />)
+      // An empty aria-label is worse than none, so the attribute must be
+      // absent rather than present-but-empty.
+      expect(screen.getByTestId("stAudio")).not.toHaveAttribute("aria-label")
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits aria-label when alt is %s", (_label, alt) => {
+      render(<Audio {...getProps({ alt })} />)
+      expect(screen.getByTestId("stAudio")).not.toHaveAttribute("aria-label")
+    })
   })
 
   describe("crossOrigin attribute", () => {

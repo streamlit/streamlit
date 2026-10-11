@@ -84,7 +84,9 @@ _LOGGER: Final = get_logger(__name__)
 # to ``""`` — ``headless`` alone fires for every deployed app and would swamp the
 # metric, and "no agent harness" / "already installed" / "user dismissed" are
 # either already measurable from the page profile or simply not interesting.
-_REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset({"conflict", "check_failed"})
+_REPORTED_NUDGE_SUPPRESSION_REASONS: Final = frozenset(
+    {"conflict", "check_failed", "check_unreadable"}
+)
 
 
 def _close_script_event_loop(loop: asyncio.AbstractEventLoop) -> None:
@@ -262,8 +264,6 @@ class AppSession:
         self._session_state = SessionState()
         self._user_info = user_info
 
-        self._debug_last_backmsg_id: str | None = None
-
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
         self._backend_operation_dispatcher = self._create_backend_operation_dispatcher()
@@ -423,10 +423,6 @@ class AppSession:
             The message to enqueue
 
         """
-
-        if self._debug_last_backmsg_id:
-            msg.debug_last_backmsg_id = self._debug_last_backmsg_id
-
         self._browser_queue.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
@@ -436,9 +432,6 @@ class AppSession:
         try:
             msg_type = msg.WhichOneof("type")
             if msg_type == "rerun_script":
-                if msg.debug_last_backmsg_id:
-                    self._debug_last_backmsg_id = msg.debug_last_backmsg_id
-
                 self._handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "load_git_info":
                 self._handle_git_information_request()
@@ -554,6 +547,7 @@ class AppSession:
                 page_name=client_state.page_name,
                 fragment_id=fragment_id or None,
                 is_auto_rerun=client_state.is_auto_rerun,
+                is_history_navigation=client_state.is_history_navigation,
                 cached_message_hashes=frozenset(client_state.cached_message_hashes),
                 context_info=client_state.context_info,
             )
@@ -837,7 +831,6 @@ class AppSession:
                 status = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
 
             self._enqueue_forward_msg(self._create_script_finished_message(status))
-            self._debug_last_backmsg_id = None
 
             if event in {
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
@@ -1072,9 +1065,13 @@ class AppSession:
         # The apply_show_error_details flag applies the client.showErrorDetails
         # redaction. Without this flag, the session sends the internal message,
         # type, and stack trace of the error to the browser.
-        exception_utils.marshall(
-            msg.delta.new_element.exception, e, apply_show_error_details=True
-        )
+        try:
+            exception_utils.marshall(
+                msg.delta.new_element.exception, e, apply_show_error_details=True
+            )
+        except Exception:
+            # Marshalling the error must not replace the original failure.
+            _LOGGER.exception("Failed to marshall exception for the frontend")
         return msg
 
     def _handle_git_information_request(self) -> None:
@@ -1344,7 +1341,7 @@ def _parse_and_populate_chart_colors(
         for color in colors:
             try:
                 msg_field.append(color)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.%s config option: %s.",
                     config_key,
@@ -1437,7 +1434,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                     ):
                         font_face["weight_range"] = str(font_face["weight_range"])
                 msg.font_faces.append(ParseDict(font_face, FontFace()))
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.fontFaces config option: %s.",
                     font_face,
@@ -1476,7 +1473,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         for size in heading_font_sizes:
             try:
                 msg.heading_font_sizes.append(size)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.headingFontSizes config option: %s.",
                     size,
@@ -1517,7 +1514,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         for weight in heading_weights:
             try:
                 msg.heading_font_weights.append(weight)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.headingFontWeights config option: %s.",
                     weight,

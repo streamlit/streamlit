@@ -23,7 +23,7 @@ import { VERY_TALL } from "~lib/mocks/arrow/tall"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
-import { CustomGridTheme } from "./useCustomTheme"
+import type { CustomGridTheme } from "./useCustomTheme"
 import useTableSizer from "./useTableSizer"
 
 const mockTheme = {

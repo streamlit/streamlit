@@ -39,7 +39,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 39
+NUM_SLIDER_WIDGETS = 40
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -265,7 +265,9 @@ def test_slider_works_with_fragments(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
 
 
-def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFunction):
+def test_slider_with_float_formatting(
+    app: Page, assert_snapshot: ImageCompareFunction, browser_name: str
+):
     slider = get_slider(app, "Slider 11 (formatted float)")
     slider.click()
 
@@ -275,15 +277,26 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     reset_hovering(app)
     reset_focus(app)
     expect(app.get_by_text("Slider 11: 0.8")).to_be_visible()
-    # Wait for the tick bar (min/max labels) to fully fade out (transition: 300ms + 200ms delay)
-    # so the snapshot is stable and not captured mid-transition.
+    # Assert the formatted label directly. This, not the snapshot, is what pins
+    # down `format="%f%%"`: the markdown above only shows the raw value (0.8).
+    expect(slider.get_by_test_id("stSliderThumbValue")).to_have_text("0.8%")
+    # Once unhovered the tick bar fades out (opacity 300ms after a 200ms delay), so
+    # wait for it to reach 0 rather than capturing it mid-fade.
     expect(slider.get_by_test_id("stSliderTickBar")).to_have_css("opacity", "0")
-    # The "0.8%" thumb value label only renders after this interaction, so on a
-    # cold page load it can be captured before the "Source Sans" web font finishes
-    # loading (flash-of-fallback-text). Wait for the font to avoid a snapshot flake
-    # where only the value label differs.
+    # Source Sans sets no font-display, so until it loads the label renders invisible
+    # rather than shifted. Waiting reports that as a font timeout instead of an opaque
+    # snapshot mismatch.
     expect_font(app, "Source Sans")
-    assert_snapshot(slider, name="st_slider-float_formatting")
+    # This label is fractionally positioned, so its glyphs can snap one pixel up or
+    # down. Of the 704x69 capture, Chromium's 0.003 lets up to 144 pixels differ, which
+    # absorbs the observed 116px shift, while a 2px shift (147px) or a leftover focus
+    # ring (187px) still fails. Firefox and WebKit have never shown it, so they keep
+    # the 0.002 default.
+    assert_snapshot(
+        slider,
+        name="st_slider-float_formatting",
+        image_threshold=0.003 if browser_name == "chromium" else 0.002,
+    )
 
 
 def test_check_top_level_class(app: Page):
@@ -736,3 +749,20 @@ def test_slider_on_change_ignore(app: Page):
     wait_for_app_loaded(app)
     expect(get_element_by_key(app, "ignore_slider")).to_contain_text("30")
     expect_prefixed_markdown(app, "Ignore slider value:", "30")
+
+
+def test_slider_swaps_reversed_min_max(app: Page):
+    """Reversed min/max are swapped so the thumb can travel the full range."""
+    slider = get_slider(app, "Reversed bounds slider")
+    slider.scroll_into_view_if_needed()
+    expect(app.get_by_test_id("stException")).not_to_be_attached()
+
+    slider_role = slider.get_by_role("slider")
+    expect(slider_role).to_have_attribute("min", "1")
+    expect(slider_role).to_have_attribute("max", "10")
+
+    expect_prefixed_markdown(app, "Reversed bounds slider value:", "5")
+
+    slider_role.press("ArrowRight")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Reversed bounds slider value:", "6")

@@ -151,8 +151,10 @@ class HeadingMixin:
               wraps onto additional lines.
             - ``False``: The header stays on one line. Overflow is truncated
               with an ellipsis. Extra body lines after the first newline are
-              omitted so the heading stays one line. Anchor and help icons
-              remain visible.
+              omitted so the heading stays one line. Hovering an ellipsized
+              first line reveals that line's full text, including when
+              ``help`` is set.
+              Anchor and help icons remain visible.
 
         Examples
         --------
@@ -300,8 +302,10 @@ class HeadingMixin:
               it wraps onto additional lines.
             - ``False``: The subheader stays on one line. Overflow is truncated
               with an ellipsis. Extra body lines after the first newline are
-              omitted so the heading stays one line. Anchor and help icons
-              remain visible.
+              omitted so the heading stays one line. Hovering an ellipsized
+              first line reveals that line's full text, including when
+              ``help`` is set.
+              Anchor and help icons remain visible.
 
         Examples
         --------
@@ -443,8 +447,10 @@ class HeadingMixin:
               wraps onto additional lines.
             - ``False``: The title stays on one line. Overflow is truncated
               with an ellipsis. Extra body lines after the first newline are
-              omitted so the heading stays one line. Anchor and help icons
-              remain visible.
+              omitted so the heading stays one line. Hovering an ellipsized
+              first line reveals that line's full text, including when
+              ``help`` is set.
+              Anchor and help icons remain visible.
 
         Examples
         --------
@@ -519,8 +525,7 @@ class HeadingMixin:
         proto = HeadingProto()
         proto.tag = tag.value
         proto.body = clean_text(body)
-        # Treat "" like None so callers can pass page.icon (which is "" when unset).
-        proto.icon = validate_icon_or_emoji(None if icon == "" else icon)
+        proto.icon = validate_icon_or_emoji(icon)
         proto.wrap = wrap
         if divider:
             proto.divider = HeadingMixin._handle_divider_color(divider)

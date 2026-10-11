@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useMemo, useRef } from "react"
+import { memo, type ReactElement, useEffect, useMemo, useRef } from "react"
 
 import { getLogger } from "loglevel"
 
-import { Audio as AudioProto } from "@streamlit/protobuf"
+import type { Audio as AudioProto } from "@streamlit/protobuf"
 
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
-import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
+import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
+import type { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
 import { StyledAudio, StyledAudioContainer } from "./styled-components"
 
@@ -40,7 +40,7 @@ function Audio({
 }: Readonly<AudioProps>): ReactElement {
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  const { startTime, endTime, loop, autoplay } = element
+  const { startTime, endTime, loop, autoplay, alt } = element
 
   const preventAutoplay = useMemo<boolean>(() => {
     if (!element.id) {
@@ -174,6 +174,10 @@ function Audio({
         data-testid="stAudio"
         ref={audioRef}
         controls
+        // Only set an accessible name when the author provided one. Blank input
+        // is treated as absent: aria-label=" " computes to an empty accessible
+        // name, which is worse than having no aria-label at all.
+        aria-label={alt?.trim() || undefined}
         autoPlay={autoplay && !preventAutoplay}
         src={uri}
         onError={handleAudioError}

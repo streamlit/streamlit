@@ -19,7 +19,8 @@ import streamlit as st
 st.header("Mermaid Chart Types")
 
 st.subheader("Flowchart")
-st.mermaid_chart("""
+with st.container(key="mermaid_without_alt"):
+    st.mermaid_chart("""
 graph TD
     A[Start] --> B{Decision}
     B -->|Yes| C[OK]
@@ -29,7 +30,9 @@ graph TD
 """)
 
 st.subheader("Sequence Diagram")
-st.mermaid_chart("""
+with st.container(key="mermaid_sequence_with_alt"):
+    st.mermaid_chart(
+        """
 sequenceDiagram
     participant User
     participant App
@@ -38,7 +41,9 @@ sequenceDiagram
     App->>Server: API request
     Server-->>App: Response
     App-->>User: Update UI
-""")
+""",
+        alt="User to app to server API handshake",
+    )
 
 st.subheader("Class Diagram")
 st.mermaid_chart("""
@@ -92,7 +97,9 @@ gantt
 """)
 
 st.subheader("Mind Map")
-st.mermaid_chart("""
+with st.container(key="mermaid_mindmap_with_alt"):
+    st.mermaid_chart(
+        """
 mindmap
     root((Streamlit))
         Elements
@@ -107,7 +114,9 @@ mindmap
             Columns
             Tabs
             Containers
-""")
+""",
+        alt="Streamlit element and widget taxonomy",
+    )
 
 # Sizing regression cases (kept last so existing snapshot indices are stable).
 st.subheader("Content width")
@@ -115,3 +124,12 @@ st.mermaid_chart("graph LR\n    A --> B --> C", width="content")
 
 st.subheader("Tall diagram")
 st.mermaid_chart("graph TD\n" + "\n".join(f"    N{i} --> N{i + 1}" for i in range(12)))
+
+# Keyed for accessible-name assertions. Appended last so the nth offsets
+# used by the snapshot tests above stay stable.
+st.subheader("Alt text")
+with st.container(key="mermaid_with_alt"):
+    st.mermaid_chart(
+        "graph TD\n    A --> B",
+        alt="Decision flow from start to cancel",
+    )

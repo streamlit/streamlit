@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { AppRoot, HostCommunicationManager } from "@streamlit/lib"
+import type { AppRoot, HostCommunicationManager } from "@streamlit/lib"
 import {
   type AppPage,
   Navigation,
-  NewSession,
-  PageConfig,
+  type NewSession,
+  type PageConfig,
 } from "@streamlit/protobuf"
 
 interface AppNavigationState {

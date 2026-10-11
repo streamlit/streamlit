@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import { CustomThemeConfig } from "@streamlit/protobuf"
+import type { CustomThemeConfig } from "@streamlit/protobuf"
 
-import emotionBaseTheme from "./emotionBaseTheme"
-import {
+import type emotionBaseTheme from "./emotionBaseTheme"
+import type {
   OptionalThemeColors,
   RequiredThemeColors,
 } from "./emotionBaseTheme/themeColors"
-import { ThemeShadows } from "./getShadows"
+import type { ThemeShadows } from "./getShadows"
 import type { NamedColor } from "./namedColors"
-import { type PrimitiveColors } from "./primitives/colors"
+import type { PrimitiveColors } from "./primitives/colors"
 
 /**
  * Comprehensive type for emotion theme colors.
@@ -84,6 +84,8 @@ type SpecialEmotionColors = {
   dataframeBorderColor: string
   // Used for dataframe header background
   dataframeHeaderBackgroundColor: string
+  // Used for dataframe column and group header text
+  dataframeHeaderTextColor: string
 
   headingColor: string
 

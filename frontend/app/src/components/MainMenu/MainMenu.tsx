@@ -15,10 +15,10 @@
  */
 
 import {
-  FocusEvent,
-  KeyboardEvent,
+  type FocusEvent,
+  type KeyboardEvent,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useLayoutEffect,
@@ -32,7 +32,7 @@ import { FloatingPortal } from "@floating-ui/react"
 import { getLogger } from "loglevel"
 
 import type { Steps } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import type { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import {
   BaseButton,
@@ -41,14 +41,14 @@ import {
   CopyButton,
   DynamicIcon,
   Icon,
-  IGuestToHostMessage,
-  IMenuItem,
+  type IGuestToHostMessage,
+  type IMenuItem,
   ThemeContext,
   useEmotionTheme,
   useFloatingOverlay,
   useOverlayDismissal,
 } from "@streamlit/lib"
-import { Config, PageConfig } from "@streamlit/protobuf"
+import { Config, type PageConfig } from "@streamlit/protobuf"
 
 import { focusNextTabbable, focusPrevTabbable } from "./focusTabbable"
 import {
@@ -950,7 +950,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
 
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open: isMenuOpen,
     placement: "bottom-end",
     offsetPx: convertRemToPx(theme.spacing.twoXS),
@@ -993,8 +993,8 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: isMenuOpen,
     onClose: closeMenu,
-    floatingSetFn: refs.setFloating,
-    referenceSetFn: refs.setReference,
+    floatingSetFn: setFloating,
+    referenceSetFn: setReference,
   })
 
   const setTriggerAndReferenceRef = useCallback(

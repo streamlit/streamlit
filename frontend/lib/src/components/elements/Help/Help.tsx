@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
-import {
+import type {
   Help as HelpProto,
-  type Member as MemberProto,
+  Member as MemberProto,
 } from "@streamlit/protobuf"
 
 import {

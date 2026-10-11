@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useMemo,
@@ -31,7 +31,7 @@ import { getLogger } from "loglevel"
 
 import {
   EChartsChart as EChartsChartProto,
-  streamlit,
+  type streamlit,
 } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -46,9 +46,10 @@ import { ensureError } from "~lib/util/ErrorHandling"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
+  applyAltToOption,
   applyStreamlitOptionDefaults,
   buildStreamlitEChartsTheme,
-  EChartsOptionObject,
+  type EChartsOptionObject,
   insideDataZoomConsumesWheelEvent,
   optionHasInsideDataZoom,
   STREAMLIT_THEME,
@@ -205,8 +206,7 @@ export function EChartsChart({
           if (prev[op] === undefined) {
             return prev
           }
-          const next = { ...prev }
-          delete next[op]
+          const { [op]: _removed, ...next } = prev
           return next
         }
         if (prev[op] === message) {
@@ -271,14 +271,21 @@ export function EChartsChart({
     if (!option) {
       return null
     }
-    return withDefaultSeriesCursor(
+    let prepared = withDefaultSeriesCursor(
       applyStreamlitOptionDefaults(option, element.theme, theme)
     )
+    // Proto `alt` wins over generated / author aria.label.description and
+    // forces aria.enabled so the chart stays named.
+    if (element.alt) {
+      prepared = applyAltToOption(prepared, element.alt)
+    }
+    return prepared
     // `theme` is read only for rem→px insets (spacing, title size, baseFontSize).
     // eslint-disable-next-line react-hooks/exhaustive-deps -- color-only theme copies must not re-apply the option
   }, [
     option,
     element.theme,
+    element.alt,
     spacing.sm,
     spacing.md,
     spacing.lg,
@@ -390,6 +397,14 @@ export function EChartsChart({
     appliedOptionRef.current = preparedOption
 
     try {
+      // Keyed charts reuse zr.dom. ECharts 6.1 setLabel can leave a prior
+      // aria-label when the new option has no description and no series
+      // (it sets role="img" then returns). Clear before setOption when
+      // Streamlit is not applying alt so a removed name cannot stick;
+      // ECharts rewrites the label when it has series data or a description.
+      if (containerRef.current && !element.alt) {
+        containerRef.current.removeAttribute("aria-label")
+      }
       chartInstance.setOption(preparedOption as echarts.EChartsOption, {
         notMerge: true,
       })
@@ -401,7 +416,7 @@ export function EChartsChart({
     } catch (error) {
       setOpError("option", ensureError(error).message)
     }
-  }, [chartInstance, preparedOption, containerRef, setOpError])
+  }, [chartInstance, preparedOption, containerRef, setOpError, element.alt])
 
   // Resize the chart when its container dimensions change. Entering/exiting
   // fullscreen changes the measured width/height, so this covers it too.
@@ -498,6 +513,8 @@ export function EChartsChart({
     element.theme,
   ])
 
+  const labelContext = element.alt?.trim() || undefined
+
   return (
     <StyledEChartsChartRoot isStretchHeight={isStretchHeight}>
       <StyledEChartsChartFill isStretchHeight={isStretchHeight}>
@@ -512,12 +529,14 @@ export function EChartsChart({
             onExpand={expand}
             onCollapse={collapse}
             disableFullscreenMode={disableFullscreenMode}
+            labelContext={labelContext}
           >
             {chartInstance !== null && (
               <ToolbarAction
                 label={`Download as ${downloadType.toUpperCase()}`}
                 icon={FileDownload}
                 onClick={handleDownloadChart}
+                labelContext={labelContext}
               />
             )}
           </Toolbar>
@@ -526,31 +545,29 @@ export function EChartsChart({
               ECharts chart error: {parseError}
             </StyledEChartsError>
           ) : (
-            <>
-              <StyledEChartsChartStack>
-                {/*
-              No `role` here on purpose. ECharts sets `role="img"` plus a
-              generated `aria-label` on this same element (`zr.dom`) whenever
-              `aria.enabled` is on, which is the default. Declaring the role
-              here too would leave it behind as an image with no accessible
-              name for users who opt out with `aria: {enabled: false}`.
-            */}
-                <StyledEChartsChartContainer
-                  ref={containerRef}
-                  className="stEChartsChart"
-                  data-testid="stEChartsChart"
-                  aria-busy={!hasRendered && renderError === null}
-                />
-                {renderError !== null && (
-                  <StyledEChartsErrorOverlay
-                    role="alert"
-                    data-testid="stEChartsChartError"
-                  >
-                    ECharts chart error: {renderError}
-                  </StyledEChartsErrorOverlay>
-                )}
-              </StyledEChartsChartStack>
-            </>
+            <StyledEChartsChartStack>
+              {/*
+                No `role` here on purpose. ECharts sets `role="img"` plus a
+                generated `aria-label` on this same element (`zr.dom`) whenever
+                `aria.enabled` is on, which is the default. Declaring the role
+                here too would leave it behind as an image with no accessible
+                name for users who opt out with `aria: {enabled: false}`.
+              */}
+              <StyledEChartsChartContainer
+                ref={containerRef}
+                className="stEChartsChart"
+                data-testid="stEChartsChart"
+                aria-busy={!hasRendered && renderError === null}
+              />
+              {renderError !== null && (
+                <StyledEChartsErrorOverlay
+                  role="alert"
+                  data-testid="stEChartsChartError"
+                >
+                  ECharts chart error: {renderError}
+                </StyledEChartsErrorOverlay>
+              )}
+            </StyledEChartsChartStack>
           )}
         </StyledToolbarElementContainer>
       </StyledEChartsChartFill>

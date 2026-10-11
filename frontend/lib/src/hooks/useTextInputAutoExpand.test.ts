@@ -16,7 +16,7 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import { RefObject } from "react"
+import type { RefObject } from "react"
 
 import { act, renderHook } from "@testing-library/react"
 

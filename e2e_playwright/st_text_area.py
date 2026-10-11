@@ -210,3 +210,22 @@ bound_area_max = st.text_area(
     max_chars=5,
 )
 st.write("bound area max value:", bound_area_max)
+
+# --- on_change="ignore" text area ---
+# Run counter so test_text_area_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_area = st.text_area(
+    "Ignore change text area",
+    value="hello",
+    key="ignore_text_area",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore text area value:", ignore_area)
+
+if st.button("Apply ignore text area", key="apply_ignore_text_area"):
+    st.write("Applied ignore text area value:", ignore_area)

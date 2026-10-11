@@ -19,7 +19,7 @@ import { lazy } from "react"
 import { screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import { ElementNode } from "~lib/AppNode"
+import type { ElementNode } from "~lib/AppNode"
 import { render } from "~lib/test_util"
 
 import { ElementContainer } from "./ElementContainer"

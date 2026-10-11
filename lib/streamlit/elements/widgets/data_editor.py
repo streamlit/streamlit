@@ -60,7 +60,12 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversionError
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -70,6 +75,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.type_util import is_list_like, is_type
 from streamlit.util import ReadOnlyAttributeDictionary, calc_hash, create_fast_hasher
@@ -643,6 +649,37 @@ def _fix_column_headers(data_df: pd.DataFrame) -> None:
         )
 
 
+def _stringify_arrow_incompatible_columns(
+    data_df: pd.DataFrame,
+    column_config_mapping: ColumnConfigMapping,
+    *,
+    trial_conversion: bool,
+) -> None:
+    """Stringify Arrow-incompatible columns in place and disable editing for them.
+
+    A converted column has to be read-only because the frontend sends edits back
+    in the column's original type, which the stringified data no longer matches.
+
+    With ``trial_conversion=False``, only the checks that don't require converting
+    the column are applied.
+    """
+    for column_name, column_data in data_df.items():
+        if (
+            dataframe_util.determine_arrow_column_fix(
+                column_data, trial_conversion=trial_conversion
+            )
+            is not None
+        ):
+            update_column_config(
+                column_config_mapping, str(column_name), {"disabled": True}
+            )
+            # Every fix becomes a string here, including the ones
+            # ``fix_arrow_incompatible_column_types`` would turn into lists: the
+            # editor cannot round-trip converted values, so the column is disabled
+            # either way and a string is the more readable representation.
+            data_df[cast("Any", column_name)] = column_data.astype("string")
+
+
 def _check_column_names(data_df: pd.DataFrame) -> None:
     """Check if the column names in the provided dataframe are valid.
 
@@ -761,6 +798,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> list[T]:
         pass
 
@@ -783,6 +821,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> dict[str, T]:
         pass
 
@@ -805,6 +844,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> set[T]:
         pass
 
@@ -827,6 +867,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> EditableData:
         pass
 
@@ -849,6 +890,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> pd.DataFrame:
         pass
 
@@ -871,6 +913,7 @@ class DataEditorMixin:
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -1068,6 +1111,18 @@ class DataEditorMixin:
             leave a cell empty, use an empty string (``""``). Other common
             values are ``"null"``, ``"NaN"`` and ``"-"``.
 
+        alt : str or None
+            A short, plain-text accessible name for the data editor. If this is
+            ``None`` (default), the grid has no element-level accessible name.
+            Cell values remain available through the grid's own accessibility
+            tree.
+
+            An empty or whitespace-only string is treated the same as ``None``.
+
+            Prefer naming what the data is (for example, "Editable customer
+            list") rather than pasting cell contents. This is a short name
+            for findability, not a full text alternative for the table.
+
         Returns
         -------
         pandas.DataFrame, pandas.Series, pyarrow.Table, numpy.ndarray, list, set, tuple, or dict.
@@ -1169,6 +1224,10 @@ class DataEditorMixin:
         import pyarrow as pa
 
         key = to_key(key)
+        on_change = validate_on_change_mode(
+            on_change,
+            supported_modes=(),
+        )
 
         validate_width(width, allow_content=True)
         validate_height(
@@ -1238,19 +1297,20 @@ class DataEditorMixin:
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(processed_column_config)
 
-        # Deactivate editing for columns that are not compatible with arrow
-        for column_name, column_data in data_df.items():
-            if dataframe_util.determine_arrow_column_fix(column_data) is not None:
-                update_column_config(
-                    column_config_mapping, str(column_name), {"disabled": True}
-                )
-                # Convert incompatible type to string
-                data_df[cast("Any", column_name)] = column_data.astype("string")
-
         apply_data_specific_configs(column_config_mapping, data_format)
 
         # Fix the column headers to work correctly for data editing:
         _fix_column_headers(data_df)
+
+        # Deactivate editing for columns that are not compatible with Arrow.
+        # This has to run after the column headers are fixed, so that the column
+        # config is keyed by the same names the frontend receives.
+        # Columns that only a trial conversion can detect are left to the Arrow
+        # serialization below: it fails on them anyway, and this way a dataframe
+        # that serializes fine never pays for a trial conversion.
+        _stringify_arrow_incompatible_columns(
+            data_df, column_config_mapping, trial_conversion=False
+        )
 
         has_range_index = isinstance(data_df.index, pd.RangeIndex)
 
@@ -1292,7 +1352,26 @@ class DataEditorMixin:
         # Convert the dataframe to an arrow table which is used as the main
         # serialization format for sending the data to the frontend.
         # We also utilize the arrow schema to determine the data kinds of every column.
-        arrow_table = pa.Table.from_pandas(data_df)
+        arrow_conversion_errors = dataframe_util.get_arrow_conversion_errors()
+        try:
+            arrow_table = pa.Table.from_pandas(data_df)
+        except arrow_conversion_errors as ex:
+            _LOGGER.info(
+                "Serialization of dataframe to Arrow table was unsuccessful. "
+                "Converting the incompatible columns to strings and retrying.",
+                exc_info=ex,
+            )
+            _stringify_arrow_incompatible_columns(
+                data_df, column_config_mapping, trial_conversion=True
+            )
+            try:
+                arrow_table = pa.Table.from_pandas(data_df)
+            except arrow_conversion_errors as retry_ex:
+                # The retry only stringifies columns, never the index: the data
+                # editor identifies rows by their index values.
+                raise StreamlitDataframeConversionError(
+                    f"Unable to convert dataframe to Arrow table.\n{retry_ex}"
+                ) from retry_ex
 
         # Determine the dataframe schema which is required for parsing edited values
         # and for checking type compatibilities.
@@ -1336,6 +1415,8 @@ class DataEditorMixin:
                 include_row_count=True,
             )
 
+        normalized_alt = normalize_alt(alt)
+
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
@@ -1350,11 +1431,15 @@ class DataEditorMixin:
             num_rows=num_rows,
             row_height=row_height,
             placeholder=placeholder,
+            alt=normalized_alt,
             **signature_kwargs,
         )
 
         proto = DataframeProto()
         proto.id = element_id
+
+        if normalized_alt is not None:
+            proto.alt = normalized_alt
 
         if row_height:
             proto.row_height = row_height

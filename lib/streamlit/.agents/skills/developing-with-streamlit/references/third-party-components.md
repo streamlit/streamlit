@@ -130,12 +130,7 @@ A collection of community utilities. Cherry-pick what you need.
 uv add streamlit-extras
 ```
 
-```python
-from streamlit_extras.pagination import pagination
-
-page = pagination(num_pages=10, default=1, key="my_pages")
-st.write(f"Current page: {page}")
-```
+For pagination, use the native `st.pagination` widget instead of `streamlit_extras.pagination`.
 
 ```python
 from annotated_text import annotated_text
