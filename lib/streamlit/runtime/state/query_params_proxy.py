@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, MutableMapping
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, overload
 
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.state.session_state_proxy import get_session_state
@@ -54,8 +54,10 @@ class QueryParamsProxy(MutableMapping[str, str]):
         with get_session_state().query_params() as qp:
             del qp[key]
 
+    # Callers assign a string, or an iterable of strings for a repeated key.
+    # Non-dict values are still stringified so existing apps keep working.
     @gather_metrics("query_params.set_item")
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
         with get_session_state().query_params() as qp:
             qp[key] = value
 
@@ -76,36 +78,49 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
     @overload
     def update(
-        self, params: SupportsKeysAndGetItem[str, str | Iterable[str]], /, **kwds: str
+        self,
+        params: SupportsKeysAndGetItem[str, str | Iterable[str]],
+        /,
+        **kwds: str | Iterable[str],
     ) -> None: ...
 
     @overload
     def update(
-        self, params: Iterable[tuple[str, str | Iterable[str]]], /, **kwds: str
+        self,
+        params: Iterable[tuple[str, str | Iterable[str]]],
+        /,
+        **kwds: str | Iterable[str],
     ) -> None: ...
 
     @overload
     def update(self, /, **kwds: str | Iterable[str]) -> None: ...
 
-    def update(self, params=(), /, **kwds) -> None:  # type: ignore
+    def update(
+        self,
+        params: SupportsKeysAndGetItem[str, str | Iterable[str]]
+        | Iterable[tuple[str, str | Iterable[str]]] = (),
+        /,
+        **kwds: str | Iterable[str],
+    ) -> None:
         """
-        Update one or more values in query_params at once from a dictionary or
-        dictionary-like object.
+        Update one or more query parameters at once.
 
-        See `Mapping.update()` from Python's `collections` library.
+        Pass strings, or iterables of strings for repeated keys. The method
+        accepts a mapping or an iterable of ``(key, value)`` pairs, followed
+        by keyword arguments, as with ``dict.update()``.
 
         Parameters
         ----------
-        other: SupportsKeysAndGetItem[str, str] | Iterable[tuple[str, str]]
-            A dictionary or mapping of strings to strings.
-        **kwds: str
-            Additional key/value pairs to update passed as keyword arguments.
+        params: mapping or iterable of pairs
+            Query parameters to merge into the current values.
+        **kwds: str or iterable of str
+            Additional query parameters, passed as keyword arguments.
         """
         with get_session_state().query_params() as qp:
             qp.update(params, **kwds)
 
     @gather_metrics("query_params.set_attr")
-    def __setattr__(self, key: str, value: Any) -> None:
+    def __setattr__(self, key: str, value: str | Iterable[str]) -> None:
         with get_session_state().query_params() as qp:
             qp[key] = value
 
@@ -144,8 +159,8 @@ class QueryParamsProxy(MutableMapping[str, str]):
         Get all query parameters as a dictionary.
 
         This method primarily exists for internal use and is not needed for
-        most cases. ``st.query_params`` returns an object that inherits from
-        ``dict`` by default.
+        most cases, because ``st.query_params`` already behaves like a
+        dictionary.
 
         When a key is repeated as a query parameter within the URL, this method
         will return only the last value of each unique key.
@@ -173,7 +188,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
         | Iterable[tuple[str, str | Iterable[str]]],
     ) -> None:
         """
-        Set all of the query parameters from a dictionary or dictionary-like object.
+        Set all query parameters from a mapping or an iterable of pairs.
 
         This method primarily exists for advanced users who want to control
         multiple query parameters in a single update. To set individual query
@@ -183,7 +198,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
         used to set embedding options as described in `Embed your app \
         <https://docs.streamlit.io/deploy/streamlit-community-cloud/share-your-app/embed-your-app#embed-options>`_.
 
-        To handle repeated keys, the value in a key-value pair should be a list.
+        For a repeated key, pass an iterable of strings as the value.
 
         .. note::
             ``.from_dict()`` is not a direct inverse of ``.to_dict()`` if
@@ -192,14 +207,15 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
         Parameters
         ----------
-        params: dict
-            A dictionary used to replace the current query parameters.
+        params: mapping or iterable of pairs
+            Query parameters that replace the current values. Values are
+            strings, or iterables of strings for repeated keys.
 
         Examples
         --------
         >>> import streamlit as st
         >>>
-        >>> st.query_params.from_dict({"foo": "bar", "baz": [1, "two"]})
+        >>> st.query_params.from_dict({"foo": "bar", "baz": ["one", "two"]})
 
         """
         with get_session_state().query_params() as qp:

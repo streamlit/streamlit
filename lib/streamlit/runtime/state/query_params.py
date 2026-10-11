@@ -394,7 +394,7 @@ class QueryParams(MutableMapping[str, str]):
         other: Iterable[tuple[str, str | Iterable[str]]]
         | SupportsKeysAndGetItem[str, str | Iterable[str]] = (),
         /,
-        **kwds: str,
+        **kwds: QueryParamValue,
     ) -> None:
         # This overrides the `update` provided by MutableMapping
         # to ensure only one one ForwardMsg is sent.
