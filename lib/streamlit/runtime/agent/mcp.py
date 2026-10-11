@@ -160,8 +160,9 @@ as the result shows it, or the bare file ID. Only files in the session's latest 
 result are available, so read them before your next `interact` call.
 
 A table comes back as JSON with its `columns`, its `row_count`, and up to \
-`limit` `rows` from `offset`, as values in `columns` order like \
-`data.preview`; `next_offset` is where the next page starts, null on the last. \
+`limit` `rows` ({data_access.DEFAULT_ROW_LIMIT} by default) from `offset`, as \
+values in `columns` order like `data.preview`; `next_offset` is where the next \
+page starts, null on the last. \
 The preview already holds the first rows, so start at `offset` equal to the \
 length of `data.preview.rows`. \
 An image or audio comes back as itself, text as text, and any other file as an \
