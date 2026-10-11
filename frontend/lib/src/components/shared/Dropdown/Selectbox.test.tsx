@@ -656,6 +656,8 @@ describe("Selectbox widget", () => {
     await waitFor(() => {
       expect(screen.queryAllByRole("option")).toHaveLength(3)
     })
+    // Enter-target sync must name the first option on open (no typing).
+    await expectActiveOption(selectboxInput, "yes")
 
     // Typing is blocked, so no visible text is entered and the list stays
     // unfiltered. Using keyboard() (not type()) avoids an implicit re-click,

@@ -644,15 +644,17 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     selectbox_input.click()
     expect(selectbox_input).to_be_focused()
 
-    # Click opens the menu; wait for Enter-target sync on the first option
-    # before the one-ArrowDown contract below. ArrowDown alone is only a
-    # backup when click does not open in CI.
+    # Click usually opens via pointerDown; ArrowDown is a CI backup when it
+    # does not. Re-anchor on the first option afterward: sync or that backup
+    # ArrowDown may leave focus on row 0 or 1; ArrowUp clamps at the first.
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     if selectbox_input.get_attribute("aria-expanded") != "true":
         selectbox_input.press("ArrowDown")
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
+    for _ in range(3):
+        selectbox_input.press("ArrowUp")
     expect(options.first).to_have_attribute("data-focused", "true")
 
     # Typing must NOT filter the list: character input is blocked, so all
@@ -666,7 +668,8 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     # toHaveValue("")).
     expect(selectbox_input).to_have_value("")
 
-    # One ArrowDown from the synced first option moves to "No"; Enter commits.
+    # One ArrowDown from the first option moves to "No"; Enter commits.
+    # (Open-without-typing activedescendant sync is covered in unit tests.)
     selectbox_input.press("ArrowDown")
     selectbox_input.press("Enter")
     expect_markdown(app, "value 23: No")
