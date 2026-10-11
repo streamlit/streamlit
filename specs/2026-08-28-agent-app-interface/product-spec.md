@@ -252,10 +252,11 @@ chunk by chunk, never appears, while a toast the run raised does.
 the request returns `202 Accepted` with `run_timed_out`, and the run keeps going.
 Restarting it on retry would be a trap: a script whose uncached first load always
 outlasts the timeout could never finish, and a retried click would fire twice. What a
-request gets depends on the session's state:
+request on that session gets depends on the session's state; other sessions and creating
+calls are unaffected:
 
-| Session state                                | The same request, or only `session_id` | Any other request                           |
-| -------------------------------------------- | -------------------------------------- | ------------------------------------------- |
+| Session state                                | A retry: the same request again, or only `session_id` | A different request with the same `session_id` |
+| -------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------- |
 | Idle                                         | Runs                                   | Runs                                        |
 | Serving a request                            | `session_busy`                         | `session_busy`                              |
 | Running a timed-out interaction              | Waits for it and returns its result    | `session_busy`                              |
