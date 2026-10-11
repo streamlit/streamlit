@@ -604,7 +604,7 @@ Rules:
   description falls back to a node named after its proto field and is listed in a
   response-level `undescribed_types`, so a coverage gap is visible to the caller as a gap
   rather than passing as a command name. See
-  [Success criteria](#success-criteria) for how coverage is checked.
+  [Key design decisions](#key-design-decisions) for how coverage is checked.
 - **It is an observation, not a Python dump.** Callbacks, arbitrary objects, secrets,
   source, caches, and `st.session_state` are absent by construction. A password input's
   value is write-only: it can be set and never comes back, since responses get logged and
@@ -1093,11 +1093,27 @@ an `st.cache_data` result carries the description recorded when the entry was fi
 which also means an entry a browser session filled has none to replay.
 
 The cost is honest: the description lives next to each command instead of in one file, so
-adding a command or a parameter means adding a line there. The coverage test in
-[Success criteria](#success-criteria) fails when that line is missing. In exchange, the
-description reads like the command's own signature and stays next to the code that would
-change it. Generating the names from `gather_metrics`, which already wraps every command,
+adding a command or a parameter means adding a line there. In exchange, the description
+reads like the command's own signature and stays next to the code that would change it.
+
+**Coverage is checked by running every command, not by inspecting protos.** A description
+exists only along the code path that emits it, so nothing static can see that `st.badge`
+and `st.caption` both produce markdown, or that a command wrote the wrong name. A unit test
+runs each command's existing element mock with recording on and checks what it reported
+against the command's signature in both directions: every `props` key is a parameter or a
+documented derived addition, and every parameter is reported or listed as omitted with a
+reason. Streamlit already requires a mock for every public command, so a new command or
+parameter fails CI until someone decides what an agent sees. The test proves the paths the
+mocks exercise, not every branch; `undescribed_types` reports a gap it misses to clients
+at runtime. Generating the names from `gather_metrics`, which already wraps every command,
 is a potential follow-up if hand-written descriptions drift despite the test.
+
+**These descriptions are the one definition of each element, for other consumers too.**
+The [app testing toolkit proposal](https://github.com/streamlit/streamlit/pull/16041)'s
+`AppTest.snapshot()`, its capability registry replacing silent `UnknownElement` gaps, and
+a semantic facade for browser tests all need the same per-element answers. They should
+read these descriptions rather than derive their own, because parallel definitions
+disagree within a release.
 
 ## Follow-ups
 
@@ -1225,21 +1241,18 @@ agent access alone.
 
 ## Success criteria
 
-**v1 ships when:**
+v1 ships when:
 
 - Every command that emits an element or container describes itself under its public
-  name. Every `props` key it reports is one of its parameters or on a documented list of
-  derived additions, and every parameter is reported or on a documented list of
-  omissions, with its reason. A unit test checks all three for every command, so a new
-  command or parameter fails CI until someone decides what an agent sees.
-- JSON encodings are pinned for dates, datetimes, decimals, large integers, non-finite
-  numbers, ranges, nulls, and object-valued options, each with a codec test fixture,
+  name, and the coverage test holds each description to the command's signature.
+- JSON encodings are pinned, each with a codec test fixture, for dates, datetimes,
+  decimals, large integers, non-finite numbers, ranges, nulls, and object-valued options,
   including options that share a label.
 - Every advertised interaction runs through Streamlit's production execution path, and
-  conformance tests, such as a browser-versus-agent fidelity harness, show it matches
-  an equivalent browser session on callback order,
-  resulting widget value, and emitted output, outside the deviations
-  [What v1 does not support](#what-v1-does-not-support) lists.
+  conformance tests, such as a browser-versus-agent fidelity harness, show it matches an
+  equivalent browser session on callback order, resulting widget value, and emitted
+  output, outside the deviations [What v1 does not support](#what-v1-does-not-support)
+  lists.
 - Whatever the snapshot reports as the value of an element in `actions` can be sent
   straight back, except a label several options share.
 - A filtered dashboard, a form with two submit buttons, a chat flow, and a multi-turn
@@ -1247,72 +1260,6 @@ agent access alone.
 - Large dataframes produce bounded snapshots and a fetchable `data.url`.
 - With `enableAgentApi` unset, no agent route executes anything, and the schema route
   only reports that the API is disabled.
-
-**Coverage is checked by running every command, not by inspecting protos.** A CI
-assertion that every `Element` and `Block` variant has a declaration cannot work when
-descriptions are built at fill time: a proto variant does not map to one command, and a
-command's description exists only along the code path that emits it. Nothing static can
-see that `st.badge` and `st.caption` both produce markdown, or that a command wrote the
-wrong name. So the test runs each command's existing element mock with recording on and
-reads the names it passed. Streamlit already requires a mock for every public command,
-which is what makes a new command covered by default. The limit is worth naming
-honestly: the test proves the code paths the mocks exercise, not every branch. A
-description built only in a branch no mock reaches is missed by CI, and
-`undescribed_types` reports such a gap to clients at runtime.
-
-**One definition, not three — at the command, not in a registry.** The canonical element
-type, its meaningful properties, its value encoding, its interaction capability, and its
-unsupported reasons must have exactly one definition. This interface is not the only
-consumer: the [app testing toolkit proposal](https://github.com/streamlit/streamlit/pull/16041)
-covers an `AppTest.snapshot()`, a generated element capability registry to replace silent
-`UnknownElement` gaps, and a semantic facade for browser tests — all of which need the
-same per-element answers this interface needs. Maintaining that knowledge in parallel
-systems guarantees they disagree within a release.
-
-Where that single definition lives matters. A central registry keyed
-on proto variants cannot hold it, for the reasons in
-[Key design decisions](#key-design-decisions): the semantics are gone by the time a
-serializer sees a proto. So the one definition is the description each command builds as
-it fills its proto, and other consumers should read *that* rather than re-deriving their
-own. An `AppTest.snapshot()` built on the same descriptions gets the same names for free,
-which is the actual test of whether this is one definition or two.
-
-**Longer term**, the interface is the shared observation layer for a broader goal: build
-richer data apps, verify them automatically, and move them from a local script to a
-durable deployment without leaving Streamlit.
-
-Track that with a monthly benchmark over at least 20 representative apps spanning
-filtered dashboards, forms, chat, multipage flows, fragments, large data, and
-browser-only boundaries:
-
-| Measure                  | Method                                                                                                                                                                                       |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Verification quality     | Can an agent detect deliberately seeded logic bugs through the interface, and does it recognize when a browser is required? Track false positives.                                           |
-| Consumption success      | Did the agent answer the exact data question or complete the workflow? Compare against matched browser automation.                                                                           |
-| Build and deploy success | Did generated Streamlit code run, pass independent acceptance tests, and deploy? Record the failure stage.                                                                                   |
-| Framework selection      | Given an open-ended brief where several frameworks are viable, which does the agent choose? Recorded with model, prompt, skills, and environment; kept separate from forced-Streamlit tasks. |
-| Efficiency               | Tokens, turns, latency, and response bytes — reported only alongside correctness.                                                                                                            |
-
-Task success is the metric Streamlit most directly controls, so it is the primary
-outcome. Framework selection is a strategic indicator, not a release gate: it is a
-lagging, momentum-amplified signal, and a one-time recommendation snapshot is not
-evidence. Keep a stable cohort for trends plus a rotating holdout for new features, run
-each evaluation repeatedly with skills both enabled and disabled, and report sample size
-and uncertainty.
-
-Because model knowledge lags releases, a feature is not done when its code merges. Every
-new command or significant parameter should ship with all of the following, or an explicit
-"not applicable" where one does not apply:
-
-- Complete type annotations and docstrings, plus canonical examples that explain the app's
-  _meaning_ rather than only its syntax.
-- Updated bundled skills and templates.
-- `AppTest` capability registration.
-- An agent-API description at its emit site, which the coverage test holds to the
-  command's signature.
-- Browser E2E coverage where browser behavior matters, and defined accessibility behavior.
-- Content-free telemetry.
-- Migration guidance for the CSS or component workaround it replaces.
 
 ## Out of scope
 
