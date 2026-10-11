@@ -109,10 +109,6 @@ export const StyledAppViewMain = styled.main<StyledAppViewMainProps>(
         outline: "none",
       },
 
-      "&:focus-visible": {
-        outline: "none",
-      },
-
       // Inset ring frames the area below the absolutely positioned header.
       // Use the muted ring because stMain is a scroll region, not an actionable control.
       // Sticky + negative margin pins the ring to the scrollport so it does not

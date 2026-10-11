@@ -201,7 +201,7 @@ describe("AppView element", () => {
     const skipLink = screen.getByRole("link", { name: "Skip to main content" })
     expect(skipLink).toHaveAttribute("href", "#stMain")
     expect(skipLink).toHaveAttribute("data-testid", "stSkipToContent")
-    // Skip link is the first focusable control in the app shell.
+    // The app shell renders the skip link before all other chrome.
     expect(screen.getByTestId("stAppViewContainer").firstChild).toBe(skipLink)
 
     // Activation focuses main without writing location.hash (embed hosts

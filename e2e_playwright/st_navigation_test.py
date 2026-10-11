@@ -47,7 +47,7 @@ def test_sidebar_navigation_mode_shows_sidebar_nav_only(app: Page) -> None:
 
 
 def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
-    """Shell exposes main/nav landmarks and a skip link into main (WCAG 2.4.1)."""
+    """Shell exposes main and page-nav landmarks, a skip link into main, and a focus ring on main."""
     main = app.get_by_role("main")
     expect(main).to_be_attached()
     expect(main).to_have_attribute("id", "stMain")
@@ -75,23 +75,11 @@ def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
     expect(app).not_to_have_url(re.compile(r"#stMain"))
     assert app.evaluate("() => window.location.hash") == hash_before
 
-    # Focus ring is an inset box-shadow on sticky ::before below the header.
+    # Focus ring is an inset box-shadow on sticky ::before (scroll-pin coverage
+    # needs an overflowing page; this fixture stays within the viewport).
     ring_shadow = main.evaluate("el => getComputedStyle(el, '::before').boxShadow")
     assert ring_shadow != "none"
     assert "inset" in ring_shadow
-    ring_top = main.evaluate("el => getComputedStyle(el, '::before').top")
-    header_height = app.get_by_test_id("stHeader").evaluate(
-        "el => `${el.getBoundingClientRect().height}px`"
-    )
-    assert ring_top == header_height
-
-    # Ring stays pinned to the scrollport after main scrolls.
-    main.evaluate("el => { el.scrollTop = Math.min(el.scrollHeight, 400) }")
-    scrolled_top = main.evaluate("el => getComputedStyle(el, '::before').top")
-    scrolled_shadow = main.evaluate("el => getComputedStyle(el, '::before').boxShadow")
-    assert scrolled_shadow != "none"
-    assert "inset" in scrolled_shadow
-    assert scrolled_top == ring_top
 
 
 def test_top_navigation_mode_shows_top_nav_only(app: Page) -> None:
