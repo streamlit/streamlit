@@ -604,7 +604,7 @@ Rules:
   description falls back to a node named after its proto field and is listed in a
   response-level `undescribed_types`, so a coverage gap is visible to the caller as a gap
   rather than passing as a command name. See
-  [Success criteria](#success-criteria) for how coverage is checked.
+  [Key design decisions](#key-design-decisions) for how coverage is checked.
 - **It is an observation, not a Python dump.** Callbacks, arbitrary objects, secrets,
   source, caches, and `st.session_state` are absent by construction. A password input's
   value is write-only: it can be set and never comes back, since responses get logged and
@@ -813,7 +813,7 @@ because only its first 100 rows are inlined, so every truncated preview gets a U
 however small the table is in bytes. The cap is a row count set high enough that most
 filtered tables come back complete. **A preview must never look like the complete answer
 to an aggregate question**: should a response budget be added
-([open question 6](#open-questions)), a document over it fails the request rather than
+([open question 3](#open-questions)), a document over it fails the request rather than
 being truncated silently.
 
 Charts and maps:
@@ -826,7 +826,7 @@ Charts and maps:
   image, is kept, since removing decoration must not remove meaning. Base64 typed arrays
   (`bdata`), which a model cannot read, are expanded into numbers. Nothing that holds data
   is dropped at any size: the traces are the figure's data, and serving a large
-  specification behind `data.url` is the answer open question 6 points to. Serving an
+  specification behind `data.url` is the answer open question 3 points to. Serving an
   ECharts `dataset.source` as Arrow, as `st.map` serves its table, is a potential
   follow-up.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
@@ -852,8 +852,8 @@ Charts and maps:
   fetch the file while it resolves; a file ID is a content hash, unguessable only to
   someone who does not know the content. Identical bytes share one URL across sessions,
   and in an app with per-user data, a user who learns another user's URL can fetch it
-  while it is rendered. Both belong to media storage for every client
-  ([open question 3](#open-questions)), not to this interface.
+  while it is rendered. Both are how media storage works for every client today, and
+  outside this interface.
 - **They are bounded by `server.maxMessageSize`** (200 MB by default) per element, the
   bound the app's own WebSocket messages have, so an agent is served no more than the app
   could send its browser; anything larger is marked unavailable rather than registered.
@@ -892,9 +892,11 @@ back to a browser rather than mistake it for missing content:
 ### Limits and configuration
 
 Every bound v1 applies, in one place. The session, timeout, and TTL options are public,
-and their defaults are still open ([open question 4](#open-questions)). The preview size
-is a hidden option: the default is meant to be right, and the setting is there for
-operators and tests rather than for tuning per app.
+so an operator can tune them; the defaults are what v1 ships. The run timeout bounds
+how long one request waits, not how long the run may take, so it sits below clients'
+own timeouts rather than growing to fit the slowest app. The preview size is a hidden
+option: the default is meant to be right, and the setting is there for operators and
+tests rather than for tuning per app.
 
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -906,8 +908,8 @@ operators and tests rather than for tuning per app.
 | Request body                           | 25 MB, then `request_too_large`; the same bound as a WebSocket message | `server.maxWidgetStateSize`                                  |
 | Preview rows per table                 | 100                                                   | `server.agentPreviewRows` (hidden)                                            |
 | Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
-| Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 6](#open-questions))                                    |
-| Response size                          | No cap                                                | [Open question 6](#open-questions)                                            |
+| Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 3](#open-questions))                                    |
+| Response size                          | No cap                                                | [Open question 3](#open-questions)                                            |
 | Wait for a follow-up run to start      | 50 ms after a run finishes: a quiet-period heuristic, not proof the chain settled | Fixed; to be replaced by the script runner's shutdown signal before v1 ships |
 | `data.url` lifetime                    | While the element that produced it is still rendered  | Fixed; a fetch-now handle, never persisted                                    |
 | Who may call                           | The WebSocket's Host allow-list; no web page unless its origin is listed | `server.allowedHosts`, `server.corsAllowedOrigins`              |
@@ -1019,7 +1021,7 @@ and the rest of it is what stands between opt-in and on-by-default:
 | Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | A response budget, and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
 | Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits, and per-caller session quotas, so one anonymous client cannot hold every slot. |
 | Cross-origin requests | A page on another site can make a visitor's browser send a request to any app that browser can reach, including, through DNS rebinding, an app on the visitor's own machine. | No cookie is read, and any request carrying an `Origin` not listed in `server.corsAllowedOrigins` is refused. A same-origin rule would not stop rebinding, since a rebound page is same-origin with the `Host` it sends, but browsers send `Origin` on every POST and programmatic clients send none, so this refuses web pages without turning away an agent. No browser caller loses anything: the route sends no CORS headers, so no other origin could read a response. | —                                                                                                  |
-| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here. | A credential flow that maps an `st.login` user to an agent ([open question 2](#open-questions)). |
+| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here. | A credential flow that maps an `st.login` user to an agent ([open question 1](#open-questions)). |
 
 That keeps the decision reversible. An app opts in, deployments that authenticate every
 path — an auth proxy, a private Community Cloud app, SiS — gate the route exactly as they
@@ -1093,11 +1095,27 @@ an `st.cache_data` result carries the description recorded when the entry was fi
 which also means an entry a browser session filled has none to replay.
 
 The cost is honest: the description lives next to each command instead of in one file, so
-adding a command or a parameter means adding a line there. The coverage test in
-[Success criteria](#success-criteria) fails when that line is missing. In exchange, the
-description reads like the command's own signature and stays next to the code that would
-change it. Generating the names from `gather_metrics`, which already wraps every command,
+adding a command or a parameter means adding a line there. In exchange, the description
+reads like the command's own signature and stays next to the code that would change it.
+
+**Coverage is checked by running every command, not by inspecting protos.** A description
+exists only along the code path that emits it, so nothing static can see that `st.badge`
+and `st.caption` both produce markdown, or that a command wrote the wrong name. A unit test
+runs each command's existing element mock with recording on and checks what it reported
+against the command's signature in both directions: every `props` key is a parameter or a
+documented derived addition, and every parameter is reported or listed as omitted with a
+reason. Streamlit already requires a mock for every public command, so a new command or
+parameter fails CI until someone decides what an agent sees. The test proves the paths the
+mocks exercise, not every branch; `undescribed_types` reports a gap it misses to clients
+at runtime. Generating the names from `gather_metrics`, which already wraps every command,
 is a potential follow-up if hand-written descriptions drift despite the test.
+
+**These descriptions are the one definition of each element, for other consumers too.**
+The [app testing toolkit proposal](https://github.com/streamlit/streamlit/pull/16041)'s
+`AppTest.snapshot()`, its capability registry replacing silent `UnknownElement` gaps, and
+a semantic facade for browser tests all need the same per-element answers. They should
+read these descriptions rather than derive their own, because parallel definitions
+disagree within a release.
 
 ## Follow-ups
 
@@ -1127,8 +1145,8 @@ this list: it is a correctness fix that v1 makes.
 1. **On by default.** A credential flow that maps an `st.login` user to an agent, the
    response and rate budgets and per-caller quotas that make bulk access and request
    volume safe, per-platform routing, and session affinity for multi-worker deployments
-   — then flip the flag to opt-out. Brings use cases 2–4 to apps whose authors never
-   opted in.
+   — then flip the default for all of Streamlit at once, with `server.enableAgentApi`
+   as the opt-out. Brings use cases 2–4 to apps whose authors never opted in.
 2. **Authored descriptions** — a standalone project worth doing on its own accessibility
    merits. Element-level alternative text has landed
    ([#8563](https://github.com/streamlit/streamlit/issues/8563)): `alt` exists on
@@ -1225,21 +1243,18 @@ agent access alone.
 
 ## Success criteria
 
-**v1 ships when:**
+v1 ships when:
 
 - Every command that emits an element or container describes itself under its public
-  name. Every `props` key it reports is one of its parameters or on a documented list of
-  derived additions, and every parameter is reported or on a documented list of
-  omissions, with its reason. A unit test checks all three for every command, so a new
-  command or parameter fails CI until someone decides what an agent sees.
-- JSON encodings are pinned for dates, datetimes, decimals, large integers, non-finite
-  numbers, ranges, nulls, and object-valued options, each with a codec test fixture,
+  name, and the coverage test holds each description to the command's signature.
+- JSON encodings are pinned, each with a codec test fixture, for dates, datetimes,
+  decimals, large integers, non-finite numbers, ranges, nulls, and object-valued options,
   including options that share a label.
 - Every advertised interaction runs through Streamlit's production execution path, and
-  conformance tests, such as a browser-versus-agent fidelity harness, show it matches
-  an equivalent browser session on callback order,
-  resulting widget value, and emitted output, outside the deviations
-  [What v1 does not support](#what-v1-does-not-support) lists.
+  conformance tests, such as a browser-versus-agent fidelity harness, show it matches an
+  equivalent browser session on callback order, resulting widget value, and emitted
+  output, outside the deviations [What v1 does not support](#what-v1-does-not-support)
+  lists.
 - Whatever the snapshot reports as the value of an element in `actions` can be sent
   straight back, except a label several options share.
 - A filtered dashboard, a form with two submit buttons, a chat flow, and a multi-turn
@@ -1247,72 +1262,6 @@ agent access alone.
 - Large dataframes produce bounded snapshots and a fetchable `data.url`.
 - With `enableAgentApi` unset, no agent route executes anything, and the schema route
   only reports that the API is disabled.
-
-**Coverage is checked by running every command, not by inspecting protos.** A CI
-assertion that every `Element` and `Block` variant has a declaration cannot work when
-descriptions are built at fill time: a proto variant does not map to one command, and a
-command's description exists only along the code path that emits it. Nothing static can
-see that `st.badge` and `st.caption` both produce markdown, or that a command wrote the
-wrong name. So the test runs each command's existing element mock with recording on and
-reads the names it passed. Streamlit already requires a mock for every public command,
-which is what makes a new command covered by default. The limit is worth naming
-honestly: the test proves the code paths the mocks exercise, not every branch. A
-description built only in a branch no mock reaches is missed by CI, and
-`undescribed_types` reports such a gap to clients at runtime.
-
-**One definition, not three — at the command, not in a registry.** The canonical element
-type, its meaningful properties, its value encoding, its interaction capability, and its
-unsupported reasons must have exactly one definition. This interface is not the only
-consumer: the [app testing toolkit proposal](https://github.com/streamlit/streamlit/pull/16041)
-covers an `AppTest.snapshot()`, a generated element capability registry to replace silent
-`UnknownElement` gaps, and a semantic facade for browser tests — all of which need the
-same per-element answers this interface needs. Maintaining that knowledge in parallel
-systems guarantees they disagree within a release.
-
-Where that single definition lives matters. A central registry keyed
-on proto variants cannot hold it, for the reasons in
-[Key design decisions](#key-design-decisions): the semantics are gone by the time a
-serializer sees a proto. So the one definition is the description each command builds as
-it fills its proto, and other consumers should read *that* rather than re-deriving their
-own. An `AppTest.snapshot()` built on the same descriptions gets the same names for free,
-which is the actual test of whether this is one definition or two.
-
-**Longer term**, the interface is the shared observation layer for a broader goal: build
-richer data apps, verify them automatically, and move them from a local script to a
-durable deployment without leaving Streamlit.
-
-Track that with a monthly benchmark over at least 20 representative apps spanning
-filtered dashboards, forms, chat, multipage flows, fragments, large data, and
-browser-only boundaries:
-
-| Measure                  | Method                                                                                                                                                                                       |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Verification quality     | Can an agent detect deliberately seeded logic bugs through the interface, and does it recognize when a browser is required? Track false positives.                                           |
-| Consumption success      | Did the agent answer the exact data question or complete the workflow? Compare against matched browser automation.                                                                           |
-| Build and deploy success | Did generated Streamlit code run, pass independent acceptance tests, and deploy? Record the failure stage.                                                                                   |
-| Framework selection      | Given an open-ended brief where several frameworks are viable, which does the agent choose? Recorded with model, prompt, skills, and environment; kept separate from forced-Streamlit tasks. |
-| Efficiency               | Tokens, turns, latency, and response bytes — reported only alongside correctness.                                                                                                            |
-
-Task success is the metric Streamlit most directly controls, so it is the primary
-outcome. Framework selection is a strategic indicator, not a release gate: it is a
-lagging, momentum-amplified signal, and a one-time recommendation snapshot is not
-evidence. Keep a stable cohort for trends plus a rotating holdout for new features, run
-each evaluation repeatedly with skills both enabled and disabled, and report sample size
-and uncertainty.
-
-Because model knowledge lags releases, a feature is not done when its code merges. Every
-new command or significant parameter should ship with all of the following, or an explicit
-"not applicable" where one does not apply:
-
-- Complete type annotations and docstrings, plus canonical examples that explain the app's
-  _meaning_ rather than only its syntax.
-- Updated bundled skills and templates.
-- `AppTest` capability registration.
-- An agent-API description at its emit site, which the coverage test holds to the
-  command's signature.
-- Browser E2E coverage where browser behavior matters, and defined accessibility behavior.
-- Content-free telemetry.
-- Migration guidance for the CSS or component workaround it replaces.
 
 ## Out of scope
 
@@ -1347,34 +1296,16 @@ new command or significant parameter should ship with all of the following, or a
 
 ## Open questions
 
-1. What has to be true to make the interface opt-out rather than opt-in, and should
-   the default flip everywhere at once or per platform? Hosted platforms may want to
-   keep their own policy override regardless.
-2. Which hosted credential flow can map an agent to the correct `st.user` without
+1. Which hosted credential flow can map an agent to the correct `st.user` without
    introducing a second identity system? A browser's signed auth cookie is not a general
    agent credential.
-3. **Should media storage as a whole move to session-scoped URLs?** Content-hash URLs let
-   a user of a per-user app who learns another user's URL fetch it while it is still
-   rendered. That holds for every image and eager download today, so it is a decision for
-   media storage and every client, not a prerequisite for this interface.
-4. **What run timeout and session budgets should ship?** The preview is settled: 100 rows
-   keeps most filtered tables complete. The run timeout bounds how long one request
-   waits, not how long the run may take, since a retry collects the run in progress, so
-   its default should sit below the clients' own request timeouts rather than grow to fit
-   the slowest app. The prototype uses 30 s, half the MCP TypeScript SDK's default, and
-   a client that disconnects first is treated as timed out, so a short client timeout
-   costs a retry rather than the result. Follow-up #4's operation handle would make even
-   the retries unnecessary. The session cap and idle TTL need defaults chosen against
-   real memory use. A chat client's turns can be minutes apart, which argues for a
-   longer idle TTL than 15 minutes if memory allows. The response size is
-   [open question 6](#open-questions).
-5. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
+2. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
    times, and datetimes as ISO 8601 text, decimals as strings, durations as seconds,
    non-finite numbers as `null`, ranges as two-item lists, and object-valued options as
    their `format_func` labels. Integers beyond 2^53 are still plain JSON numbers, which
    JavaScript parsers round. These must be settled before v1 ships, with or without
    per-action schemas.
-6. **Does the response need a budget, and how should it be met?** The response document
+3. **Does the response need a budget, and how should it be met?** The response document
    is unbounded, and two things dominate a large one: a selectbox over a few thousand
    values puts all of them in every snapshot of its page, and a figure carries its traces,
    so a 20,000-point scatter or a page of a dozen Plotly figures is half a megabyte.
@@ -1386,7 +1317,7 @@ new command or significant parameter should ship with all of the following, or a
    `get_data` — rather than to cap and discard. The cost is real for chat clients: a
    page of a few Plotly charts can reach a megabyte per response, and a selectbox of a
    few hundred options adds tens of kilobytes to every call on its page.
-7. **What stability does the snapshot promise, and where does a public contract live?**
+4. **What stability does the snapshot promise, and where does a public contract live?**
    The document is a compatibility surface from its first release: clients will key on
    element types, `props` names, and error codes, and every command's description becomes
    part of it. That needs a written policy before v1 ships — what `schema_version`
