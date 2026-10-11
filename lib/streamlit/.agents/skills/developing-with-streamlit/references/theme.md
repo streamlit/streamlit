@@ -4,7 +4,11 @@ Configure themes in `.streamlit/config.toml`, optionally sharing a `theme.base` 
 
 Use `streamlit config show` for the full option list and descriptions. Do not invent option names.
 
-Theme options can't be changed from the script (`st.set_option` rejects them). Set them in TOML, flags, or env vars. TOML edits apply on the next rerun. `fontFaces` additions and updates apply on the next rerun; after removing the last `fontFaces` entry, refresh the page so old `@font-face` rules clear. Restart the server when you newly enable `[server] enableStaticServing` so static font routes register.
+Theme options can't be changed from the script (`st.set_option` rejects them). Set them in TOML, flags, or env vars.
+
+- TOML edits apply on the next rerun.
+- `fontFaces` additions and updates apply on the next rerun. After you remove the last `fontFaces` entry, refresh the page so old `@font-face` rules clear.
+- Restart the server when you newly enable `[server] enableStaticServing` so static font routes register.
 
 ## Choose a config shape
 
@@ -51,7 +55,7 @@ Do not put these under light/dark/sidebar: `base`, `fontFaces` (`[[theme.fontFac
 
 ### Options allowed in all six sections
 
-Most other theme keys may be set in any of the six sections:
+All other theme keys may be set in any of the six sections:
 
 - Colors and semantic `*Color` / `*BackgroundColor` / `*TextColor`
 - Dataframe chrome and chart palettes
@@ -62,14 +66,9 @@ Most other theme keys may be set in any of the six sections:
 
 ### Source precedence (highest wins)
 
-1. CLI flags — `--theme.primaryColor="#0969da"`
-2. Environment variables — `STREAMLIT_THEME_PRIMARY_COLOR`
-3. Script-level `.streamlit/config.toml` (next to the main script)
-4. Project-level `$CWD/.streamlit/config.toml`
-5. Global `~/.streamlit/config.toml`
-6. Built-in defaults
+Source precedence follows `cli.md`: CLI flags > env vars > script, project, then global `config.toml` > defaults.
 
-Values already set in config, environment variables, or CLI flags override a `theme.base` file or URL. Keys that file leaves unset fall back to the built-in light or dark theme. General precedence is in `cli.md`.
+Values already set in config, environment variables, or CLI flags override a `theme.base` file or URL. Keys that file leaves unset fall back to the built-in light or dark theme.
 
 ### CLI and env naming
 
@@ -164,9 +163,9 @@ A shared file may use all valid theme sections. App config, environment variable
 Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `font`):
 
 - Semantic `*Color` / `*BackgroundColor` / `*TextColor`
-- `chartCategoricalColors` (any non-empty length; Plotly, Altair, Vega-Lite, and ECharts), `chartSequentialColors` (exactly 10; same libraries), and `chartDivergingColors` (exactly 10; Plotly, Altair, Vega-Lite — not ECharts)
+- `chartCategoricalColors`, `chartSequentialColors`, `chartDivergingColors` (see [Chart colors](#chart-colors))
 - `dataframeHeaderBackgroundColor`, `dataframeHeaderTextColor`, `dataframeBorderColor`
-- `baseRadius`, `buttonRadius`, `showWidgetBorder`, `showSidebarBorder`
+- `baseRadius`, `buttonRadius`, `showWidgetBorder`; `showSidebarBorder` (`[theme]`-only)
 - Google Fonts URL syntax; `[[theme.fontFaces]]` + `[server] enableStaticServing = true`
 - `headingFontSizes` / `headingFontWeights`, `metricValueFontSize` / `metricValueFontWeight`, `linkUnderline`
 - Dual light/dark, sidebars, shared `theme.base`
@@ -179,12 +178,12 @@ Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`
 [theme]
 primaryColor = "#0969da"           # Buttons, links, active elements
 backgroundColor = "#ffffff"        # Main content background
-secondaryBackgroundColor = "#f6f8fa"  # Widget backgrounds, code blocks
+secondaryBackgroundColor = "#f6f8fa"  # Widget backgrounds
 textColor = "#1F2328"              # Body text
 
 linkColor = "#0969da"              # Defaults to blueTextColor
 codeTextColor = "#116329"          # Defaults to greenTextColor
-codeBackgroundColor = "#f6f8fa"
+codeBackgroundColor = "#f6f8fa"    # Code blocks; unset → mix of background and secondary
 borderColor = "#d0d7de"
 ```
 
@@ -268,7 +267,7 @@ codeFontSize = "0.875rem"
 codeFontWeight = 400
 headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "12px"]
 headingFontWeights = [600, 600, 600, 500, 500, 500]
-metricValueFontSize = "2.25rem"    # quoted px/rem string; unquoted numbers are ignored; a unitless numeric string is pixels; [theme]-only
+metricValueFontSize = "2.25rem"    # String with px/rem (or unitless = px); bare numbers are ignored. [theme]-only
 metricValueFontWeight = 700        # unset → inherit from parent; [theme]-only
 linkUnderline = false
 ```
@@ -361,9 +360,11 @@ chartCategoricalColors = ["#58a6ff", "#3fb950", "#db61a2", "#a371f7", "#f85149",
 [theme.light.sidebar]
 backgroundColor = "#f6f8fa"
 secondaryBackgroundColor = "#eaeef2"
+codeBackgroundColor = "#eaeef2"
 textColor = "#1F2328"
 borderColor = "#d0d7de"
 primaryColor = "#0969da"
+linkColor = "#0969da"
 
 [theme.dark.sidebar]
 backgroundColor = "#010409"
@@ -424,7 +425,7 @@ secondaryBackgroundColor = "#174D6A"
 textColor = "#ffffff"
 borderColor = "#1E6D94"
 primaryColor = "#0969da"
-linkColor = "#79c0ff"
+linkColor = "#8ecbff"
 ```
 
 Locked look vs settings toggle:
@@ -444,7 +445,12 @@ primaryColor = "#0969da"
 primaryColor = "#1f6feb"
 ```
 
-Also avoid: light primary on white button text; gray-on-white body text; secondary that is not distinct from main (wrong direction for light or dark); branding only via CLI/env.
+Also avoid:
+
+- A light `primaryColor` behind white button text
+- Gray body text on a white background
+- A `secondaryBackgroundColor` that is not distinct from `backgroundColor` (darker on a light theme, lighter on a dark theme)
+- Brand colors that exist only as CLI flags or env vars
 
 ## IMPORTANT: No custom CSS unless explicitly requested
 
