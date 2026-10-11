@@ -535,7 +535,8 @@ Rules:
   is `props.value`. Where the proto's encoding would mislead, `props` carries what the
   author meant: `st.progress` reports a fraction whichever form the author passed — an
   `int` percent and a `float` fraction look alike in JSON — and `st.json` its decoded
-  body rather than a JSON string.
+  body rather than a JSON string. A few containers report state in `props` because they
+  have no `value` to carry it: a dialog's `is_open`, and a popover's or tab's `open`.
 - **Reported options and values are the form a request may send back.** For a widget with
   a `format_func`, `st.session_state` holds the author's Python option while the accepted
   wire value is the formatted string, and reporting the authored object would make both
@@ -566,7 +567,9 @@ Rules:
   is on the new page — so a parameter one page was opened with, or one the app set through
   `st.query_params`, does not follow the client to the next page.
 
-  Bound parameters differ from a browser in one way: setting a bound widget drops its
+  A bound widget reports `bind: "query-params"` in its `props`, so a client can tell
+  which parameter sets it without a trial run. Bound parameters differ from a browser in
+  one way: setting a bound widget drops its
   parameter instead of rewriting it, because the runtime reads the address back on every
   rerun and a stale copy would put the old value back over the edit. The parameter
   returns when the app writes it back. Two runtime rules apply as they do in a browser: a

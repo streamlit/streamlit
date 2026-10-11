@@ -96,7 +96,7 @@ _OMITTED_EVERYWHERE: dict[str, str] = {
     "default": _STARTING_VALUE,
     "index": _STARTING_VALUE,
     "selection_default": _STARTING_VALUE,
-    "bind": _STATE_HANDLING,
+    "bind": "reported by the snapshot from the widget registry, which every widget fills",
     "persist_state": _STATE_HANDLING,
     "shortcut": _BROWSER_AFFORDANCE,
     "data": _CONTENT,

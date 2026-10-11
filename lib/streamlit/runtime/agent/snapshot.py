@@ -320,6 +320,7 @@ class _SnapshotBuilder:
 
         result = self._base(description, inherited_support)
         self._note_fragment(node, result)
+        self._note_bind(description.get("key"), result)
 
         # A container can be a widget itself: `st.tabs(on_change="rerun")`
         # registers one whose value is the open tab. Without this it would be
@@ -341,6 +342,19 @@ class _SnapshotBuilder:
         if node.fragment_id is None:
             return
         result["fragment"] = node.fragment_id
+
+    def _note_bind(self, element_id: str | None, result: dict[str, Any]) -> None:
+        """Report a widget's `bind` parameter, which the widget registry holds.
+
+        Read here rather than passed by every widget's description, since every
+        widget registers it. It tells a client that the widget mirrors the URL
+        parameter named after its key, so `query_params` can set it.
+        """
+        if not element_id or self._session_state is None:
+            return
+        metadata = self._session_state._new_widget_state.widget_metadata.get(element_id)
+        if metadata is not None and metadata.bind:
+            result.setdefault("props", {})["bind"] = metadata.bind
 
     def _serialize_element(
         self, node: _Node, inherited_support: str | None = None
@@ -365,6 +379,7 @@ class _SnapshotBuilder:
         result = self._base(description, inherited_support)
         self._note_fragment(node, result)
         element_id = description.get("key")
+        self._note_bind(element_id, result)
 
         action = description.get("action")
         if element_id and action and not _is_write_only(description):
