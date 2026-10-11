@@ -55,7 +55,7 @@ When creating new templates or adapting existing ones, follow these patterns for
 
 ### Page Configuration
 
-Always set page config as the first Streamlit call, with `layout="wide"` and a Material icon:
+Set page config near the top of the script, with `layout="wide"` and a Material icon:
 
 ```python
 st.set_page_config(

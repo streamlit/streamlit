@@ -49,7 +49,7 @@ with st.container(horizontal=True):
     st.metric("Orders", "1.4k", "+5%", border=True)
 ```
 
-Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows.
+Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`). Otherwise, use `st.columns` with `height="stretch"` on each metric so the cards share a height and width (see "Aligning elements side by side" in `layouts.md`).
 
 ## Zero deltas
 
@@ -74,7 +74,7 @@ st.metric(
     "+3.2%",
     border=True,
     chart_data=weekly_values,
-    chart_type="line",  # or "bar"
+    chart_type="line",  # or "bar" or "area"
 )
 ```
 
@@ -176,7 +176,7 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 | `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, time-series charts, date filtering |
 | `dashboard-companies` | Company comparison with sparkline columns, filterable data tables, custom cache spinner |
 | `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, popover filters |
-| `dashboard-feature-usage` | Feature adoption tracking, trend analysis, conditional "Raw data" expander |
+| `dashboard-feature-usage` | API endpoint usage analytics, trend analysis, conditional "Raw data" expander |
 | `dashboard-seattle-weather` | Weather data visualization |
 | `dashboard-stock-peers` | Stock peer comparison |
 

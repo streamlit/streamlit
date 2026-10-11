@@ -24,7 +24,8 @@ import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Final
+from tempfile import TemporaryFile
+from typing import IO, Any, Final
 
 import pytest
 
@@ -38,6 +39,7 @@ from e2e_playwright.shared.git_utils import get_git_root
 
 _SCENARIOS_DIR: Final = Path(__file__).parent / "scenarios"
 _LOAD_TEST_SERVER_START_ATTEMPTS: Final = 3
+_SERVER_LOG_TAIL_LINES: Final = 80
 
 
 @dataclass
@@ -186,15 +188,23 @@ def start_load_test_server(
     scenario_path: Path,
     *,
     extra_env: dict[str, str] | None = None,
-) -> subprocess.Popen[str]:
+) -> tuple[subprocess.Popen[str], IO[str]]:
     """Start a Streamlit server for load testing.
 
-    Stderr is redirected to DEVNULL to avoid pipe buffer exhaustion that could
-    deadlock the server process. If startup fails, the server won't produce
-    useful stderr output anyway since it would have crashed before emitting
-    diagnostics. Stdout is also discarded (DEVNULL).
+    Captures stdout and stderr to a temp file instead of a pipe so a large
+    volume of logs cannot deadlock the server. The caller keeps the file
+    handle and must close it after the process exits.
+
+    Returns
+    -------
+    process
+        The started Streamlit process.
+    log_file
+        Combined stdout and stderr. Closing it deletes the temp file.
     """
     env = os.environ.copy()
+    # Unbuffered stdout keeps the log tail complete if terminate_process SIGKILLs a hung server.
+    env["PYTHONUNBUFFERED"] = "1"
     if extra_env:
         env.update(extra_env)
 
@@ -212,12 +222,56 @@ def start_load_test_server(
         "--server.fileWatcherType=none",
     ]
 
-    return subprocess.Popen(
-        args,
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        text=True,
+    log_file = TemporaryFile("w+", encoding="utf-8", errors="replace")
+    try:
+        process = subprocess.Popen(
+            args,
+            env=env,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+    except Exception:
+        log_file.close()
+        raise
+    return process, log_file
+
+
+def _read_log_tail(
+    log_file: IO[str], *, max_lines: int = _SERVER_LOG_TAIL_LINES
+) -> str:
+    """Return the last ``max_lines`` lines from a captured server log."""
+    try:
+        log_file.seek(0)
+        text = log_file.read()
+    except OSError as exc:
+        return f"(failed to read server log: {exc})"
+    if not text.strip():
+        return "(no output captured)"
+    lines = text.splitlines()
+    return "\n".join(lines[-max_lines:])
+
+
+def _server_process_status(returncode: int | None) -> str:
+    """Describe a child process as a returncode or as still running."""
+    if returncode is not None:
+        return f"returncode={returncode}"
+    return "process was still running"
+
+
+def _format_server_startup_failure(
+    port: int,
+    returncode: int | None,
+    log_file: IO[str],
+) -> str:
+    """Build the failure message for a server that never became healthy."""
+    status = _server_process_status(returncode)
+    log_tail = _read_log_tail(log_file)
+    return (
+        f"Server failed to start on port {port} ({status})\n"
+        f"--- server stdout/stderr tail "
+        f"(up to {_SERVER_LOG_TAIL_LINES} lines) ---\n"
+        f"{log_tail}"
     )
 
 
@@ -253,10 +307,11 @@ def start_healthy_load_test_server(
     scenario_path: Path,
     *,
     max_attempts: int = _LOAD_TEST_SERVER_START_ATTEMPTS,
-) -> tuple[subprocess.Popen[str], int]:
+) -> tuple[subprocess.Popen[str], int, IO[str]]:
     """Start a load-test server, retrying on a new port if health never comes up.
 
-    Returns the process and the port that became healthy.
+    Returns the process, the port that became healthy, and the log file handle.
+    The caller must close the log file after terminating the process.
 
     Raises
     ------
@@ -264,16 +319,36 @@ def start_healthy_load_test_server(
         If every attempt fails its health check.
     """
     tried_ports: list[int] = []
-    for _ in range(max_attempts):
+    attempt_statuses: list[str] = []
+    last_failure: str | None = None
+    for attempt_index in range(max_attempts):
         port = find_available_port()
         tried_ports.append(port)
-        process = start_load_test_server(port, scenario_path)
+        process, log_file = start_load_test_server(port, scenario_path)
         if wait_for_server(port, process=process):
-            return process, port
-        terminate_process(process)
+            return process, port, log_file
+        try:
+            # Record status before terminate_process. A SIGKILL would look like a crash and hide a health-check timeout.
+            returncode = process.poll()
+            terminate_process(process)
+            attempt_statuses.append(
+                f"Attempt {attempt_index + 1}: port {port} "
+                f"({_server_process_status(returncode)})"
+            )
+            if attempt_index == max_attempts - 1:
+                last_failure = _format_server_startup_failure(
+                    port, returncode, log_file
+                )
+        finally:
+            log_file.close()
 
+    status_block = "\n".join(attempt_statuses)
+    detail = f"\n{status_block}"
+    if last_failure is not None:
+        detail = f"{detail}\n{last_failure}"
     raise RuntimeError(
-        f"Server failed to start after {max_attempts} attempts (ports: {tried_ports})"
+        f"Server failed to start after {max_attempts} attempts "
+        f"(ports: {tried_ports}){detail}"
     )
 
 

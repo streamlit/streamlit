@@ -225,6 +225,23 @@ def test_audio_input_widget_rendering(
         name="st_audio_input-width_300px",
     )
 
+    # The widget adds no trailing space, so it lines up with st.file_uploader.
+    audio_input = get_audio_input_by_label(themed_app, "Audio Input 1")
+    element_container = themed_app.get_by_test_id("stElementContainer").filter(
+        has=audio_input
+    )
+
+    def _container_matches_widget_height() -> bool:
+        widget_box = audio_input.bounding_box()
+        container_box = element_container.bounding_box()
+        return (
+            widget_box is not None
+            and container_box is not None
+            and round(widget_box["height"]) == round(container_box["height"])
+        )
+
+    wait_until(themed_app, _container_matches_widget_height)
+
 
 def test_check_top_level_class(app: Page):
     """Check that custom CSS class is applied via key."""

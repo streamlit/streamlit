@@ -4,6 +4,17 @@ Opinionated examples for writing clean, performant, and maintainable Streamlit a
 
 Use this reference when reviewing an app, starting a new app, or applying the quick-reference rules from `SKILL.md`.
 
+## Contents
+
+- [Styling and copy](#styling-and-copy)
+- [HTML and iframes](#html-and-iframes)
+- [Layout](#layout)
+- [Navigation and pages](#navigation-and-pages)
+- [Performance](#performance)
+- [Data and charts](#data-and-charts)
+- [Widgets and state](#widgets-and-state)
+- [Secrets and queries](#secrets-and-queries)
+
 ## Styling and copy
 
 Do not use custom CSS for app styling unless the user actively requests it. Prefer native Streamlit APIs and `.streamlit/config.toml` to customize the appearance.
@@ -92,7 +103,7 @@ st.dataframe(df, width="content")
 st.download_button("Download CSV", df.to_csv(), "orders.csv", width="stretch")
 ```
 
-Prefer horizontal containers for responsive rows, and reserve columns for fixed grids or specific width ratios.
+Prefer horizontal containers for responsive rows, and reserve columns for fixed grids, specific width ratios, or cards that must share a width.
 
 ```python
 # BAD: Columns for a simple button row
@@ -104,6 +115,30 @@ right.button("Save", type="primary")
 with st.container(horizontal=True, horizontal_alignment="right"):
     st.button("Cancel")
     st.button("Save", type="primary")
+```
+
+Align elements placed side by side. Bottom-align rows that mix labeled inputs with buttons, checkboxes, or toggles, and give sibling cards consistent content or `height="stretch"`. See "Aligning elements side by side" in [layouts.md](layouts.md) for element sizes and more patterns.
+
+```python
+# BAD: The button and toggle sit above the input field; the cards have uneven heights
+with st.container(horizontal=True):
+    st.text_input("Customer")
+    st.toggle("Active only")
+    st.button("Search")
+
+revenue_col, orders_col = st.columns(2)
+revenue_col.metric("Revenue", "$1.2M", "+8%", border=True)
+orders_col.metric("Orders", "1.4k", border=True)
+
+# GOOD: Everything lines up with the input field, and the cards share a height
+with st.container(horizontal=True, vertical_alignment="bottom"):
+    st.text_input("Customer")
+    st.toggle("Active only")
+    st.button("Search")
+
+revenue_col, orders_col = st.columns(2)
+revenue_col.metric("Revenue", "$1.2M", "+8%", border=True, height="stretch")
+orders_col.metric("Orders", "1.4k", border=True, height="stretch")
 ```
 
 Use bordered containers for visual grouping.
