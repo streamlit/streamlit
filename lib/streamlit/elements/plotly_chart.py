@@ -539,12 +539,14 @@ class PlotlyMixin:
               height of its content.
             - ``"stretch"``: The height of the element expands to fill the
               available vertical space in its parent container. When multiple
-              elements with stretch height are in the same container, they
-              share the available vertical space evenly. The chart keeps no
-              minimum height, so it can shrink to zero when the container is
-              already full. Use an integer height to keep the chart visible.
-              If the element is not in a parent container, the height matches
-              the height of its content.
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. Inside a
+              container that already has a fixed height, the chart keeps no
+              minimum height and can shrink to zero when the other elements
+              fill the container. Use an integer height to keep the chart
+              visible there. Otherwise, the chart uses its figure's
+              ``layout.height``, or 450 pixels when the figure does not set
+              one, and still grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.

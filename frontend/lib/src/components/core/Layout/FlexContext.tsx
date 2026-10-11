@@ -61,10 +61,10 @@ export const FlexContext = createContext<IFlexContext | null>(null)
 FlexContext.displayName = "FlexContext"
 
 /**
- * Whether a stretch-height element should use its default height. Only when
- * its container has no definite height to fill. Inside a definite-height
- * container, a default height would stop the element from shrinking to fit
- * next to its siblings.
+ * Whether a stretch-height element should use its default height. It should
+ * only do so when its container has no definite height to fill. Inside a
+ * definite-height container, a default height would stop the element from
+ * shrinking to fit next to its siblings.
  */
 export function hasStretchHeightFallback(
   flexContext: IFlexContext | null

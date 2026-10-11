@@ -138,7 +138,8 @@ export function hasNestedComposition(spec: string | object): boolean {
 
 /**
  * Top-level Vega-Lite keys that make a spec a multi-view composition. Layer is
- * intentionally absent.
+ * intentionally absent: layered charts share one view size, so they stay a
+ * single view.
  */
 const COMPOSITION_KEYS = ["facet", "repeat", "concat", "hconcat", "vconcat"]
 
