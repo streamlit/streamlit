@@ -308,7 +308,9 @@ const Multiselect: FC<Props> = props => {
 
   const displayOptionsRef = useRef(displayOptions)
   displayOptionsRef.current = displayOptions
-  // Filter unmount skips onHoverEnd — clear stale hover.
+  // A filter can unmount the hovered row without onHoverEnd. Clear that
+  // hover so it does not become the Enter target again when the query is
+  // cleared.
   if (
     notNullOrUndefined(hoveredKey) &&
     !displayOptions.some(o => o.id === hoveredKey)

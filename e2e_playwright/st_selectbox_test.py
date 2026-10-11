@@ -222,9 +222,7 @@ def test_shows_correct_options_via_fuzzy_search(
 
     # Typing alone must set aria-activedescendant on the Enter target (#16841).
     # Assert without arrow keys so the check cannot pass via keyboard navigation.
-    # Prefer data-focused on the filtered option (same focus state); then confirm
-    # the combobox activedescendant id points at that row.
-    expect(options.first).to_have_attribute("data-focused", "true", timeout=10000)
+    expect(options.first).to_have_attribute("data-focused", "true")
     expect(selectbox_input).to_have_attribute(
         "aria-activedescendant", re.compile(r".+")
     )
@@ -644,9 +642,7 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     selectbox_input.click()
     expect(selectbox_input).to_be_focused()
 
-    # Click usually opens via pointerDown; ArrowDown is a CI backup when it
-    # does not. Re-anchor on the first option afterward: sync or that backup
-    # ArrowDown may leave focus on row 0 or 1; ArrowUp clamps at the first.
+    # ArrowDown opens if click did not; ArrowUp clamps to first for one-ArrowDown→No.
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     if selectbox_input.get_attribute("aria-expanded") != "true":
         selectbox_input.press("ArrowDown")
@@ -669,7 +665,6 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     expect(selectbox_input).to_have_value("")
 
     # One ArrowDown from the first option moves to "No"; Enter commits.
-    # (Open-without-typing activedescendant sync is covered in unit tests.)
     selectbox_input.press("ArrowDown")
     selectbox_input.press("Enter")
     expect_markdown(app, "value 23: No")

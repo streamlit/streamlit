@@ -25,15 +25,17 @@ import { ComboBoxStateContext, type Key } from "react-aria-components"
 
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
+/** Poll while Virtualizer has not registered the Enter-target row yet. */
 const MAX_SYNC_RETRY_MS = 5000
 /** Survive RAC's post-paint focusedKey clear after inputValue changes. */
 const STABLE_MATCH_FRAMES = 3
 
 /**
- * Keep ComboBox focusedKey on the Enter target for aria-activedescendant
- * (#16841). RAC clears focusedKey on inputValue changes; rAF-retry until the
- * row registers (up to {@link MAX_SYNC_RETRY_MS}). Hook-written keys may be
- * replaced on hover; arrow moves must not (skipApplyRef / clear lastSynced).
+ * Keep the active option on the Enter target so aria-activedescendant stays
+ * set while the menu is open (#16841). React Aria clears focusedKey after
+ * inputValue changes; rAF-retry until the row is registered (up to
+ * {@link MAX_SYNC_RETRY_MS}). Hover may replace a hook-written key; an arrow
+ * move may not (`skipApplyRef` / clear lastSyncedKeyRef).
  */
 export function useSyncComboBoxEnterTargetFocus(
   enterTargetKey: Key | null,
@@ -46,6 +48,7 @@ export function useSyncComboBoxEnterTargetFocus(
   const prevFocusedKeyRef = useRef<Key | null>(null)
 
   const focusedKey = state?.selectionManager.focusedKey ?? null
+  // String tokens (not booleans): restart when the mismatched/absent key changes.
   const absentFocusedKey =
     state?.isOpen &&
     notNullOrUndefined(focusedKey) &&

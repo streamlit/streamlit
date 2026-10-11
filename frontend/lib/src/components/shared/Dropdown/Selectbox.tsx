@@ -96,8 +96,8 @@ type ComboOption = {
 
 const CREATABLE_ID = "__creatable__"
 
-/** Lists at or below this size skip Virtualizer so setFocusedKey can land. */
-const SELECTBOX_VIRTUALIZE_MIN_OPTIONS = 25
+/** Max options without Virtualizer; short lists so setFocusedKey can land. */
+const SELECTBOX_MAX_UNVIRTUALIZED_OPTIONS = 25
 
 /** Live ComboBox state pointer for capture-phase key handlers outside RAC. */
 type ComboBoxStateHandle = NonNullable<
@@ -575,7 +575,8 @@ const Selectbox: FC<Props> = ({
       ) {
         openDropdownRef.current?.()
       }
-      // With focusedKey still null, ArrowDown would land on leading Add first.
+      // React Aria clears focusedKey on each keystroke. Until sync restores it,
+      // ArrowDown would land on the leading "Add" row, so jump to the first match.
       if (e.key === "ArrowDown" && isOpenRef.current) {
         const state = comboBoxStateRef.current
         const focused = state?.selectionManager.focusedKey
@@ -592,7 +593,8 @@ const Selectbox: FC<Props> = ({
           }
         }
       }
-      // Close on Tab before RAC commit(); do not stopPropagation (FocusScope).
+      // Clear isOpenRef before close() so handleSelectionChange drops RAC's
+      // commitValue callback; do not stopPropagation (dialog FocusScope).
       if (e.key === "Tab" && isOpenRef.current) {
         isOpenRef.current = false
         closeDropdownRef.current?.()
@@ -639,7 +641,8 @@ const Selectbox: FC<Props> = ({
         return
       }
 
-      // Refs: same-turn fill/type + Enter sees the post-filter target.
+      // Read refs so an Enter in the same tick as the last keystroke uses the
+      // filtered list.
       const targetId = enterTargetIdRef.current
       const options = displayOptionsRef.current
       const target = targetId ? options.find(o => o.id === targetId) : null
@@ -753,8 +756,7 @@ const Selectbox: FC<Props> = ({
             offset={0}
             style={floatingStyles}
           >
-            {/* Short lists skip Virtualizer so setFocusedKey can land (#16841). */}
-            {displayOptions.length > SELECTBOX_VIRTUALIZE_MIN_OPTIONS ? (
+            {displayOptions.length > SELECTBOX_MAX_UNVIRTUALIZED_OPTIONS ? (
               <Virtualizer
                 layout={ListLayout}
                 layoutOptions={virtualizerLayoutOptions}

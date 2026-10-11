@@ -271,7 +271,7 @@ def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
 
 
 def test_dialog_keeps_tab_focus_with_open_select_menus(app: Page):
-    """Tab with an open select menu must stay in the dialog (no stopPropagation)."""
+    """Tab from an open selectbox or multiselect closes the menu and keeps focus inside the dialog."""
     open_dialog_with_date_input(app)
     dialog = app.get_by_role("dialog")
     expect(dialog).to_be_visible()
