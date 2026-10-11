@@ -4,7 +4,7 @@ Build brand-aligned themes with `.streamlit/config.toml`. Prefer config (and opt
 
 Use `streamlit config show` for the full option list and descriptions. Do not invent option names.
 
-Theme options are not runtime-scriptable (`st.set_option` cannot change them). Configure themes in TOML, flags, or env vars before/at process start.
+Theme options can't be changed from the script (`st.set_option` rejects them). Set them in TOML, flags, or env vars. TOML edits apply on the next rerun, except `fontFaces`, which needs a restart.
 
 ## Choose a config shape
 
@@ -69,7 +69,7 @@ Most other theme keys may be set in any of the six sections:
 5. Global `~/.streamlit/config.toml`
 6. Built-in defaults
 
-A `theme.base` file or URL is the lowest theme layer. Config, environment variables, and CLI flags that are already set override that file. General precedence is in `cli.md`.
+Values already set in config, environment variables, or CLI flags override a `theme.base` file or URL. Keys the file leaves unset still use the built-in light or dark theme. General precedence is in `cli.md`.
 
 ### CLI and env naming
 
@@ -95,9 +95,9 @@ Then, for **main** (light mode): `[theme]` → `[theme.light]`.
 For **sidebar** (light mode): resolved main → `[theme.sidebar]` → `[theme.light.sidebar]`.
 Dark mode uses `[theme.dark]` / `[theme.dark.sidebar]` the same way.
 
-Unset sidebar `backgroundColor` falls back to the resolved main `secondaryBackgroundColor`, and unset sidebar `secondaryBackgroundColor` falls back to the main `backgroundColor` (they swap). Do not copy those two values unchanged from the main theme unless that swap is intentional.
+Unset sidebar `backgroundColor` falls back to the resolved main `secondaryBackgroundColor`, and unset sidebar `secondaryBackgroundColor` falls back to the main `backgroundColor` (they swap). Leave both unset to keep that swap. Set both explicitly only when the sidebar should use the main pairing or another custom pair.
 
-**Heading type in the sidebar:** Sidebar `headingFontSizes` start from the sidebar defaults unless a sidebar section sets them. Sidebar `headingFontWeights` follow the normal merge (resolved main, then sidebar sections). `[theme]`-only keys are never read from nested tables.
+**Sidebar headings:** `headingFontSizes` start from the sidebar defaults unless a sidebar section sets them. `headingFontWeights` follow the normal merge (resolved main, then sidebar sections). `[theme]`-only keys are never read from nested tables.
 
 ### Appearance toggle rules
 
@@ -125,8 +125,12 @@ font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;70
 
 [theme.sidebar]
 backgroundColor = "#0f172a"
-textColor = "#f8fafc"
 secondaryBackgroundColor = "#1e293b"
+codeBackgroundColor = "#1e293b"
+textColor = "#f8fafc"
+borderColor = "#334155"
+primaryColor = "#a5b4fc"
+linkColor = "#c7d2fe"
 
 [theme.dark]
 primaryColor = "#a5b4fc"
@@ -152,7 +156,7 @@ Shared-file rules: may include all valid theme sections; if it sets `base`, that
 Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `font`):
 
 - Semantic `*Color` / `*BackgroundColor` / `*TextColor`
-- `chartCategoricalColors` / `chartSequentialColors` (exactly 10; Plotly, Altair, Vega-Lite, and ECharts) and `chartDivergingColors` (exactly 10; Plotly, Altair, Vega-Lite — not ECharts)
+- `chartCategoricalColors` (any non-empty length; Plotly, Altair, Vega-Lite, and ECharts), `chartSequentialColors` (exactly 10; same libraries), and `chartDivergingColors` (exactly 10; Plotly, Altair, Vega-Lite — not ECharts)
 - `dataframeHeaderBackgroundColor`, `dataframeHeaderTextColor`, `dataframeBorderColor`
 - `baseRadius`, `buttonRadius`, `showWidgetBorder`, `showSidebarBorder`
 - Google Fonts URL syntax; `[[theme.fontFaces]]` + `[server] enableStaticServing = true`
@@ -254,9 +258,9 @@ baseFontSize = 14                  # px; default 16 ([theme]-only)
 baseFontWeight = 400               # [theme]-only
 codeFontSize = "0.875rem"
 codeFontWeight = 400
-headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "12px"]  # sidebar uses its own defaults unless set there
-headingFontWeights = [600, 600, 600, 500, 500, 500]  # sidebar follows normal merge unless overridden
-metricValueFontSize = "2.25rem"    # quoted px/rem; unquoted numbers ignored; unitless numeric string = pixels; [theme]-only
+headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "12px"]
+headingFontWeights = [600, 600, 600, 500, 500, 500]
+metricValueFontSize = "2.25rem"    # string with px/rem (unitless string = px); [theme]-only
 metricValueFontWeight = 700        # unset → inherit from parent; [theme]-only
 linkUnderline = false
 ```
@@ -287,8 +291,6 @@ borderColor = "#334155"
 primaryColor = "#38bdf8"
 linkColor = "#7dd3fc"
 showWidgetBorder = true
-# headingFontSizes: set here to override sidebar defaults
-# headingFontWeights: otherwise follow the resolved main theme
 ```
 
 Per appearance: shared `[theme.sidebar]` plus `[theme.light.sidebar]` / `[theme.dark.sidebar]`. Merge: main → `[theme.sidebar]` → nested sidebar. Unset sidebar backgrounds swap main `secondaryBackgroundColor` / `backgroundColor` (see [Section merge order](#section-merge-order)).
@@ -308,7 +310,7 @@ When the sidebar contrast differs from main, set a full color set (`textColor`, 
 
 **Per mode, set at least:** `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `primaryColor` (contrast with white button text), `borderColor`, and chart palettes if you use charts.
 
-**Runtime:** `st.context.theme.type` is `"light"` or `"dark"`—use for logos or third-party pieces that ignore theme tokens; keep colors/fonts in config.
+**Runtime:** `st.context.theme.type` is `"light"` or `"dark"`—use for logos or third-party pieces that ignore theme tokens; keep colors/fonts in config. The value is inferred from the painted background and can be wrong on the first run of a session and immediately after a Settings appearance change until the next rerun.
 
 ```python
 if st.context.theme.type == "dark":
@@ -320,7 +322,7 @@ if st.context.theme.type == "dark":
 - **Contrast:** WCAG AA (~4.5:1) for body text; primary color must support white button labels.
 - **Harmony:** Neutral base + one brand accent, or a small semantic set (success/error) alongside primary.
 - **Type:** Body 14–16px / 400; clear heading scale; monospace code slightly smaller than body.
-- **Layers:** Main background lightest → secondary/widgets → sidebar (match or deliberate contrast) → code blocks.
+- **Layers:** Keep `secondaryBackgroundColor` distinct from `backgroundColor`—slightly darker on a light theme, slightly lighter on a dark theme. Sidebar may match or deliberately contrast.
 
 ## Example: dual light/dark with sidebars
 
@@ -352,9 +354,6 @@ borderColor = "#30363d"
 codeBackgroundColor = "#161b22"
 chartCategoricalColors = ["#58a6ff", "#3fb950", "#db61a2", "#a371f7", "#f85149", "#d29922", "#8b949e"]
 
-[theme.sidebar]
-showWidgetBorder = true
-
 [theme.light.sidebar]
 backgroundColor = "#f6f8fa"
 secondaryBackgroundColor = "#eaeef2"
@@ -374,29 +373,45 @@ For a single locked dark theme, see the **vscode** template under `assets/templa
 
 ## Common mistakes
 
-```toml
-# BAD: wrong nest order
-[theme.sidebar.light]
-# GOOD:
-[theme.light.sidebar]
+Wrong nest order:
 
-# BAD: [theme]-only keys under dark
+```toml
+# BAD
+[theme.sidebar.light]
+
+# GOOD
+[theme.light.sidebar]
+```
+
+`[theme]`-only keys under light/dark:
+
+```toml
+# BAD
 [theme.dark]
 base = "dark"
-# GOOD:
+
+# GOOD
 [theme]
 base = "dark"
+```
 
-# BAD: chain base files inside brand-theme.toml
+Chaining base files inside a brand theme:
+
+```toml
+# BAD in brand-theme.toml
 base = "./other.toml"
-# GOOD in brand file:
+
+# GOOD in brand-theme.toml
 base = "light"
 ```
+
+Incomplete dark sidebar on a light main:
 
 ```toml
 # BAD: only sidebar background
 [theme.sidebar]
 backgroundColor = "#11567F"
+
 # GOOD: full contrast set
 [theme.sidebar]
 backgroundColor = "#11567F"
@@ -406,12 +421,16 @@ borderColor = "#1E6D94"
 primaryColor = "#79c0ff"
 ```
 
+Locked look vs settings toggle:
+
 ```toml
-# Single [theme] is valid when you want one locked appearance (include base for dark):
+# Valid when you want one locked appearance (include base for dark):
 [theme]
 base = "dark"
 primaryColor = "#0969da"
+```
 
+```toml
 # Use light/dark sections when the settings toggle should stay available:
 [theme.light]
 primaryColor = "#0969da"
@@ -419,7 +438,7 @@ primaryColor = "#0969da"
 primaryColor = "#58a6ff"
 ```
 
-Also avoid: light primary on white button text; gray-on-white body text; secondary background lighter than main; branding only via CLI/env.
+Also avoid: light primary on white button text; gray-on-white body text; secondary that is not distinct from main (wrong direction for light or dark); branding only via CLI/env.
 
 ## IMPORTANT: No custom CSS unless explicitly requested
 
