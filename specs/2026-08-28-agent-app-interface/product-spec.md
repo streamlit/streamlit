@@ -813,7 +813,7 @@ because only its first 100 rows are inlined, so every truncated preview gets a U
 however small the table is in bytes. The cap is a row count set high enough that most
 filtered tables come back complete. **A preview must never look like the complete answer
 to an aggregate question**: should a response budget be added
-([open question 4](#open-questions)), a document over it fails the request rather than
+([open question 3](#open-questions)), a document over it fails the request rather than
 being truncated silently.
 
 Charts and maps:
@@ -826,7 +826,7 @@ Charts and maps:
   image, is kept, since removing decoration must not remove meaning. Base64 typed arrays
   (`bdata`), which a model cannot read, are expanded into numbers. Nothing that holds data
   is dropped at any size: the traces are the figure's data, and serving a large
-  specification behind `data.url` is the answer open question 4 points to. Serving an
+  specification behind `data.url` is the answer open question 3 points to. Serving an
   ECharts `dataset.source` as Arrow, as `st.map` serves its table, is a potential
   follow-up.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
@@ -892,9 +892,11 @@ back to a browser rather than mistake it for missing content:
 ### Limits and configuration
 
 Every bound v1 applies, in one place. The session, timeout, and TTL options are public,
-and their defaults are still open ([open question 2](#open-questions)). The preview size
-is a hidden option: the default is meant to be right, and the setting is there for
-operators and tests rather than for tuning per app.
+so an operator can tune them; the defaults are what v1 ships. The run timeout bounds
+how long one request waits, not how long the run may take, so it sits below clients'
+own timeouts rather than growing to fit the slowest app. The preview size is a hidden
+option: the default is meant to be right, and the setting is there for operators and
+tests rather than for tuning per app.
 
 | Limit                                  | Default                                               | Set by                                                                        |
 | -------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -906,8 +908,8 @@ operators and tests rather than for tuning per app.
 | Request body                           | 25 MB, then `request_too_large`; the same bound as a WebSocket message | `server.maxWidgetStateSize`                                  |
 | Preview rows per table                 | 100                                                   | `server.agentPreviewRows` (hidden)                                            |
 | Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
-| Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 4](#open-questions))                                    |
-| Response size                          | No cap                                                | [Open question 4](#open-questions)                                            |
+| Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 3](#open-questions))                                    |
+| Response size                          | No cap                                                | [Open question 3](#open-questions)                                            |
 | Wait for a follow-up run to start      | 50 ms after a run finishes: a quiet-period heuristic, not proof the chain settled | Fixed; to be replaced by the script runner's shutdown signal before v1 ships |
 | `data.url` lifetime                    | While the element that produced it is still rendered  | Fixed; a fetch-now handle, never persisted                                    |
 | Who may call                           | The WebSocket's Host allow-list; no web page unless its origin is listed | `server.allowedHosts`, `server.corsAllowedOrigins`              |
@@ -1297,24 +1299,13 @@ v1 ships when:
 1. Which hosted credential flow can map an agent to the correct `st.user` without
    introducing a second identity system? A browser's signed auth cookie is not a general
    agent credential.
-2. **What run timeout and session budgets should ship?** The preview is settled: 100 rows
-   keeps most filtered tables complete. The run timeout bounds how long one request
-   waits, not how long the run may take, since a retry collects the run in progress, so
-   its default should sit below the clients' own request timeouts rather than grow to fit
-   the slowest app. The prototype uses 30 s, half the MCP TypeScript SDK's default, and
-   a client that disconnects first is treated as timed out, so a short client timeout
-   costs a retry rather than the result. Follow-up #4's operation handle would make even
-   the retries unnecessary. The session cap and idle TTL need defaults chosen against
-   real memory use. A chat client's turns can be minutes apart, which argues for a
-   longer idle TTL than 15 minutes if memory allows. The response size is
-   [open question 4](#open-questions).
-3. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
+2. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
    times, and datetimes as ISO 8601 text, decimals as strings, durations as seconds,
    non-finite numbers as `null`, ranges as two-item lists, and object-valued options as
    their `format_func` labels. Integers beyond 2^53 are still plain JSON numbers, which
    JavaScript parsers round. These must be settled before v1 ships, with or without
    per-action schemas.
-4. **Does the response need a budget, and how should it be met?** The response document
+3. **Does the response need a budget, and how should it be met?** The response document
    is unbounded, and two things dominate a large one: a selectbox over a few thousand
    values puts all of them in every snapshot of its page, and a figure carries its traces,
    so a 20,000-point scatter or a page of a dozen Plotly figures is half a megabyte.
@@ -1326,7 +1317,7 @@ v1 ships when:
    `get_data` — rather than to cap and discard. The cost is real for chat clients: a
    page of a few Plotly charts can reach a megabyte per response, and a selectbox of a
    few hundred options adds tens of kilobytes to every call on its page.
-5. **What stability does the snapshot promise, and where does a public contract live?**
+4. **What stability does the snapshot promise, and where does a public contract live?**
    The document is a compatibility surface from its first release: clients will key on
    element types, `props` names, and error codes, and every command's description becomes
    part of it. That needs a written policy before v1 ships — what `schema_version`
