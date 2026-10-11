@@ -730,8 +730,7 @@ malformed date, time, or color string, or a slider range with the wrong number o
 is reset to the default, a fraction sent to an integer input is truncated, and text past
 `max_chars` is cut. A reversed slider range and a date range of any length are stored as
 sent, so a client sends two values, lowest first.
-[Potential follow-ups](potential-follow-ups.md) ranks the validations by how much apps
-rely on them, and proposes a per-key note saying how each value landed.
+A per-key note saying how each value landed is a potential follow-up.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -856,8 +855,7 @@ raises both. The session also keeps the page's messages between interactions, so
 fragment rerun can return the whole page, which means it holds what the app last sent its
 client: a 50,000-row table is 1.7 MB per session. v1 bounds that with the same limit, the
 session cap, and the idle TTL. Keeping only the summary a snapshot reads would cut that
-table to 38 KB, and is a [potential follow-up](potential-follow-ups.md) if profiling asks
-for it.
+table to 38 KB, and is a potential follow-up if profiling asks for it.
 
 Truncation is always explicit. **A preview must never look like the complete answer to
 an aggregate question.** Should a response budget be added
@@ -879,8 +877,8 @@ Two consequences of that framing are easy to get wrong:
 - **A chart that was given a specification rather than a dataframe is `complete`.**
   `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification, so
   there is no table to serve and a client should stop looking for one. Serving an
-  ECharts `dataset.source` as Arrow, as `st.map` serves its table, is a
-  [potential follow-up](potential-follow-ups.md#side-load-echarts-datasets-as-arrow). This is different
+  ECharts `dataset.source` as Arrow, as `st.map` serves its table, is a potential
+  follow-up. This is different
   from having no data contract at all. It does not mean the specification is worth its
   weight: about nine tenths of a small Plotly figure is `layout.template`, the theme, and
   a dashboard page of them reaches hundreds of kilobytes while answering nothing. Report
@@ -951,7 +949,7 @@ operators and tests rather than for tuning per app.
 | Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
 | Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 6](#open-questions))                                    |
 | Response size                          | No cap                                                | [Open question 6](#open-questions)                                            |
-| Wait for a follow-up run to start      | 50 ms after a run finishes: a quiet-period heuristic, not proof the chain settled | Fixed; replaced by the script runner's shutdown signal in the [implementation plan](implementation-plan.md) |
+| Wait for a follow-up run to start      | 50 ms after a run finishes: a quiet-period heuristic, not proof the chain settled | Fixed; to be replaced by the script runner's shutdown signal before v1 ships |
 | `data.url` lifetime                    | While the element that produced it is still rendered  | Fixed; a fetch-now handle, never persisted                                    |
 | Who may call                           | The WebSocket's Host allow-list; no web page unless its origin is listed | `server.allowedHosts`, `server.corsAllowedOrigins`              |
 | Who the caller is                      | Anonymous                                             | `server.trustedUserHeaders`                                                   |
@@ -1162,15 +1160,13 @@ adding a command or a parameter means adding a line there. The coverage test in
 [Success criteria](#success-criteria) fails when that line is missing. In exchange, the
 description reads like the command's own signature and stays next to the code that would
 change it. Generating the names from `gather_metrics`, which already wraps every command,
-is a [potential follow-up](potential-follow-ups.md#generate-descriptions-at-the-public-api-boundary)
-if hand-written descriptions drift despite the test.
+is a potential follow-up if hand-written descriptions drift despite the test.
 
 ## Follow-ups
 
 Each of these is additive to the v1 contract and independently shippable. They are
-ordered roughly by expected value. Smaller implementation follow-ups and alternatives
-considered while building the prototype are in [potential-follow-ups.md](potential-follow-ups.md),
-each with what would make it worth doing:
+ordered roughly by expected value. Smaller potential follow-ups and alternatives
+considered while building the prototype:
 
 - Generating descriptions at the public API boundary instead of per command.
 - Widget constraints checked server-side
@@ -1188,8 +1184,8 @@ each with what would make it worth doing:
 - A per-key note on how each sent value landed.
 - A non-executing read of the last snapshot (part of follow-up #4).
 
-Settling on the script runner's shutdown instead of the 50 ms quiet period is also
-listed there, and the [implementation plan](implementation-plan.md) does it for v1.
+Settling on the script runner's shutdown instead of the 50 ms quiet period is not on
+this list: it is a correctness fix that v1 makes.
 
 1. **On by default.** A credential flow that maps an `st.login` user to an agent, the
    response and rate budgets and per-caller quotas that make bulk access and request
@@ -1228,9 +1224,9 @@ listed there, and the [implementation plan](implementation-plan.md) does it for 
    and the specification's own guidance for this shape is the opaque-handle pattern
    `session_id` already implements. `interact` must never be annotated read-only. A
    second, read-only `get_data` tool serves the files a result references, tables as
-   pages of rows, because chat clients cannot resolve or parse a `data.url`. The
-   design, including why it is written by hand rather than on the SDK,
-   is in [mcp-support.md](mcp-support.md).
+   pages of rows, because chat clients cannot resolve or parse a `data.url`. It is
+   written by hand rather than on the MCP SDK, which keeps it free of new
+   dependencies.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2
@@ -1244,8 +1240,7 @@ listed there, and the [implementation plan](implementation-plan.md) does it for 
    library-specific, follow. Then uploads, including `st.chat_input` attachments;
    `st.data_editor` edits; deferred downloads; per-action JSON Schema; and the browser's
    half of forms and bound parameters — applying `clear_on_submit` and rewriting a
-   bound parameter when its widget is set, as described in
-   [potential-follow-ups.md](potential-follow-ups.md#perform-more-of-the-browsers-form-and-url-behavior).
+   bound parameter when its widget is set.
 
 ## Beyond the app surface
 
@@ -1304,9 +1299,8 @@ agent access alone.
   numbers, ranges, nulls, and object-valued options, each with a codec test fixture,
   including options that share a label.
 - Every advertised interaction runs through Streamlit's production execution path, and
-  conformance tests, such as the
-  [fidelity harness](potential-follow-ups.md#browser-versus-agent-fidelity-harness),
-  show it matches an equivalent browser session on callback order,
+  conformance tests, such as a browser-versus-agent fidelity harness, show it matches
+  an equivalent browser session on callback order,
   resulting widget value, and emitted output, outside the deviations
   [What v1 does not support](#what-v1-does-not-support) lists.
 - Whatever the snapshot reports as the value of an element in `actions` can be sent
@@ -1408,7 +1402,7 @@ new command or significant parameter should ship with all of the following, or a
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until a credential flow maps them. Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
 | No breaking API changes    | ✅ Additive: `server.enableAgentApi`, off in v1, its budget options, new routes under `/_stcore/agent/`, and the discovery hint in `index.html`. No `st.*` signature changes. One behavior is sharper: an `st.context` field the client never sent reads as `None` rather than an empty default. Browser apps never see it, because the frontend always sends every field, and an explicitly sent `0` or `False` is kept, since the fields track presence. Flipping the default later is itself a reviewed change, not a silent one. |
-| No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either; see [mcp-support.md](mcp-support.md).                                                                                                                                                                                                                                                                                                                                                                                          |
+| No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either, since it is written by hand rather than on the MCP SDK.                                                                                                                                                                                                                                                                                                                                                                                          |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
 | Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: off by default in v1 with on-by-default as the goal, open to any program that can reach the app once on but refusing unlisted web origins, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, and identity mapping — the gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
 | Any docs changes needed?   | Protocol reference and coverage matrix, an authoring guide ("write `key=`, explain the app in the app"), verification guidance next to `AppTest` and Playwright, and a security/deployment page.                                                                                                                                                                                                                                                                                                              |
