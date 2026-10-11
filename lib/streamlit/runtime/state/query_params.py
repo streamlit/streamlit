@@ -391,8 +391,8 @@ class QueryParams(MutableMapping[str, str]):
 
     def update(
         self,
-        other: Iterable[tuple[str, str | Iterable[str]]]
-        | SupportsKeysAndGetItem[str, str | Iterable[str]] = (),
+        other: Iterable[tuple[str, QueryParamValue]]
+        | SupportsKeysAndGetItem[str, QueryParamValue] = (),
         /,
         **kwds: QueryParamValue,
     ) -> None:
@@ -402,9 +402,9 @@ class QueryParams(MutableMapping[str, str]):
         # Consume dict-like objects into a list upfront to avoid iterating twice
         # (once for keys, once for values). This prevents potential issues if
         # `other` is modified during iteration.
-        other_as_list: list[tuple[str, str | Iterable[str]]]
+        other_as_list: list[tuple[str, QueryParamValue]]
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
-            other_dict = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
+            other_dict = cast("SupportsKeysAndGetItem[str, QueryParamValue]", other)
             keys = list(other_dict.keys())
             other_as_list = [(k, other_dict[k]) for k in keys]
         else:

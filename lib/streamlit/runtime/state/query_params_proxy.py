@@ -54,8 +54,8 @@ class QueryParamsProxy(MutableMapping[str, str]):
         with get_session_state().query_params() as qp:
             del qp[key]
 
-    # Callers assign a string, or an iterable of strings for a repeated key.
-    # Non-dict values are still stringified so existing apps keep working.
+    # The annotation is the supported contract. At runtime, non-dict values
+    # such as ints are converted to strings. __setattr__ uses the same annotation.
     @gather_metrics("query_params.set_item")
     def __setitem__(self, key: str, value: str | Iterable[str]) -> None:
         with get_session_state().query_params() as qp:
@@ -115,6 +115,13 @@ class QueryParamsProxy(MutableMapping[str, str]):
             Query parameters to merge into the current values.
         **kwds: str or iterable of str
             Additional query parameters, passed as keyword arguments.
+
+        Examples
+        --------
+        >>> import streamlit as st
+        >>>
+        >>> st.query_params.update({"foo": "bar"}, stream=["lit", "rocks"])
+
         """
         with get_session_state().query_params() as qp:
             qp.update(params, **kwds)
@@ -159,8 +166,8 @@ class QueryParamsProxy(MutableMapping[str, str]):
         Get all query parameters as a dictionary.
 
         This method primarily exists for internal use and is not needed for
-        most cases, because ``st.query_params`` already behaves like a
-        dictionary.
+        most cases. ``st.query_params`` already supports mapping operations
+        such as subscripting, ``in``, and ``.get()``.
 
         When a key is repeated as a query parameter within the URL, this method
         will return only the last value of each unique key.
