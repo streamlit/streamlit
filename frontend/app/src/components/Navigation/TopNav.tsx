@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { useCallback, useContext, useMemo } from "react"
+import {
+  type ComponentPropsWithoutRef,
+  type ReactElement,
+  useCallback,
+  useContext,
+  useMemo,
+} from "react"
 
 import Overflow from "rc-overflow"
 
@@ -44,6 +50,22 @@ export interface Props {
 
 /** A top-nav overflow item: one page, or a section (array of pages). */
 type OverflowNavItem = AppPage.$Properties | AppPage.$Properties[]
+
+/**
+ * rc-overflow root: keep landmark attrs on the measured flex host so wrapping
+ * an extra element does not shrink the overflow width and force a false "N more".
+ */
+function TopNavOverflowContainer(
+  props: ComponentPropsWithoutRef<"nav">
+): ReactElement {
+  return (
+    <StyledOverflowContainer
+      {...props}
+      aria-label="App pages"
+      data-testid="stTopNav"
+    />
+  )
+}
 
 const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =
@@ -162,16 +184,14 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   )
 
   return (
-    <nav aria-label="App pages" data-testid="stTopNav">
-      <Overflow<OverflowNavItem>
-        component={StyledOverflowContainer}
-        itemKey={itemKey}
-        data={data}
-        maxCount={"responsive"}
-        renderItem={renderItem}
-        renderRest={renderRest}
-      />
-    </nav>
+    <Overflow<OverflowNavItem>
+      component={TopNavOverflowContainer}
+      itemKey={itemKey}
+      data={data}
+      maxCount={"responsive"}
+      renderItem={renderItem}
+      renderRest={renderRest}
+    />
   )
 }
 
