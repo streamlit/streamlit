@@ -266,7 +266,10 @@ has the client collect it first.
 shorter than the server's, and then the server is still waiting on a request nobody
 will read when the retry arrives: the retry would be told the session is busy until the
 server's timeout passed. So a request whose client disconnects stops waiting at once and
-leaves the run collectable, exactly as a `202` would.
+leaves the run collectable, exactly as a `202` would. That only works when the
+disconnect reaches the server, and a proxy that keeps the upstream connection open hides
+it. So the run timeout should stay below the timeouts of the clients a deployment
+expects: then a `202` always arrives first, with or without a proxy.
 
 That makes four session states: idle; serving a request; running a timed-out interaction
 that no request is waiting on, which a retry collects and any other request finds busy;
@@ -275,6 +278,13 @@ discards by starting a new interaction. The guarantee is narrower than retry ide
 it covers a `202` the client received. A lost final response, or a lost response to a
 creating call, leaves nothing to collect, so a retry is a new interaction and can repeat
 its side effects. Retry idempotency in general is the `request_id` of follow-up #4.
+
+Collection belongs to the session, not to a client: whichever request asks first gets
+the result. A session is meant for one client's sequence of interactions, and the rules
+keep two clients that share one from interfering more than that. A request never
+interrupts another that is still waiting; it gets `session_busy`. Letting a retry take
+over a wait still in flight would cover the proxy case above without a short timeout,
+but a second client could then cut off the first mid-wait, so v1 does not.
 
 It is a 202 rather than a 504 because the request was accepted and its run is still
 going, and because gateways and HTTP client libraries retry 502–504 on their own. A
