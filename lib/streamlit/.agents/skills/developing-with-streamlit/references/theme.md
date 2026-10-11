@@ -18,6 +18,7 @@ Theme options can't be changed from the script (`st.set_option` rejects them). S
 | User can toggle light/dark | `[theme]` + `[theme.light]` + `[theme.dark]` (define both for full control) |
 | Brand many apps the same way | Shared TOML/URL via `theme.base`, per-app overrides in each `config.toml` |
 | Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` |
+| Tighter page / sidebar spacing | `paddingTop` / `paddingBottom` (prefer over `.block-container` CSS) |
 
 ## Contents
 
@@ -28,6 +29,7 @@ Theme options can't be changed from the script (`st.set_option` rejects them). S
 - [Color configuration](#color-configuration)
 - [Typography](#typography)
 - [Border and radius](#border-and-radius)
+- [Content padding](#content-padding)
 - [Sidebar customization](#sidebar-customization)
 - [Light and dark modes](#light-and-dark-modes)
 - [Design principles](#design-principles)
@@ -168,6 +170,7 @@ Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`
 - `baseRadius`, `buttonRadius`, `showWidgetBorder`; `showSidebarBorder` (`[theme]`-only)
 - Google Fonts URL syntax; `[[theme.fontFaces]]` + `[server] enableStaticServing = true`
 - `headingFontSizes` / `headingFontWeights`, `metricValueFontSize` / `metricValueFontWeight`, `linkUnderline`
+- `paddingTop` / `paddingBottom` (main and sidebar — prefer over `.block-container` CSS)
 - Dual light/dark, sidebars, shared `theme.base`
 
 ## Color configuration
@@ -287,7 +290,7 @@ Radius keywords: `"none"`, `"small"` (0.35rem), `"medium"` (0.5rem), `"large"` (
 
 ## Content padding
 
-Control the gap between Streamlit chrome and the first/last author widgets.
+Control the gap between Streamlit chrome and the first/last author widgets. Prefer these options over `st.html` / `unsafe_allow_html` CSS that targets `.block-container` or other private layout classes.
 
 Values are quoted strings:
 
@@ -482,10 +485,11 @@ Also avoid:
 - Gray body text on a white background
 - A `secondaryBackgroundColor` that is not distinct from `backgroundColor` (darker on a light theme, lighter on a dark theme)
 - Brand colors that exist only as CLI flags or env vars
+- CSS that sets `.block-container` padding instead of `paddingTop` / `paddingBottom`
 
 ## IMPORTANT: No custom CSS unless explicitly requested
 
-Do **not** use `st.markdown(..., unsafe_allow_html=True)` or `st.html()` with `<style>` for colors, fonts, or branding unless the user explicitly asks for CSS. Use `config.toml`.
+Do **not** use `st.markdown(..., unsafe_allow_html=True)` or `st.html()` with `<style>` for colors, fonts, branding, or page spacing (including `.block-container` padding) unless the user explicitly asks for CSS. Use `config.toml`.
 
 If they ask for CSS, target `key=` classes (e.g. `.st-key-submit`), never private Streamlit class names for theming.
 
@@ -495,24 +499,26 @@ Most options hot-reload on save + rerun. `fontFaces` additions and updates apply
 
 ## Theme templates
 
-Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`:
+Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`. Prefer dual-mode templates when the settings appearance toggle should stay available.
 
-| Theme | Base | Primary | Fonts |
+| Theme | Mode | Primary | Notes |
 |-------|------|---------|-------|
-| **dracula** | Dark | `#BD93F9` | Fira Sans, JetBrains Mono |
-| **financial-dashboard** | Dark | `#60A5FA` | Inter, JetBrains Mono |
-| **fluent** | Light | `#0078D4` | Segoe UI, Cascadia Code |
-| **jupyter** | Light | `#F37626` | Source Sans 3, Source Code Pro |
-| **material-ui** | Light | `#6750A4` | Roboto, Roboto Mono |
-| **minimal** | Dark | `#6366F1` | Inter, JetBrains Mono |
-| **nord** | Dark | `#88C0D0` | Inter, JetBrains Mono |
-| **one-dark-pro** | Dark | `#61AFEF` | IBM Plex Sans, JetBrains Mono |
-| **shadcn** | Light | `#18181B` | Inter, JetBrains Mono |
-| **solarized-light** | Light | `#268BD2` | Source Sans 3, Source Code Pro |
-| **ubuntu** | Light | `#E95420` | Ubuntu, Ubuntu Mono |
-| **vscode** | Dark | `#0078D4` | Segoe UI, Fira Code |
+| **shadcn-dual** | Light + dark | `#18181B` / `#3F3F46` | Dual-mode + sidebars; start here for toggleable branding |
+| **dense-dashboard** | Light + dark | `#1D4ED8` / `#1E40AF` | Dual-mode + tighter `paddingTop`/`paddingBottom` for KPI layouts |
+| **dracula** | Dark (locked) | `#BD93F9` | Fira Sans, JetBrains Mono |
+| **financial-dashboard** | Dark (locked) | `#60A5FA` | Inter, JetBrains Mono |
+| **fluent** | Light (locked) | `#0078D4` | Segoe UI, Cascadia Code |
+| **jupyter** | Light (locked) | `#F37626` | Source Sans 3, Source Code Pro |
+| **material-ui** | Light (locked) | `#6750A4` | Roboto, Roboto Mono |
+| **minimal** | Dark (locked) | `#6366F1` | Inter, JetBrains Mono |
+| **nord** | Dark (locked) | `#88C0D0` | Inter, JetBrains Mono |
+| **one-dark-pro** | Dark (locked) | `#61AFEF` | IBM Plex Sans, JetBrains Mono |
+| **shadcn** | Light (locked) | `#18181B` | Inter, JetBrains Mono |
+| **solarized-light** | Light (locked) | `#268BD2` | Source Sans 3, Source Code Pro |
+| **ubuntu** | Light (locked) | `#E95420` | Ubuntu, Ubuntu Mono |
+| **vscode** | Dark (locked) | `#0078D4` | Segoe UI, Fira Code |
 
-See `assets/templates/themes/README.md`. All templates are single-mode; to support the appearance toggle, split them into `[theme.light]` / `[theme.dark]` (plus sidebars) following the dual-mode example above.
+See `assets/templates/themes/README.md`. Single-mode templates stay locked looks; adapt them into light/dark (+ sidebars) using `shadcn-dual`, `dense-dashboard`, or the dual-mode example above when the app should toggle.
 
 ## References
 

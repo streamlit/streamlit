@@ -1,9 +1,19 @@
 # Streamlit theme templates
 
-Ready-to-use theme configs. Each file in `configs/` is a complete `[theme]`
+Ready-to-use theme configs. Each file in `configs/` is a complete theme
 block — paste into your app's `.streamlit/config.toml`.
 
-## Available themes
+Prefer a **dual-mode** template when users should keep the settings
+light/dark toggle. Use a single-mode template only for a locked look.
+
+## Dual-mode (recommended for most new apps)
+
+| Theme | Modes | Primary | Notes |
+|-------|-------|---------|-------|
+| **shadcn-dual** | Light + dark | `#18181B` / `#3F3F46` | Neutral brand look with per-mode sidebars |
+| **dense-dashboard** | Light + dark | `#1D4ED8` / `#1E40AF` | Compact `paddingTop`/`paddingBottom` for KPI dashboards |
+
+## Single-mode (locked appearance)
 
 | Theme | Base | Primary color | Fonts |
 |-------|------|---------------|-------|
@@ -23,4 +33,5 @@ block — paste into your app's `.streamlit/config.toml`.
 All themes load [Google Fonts](https://fonts.google.com/) via the
 `font = "<family>:<stylesheet_url>"` syntax — no local font files required.
 
-See `references/theme.md` for the full theming guide.
+See `references/theme.md` for section inheritance, padding, and the full
+theming guide.

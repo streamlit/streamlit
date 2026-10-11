@@ -134,9 +134,9 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **General Streamlit best practices, app code review, or examples for recommended patterns and anti-patterns** — styling, layout, navigation, caching, fragments, forms, charts, widgets, accessible `alt=` names, session state, secrets, and page organization | read `references/best-practices.md` |
 | **App is slow, reruns take too long, data loads repeatedly, or work is recomputed unnecessarily** — caching strategies (`st.cache_data`, `st.cache_resource`), `st.fragment` for partial reruns, (optionally) `parallel=True` when independent fragments can run concurrently, `on_change="ignore"` to update a widget without a rerun, and client-side validation and limits that catch bad input in the browser | read `references/performance.md` |
 | **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers | read `references/dashboards.md` |
-| **Making an app look polished** — icons (Material Symbols), spacing, color accents, visual hierarchy, and small design touches that elevate quality | read `references/design.md` |
+| **Making an app look polished** — brand colors, light/dark, page padding, icons (Material Symbols), spacing, visual hierarchy, and small design touches that elevate quality | read `references/theme.md` first, then `references/design.md` |
 | **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect` vs `st.feedback` (ratings), including modern replacements for deprecated patterns, and how to filter high-cardinality values (thousands+) without sending them all to the browser | read `references/selection-widgets.md` |
-| **Custom themes, colors, or styling requests** — configuring colors in `.streamlit/config.toml`, reading the active theme at runtime via `st.context.theme`, and the CSS pattern to use only when the user explicitly asks for CSS | read `references/theme.md` |
+| **Custom themes, colors, padding, or styling requests** — configuring `.streamlit/config.toml` (including light/dark, sidebar, and `paddingTop`/`paddingBottom`), reading the active theme at runtime via `st.context.theme`, and the CSS pattern to use only when the user explicitly asks for CSS | read `references/theme.md` |
 | **Page structure and layout** — `st.columns`, `st.tabs`, `st.sidebar`, `st.container`, `st.expander`, responsive layout patterns, when to use each container type, and aligning side-by-side elements (widget heights, `vertical_alignment`, equal-height cards) | read `references/layouts.md` |
 | **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, `st.table` for small static tables and key-value/description lists, chart selection, accessible `alt=` names, and best practices for large datasets | read `references/data-display.md` |
 | **Apache ECharts or pyecharts** — render an existing ECharts option dict, JSON string, or `pyecharts` chart with native `st.echarts_chart` rather than a third-party component (pass `alt=` carefully — it replaces the generated description) | read `references/data-display.md` |
@@ -165,13 +165,24 @@ If the user asks for a UI element or interaction that **has never been part of S
 **Common combinations:**
 
 For **beautifying/improving an app**, read in order:
-1. `references/design.md`
-2. `references/layouts.md`
-3. `references/selection-widgets.md`
+1. `references/theme.md` — brand colors, light/dark, sidebar, padding (prefer config over CSS)
+2. `references/design.md` — icons, hierarchy, micro-polish
+3. `references/layouts.md`
+4. `references/selection-widgets.md`
+
+**Theme decision tree** (when polishing or branding; always via `.streamlit/config.toml` unless the user explicitly asks for CSS):
+
+1. Brand / colors / fonts → set `[theme]` (and semantic / chart / dataframe tokens as needed)
+2. User should toggle light and dark? → add `[theme.light]` + `[theme.dark]` (see `shadcn-dual` or the dual-mode example in `theme.md`)
+3. Sidebar should contrast or match? → `[theme.sidebar]` and/or `[theme.*.sidebar]`
+4. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` keys
+5. Tighten whitespace / dense dashboard? → `paddingTop` / `paddingBottom` (main and sidebar); start from `dense-dashboard`
+6. CSS / `st.html` `<style>` → only if the user explicitly requests CSS
 
 For **building a dashboard**, read:
 1. `references/dashboards.md`
 2. `references/data-display.md`
+3. `references/theme.md` — pair the app with a theme config (prefer `dense-dashboard` or another dual-mode template when the app should toggle or feel compact)
 
 **IMPORTANT - Use templates:**
 
@@ -184,6 +195,7 @@ When creating a **new dashboard app**, prefer starting from a template in `asset
   - `dashboard-seattle-weather` — public dataset exploration
   - `dashboard-stock-peers` — financial peer analysis
 - If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
+- Pair new dashboards with a theme from `assets/templates/themes/configs/` (especially `dense-dashboard` for compact KPI layouts)
 - See `assets/templates/apps/README.md` for template descriptions
 
 When **editing an existing app**, use templates as reference for best practices:
@@ -191,7 +203,9 @@ When **editing an existing app**, use templates as reference for best practices:
 - Apply consistent patterns from templates to improve the existing code
 
 When applying a **custom theme**, use a config from `assets/templates/themes/configs/`:
-- Copy one config file (dracula, financial-dashboard, fluent, jupyter, material-ui, minimal, nord, one-dark-pro, shadcn, solarized-light, ubuntu, vscode) to the app's `.streamlit/config.toml`
+- Prefer a **dual-mode** template (`shadcn-dual`, `dense-dashboard`) when the settings appearance toggle should stay available
+- Use a single-mode template (dracula, financial-dashboard, fluent, jupyter, material-ui, minimal, nord, one-dark-pro, shadcn, solarized-light, ubuntu, vscode) only for a locked look
+- Copy the chosen file to the app's `.streamlit/config.toml`
 - Themes include custom fonts via Google Fonts
 - See `assets/templates/themes/README.md` for the theme list
 
