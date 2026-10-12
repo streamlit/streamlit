@@ -15,6 +15,7 @@
 from playwright.sync_api import Page, expect
 
 
-def test_cache_data_max_size_eviction_and_oversized_entry(app: Page):
+def test_cache_data_max_size_eviction_and_oversized_entry(app: Page) -> None:
+    """max_size evicts the LRU entry while retaining a lone oversized value."""
     expect(app.get_by_text("LRU executions: a=1, b=2, c=1", exact=True)).to_be_visible()
     expect(app.get_by_text("Oversized executions: 1", exact=True)).to_be_visible()

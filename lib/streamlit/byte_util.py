@@ -20,7 +20,11 @@ import re
 from decimal import Decimal
 from typing import Final
 
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 
 _BYTE_SIZE_RE: Final = re.compile(
     r"^\s*(?P<value>(?:\d+(?:\.\d*)?|\.\d+))\s*"
@@ -54,10 +58,8 @@ def to_bytes(value: int | str | None) -> int | None:
         return None
 
     if isinstance(value, bool):
-        raise StreamlitAPIException(
-            "`max_size` must be a positive integer number of bytes or a string "
-            'with a unit, such as "500MB".',
-            error_id="cache-data-max-size-invalid-type",
+        raise StreamlitInvalidParameterTypeError(
+            "max_size", type(value).__name__, ["int", "str"]
         )
 
     if isinstance(value, int):
@@ -73,17 +75,12 @@ def to_bytes(value: int | str | None) -> int | None:
         parsed = Decimal(match.group("value"))
         size = int(parsed * _MULTIPLIERS[match.group("unit").lower()])
     else:
-        raise StreamlitAPIException(
-            "`max_size` must be a positive integer number of bytes or a string "
-            'with a unit, such as "500MB".',
-            error_id="cache-data-max-size-invalid-type",
+        raise StreamlitInvalidParameterTypeError(
+            "max_size", type(value).__name__, ["int", "str"]
         )
 
     if size <= 0:
-        raise StreamlitAPIException(
-            "`max_size` must be greater than 0 bytes.",
-            error_id="cache-data-max-size-nonpositive",
-        )
+        raise StreamlitValueError("max_size", ["a positive byte size"])
     return size
 
 

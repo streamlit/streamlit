@@ -45,8 +45,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     The in-memory cache is a TTL cache, which means that the entries are
     automatically removed if a given time to live (TTL) has passed.
 
-    The in-memory cache is also an LRU cache, which means that the entries
-    are automatically removed if the cache size exceeds a given maxsize.
+    The in-memory cache uses LRU eviction for a configured entry-count or
+    serialized-byte limit. A process-wide data-cache budget can also evict
+    entries across wrappers.
 
     If the storage implements its strategy for maxsize, it is recommended
     (but not necessary) that the storage implement the same LRU strategy,
@@ -91,7 +92,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             max_count=None if self._max_size_bytes is None else self._max_entries,
             on_remove=self._on_mem_cache_remove,
         )
+        self._lifecycle_lock = threading.Lock()
         self._mem_cache_lock = threading.Lock()
+        self._closed = False
         self._persist_storage = persist_storage
 
     @property
@@ -131,15 +134,21 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def set(self, key: str, value: bytes) -> None:
         """Sets the value for a given key."""
-        self._write_to_mem_cache(key, value)
-        self._persist_storage.set(key, value)
+        with self._lifecycle_lock:
+            if self._closed:
+                return
+            self._write_to_mem_cache(key, value)
+            self._persist_storage.set(key, value)
 
     def set_if_present(self, key: str, value: bytes) -> bool:
         """Replace an in-memory value only if it has not been evicted."""
-        written = self._write_to_mem_cache(key, value, require_present=True)
-        if written:
-            self._persist_storage.set(key, value)
-        return written
+        with self._lifecycle_lock:
+            if self._closed:
+                return False
+            written = self._write_to_mem_cache(key, value, require_present=True)
+            if written:
+                self._persist_storage.set(key, value)
+            return written
 
     def delete(self, key: str) -> None:
         """Delete a given key."""
@@ -179,12 +188,16 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def close(self) -> None:
         """Closes the cache storage."""
-        with self._mem_cache_lock:
-            self._mem_cache.clear()
-            removals = self._take_pending_removals()
-            self._report_removals(removals)
-        self._global_budget.unregister(self._global_storage_id)
-        self._persist_storage.close()
+        with self._lifecycle_lock:
+            if self._closed:
+                return
+            with self._mem_cache_lock:
+                self._closed = True
+                self._mem_cache.clear()
+                removals = self._take_pending_removals()
+                self._report_removals(removals)
+            self._global_budget.unregister(self._global_storage_id)
+            self._persist_storage.close()
 
     def _read_from_mem_cache(self, key: str) -> bytes:
         with self._mem_cache_lock:
@@ -214,6 +227,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         should_warn = False
         with self._global_budget.write_enforcement():
             with self._mem_cache_lock:
+                if self._closed:
+                    return False
                 if require_present and key not in self._mem_cache:
                     return False
                 if (
@@ -294,6 +309,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             ):
                 return False
             if key not in self._mem_cache:
+                # Expired entries fail membership checks but remain stored until
+                # deletion publishes their removal to the global budget.
                 with contextlib.suppress(KeyError):
                     del self._mem_cache[key]
                 removals = self._take_pending_removals()

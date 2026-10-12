@@ -12,7 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pickle
+
 import streamlit as st
+from streamlit.runtime.caching.cached_message_replay import CachedResult
+
+_CACHED_VALUE = bytes(400)
+_CACHED_RESULT_SIZE = len(
+    pickle.dumps(CachedResult(_CACHED_VALUE, [], st._main._id, st.sidebar._id))
+)
 
 
 @st.cache_resource
@@ -20,18 +28,18 @@ def execution_counts() -> dict[str, int]:
     return {}
 
 
-@st.cache_data(max_size="1200B", show_spinner=False)
+@st.cache_data(max_size=2 * _CACHED_RESULT_SIZE, show_spinner=False)
 def lru_value(key: str) -> bytes:
     counts = execution_counts()
     counts[key] = counts.get(key, 0) + 1
-    return bytes(400)
+    return _CACHED_VALUE
 
 
 @st.cache_data(max_size="1B", show_spinner=False)
 def oversized_value() -> bytes:
     counts = execution_counts()
     counts["oversized"] = counts.get("oversized", 0) + 1
-    return bytes(400)
+    return _CACHED_VALUE
 
 
 lru_value("a")

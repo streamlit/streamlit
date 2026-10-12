@@ -17,7 +17,11 @@ from __future__ import annotations
 import pytest
 
 from streamlit.byte_util import config_max_cached_data_size_to_bytes, to_bytes
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 
 
 @pytest.mark.parametrize(
@@ -36,6 +40,7 @@ from streamlit.errors import StreamlitAPIException
     ],
 )
 def test_to_bytes(value: int | str | None, expected: int | None) -> None:
+    """Supported byte-size values convert to their binary byte count."""
     assert to_bytes(value) == expected
 
 
@@ -44,16 +49,33 @@ def test_to_bytes(value: int | str | None, expected: int | None) -> None:
     [True, False, 0, -1, 1.5, "", "1", "1XB", "-1MB", "0MB", ".0001B", "nanMB"],
 )
 def test_to_bytes_rejects_invalid_values(value: object) -> None:
+    """Malformed, nonpositive, and incorrectly typed values are rejected."""
     with pytest.raises(StreamlitAPIException):
         to_bytes(value)  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize("value", [True, False, 1.5])
+def test_to_bytes_uses_shared_type_error(value: object) -> None:
+    """Incorrect value types use the shared parameter-type error."""
+    with pytest.raises(StreamlitInvalidParameterTypeError):
+        to_bytes(value)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("value", [0, -1, "0MB", ".0001B"])
+def test_to_bytes_uses_shared_value_error(value: int | str) -> None:
+    """Nonpositive byte counts use the shared parameter-value error."""
+    with pytest.raises(StreamlitValueError):
+        to_bytes(value)
+
+
 @pytest.mark.parametrize("value", [0, "0"])
 def test_config_parser_accepts_disable_sentinel(value: object) -> None:
+    """The config parser accepts numeric and string disable sentinels."""
     assert config_max_cached_data_size_to_bytes(value) is None
 
 
 def test_config_parser_uses_explicit_units() -> None:
+    """The config parser requires binary unit strings for nonzero values."""
     assert config_max_cached_data_size_to_bytes("2gb") == 2 * 1024**3
 
     for value in (1, "1", True, "0MB"):

@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import queue
 import threading
 import weakref
 from collections import OrderedDict
@@ -48,7 +49,13 @@ class _EntryRecord:
 
 
 class GlobalCacheBudget(StatsProvider):
-    """Coordinate one exact LRU budget across in-memory data caches."""
+    """Enforce one LRU byte budget across in-memory ``st.cache_data`` storages.
+
+    Storages report events with a generation that changes on every write, an
+    access version that changes on every read or write, and a per-storage event
+    sequence. These counters prevent stale removals, stale eviction selections,
+    and reordered notifications from corrupting global accounting.
+    """
 
     def __init__(
         self, max_bytes: int | None = None, *, read_config: bool = True
@@ -68,10 +75,11 @@ class GlobalCacheBudget(StatsProvider):
         self._storages: dict[
             int, weakref.ReferenceType[InMemoryCacheStorageWrapper]
         ] = {}
+        self._pending_unregisters: queue.SimpleQueue[int] = queue.SimpleQueue()
         self._entries: OrderedDict[tuple[int, str], _EntryRecord] = OrderedDict()
-        # Wrapper notifications are published under the wrapper lock with a
-        # storage-wide sequence, so one scalar per live storage rejects stale
-        # reordered events without retaining per-key removal tombstones.
+        # Each storage publishes numbered events under its own lock. Keeping the
+        # newest sequence per storage prevents a stale notification from
+        # resurrecting a removed entry.
         self._last_event_sequences: dict[int, int] = {}
         self._total_bytes = 0
         self._global_evictions = 0
@@ -84,15 +92,17 @@ class GlobalCacheBudget(StatsProvider):
     @property
     def total_bytes(self) -> int:
         with self._lock:
+            self._drain_pending_unregisters_locked()
             return self._total_bytes
 
     def register(self, storage: InMemoryCacheStorageWrapper) -> int:
         with self._lock:
+            self._drain_pending_unregisters_locked()
             storage_id = self._next_storage_id
             self._next_storage_id += 1
 
             def unregister_storage(_ref: object) -> None:
-                self.unregister(storage_id)
+                self._pending_unregisters.put(storage_id)
 
             self._storages[storage_id] = weakref.ref(storage, unregister_storage)
             self._last_event_sequences[storage_id] = 0
@@ -100,12 +110,24 @@ class GlobalCacheBudget(StatsProvider):
 
     def unregister(self, storage_id: int) -> None:
         with self._lock:
-            self._storages.pop(storage_id, None)
-            self._last_event_sequences.pop(storage_id, None)
-            for entry_key in [
-                entry_key for entry_key in self._entries if entry_key[0] == storage_id
-            ]:
-                self._total_bytes -= self._entries.pop(entry_key).size
+            self._drain_pending_unregisters_locked()
+            self._unregister_locked(storage_id)
+
+    def _drain_pending_unregisters_locked(self) -> None:
+        while True:
+            try:
+                storage_id = self._pending_unregisters.get_nowait()
+            except queue.Empty:
+                return
+            self._unregister_locked(storage_id)
+
+    def _unregister_locked(self, storage_id: int) -> None:
+        self._storages.pop(storage_id, None)
+        self._last_event_sequences.pop(storage_id, None)
+        for entry_key in [
+            entry_key for entry_key in self._entries if entry_key[0] == storage_id
+        ]:
+            self._total_bytes -= self._entries.pop(entry_key).size
 
     def _accept_event_locked(self, storage_id: int, event_sequence: int) -> bool:
         last_sequence = self._last_event_sequences.get(storage_id)
@@ -136,6 +158,7 @@ class GlobalCacheBudget(StatsProvider):
             return
         entry_key = (storage_id, key)
         with self._lock:
+            self._drain_pending_unregisters_locked()
             if not self._accept_event_locked(storage_id, event_sequence):
                 return
             current = self._entries.get(entry_key)
@@ -163,6 +186,7 @@ class GlobalCacheBudget(StatsProvider):
             return
         entry_key = (storage_id, key)
         with self._lock:
+            self._drain_pending_unregisters_locked()
             if not self._accept_event_locked(storage_id, event_sequence):
                 return
             current = self._entries.get(entry_key)
@@ -185,6 +209,7 @@ class GlobalCacheBudget(StatsProvider):
             return
         entry_key = (storage_id, key)
         with self._lock:
+            self._drain_pending_unregisters_locked()
             if not self._accept_event_locked(storage_id, event_sequence):
                 return
             current = self._entries.get(entry_key)
@@ -200,31 +225,37 @@ class GlobalCacheBudget(StatsProvider):
             self._warned = True
         _LOGGER.warning(
             "The combined st.cache_data in-memory cache exceeded "
-            "server.maxCachedDataSize. Streamlit evicts least-recently-used "
-            'entries. Increase the config value or set it to "0" to disable this '
-            "process-wide budget."
+            "server.maxCachedDataSize. Streamlit evicts older least-recently-used "
+            "entries when available, but keeps a newly written value even when it "
+            "alone exceeds the budget. Increase the config value or set it to "
+            '"0" to disable this process-wide budget.'
         )
 
     def _reserve_victim(
         self, protected: tuple[int, str]
     ) -> tuple[InMemoryCacheStorageWrapper, str, _EntryRecord] | None:
         with self._lock:
+            self._drain_pending_unregisters_locked()
             if self._max_bytes is None or self._total_bytes <= self._max_bytes:
                 return None
-            live_storages: dict[int, InMemoryCacheStorageWrapper] = {}
-            for entry_key in list(self._entries):
+
+            while self._entries:
+                entries = iter(self._entries.items())
+                entry_key, record = next(entries)
+                if entry_key == protected:
+                    candidate = next(entries, None)
+                    if candidate is None:
+                        return None
+                    entry_key, record = candidate
+
                 storage_ref = self._storages.get(entry_key[0])
                 storage = storage_ref() if storage_ref is not None else None
-                if storage is not None:
-                    live_storages[entry_key[0]] = storage
-                else:
+                if storage is None:
                     self._total_bytes -= self._entries.pop(entry_key).size
-
-            if self._total_bytes <= self._max_bytes or not self._entries:
-                return None
-            for entry_key, record in self._entries.items():
-                if entry_key != protected:
-                    return live_storages[entry_key[0]], entry_key[1], record
+                    if self._total_bytes <= self._max_bytes:
+                        return None
+                    continue
+                return storage, entry_key[1], record
             return None
 
     def enforce_budget(self, protected: tuple[int, str]) -> None:
@@ -257,6 +288,7 @@ class GlobalCacheBudget(StatsProvider):
         if family_names is not None and CACHE_DATA_EVICTIONS_FAMILY not in family_names:
             return {}
         with self._lock:
+            self._drain_pending_unregisters_locked()
             count = self._global_evictions
         return {
             CACHE_DATA_EVICTIONS_FAMILY: [

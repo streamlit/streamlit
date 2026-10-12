@@ -144,6 +144,7 @@ class CacheDataTest(unittest.TestCase):
         assert r2 == [0, 1]
 
     def test_global_budget_accounts_global_and_session_scoped_caches(self) -> None:
+        """The global budget includes both global and session-scoped data caches."""
         budget = GlobalCacheBudget(max_bytes=1_000_000, read_config=False)
         calls = {"global": 0, "session": 0}
 
@@ -334,6 +335,7 @@ If you think this is actually a Streamlit bug, please
         assert example_instance.foo(1) == 2
 
     def test_max_size_evicts_by_serialized_bytes(self) -> None:
+        """A per-function byte limit evicts entries by serialized size."""
         executions = 0
 
         @st.cache_data(max_size="500B")
@@ -349,6 +351,7 @@ If you think this is actually a Streamlit bug, please
         assert executions == 3
 
     def test_oversized_value_remains_cached(self) -> None:
+        """A single value larger than max_size remains cached."""
         executions = 0
 
         @st.cache_data(max_size=1)
@@ -374,6 +377,7 @@ If you think this is actually a Streamlit bug, please
     def test_invalid_max_size_fails_at_decoration(
         self, _name: str, max_size: object
     ) -> None:
+        """Invalid max_size values fail when the decorator is created."""
         with pytest.raises(StreamlitAPIException):
 
             @st.cache_data(max_size=max_size)  # type: ignore[arg-type]
@@ -1263,6 +1267,32 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
                 cache.write_result_if_current("vk", 1, [], invalidation_token=token)
                 is False
             )
+
+    def test_sync_write_is_discarded_if_cache_detaches_during_pickle(self) -> None:
+        """A synchronous result cannot repopulate a detached cache."""
+        cache = self._cache("sync_detached")
+        pickle_started = threading.Event()
+        continue_pickle = threading.Event()
+        original_pickle = cache._pickle_result
+
+        def delayed_pickle(*args: object, **kwargs: object) -> bytes:
+            pickle_started.set()
+            assert continue_pickle.wait(timeout=5)
+            return original_pickle(*args, **kwargs)  # type: ignore[arg-type]
+
+        with (
+            patch.object(cache, "_pickle_result", side_effect=delayed_pickle),
+            patch.object(cache.storage, "set") as storage_set,
+        ):
+            writer = threading.Thread(target=cache.write_result, args=("vk", 1, []))
+            writer.start()
+            assert pickle_started.wait(timeout=5)
+            cache.mark_detached()
+            continue_pickle.set()
+            writer.join(timeout=5)
+
+        assert not writer.is_alive()
+        storage_set.assert_not_called()
 
     def test_background_writeback_raises_on_unpicklable_value(self) -> None:
         """Unpicklable background refresh results surface as CacheError."""

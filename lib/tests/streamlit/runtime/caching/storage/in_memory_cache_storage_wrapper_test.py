@@ -216,6 +216,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             mock_persist_close.assert_called_once()
 
     def test_max_size_and_max_entries_are_both_enforced(self):
+        """Byte and entry-count limits are enforced together."""
         context = CacheStorageContext(
             function_key="func-key",
             function_display_name="func-display-name",
@@ -236,6 +237,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         assert wrapped_storage._read_from_mem_cache("c") == b"c"
 
     def test_oversized_entry_is_retained_and_warns_once(self):
+        """A lone oversized entry is retained and warns only once."""
         context = CacheStorageContext(
             function_key="func-key",
             function_display_name="func-display-name",
@@ -256,6 +258,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         warning.assert_called_once()
 
     def test_byte_eviction_preserves_persisted_entry(self):
+        """Byte eviction leaves the persisted copy available for reload."""
         context = CacheStorageContext(
             function_key="func-key",
             function_display_name="func-display-name",
@@ -276,6 +279,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             persist_get.assert_called_once_with("a")
 
     def test_set_if_present_does_not_repopulate_evicted_entry(self):
+        """Conditional writes cannot repopulate an entry after eviction."""
         context = CacheStorageContext(
             function_key="func-key",
             function_display_name="func-display-name",

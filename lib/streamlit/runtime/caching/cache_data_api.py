@@ -590,14 +590,16 @@ class CacheDataAPI:
         max_size : int, str, or None
             The maximum total serialized size of this function's in-memory cache.
             An integer is interpreted as bytes. A string must include a unit, such
-            as ``"500MB"`` or ``"1.5GiB"``. When the limit is exceeded, the least
+            as ``"500MB"`` or ``"1.5GiB"``. Units use powers of 1024, so ``"MB"``
+            and ``"MiB"`` are equivalent. When the limit is exceeded, the least
             recently used entries are removed until the cache fits.
 
             This limit measures pickled bytes, not live Python heap usage or process
             RSS. It applies only to the in-memory layer when ``persist="disk"``.
             A single value larger than the limit is retained rather than rejected.
             Defaults to None, which disables the per-function limit; the
-            process-wide ``server.maxCachedDataSize`` budget may still apply.
+            process-wide ``server.maxCachedDataSize`` budget still defaults to
+            ``"2gb"``.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
@@ -873,6 +875,11 @@ class DataCache(Cache[R]):
         # whole-cache or per-key clear (mirrors ResourceCache's _mem_cache_lock).
         self._write_lock = threading.Lock()
 
+    def mark_detached(self) -> None:
+        """Detach this cache atomically with respect to result write-back."""
+        with self._write_lock:
+            super().mark_detached()
+
     def get_stats(
         self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
@@ -928,7 +935,10 @@ class DataCache(Cache[R]):
         The value must be pickleable.
         """
         pickled_entry = self._pickle_result(value_key, value, messages)
-        self.storage.set(value_key, pickled_entry)
+        with self._write_lock:
+            if not self.is_active:
+                return
+            self.storage.set(value_key, pickled_entry)
 
     def _pickle_result(
         self, value_key: str, value: R, messages: list[MsgData]

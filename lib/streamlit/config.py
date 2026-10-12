@@ -958,10 +958,12 @@ _create_option(
     "server.maxCachedDataSize",
     description="""
         Maximum combined serialized size of all @st.cache_data in-memory caches.
-        Use an explicit unit string such as "2gb" or "500mb", or 0 (or "0") to
-        disable the process-wide budget. When exceeded, Streamlit evicts globally
-        least-recently-used entries. This bounds serialized cache size, not
-        process RSS, and does not limit persisted disk entries.
+        Use a binary unit string such as "2gb" or "500mb" (powers of 1024; "mb"
+        and "mib" are equivalent). Unlike server.maxUploadSize, a bare nonzero
+        number is rejected. Use 0 or "0" to disable the process-wide budget. When
+        exceeded, Streamlit evicts globally least-recently-used entries. This
+        bounds pickled cache bytes, not process RSS, and does not delete persisted
+        disk entries. Streamlit reads this value when the server starts.
     """,
     default_val="2gb",
     type_=str,

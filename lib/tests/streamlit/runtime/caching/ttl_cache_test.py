@@ -474,6 +474,7 @@ def test_get_and_pop_return_default_for_expired_keys() -> None:
 
 
 def test_byte_sizing_evicts_lru_and_tracks_current_size() -> None:
+    """Byte sizing evicts the LRU entry and maintains the current size."""
     cache: TTLCache[str, bytes] = TTLCache(
         maxsize=6, ttl=100, timer=_FakeClock(), getsizeof=len
     )
@@ -491,6 +492,7 @@ def test_byte_sizing_evicts_lru_and_tracks_current_size() -> None:
 
 
 def test_byte_sizing_and_count_limit_are_both_enforced() -> None:
+    """Byte and entry-count limits are enforced together."""
     cache: TTLCache[str, bytes] = TTLCache(
         maxsize=100,
         max_count=2,
@@ -507,6 +509,7 @@ def test_byte_sizing_and_count_limit_are_both_enforced() -> None:
 
 
 def test_byte_sizing_retains_one_oversized_entry() -> None:
+    """A lone value larger than the byte limit remains cached."""
     cache: TTLCache[str, bytes] = TTLCache(
         maxsize=3, ttl=100, timer=_FakeClock(), getsizeof=len
     )
@@ -518,6 +521,7 @@ def test_byte_sizing_retains_one_oversized_entry() -> None:
 
 
 def test_byte_size_is_updated_by_all_removal_paths() -> None:
+    """Every removal path updates byte size and invokes the callback."""
     clock = _FakeClock()
     removed: list[str] = []
     cache: TTLCache[str, bytes] = TTLCache(
