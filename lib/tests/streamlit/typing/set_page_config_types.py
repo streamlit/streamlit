@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, assert_type
 
 # Verify that all valid InitialSideBarState literals are accepted by mypy.
 if TYPE_CHECKING:
+    from datetime import timedelta
+
     from streamlit.commands.page_config import set_page_config
 
     set_page_config(initial_sidebar_state="auto")
@@ -38,4 +40,17 @@ if TYPE_CHECKING:
             },
         ),
         None,
+    )
+    assert_type(set_page_config(run_every=5), None)
+    assert_type(set_page_config(run_every=2.5), None)
+    assert_type(set_page_config(run_every="5s"), None)
+    assert_type(set_page_config(run_every=timedelta(seconds=30)), None)
+    assert_type(set_page_config(run_every=None), None)
+    set_page_config(
+        "Title",
+        "📊",
+        "wide",
+        "expanded",
+        None,
+        5,  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
     )

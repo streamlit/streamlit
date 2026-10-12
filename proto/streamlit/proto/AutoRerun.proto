@@ -20,13 +20,16 @@ message AutoRerun {
   // The interval of reruns in seconds
   float interval = 1;
 
-  // The fragment ID to rerun
+  // The fragment ID to rerun. An empty id is the page-level timer from
+  // st.set_page_config(run_every=...), which triggers a full app rerun.
   string fragment_id = 2;
 }
 
 // Sent when the server evicts fragments (e.g. an ancestor stopped rendering
 // them), so the client can cancel their pending auto-rerun timers.
+// An empty id cancels the page-level timer armed by st.set_page_config.
 message StopAutoRerun {
   // The fragment IDs whose auto-rerun timers should be cancelled.
+  // An empty string cancels the page-level timer.
   repeated string fragment_ids = 1;
 }

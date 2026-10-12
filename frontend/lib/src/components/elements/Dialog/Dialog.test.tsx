@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { Component, type ReactElement } from "react"
+
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
@@ -24,6 +26,11 @@ import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Dialog, { type Props as DialogProps } from "./Dialog"
+import {
+  isElementDialogOpen,
+  markElementDialogOpen,
+  resetElementDialogOpenForTests,
+} from "./elementDialogOpen"
 
 const getProps = (
   elementProps: Partial<BlockProto.Dialog> = {},
@@ -44,6 +51,35 @@ const getProps = (
 })
 
 describe("Dialog container", () => {
+  beforeEach(() => {
+    resetElementDialogOpenForTests()
+  })
+
+  it("marks an open dialog before the parent update", () => {
+    const seen: boolean[] = []
+
+    class Parent extends Component<{ open: boolean }> {
+      override componentDidUpdate(): void {
+        seen.push(isElementDialogOpen())
+      }
+
+      override render(): ReactElement | null {
+        if (!this.props.open) {
+          return null
+        }
+        return (
+          <Dialog {...getProps({ isOpen: true })}>
+            <div>test</div>
+          </Dialog>
+        )
+      }
+    }
+
+    const { rerender } = render(<Parent open={false} />)
+    rerender(<Parent open={true} />)
+    expect(seen.at(-1)).toBe(true)
+  })
+
   it("renders without crashing", () => {
     const props = getProps()
     render(
@@ -66,6 +102,46 @@ describe("Dialog container", () => {
     )
 
     expect(screen.getByText("test")).toBeVisible()
+  })
+
+  it("tracks whether an element dialog is open", () => {
+    expect(isElementDialogOpen()).toBe(false)
+
+    const { rerender, unmount } = render(
+      <Dialog {...getProps({ isOpen: true })}>
+        <div>test</div>
+      </Dialog>
+    )
+    expect(isElementDialogOpen()).toBe(true)
+
+    rerender(
+      <Dialog {...getProps({ isOpen: false })}>
+        <div>test</div>
+      </Dialog>
+    )
+    expect(isElementDialogOpen()).toBe(false)
+
+    rerender(
+      <Dialog {...getProps({ isOpen: true })}>
+        <div>test</div>
+      </Dialog>
+    )
+    expect(isElementDialogOpen()).toBe(true)
+    unmount()
+    expect(isElementDialogOpen()).toBe(false)
+  })
+
+  it("does not let a second cleanup make a later dialog look closed", () => {
+    const closeFirst = markElementDialogOpen()
+    const closeSecond = markElementDialogOpen()
+    expect(isElementDialogOpen()).toBe(true)
+
+    closeFirst()
+    closeFirst()
+    expect(isElementDialogOpen()).toBe(true)
+
+    closeSecond()
+    expect(isElementDialogOpen()).toBe(false)
   })
 
   it("should not render the text when closed", () => {

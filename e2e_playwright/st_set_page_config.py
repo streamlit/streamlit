@@ -21,6 +21,63 @@ import streamlit as st
 STATIC_DIR = Path(__file__).parent / "static"
 ICON_PATH = STATIC_DIR / "favicon.ico"
 
+
+def _run_every_scenario() -> None:
+    """Auto-rerun coverage, selected with ``?scenario=run_every``.
+
+    The rest of this script must stay idle. A page-level timer would rerun
+    the layout and menu tests on their own.
+    """
+
+    def live_page() -> None:
+        auto = st.toggle("Auto-refresh", value=True)
+        # The last call that passes run_every wins. None disables the timer.
+        st.set_page_config(run_every=1 if auto else None)
+
+        if "ticks" not in st.session_state:
+            st.session_state.ticks = 0
+        st.session_state.ticks += 1
+
+        with st.container(key="tick_count"):
+            st.markdown(f"ticks-{st.session_state.ticks}")
+
+        @st.dialog("Notes")
+        def notes() -> None:
+            st.write("Dialog is open")
+
+        if st.button("Open dialog"):
+            notes()
+
+        with st.form("details"):
+            st.text_input("Name")
+            st.form_submit_button("Save")
+
+    def quiet_page() -> None:
+        # This page does not opt into auto-rerun. The counter still changes on
+        # any rerun, so a stray tick is visible to the test.
+        st.session_state.quiet_ticks = st.session_state.get("quiet_ticks", 0) + 1
+        with st.container(key="quiet_ticks"):
+            st.markdown(f"ticks-{st.session_state.quiet_ticks}")
+        st.markdown("quiet-page")
+
+    st.navigation(
+        [
+            st.Page(live_page, title="Live", default=True),
+            st.Page(quiet_page, title="Quiet"),
+        ]
+    ).run()
+
+
+# Remember the scenario in session state. Multipage navigation drops query
+# params that are not bound to a widget, and the next run still has to select
+# this scenario instead of the default page-config script.
+if st.query_params.get("scenario") == "run_every":
+    st.session_state.scenario = "run_every"
+
+if st.session_state.get("scenario") == "run_every":
+    _run_every_scenario()
+    st.stop()
+
 st.sidebar.button("Sidebar!")
 st.markdown("Main!")
 with st.expander("Expander in main"):

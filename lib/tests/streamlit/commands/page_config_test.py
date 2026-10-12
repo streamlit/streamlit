@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import timedelta
 from pathlib import Path
 from unittest import mock
 
@@ -27,10 +28,14 @@ from streamlit.commands.page_config import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitBadTimeStringError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidURLError,
     StreamlitValueError,
 )
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageConfig_pb2 import PageConfig as PageConfigProto
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.string_util import is_emoji
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -215,6 +220,178 @@ class PageConfigTest(DeltaGeneratorTestCase):
             st.set_page_config(page_title="Hello")
 
         assert self.forward_msg_queue._queue == []
+
+    @parameterized.expand(
+        [
+            (5, 5.0),
+            (2.5, 2.5),
+            ("5s", 5.0),
+            ("1m", 60.0),
+            (timedelta(seconds=30), 30.0),
+            (1, 1.0),
+        ]
+    )
+    def test_set_page_config_run_every_arms_page_timer(
+        self, run_every: int | float | str | timedelta, expected: float
+    ) -> None:
+        """A passed ``run_every`` enqueues one app-scoped auto-rerun."""
+        st.set_page_config(run_every=run_every)
+
+        msgs = self._auto_rerun_messages()
+        assert len(msgs) == 1
+        assert msgs[0].auto_rerun.interval == expected
+        assert msgs[0].auto_rerun.fragment_id == ""
+        assert self._stop_auto_rerun_messages() == []
+
+    @parameterized.expand([0, -1, 0.5, "500ms"])
+    def test_set_page_config_run_every_below_minimum(
+        self, run_every: int | float | str
+    ) -> None:
+        """Intervals shorter than one second raise and enqueue nothing."""
+        with pytest.raises(StreamlitValueError, match="at least 1 second"):
+            st.set_page_config(run_every=run_every)
+
+        assert self.forward_msg_queue._queue == []
+
+    @parameterized.expand([float("inf"), float("-inf"), float("nan")])
+    def test_set_page_config_run_every_rejects_non_finite_interval(
+        self, run_every: float
+    ) -> None:
+        """Non-finite intervals raise and enqueue nothing."""
+        with pytest.raises(StreamlitValueError, match="finite duration"):
+            st.set_page_config(run_every=run_every)
+
+        assert self.forward_msg_queue._queue == []
+
+    @parameterized.expand([10**1000, 1e100])
+    def test_set_page_config_run_every_rejects_unrepresentable_interval(
+        self, run_every: int | float
+    ) -> None:
+        """Intervals that are too large to represent raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match="finite duration"):
+            st.set_page_config(run_every=run_every)
+
+        assert self.forward_msg_queue._queue == []
+
+    def test_set_page_config_run_every_accepts_numpy_int(self) -> None:
+        """NumPy integers use the same interval path as Python ints."""
+        import numpy as np
+
+        st.set_page_config(run_every=np.int64(5))
+
+        msgs = self._auto_rerun_messages()
+        assert len(msgs) == 1
+        assert msgs[0].auto_rerun.interval == 5
+
+    def test_set_page_config_run_every_bad_string(self) -> None:
+        """An unparseable interval string uses the shared time-string error."""
+        with pytest.raises(StreamlitBadTimeStringError):
+            st.set_page_config(run_every="nope")
+
+        assert self.forward_msg_queue._queue == []
+
+    @parameterized.expand([(True,), (["5s"],)])
+    def test_set_page_config_run_every_rejects_invalid_type(
+        self, run_every: bool | list[str]
+    ) -> None:
+        """Booleans and sequences are not intervals."""
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.set_page_config(run_every=run_every)  # type: ignore[arg-type]
+
+        assert self.forward_msg_queue._queue == []
+
+    def test_set_page_config_run_every_none_stops_page_timer(self) -> None:
+        """Explicit ``None`` clears a page timer armed earlier in the run."""
+        st.set_page_config(run_every=5)
+        st.set_page_config(run_every=None)
+
+        assert [msg.auto_rerun.interval for msg in self._auto_rerun_messages()] == [5]
+        stops = self._stop_auto_rerun_messages()
+        assert len(stops) == 1
+        assert list(stops[0].stop_auto_rerun.fragment_ids) == [""]
+
+    def test_set_page_config_omitted_run_every_does_not_touch_timer(self) -> None:
+        """Omitting ``run_every`` does not arm or clear the page timer."""
+        st.set_page_config(page_title="Hello")
+
+        assert self._auto_rerun_messages() == []
+        assert self._stop_auto_rerun_messages() == []
+
+    def test_set_page_config_omitted_run_every_keeps_earlier_interval(self) -> None:
+        """A later call that omits ``run_every`` leaves the earlier interval."""
+        st.set_page_config(run_every=5)
+        st.set_page_config(page_title="Hello")
+
+        msgs = self._auto_rerun_messages()
+        assert len(msgs) == 1
+        assert msgs[0].auto_rerun.interval == 5
+        assert self._stop_auto_rerun_messages() == []
+
+    def test_set_page_config_run_every_last_call_wins(self) -> None:
+        """The last call that passes ``run_every`` is the interval that sticks."""
+        st.set_page_config(run_every=5)
+        st.set_page_config(run_every="10s")
+
+        assert [msg.auto_rerun.interval for msg in self._auto_rerun_messages()] == [
+            5,
+            10,
+        ]
+
+    def test_set_page_config_run_every_sent_on_fragment_rerun(self) -> None:
+        """A fragment-only rerun still publishes an explicit page interval.
+
+        The frontend keeps the countdown when that interval is unchanged, and
+        applies a different interval. Dropping the message here would ignore
+        ``run_every`` until the next full rerun.
+        """
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        ctx.fragment_ids_this_run = ["frag"]
+
+        st.set_page_config(page_title="Hello", run_every=5)
+
+        assert self.get_message_from_queue(0).HasField("page_config_changed")
+        msgs = self._auto_rerun_messages()
+        assert len(msgs) == 1
+        assert msgs[0].auto_rerun.interval == 5
+        assert msgs[0].auto_rerun.fragment_id == ""
+        assert self._stop_auto_rerun_messages() == []
+
+    def test_set_page_config_run_every_none_sent_on_fragment_rerun(self) -> None:
+        """An explicit ``None`` during a fragment rerun still clears the timer."""
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        ctx.fragment_ids_this_run = ["frag"]
+
+        st.set_page_config(run_every=None)
+
+        assert self._auto_rerun_messages() == []
+        stops = self._stop_auto_rerun_messages()
+        assert len(stops) == 1
+        assert list(stops[0].stop_auto_rerun.fragment_ids) == [""]
+
+    def test_set_page_config_run_every_still_validates_without_ctx(self) -> None:
+        """A too-short interval raises even when nothing can be enqueued."""
+        with mock.patch(
+            "streamlit.commands.page_config.get_script_run_ctx",
+            return_value=None,
+        ):
+            with pytest.raises(StreamlitValueError, match="at least 1 second"):
+                st.set_page_config(run_every=0)
+
+        assert self.forward_msg_queue._queue == []
+
+    def _auto_rerun_messages(self) -> list[ForwardMsg]:
+        return [
+            msg for msg in self.forward_msg_queue._queue if msg.HasField("auto_rerun")
+        ]
+
+    def _stop_auto_rerun_messages(self) -> list[ForwardMsg]:
+        return [
+            msg
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("stop_auto_rerun")
+        ]
 
 
 def test_get_favicon_string_material_icon() -> None:

@@ -112,7 +112,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.select_slider` | Display a slider widget to select items from a list. Use it when options are ordered but not necessarily numeric. |
 | `st.selectbox` | Display a select widget. Use it for selecting one item from a medium or large set. |
 | `st.set_option` | Set a configuration option. Use sparingly because not all options are safe or meaningful to change after startup. |
-| `st.set_page_config` | Configure the default settings of the page. Prefer calling it near the top of the script; repeated calls are additive and override only the parameters you specify. |
+| `st.set_page_config` | Configure page-wide settings and behavior. Repeated calls are additive and override only the parameters you specify. |
 | `st.skeleton` | Display a skeleton loading placeholder. Use it standalone (like `st.empty`) to reserve space and replace it with content later, or as a context manager (like `st.spinner`) to show a temporary placeholder while a block runs. |
 | `st.slider` | Display a slider widget. Use it for numeric ranges, dates, times, or other ordered values. |
 | `st.snow` | Draw celebratory snowfall. Use sparingly for lightweight success or celebration effects. |
