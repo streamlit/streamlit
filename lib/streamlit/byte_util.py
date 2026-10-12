@@ -49,6 +49,9 @@ _CONFIG_MAX_CACHED_DATA_SIZE_ZERO_ERROR: Final = (
     '`server.maxCachedDataSize` must be positive. Use "0" without a unit to '
     "disable the global cache budget."
 )
+_CONFIG_MAX_CACHED_DATA_SIZE_MINIMUM_ERROR: Final = (
+    "`server.maxCachedDataSize` must be at least 1 byte."
+)
 
 
 def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
@@ -105,15 +108,21 @@ def config_max_cached_data_size_to_bytes(value: object) -> int | None:
             error_id="config-max-cached-data-size-invalid",
         )
     match = _BYTE_SIZE_RE.fullmatch(value)
-    if match is not None and int(match.group("value").replace(".", "")) == 0:
+    if match is None:
+        raise StreamlitAPIException(
+            _CONFIG_MAX_CACHED_DATA_SIZE_ERROR,
+            error_id="config-max-cached-data-size-invalid",
+        )
+    # Reject an explicit zero with a unit ("0gb"); only a bare "0" disables.
+    if int(match.group("value").replace(".", "")) == 0:
         raise StreamlitAPIException(
             _CONFIG_MAX_CACHED_DATA_SIZE_ZERO_ERROR,
             error_id="config-max-cached-data-size-invalid",
         )
     try:
         return cache_data_max_size_to_bytes(value)
-    except StreamlitAPIException as exc:
+    except StreamlitValueError as exc:
         raise StreamlitAPIException(
-            _CONFIG_MAX_CACHED_DATA_SIZE_ERROR,
+            _CONFIG_MAX_CACHED_DATA_SIZE_MINIMUM_ERROR,
             error_id="config-max-cached-data-size-invalid",
         ) from exc

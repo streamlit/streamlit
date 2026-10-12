@@ -55,27 +55,29 @@ def test_cache_data_max_size_to_bytes(
     "value",
     [True, False, 0, -1, 1.5, "", "1", "1XB", "-1MB", "0MB", ".0001B", "nanMB"],
 )
-def test_to_bytes_rejects_invalid_values(value: object) -> None:
+def test_cache_data_max_size_to_bytes_rejects_invalid_values(value: object) -> None:
     """Malformed, nonpositive, and incorrectly typed values are rejected."""
     with pytest.raises(StreamlitAPIException):
         cache_data_max_size_to_bytes(value)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("value", [True, False, 1.5])
-def test_to_bytes_uses_shared_type_error(value: object) -> None:
+def test_cache_data_max_size_to_bytes_uses_shared_type_error(value: object) -> None:
     """Incorrect value types use the shared parameter-type error."""
     with pytest.raises(StreamlitInvalidParameterTypeError):
         cache_data_max_size_to_bytes(value)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("value", [0, -1, "0MB", ".0001B"])
-def test_to_bytes_uses_shared_value_error(value: int | str) -> None:
+def test_cache_data_max_size_to_bytes_uses_shared_value_error(
+    value: int | str,
+) -> None:
     """Nonpositive byte counts use the shared parameter-value error."""
     with pytest.raises(StreamlitValueError):
         cache_data_max_size_to_bytes(value)
 
 
-def test_to_bytes_ignores_decimal_context() -> None:
+def test_cache_data_max_size_to_bytes_ignores_decimal_context() -> None:
     """App decimal settings cannot round or reject a valid byte size."""
     with localcontext() as context:
         context.prec = 2
@@ -99,3 +101,9 @@ def test_config_parser_uses_explicit_units() -> None:
 
     with pytest.raises(StreamlitAPIException, match="without a unit"):
         config_max_cached_data_size_to_bytes("0MB")
+
+
+def test_config_parser_rejects_sub_byte_values_accurately() -> None:
+    """A unit-bearing value below one byte reports the actual constraint."""
+    with pytest.raises(StreamlitAPIException, match="at least 1 byte"):
+        config_max_cached_data_size_to_bytes("0.5b")

@@ -78,7 +78,6 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self._next_access_version = 0
         self._oversized_warning_emitted = False
         self._global_budget = get_global_cache_budget()
-        self._global_storage_id = self._global_budget.register(self)
         self._mem_cache: TTLCache[str, bytes] = TTLCache(
             maxsize=(
                 self.max_entries
@@ -91,10 +90,14 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             max_count=None if self._max_size_bytes is None else self._max_entries,
             on_remove=self._on_mem_cache_remove,
         )
+        # _lifecycle_lock orders set/close so no write lands after close().
+        # _mem_cache_lock guards the memory cache and its version dictionaries.
         self._lifecycle_lock = threading.Lock()
         self._mem_cache_lock = threading.Lock()
         self._closed = False
         self._persist_storage = persist_storage
+        # Publish the storage only after every callback-visible attribute exists.
+        self._global_storage_id = self._global_budget.register(self)
 
     @property
     def ttl_seconds(self) -> float:
@@ -257,9 +260,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 )
             if should_warn:
                 _LOGGER.warning(
-                    "A cached value for %s is larger than its max_size, so Streamlit "
-                    "evicted all other in-memory entries from this function's cache. "
-                    "Increase max_size to keep more than one value.",
+                    "Streamlit kept a value from %s that is larger than max_size and "
+                    "dropped every other in-memory entry for that function. Increase "
+                    "max_size to cache more than one value.",
                     self.function_display_name,
                 )
             self._global_budget.enforce_budget((self._global_storage_id, key))

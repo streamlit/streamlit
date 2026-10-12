@@ -271,8 +271,8 @@ class DataCaches(StatsProvider):
                     del session_caches[key]
 
             if cache is not None:
-                # Detach the old cache so any in-flight result is committed before
-                # replacement, then discarded by closing the old storage.
+                # mark_detached() waits for any in-flight write; closing the old
+                # storage below then drops whatever that write stored.
                 cache.mark_detached()
                 _LOGGER.debug(
                     "Closing existing DataCache storage "
@@ -622,12 +622,12 @@ class CacheDataAPI:
             the least recently used cached entry will be removed. Defaults to None.
 
         max_size : int, str, or None
-            Maximum pickled size of this function's in-memory cache. An integer is
-            a byte count. A string must include a unit, such as ``"500MB"`` or
-            ``"1.5GiB"``. Units are powers of 1024, so ``"MB"`` and ``"MiB"`` are
-            the same. ``None`` (default) disables this per-function limit.
-            ``server.maxCachedDataSize`` still defaults to ``"2gb"`` across
-            in-memory ``st.cache_data`` caches.
+            The maximum serialized (pickled) size of this function's in-memory
+            cache. If this is an integer, it's a number of bytes. If this is a
+            string, it must include a unit, like ``"500MB"`` or ``"1.5GiB"``.
+            Units are powers of 1024, so ``"MB"`` and ``"MiB"`` are equivalent.
+            If this is ``None`` (default), this function has no per-function limit.
+            The process-wide ``server.maxCachedDataSize`` budget applies.
 
             On a write that would exceed the limit, Streamlit drops
             least-recently-used entries until the new value fits. One value larger

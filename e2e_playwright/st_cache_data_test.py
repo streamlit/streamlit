@@ -80,6 +80,7 @@ def test_that_replay_element_works_as_expected(app: Page):
 def test_cache_data_max_size_eviction_and_oversized_entry(app: Page) -> None:
     """max_size evicts the LRU entry while retaining a lone oversized value."""
     click_button(app, "Run cache_data max_size test")
+    expect(app.get_by_test_id("stException")).to_have_count(0)
     expect(
         app.get_by_text(
             "cache_data max_size executions: a=1, b=2, c=1; oversized=1",

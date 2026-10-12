@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import math
 import queue
 import threading
 import weakref
@@ -43,6 +44,12 @@ CACHE_DATA_EVICTIONS_FAMILY: Final = "cache_data_evictions"
 
 @dataclass
 class _EntryRecord:
+    """Bookkeeping used to reject a stale eviction candidate.
+
+    ``generation`` changes on every rewrite and ``access_version`` on every read,
+    so an entry selected without its storage lock is evicted only if neither changed.
+    """
+
     size: int
     generation: int
     access_version: int
@@ -130,7 +137,7 @@ class GlobalCacheBudget(StatsProvider):
 
     @contextmanager
     def write_enforcement(self) -> Generator[None, None, None]:
-        """Serialize writes until each new entry completes its own budget check."""
+        """Hold the write lock until each write finishes enforcing the budget."""
         if self._max_bytes is None:
             yield
             return
@@ -236,6 +243,7 @@ class GlobalCacheBudget(StatsProvider):
                 storage
                 for storage_ref in self._storages.values()
                 if (storage := storage_ref()) is not None
+                and math.isfinite(storage.ttl_seconds)
             ]
         for storage in storages:
             storage._reap_expired_entries()
@@ -274,6 +282,11 @@ class GlobalCacheBudget(StatsProvider):
             return None
 
     def enforce_budget(self, protected: tuple[int, str]) -> None:
+        """Evict LRU entries without evicting the write currently being enforced.
+
+        ``protected`` identifies the storage and key for that write. The entry stays
+        cached even when it alone exceeds the process-wide budget.
+        """
         if self._max_bytes is None:
             return
         with self._enforcement_lock:

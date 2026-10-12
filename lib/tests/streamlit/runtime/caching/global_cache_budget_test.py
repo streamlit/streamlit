@@ -137,6 +137,64 @@ def test_budget_reaps_newer_expired_entry_before_evicting_live_lru() -> None:
     assert budget.total_bytes == 4
 
 
+def test_expiry_reconciliation_skips_storages_without_ttl() -> None:
+    """Global reconciliation visits only storages whose entries can expire."""
+    budget = GlobalCacheBudget(max_bytes=6)
+    persistent = _create_storage(budget, "persistent")
+    expiring = _create_storage(budget, "expiring", ttl_seconds=1)
+
+    with (
+        patch.object(persistent, "_reap_expired_entries") as persistent_reap,
+        patch.object(expiring, "_reap_expired_entries") as expiring_reap,
+    ):
+        budget._reap_expired_entries()
+
+    persistent_reap.assert_not_called()
+    expiring_reap.assert_called_once_with()
+
+
+def test_storage_is_initialized_before_budget_registration() -> None:
+    """Concurrent expiry reconciliation cannot observe a half-built storage."""
+    budget = GlobalCacheBudget(max_bytes=1)
+    context = CacheStorageContext(
+        function_key="constructing",
+        function_display_name="constructing",
+        ttl_seconds=1,
+    )
+    registered = threading.Event()
+    continue_registration = threading.Event()
+    original_register = budget.register
+
+    def blocking_register(storage: InMemoryCacheStorageWrapper) -> int:
+        storage_id = original_register(storage)
+        registered.set()
+        assert continue_registration.wait(timeout=5)
+        return storage_id
+
+    with (
+        patch(
+            "streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper."
+            "get_global_cache_budget",
+            return_value=budget,
+        ),
+        patch.object(budget, "register", side_effect=blocking_register),
+        ThreadPoolExecutor(max_workers=1) as executor,
+    ):
+        future = executor.submit(
+            InMemoryCacheStorageWrapper,
+            DummyCacheStorage(),
+            context,
+        )
+        assert registered.wait(timeout=5)
+        try:
+            budget._reap_expired_entries()
+        finally:
+            continue_registration.set()
+        storage = future.result(timeout=5)
+
+    storage.close()
+
+
 def test_budget_retains_current_oversized_entry_and_warns_once() -> None:
     """A lone value over budget remains cached and emits one warning."""
     budget = GlobalCacheBudget(max_bytes=2)
