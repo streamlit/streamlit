@@ -563,5 +563,49 @@ describe("TopNavSection", () => {
       expect(screen.getByText("Page B").closest("a")).toHaveFocus()
       expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
     })
+
+    it("restores menu focus when the focused page is removed from the front", async () => {
+      const user = userEvent.setup()
+      const { rerender } = renderWithContexts(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: THREE_PAGE_SECTION,
+            title: "Group",
+          })}
+        />
+      )
+
+      await openPopover(user)
+      expect(screen.getByText("Page A").closest("a")).toHaveFocus()
+
+      // Overflow often drops leading items; index 0 stays in range but Page A unmounts.
+      rerender(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: [
+              [
+                {
+                  pageScriptHash: "page_b",
+                  pageName: "Page B",
+                  urlPathname: "page_b",
+                  isDefault: false,
+                },
+                {
+                  pageScriptHash: "page_c",
+                  pageName: "Page C",
+                  urlPathname: "page_c",
+                  isDefault: false,
+                },
+              ],
+            ],
+            title: "Group",
+          })}
+        />
+      )
+
+      expect(screen.queryByText("Page A")).not.toBeInTheDocument()
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
+      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
+    })
   })
 })
