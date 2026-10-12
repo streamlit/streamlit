@@ -620,8 +620,13 @@ Rules:
   `status`, `observed_at`, and error codes — is server-generated.
 - **The `status` field reports the run, not the transport.** `ready` means the run chain
   settled and the app did not raise. See [When a run fails](#when-a-run-fails).
-- **Versioned.** Additive optional fields are compatible within `schema_version: 1`;
-  clients tolerate unknown fields and unknown element types.
+- **Versioned, and self-describing.** Additive optional fields are compatible within
+  `schema_version: 1`; clients tolerate unknown fields and unknown element types. The
+  rest moves with Streamlit: each app serves the OpenAPI document for its own version,
+  and the element vocabulary is the API of the Streamlit it runs, so a client that reads
+  the description, as a model does on every connection, picks up a change with the
+  upgrade. Only a script that hard-codes element types or `props` names relies on the
+  additive rule, and authored keys keep its addressing stable.
 
 ### When a run fails
 
@@ -1292,7 +1297,7 @@ v1 ships when:
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
 | Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: off by default in v1 with on-by-default as the goal, open to any program that can reach the app once on but refusing unlisted web origins, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, and identity mapping — the gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
 | Any docs changes needed?   | Protocol reference and coverage matrix, an authoring guide ("write `key=`, explain the app in the app"), verification guidance next to `AppTest` and Playwright, and a security/deployment page.                                                                                                                                                                                                                                                                                                              |
-| Any other risks?           | The snapshot is a long-lived compatibility surface and needs a version field and a written stability policy from the first release. Adoption risk: if it stays experimental too long, the ecosystem standardizes on browser automation instead.                                                                                                                                                                                                                                                               |
+| Any other risks?           | The snapshot is a compatibility surface for scripts that hard-code it; it carries `schema_version` and changes additively within it, while clients that read the served description pick up changes with each Streamlit release. Adoption risk: if it stays experimental too long, the ecosystem standardizes on browser automation instead.                                                                                                                                                                                                                                                               |
 
 ## Open questions
 
@@ -1317,14 +1322,3 @@ v1 ships when:
    `get_data` — rather than to cap and discard. The cost is real for chat clients: a
    page of a few Plotly charts can reach a megabyte per response, and a selectbox of a
    few hundred options adds tens of kilobytes to every call on its page.
-4. **What stability does the snapshot promise, and where does a public contract live?**
-   The document is a compatibility surface from its first release: clients will key on
-   element types, `props` names, and error codes, and every command's description becomes
-   part of it. That needs a written policy before v1 ships — what `schema_version`
-   guarantees, which changes are additive, and whether the first release is labeled
-   experimental so the shape can still move. The path is part of the same decision.
-   `/_stcore/` is Streamlit's internal namespace, next to the WebSocket and health
-   routes, which keeps the interface clear of routes an `st.App` author defines, but it
-   also signals "not a contract". Keeping it there with `v1` carrying the stability, or
-   moving to a prefix that reads as public, should be decided before clients depend on
-   either.
