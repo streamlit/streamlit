@@ -172,17 +172,20 @@ For **beautifying/improving an app**, read in order:
 
 **Theme decision tree** (when polishing or branding; always via `.streamlit/config.toml` unless the user explicitly asks for CSS):
 
-1. Brand / colors / fonts → set `[theme]` (and semantic / chart / dataframe tokens as needed)
-2. User should toggle light and dark? → add `[theme.light]` + `[theme.dark]` (see `shadcn-dual` or the dual-mode example in `theme.md`)
-3. Sidebar should contrast or match? → `[theme.sidebar]` and/or `[theme.*.sidebar]`
-4. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` keys
-5. Tighten whitespace / dense dashboard? → `paddingTop` / `paddingBottom` (main and sidebar); start from `dense-dashboard`
-6. CSS / `st.html` `<style>` → only if the user explicitly requests CSS
+1. Same brand across many apps? → shared TOML/URL via `theme.base`, then per-app overrides in each app’s `config.toml` (see `theme.md`)
+2. Brand / colors / fonts for this app → set `[theme]` (and semantic / chart / dataframe tokens as needed)
+3. Locked single look, or user can toggle light/dark?
+   - Locked → `[theme]` only (`base = "light"` or `"dark"`)
+   - Toggle → add `[theme.light]` + `[theme.dark]` (see `shadcn-dual` or the dual-mode example in `theme.md`)
+4. Sidebar should contrast or match? → `[theme.sidebar]` and/or `[theme.*.sidebar]`
+5. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` keys
+6. Tighten whitespace / dense dashboard? → `paddingTop` / `paddingBottom` (main and sidebar); `dense-dashboard` is a ready example
+7. CSS / `st.html` `<style>` → only if the user explicitly requests CSS
 
 For **building a dashboard**, read:
 1. `references/dashboards.md`
 2. `references/data-display.md`
-3. `references/theme.md` — pair the app with a theme config (prefer `dense-dashboard` or another dual-mode template when the app should toggle or feel compact)
+3. `references/theme.md` — pair the app with a theme config (`theme.base` for shared brand; `dense-dashboard` when you want compact padding and a light/dark toggle)
 
 **IMPORTANT - Use templates:**
 
@@ -195,7 +198,7 @@ When creating a **new dashboard app**, prefer starting from a template in `asset
   - `dashboard-seattle-weather` — public dataset exploration
   - `dashboard-stock-peers` — financial peer analysis
 - If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
-- Pair new dashboards with a theme from `assets/templates/themes/configs/` (especially `dense-dashboard` for compact KPI layouts)
+- Pair new dashboards with a theme from `assets/templates/themes/configs/` (use `theme.base` for org-wide brand; `dense-dashboard` when compact padding helps)
 - See `assets/templates/apps/README.md` for template descriptions
 
 When **editing an existing app**, use templates as reference for best practices:
@@ -203,9 +206,10 @@ When **editing an existing app**, use templates as reference for best practices:
 - Apply consistent patterns from templates to improve the existing code
 
 When applying a **custom theme**, use a config from `assets/templates/themes/configs/`:
-- Prefer a **dual-mode** template (`shadcn-dual`, `dense-dashboard`) when the settings appearance toggle should stay available
-- Use a single-mode template (dracula, financial-dashboard, fluent, jupyter, material-ui, minimal, nord, one-dark-pro, shadcn, solarized-light, ubuntu, vscode) only for a locked look
-- Copy the chosen file to the app's `.streamlit/config.toml`
+- Prefer `theme.base` (shared corporate/brand TOML or URL) when several apps should inherit the same look, then override per app
+- Choose **single-mode** (dracula, financial-dashboard, fluent, jupyter, material-ui, minimal, nord, one-dark-pro, shadcn, solarized-light, ubuntu, vscode) for a locked look
+- Choose **dual-mode** (`shadcn-dual`, `dense-dashboard`) only when the settings appearance toggle should stay available
+- Copy the chosen file to the app's `.streamlit/config.toml` (or point `theme.base` at a shared file)
 - Themes include custom fonts via Google Fonts
 - See `assets/templates/themes/README.md` for the theme list
 

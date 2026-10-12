@@ -1,6 +1,6 @@
 # Creating Streamlit themes
 
-Configure themes in `.streamlit/config.toml`, optionally sharing a `theme.base` file across apps. Use CLI flags or env vars only for temporary overrides, and use CSS only when the user explicitly asks for it.
+Configure themes in `.streamlit/config.toml`. Prefer a shared `theme.base` file (or URL) for org-wide brand, then override per app. Use CLI flags or env vars only for temporary overrides, and use CSS only when the user explicitly asks for it.
 
 Use `streamlit config show` for the full option list and descriptions. Do not invent option names.
 
@@ -14,9 +14,9 @@ Theme options can't be changed from the script (`st.set_option` rejects them). S
 
 | Goal | Use |
 |------|-----|
+| Brand many apps the same way | Shared TOML/URL via `theme.base`, per-app overrides in each `config.toml` |
 | Single locked look | `[theme]` only (`base = "light"` or `"dark"`) |
 | User can toggle light/dark | `[theme]` + `[theme.light]` + `[theme.dark]` (define both for full control) |
-| Brand many apps the same way | Shared TOML/URL via `theme.base`, per-app overrides in each `config.toml` |
 | Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` |
 | Tighter page / sidebar spacing | `paddingTop` / `paddingBottom` (prefer over `.block-container` CSS) |
 
@@ -170,8 +170,9 @@ Prefer these over CSS beyond the classic five (`primaryColor`, `backgroundColor`
 - `baseRadius`, `buttonRadius`, `showWidgetBorder`; `showSidebarBorder` (`[theme]`-only)
 - Google Fonts URL syntax; `[[theme.fontFaces]]` + `[server] enableStaticServing = true`
 - `headingFontSizes` / `headingFontWeights`, `metricValueFontSize` / `metricValueFontWeight`, `linkUnderline`
+- Shared `theme.base` file/URL for multi-app brand inheritance
+- Dual light/dark sections and sidebars when those shapes fit the goal
 - `paddingTop` / `paddingBottom` (main and sidebar — prefer over `.block-container` CSS)
-- Dual light/dark, sidebars, shared `theme.base`
 
 ## Color configuration
 
@@ -499,11 +500,11 @@ Most options hot-reload on save + rerun. `fontFaces` additions and updates apply
 
 ## Theme templates
 
-Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`. Prefer dual-mode templates when the settings appearance toggle should stay available.
+Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Choose single-mode or dual-mode from the goal — dual-mode is only for keeping the settings appearance toggle.
 
 | Theme | Mode | Primary | Notes |
 |-------|------|---------|-------|
-| **shadcn-dual** | Light + dark | `#18181B` / `#3F3F46` | Dual-mode + sidebars; start here for toggleable branding |
+| **shadcn-dual** | Light + dark | `#18181B` / `#3F3F46` | Dual-mode + sidebars when users should toggle appearance |
 | **dense-dashboard** | Light + dark | `#1D4ED8` / `#1E40AF` | Dual-mode + tighter `paddingTop`/`paddingBottom` for KPI layouts |
 | **dracula** | Dark (locked) | `#BD93F9` | Fira Sans, JetBrains Mono |
 | **financial-dashboard** | Dark (locked) | `#60A5FA` | Inter, JetBrains Mono |
@@ -518,7 +519,7 @@ Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config
 | **ubuntu** | Light (locked) | `#E95420` | Ubuntu, Ubuntu Mono |
 | **vscode** | Dark (locked) | `#0078D4` | Segoe UI, Fira Code |
 
-See `assets/templates/themes/README.md`. Single-mode templates stay locked looks; adapt them into light/dark (+ sidebars) using `shadcn-dual`, `dense-dashboard`, or the dual-mode example above when the app should toggle.
+See `assets/templates/themes/README.md`. For org-wide brand, put shared keys in a `theme.base` file and override per app. Use dual-mode templates (or split a single-mode template into light/dark) only when the app should toggle.
 
 ## References
 

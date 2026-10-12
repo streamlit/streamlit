@@ -1,12 +1,20 @@
 # Streamlit theme templates
 
 Ready-to-use theme configs. Each file in `configs/` is a complete theme
-block — paste into your app's `.streamlit/config.toml`.
+block — paste into your app's `.streamlit/config.toml`, or adapt into a
+shared brand file and point each app’s `theme.base` at it.
 
-Prefer a **dual-mode** template when users should keep the settings
-light/dark toggle. Use a single-mode template only for a locked look.
+**Encourage first:** shared `theme.base` inheritance for org-wide brand,
+then per-app overrides. Pick single-mode or dual-mode from the goal
+below — neither is the default for every app.
 
-## Dual-mode (recommended for most new apps)
+| Goal | Approach |
+|------|----------|
+| Same brand across many apps | Shared TOML/URL via `theme.base`; tweak in each app’s `config.toml` |
+| Locked single look | Single-mode template or `[theme]` only |
+| User can toggle light/dark | Dual-mode template (`shadcn-dual`, `dense-dashboard`) |
+
+## Dual-mode (settings toggle stays available)
 
 | Theme | Modes | Primary | Notes |
 |-------|-------|---------|-------|
@@ -33,5 +41,5 @@ light/dark toggle. Use a single-mode template only for a locked look.
 All themes load [Google Fonts](https://fonts.google.com/) via the
 `font = "<family>:<stylesheet_url>"` syntax — no local font files required.
 
-See `references/theme.md` for section inheritance, padding, and the full
-theming guide.
+See `references/theme.md` for shared `theme.base` inheritance, light/dark
+sections, padding, and the full theming guide.
