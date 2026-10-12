@@ -144,10 +144,10 @@ export function PlotlyChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [element.id, element.spec])
 
-  // Size-contain stretch-width, stretch-height charts so the rendered
-  // plot can't grow its parent's height. Without a definite parent
-  // height, the box falls back to the figure's `layout.height` or the
-  // default height. Fullscreen sets its own size.
+  // Size-contain charts with stretch or pixel width and height so the
+  // rendered plot cannot grow its parent. Without a definite parent
+  // height, use the figure height or the default height. Fullscreen sets
+  // its own size.
   const isSizeContained =
     !isFullScreen &&
     shouldWidthStretch(widthConfig) &&
@@ -373,7 +373,7 @@ export function PlotlyChart({
   // Plotly.js replaces layout.height below 10 with its default of 450,
   // which paints out of a size-contained box. Hide the plot instead of
   // passing that height.
-  const hidesShrunkPlot =
+  const isShrunkPlotHidden =
     isSizeContained && !hasFallbackHeight && chartContainerHeight < 10
 
   let calculatedHeight =
@@ -564,10 +564,8 @@ export function PlotlyChart({
           // Hide the plotly chart if the width is not defined yet
           // to prevent flickering issues.
           visibility:
-            hidesShrunkPlot || plotlyFigure.layout?.width === undefined
-              ? "hidden"
-              : undefined,
-          display: hidesShrunkPlot ? "none" : undefined,
+            plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
+          display: isShrunkPlotHidden ? "none" : undefined,
           // If the scrollbars are activated, it leads to flickering issues.
           // We don't need overflow here since the parent container and plot dimensions are in sync.
           overflow: "hidden",

@@ -143,7 +143,10 @@ export function hasNestedComposition(spec: string | object): boolean {
  */
 const COMPOSITION_KEYS = ["facet", "repeat", "concat", "hconcat", "vconcat"]
 
-/** Vega-Lite spec string or object. `undefined` for invalid JSON, null, and arrays. */
+/**
+ * Parses a Vega-Lite spec string (objects pass through) into a plain object,
+ * or returns undefined for invalid JSON, null, and arrays.
+ */
 const parseSpecObject = (
   spec: string | object
 ): Record<string, unknown> | undefined => {
@@ -308,9 +311,11 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // Pixel widths count as stretch here (see `shouldWidthStretch`).
   const isContentWidthContained =
     useStretchHeight && !useStretchWidth && isSingleView
-  // Facet, repeat, and concat charts are not size-contained. Vega applies a
-  // container height to every child view, so a fallback box would reserve one
-  // panel and paint the rest over the elements that follow.
+  // Size-contain single-view charts with a stretch or pixel height, so the
+  // rendered chart cannot feed its height back into the row. Compositions are
+  // excluded: Vega applies the container height to every child view, so one
+  // fallback box would hold one panel while the rest paint over the following
+  // elements.
   const isSizeContained = useStretchHeight && isSingleView
   // Whether Vega sizes the chart to its measured container height.
   // A composition without a definite parent height skips this, because

@@ -238,7 +238,10 @@ with st.container(
     st.button("Pixel-height chart neighbor")
 
 with st.container(horizontal=True, key="container-horizontal-stretch-plotly-fallback"):
-    st.plotly_chart(px.line(df, x="x", y="y"), height="stretch")
+    # 320 is not Plotly's 450px default, so the test can tell them apart.
+    plotly_figure = px.line(df, x="x", y="y")
+    plotly_figure.update_layout(height=320)
+    st.plotly_chart(plotly_figure, height="stretch")
     st.button("Plotly neighbor")
 
 # A multi-view chart has no single height to fall back to. In a content-height
