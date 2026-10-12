@@ -31,6 +31,10 @@ import {
 } from "@emotion-icons/material-outlined"
 import { FloatingPortal } from "@floating-ui/react"
 
+import {
+  focusNextTabbable,
+  focusPrevTabbable,
+} from "@streamlit/app/src/components/MainMenu/focusTabbable"
 import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   convertRemToPx,
@@ -43,10 +47,6 @@ import {
 import type { AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
-import {
-  focusNextTabbable,
-  focusPrevTabbable,
-} from "../MainMenu/focusTabbable"
 import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledIconContainer,
@@ -98,6 +98,16 @@ const TopNavSection = ({
     () => sections.reduce((count, section) => count + section.length, 0),
     [sections]
   )
+
+  const sectionLinkOffsets = useMemo(() => {
+    const offsets: number[] = []
+    let total = 0
+    for (const section of sections) {
+      offsets.push(total)
+      total += section.length
+    }
+    return offsets
+  }, [sections])
   const lastLinkIndex = Math.max(0, flatLinkCount - 1)
 
   const [focusedIndex, setFocusedIndex] = useState(0)
@@ -273,8 +283,10 @@ const TopNavSection = ({
     return null
   }
 
-  let linkIndex = 0
-  const renderPageLink = (item: AppPage.$Properties): React.ReactElement => {
+  const renderPageLink = (
+    item: AppPage.$Properties,
+    currentLinkIndex: number
+  ): React.ReactElement => {
     const isExternal = isExternalPage(item)
     const handleClick = (e: React.MouseEvent): void => {
       if (isExternal) {
@@ -289,8 +301,6 @@ const TopNavSection = ({
     }
 
     const pageName = String(item.pageName || "")
-    const currentLinkIndex = linkIndex
-    linkIndex += 1
 
     return (
       <StyledTopNavSidebarNavLinkContainer
@@ -319,18 +329,18 @@ const TopNavSection = ({
     const sectionName = section[0].sectionHeader || ""
     const sectionLabel =
       sectionName.trim() || String(section[0].pageName || "").trim()
-    const links = section.map(item => renderPageLink(item))
+    const links = section.map((item, itemIndex) =>
+      renderPageLink(item, sectionLinkOffsets[sectionIndex] + itemIndex)
+    )
 
     if (!showSections) {
       return links
     }
 
+    const sectionKey = `${section[0].pageScriptHash ?? ""}-${sectionLabel}`
+
     return (
-      <div
-        key={`top-nav-section-${sectionIndex}`}
-        role="group"
-        aria-label={sectionLabel}
-      >
+      <div key={sectionKey} role="group" aria-label={sectionLabel}>
         <StyledSectionName>
           <StreamlitMarkdown
             source={sectionName || sectionLabel}
