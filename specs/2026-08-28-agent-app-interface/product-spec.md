@@ -620,12 +620,9 @@ Rules:
   `status`, `observed_at`, and error codes — is server-generated.
 - **The `status` field reports the run, not the transport.** `ready` means the run chain
   settled and the app did not raise. See [When a run fails](#when-a-run-fails).
-- **Values are plain JSON, encoded one way everywhere.** Dates, times, and datetimes are
-  ISO 8601 text, with an offset only when the value has one; decimals are strings, to
-  keep their digits; durations are seconds; NaN and infinity are `null`; binary data is
-  its size, `{"bytes": <length>}`; a range is a two-item list; an option object is its
-  `format_func` label; integers are plain numbers at any size. The same encoding applies
-  to `value`, `props`, and table rows, and is what a request sends back.
+- **Values are plain JSON, encoded one way everywhere**, as the table after these rules
+  lists. The same encoding applies to `value`, `props`, and table rows, and is what a
+  request sends back.
 - **Versioned, and self-describing.** Additive optional fields are compatible within
   `schema_version: 1`; clients tolerate unknown fields and unknown element types. The
   rest moves with Streamlit: each app serves the OpenAPI document for its own version,
@@ -633,6 +630,20 @@ Rules:
   the description, as a model does on every connection, picks up a change with the
   upgrade. Only a script that hard-codes element types or `props` names relies on the
   additive rule, and authored keys keep its addressing stable.
+
+| Python value                       | JSON                                         | Example                              |
+| ---------------------------------- | -------------------------------------------- | ------------------------------------ |
+| `date`, `time`, `datetime`         | ISO 8601 text, with an offset only when the value has one | `"2026-10-12"`, `"09:30:00"`, `"2026-10-12T09:30:00+00:00"` |
+| `timedelta`                        | Seconds                                      | `5400.0`                             |
+| `Decimal`                          | String, to keep its digits                   | `"0.10"`                             |
+| NaN, infinity, a missing table cell | `null`                                      | `null`                               |
+| `bytes`                            | Its size                                     | `{"bytes": 3}`                       |
+| `Enum`                             | Its value                                    | `"red"`                              |
+| Set, tuple                         | List                                         | `["a", "b"]`                         |
+| Range widget value                 | Two-item list                                | `[20, 80]`                           |
+| Option object                      | Its `format_func` label                      | `"December"`                         |
+| Integer                            | Number, at any size                          | `9223372036854775807`                |
+| Anything else                      | `str(value)`                                 | `"Point(1, 2)"`                      |
 
 ### When a run fails
 
@@ -1201,7 +1212,11 @@ this list: it is a correctness fix that v1 makes.
    Dataframe row and column selection is the smaller, most common case, and its state is
    already a JSON value the runtime validates; chart selections, whose point identity is
    library-specific, follow. Then uploads, including `st.chat_input` attachments;
-   `st.data_editor` edits; deferred downloads; per-action JSON Schema; and the browser's
+   `st.data_editor` edits; deferred downloads; per-action JSON Schema, which would give
+   each entry in `actions` the schema of the value it accepts, built from named
+   encodings defined once in the OpenAPI document with standard JSON Schema formats
+   (`date`, `date-time`, `time`) and the element's own constraints (`enum` for options,
+   bounds), so the encodings above become machine-readable per key; and the browser's
    half of forms and bound parameters — applying `clear_on_submit` and rewriting a
    bound parameter when its widget is set.
 9. **Compact responses.** Large content moves to media storage, the pattern tables
