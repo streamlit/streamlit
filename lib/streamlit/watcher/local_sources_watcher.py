@@ -319,15 +319,15 @@ def get_module_paths(module: ModuleType) -> set[str]:
             else cast("list[str | None]", [])
         ),
         # https://www.python.org/dev/peps/pep-0420/
-        # Handling of "namespace packages" in which the __path__ attribute
-        # is a _NamespacePath object with a _path attribute containing
-        # the various paths of the package.
+        # Namespace packages expose a path object whose _path lists the
+        # package locations. The type is _NamespacePath through 3.14 and
+        # NamespacePath on 3.15+.
         lambda m: (
             cast("list[str | None]", list(m.__path__._path))  # ty: ignore[invalid-argument-type]
             if hasattr(m, "__path__")
             # This check prevents issues with torch classes:
             # https://github.com/streamlit/streamlit/issues/10992
-            and type(m.__path__).__name__ == "_NamespacePath"
+            and type(m.__path__).__name__ in {"_NamespacePath", "NamespacePath"}
             and hasattr(m.__path__, "_path")
             else cast("list[str | None]", [])
         ),
