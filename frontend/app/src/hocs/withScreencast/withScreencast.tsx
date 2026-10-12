@@ -94,7 +94,7 @@ function withScreencast<P extends InjectedProps>(
 
       if (currentState === "RECORDING") {
         const recorder = recorderRef.current
-        if (!recorder || recorder.getState() === "inactive") {
+        if (recorder.getState() === "inactive") {
           setCurrentState("OFF")
         } else {
           const blob = await recorder.stop()

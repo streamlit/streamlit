@@ -118,10 +118,7 @@ export function withStreamlitConnection<ArgType = any>(
       // case, the child won't be mounted and therefore won't call
       // `setFrameHeight` on its own. We do it here so that the rendered
       // error will be visible.
-      if (
-        this.state.componentError !== undefined &&
-        this.state.componentError !== null
-      ) {
+      if (this.state.componentError !== undefined) {
         Streamlit.setFrameHeight()
       }
     }
@@ -147,10 +144,7 @@ export function withStreamlitConnection<ArgType = any>(
 
     public override render(): ReactNode {
       // If our wrapped component threw an error, display it.
-      if (
-        this.state.componentError !== undefined &&
-        this.state.componentError !== null
-      ) {
+      if (this.state.componentError !== undefined) {
         return (
           <div>
             <h1>Component Error</h1>
@@ -160,10 +154,7 @@ export function withStreamlitConnection<ArgType = any>(
       }
 
       // Don't render until we've gotten our first RENDER_EVENT from Streamlit.
-      if (
-        this.state.renderData === undefined ||
-        this.state.renderData === null
-      ) {
+      if (this.state.renderData === undefined) {
         return null
       }
 

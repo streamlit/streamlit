@@ -391,10 +391,6 @@ function ComponentInstance(props: Props): ReactElement {
 
     // De-register component when unmounting and when effect is re-running
     return () => {
-      if (!contentWindow) {
-        return
-      }
-
       registry.deregisterListener(contentWindow)
     }
   }, [registry, componentName])
