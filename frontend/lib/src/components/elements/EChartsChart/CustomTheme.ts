@@ -72,8 +72,8 @@ function formatTooltipItem(value: unknown): string {
     // through so an id or year is not grouped.
     return value.trim() === "" ? "-" : value
   }
-  // The chart spec is JSON, so tooltip values are numbers, strings, booleans,
-  // or missing. Other types (including Date and bigint) do not arrive here.
+  // Chart specs are JSON, so booleans are the only other expected type.
+  // Anything else (null, Date, bigint) renders as a dash.
   if (typeof value === "boolean") {
     return String(value)
   }
@@ -297,7 +297,10 @@ export function buildStreamlitEChartsTheme(
         fontWeight: theme.fontWeights.normal,
       },
       // Returns plain text, which ECharts HTML-escapes. Never set an HTML
-      // formatter here (see the product spec's tooltip XSS note).
+      // formatter here (see the product spec's tooltip XSS note). This
+      // replaces ECharts' time-aware default, so a time or ordinal dimension
+      // that is itself the tooltip value is shortened like any other number.
+      // On an ordinary time-series chart the date stays in the header.
       valueFormatter: formatEChartsTooltipValue,
     },
     categoryAxis: axisDefaults,
