@@ -301,9 +301,7 @@ def get_module_paths(module: ModuleType) -> set[str]:
         # __file__ is the pathname of the file from which the module was loaded
         # if it was loaded from a file.
         # The __file__ attribute may be missing for certain types of modules
-        lambda m: (
-            [m.__file__] if hasattr(m, "__file__") else cast("list[str | None]", [])
-        ),
+        lambda m: [m.__file__] if hasattr(m, "__file__") else list[str | None](),
         # https://docs.python.org/3/reference/import.html#__spec__
         # The __spec__ attribute is set to the module spec that was used
         # when importing the module. one exception is __main__,
@@ -316,7 +314,7 @@ def get_module_paths(module: ModuleType) -> set[str]:
         lambda m: (
             [m.__spec__.origin]
             if hasattr(m, "__spec__") and m.__spec__ is not None
-            else cast("list[str | None]", [])
+            else list[str | None]()
         ),
         # https://www.python.org/dev/peps/pep-0420/
         # Namespace packages expose a path object whose _path lists the
@@ -329,7 +327,7 @@ def get_module_paths(module: ModuleType) -> set[str]:
             # https://github.com/streamlit/streamlit/issues/10992
             and type(m.__path__).__name__ in {"_NamespacePath", "NamespacePath"}
             and hasattr(m.__path__, "_path")
-            else cast("list[str | None]", [])
+            else list[str | None]()
         ),
     ]
 
