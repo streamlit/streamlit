@@ -375,7 +375,8 @@ export function isFromWindows(): boolean {
 }
 
 /**
- * Sets cookie value
+ * Sets a cookie value. Silently skips the write when the document cannot
+ * store cookies (for example, a sandboxed iframe without `allow-same-origin`).
  */
 export function setCookie(
   name: string,
@@ -386,7 +387,12 @@ export function setCookie(
   const expirationStr: string = expirationDate
     ? `expires=${expirationDate.toUTCString()};`
     : ""
-  document.cookie = `${name}=${value};${expirationStr}path=/`
+  try {
+    document.cookie = `${name}=${value};${expirationStr}path=/`
+  } catch {
+    // Cookie writes are best-effort; callers must not rely on the value
+    // persisting.
+  }
 }
 
 export function isValidElementId(
