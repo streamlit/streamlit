@@ -337,8 +337,8 @@ if st.button("Save"):
 Prefer caching, fragments, and forms first, and only use this where the user doesn't expect an immediate reaction:
 
 - Don't use it on widgets that drive other UI (options, conditional fields, charts). Nothing else reacts, so the app looks broken.
-- Any rerun, even from an unrelated widget, delivers all pending values. Gate the work that uses them behind a button.
-- Pending values are lost on a page refresh unless the widget sets `bind="query-params"`.
+- Any browser-triggered rerun, even from an unrelated widget, delivers all pending values. Gate the work that uses them behind a button.
+- Pending values are lost on a page refresh unless the widget sets `key` and `bind="query-params"`.
 - It has no effect inside `st.form`. File, camera, and audio inputs still upload immediately; only the rerun is deferred.
 
 ## Client-side validation
