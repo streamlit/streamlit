@@ -74,6 +74,8 @@ streamlit run app.py --client.showErrorDetails=none
 streamlit run app.py --theme.primaryColor=blue
 ```
 
+Nested theme flags follow the same pattern, for example `--theme.sidebar.backgroundColor` or `--theme.light.primaryColor`. Prefer `.streamlit/config.toml` for persistent themes. See `theme.md` for section inheritance, shared `theme.base` files, and `STREAMLIT_THEME_*` names.
+
 ### Combining multiple options
 
 ```bash

@@ -68,7 +68,7 @@ function renderTopNav(
   }
 ): ReturnType<typeof renderWithContexts> {
   const navigationContextValues = getNavigationContextOutput(
-    overrides?.navigationContext || {}
+    overrides?.navigationContext ?? {}
   )
 
   return renderWithContexts(<TopNav {...getProps(props)} />, {

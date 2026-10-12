@@ -755,10 +755,17 @@ def test_select_all_parameter(app: Page):
     expect(app.get_by_role("option")).to_have_count(2)
     expect(app.get_by_role("option").nth(0)).to_have_text("apple")
 
+    # Typing keeps aria-activedescendant on the Enter target (#16841).
+    expect(input_false).to_have_attribute("aria-activedescendant", re.compile(r".+"))
+    active_id = input_false.get_attribute("aria-activedescendant")
+    assert active_id is not None
+    expect(app.locator(f'[id="{active_id}"]')).to_have_text("apple")
+
     input_false.press("Enter")
     wait_for_app_run(app)
 
     expect_text(app, "select_all False: ['apple']")
+
     expect(ms_false.locator('span[title="apricot"]')).not_to_be_visible()
     _close_dropdown(app)
 

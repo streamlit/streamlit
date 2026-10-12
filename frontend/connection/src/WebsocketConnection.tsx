@@ -49,6 +49,10 @@ import type {
   StreamlitEndpoints,
 } from "./types"
 import { buildWsUri } from "./utils"
+import {
+  formatWebsocketCloseLog,
+  isNormalWebsocketClosure,
+} from "./websocketCloseDiagnostics"
 
 export interface Args {
   /** The application's SessionInfo instance */
@@ -358,6 +362,7 @@ export class WebsocketConnection {
       // If we get a fatal error, we transition to DISCONNECTED_FOREVER
       // regardless of our current state.
       this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank error message uses the fallback
         message: errMsg || "Unknown error",
       })
       return
@@ -718,9 +723,14 @@ export class WebsocketConnection {
       }
     })
 
-    this.websocket.addEventListener("close", () => {
+    this.websocket.addEventListener("close", (event: CloseEvent) => {
       if (checkWebsocket()) {
-        LOG.warn("WebSocket onclose")
+        const closeLog = formatWebsocketCloseLog(event, this.state)
+        if (isNormalWebsocketClosure(event.code, event.wasClean)) {
+          LOG.info(closeLog)
+        } else {
+          LOG.warn(closeLog)
+        }
         this.closeConnection()
         this.stepFsm("CONNECTION_CLOSED")
       }

@@ -48,7 +48,7 @@ const createChainableMethods = (renderDotImpl?: Mock): MockGraphvizChain => {
     scale: () => chainable,
     engine: () => chainable,
     renderDot:
-      renderDotImpl ||
+      renderDotImpl ??
       vi.fn((_spec: string, callback?: () => void) => {
         callback?.()
 

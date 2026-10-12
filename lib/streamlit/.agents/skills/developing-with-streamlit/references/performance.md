@@ -337,6 +337,24 @@ Caveats for `on_change="ignore"`:
 - Inside `st.form`, `on_change="ignore"` has no effect; the form already defers commits until submit.
 - `st.file_uploader`, `st.camera_input`, and `st.audio_input` still upload the file, photo, or recording immediately; only the rerun is deferred.
 
+## Client-side validation
+
+Use client-side validation and limits whenever the widget already supports them. They catch bad input in the browser, which avoids a rerun and gives the user immediate feedback.
+
+- `st.text_input`: `validate`, `required`, `max_chars`, and `type` (`type="email"` and `type="url"` check the format by default).
+- `st.text_area` and `st.chat_input`: `max_chars`.
+- `st.number_input`: `min_value`, `max_value`, `step`, and `required`.
+- `st.date_input` and `st.datetime_input`: `min_value` and `max_value`. `st.datetime_input` also takes `step`.
+- `st.data_editor`: the same kinds of limits via `st.column_config`.
+- `st.file_uploader`: `type` rejects a disallowed file before upload.
+
+```python
+email = st.text_input("Email", type="email", required=True)
+qty = st.number_input("Quantity", min_value=1, max_value=99, step=1)
+```
+
+These checks are a UX guardrail, not a security boundary. See [Widget input constraints are mostly client-side](session-state.md#widget-input-constraints-are-mostly-client-side).
+
 ## Conditional rendering
 
 **This is critical and often missed.**

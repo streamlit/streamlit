@@ -79,7 +79,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
         return (
           <TopNavSection
             sections={[item]}
-            title={item[0].sectionHeader || ""}
+            title={item[0].sectionHeader ?? ""}
             handlePageChange={onPageChange}
             endpoints={endpoints}
             pageLinkBaseUrl={pageLinkBaseUrl}
