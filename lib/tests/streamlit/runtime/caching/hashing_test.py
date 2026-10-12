@@ -324,7 +324,16 @@ class HashTest(unittest.TestCase):
         assert is_type(a, "builtins.getset_descriptor")
 
         assert get_hash(a) == get_hash(a)
-        assert get_hash(a) != get_hash(b)
+        # Python 3.15 shares object's __dict__ descriptor, so
+        # A.__dict__["__dict__"] and B.__dict__["__dict__"] are one object and
+        # hash the same. On 3.11-3.14 each class has its own descriptor.
+        if a is b:
+            assert get_hash(a) == get_hash(b)
+        else:
+            assert get_hash(a) != get_hash(b)
+
+        # Distinct builtin descriptors stay distinct on every supported version.
+        assert get_hash(int.__dict__["real"]) != get_hash(int.__dict__["imag"])
 
     def test_dict(self):
         assert get_hash({1: 1}) == get_hash({1: 1})

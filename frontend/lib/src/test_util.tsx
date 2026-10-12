@@ -534,7 +534,7 @@ export function createTestFile(
       js: "application/javascript",
       json: "application/json",
     }
-    mimeType = mimeTypes[ext || ""] || "application/octet-stream"
+    mimeType = mimeTypes[ext ?? ""] || "application/octet-stream"
   }
 
   return new File([content], fileName, { type: mimeType })
@@ -567,6 +567,7 @@ export function createDirectoryFiles(
   }>
 ): File[] {
   return files.map(({ content, path, mimeType = "text/plain" }) => {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank file name uses file
     const fileName = path.split("/").pop() || "file"
     return createFileWithPath(content, fileName, path, mimeType)
   })

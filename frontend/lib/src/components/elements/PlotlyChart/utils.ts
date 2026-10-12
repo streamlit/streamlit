@@ -72,6 +72,7 @@ function getLegendGroup(data: unknown): string | undefined {
   if (typeof data !== "object" || data === null) {
     return undefined
   }
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank legend group is omitted
   return (data as { legendgroup?: string }).legendgroup || undefined
 }
 

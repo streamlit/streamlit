@@ -61,7 +61,7 @@ const useWidgetManagerElementState = <T,>({
     [widgetMgr, id, key]
   )
 
-  const element = useMemo(() => ({ formId: formId || "" }), [formId])
+  const element = useMemo(() => ({ formId: formId ?? "" }), [formId])
   const onFormCleared = useCallback(
     () => setState(defaultValue),
     [defaultValue, setState]

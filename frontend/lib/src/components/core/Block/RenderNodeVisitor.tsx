@@ -60,6 +60,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   }
 
   private getCurrentKey(elementId?: string): string {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank key override falls through to the element id
     return this.elementKeyOverride || elementId || this.index.toString()
   }
 
@@ -86,6 +87,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     // Use blockId as React key when available so that keyed containers
     // maintain component identity across positional shifts (e.g. when a
     // conditional element above the container causes it to move).
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
     const key = this.getCurrentKey(node.deltaBlock?.id || undefined)
     this.index += 1
     const renderer = <BlockNodeRenderer key={key} {...childProps} />

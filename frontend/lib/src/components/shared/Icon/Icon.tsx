@@ -42,9 +42,10 @@ const getDefaultProps = ({
   padding,
   color,
 }: GetDefaultPropsArgs): DefaultProps => ({
-  size: size || "md",
-  margin: margin || "",
-  padding: padding || "",
+  size: size ?? "md",
+  margin: margin ?? "",
+  padding: padding ?? "",
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank color means unset
   color: color || undefined,
 })
 
@@ -99,7 +100,7 @@ export const EmojiIcon = memo(function EmojiIcon({
 
   return (
     <StyledEmojiIcon
-      data-testid={testid || "stIconEmoji"}
+      data-testid={testid ?? "stIconEmoji"}
       aria-hidden="true"
       {...getDefaultProps({ size, margin, padding, color })}
     >

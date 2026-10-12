@@ -141,6 +141,7 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   // Blank input is treated as absent: aria-label=" " computes to an empty
   // accessible name, which is worse than none. Native <table> already has
   // the table role — do not add role="figure" or role="img".
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const accessibleName = element.alt?.trim() || undefined
 
   return (
@@ -354,7 +355,7 @@ function generateTableCell(
   const styledCell = getStyledCell(table, rowIndex, columnIndex)
 
   let formattedContent =
-    styledCell?.displayContent || formatArrowCell(content, contentType)
+    styledCell?.displayContent ?? formatArrowCell(content, contentType)
   let hasStylerTooltip: boolean = false
 
   const style: React.CSSProperties = {

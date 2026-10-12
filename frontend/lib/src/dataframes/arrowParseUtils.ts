@@ -253,7 +253,7 @@ function parsePandasIndexColumnTypes(
       if (isPandasRangeIndex(indexCol)) {
         // Range indices are not part of the arrow schema, so we need to
         // create a new field with the correct type information manually:
-        const indexName = indexCol.name || ""
+        const indexName = indexCol.name ?? ""
         return {
           type: DataFrameCellType.INDEX,
           arrowField: new Field(indexName, new Int(true, 64), true),
