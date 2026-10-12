@@ -19,6 +19,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -43,7 +44,6 @@ import {
   NavigationContext,
   SidebarConfigContext,
   useEmotionTheme,
-  useExecuteWhenChanged,
   useScrollbarGutterSize,
   useWindowDimensionsContext,
 } from "@streamlit/lib"
@@ -129,9 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     return sidebarWidthLimits.defaultWidthPx.toString()
   })
 
-  const [lastInnerWidth, setLastInnerWidth] = useState<number>(
-    innerWidth ?? Infinity
-  )
+  const lastInnerWidthRef = useRef(innerWidth ?? Infinity)
 
   // When hovering sidebar header
   const [showSidebarCollapse, setShowSidebarCollapse] =
@@ -176,17 +174,20 @@ const Sidebar: React.FC<SidebarProps> = ({
     [initializeSidebarWidth]
   )
 
-  useExecuteWhenChanged(() => {
+  // Collapsing updates the parent's state, so it can't run during render. A
+  // layout effect still collapses the sidebar before paint.
+  useLayoutEffect(() => {
+    const previousInnerWidth = lastInnerWidthRef.current
+    lastInnerWidthRef.current = innerWidth
     // Collapse the sidebar if the window was narrowed and is now mobile-sized
     if (
-      innerWidth < lastInnerWidth &&
+      innerWidth < previousInnerWidth &&
       innerWidth <= mediumBreakpointPx &&
       !isCollapsed
     ) {
       onToggleCollapse(true, false)
     }
-    setLastInnerWidth(innerWidth)
-  }, [innerWidth])
+  }, [innerWidth, mediumBreakpointPx, isCollapsed, onToggleCollapse])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent): void => {
