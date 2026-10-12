@@ -1,6 +1,6 @@
 # Creating Streamlit themes
 
-Configure themes in `.streamlit/config.toml`. Prefer a shared `theme.base` file (or URL) for org-wide brand, then override per app. Use CLI flags or env vars only for temporary overrides, and use CSS only when the user explicitly asks for it.
+Configure themes in `.streamlit/config.toml`. When several apps share a brand, point each app's `theme.base` at one shared file (or URL) and override per app. Use CLI flags or env vars only for temporary overrides, and use CSS only when the user explicitly asks for it.
 
 Use `streamlit config show` for the full option list and descriptions. Do not invent option names.
 
@@ -25,7 +25,7 @@ Relative `theme.base` paths resolve from the `streamlit run` working directory, 
 **Where to put keys** (placement the table above leaves out)
 
 1. Shared across modes? → put fonts, radii, `showWidgetBorder` / `showSidebarBorder`, and padding on `[theme]` (only keys that should apply to both light and dark)
-2. Toggle light/dark? → put per-mode colors on `[theme.light]` and `[theme.dark]`; do not put mode-specific palettes on `[theme]` (they apply to both modes). See `shadcn-dual` or the dual-mode example below
+2. Toggle light/dark? → put per-mode colors on `[theme.light]` and `[theme.dark]`. A color on `[theme]` also reaches dark mode unless `[theme.dark]` overrides it, which the shared-brand example relies on. See `shadcn-dual` or the dual-mode example below
 3. Sidebar should contrast or match? → `[theme.sidebar]` for a locked theme; `[theme.light.sidebar]` / `[theme.dark.sidebar]` when the appearance toggle stays on. Shared sidebar padding can sit on `[theme.sidebar]`
 4. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` on the section for that mode (light, dark, or locked `[theme]`)
 
@@ -517,7 +517,7 @@ Most options hot-reload on save + rerun. `fontFaces` additions and updates apply
 
 ## Theme templates
 
-Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Choose single-mode or dual-mode from the goal — dual-mode is only for keeping the settings appearance toggle.
+Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Choose a single- or dual-mode template based on whether users should control appearance; use dual mode only when the settings appearance toggle should stay available.
 
 | Theme | Mode | Primary | Fonts | Notes |
 |-------|------|---------|-------|-------|

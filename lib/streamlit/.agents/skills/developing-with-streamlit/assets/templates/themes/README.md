@@ -9,10 +9,9 @@ radii, borders, chart/dataframe palettes) in one `theme.base` file and
 override per app. Keep app-specific layout tweaks (padding, denser
 sidebar, one-off primary) in each app’s `config.toml`. Streamlit resolves
 a relative `theme.base` path from the `streamlit run` working directory,
-not from `config.toml`. Otherwise, copy a template straight into
-`.streamlit/config.toml`. Pick single-mode or dual-mode from the goal
-below; a new app should toggle light and dark only when that toggle is
-wanted.
+not from `config.toml`. For a single app, copy a template straight into
+`.streamlit/config.toml`. Choose single or dual mode from the goal below;
+use dual mode only when users should control appearance.
 
 | Goal | Approach |
 |------|----------|
