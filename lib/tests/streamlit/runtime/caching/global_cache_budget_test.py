@@ -308,7 +308,10 @@ def test_victim_selection_resolves_only_the_oldest_storage() -> None:
     budget._storages[second._global_storage_id] = second_ref
     budget._max_bytes = 1
 
-    victim = budget._reserve_victim(protected=(-1, "none"))
+    victim = budget._select_victim_snapshot(
+        protected=(-1, "none"),
+        excluded=set(),
+    )
 
     assert victim is not None
     assert victim[0] is first
@@ -373,6 +376,40 @@ def test_read_between_selection_and_eviction_retries_current_lru() -> None:
         second.get("b")
     assert second.get("c") == b"c"
     assert budget.total_bytes == 4
+
+
+def test_contended_victim_is_attempted_only_once_per_enforcement() -> None:
+    """A repeatedly refreshed victim cannot stall every cache writer."""
+    budget = GlobalCacheBudget(max_bytes=6)
+    old_storage = _create_storage(budget, "old")
+    writer_storage = _create_storage(budget, "writer")
+    old_storage.set("old", b"aaaaaa")
+    original_evict = old_storage._evict_from_mem_cache
+    attempts = 0
+
+    def refresh_before_evict(
+        key: str,
+        expected_generation: int,
+        expected_access_version: int,
+    ) -> bool:
+        nonlocal attempts
+        attempts += 1
+        if attempts > 1:
+            raise AssertionError("The same contended victim was retried")
+        assert old_storage.get(key) == b"aaaaaa"
+        return original_evict(key, expected_generation, expected_access_version)
+
+    with patch.object(
+        old_storage,
+        "_evict_from_mem_cache",
+        side_effect=refresh_before_evict,
+    ):
+        writer_storage.set("new", b"b")
+
+    assert attempts == 1
+    assert budget.total_bytes == 7
+    assert old_storage.get("old") == b"aaaaaa"
+    assert writer_storage.get("new") == b"b"
 
 
 def test_overlapping_writes_are_serialized_through_enforcement() -> None:

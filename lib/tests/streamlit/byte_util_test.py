@@ -85,6 +85,16 @@ def test_cache_data_max_size_to_bytes_ignores_decimal_context() -> None:
         assert cache_data_max_size_to_bytes("1.1MB") == 11 * 1024**2 // 10
 
 
+def test_parsers_reject_long_numeric_tokens_with_streamlit_errors() -> None:
+    """Pathological digit counts cannot leak Python's native int error."""
+    value = f"{'1' * 5000}MB"
+
+    with pytest.raises(StreamlitValueError):
+        cache_data_max_size_to_bytes(value)
+    with pytest.raises(StreamlitAPIException, match="supported byte-size range"):
+        config_max_cached_data_size_to_bytes(value)
+
+
 @pytest.mark.parametrize("value", [0, "0"])
 def test_config_parser_accepts_disable_sentinel(value: object) -> None:
     """The config parser accepts numeric and string disable sentinels."""

@@ -566,6 +566,10 @@ class CacheDataAPI:
         You can clear a function's cache with ``func.clear()`` or clear the entire
         cache with ``st.cache_data.clear()``.
 
+        Streamlit limits the combined pickled size of in-memory ``st.cache_data``
+        entries with ``server.maxCachedDataSize`` (2 GiB by default). Set that
+        option to ``"0"`` to disable the process-wide budget.
+
         A function's arguments must be hashable to cache it. Streamlit makes a
         best effort to hash a variety of objects, but the fallback hashing method
         requires that the argument be pickleable, also. If you have an unhashable
@@ -617,9 +621,11 @@ class CacheDataAPI:
             Note that ``ttl`` will be ignored if ``persist="disk"`` or ``persist=True``.
 
         max_entries : int or None
-            The maximum number of entries to keep in the cache, or None
-            for an unbounded cache. When a new entry is added to a full cache,
-            the least recently used cached entry will be removed. Defaults to None.
+            The maximum number of entries to keep in this function's cache, or
+            ``None`` (default) for no entry-count limit. When a new entry is added
+            to a full cache, Streamlit removes the least-recently-used entry.
+            ``None`` does not disable the process-wide
+            ``server.maxCachedDataSize`` budget.
 
         max_size : int, str, or None
             The maximum serialized (pickled) size of this function's in-memory
@@ -630,9 +636,9 @@ class CacheDataAPI:
             The process-wide ``server.maxCachedDataSize`` budget applies.
 
             On a write that would exceed the limit, Streamlit drops
-            least-recently-used entries until the new value fits. One value larger
-            than the limit is kept, after every other entry in this function's cache
-            is evicted, and Streamlit logs a warning once. With ``persist="disk"``,
+            least-recently-used entries until the new value fits. If a single value
+            is larger than ``max_size``, Streamlit evicts every other entry for this
+            function, keeps that value, and logs a warning. With ``persist="disk"``,
             only the in-memory copy is dropped; a later read can load the disk copy
             again. This measures pickled bytes, not process RSS.
 

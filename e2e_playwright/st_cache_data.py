@@ -192,11 +192,11 @@ def max_size_execution_counts(session_key: str) -> dict[str, int]:  # noqa: ARG0
     return {}
 
 
-@st.cache_data(max_size="1KiB", show_spinner=False)
+@st.cache_data(max_size="10KiB", show_spinner=False)
 def max_size_lru_value(session_key: str, key: str) -> bytes:
     counts = max_size_execution_counts(session_key)
     counts[key] = counts.get(key, 0) + 1
-    return bytes(200)
+    return bytes(4000)
 
 
 @st.cache_data(max_size="1B", show_spinner=False)

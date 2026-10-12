@@ -137,7 +137,7 @@ class GlobalCacheBudget(StatsProvider):
 
     @contextmanager
     def write_enforcement(self) -> Generator[None, None, None]:
-        """Hold the write lock until each write finishes enforcing the budget."""
+        """Serialize a storage write with its process-wide budget enforcement."""
         if self._max_bytes is None:
             yield
             return
@@ -248,8 +248,10 @@ class GlobalCacheBudget(StatsProvider):
         for storage in storages:
             storage._reap_expired_entries()
 
-    def _reserve_victim(
-        self, protected: tuple[int, str]
+    def _select_victim_snapshot(
+        self,
+        protected: tuple[int, str],
+        excluded: set[tuple[int, str]],
     ) -> tuple[InMemoryCacheStorageWrapper, str, _EntryRecord] | None:
         with self._lock:
             self._drain_pending_unregisters_locked()
@@ -257,29 +259,41 @@ class GlobalCacheBudget(StatsProvider):
                 return None
 
             while self._entries:
-                entries = iter(self._entries.items())
-                entry_key, record = next(entries)
-                if entry_key == protected:
-                    candidate = next(entries, None)
-                    if candidate is None:
-                        return None
-                    entry_key, record = candidate
-
-                storage_ref = self._storages.get(entry_key[0])
-                storage = storage_ref() if storage_ref is not None else None
-                if storage is None:
-                    self._unregister_locked(entry_key[0])
-                    if self._total_bytes <= self._max_bytes:
-                        return None
-                    continue
-                # Snapshot versions while holding the budget lock. The live record is
-                # mutated in place on reads to keep allocations off the hit path.
-                return (
-                    storage,
-                    entry_key[1],
-                    _EntryRecord(record.size, record.generation, record.access_version),
-                )
+                stale_storage_id = None
+                for entry_key, record in self._entries.items():
+                    if entry_key == protected or entry_key in excluded:
+                        continue
+                    storage_ref = self._storages.get(entry_key[0])
+                    storage = storage_ref() if storage_ref is not None else None
+                    if storage is None:
+                        stale_storage_id = entry_key[0]
+                        break
+                    # Snapshot versions while holding the budget lock. The live record
+                    # is mutated in place on reads to avoid hit-path allocations.
+                    return (
+                        storage,
+                        entry_key[1],
+                        _EntryRecord(
+                            record.size,
+                            record.generation,
+                            record.access_version,
+                        ),
+                    )
+                if stale_storage_id is None:
+                    return None
+                self._unregister_locked(stale_storage_id)
+                if self._total_bytes <= self._max_bytes:
+                    return None
             return None
+
+    def _protected_entry_alone_exceeds_budget(self, protected: tuple[int, str]) -> bool:
+        with self._lock:
+            self._drain_pending_unregisters_locked()
+            return (
+                self._max_bytes is not None
+                and self._total_bytes > self._max_bytes
+                and all(entry_key == protected for entry_key in self._entries)
+            )
 
     def enforce_budget(self, protected: tuple[int, str]) -> None:
         """Evict LRU entries without evicting the write currently being enforced.
@@ -295,13 +309,15 @@ class GlobalCacheBudget(StatsProvider):
             # TTL expiry is local to each memory cache. Reconcile all expired entries
             # before selecting from the remaining live global LRU.
             self._reap_expired_entries()
+            attempted: set[tuple[int, str]] = set()
             while True:
-                victim = self._reserve_victim(protected)
+                victim = self._select_victim_snapshot(protected, attempted)
                 if victim is None:
-                    if self.total_bytes > self._max_bytes:
+                    if self._protected_entry_alone_exceeds_budget(protected):
                         self._warn_once(self._storage_display_name(protected[0]))
                     return
                 storage, key, record = victim
+                attempted.add((storage._global_storage_id, key))
                 evicted = storage._evict_from_mem_cache(
                     key,
                     expected_generation=record.generation,
@@ -310,9 +326,8 @@ class GlobalCacheBudget(StatsProvider):
                 if evicted:
                     with self._lock:
                         self._global_evictions += 1
-                # If the entry changed since selection, eviction is skipped. Storages
-                # publish every change before releasing their lock, so the next
-                # selection sees current state and the loop makes progress.
+                # If a read changed the entry after selection, skip it for this pass.
+                # A later write retries enforcement with a fresh global LRU snapshot.
 
     def get_stats(
         self, family_names: Sequence[str] | None = None
