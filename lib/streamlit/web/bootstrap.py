@@ -22,6 +22,7 @@ import sys
 from typing import TYPE_CHECKING, Any, Final, Literal
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
+from streamlit.errors import StreamlitSecretNotFoundError
 from streamlit.logger import get_logger
 from streamlit.watcher import report_watchdog_availability, watch_file
 from streamlit.web.server import Server, server_address_is_unix_socket, server_util
@@ -240,9 +241,15 @@ def prepare_streamlit_environment(main_script_path: str) -> None:
     _initialize_mimetypes()
     _fix_pydeck_mapbox_api_warning()
 
-    # Missing secrets files are ignored. Parse errors are logged and startup continues.
+    # load_if_toml_exists() is a non-raising probe used by cookie/XSRF/auth
+    # setup during app construction, which runs before this function. Call
+    # the strict parser here so a malformed file is logged once without
+    # aborting startup. Missing files stay silent.
     try:
-        secrets.load_if_toml_exists()
+        secrets._parse()
+    except StreamlitSecretNotFoundError as exc:
+        if exc.error_id != "no-secrets-found":
+            _LOGGER.exception("Failed to load secrets.toml file")
     except Exception:
         _LOGGER.exception("Failed to load secrets.toml file")
 

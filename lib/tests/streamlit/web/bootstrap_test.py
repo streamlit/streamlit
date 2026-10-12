@@ -19,6 +19,7 @@ import os
 import os.path
 import sys
 import types
+from contextlib import contextmanager
 from io import StringIO
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import Mock, mock_open, patch
@@ -372,7 +373,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         assert not re.search(r"(?<!Local )(?<!Network )URL:", out)
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
-    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
+    @patch("streamlit.web.bootstrap.secrets._parse", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
     def test_maybe_print_static_folder_warning_called_once_on_server_start(
@@ -497,7 +498,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
-    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
+    @patch("streamlit.web.bootstrap.secrets._parse")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
         bootstrap._on_server_start(Mock())
@@ -507,7 +508,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._LOGGER.exception")
-    @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
+    @patch("streamlit.web.bootstrap.secrets._parse")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):
         """If secrets throws an error on startup, we catch and log it."""
         mock_exception = Exception("Secrets exploded!")
@@ -559,7 +560,8 @@ class BootstrapSecretsLoadTest(TestCase):
         os.environ.clear()
         os.environ.update(self._prev_environ)
 
-    def _prepare_with_secrets_file(self, contents: str | None) -> None:
+    @contextmanager
+    def _secrets_patches(self, contents: str | None):
         open_patch = (
             patch("builtins.open", mock_open(read_data=contents))
             if contents is not None
@@ -568,8 +570,14 @@ class BootstrapSecretsLoadTest(TestCase):
         with (
             patch.object(bootstrap, "secrets", self.secrets),
             patch(
-                "streamlit.config.get_option",
-                return_value=[self.MOCK_SECRETS_PATH],
+                "streamlit.web.server.server_util.secrets_singleton",
+                self.secrets,
+            ),
+            patch_config_options(
+                {
+                    "secrets.files": [self.MOCK_SECRETS_PATH],
+                    "server.cookieSecret": "from-config",
+                }
             ),
             patch("streamlit.watcher.path_watcher.watch_file"),
             patch.object(bootstrap, "_initialize_mimetypes"),
@@ -577,6 +585,10 @@ class BootstrapSecretsLoadTest(TestCase):
             patch.object(bootstrap, "_maybe_print_static_folder_warning"),
             open_patch,
         ):
+            yield
+
+    def _prepare_with_secrets_file(self, contents: str | None) -> None:
+        with self._secrets_patches(contents):
             bootstrap.prepare_streamlit_environment("app.py")
 
     def test_absent_secrets_file_is_non_fatal(self) -> None:
@@ -586,28 +598,43 @@ class BootstrapSecretsLoadTest(TestCase):
         mock_log.assert_not_called()
         assert os.environ.get("SMTP_PASSWORD") is None
 
-    def test_malformed_secrets_toml_logs_path_and_parser_detail(self) -> None:
-        """Malformed TOML must log a precise, secret-safe diagnostic at startup."""
+    def test_malformed_secrets_toml_logs_and_continues(self) -> None:
+        """Malformed TOML logs once and does not abort ``prepare_streamlit_environment``."""
         with self.assertLogs(bootstrap._LOGGER, level="ERROR") as logs:
             self._prepare_with_secrets_file(
                 'SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = ---\n'
             )
 
-        assert logs.records
+        assert len(logs.records) == 1
         record = logs.records[0]
         assert "Failed to load secrets.toml file" in record.getMessage()
         assert record.exc_info is not None
-        exc = record.exc_info[1]
-        assert isinstance(exc, StreamlitSecretNotFoundError)
-        diagnostic = str(exc)
-        error = exc.exec_kwargs["error"]
-        assert "Error parsing secrets file" in diagnostic
-        assert self.MOCK_SECRETS_PATH in diagnostic
-        assert error
-        assert error in diagnostic
-        assert "synthetic-secret-value" not in diagnostic
-        assert "synthetic-secret-value" not in error
-        assert os.environ.get("SMTP_PASSWORD") is None
+        assert isinstance(record.exc_info[1], StreamlitSecretNotFoundError)
+
+    def test_malformed_secrets_do_not_abort_middleware_construction(self) -> None:
+        """Session middleware is built before ``prepare_streamlit_environment``."""
+        from starlette.middleware.sessions import SessionMiddleware
+
+        from streamlit.web.server.starlette.starlette_app import (
+            create_streamlit_middleware,
+        )
+
+        malformed = 'SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = ---\n'
+        with self._secrets_patches(malformed):
+            middleware_list = create_streamlit_middleware()
+            session_middleware = next(
+                mw for mw in middleware_list if mw.cls is SessionMiddleware
+            )
+            assert session_middleware.kwargs["secret_key"] == "from-config"
+
+            with self.assertLogs(bootstrap._LOGGER, level="ERROR") as logs:
+                bootstrap.prepare_streamlit_environment("app.py")
+
+        assert len(logs.records) == 1
+        record = logs.records[0]
+        assert "Failed to load secrets.toml file" in record.getMessage()
+        assert record.exc_info is not None
+        assert isinstance(record.exc_info[1], StreamlitSecretNotFoundError)
 
     def test_valid_top_level_secrets_are_promoted_to_environ(self) -> None:
         """Valid scalar secrets are still copied into ``os.environ`` at startup."""

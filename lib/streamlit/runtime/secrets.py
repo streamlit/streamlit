@@ -174,11 +174,11 @@ class Secrets(Mapping[str, Any]):
     def load_if_toml_exists(self) -> bool:
         """Load secrets.toml files from disk if they exist.
 
-        Missing secrets files are optional and return ``False``. If a secrets
-        file exists but cannot be parsed, the parse error is raised.
-
-        Returns True if a secrets.toml file was successfully parsed, False
-        if no secrets file was found.
+        Returns True if a secrets.toml file was successfully parsed. Returns
+        False when no secrets file is present, or when a configured path
+        cannot be loaded (parse error, invalid path, or a directory entry
+        that is not a folder). Callers use this as a boolean availability
+        probe and must not rely on it to raise.
 
         Thread-safe.
         """
@@ -186,10 +186,9 @@ class Secrets(Mapping[str, Any]):
             self._parse()
 
             return True
-        except StreamlitSecretNotFoundError as exc:
-            if exc.error_id == "no-secrets-found":
-                return False
-            raise
+        except StreamlitSecretNotFoundError:
+            # Missing files and unloadable paths are both "secrets unavailable".
+            return False
 
     def _reset(self) -> None:
         """Clear the secrets dictionary and remove any secrets that were
@@ -301,8 +300,9 @@ class Secrets(Mapping[str, Any]):
         Raises
         ------
         StreamlitSecretNotFoundError
-            Raised if no secrets.toml file exists, or if a secrets file exists
-            but cannot be parsed.
+            Raised when no secrets file exists, or when a configured path
+            cannot be loaded (parse error, invalid path, or a directory
+            entry that is not a folder).
 
         """
         # Avoid taking a lock for the common case where secrets are already
@@ -514,6 +514,7 @@ class Secrets(Mapping[str, Any]):
             "_programmatic_secrets",
             "file_change_listener",
             "load_if_toml_exists",
+            "_parse",
         }:
             super().__setattr__(key, value)
         else:

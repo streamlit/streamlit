@@ -144,12 +144,17 @@ class SecretsTest(unittest.TestCase):
         read_data='SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = ---\n',
     )
     @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
-    def test_load_if_toml_exists_raises_for_malformed_toml(self, mock_get_option, _):
-        """Malformed TOML is not classified as an absent secrets file."""
+    def test_load_if_toml_exists_returns_false_for_malformed_toml(
+        self, mock_get_option, _
+    ):
+        """Malformed TOML is treated as unavailable by the boolean probe."""
+        assert not self.secrets.load_if_toml_exists()
+        assert os.environ.get("SMTP_PASSWORD") is None
+
         with pytest.raises(
             StreamlitSecretNotFoundError, match="Error parsing secrets file"
         ) as excinfo:
-            self.secrets.load_if_toml_exists()
+            self.secrets._parse()
 
         message = str(excinfo.value)
         error = excinfo.value.exec_kwargs["error"]
@@ -159,7 +164,6 @@ class SecretsTest(unittest.TestCase):
         assert error in message
         assert "synthetic-secret-value" not in message
         assert "synthetic-secret-value" not in error
-        assert os.environ.get("SMTP_PASSWORD") is None
 
     @patch("streamlit.config.get_option", return_value=[MOCK_SECRETS_FILE_LOC])
     def test_missing_toml_error(self, _):
