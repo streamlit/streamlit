@@ -456,7 +456,8 @@ def test_top_nav_section_keyboard_and_aria(app: Page):
     """Test keyboard dismissal and ARIA state for top nav section popovers.
 
     Escape must close the popover and return focus to the trigger, while
-    aria-expanded reflects the open or closed state.
+    aria-expanded reflects the open or closed state. ArrowDown opens the menu
+    and moves focus to the first page link (#17339).
     """
     app.set_viewport_size({"width": 1280, "height": 800})
 
@@ -467,6 +468,7 @@ def test_top_nav_section_keyboard_and_aria(app: Page):
 
     # Trigger starts closed with correct ARIA state
     expect(section_trigger).to_have_attribute("aria-expanded", "false")
+    expect(section_trigger).to_have_attribute("aria-haspopup", "menu")
     expect(app.get_by_test_id("stTopNavPopover")).not_to_be_visible()
 
     # Click to open — aria-expanded updates and popover appears
@@ -479,6 +481,15 @@ def test_top_nav_section_keyboard_and_aria(app: Page):
     expect(section_trigger).to_have_attribute("aria-expanded", "false")
     expect(app.get_by_test_id("stTopNavPopover")).not_to_be_visible()
     expect(section_trigger).to_be_focused()
+
+    # ArrowDown opens the menu and focuses the first dropdown link
+    section_trigger.focus()
+    app.keyboard.press("ArrowDown")
+    expect(section_trigger).to_have_attribute("aria-expanded", "true")
+    popover = app.get_by_test_id("stTopNavPopover").locator("visible=true")
+    first_link = popover.get_by_test_id("stTopNavDropdownLink").first
+    expect(first_link).to_be_visible()
+    expect(first_link).to_be_focused()
 
 
 def test_mixed_sections_visual_regression(

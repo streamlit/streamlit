@@ -42,6 +42,10 @@ export interface SidebarNavLinkProps {
   widgetsDisabled: boolean
   isExternal?: boolean
   externalUrl?: string | null
+  /** Roving tabindex for top-nav dropdown menu keyboard navigation. */
+  menuTabIndex?: number
+  /** Ref callback for the underlying anchor (top-nav dropdown menus). */
+  itemRef?: (element: HTMLAnchorElement | null) => void
 }
 
 const SidebarNavLink = ({
@@ -55,6 +59,8 @@ const SidebarNavLink = ({
   widgetsDisabled,
   isExternal,
   externalUrl,
+  menuTabIndex,
+  itemRef,
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
   // If connection state not connected, or host has disabled inputs,
@@ -83,6 +89,7 @@ const SidebarNavLink = ({
       data-testid={navLinkContainerTestId}
     >
       <StyledSidebarNavLink
+        ref={itemRef}
         data-testid={navLinkTestId}
         isActive={effectiveIsActive}
         disabled={disableSidebarNavLinks}
@@ -91,6 +98,8 @@ const SidebarNavLink = ({
         aria-current={effectiveIsActive ? "page" : undefined}
         target={isExternal ? "_blank" : undefined}
         rel={isExternal ? "noopener noreferrer" : undefined}
+        role={isInDropdown ? "menuitem" : undefined}
+        tabIndex={isInDropdown ? menuTabIndex : undefined}
       >
         {icon?.length ? (
           <StyledSidebarNavIcon isActive={effectiveIsActive}>

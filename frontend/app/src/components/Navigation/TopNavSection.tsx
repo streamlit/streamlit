@@ -14,7 +14,16 @@
  * limitations under the License.
  */
 
-import { Fragment, useCallback, useRef, useState } from "react"
+import {
+  type FocusEvent,
+  type KeyboardEvent,
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import {
   KeyboardArrowDown,
@@ -34,6 +43,10 @@ import {
 import type { AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
+import {
+  focusNextTabbable,
+  focusPrevTabbable,
+} from "../MainMenu/focusTabbable"
 import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledIconContainer,
@@ -57,6 +70,9 @@ interface TopNavSectionProps {
   widgetsDisabled: boolean
 }
 
+/** Why the menu was closed — drives focus-return behavior. */
+type CloseReason = "escape" | "tab" | "shift-tab" | "other"
+
 const TopNavSection = ({
   title,
   sections,
@@ -68,10 +84,30 @@ const TopNavSection = ({
   widgetsDisabled,
 }: TopNavSectionProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false)
+  const menuId = useId()
   const theme = useEmotionTheme()
   const showSections = sections.length > 1
 
   const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const linkRefs = useRef<Array<HTMLAnchorElement | null>>([])
+  const closeReasonRef = useRef<CloseReason>("other")
+  const prevOpenRef = useRef(false)
+  const openFocusIndexRef = useRef(0)
+
+  const flatLinkCount = useMemo(
+    () => sections.reduce((count, section) => count + section.length, 0),
+    [sections]
+  )
+  const lastLinkIndex = Math.max(0, flatLinkCount - 1)
+
+  const [focusedIndex, setFocusedIndex] = useState(0)
+  const clampedIndex =
+    flatLinkCount === 0 ? -1 : Math.min(focusedIndex, lastLinkIndex)
+
+  const closeMenu = useCallback((reason: CloseReason = "other"): void => {
+    closeReasonRef.current = reason
+    setOpen(false)
+  }, [])
 
   const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open,
@@ -81,21 +117,153 @@ const TopNavSection = ({
 
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: open,
-    onClose: () => setOpen(false),
+    onClose: () => closeMenu("other"),
     floatingSetFn: setFloating,
     referenceSetFn: setReference,
-    restoreFocusFn: () => triggerRef.current?.focus(),
   })
 
-  // Attach both triggerRef (for focus restoration) and setReferenceRef
-  // (for floating-ui + dismissal hit-testing) to the same button element.
+  useLayoutEffect(() => {
+    if (prevOpenRef.current && !open) {
+      const reason = closeReasonRef.current
+      closeReasonRef.current = "other"
+      const button = triggerRef.current
+      if (button) {
+        if (reason === "tab") {
+          focusNextTabbable(button)
+        } else if (reason === "shift-tab") {
+          focusPrevTabbable(button)
+        } else {
+          button.focus()
+        }
+      }
+    }
+    prevOpenRef.current = open
+  }, [open])
+
   const setNavSectionRef = useCallback(
-    (node: HTMLButtonElement | null) => {
+    (node: HTMLButtonElement | null): void => {
       triggerRef.current = node
       setReferenceRef(node)
     },
     [setReferenceRef]
   )
+
+  const focusLinkAtIndex = useCallback((index: number): void => {
+    setFocusedIndex(index)
+    linkRefs.current[index]?.focus()
+  }, [])
+
+  const setLinkRef = useCallback(
+    (index: number) =>
+      (element: HTMLAnchorElement | null): void => {
+        linkRefs.current[index] = element
+      },
+    []
+  )
+
+  const menuListRef = useCallback((node: HTMLDivElement | null): void => {
+    if (node) {
+      const index = Math.min(
+        openFocusIndexRef.current,
+        Math.max(0, linkRefs.current.length - 1)
+      )
+      openFocusIndexRef.current = 0
+      linkRefs.current[index]?.focus()
+      setFocusedIndex(index)
+    }
+  }, [])
+
+  const handleMenuFocus = (event: FocusEvent<HTMLDivElement>): void => {
+    const target = event.target
+    if (!(target instanceof HTMLAnchorElement)) {
+      return
+    }
+    const index = linkRefs.current.findIndex(el => el === target)
+    if (index !== -1) {
+      setFocusedIndex(index)
+    }
+  }
+
+  const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (flatLinkCount === 0) {
+      return
+    }
+
+    const target = event.target
+    if (
+      event.key === " " &&
+      target instanceof HTMLAnchorElement &&
+      target.getAttribute("role") === "menuitem"
+    ) {
+      event.preventDefault()
+      target.click()
+      return
+    }
+
+    switch (event.key) {
+      case "ArrowDown": {
+        event.preventDefault()
+        focusLinkAtIndex(clampedIndex >= lastLinkIndex ? 0 : clampedIndex + 1)
+        break
+      }
+      case "ArrowUp": {
+        event.preventDefault()
+        focusLinkAtIndex(clampedIndex <= 0 ? lastLinkIndex : clampedIndex - 1)
+        break
+      }
+      case "Home": {
+        event.preventDefault()
+        focusLinkAtIndex(0)
+        break
+      }
+      case "End": {
+        event.preventDefault()
+        focusLinkAtIndex(lastLinkIndex)
+        break
+      }
+      case "Tab": {
+        event.preventDefault()
+        closeMenu(event.shiftKey ? "shift-tab" : "tab")
+        break
+      }
+      default:
+        break
+    }
+  }
+
+  const openMenu = useCallback((): void => {
+    openFocusIndexRef.current = 0
+    setFocusedIndex(0)
+    setOpen(true)
+  }, [])
+
+  const handleTriggerClick = (): void => {
+    if (open) {
+      closeMenu("other")
+    } else {
+      openMenu()
+    }
+  }
+
+  const handleTriggerKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>
+  ): void => {
+    if (open || flatLinkCount === 0) {
+      return
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault()
+      openFocusIndexRef.current = 0
+      setFocusedIndex(0)
+      setOpen(true)
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault()
+      openFocusIndexRef.current = lastLinkIndex
+      setFocusedIndex(lastLinkIndex)
+      setOpen(true)
+    }
+  }
 
   if (
     isNullOrUndefined(sections) ||
@@ -105,59 +273,77 @@ const TopNavSection = ({
     return null
   }
 
-  const popoverContent = sections.map((section, _sectionIndex) => {
-    const sectionName = section[0].sectionHeader
-
-    return section.map((item, index) => {
-      const isExternal = isExternalPage(item)
-      const handleClick = (e: React.MouseEvent): void => {
-        // External links are handled by the browser (target="_blank")
-        if (isExternal) {
-          setOpen(false)
-          return
-        }
-        e.preventDefault()
-        if (item.pageScriptHash) {
-          handlePageChange(item.pageScriptHash)
-        }
-        setOpen(false)
+  let linkIndex = 0
+  const renderPageLink = (item: AppPage.$Properties): React.ReactElement => {
+    const isExternal = isExternalPage(item)
+    const handleClick = (e: React.MouseEvent): void => {
+      if (isExternal) {
+        closeMenu()
+        return
       }
+      e.preventDefault()
+      if (item.pageScriptHash) {
+        handlePageChange(item.pageScriptHash)
+      }
+      closeMenu()
+    }
 
-      // Convert potentially null pageName to string safely
-      const pageName = String(item.pageName || "")
+    const pageName = String(item.pageName || "")
+    const currentLinkIndex = linkIndex
+    linkIndex += 1
 
-      return (
-        <Fragment key={`${item.pageScriptHash}-${pageName}`}>
-          {index === 0 && showSections && (
-            <StyledSectionName>
-              <StreamlitMarkdown
-                source={sectionName || ""}
-                allowHTML={false}
-                isLabel
-                disableLinks
-                truncate
-                inheritFont
-              />
-            </StyledSectionName>
-          )}
-          <StyledTopNavSidebarNavLinkContainer>
-            <SidebarNavLink
-              icon={item.icon || null}
-              isTopNav={true}
-              isInDropdown={true}
-              isActive={currentPageScriptHash === item.pageScriptHash}
-              onClick={handleClick}
-              pageUrl={endpoints.buildAppPageURL(pageLinkBaseUrl, item)}
-              widgetsDisabled={widgetsDisabled}
-              isExternal={isExternal}
-              externalUrl={getExternalPageUrl(item)}
-            >
-              {pageName}
-            </SidebarNavLink>
-          </StyledTopNavSidebarNavLinkContainer>
-        </Fragment>
-      )
-    })
+    return (
+      <StyledTopNavSidebarNavLinkContainer
+        key={`${item.pageScriptHash}-${pageName}`}
+      >
+        <SidebarNavLink
+          icon={item.icon || null}
+          isTopNav={true}
+          isInDropdown={true}
+          isActive={currentPageScriptHash === item.pageScriptHash}
+          onClick={handleClick}
+          pageUrl={endpoints.buildAppPageURL(pageLinkBaseUrl, item)}
+          widgetsDisabled={widgetsDisabled}
+          isExternal={isExternal}
+          externalUrl={getExternalPageUrl(item)}
+          menuTabIndex={clampedIndex === currentLinkIndex ? 0 : -1}
+          itemRef={setLinkRef(currentLinkIndex)}
+        >
+          {pageName}
+        </SidebarNavLink>
+      </StyledTopNavSidebarNavLinkContainer>
+    )
+  }
+
+  const popoverContent = sections.map((section, sectionIndex) => {
+    const sectionName = section[0].sectionHeader || ""
+    const sectionLabel =
+      sectionName.trim() || String(section[0].pageName || "").trim()
+    const links = section.map(item => renderPageLink(item))
+
+    if (!showSections) {
+      return links
+    }
+
+    return (
+      <div
+        key={`top-nav-section-${sectionIndex}`}
+        role="group"
+        aria-label={sectionLabel}
+      >
+        <StyledSectionName>
+          <StreamlitMarkdown
+            source={sectionName || sectionLabel}
+            allowHTML={false}
+            isLabel
+            disableLinks
+            truncate
+            inheritFont
+          />
+        </StyledSectionName>
+        {links}
+      </div>
+    )
   })
 
   return (
@@ -165,10 +351,12 @@ const TopNavSection = ({
       <StyledNavSection
         ref={setNavSectionRef}
         type="button"
-        onClick={() => setOpen(prev => !prev)}
+        onClick={handleTriggerClick}
+        onKeyDown={handleTriggerKeyDown}
         isOpen={open}
         aria-expanded={open}
-        aria-haspopup="true"
+        aria-haspopup="menu"
+        aria-controls={open ? menuId : undefined}
         data-testid="stTopNavSection"
       >
         <StyledNavSectionText>
@@ -182,7 +370,7 @@ const TopNavSection = ({
           />
         </StyledNavSectionText>
         {!hideChevron && (
-          <StyledIconContainer>
+          <StyledIconContainer aria-hidden="true">
             <Icon
               content={open ? KeyboardArrowUp : KeyboardArrowDown}
               size="lg"
@@ -197,7 +385,15 @@ const TopNavSection = ({
             style={floatingStyles}
             data-testid="stTopNavPopoverBody"
           >
-            <StyledPopoverContent data-testid="stTopNavPopover">
+            <StyledPopoverContent
+              ref={menuListRef}
+              id={menuId}
+              data-testid="stTopNavPopover"
+              role="menu"
+              aria-label={title}
+              onFocus={handleMenuFocus}
+              onKeyDown={handleMenuKeyDown}
+            >
               {popoverContent}
             </StyledPopoverContent>
           </StyledTopNavPopoverBody>
