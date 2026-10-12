@@ -161,9 +161,9 @@ const parseSpecObject = (
 
 // Exported for testing
 /**
- * A single-view chart has one width, known before rendering. Facet, repeat,
- * and concat compositions take their width from their children. Layered
- * charts are still a single view.
+ * Whether the spec draws a single view, including layered charts, rather
+ * than a facet, repeat, or concat composition. Only a single view has one
+ * size that Streamlit can predict before Vega renders it.
  */
 export function isSingleViewChart(spec: string | object): boolean {
   const parsedSpec = parseSpecObject(spec)
@@ -180,9 +180,10 @@ export function isSingleViewChart(spec: string | object): boolean {
  * none.
  *
  * Fit autosizing renders a single-view chart exactly this wide. A missing
- * width, a non-numeric width, and a step width such as `{"step": 20}`
- * (`alt.Step(...)`) all return `undefined`, so the chart uses the default
- * chart width. Step width depends on the data domain and is not known yet.
+ * width, a non-numeric width, a width of 0 or less, and a step width such as
+ * `{"step": 20}` (`alt.Step(...)`) all return `undefined`, so the chart uses
+ * the default chart width. Step width depends on the data domain and is not
+ * known yet.
  */
 export function getSpecWidth(spec: string | object): number | undefined {
   const width = parseSpecObject(spec)?.width
@@ -300,18 +301,16 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // This prevents the infinite loop caused by container-driven facet sizing.
   const useStretchWidth = isFacet && !isFullScreen ? false : baseStretchWidth
 
-  // A content-width chart with a container-driven height would otherwise
-  // collapse to 0×0. Single-view charts know their width from the spec, so
-  // size them like a stretch-width chart inside a box of that width.
+  // A content-width single-view chart with a stretch or pixel height has
+  // nothing to measure and renders at 0×0. Size-contain it at its spec width
+  // (or the default chart width) and draw it like a stretch-width chart.
+  // Pixel widths count as stretch here (see `shouldWidthStretch`).
   const isContentWidthContained =
     useStretchHeight && !useStretchWidth && isSingleView
   // Facet, repeat, and concat charts are not size-contained. Vega applies a
   // container height to every child view, so a fallback box would reserve one
   // panel and paint the rest over the elements that follow.
-  const isSizeContained =
-    useStretchHeight &&
-    isSingleView &&
-    (useStretchWidth || isContentWidthContained)
+  const isSizeContained = useStretchHeight && isSingleView
   // A container height feeds back into a content-height row unless the chart
   // is size-contained, already has a pixel height, or sits in a container
   // with a definite height. Fullscreen measures its own frame.

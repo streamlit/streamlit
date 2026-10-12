@@ -372,7 +372,11 @@ export function PlotlyChart({
   let calculatedHeight =
     chartContainerHeight > 0
       ? chartContainerHeight
-      : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
+      : // A 0px size-contained box has no fallback height. Don't draw the
+        // previous figure height out of that box onto the elements below.
+        isSizeContained && !hasFallbackHeight
+        ? 0
+        : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
 
   if (isFullScreen) {
     calculatedWidth = width

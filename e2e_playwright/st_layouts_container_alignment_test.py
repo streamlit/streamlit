@@ -52,7 +52,7 @@ def _height(locator: Locator) -> int | None:
 
 
 def _expect_chart_drawn(chart: Locator, width_px: int) -> None:
-    """Vega drew the chart across its box, not just reserved the space."""
+    """Assert that Vega drew across its box instead of only reserving space."""
     drawing = chart.locator("canvas, svg").first
     expect(drawing).to_be_visible()
     expect(drawing).to_have_css("width", f"{width_px}px")
