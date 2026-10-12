@@ -111,7 +111,7 @@ independently, and whichever is hit first triggers eviction:
 def fetch_report(report_id: str) -> pd.DataFrame: ...
 
 
-# max_size and max_entries can both apply (belt and suspenders).
+# Cap both the entry count and the total size.
 @st.cache_data(max_entries=100, max_size="2GB")
 def transform(key: str) -> pd.DataFrame: ...
 ```
@@ -135,15 +135,21 @@ combined serialized size of **all** `st.cache_data` in-memory caches:
 maxCachedDataSize = "2gb"   # applies across all @st.cache_data functions
 ```
 
+The option lives under `[server]` next to the other size caps (`server.maxUploadSize`,
+`server.maxMessageSize`).
+
 When the combined size of all `st.cache_data` caches exceeds this budget, Streamlit evicts
 globally least-recently-used entries (across functions) until it fits. A per-function
 `max_size` is enforced *in addition to* the global budget (the function cap can only make a
 cache smaller, never exceed the global budget).
 
 Because eviction only ever drops recomputable cached data, an app that stays under the
-budget sees **no behavior change**, and an app that would previously OOM instead degrades
-gracefully (slower, because of recomputation) while staying alive. This is the core reason
-a default here is far safer than, say, a default `ttl`.
+budget sees **no behavior change**, and an app whose cache would otherwise grow without
+bound degrades gracefully (slower, because of recomputation). This is the core reason a
+default here is far safer than, say, a default `ttl`. The budget reduces out-of-memory risk
+from unbounded cache growth but does not guarantee the process stays up: it counts
+serialized values only (not unpickled copies or cache metadata), and a single entry larger
+than the budget is still stored.
 
 `maxCachedDataSize` defaults to `"2gb"`. The alternatives considered are documented in
 [Default-value options](#default-value-options-for-the-global-budget) below.
@@ -158,8 +164,8 @@ a default here is far safer than, say, a default `ttl`.
 - **A single entry larger than the limit**: A write is never rejected. If the entry alone
   exceeds `max_size` (or the global budget), it is still stored and the limit is temporarily
   exceeded — eviction never drops the entry currently being written. Streamlit logs a
-  warning once per cache when a stored entry exceeds the configured `max_size`, so the
-  developer learns their cap is smaller than a single result.
+  warning once per cache when a stored entry exceeds the configured `max_size` or the
+  global budget, so the developer learns the limit is smaller than a single result.
 - **Global eviction can empty a function's cache**: The per-function `max_size` keeps at
   least one entry per function, but the process-wide budget evicts the globally
   least-recently-used entries across *all* functions and can therefore shrink an individual
@@ -171,8 +177,8 @@ a default here is far safer than, say, a default `ttl`.
   front cache), which is where the memory-pressure problem lives. The on-disk layer is not
   bounded by `max_size` (disk isn't the scarce resource); this matches how `max_entries`
   and `ttl` already behave relative to the in-memory wrapper.
-- **Interaction with `refresh_mode="background"`**: stale-but-retained entries (kept up to
-  `2 × ttl`, see
+- **Interaction with `refresh_mode="background"`**: stale-but-retained entries (kept until
+  hard expiry at `runner.cacheBackgroundRefreshTTLMultiplier × ttl`, 2 × `ttl` by default; see
   [background refresh spec](../2026-04-08-cache-background-refresh/product-spec.md)) count
   toward `max_size` like any other entry and participate in the same LRU eviction.
 - **Interaction with `scope="session"`**: The global budget is process-wide. Session-scoped
@@ -181,8 +187,8 @@ a default here is far safer than, say, a default `ttl`.
   intentional — the budget bounds *total* process memory, so under pressure a busy session
   can evict another session's least-recently-used entries. The per-function `max_size` still
   applies independently within each function's cache regardless of scope.
-- **Validation**: A `max_size` that parses to `<= 0`, or a string with an unrecognized
-  unit, raises `StreamlitAPIException` at decoration time (fail fast, fail helpfully).
+- **Validation**: A `max_size` that is a `bool`, parses to `<= 0`, or uses an unrecognized
+  unit raises `StreamlitValueError` at decoration time (fail fast, fail helpfully).
 
 ### Default-value options for the global budget
 
@@ -222,7 +228,7 @@ from safest-but-least-effective to most-protective:
 for the default global budget, combined with the Option D one-time warning (so developers
 who hit the budget are told why entries are being evicted and how to tune it). Start with a
 conservative, clearly documented 2 GB default to reduce the chance of disrupting apps that
-legitimately cache large amounts of data, and revisit it based on telemetry and G2K
+legitimately cache large amounts of data, and revisit it based on telemetry and customer
 feedback. This gives explicit developers precise control while giving the silent majority
 a safety net that degrades instead of crashes.
 
@@ -260,7 +266,7 @@ pickled bytes, so there is no cheap size measurement. Streamlit's only tool is
 Byte-based eviction here would be both costly and inaccurate, and evicting a resource that
 apps treat as a singleton (a connection pool, a loaded model) is riskier than dropping a
 recomputable data blob. `st.cache_resource` therefore keeps `max_entries`/`ttl` only. This
-matches the original spec's conclusion and can be revisited if there's clear demand.
+can be revisited if there's clear demand.
 
 ## Out of scope (future work)
 
@@ -282,7 +288,7 @@ matches the original spec's conclusion and can be revisited if there's clear dem
 
 | Item                       | ✅ or comment                                                                                                                                                              |
 |----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Works on SiS, Cloud, etc?  | ✅ Pure Python, no new dependency. SiS may enforce its own per-entry/account cache limits; the `max_size` parameter can be ignored there if it conflicts (like `max_entries`). Confirm with SiS before enabling a non-zero global default there. |
+| Works on SiS, Cloud, etc?  | ⚠️ Pure Python, no new dependency. SiS's cache storage manager may enforce its own cache limits and ignore `max_size`, the same way it may ignore `max_entries`. The library default stays `"2gb"`, but SiS keeps the global budget off (`"0"`) until SiS confirms a non-zero default. |
 | No breaking API changes    | ✅ `max_size` is a new optional parameter defaulting to `None`. ⚠️ A non-zero global default (Option B/C) is a behavior change — but only evicts recomputable data, never errors. Option A avoids even that. |
 | No new dependencies        | ✅ Byte sizes come from `len(pickled_bytes)`. Option C (memory-fraction default) is the only variant that would need memory detection; the recommendation (Option B) avoids it. |
 | Metrics collected          | ✅ `cache_memory_bytes` already reports per-cache serialized size. `max_size` adoption and global-budget eviction counts need explicit instrumentation (tech spec).         |
