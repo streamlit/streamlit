@@ -15,7 +15,7 @@
  */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
+import type { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, Float64, List } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
@@ -26,11 +26,11 @@ import {
   AreaChartColumn,
   BAR_CHART_TYPE,
   BarChartColumn,
-  ChartColumnParams,
+  type ChartColumnParams,
   LINE_CHART_TYPE,
   LineChartColumn,
 } from "./ChartColumn"
-import { BaseColumnProps, isErrorCell } from "./utils"
+import { type BaseColumnProps, isErrorCell } from "./utils"
 
 const CHART_COLUMN_TEMPLATE = {
   id: "1",

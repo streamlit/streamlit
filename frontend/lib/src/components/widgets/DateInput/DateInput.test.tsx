@@ -33,7 +33,7 @@ import {
 import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import DateInput, { Props } from "./DateInput"
+import DateInput, { type Props } from "./DateInput"
 
 // Wire format (ISO 8601) — proto fields + setStringArrayValue calls
 const originalDateWire = "1970-01-20"
@@ -114,142 +114,218 @@ const clearSegment = async (
 }
 
 describe("DateInput", () => {
-  it("renders without crashing", () => {
-    const props = getProps()
-    render(<DateInput {...props} />)
-    expect(screen.getByTestId("stDateInput")).toBeVisible()
-  })
-
-  it("renders a label", () => {
-    const props = getProps()
-    render(<DateInput {...props} />)
-    expect(screen.getByText("Label")).toBeVisible()
-  })
-
-  it("displays the correct segment order and value for the provided format", () => {
-    const props = getProps({
-      format: "DD.MM.YYYY",
+  describe("rendering, layout, and initial state", () => {
+    it("renders without crashing", () => {
+      const props = getProps()
+      render(<DateInput {...props} />)
+      expect(screen.getByTestId("stDateInput")).toBeVisible()
     })
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
 
-    // format="DD.MM.YYYY" reorders the rendered segments (day, month, year)
-    // independently of the fixed en-US `I18nProvider`'s natural (month,
-    // day, year) order — see dateInputUtils.reorderSegments.
-    const spinbuttons = within(region).getAllByRole("spinbutton")
-    expect(spinbuttons.map(s => s.getAttribute("data-type"))).toEqual([
-      "day",
-      "month",
-      "year",
-    ])
-    expect(spinbuttons.map(s => s.textContent)).toEqual(["20", "01", "1970"])
-
-    const literals = within(region).getAllByText(".", { exact: true })
-    expect(literals).toHaveLength(2)
-  })
-
-  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
-    const props = getProps({
-      labelVisibility: {
-        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
-      },
+    it("renders a label", () => {
+      const props = getProps()
+      render(<DateInput {...props} />)
+      expect(screen.getByText("Label")).toBeVisible()
     })
-    render(<DateInput {...props} />)
-    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
-      "visibility: hidden"
-    )
-  })
 
-  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
-    const props = getProps({
-      labelVisibility: {
-        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
-      },
+    it("displays the correct segment order and value for the provided format", () => {
+      const props = getProps({
+        format: "DD.MM.YYYY",
+      })
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+
+      // format="DD.MM.YYYY" reorders the rendered segments (day, month, year)
+      // independently of the fixed en-US `I18nProvider`'s natural (month,
+      // day, year) order — see dateInputUtils.reorderSegments.
+      const spinbuttons = within(region).getAllByRole("spinbutton")
+      expect(spinbuttons.map(s => s.getAttribute("data-type"))).toEqual([
+        "day",
+        "month",
+        "year",
+      ])
+      expect(spinbuttons.map(s => s.textContent)).toEqual(["20", "01", "1970"])
+
+      const literals = within(region).getAllByText(".", { exact: true })
+      expect(literals).toHaveLength(2)
     })
-    render(<DateInput {...props} />)
-    expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
-  })
 
-  it("sets widget value on render", () => {
-    const props = getProps()
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    it("passes labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+      const props = getProps({
+        labelVisibility: {
+          value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
+        },
+      })
+      render(<DateInput {...props} />)
+      expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
+        "visibility: hidden"
+      )
+    })
 
-    render(<DateInput {...props} />)
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
-      [originalDateWire],
-      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
-    )
-  })
+    it("passes labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+      const props = getProps({
+        labelVisibility: {
+          value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
+        },
+      })
+      render(<DateInput {...props} />)
+      expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
+    })
 
-  it("can pass a fragmentId to setStringArrayValue", () => {
-    const props = getProps(undefined, { fragmentId: "myFragmentId" })
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    it("sets widget value on render", () => {
+      const props = getProps()
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
-    render(<DateInput {...props} />)
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
-      [originalDateWire],
+      render(<DateInput {...props} />)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element.id,
+        [originalDateWire],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
+      )
+    })
+
+    it("can pass a fragmentId to setStringArrayValue", () => {
+      const props = getProps(undefined, { fragmentId: "myFragmentId" })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      render(<DateInput {...props} />)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element.id,
+        [originalDateWire],
+        {
+          formId: props.element.formId,
+          fragmentId: "myFragmentId",
+          fromUser: false,
+        }
+      )
+    })
+
+    it("has correct className", () => {
+      const props = getProps()
+      render(<DateInput {...props} />)
+
+      const dateInput = screen.getByTestId("stDateInput")
+      expect(dateInput).toHaveAttribute("class", "stDateInput")
+    })
+
+    it("renders a default value", () => {
+      const props = getProps()
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+
+      const { year, month, day } = getSingleDateSegments(region)
+      expect(year).toHaveTextContent("1970")
+      expect(month).toHaveTextContent("01")
+      expect(day).toHaveTextContent("20")
+    })
+
+    it.each([
+      { name: "single", isRange: false, value: ["2020-01-10"] },
       {
-        formId: props.element.formId,
-        fragmentId: "myFragmentId",
-        fromUser: false,
+        name: "range",
+        isRange: true,
+        value: ["2020-01-10", "2020-01-20"],
+      },
+    ])("keeps trailing controls outside the $name field scroller", config => {
+      const props = getProps({
+        isRange: config.isRange,
+        default: [],
+        value: config.value,
+        setValue: true,
+      })
+      render(<DateInput {...props} />)
+
+      const field = screen.getByTestId("stDateInputField")
+      const scroller = screen.getByTestId("stDateInputFieldsScroller")
+      const clearButton = screen.getByTestId("stDateInputClearButton")
+
+      expect(scroller.parentElement).toBe(field)
+      expect(field).toContainElement(clearButton)
+      expect(scroller).not.toContainElement(clearButton)
+    })
+  })
+
+  describe("disabled state", () => {
+    it("can be disabled", () => {
+      const props = getProps()
+      render(<DateInput {...props} disabled={true} />)
+      const region = screen.getByTestId("stDateInput")
+
+      const { year, month, day } = getSingleDateSegments(region)
+      for (const segment of [year, month, day]) {
+        expect(segment).toHaveAttribute("aria-disabled", "true")
+        expect(segment).toHaveAttribute("contenteditable", "false")
       }
-    )
+      expect(screen.getByTestId("stDateInputCalendarButton")).toBeDisabled()
+    })
+
+    it("disables the calendar button on a range widget", () => {
+      render(<DateInput {...getProps({ isRange: true })} disabled={true} />)
+      expect(screen.getByTestId("stDateInputCalendarButton")).toBeDisabled()
+    })
   })
 
-  it("has correct className", () => {
-    const props = getProps()
-    render(<DateInput {...props} />)
+  describe("segment editing", () => {
+    it("updates the widget value when it's changed", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: undefined })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
-    const dateInput = screen.getByTestId("stDateInput")
-    expect(dateInput).toHaveAttribute("class", "stDateInput")
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "02")
+      await typeIntoSegment(user, day, "06")
+
+      expect(year).toHaveTextContent("2020")
+      expect(month).toHaveTextContent("02")
+      expect(day).toHaveTextContent("06")
+
+      // Segment edits are buffered locally and committed on popover close.
+      await user.click(document.body)
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          [newDateWire],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
   })
 
-  it("renders a default value", () => {
-    const props = getProps()
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
+  describe("commit on blur outside a form", () => {
+    it("commits pending segment edits on blur outside a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
-    const { year, month, day } = getSingleDateSegments(region)
-    expect(year).toHaveTextContent("1970")
-    expect(month).toHaveTextContent("01")
-    expect(day).toHaveTextContent("20")
-  })
+      render(<DateInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
 
-  it("can be disabled", () => {
-    const props = getProps()
-    render(<DateInput {...props} disabled={true} />)
-    const region = screen.getByTestId("stDateInput")
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
 
-    const { year, month, day } = getSingleDateSegments(region)
-    for (const segment of [year, month, day]) {
-      expect(segment).toHaveAttribute("aria-disabled", "true")
-      expect(segment).toHaveAttribute("contenteditable", "false")
-    }
-  })
+      // Type a new date — edits are buffered locally in displayValue.
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "02")
+      await typeIntoSegment(user, day, "06")
 
-  it("updates the widget value when it's changed", async () => {
-    const user = userEvent.setup()
-    const props = getProps({ default: undefined })
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      // Before blur: no widget write yet.
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
 
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
-    const { year, month, day } = getSingleDateSegments(region)
-
-    await typeIntoSegment(user, year, "2020")
-    await typeIntoSegment(user, month, "02")
-    await typeIntoSegment(user, day, "06")
-
-    expect(year).toHaveTextContent("2020")
-    expect(month).toHaveTextContent("02")
-    expect(day).toHaveTextContent("06")
-
-    // Segment edits are buffered locally and committed on popover close.
-    await user.click(document.body)
-
-    await waitFor(() => {
+      // Tab past the calendar button to leave the field and commit.
+      await user.tab()
+      await user.tab()
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element.id,
         [newDateWire],
@@ -258,424 +334,536 @@ describe("DateInput", () => {
     })
   })
 
-  it("displays an error tooltip when the entered date for single date input outside range", async () => {
-    const user = userEvent.setup()
-    const props = getProps({
-      min: "2020-01-05",
-      max: "2020-01-25",
-    })
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
-    const { year, month, day } = getSingleDateSegments(region)
+  describe("validation and error display", () => {
+    it("displays an error tooltip when the entered date for single date input is outside range", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        min: "2020-01-05",
+        max: "2020-01-25",
+      })
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
 
-    await typeIntoSegment(user, year, "2020")
-    await typeIntoSegment(user, month, "01")
-    await typeIntoSegment(user, day, "30")
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "01")
+      await typeIntoSegment(user, day, "30")
 
-    const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
-    expect(errorIcon).toBeVisible()
-
-    // Hover over the error icon to trigger the tooltip
-    act(() => setInteractionModality("pointer"))
-    await user.hover(errorIcon)
-
-    const tooltip = await screen.findByTestId("stTooltipErrorContent")
-    expect(tooltip).toHaveTextContent(
-      "Error: Date set outside allowed range. Please select a date on or before 2020/01/25."
-    )
-  })
-
-  it("displays correct error tooltip when the entered date for range input below min date", async () => {
-    const user = userEvent.setup()
-    const props = getProps({
-      default: ["2020-02-01", "2020-02-07"],
-      min: "2020-01-01",
-      max: "2020-12-31",
-      isRange: true,
-    })
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
-    const start = getRangeDateSegments(region, "start")
-
-    await typeIntoSegment(user, start.year, "2019")
-    await typeIntoSegment(user, start.month, "01")
-    await typeIntoSegment(user, start.day, "05")
-
-    const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
-    expect(errorIcon).toBeVisible()
-
-    // Hover over the error icon to trigger the tooltip
-    act(() => setInteractionModality("pointer"))
-    await user.hover(errorIcon)
-
-    const tooltip = await screen.findByTestId("stTooltipErrorContent")
-    expect(tooltip).toHaveTextContent(
-      "Error: Start date set outside allowed range. Please select a date after 2020/01/01."
-    )
-  })
-
-  it("displays correct error tooltip when the entered date for range input above max date", async () => {
-    const user = userEvent.setup()
-    const props = getProps({
-      default: ["2020-02-01", "2020-02-07"],
-      min: "2020-01-01",
-      max: "2020-12-31",
-      isRange: true,
-    })
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
-    const end = getRangeDateSegments(region, "end")
-
-    await typeIntoSegment(user, end.year, "2021")
-    await typeIntoSegment(user, end.month, "02")
-    await typeIntoSegment(user, end.day, "07")
-
-    const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
-    expect(errorIcon).toBeVisible()
-
-    // Hover over the error icon to trigger the tooltip
-    act(() => setInteractionModality("pointer"))
-    await user.hover(errorIcon)
-
-    const tooltip = await screen.findByTestId("stTooltipErrorContent")
-    expect(tooltip).toHaveTextContent(
-      "Error: End date set outside allowed range. Please select a date before 2020/12/31."
-    )
-  })
-
-  it("does not commit an invalid date", async () => {
-    const user = userEvent.setup()
-    const props = getProps({
-      default: undefined,
-      min: "2020-01-01",
-      max: "2020-01-31",
-    })
-    render(<DateInput {...props} />)
-    // Set up spy after initial setStringArrayValue call
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
-
-    const region = screen.getByTestId("stDateInput")
-    const { year, month, day } = getSingleDateSegments(region)
-    await typeIntoSegment(user, year, "2020")
-    await typeIntoSegment(user, month, "02")
-    await typeIntoSegment(user, day, "15")
-
-    expect(year).toHaveTextContent("2020")
-    expect(month).toHaveTextContent("02")
-    expect(day).toHaveTextContent("15")
-    await screen.findByTestId("stTooltipErrorHoverTarget")
-    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
-
-    // Close the popover — commit-on-close should also reject the invalid date.
-    await user.keyboard("{Escape}")
-    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
-  })
-
-  it("reverts to committed value when closed with empty input (non-clearable)", async () => {
-    const user = userEvent.setup()
-    const props = getProps()
-
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
-    const { year, month, day } = getSingleDateSegments(region)
-
-    // Opens the popover (segments are focused/edited the same way whether
-    // or not it's open) and clears every segment back to its placeholder.
-    await clearSegment(user, year)
-    await clearSegment(user, month)
-    await clearSegment(user, day)
-    expect(year).toHaveTextContent("yyyy")
-    expect(month).toHaveTextContent("mm")
-    expect(day).toHaveTextContent("dd")
-
-    // Close the popover via Escape.
-    await user.keyboard("{Escape}")
-
-    await waitFor(() => {
-      expect(year).toHaveTextContent(originalDateWire.split("-")[0])
-    })
-    expect(month).toHaveTextContent(originalDateWire.split("-")[1])
-    expect(day).toHaveTextContent(originalDateWire.split("-")[2])
-  })
-
-  it("has a minDate", async () => {
-    const user = userEvent.setup()
-    const props = getProps({})
-
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
-    const { year } = getSingleDateSegments(region)
-    await user.click(year)
-
-    // React Aria's `Calendar` marks out-of-range cells `aria-disabled`;
-    // the day before `min` should be disabled, `min` itself shouldn't be.
-    expect(
-      await screen.findByLabelText("Monday, January 19, 1970")
-    ).toHaveAttribute("aria-disabled", "true")
-    expect(
-      screen.getByLabelText(/Tuesday, January 20, 1970/)
-    ).not.toHaveAttribute("aria-disabled")
-  })
-
-  it("has a minDate if passed", async () => {
-    const user = userEvent.setup()
-    const props = getProps({
-      min: "2020-01-05",
-      // Choose default so min is in the default page when the widget is opened.
-      default: ["2020-01-15"],
-    })
-
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
-    const { year } = getSingleDateSegments(region)
-    await user.click(year)
-
-    expect(
-      await screen.findByLabelText("Saturday, January 4, 2020")
-    ).toHaveAttribute("aria-disabled", "true")
-    expect(
-      screen.getByLabelText(/Sunday, January 5, 2020/)
-    ).not.toHaveAttribute("aria-disabled")
-  })
-
-  it("has a maxDate if it is passed", async () => {
-    const user = userEvent.setup()
-    const props = getProps({
-      max: "2020-01-25",
-      // Choose default so min is in the default page when the widget is opened.
-      default: ["2020-01-15"],
-    })
-
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
-    const { year } = getSingleDateSegments(region)
-    await user.click(year)
-
-    expect(
-      await screen.findByLabelText(/Saturday, January 25, 2020/)
-    ).not.toHaveAttribute("aria-disabled")
-    expect(screen.getByLabelText("Sunday, January 26, 2020")).toHaveAttribute(
-      "aria-disabled",
-      "true"
-    )
-  })
-
-  it("resets its value when form is cleared", async () => {
-    const user = userEvent.setup()
-    // Create a widget in a clearOnSubmit form
-    const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormSubmitBehaviors("form", true)
-
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
-
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
-    const { year, month, day } = getSingleDateSegments(region)
-
-    await typeIntoSegment(user, year, "2020")
-    await typeIntoSegment(user, month, "02")
-    await typeIntoSegment(user, day, "06")
-
-    // Segment edits are buffered locally and committed on popover close.
-    await user.click(document.body)
-
-    await waitFor(() => {
-      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-        props.element.id,
-        [newDateWire],
-        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
-      )
-    })
-
-    act(() => {
-      // "Submit" the form
-      props.widgetMgr.submitForm("form", undefined)
-    })
-
-    // Our widget should be reset, and the widgetMgr should be updated
-    expect(year).toHaveTextContent(originalDateWire.split("-")[0])
-    expect(month).toHaveTextContent(originalDateWire.split("-")[1])
-    expect(day).toHaveTextContent(originalDateWire.split("-")[2])
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
-      props.element.id,
-      [originalDateWire],
-      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
-    )
-  })
-
-  it("clears validation error state when form is cleared", async () => {
-    const user = userEvent.setup()
-    const props = getProps({
-      formId: "form",
-      default: ["2026-01-15"],
-      min: "2026-01-01",
-      max: "2026-12-31",
-    })
-    props.widgetMgr.setFormSubmitBehaviors("form", true)
-
-    render(<DateInput {...props} />)
-    const region = screen.getByTestId("stDateInput")
-    const { year, month, day } = getSingleDateSegments(region)
-
-    await typeIntoSegment(user, year, "2025")
-    await typeIntoSegment(user, month, "12")
-    await typeIntoSegment(user, day, "01")
-
-    expect(
-      await screen.findByTestId("stTooltipErrorHoverTarget")
-    ).toBeVisible()
-
-    act(() => {
-      props.widgetMgr.submitForm("form", undefined)
-    })
-
-    await waitFor(() => {
+      const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
+      expect(errorIcon).toBeVisible()
       expect(
-        screen.queryByTestId("stTooltipErrorHoverTarget")
-      ).not.toBeInTheDocument()
-    })
-    expect(year).toHaveTextContent("2026")
-    expect(month).toHaveTextContent("01")
-    expect(day).toHaveTextContent("15")
-  })
+        screen.getByTestId("stDateInputFieldsScroller")
+      ).not.toContainElement(screen.getByTestId("stDateInputError"))
 
-  it("commits pending value on blur when inside a form (form-submit race fix)", async () => {
-    const user = userEvent.setup()
-    const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormSubmitBehaviors("form", true)
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      // Hover over the error icon to trigger the tooltip
+      act(() => setInteractionModality("pointer"))
+      await user.hover(errorIcon)
 
-    render(<DateInput {...props} />)
-    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
-
-    const region = screen.getByTestId("stDateInput")
-    const { year, month, day } = getSingleDateSegments(region)
-
-    await typeIntoSegment(user, year, "2020")
-    await typeIntoSegment(user, month, "02")
-    await typeIntoSegment(user, day, "06")
-
-    // Before blur: segment edits are buffered locally — no widget write yet.
-    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
-
-    // Blur (simulates clicking a form Submit button) writes the pending
-    // value synchronously so form submit reads the correct state.
-    await user.tab()
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
-      [newDateWire],
-      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
-    )
-  })
-
-  it("does not commit placeholder state on blur in a form (partially typed)", async () => {
-    const user = userEvent.setup()
-    const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormSubmitBehaviors("form", true)
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
-
-    render(<DateInput {...props} />)
-    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
-
-    const region = screen.getByTestId("stDateInput")
-    const { year } = getSingleDateSegments(region)
-
-    // Partially clear the year segment (leaves placeholders in year,
-    // but month and day remain filled — a mid-edit state)
-    await clearSegment(user, year)
-
-    // Blur should NOT commit the partially typed state — form submit
-    // should read the original committed value, not an incomplete date.
-    await user.tab()
-    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
-  })
-
-  it("commits cleared value on blur when all segments are cleared in a form widget", async () => {
-    const user = userEvent.setup()
-    const props = getProps({ formId: "form", default: [] })
-    props.widgetMgr.setFormSubmitBehaviors("form", true)
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
-
-    // Pre-seed widget state so the widget starts with a committed value
-    props.widgetMgr.setStringArrayValue(props.element.id, [originalDateWire], {
-      formId: props.element.formId,
-      fragmentId: undefined,
-      fromUser: false,
+      const tooltip = await screen.findByTestId("stTooltipErrorContent")
+      expect(tooltip).toHaveTextContent(
+        "Error: Date set outside allowed range. Please select a date on or before 2020/01/25."
+      )
     })
 
-    render(<DateInput {...props} />)
-    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+    it("displays correct error tooltip when the range start date is below min date", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2020-02-01", "2020-02-07"],
+        min: "2020-01-01",
+        max: "2020-12-31",
+        isRange: true,
+      })
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const start = getRangeDateSegments(region, "start")
 
-    const region = screen.getByTestId("stDateInput")
-    const { year, month, day } = getSingleDateSegments(region)
+      await typeIntoSegment(user, start.year, "2019")
+      await typeIntoSegment(user, start.month, "01")
+      await typeIntoSegment(user, start.day, "05")
 
-    // Clear ALL segments — deliberate empty intent
-    await clearSegment(user, year)
-    await clearSegment(user, month)
-    await clearSegment(user, day)
+      const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
+      expect(errorIcon).toBeVisible()
 
-    // Blur should commit the cleared state — fully cleared is a valid
-    // user intent, distinct from partially typed (mid-edit).
-    await user.tab()
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
-      [],
-      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
-    )
+      // Hover over the error icon to trigger the tooltip
+      act(() => setInteractionModality("pointer"))
+      await user.hover(errorIcon)
+
+      const tooltip = await screen.findByTestId("stTooltipErrorContent")
+      expect(tooltip).toHaveTextContent(
+        "Error: Date set outside allowed range. Please select a date on or after 2020/01/01."
+      )
+    })
+
+    it("displays correct error tooltip when the range start date is above max date", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2020-02-01", "2020-02-07"],
+        min: "2020-01-01",
+        max: "2020-12-31",
+        isRange: true,
+      })
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const start = getRangeDateSegments(region, "start")
+
+      await typeIntoSegment(user, start.year, "2021")
+      await typeIntoSegment(user, start.month, "02")
+      await typeIntoSegment(user, start.day, "07")
+
+      const errorIcon = await screen.findByTestId("stTooltipErrorHoverTarget")
+      expect(errorIcon).toBeVisible()
+
+      // Hover over the error icon to trigger the tooltip
+      act(() => setInteractionModality("pointer"))
+      await user.hover(errorIcon)
+
+      const tooltip = await screen.findByTestId("stTooltipErrorContent")
+      expect(tooltip).toHaveTextContent(
+        "Error: Date set outside allowed range. Please select a date on or before 2020/12/31."
+      )
+    })
+
+    it("does not commit an invalid date", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: undefined,
+        min: "2020-01-01",
+        max: "2020-01-31",
+      })
+      render(<DateInput {...props} />)
+      // Set up spy after initial setStringArrayValue call
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "02")
+      await typeIntoSegment(user, day, "15")
+
+      expect(year).toHaveTextContent("2020")
+      expect(month).toHaveTextContent("02")
+      expect(day).toHaveTextContent("15")
+      await screen.findByTestId("stTooltipErrorHoverTarget")
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+      // Close the popover — commit-on-close should also reject the invalid date.
+      await user.keyboard("{Escape}")
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+    })
   })
 
-  it("commits pending value on blur outside a form (calendar-select → adjust → blur)", async () => {
-    const user = userEvent.setup()
-    const props = getProps()
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+  describe("clear and revert", () => {
+    it("reverts to committed value when closed with empty input (non-clearable)", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
 
-    render(<DateInput {...props} />)
-    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
 
-    const region = screen.getByTestId("stDateInput")
-    const { year, month, day } = getSingleDateSegments(region)
+      // Opens the popover (segments are focused/edited the same way whether
+      // or not it's open) and clears every segment back to its placeholder.
+      await clearSegment(user, year)
+      await clearSegment(user, month)
+      await clearSegment(user, day)
+      expect(year).toHaveTextContent("yyyy")
+      expect(month).toHaveTextContent("mm")
+      expect(day).toHaveTextContent("dd")
 
-    // Type a new date — edits are buffered locally in displayValue.
-    await typeIntoSegment(user, year, "2020")
-    await typeIntoSegment(user, month, "02")
-    await typeIntoSegment(user, day, "06")
+      // Close the popover via Escape.
+      await user.keyboard("{Escape}")
 
-    // Before blur: no widget write yet.
-    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
-
-    // Blur commits the buffered value even outside a form.
-    await user.tab()
-    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
-      props.element.id,
-      [newDateWire],
-      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
-    )
+      await waitFor(() => {
+        expect(year).toHaveTextContent(originalDateWire.split("-")[0])
+      })
+      expect(month).toHaveTextContent(originalDateWire.split("-")[1])
+      expect(day).toHaveTextContent(originalDateWire.split("-")[2])
+    })
   })
 
-  it("non-clearable widget reverts to committed value on blur after clearing all segments", async () => {
-    const user = userEvent.setup()
-    // Non-empty default makes the widget non-clearable. Clearing all
-    // segments then leaving the field closes the popover; close-commit
-    // restores the last committed value locally. No backend write fires
-    // because the committed value never changed (edits were buffered).
-    const props = getProps({ formId: "form" })
-    props.widgetMgr.setFormSubmitBehaviors("form", true)
-    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+  describe("calendar bounds", () => {
+    it("has a minDate", async () => {
+      const user = userEvent.setup()
+      const props = getProps({})
 
-    render(<DateInput {...props} />)
-    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const { year } = getSingleDateSegments(region)
+      await user.click(year)
 
-    const region = screen.getByTestId("stDateInput")
-    const { year, month, day } = getSingleDateSegments(region)
+      // React Aria's `Calendar` marks out-of-range cells `aria-disabled`;
+      // the day before `min` should be disabled, `min` itself shouldn't be.
+      expect(
+        await screen.findByLabelText("Monday, January 19, 1970")
+      ).toHaveAttribute("aria-disabled", "true")
+      expect(
+        screen.getByLabelText(/Tuesday, January 20, 1970/)
+      ).not.toHaveAttribute("aria-disabled")
+    })
 
-    await clearSegment(user, year)
-    await clearSegment(user, month)
-    await clearSegment(user, day)
+    it("has a minDate if passed", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        min: "2020-01-05",
+        // Choose default so min is in the default page when the widget is opened.
+        default: ["2020-01-15"],
+      })
 
-    await user.tab()
-    // Close-commit reverts the display locally; no setStringArrayValue
-    // should fire (avoids a spurious backend rerun with an unchanged value).
-    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const { year } = getSingleDateSegments(region)
+      await user.click(year)
+
+      expect(
+        await screen.findByLabelText("Saturday, January 4, 2020")
+      ).toHaveAttribute("aria-disabled", "true")
+      expect(
+        screen.getByLabelText(/Sunday, January 5, 2020/)
+      ).not.toHaveAttribute("aria-disabled")
+    })
+
+    it("has a maxDate if it is passed", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        max: "2020-01-25",
+        // Choose default so min is in the default page when the widget is opened.
+        default: ["2020-01-15"],
+      })
+
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const { year } = getSingleDateSegments(region)
+      await user.click(year)
+
+      expect(
+        await screen.findByLabelText(/Saturday, January 25, 2020/)
+      ).not.toHaveAttribute("aria-disabled")
+      expect(
+        screen.getByLabelText("Sunday, January 26, 2020")
+      ).toHaveAttribute("aria-disabled", "true")
+    })
+  })
+
+  describe("form integration", () => {
+    it("resets its value when form is cleared", async () => {
+      const user = userEvent.setup()
+      // Create a widget in a clearOnSubmit form
+      const props = getProps({ formId: "form" })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "02")
+      await typeIntoSegment(user, day, "06")
+
+      // Segment edits are buffered locally and committed on popover close.
+      await user.click(document.body)
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          [newDateWire],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+
+      act(() => {
+        // "Submit" the form
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      // Re-query because form clear remounts DateField and detaches the old nodes.
+      const resetSegments = getSingleDateSegments(region)
+      expect(resetSegments.year).toHaveTextContent(
+        originalDateWire.split("-")[0]
+      )
+      expect(resetSegments.month).toHaveTextContent(
+        originalDateWire.split("-")[1]
+      )
+      expect(resetSegments.day).toHaveTextContent(
+        originalDateWire.split("-")[2]
+      )
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+        props.element.id,
+        [originalDateWire],
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+      )
+    })
+
+    it("clears incomplete segments and restores focus to the first segment after a form clear", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        formId: "form",
+        default: [],
+      })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const { year } = getSingleDateSegments(region)
+
+      await typeIntoSegment(user, year, "2020")
+      expect(year).toHaveTextContent("2020")
+      expect(getSingleDateSegments(region).month).toHaveFocus()
+
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      const resetSegments = getSingleDateSegments(region)
+      expect(resetSegments.year).toHaveTextContent("yyyy")
+      expect(resetSegments.month).toHaveTextContent("mm")
+      expect(resetSegments.day).toHaveTextContent("dd")
+      expect(resetSegments.month).not.toHaveFocus()
+      expect(resetSegments.year).toHaveFocus()
+    })
+
+    it("does not steal focus when an unfocused field is cleared by a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        formId: "form",
+        default: [],
+      })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+      render(
+        <>
+          <DateInput {...props} />
+          <button>Submit</button>
+        </>
+      )
+      const region = screen.getByTestId("stDateInput")
+      await typeIntoSegment(user, getSingleDateSegments(region).year, "2020")
+      const submitButton = screen.getByRole("button", { name: "Submit" })
+      await user.click(submitButton)
+
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      expect(submitButton).toHaveFocus()
+      expect(getSingleDateSegments(region).year).not.toHaveFocus()
+    })
+
+    it("clears incomplete range segments and restores focus after a form clear", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: true,
+        formId: "form",
+        default: [],
+      })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const start = getRangeDateSegments(region, "start")
+      await typeIntoSegment(user, start.year, "2020")
+      await typeIntoSegment(user, start.month, "02")
+      await typeIntoSegment(user, start.day, "06")
+      const end = getRangeDateSegments(region, "end")
+      await typeIntoSegment(user, end.year, "2021")
+      expect(end.year).toHaveTextContent("2021")
+
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      const resetStart = getRangeDateSegments(region, "start")
+      const resetEnd = getRangeDateSegments(region, "end")
+      for (const segment of [
+        ...Object.values(resetStart),
+        ...Object.values(resetEnd),
+      ]) {
+        expect(segment).toHaveAttribute("data-placeholder", "true")
+      }
+      expect(resetStart.year).toHaveFocus()
+    })
+
+    it("clears validation error state when form is cleared", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        formId: "form",
+        default: ["2026-01-15"],
+        min: "2026-01-01",
+        max: "2026-12-31",
+      })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+
+      render(<DateInput {...props} />)
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+
+      await typeIntoSegment(user, year, "2025")
+      await typeIntoSegment(user, month, "12")
+      await typeIntoSegment(user, day, "01")
+
+      expect(
+        await screen.findByTestId("stTooltipErrorHoverTarget")
+      ).toBeVisible()
+
+      act(() => {
+        props.widgetMgr.submitForm("form", undefined)
+      })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stTooltipErrorHoverTarget")
+        ).not.toBeInTheDocument()
+      })
+      // Re-query because form clear remounts DateField and detaches the old nodes.
+      const resetSegments = getSingleDateSegments(region)
+      expect(resetSegments.year).toHaveTextContent("2026")
+      expect(resetSegments.month).toHaveTextContent("01")
+      expect(resetSegments.day).toHaveTextContent("15")
+    })
+
+    it("commits pending value on blur for a widget inside a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ formId: "form" })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      render(<DateInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+
+      await typeIntoSegment(user, year, "2020")
+      await typeIntoSegment(user, month, "02")
+      await typeIntoSegment(user, day, "06")
+
+      // Before blur: segment edits are buffered locally — no widget write yet.
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+
+      // Tab past the calendar button to leave the field and commit.
+      await user.tab()
+      await user.tab()
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element.id,
+        [newDateWire],
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+      )
+    })
+
+    it("does not commit placeholder state on blur in a form (partially typed)", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ formId: "form" })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      render(
+        <>
+          <button type="button" data-testid="outside">
+            Outside
+          </button>
+          <DateInput {...props} />
+        </>
+      )
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      const { year } = getSingleDateSegments(region)
+
+      // Partially clear the year segment (leaves placeholders in year,
+      // but month and day remain filled — a mid-edit state)
+      await clearSegment(user, year)
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+
+      // Concrete outside leave while the preview is open: must not commit, and
+      // close-commit must still revert the incomplete display.
+      fireEvent.blur(screen.getByTestId("stDateInputField"), {
+        relatedTarget: screen.getByTestId("outside"),
+      })
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateInputCalendar")
+        ).not.toBeInTheDocument()
+        const refreshed = getSingleDateSegments(
+          screen.getByTestId("stDateInput")
+        )
+        expect(refreshed.year).toHaveTextContent("1970")
+        expect(refreshed.month).toHaveTextContent("01")
+        expect(refreshed.day).toHaveTextContent("20")
+      })
+    })
+
+    it("commits cleared value on blur when all segments are cleared in a form widget", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ formId: "form", default: [] })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      // Pre-seed widget state so the widget starts with a committed value
+      props.widgetMgr.setStringArrayValue(
+        props.element.id,
+        [originalDateWire],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
+      )
+
+      render(<DateInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+
+      // Clear ALL segments — deliberate empty intent
+      await clearSegment(user, year)
+      await clearSegment(user, month)
+      await clearSegment(user, day)
+
+      // Tab past the calendar button to leave and commit the cleared state —
+      // fully cleared is a valid user intent, distinct from partially typed.
+      await user.tab()
+      await user.tab()
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element.id,
+        [],
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+      )
+    })
+
+    it("non-clearable widget reverts to committed value on blur after clearing all segments", async () => {
+      const user = userEvent.setup()
+      // Non-empty default makes the widget non-clearable. Clearing all
+      // segments then leaving the field closes the popover; close-commit
+      // restores the last committed value locally. No backend write fires
+      // because the committed value never changed (edits were buffered).
+      const props = getProps({ formId: "form" })
+      props.widgetMgr.setFormSubmitBehaviors("form", true)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      render(<DateInput {...props} />)
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+      const region = screen.getByTestId("stDateInput")
+      const { year, month, day } = getSingleDateSegments(region)
+
+      await clearSegment(user, year)
+      await clearSegment(user, month)
+      await clearSegment(user, day)
+
+      // Tab past the calendar button to leave the field.
+      await user.tab()
+      await user.tab()
+      // Close-commit reverts the display locally; no setStringArrayValue
+      // should fire (avoids a spurious backend rerun with an unchanged value).
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+    })
   })
 
   describe("localization", () => {
@@ -849,7 +1037,7 @@ describe("DateInput", () => {
         .queryAllByRole("button", { expanded: false })
         .filter(el => el.getAttribute("aria-haspopup") === "listbox")
         .map(el => el.getAttribute("aria-label"))
-      expect(pickerNames.sort()).toEqual(["month", "year"])
+      expect(pickerNames.toSorted()).toEqual(["month", "year"])
       expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
     })
 
@@ -1406,6 +1594,111 @@ describe("DateInput", () => {
       })
     })
 
+    it("completes the range against an externally updated start date", async () => {
+      const user = userEvent.setup()
+      vi.setSystemTime(new Date(2024, 2, 15))
+
+      const props = getProps({
+        isRange: true,
+        default: [],
+        min: "2019-07-01",
+      })
+      const { rerender } = render(<DateInput {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const region = screen.getByTestId("stDateInput")
+      await user.click(getRangeDateSegments(region, "start").year)
+      await user.click(
+        await screen.findByLabelText("Wednesday, March 6, 2024")
+      )
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          ["2024-03-06"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+
+      const updatedElement = DateInputProto.create({
+        ...props.element,
+        value: ["2024-03-20"],
+        setValue: true,
+      })
+      rerender(<DateInput {...props} element={updatedElement} />)
+
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+      await user.click(await screen.findByLabelText("Sunday, March 10, 2024"))
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          ["2024-03-10", "2024-03-20"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2024-03-06", "2024-03-10"],
+        expect.anything()
+      )
+    })
+
+    it("starts a new range when the externally updated start date is clicked", async () => {
+      const user = userEvent.setup()
+      vi.setSystemTime(new Date(2024, 2, 15))
+
+      const props = getProps({
+        isRange: true,
+        default: [],
+        min: "2019-07-01",
+      })
+      const { rerender } = render(<DateInput {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const region = screen.getByTestId("stDateInput")
+      await user.click(getRangeDateSegments(region, "start").year)
+      await user.click(
+        await screen.findByLabelText("Wednesday, March 6, 2024")
+      )
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          ["2024-03-06"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+
+      const updatedElement = DateInputProto.create({
+        ...props.element,
+        value: ["2024-03-20", "2024-03-25"],
+        setValue: true,
+      })
+      rerender(<DateInput {...props} element={updatedElement} />)
+
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+      // userEvent.click hangs on already-selected React Aria range cells in JSDOM.
+      const updatedStart = screen.getByLabelText(/Wednesday, March 20, 2024/)
+      /* eslint-disable testing-library/prefer-user-event */
+      fireEvent.pointerDown(updatedStart, { pointerType: "mouse", button: 0 })
+      fireEvent.pointerUp(updatedStart, { pointerType: "mouse", button: 0 })
+      fireEvent.click(updatedStart)
+      /* eslint-enable testing-library/prefer-user-event */
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          ["2024-03-20"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+    })
+
     it("renders and commits a single-day range correctly (start === end)", async () => {
       const user = userEvent.setup()
 
@@ -1569,19 +1862,25 @@ describe("DateInput single-mode keyboard navigation", () => {
     return { calendar, gridCell, segments }
   }
 
-  it("Tab from last segment closes calendar (does not enter it)", async () => {
+  it("Tab from last segment focuses calendar button, then leaves and closes", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)
 
     const region = screen.getByTestId("stDateInput")
     const { day } = getSingleDateSegments(region)
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
 
     // Focus the last segment (day)
     await user.click(day)
     // Calendar should be open
     await screen.findByTestId("stDateInputCalendar")
 
-    // Tab from day segment should close the calendar
+    // Tab from day segment moves to the calendar toggle (popover stays open)
+    await user.tab()
+    expect(calendarButton).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
+
+    // Tab from the calendar button leaves the widget and closes the popover
     await user.tab()
     await waitFor(() => {
       expect(
@@ -1755,6 +2054,48 @@ describe("DateInput single-mode keyboard navigation", () => {
       expect(
         screen.queryByTestId("stDateInputCalendar")
       ).not.toBeInTheDocument()
+    })
+  })
+
+  it("still reverts an incomplete edit on close after a blur committed while the popover was closed", async () => {
+    const user = userEvent.setup()
+    render(
+      <>
+        <DateInput {...getProps()} />
+        <button type="button" data-testid="outside">
+          Outside
+        </button>
+      </>
+    )
+    const { day } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(day)
+    await screen.findByTestId("stDateInputCalendar")
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    // Edit while closed, then blur — must not stick skipCloseCommitRef.
+    await user.keyboard("{Backspace}{Backspace}25")
+    fireEvent.blur(screen.getByTestId("stDateInputField"), {
+      relatedTarget: screen.getByTestId("outside"),
+    })
+    await waitFor(() => {
+      expect(
+        getSingleDateSegments(screen.getByTestId("stDateInput")).day
+      ).toHaveTextContent("25")
+    })
+    await clearSegment(
+      user,
+      getSingleDateSegments(screen.getByTestId("stDateInput")).year
+    )
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      const after = getSingleDateSegments(screen.getByTestId("stDateInput"))
+      expect(after.year).toHaveTextContent("1970")
+      expect(after.month).toHaveTextContent("01")
+      expect(after.day).toHaveTextContent("25")
     })
   })
 
@@ -1971,9 +2312,10 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     // Focus and close the popover via Tab
     await user.click(year)
     await screen.findByTestId("stDateInputCalendar")
-    // Close by tabbing through all segments and out
+    // Close by tabbing through all segments, the calendar button, and out
     await user.tab() // to month
     await user.tab() // to day
+    await user.tab() // to calendar button
     await user.tab() // leaves widget, closes popover
     await waitFor(() => {
       expect(
@@ -2080,12 +2422,13 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(month).toHaveFocus()
   })
 
-  it("passive mode still closes on Tab from last segment (no regression)", async () => {
+  it("passive mode Tab goes to calendar button then closes on second Tab", async () => {
     const user = userEvent.setup()
     render(<DateInput {...getProps()} />)
 
     const region = screen.getByTestId("stDateInput")
     const { day } = getSingleDateSegments(region)
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
 
     await user.click(day)
     await screen.findByTestId("stDateInputCalendar")
@@ -2095,7 +2438,15 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     expect(calendar).not.toHaveAttribute("role", "dialog")
     expect(calendar).not.toHaveAttribute("aria-modal")
 
-    // Tab from day should close (passive behavior unchanged)
+    // Tab from day focuses the calendar toggle without entering active mode
+    await user.tab()
+    expect(calendarButton).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).not.toHaveAttribute(
+      "role",
+      "dialog"
+    )
+
+    // Tab from the calendar button leaves and closes
     await user.tab()
     await waitFor(() => {
       expect(
@@ -2123,7 +2474,12 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     // Let pending rAF focus moves land before clicking.
     for (let i = 0; i < 3; i++) {
       await act(
-        async () => new Promise<void>(r => requestAnimationFrame(() => r()))
+        async () =>
+          new Promise<void>(r => {
+            requestAnimationFrame(() => {
+              r()
+            })
+          })
       )
     }
 
@@ -2131,7 +2487,12 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     // Let any rAF re-steal attempt land.
     for (let i = 0; i < 3; i++) {
       await act(
-        async () => new Promise<void>(r => requestAnimationFrame(() => r()))
+        async () =>
+          new Promise<void>(r => {
+            requestAnimationFrame(() => {
+              r()
+            })
+          })
       )
     }
     expect(day).toHaveFocus()
@@ -2140,7 +2501,9 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
       "dialog"
     )
 
-    // Close by tabbing out, then re-open by click: must stay passive.
+    // Close by tabbing past the calendar button, then re-open by click: must
+    // stay passive.
+    await user.tab()
     await user.tab()
     await waitFor(() => {
       expect(
@@ -2152,7 +2515,12 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
     await screen.findByTestId("stDateInputCalendar")
     for (let i = 0; i < 3; i++) {
       await act(
-        async () => new Promise<void>(r => requestAnimationFrame(() => r()))
+        async () =>
+          new Promise<void>(r => {
+            requestAnimationFrame(() => {
+              r()
+            })
+          })
       )
     }
     expect(refreshed.day).toHaveFocus()
@@ -2165,9 +2533,259 @@ describe("DateInput single-mode active calendar (Alt+ArrowDown)", () => {
       "Alt+ArrowDown"
     )
   })
+
+  it("puts popup ARIA on the calendar button, not the field wrapper", () => {
+    render(<DateInput {...getProps()} />)
+    const field = screen.getByTestId("stDateInputField")
+    expect(field).not.toHaveAttribute("aria-expanded")
+    expect(field).not.toHaveAttribute("aria-haspopup")
+    expect(field).not.toHaveAttribute("aria-controls")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    expect(calendarButton).toHaveAttribute("aria-label", "Choose date")
+    expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+    expect(calendarButton).not.toHaveAttribute("tabIndex", "-1")
+  })
+
+  it("calendar button opens active calendar and toggles aria-expanded", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    expect(calendar).toHaveAttribute("role", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+    expect(calendarButton).toHaveAttribute("aria-controls")
+
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+  })
+
+  it("commits typed segment edits when the calendar button closes the dialog", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    spy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(screen.getByTestId("stDateInputCalendar")).toHaveAttribute(
+        "role",
+        "dialog"
+      )
+    })
+    await user.click(calendarButton)
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(props.element.id, [newDateWire], {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+      })
+    })
+  })
+
+  it("Escape after a pointer-opened calendar restores focus to the calendar button", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+    await screen.findByTestId("stDateInputCalendar")
+
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveFocus()
+  })
+
+  it("Escape on the focused calendar button keeps focus on the toggle", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const { year } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    act(() => {
+      calendarButton.focus()
+    })
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveFocus()
+  })
+
+  it("passive preview does not set aria-expanded on the calendar button", async () => {
+    const user = userEvent.setup()
+    render(<DateInput {...getProps()} />)
+
+    const { year } = getSingleDateSegments(screen.getByTestId("stDateInput"))
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+    expect(screen.getByTestId("stDateInputCalendar")).not.toHaveAttribute(
+      "role",
+      "dialog"
+    )
+  })
 })
 
 describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
+  it("puts popup ARIA on the calendar button, not the field wrapper", () => {
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+    const field = screen.getByTestId("stDateInputField")
+    expect(field).not.toHaveAttribute("aria-expanded")
+    expect(field).not.toHaveAttribute("aria-haspopup")
+    expect(field).not.toHaveAttribute("aria-controls")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    expect(calendarButton).toHaveAttribute("aria-label", "Choose date range")
+    expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+    expect(calendarButton).not.toHaveAttribute("tabIndex", "-1")
+  })
+
+  it("calendar button opens active calendar and toggles aria-expanded", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+
+    const calendar = await screen.findByTestId("stDateInputCalendar")
+    expect(calendar).toHaveAttribute("role", "dialog")
+    expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+    expect(calendarButton).toHaveAttribute("aria-controls")
+
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    expect(calendarButton).not.toHaveAttribute("aria-controls")
+  })
+
+  it("commits typed segment edits when the calendar button closes the dialog", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+      min: "2019-01-01",
+    })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    spy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+    const end = getRangeDateSegments(region, "end")
+    await typeIntoSegment(user, start.year, "2021")
+    await typeIntoSegment(user, start.month, "02")
+    await typeIntoSegment(user, start.day, "07")
+    await typeIntoSegment(user, end.year, "2021")
+    await typeIntoSegment(user, end.month, "02")
+    await typeIntoSegment(user, end.day, "09")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(screen.getByTestId("stDateInputCalendar")).toHaveAttribute(
+        "role",
+        "dialog"
+      )
+    })
+    await user.click(calendarButton)
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2021-02-07", "2021-02-09"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+    })
+  })
+
+  it("Escape on the focused calendar button keeps focus on the toggle", async () => {
+    const user = userEvent.setup()
+    render(
+      <DateInput
+        {...getProps({
+          isRange: true,
+          default: ["2019-07-06", "2019-07-08"],
+        })}
+      />
+    )
+
+    const { year } = getRangeDateSegments(
+      screen.getByTestId("stDateInput"),
+      "start"
+    )
+    await user.click(year)
+    await screen.findByTestId("stDateInputCalendar")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    act(() => {
+      calendarButton.focus()
+    })
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(calendarButton).toHaveFocus()
+  })
+
   it("Alt+ArrowDown from start field segment enters active calendar", async () => {
     const user = userEvent.setup()
     render(
@@ -2362,6 +2980,31 @@ describe("DateInput single-mode paste handling", () => {
       ).toBe(true)
     })
   })
+
+  it("pasting an out-of-range segment value is rejected", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { day } = getSingleDateSegments(region)
+
+    await user.click(day)
+    await user.paste("99")
+
+    await waitFor(() => {
+      const calls = (
+        props.widgetMgr.setStringArrayValue as ReturnType<typeof vi.fn>
+      ).mock.calls
+      const dateValues = calls.map(c => c[1])
+      expect(
+        dateValues.every(
+          v => JSON.stringify(v) === JSON.stringify([originalDateWire])
+        )
+      ).toBe(true)
+    })
+  })
 })
 
 describe("DateInput range-mode paste handling", () => {
@@ -2412,6 +3055,98 @@ describe("DateInput range-mode paste handling", () => {
         expect.objectContaining({ fromUser: true })
       )
     })
+  })
+
+  it("pasting a full range string into the start field updates both values", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+
+    await user.click(year)
+    await user.paste("2024/03/06 – 2024/03/08")
+
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        "1",
+        ["2024-03-06", "2024-03-08"],
+        expect.objectContaining({ fromUser: true })
+      )
+    })
+  })
+
+  it("sorts a reversed range paste before committing", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+
+    await user.click(year)
+    await user.paste("2024/03/08 – 2024/03/06")
+
+    await waitFor(() => {
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        "1",
+        ["2024-03-06", "2024-03-08"],
+        expect.objectContaining({ fromUser: true })
+      )
+    })
+  })
+
+  it("pasting a full range string into the end field is ignored", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const end = getRangeDateSegments(region, "end")
+
+    await user.click(end.year)
+    await user.paste("2024/03/06 – 2024/03/08")
+
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+    expect(end.year).toHaveTextContent("2019")
+    expect(end.month).toHaveTextContent("07")
+    expect(end.day).toHaveTextContent("08")
+  })
+
+  it("pasting an out-of-range range does not commit", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+      min: "2019-07-01",
+      max: "2019-12-31",
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getRangeDateSegments(region, "start")
+
+    await user.click(year)
+    await user.paste("2024/03/06 – 2024/03/08")
+
+    await screen.findByTestId("stTooltipErrorHoverTarget")
+    expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
   })
 
   it("paste is ignored when range widget is disabled", async () => {
@@ -2470,8 +3205,83 @@ describe("DateInput range-mode paste handling", () => {
   })
 })
 
+describe("DateInput passive preview leave (single and range)", () => {
+  const modes = [
+    {
+      mode: "single",
+      props: (): ReturnType<typeof getProps> => getProps(),
+      getDay: (r: HTMLElement): HTMLElement => getSingleDateSegments(r).day,
+      nextDayName: /January 21, 1970/,
+    },
+    {
+      mode: "range",
+      props: (): ReturnType<typeof getProps> =>
+        getProps({ isRange: true, default: ["2019-07-06", "2019-07-08"] }),
+      getDay: (r: HTMLElement): HTMLElement =>
+        getRangeDateSegments(r, "end").day,
+      nextDayName: /July 9, 2019/,
+    },
+  ] as const
+
+  it.each(modes)(
+    "pointerdown stays open; Safari skip-button Tab closes outside ($mode)",
+    async ({ props, getDay, nextDayName }) => {
+      const user = userEvent.setup()
+      const widgetProps = props()
+      vi.spyOn(widgetProps.widgetMgr, "setStringArrayValue")
+      render(
+        <>
+          <button type="button" data-testid="outside">
+            Outside
+          </button>
+          <DateInput {...widgetProps} />
+        </>
+      )
+
+      const lastSegment = getDay(screen.getByTestId("stDateInput"))
+      await user.click(lastSegment)
+      const calendar = await screen.findByTestId("stDateInputCalendar")
+      const nextDay = within(calendar).getByRole("button", {
+        name: nextDayName,
+      })
+      /* eslint-disable testing-library/prefer-user-event */
+      fireEvent.pointerDown(nextDay)
+      fireEvent.blur(screen.getByTestId("stDateInputField"), {
+        relatedTarget: null,
+      })
+      /* eslint-enable testing-library/prefer-user-event */
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+
+      await user.click(nextDay)
+      await waitFor(() => {
+        expect(widgetProps.widgetMgr.setStringArrayValue).toHaveBeenCalled()
+      })
+
+      // rAF leave (park-on-grid covered in focusLeave.test.ts).
+      await user.click(getDay(screen.getByTestId("stDateInput")))
+      await screen.findByTestId("stDateInputCalendar")
+      /* eslint-disable testing-library/prefer-user-event */
+      await act(async () => {
+        fireEvent.keyDown(getDay(screen.getByTestId("stDateInput")), {
+          key: "Tab",
+        })
+        screen.getByTestId("outside").focus()
+        await new Promise<void>(r => {
+          requestAnimationFrame(() => r())
+        })
+      })
+      /* eslint-enable testing-library/prefer-user-event */
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+    }
+  )
+})
+
 describe("DateInput range-mode keyboard navigation", () => {
-  it("Tab from last end-date segment closes calendar", async () => {
+  it("Tab from last end-date segment focuses calendar button, then closes", async () => {
     const user = userEvent.setup()
     render(
       <DateInput
@@ -2484,9 +3294,14 @@ describe("DateInput range-mode keyboard navigation", () => {
 
     const region = screen.getByTestId("stDateInput")
     const { day } = getRangeDateSegments(region, "end")
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
 
     await user.click(day)
     await screen.findByTestId("stDateInputCalendar")
+
+    await user.tab()
+    expect(calendarButton).toHaveFocus()
+    expect(screen.getByTestId("stDateInputCalendar")).toBeInTheDocument()
 
     await user.tab()
     await waitFor(() => {
@@ -3423,5 +4238,312 @@ describe("DateInput query param binding", () => {
     expect(end.year).toHaveTextContent("2025")
     expect(end.month).toHaveTextContent("07")
     expect(end.day).toHaveTextContent("10")
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  const openCalendar = async (
+    user: ReturnType<typeof userEvent.setup>
+  ): Promise<HTMLElement> => {
+    const region = screen.getByTestId("stDateInput")
+    const { year } = getSingleDateSegments(region)
+    await user.click(year)
+    return screen.findByTestId("stDateInputCalendar")
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        [newDateWire],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: false }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        [newDateWire],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        [newDateWire],
+        {
+          formId: "testForm",
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ ignoreRerun: true })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a calendar date is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const calendar = await openCalendar(user)
+    const otherDay = within(calendar).getByRole("button", {
+      name: /January 25, 1970/,
+    })
+    await user.click(otherDay)
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+
+    expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      ["1970-01-25"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when clear is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        default: [],
+        value: [originalDateWire],
+        setValue: true,
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const clearButton = await screen.findByTestId("stDateInputClearButton")
+    await user.click(clearButton)
+
+    expect(setStringArrayValueSpy).toHaveBeenCalledWith(props.element.id, [], {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false for range commits", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        isRange: true,
+        default: [],
+        min: "2020-01-01",
+        max: "2020-12-31",
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+    const end = getRangeDateSegments(region, "end")
+    await typeIntoSegment(user, start.year, "2020")
+    await typeIntoSegment(user, start.month, "02")
+    await typeIntoSegment(user, start.day, "01")
+    await typeIntoSegment(user, end.year, "2020")
+    await typeIntoSegment(user, end.month, "02")
+    await typeIntoSegment(user, end.day, "07")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2020-02-01", "2020-02-07"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })

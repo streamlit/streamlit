@@ -84,6 +84,12 @@ in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "in_cached_function", default=False
 )
 
+# True while execution_control enqueues its internal st.empty() yield point,
+# so the fragment-callback element warning ignores that write.
+_fragment_callback_warning_suppressed: contextvars.ContextVar[bool] = (
+    contextvars.ContextVar("fragment_callback_warning_suppressed", default=False)
+)
+
 
 @dataclass(frozen=True)
 class FragmentThreadState:
@@ -197,6 +203,21 @@ class ThreadState:
             _thread_state.reset(token)
 
 
+def is_fragment_callback_warning_suppressed() -> bool:
+    """Whether the fragment-callback element warning is suppressed for this write."""
+    return _fragment_callback_warning_suppressed.get()
+
+
+@contextlib.contextmanager
+def suppress_fragment_callback_warning() -> Generator[None, None, None]:
+    """Suppress the fragment-callback element warning within this block."""
+    token = _fragment_callback_warning_suppressed.set(True)
+    try:
+        yield
+    finally:
+        _fragment_callback_warning_suppressed.reset(token)
+
+
 @dataclass
 class ScriptRunContext:
     """A context object that contains data for a "script run" - that is,
@@ -236,6 +257,8 @@ class ScriptRunContext:
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     fragment_ids_this_run: list[str] | None = None
+    # True when this rerun was triggered by browser back/forward (popstate).
+    is_history_navigation: bool = False
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
     parallel_coordinator: ParallelFragmentCoordinator | None = None
@@ -269,6 +292,7 @@ class ScriptRunContext:
         fragment_ids_this_run: list[str] | None = None,
         cached_message_hashes: frozenset[str] | None = None,
         context_info: ContextInfo | None = None,
+        is_history_navigation: bool = False,
         # Checked by fragment workers to cease execution.
         yield_check: Callable[[], None] = lambda: None,
     ) -> None:
@@ -295,6 +319,7 @@ class ScriptRunContext:
         self._has_script_started = False
         self.command_tracking_deactivated: bool = False
         self.fragment_ids_this_run = fragment_ids_this_run
+        self.is_history_navigation = is_history_navigation
         self.has_dialog_opened = False
         self.cached_message_hashes = frozenset(cached_message_hashes or ())
 

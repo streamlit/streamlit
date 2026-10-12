@@ -20,6 +20,7 @@ import asyncio
 import errno
 import select
 import socket
+from importlib.metadata import PackageNotFoundError
 from typing import TYPE_CHECKING
 from unittest import mock
 from unittest.mock import AsyncMock, patch
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
     from typing import Any
 
 from streamlit import config
+from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.runtime import Runtime
 from streamlit.web.server.server import Server
 from streamlit.web.server.starlette.starlette_server import (
@@ -43,6 +45,7 @@ from streamlit.web.server.starlette.starlette_server import (
     _get_uvicorn_config_kwargs,
     _get_websocket_settings,
     _is_port_manually_set,
+    _maybe_warn_uvicorn_websockets_mismatch,
     _server_address_is_unix_socket,
 )
 from tests.testutil import patch_config_options
@@ -422,6 +425,117 @@ class TestGetUvicornConfigKwargs:
         assert kwargs["ws_per_message_deflate"] is False
         assert kwargs["use_colors"] is False
         assert kwargs["access_log"] is False
+
+
+class TestWarnUvicornWebsocketsMismatch:
+    """Tests for _maybe_warn_uvicorn_websockets_mismatch."""
+
+    @pytest.mark.parametrize(
+        ("websockets_version", "uvicorn_version", "expect_warning"),
+        [
+            ("17.0.0", "0.51.0", True),
+            ("16.1", "0.51.0", True),
+            ("17.0.0", "0.52.0", False),
+            ("16.0.0", "0.51.0", False),
+            ("16.1.1", "0.51.0", False),
+        ],
+    )
+    def test_warns_only_for_affected_version_pairs(
+        self,
+        websockets_version: str,
+        uvicorn_version: str,
+        expect_warning: bool,
+    ) -> None:
+        """Warn only for websockets 16.1 or 17+ with uvicorn < 0.52.0."""
+
+        def fake_version(name: str) -> str:
+            return {"websockets": websockets_version, "uvicorn": uvicorn_version}[name]
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._package_version",
+                side_effect=fake_version,
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._LOGGER.warning"
+            ) as mock_warning,
+        ):
+            _maybe_warn_uvicorn_websockets_mismatch()
+
+        if not expect_warning:
+            mock_warning.assert_not_called()
+            return
+
+        mock_warning.assert_called_once()
+        message, logged_websockets, logged_uvicorn = mock_warning.call_args.args
+        assert "abort" in message
+        assert "/_stcore/stream" in message
+        assert "0.52.0" in message
+        assert "16.1.1" in message
+        assert logged_websockets == websockets_version
+        assert logged_uvicorn == uvicorn_version
+
+    def test_does_not_warn_when_metadata_lookup_fails(self) -> None:
+        """Do not warn if either package is missing from metadata."""
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._package_version",
+                side_effect=PackageNotFoundError("websockets"),
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._LOGGER.warning"
+            ) as mock_warning,
+        ):
+            _maybe_warn_uvicorn_websockets_mismatch()
+
+        mock_warning.assert_not_called()
+
+    def test_does_not_warn_when_version_string_is_invalid(self) -> None:
+        """Do not warn (or raise) if a package version is not PEP 440."""
+
+        def fake_version(name: str) -> str:
+            return {"websockets": "not-a-version", "uvicorn": "0.51.0"}[name]
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._package_version",
+                side_effect=fake_version,
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._LOGGER.warning"
+            ) as mock_warning,
+        ):
+            _maybe_warn_uvicorn_websockets_mismatch()
+
+        mock_warning.assert_not_called()
+
+    @patch_config_options(
+        {
+            "server.sslCertFile": None,
+            "server.sslKeyFile": None,
+            "server.websocketPingInterval": None,
+            "server.enableWebsocketCompression": True,
+        }
+    )
+    def test_uvicorn_config_kwargs_invokes_mismatch_warning(self) -> None:
+        """Warn from _get_uvicorn_config_kwargs when versions are incompatible."""
+
+        def fake_version(name: str) -> str:
+            return {"websockets": "17.0.0", "uvicorn": "0.51.0"}[name]
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._package_version",
+                side_effect=fake_version,
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._LOGGER.warning"
+            ) as mock_warning,
+        ):
+            _get_uvicorn_config_kwargs()
+
+        mock_warning.assert_called_once()
 
 
 class TestServerPortIsManuallySet:
@@ -1396,3 +1510,47 @@ class TestUvicornRunner:
             runner = UvicornRunner("myapp:app")
             with pytest.raises(RuntimeError, match="Unix sockets are not supported"):
                 runner.run()
+
+
+class TestServerProperties:
+    """Lightweight Server helpers that do not require a live uvicorn bind."""
+
+    @pytest.fixture(autouse=True)
+    def _isolate_runtime(self) -> Iterator[None]:
+        """Reset the Runtime singleton and skip component file watching."""
+        Runtime._instance = None
+        with patch.object(BidiComponentManager, "discover_and_register_components"):
+            yield
+        runtime = Runtime._instance
+        if runtime is not None:
+            runtime.bidi_component_registry.stop_file_watching()
+        Runtime._instance = None
+
+    def test_repr_includes_class_name(self) -> None:
+        """repr() includes the class name."""
+        server = Server("mock/script/path", is_hello=False)
+        assert "Server" in repr(server)
+
+    def test_browser_is_connected_is_false_before_sessions(self) -> None:
+        """No connected sessions means the browser is not connected."""
+        server = Server("mock/script/path", is_hello=False)
+        assert server.browser_is_connected is False
+
+    def test_is_running_hello_when_script_is_hello_app(self) -> None:
+        """Hello detection matches the hello app script path."""
+        from streamlit.hello import streamlit_app
+
+        hello_server = Server(streamlit_app.__file__, is_hello=False)
+        assert hello_server.is_running_hello is True
+
+    def test_is_running_hello_ignores_is_hello_flag(self) -> None:
+        """The is_hello constructor flag does not control is_running_hello."""
+        other_server = Server("mock/script/path", is_hello=True)
+        assert other_server.is_running_hello is False
+
+    def test_stop_without_starlette_server_stops_runtime(self) -> None:
+        """If uvicorn was never started, stop() still shuts down the runtime."""
+        server = Server("mock/script/path", is_hello=False)
+        with patch.object(server._runtime, "stop") as mock_stop:
+            server.stop()
+            mock_stop.assert_called_once()

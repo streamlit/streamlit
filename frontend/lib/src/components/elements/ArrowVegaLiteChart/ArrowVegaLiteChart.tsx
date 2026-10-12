@@ -15,7 +15,7 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
   useCallback,
   useEffect,
@@ -34,9 +34,9 @@ import {
   TableChart,
 } from "@emotion-icons/material-outlined"
 
-import {
-  type ArrowData,
-  type ArrowNamedDataSet,
+import type {
+  ArrowData,
+  ArrowNamedDataSet,
   streamlit,
   VegaLiteChart as VegaLiteChartProto,
 } from "@streamlit/protobuf"
@@ -56,9 +56,9 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { downloadDataUrl } from "~lib/util/downloadDataUrl"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { VegaLiteChartElement, WrappedNamedDataset } from "./arrowUtils"
+import type { VegaLiteChartElement, WrappedNamedDataset } from "./arrowUtils"
 import {
   StyledVegaLiteChartContainer,
   StyledVegaLiteChartTooltips,
@@ -72,11 +72,14 @@ export function isFacetChart(spec: string | object): boolean {
     const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
 
     return !!(
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy facet still lets row or column encodings count
       parsedSpec.facet ||
       // TODO (lawilby): do some tests for row/column
       // shorthand facet charts to confirm they work with
       // sizing in the same way.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy row encoding still lets a column encoding count
       parsedSpec.encoding?.row ||
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy column encoding still lets a facet encoding count
       parsedSpec.encoding?.column ||
       parsedSpec.encoding?.facet
     )
@@ -99,14 +102,23 @@ export function isFacetChart(spec: string | object): boolean {
 // Exported for testing
 export function hasNestedComposition(spec: string | object): boolean {
   try {
-    const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
+    const parsedSpec: unknown =
+      typeof spec === "string" ? JSON.parse(spec) : spec
+    if (
+      parsedSpec === null ||
+      typeof parsedSpec !== "object" ||
+      Array.isArray(parsedSpec)
+    ) {
+      return false
+    }
 
-    if (!("vconcat" in parsedSpec) || !Array.isArray(parsedSpec.vconcat)) {
+    const { vconcat } = parsedSpec as { vconcat?: unknown }
+    if (!Array.isArray(vconcat)) {
       return false
     }
 
     // Check if any child in vconcat contains a composition operator
-    return parsedSpec.vconcat.some(
+    return vconcat.some(
       (child: unknown) =>
         child !== null &&
         typeof child === "object" &&
@@ -164,6 +176,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       id: elementProto.id,
       selectionMode: elementProto.selectionMode,
       formId: elementProto.formId,
+      alt: elementProto.alt ?? "",
     }),
     // elementHash is intentionally included as a stability anchor for memoization
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -433,6 +446,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
   }, [data, datasets])
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
+  const labelContext = inputElement.alt?.trim() || undefined
+
   if (showData) {
     const derivedHeight =
       fullScreenHeight ??
@@ -443,6 +459,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         data={data ?? datasets[0]?.data}
         height={derivedHeight}
         width={widthConfig ?? undefined}
+        alt={labelContext}
         customToolbarActions={[
           <ToolbarAction
             key="show-chart"
@@ -451,6 +468,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             onClick={() => {
               setShowData(false)
             }}
+            labelContext={labelContext}
           />,
         ]}
       />
@@ -477,6 +495,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         onExpand={expand}
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
+        labelContext={labelContext}
       >
         {enableShowData && (
           <ToolbarAction
@@ -485,6 +504,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             onClick={() => {
               setShowData(true)
             }}
+            labelContext={labelContext}
           />
         )}
         {isViewReady && (
@@ -492,6 +512,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             label="Download as PNG"
             icon={FileDownload}
             onClick={handleDownloadPng}
+            labelContext={labelContext}
           />
         )}
         {showCopySpecAction && (
@@ -502,6 +523,9 @@ const ArrowVegaLiteChart: FC<Props> = ({
             label={isCopied ? "Copied!" : "Copy Vega-Lite spec"}
             icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySpec}
+            // Skip context while on the transient "Copied!" label so the name
+            // stays "Copied!" rather than "Copied!: {context}".
+            labelContext={isCopied ? undefined : labelContext}
           />
         )}
       </Toolbar>

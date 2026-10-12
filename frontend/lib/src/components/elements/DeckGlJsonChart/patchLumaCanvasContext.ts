@@ -55,6 +55,9 @@ const canvasContextProto = CanvasContext.prototype as MaybePatchedCanvasContext
 
 if (!canvasContextProto.__streamlitMaxTexturePatchApplied) {
   const originalGetMaxDrawingBufferSize =
+    // Prototype patch must capture the original to `.call(this)`. Binding the
+    // method to the prototype would lock `this` to CanvasContext.prototype.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- see above
     canvasContextProto.getMaxDrawingBufferSize
 
   canvasContextProto.getMaxDrawingBufferSize =

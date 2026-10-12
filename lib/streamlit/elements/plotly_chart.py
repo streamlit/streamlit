@@ -44,13 +44,22 @@ from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+    validate_on_change_mode,
+)
 from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
@@ -432,6 +441,7 @@ class PlotlyMixin:
             "lasso",
         ),
         config: dict[str, Any] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -452,6 +462,7 @@ class PlotlyMixin:
             "lasso",
         ),
         config: dict[str, Any] | None = None,
+        alt: str | None = None,
     ) -> PlotlyState: ...
 
     @gather_metrics("plotly_chart")
@@ -471,6 +482,7 @@ class PlotlyMixin:
             "lasso",
         ),
         config: dict[str, Any] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
 
@@ -611,6 +623,19 @@ class PlotlyMixin:
             configuration options, see Plotly's documentation on `Configuration
             in Python <https://plotly.com/python/configuration-options/>`_.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the chart.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Prefer a short, specific description; a vague one can be worse than
+            none. This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Returns
         -------
         element or PlotlyState
@@ -642,7 +667,9 @@ class PlotlyMixin:
         ...     hist_data, group_labels, bin_size=[0.1, 0.25, 0.5]
         ... )
         >>>
-        >>> st.plotly_chart(fig)
+        >>> st.plotly_chart(
+        ...     fig, alt="Distribution of three groups of random samples"
+        ... )
 
         .. output::
            https://doc-plotly-chart.streamlit.app/
@@ -704,10 +731,12 @@ class PlotlyMixin:
         if theme not in {"streamlit", None}:
             raise StreamlitValueError("theme", ["'streamlit'", "None"])
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitValueError(
-                "on_select", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
@@ -715,13 +744,11 @@ class PlotlyMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -743,11 +770,17 @@ class PlotlyMixin:
         plotly_chart_proto.spec = plotly.io.to_json(figure, validate=False)
         plotly_chart_proto.config = json.dumps(config)
 
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            # Carry alt on its own proto field so it is not baked into the
+            # wire spec JSON (frontend applies it as the chart accessible name).
+            plotly_chart_proto.alt = normalized_alt
+
         ctx = get_script_run_ctx()
 
-        # We are computing the widget id for all plotly uses
-        # to also allow non-widget Plotly charts to keep their state
-        # when the frontend component gets unmounted and remounted.
+        # Compute an ID for every Plotly chart so the frontend can restore
+        # state after remount. Always hash command kwargs (including alt),
+        # even when the author set a key, so changing alt remounts the chart.
         plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,
@@ -760,6 +793,7 @@ class PlotlyMixin:
             theme=theme,
             width=width,
             height=height,
+            alt=normalized_alt,
         )
 
         # Handle "content" width and height by inspecting the figure's natural dimensions
@@ -776,7 +810,7 @@ class PlotlyMixin:
 
             widget_state = register_widget(
                 plotly_chart_proto.id,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,

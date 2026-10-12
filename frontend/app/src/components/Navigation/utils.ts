@@ -16,7 +16,7 @@
 
 import { groupBy } from "lodash-es"
 
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 interface NavigationSections {
@@ -63,7 +63,7 @@ export function shouldShowNavigation(
 export function groupPagesBySection(
   appPages: AppPage.$Properties[]
 ): NavigationSections {
-  return groupBy(appPages, page => page.sectionHeader || "")
+  return groupBy(appPages, page => page.sectionHeader ?? "")
 }
 
 /**

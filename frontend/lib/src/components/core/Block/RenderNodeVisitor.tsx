@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
-import { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
-import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
+import type { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import { getElementId } from "~lib/util/utils"
 
-import { BlockNodeRenderer, BlockPropsWithoutWidth } from "./Block"
+import { BlockNodeRenderer, type BlockPropsWithoutWidth } from "./Block"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 
 type OptionalReactElements = ReactElement | ReactElement[] | null | undefined
@@ -38,7 +38,7 @@ type OptionalReactElements = ReactElement | ReactElement[] | null | undefined
  * Usage:
  * ```typescript
  * const elements = RenderNodeVisitor.collectReactElements(props, disableFullscreen)
- * return <>{elements}</>
+ * return elements
  * ```
  */
 export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> {
@@ -60,6 +60,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   }
 
   private getCurrentKey(elementId?: string): string {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank key override falls through to the element id
     return this.elementKeyOverride || elementId || this.index.toString()
   }
 
@@ -86,6 +87,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     // Use blockId as React key when available so that keyed containers
     // maintain component identity across positional shifts (e.g. when a
     // conditional element above the container causes it to move).
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
     const key = this.getCurrentKey(node.deltaBlock?.id || undefined)
     this.index += 1
     const renderer = <BlockNodeRenderer key={key} {...childProps} />
@@ -158,7 +160,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
    *
    * @example
    * const ChildRenderer = (props) => {
-   *   return <>{RenderNodeVisitor.collectReactElements(props, false)}</>
+   *   return RenderNodeVisitor.collectReactElements(props, false)
    * }
    */
   static collectReactElements(props: BlockPropsWithoutWidth): ReactElement[] {

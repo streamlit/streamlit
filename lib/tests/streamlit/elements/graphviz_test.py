@@ -176,3 +176,52 @@ class GraphvizTest(DeltaGeneratorTestCase):
 
         with pytest.raises(StreamlitAPIException):
             st.graphviz_chart(graph, height=invalid_height)
+
+    def test_graphviz_chart_alt(self):
+        """A non-empty alt is stored on the proto; omitted/None leave it unset."""
+        graph = graphviz.Digraph()
+        graph.edge("Hello", "World")
+
+        st.graphviz_chart(graph, alt="Directed graph of Hello to World")
+        el = self.get_delta_from_queue().new_element.graphviz_chart
+        assert el.HasField("alt")
+        assert el.alt == "Directed graph of Hello to World"
+
+        st.graphviz_chart(graph)
+        assert not self.get_delta_from_queue().new_element.graphviz_chart.HasField(
+            "alt"
+        )
+
+        st.graphviz_chart(graph, alt=None)
+        assert not self.get_delta_from_queue().new_element.graphviz_chart.HasField(
+            "alt"
+        )
+
+    @parameterized.expand(["", "   "])
+    def test_graphviz_chart_empty_alt_is_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        graph = graphviz.Digraph()
+        graph.edge("Hello", "World")
+
+        st.graphviz_chart(graph, alt=blank_alt)
+        assert not self.get_delta_from_queue().new_element.graphviz_chart.HasField(
+            "alt"
+        )
+
+    def test_graphviz_chart_alt_strips_whitespace(self):
+        """Leading and trailing whitespace is stripped from alt."""
+        graph = graphviz.Digraph()
+        graph.edge("Hello", "World")
+
+        st.graphviz_chart(graph, alt="  Directed graph of Hello to World  ")
+        el = self.get_delta_from_queue().new_element.graphviz_chart
+        assert el.HasField("alt")
+        assert el.alt == "Directed graph of Hello to World"
+
+    def test_graphviz_chart_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Graph of "A < B" & nodes <script>alert(1)</script>'
+        st.graphviz_chart("digraph { a -> b }", alt=adversarial)
+        el = self.get_delta_from_queue().new_element.graphviz_chart
+        assert el.HasField("alt")
+        assert el.alt == adversarial

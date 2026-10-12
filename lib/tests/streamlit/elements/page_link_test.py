@@ -14,9 +14,11 @@
 
 """page_link unit tests."""
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.errors import (
@@ -58,6 +60,86 @@ class PageLinkTest(DeltaGeneratorTestCase):
         """Test that page_link throws on external link with no label."""
         with pytest.raises(StreamlitMissingRequiredParameterError):
             st.page_link(page="http://example.com")
+
+    @parameterized.expand(
+        [
+            ("backslash_unc", "\\\\server\\share\\page.py"),
+            ("forward_slash_unc", "//server/share/page.py"),
+            ("forward_then_backslash_unc", "/\\server\\share\\page.py"),
+            ("backslash_then_forward_unc", "\\/server/share/page.py"),
+            ("extended_unc", "\\\\?\\UNC\\server\\share\\page.py"),
+            ("extended_local", "\\\\?\\C:\\app\\page.py"),
+            ("device_namespace", "\\\\.\\device\\page.py"),
+            ("path_object", Path("\\\\server\\share\\page.py")),
+        ]
+    )
+    @patch("streamlit.env_util.IS_WINDOWS", True)
+    def test_rejects_unsafe_windows_paths_before_resolving(
+        self, _name: str, page: str | Path
+    ) -> None:
+        """Windows network/device paths are rejected before filesystem access."""
+        with (
+            patch("os.path.realpath") as realpath,
+            pytest.raises(StreamlitAPIException, match="Network paths"),
+        ):
+            st.page_link(page)
+
+        realpath.assert_not_called()
+
+    @parameterized.expand(
+        [
+            ("string", "page\x00.py"),
+            ("path_object", Path("page\x00.py")),
+        ]
+    )
+    def test_rejects_null_bytes_before_resolving(
+        self, _name: str, page: str | Path
+    ) -> None:
+        """Null-byte page paths are rejected before filesystem access."""
+        with (
+            patch("os.path.realpath") as realpath,
+            pytest.raises(StreamlitAPIException, match="null bytes"),
+        ):
+            st.page_link(page)
+
+        realpath.assert_not_called()
+
+    @parameterized.expand(
+        [
+            ("windows_drive", True, "C:\\app\\page.py"),
+            ("parent_relative", True, "../shared/page.py"),
+            ("non_windows_double_slash", False, "//server/share/page.py"),
+        ]
+    )
+    def test_allows_paths_accepted_by_the_public_api(
+        self, _name: str, is_windows: bool, page: str
+    ) -> None:
+        """Relative, drive-absolute, and non-Windows double-slash paths resolve."""
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {
+            "page": {
+                "script_path": "/resolved/page.py",
+                "page_name": "Page",
+                "page_script_hash": "page-hash",
+            }
+        }
+
+        with (
+            patch("streamlit.env_util.IS_WINDOWS", is_windows),
+            patch(
+                "streamlit.elements.widgets.button.get_script_run_ctx",
+                return_value=ctx,
+            ),
+            patch(
+                "streamlit.elements.widgets.button.normalize_path_join",
+                return_value="/unresolved/page.py",
+            ),
+            patch("os.path.realpath", return_value="/resolved/page.py") as realpath,
+        ):
+            st.page_link(page)
+
+        realpath.assert_called_once_with("/unresolved/page.py")
 
     def test_icon(self):
         """Test that it can be called with icon param."""
@@ -239,21 +321,23 @@ class PageLinkTest(DeltaGeneratorTestCase):
         assert c.page == "https://docs.streamlit.io"
         assert c.external
 
-    def test_empty_string_icon_for_external_page_should_raise_exception(self):
-        """Test that st.page_link with empty string icon raises an exception for external pages."""
+    @parameterized.expand([("",), ("   ",)])
+    def test_empty_or_whitespace_icon_for_external_page_means_no_icon(
+        self, icon: str
+    ) -> None:
+        """st.page_link treats empty or whitespace-only icon as no icon."""
+        st.page_link(page="https://example.com", label="Test", icon=icon)
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.icon == ""
 
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.page_link(page="https://example.com", label="Test", icon="")
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_empty_icon_suppresses_page_icon(self) -> None:
+        """st.page_link(icon="") must not fall back to the Page icon."""
+        page = st.Page("foo.py", title="Bar Test", icon="🎈")
+        st.page_link(page=page, icon="")
 
-        assert 'The value "" is not a valid emoji' in str(exc_info.value)
-
-    def test_whitespace_only_icon_for_external_page_should_raise_exception(self):
-        """Test that st.page_link with whitespace-only icon raises an exception for external pages."""
-
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.page_link(page="https://example.com", label="Test", icon="   ")
-
-        assert 'The value "   " is not a valid emoji' in str(exc_info.value)
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.icon == ""
 
     @patch("pathlib.Path.is_file", MagicMock(return_value=True))
     def test_st_page_with_mismatched_file_path_raises(self):

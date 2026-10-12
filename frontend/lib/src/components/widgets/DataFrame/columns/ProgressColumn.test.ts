@@ -15,14 +15,14 @@
  */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { RangeCellType } from "@glideapps/glide-data-grid-cells"
+import type { RangeCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, Float64, Int64 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { mockTheme } from "~lib/mocks/mockTheme"
 
-import ProgressColumn, { ProgressColumnParams } from "./ProgressColumn"
-import { BaseColumnProps, ErrorCell, isErrorCell } from "./utils"
+import ProgressColumn, { type ProgressColumnParams } from "./ProgressColumn"
+import { type BaseColumnProps, type ErrorCell, isErrorCell } from "./utils"
 
 const PROGRESS_COLUMN_TEMPLATE = {
   id: "1",

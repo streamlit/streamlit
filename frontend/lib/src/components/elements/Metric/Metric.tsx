@@ -14,17 +14,21 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useId, useRef } from "react"
+import { memo, type ReactElement, useEffect, useId, useRef } from "react"
 
 import { Global } from "@emotion/react"
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
 import { getLogger } from "loglevel"
 import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
-import { TopLevelSpec } from "vega-lite"
+import type { TopLevelSpec } from "vega-lite"
 
-import { convertRemToPx, EmotionTheme, useEmotionTheme } from "@streamlit/lib"
+import {
+  convertRemToPx,
+  type EmotionTheme,
+  useEmotionTheme,
+} from "@streamlit/lib"
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
@@ -151,7 +155,7 @@ export function getMetricChartSpec(
           }),
           ...(chartType === MetricProto.ChartType.BAR && {
             type: "bar",
-            cornerRadius: parseFloat(theme.radii.full),
+            cornerRadius: Number.parseFloat(theme.radii.full),
           }),
           ...(chartType === MetricProto.ChartType.AREA && {
             type: "area",
@@ -399,6 +403,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
         } else {
           finalizeEmbed = result.finalize
         }
+        return
       })
       .catch((error: unknown) => {
         // Ignore embed rejections so teardown races do not throw. LOG.debug

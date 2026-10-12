@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { Mock } from "vitest"
+import type { Mock } from "vitest"
 
 import { FileUploadClient } from "./FileUploadClient"
 import { mockSessionInfo } from "./mocks/mocks"
-import { StreamlitEndpoints } from "./StreamlitEndpoints"
+import type { StreamlitEndpoints } from "./StreamlitEndpoints"
 
 const MOCK_FILE_ID = -111
 const MOCK_FILE = new File(["file1"], "file1.txt")
@@ -147,7 +147,7 @@ describe("FileUploadClient Upload", () => {
     const fileURLsPromise = uploader.fetchFileURLs([])
     expect(requestFileURLs).toHaveBeenCalledTimes(1)
 
-    // @ts-expect-error
+    // @ts-expect-error - pendingFileURLsRequests is private
     const pendingReqs = uploader.pendingFileURLsRequests
     expect(pendingReqs.size).toBe(1)
 
@@ -159,7 +159,7 @@ describe("FileUploadClient Upload", () => {
   it("onFileURLsResponse rejects promise on errorMsg", async () => {
     void uploader.fetchFileURLs([])
 
-    // @ts-expect-error
+    // @ts-expect-error - pendingFileURLsRequests is private
     const pendingReqs = uploader.pendingFileURLsRequests
     const reqId = pendingReqs.keys().next().value as string
     const promise = pendingReqs.get(reqId)?.promise
@@ -175,7 +175,7 @@ describe("FileUploadClient Upload", () => {
   it("onFileURLsResponse resolves promise on success", async () => {
     void uploader.fetchFileURLs([])
 
-    // @ts-expect-error
+    // @ts-expect-error - pendingFileURLsRequests is private
     const pendingReqs = uploader.pendingFileURLsRequests
     const reqId = pendingReqs.keys().next().value as string
     const promise = pendingReqs.get(reqId)?.promise

@@ -24,7 +24,7 @@ import re
 import secrets
 import threading
 from collections import OrderedDict
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Final, Literal
 
 from streamlit import config_util, development, env_util, file_util, util
@@ -93,7 +93,7 @@ _DEFINED_BY_ENV_VAR: Final = "environment variable"
 _LOGGER: Final = logging.getLogger(__name__)
 
 
-class ShowErrorDetailsConfigOptions(str, Enum):
+class ShowErrorDetailsConfigOptions(StrEnum):
     """Valid options for the "client.showErrorDetails" config."""
 
     FULL = "full"
@@ -115,7 +115,7 @@ class ShowErrorDetailsConfigOptions(str, Enum):
         # (e.g. st.set_option("client.showErrorDetails", False)).
 
 
-class CustomThemeCategories(str, Enum):
+class CustomThemeCategories(StrEnum):
     """Theme categories that can be set with custom theme config."""
 
     SIDEBAR = "sidebar"
@@ -2468,6 +2468,29 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "dataframeHeaderTextColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The text color of the dataframe's header.
+
+        This color applies to column headers, grouped column headers, and
+        header icons such as sort and edit. It doesn't apply to the text in
+        body cells. If this is set, Streamlit uses it as-is. If it isn't
+        set, Streamlit uses a faded version of `theme.textColor` (the
+        configured `textColor`, or the theme default if `textColor` is also
+        unset). When a column is selected, its header text and icons stay
+        white, matching existing selection behavior.
+    """,
+)
+
+_create_theme_options(
     "showWidgetBorder",
     categories=[
         "theme",
@@ -2829,9 +2852,9 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
 
     """
     try:
-        import toml
+        import tomllib
 
-        parsed_config_file = toml.loads(raw_toml)
+        parsed_config_file = tomllib.loads(raw_toml)
     except Exception:
         # Catching any parsing exception to prevent this from breaking our
         # config change watcher logic.

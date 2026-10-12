@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-TOTAL_BUTTONS = 40
+TOTAL_BUTTONS = 43
 
 WRAP_LABEL = "Regenerate the complete quarterly report now"
 
@@ -395,6 +395,34 @@ def test_wrap_auto_no_wrap_for_direct_column_children(app: Page):
     wait_until(app, columns_are_stacked)
     expect_label_truncated(auto_direct)
     expect(auto_direct.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+
+def test_hidden_tab_label_gets_title_when_shown(app: Page):
+    """A clipped no-wrap button in an unselected tab gets a title once shown."""
+    tabs = get_element_by_key(app, "wrap_false_hidden_tab")
+    button = get_element_by_key(app, "wrap_false_hidden_tab_button")
+
+    expect(button.get_by_title(WRAP_LABEL, exact=True)).to_have_count(0)
+    tabs.get_by_role("tab", name="Hidden label").click()
+    expect(button.get_by_title(WRAP_LABEL, exact=True)).to_be_visible()
+
+
+def test_short_label_has_no_native_title(app: Page):
+    """A label that fits does not get a native title, including when no-wrap is
+    the resolved default inside a horizontal container.
+    """
+    short_horizontal = get_element_by_key(app, "wrap_auto_short_button")
+    short_explicit = get_element_by_key(app, "wrap_false_short_button")
+
+    # Wait for a clipped label's title first, so a missing short-label title is
+    # not a pass that landed before the tooltip effect ran.
+    expect(
+        get_element_by_key(app, "wrap_auto_button").get_by_title(WRAP_LABEL, exact=True)
+    ).to_be_visible()
+    expect(short_horizontal.get_by_role("button", name="Short label")).to_be_visible()
+    expect(short_horizontal.get_by_title("Short label", exact=True)).to_have_count(0)
+    expect(short_explicit.get_by_role("button", name="Short label")).to_be_visible()
+    expect(short_explicit.get_by_title("Short label", exact=True)).to_have_count(0)
 
 
 def test_wrap_false_help_takes_precedence_over_title(app: Page):

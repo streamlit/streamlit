@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, ReactNode } from "react"
+import { memo, type ReactElement, type ReactNode } from "react"
 
 import { notNullOrUndefined } from "~lib/util/utils"
 
@@ -24,7 +24,7 @@ import {
   StyledFileChips,
 } from "./styled-components"
 import UploadedFileChip from "./UploadedFileChip"
-import { UploadFileInfo } from "./UploadFileInfo"
+import type { UploadFileInfo } from "./UploadFileInfo"
 
 interface Props {
   items: UploadFileInfo[]

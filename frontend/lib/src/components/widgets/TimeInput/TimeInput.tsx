@@ -15,11 +15,11 @@
  */
 
 import {
-  ClipboardEvent,
-  FocusEvent,
-  KeyboardEvent,
+  type ClipboardEvent,
+  type FocusEvent,
+  type KeyboardEvent,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useId,
@@ -33,7 +33,7 @@ import { Cancel } from "@emotion-icons/material-rounded"
 import { Time } from "@internationalized/date"
 import { I18nProvider, type TimeValue } from "react-aria-components"
 
-import { TimeInput as TimeInputProto } from "@streamlit/protobuf"
+import type { TimeInput as TimeInputProto } from "@streamlit/protobuf"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import Icon from "~lib/components/shared/Icon/Icon"
@@ -44,7 +44,7 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -54,7 +54,7 @@ import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledClearButton,
@@ -807,6 +807,10 @@ function updateWidgetMgrState(
     formId: element.formId,
     fragmentId,
     fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
   })
 }
 

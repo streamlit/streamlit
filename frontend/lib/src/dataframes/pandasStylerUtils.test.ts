@@ -17,7 +17,7 @@
 import { describe, expect } from "vitest"
 
 import { getStyledCell, getStyledHeaders } from "./pandasStylerUtils"
-import { Quiver } from "./Quiver"
+import type { Quiver } from "./Quiver"
 
 const T_FAKE_UUID = "T_FAKE_UUID"
 

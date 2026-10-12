@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -120,6 +118,16 @@ if TYPE_CHECKING:
     assert_type(multiselect("foo", ["a", "b"], select_all=True), list[str])
     assert_type(multiselect("foo", ["a", "b"], select_all=False), list[str])
     assert_type(multiselect("foo", ["a", "b"], select_all=1000), list[str])
+
+    # Check on_change parameter modes
+    assert_type(multiselect("foo", [1, 2, 3], on_change=None), list[int])
+    assert_type(multiselect("foo", [1, 2, 3], on_change="rerun"), list[int])
+    assert_type(multiselect("foo", [1, 2, 3], on_change="ignore"), list[int])
+    assert_type(multiselect("foo", [1, 2, 3], on_change=lambda: None), list[int])
+    assert_type(
+        multiselect("foo", [1, 2, 3], accept_new_options=True, on_change="ignore"),
+        list[int | str],
+    )
 
     def on_multiselect_change(prefix: str) -> None: ...
 

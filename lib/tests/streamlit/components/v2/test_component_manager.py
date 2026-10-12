@@ -20,6 +20,7 @@ import threading
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 from streamlit.components.v2 import component as component_api
 from streamlit.components.v2.component_manager import BidiComponentManager
@@ -346,7 +347,7 @@ def test_unregister_delegates_to_registry() -> None:
 
 def test_start_file_watching_when_already_started_logs_and_skips() -> None:
     """When watching is active, log a warning and do not restart the watcher."""
-    from unittest.mock import MagicMock, patch
+    from unittest.mock import MagicMock
 
     mock_registry = MagicMock()
     mock_manifest_handler = MagicMock()
@@ -369,7 +370,6 @@ def test_start_file_watching_when_already_started_logs_and_skips() -> None:
 
 def test_discover_and_register_components_logs_warning_on_scan_failure() -> None:
     """Manifest scan failures log a warning and do not propagate."""
-    from unittest.mock import patch
 
     manager = BidiComponentManager()
 
@@ -390,7 +390,7 @@ def test_discover_and_register_components_logs_warning_on_scan_failure() -> None
 
 def test_stop_file_watching_when_not_started_logs_and_skips() -> None:
     """When watching is inactive, log a warning and do not stop the watcher."""
-    from unittest.mock import MagicMock, patch
+    from unittest.mock import MagicMock
 
     mock_file_watcher = MagicMock()
     mock_file_watcher.is_watching_active = False
@@ -405,7 +405,7 @@ def test_stop_file_watching_when_not_started_logs_and_skips() -> None:
 
 def test_stop_file_watching_when_active_calls_watcher() -> None:
     """When watching is active, delegate shutdown to the file watcher."""
-    from unittest.mock import MagicMock, patch
+    from unittest.mock import MagicMock
 
     mock_file_watcher = MagicMock()
     mock_file_watcher.is_watching_active = True
@@ -420,7 +420,7 @@ def test_stop_file_watching_when_active_calls_watcher() -> None:
 
 def test_on_components_changed_logs_exception_when_recompute_raises() -> None:
     """Registry updates that fail during recompute log at exception level."""
-    from unittest.mock import MagicMock, patch
+    from unittest.mock import MagicMock
 
     mock_registry = MagicMock()
     manager = BidiComponentManager(registry=mock_registry, file_watcher=MagicMock())
@@ -446,3 +446,54 @@ def test_recompute_definition_from_api_returns_none_without_recorded_inputs() ->
     """Recompute without prior ``record_api_inputs`` returns ``None``."""
     manager = BidiComponentManager()
     assert manager._recompute_definition_from_api("unknown.component") is None
+
+
+def test_ensure_definition_leaves_explicit_empty_registration() -> None:
+    """An explicit empty registration is not rebuilt or replaced on mount."""
+
+    manager = BidiComponentManager()
+    name = "empty_component"
+    manager.register(BidiComponentDefinition(name=name))
+
+    with patch.object(manager, "build_definition_with_validation") as build:
+        manager.ensure_definition_if_missing_or_placeholder(
+            component_key=name,
+            html="<p>old</p>",
+            css="style.css",
+            js=None,
+        )
+
+    build.assert_not_called()
+    stored = manager.get(name)
+    assert stored is not None
+    assert stored.html is None
+    assert name not in manager._api_inputs
+
+
+def test_ensure_definition_fills_a_manifest_discovery(tmp_path: Path) -> None:
+    """A name-only manifest discovery is replaced by the captured definition."""
+    manager = BidiComponentManager()
+    manifest = ComponentManifest(
+        name="pkg",
+        version="0.0.1",
+        components=[ComponentConfig(name="comp")],
+    )
+    manager.register_from_manifest(manifest, tmp_path)
+    name = "pkg.comp"
+    discovered = manager.get(name)
+    assert discovered is not None
+    assert discovered.is_manifest_discovery
+
+    manager.ensure_definition_if_missing_or_placeholder(
+        component_key=name,
+        html="<p>filled</p>",
+        css=None,
+        js=None,
+    )
+
+    stored = manager.get(name)
+    assert stored is not None
+    assert stored.html == "<p>filled</p>"
+    assert not stored.is_manifest_discovery
+    assert manager._api_inputs[name].css is None
+    assert manager._api_inputs[name].js is None

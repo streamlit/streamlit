@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useId } from "react"
+import { type FC, memo, useCallback, useId } from "react"
 
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
@@ -38,7 +38,7 @@ import {
   StyledFileChipSize,
   StyledVisuallyHidden,
 } from "./styled-components"
-import { UploadFileInfo } from "./UploadFileInfo"
+import type { UploadFileInfo } from "./UploadFileInfo"
 import { getFileTypeIcon, truncateFilename, useImagePreview } from "./utils"
 
 export interface Props {

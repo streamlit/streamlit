@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -35,19 +35,22 @@ import {
 } from "@emotion-icons/material-outlined"
 import {
   CompactSelection,
-  DataEditorRef,
+  type DataEditorRef,
   DataEditor as GlideDataEditor,
-  GridCell,
-  GridColumn,
-  GridMouseEventArgs,
-  GridSelection,
+  type GridCell,
+  type GridColumn,
+  type GridMouseEventArgs,
+  type GridSelection,
   type Item,
-  Rectangle,
+  type Rectangle,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
-import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe as DataframeProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
 import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
@@ -65,10 +68,10 @@ import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import useTimeout from "~lib/hooks/useTimeout"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   getTextCell,
   ImageCellEditor,
   toGlideColumn,
@@ -436,8 +439,8 @@ function DataFrame({
   const getOriginalIndexRef = useRef(getOriginalIndex)
   getOriginalIndexRef.current = getOriginalIndex
 
-  // Ref to track the last processed selectionState to avoid proto mutation.
-  // Used to detect when a new programmatic selection arrives from the backend.
+  // Last applied programmatic selectionState JSON. Reset when the one-shot
+  // field is absent so a later identical payload can apply.
   const processedSelectionStateRef = useRef<string | null>(null)
 
   // Create the sync selection state callback using the sorted columns and getOriginalIndex.
@@ -660,21 +663,22 @@ function DataFrame({
 
   /**
    * Apply programmatic selection changes set via st.session_state.
-   * selectionState is a one-shot signal from the backend (only present on
-   * the rerun where the value changed). We track processed values via ref
-   * to avoid mutating the proto object.
+   * The backend sends selectionState only on the rerun where the value
+   * changed. This effect skips identical payloads across React re-renders
+   * of that message, and clears processedSelectionStateRef when
+   * selectionState is absent so a later identical value can apply.
    */
   useEffect(() => {
-    // Skip if no selectionState or we've already processed this exact value
-    if (
-      !element.selectionState ||
-      element.selectionState === processedSelectionStateRef.current
-    ) {
+    if (!element.selectionState) {
+      processedSelectionStateRef.current = null
+      return
+    }
+
+    if (element.selectionState === processedSelectionStateRef.current) {
       return
     }
 
     const selectionState = element.selectionState
-    // Mark as processed (using ref instead of proto mutation)
     processedSelectionStateRef.current = selectionState
 
     const programmaticSelection = getProgrammaticSelectionState({
@@ -795,7 +799,7 @@ function DataFrame({
     gridTheme,
     numRows,
     usesGroupRow,
-    containerWidth || 0,
+    containerWidth ?? 0,
     fullScreenHeight,
     isFullScreen,
     widthConfig,
@@ -832,7 +836,7 @@ function DataFrame({
   const { pinColumn, unpinColumn, freezeColumns } = useColumnPinning(
     columns,
     isEmptyTable,
-    containerWidth || 0,
+    containerWidth ?? 0,
     gridTheme.minColumnWidth,
     clearSelection,
     setColumnConfigMapping
@@ -937,6 +941,12 @@ function DataFrame({
   // disabled in that case.
   const isSearchOpen = canSearch && showSearch
 
+  // Name the grid (not the toolbar wrapper) only when alt is non-blank.
+  // role="region" (not "img") exposes the name without making Glide's
+  // operable canvas presentational.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt must not become an accessible name
+  const accessibleName = element.alt?.trim() || undefined
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -1006,6 +1016,7 @@ function DataFrame({
         onExpand={expand}
         onCollapse={collapse}
         target={StyledResizableContainer}
+        labelContext={accessibleName}
       >
         {customToolbarActions?.map(action => action)}
         {((isRowSelectionActivated &&
@@ -1025,6 +1036,7 @@ function DataFrame({
               clearSelection()
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
         {canDeleteRows && isRowSelected && (
@@ -1037,6 +1049,7 @@ function DataFrame({
                 clearTooltip()
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {canAddRows && !isRowSelected && (
@@ -1053,6 +1066,7 @@ function DataFrame({
                 dataEditorRef.current?.scrollTo(0, numRows, "vertical")
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {!isEmptyTable && allColumns.length > 0 && (
@@ -1069,6 +1083,7 @@ function DataFrame({
               label="Show/hide columns"
               icon={Visibility}
               onClick={handleToggleColumnVisibilityMenu}
+              labelContext={accessibleName}
             />
           </ColumnVisibilityMenu>
         )}
@@ -1077,6 +1092,7 @@ function DataFrame({
             label="Download as CSV"
             icon={FileDownload}
             onClick={exportToCsv}
+            labelContext={accessibleName}
           />
         )}
         {canSearch && (
@@ -1092,12 +1108,15 @@ function DataFrame({
               }
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
       </Toolbar>
       <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}
+        aria-label={accessibleName}
+        {...(accessibleName ? { role: "region" } : {})}
         defaultSize={resizableSize}
         style={{
           border: `${gridTheme.tableBorderWidth}px solid ${gridTheme.glideTheme.borderColor}`,

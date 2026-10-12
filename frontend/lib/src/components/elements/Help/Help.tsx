@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
-import {
+import type {
   Help as HelpProto,
-  type Member as MemberProto,
+  Member as MemberProto,
 } from "@streamlit/protobuf"
 
 import {
@@ -71,6 +71,7 @@ export const Member = memo(function Member({
           </StyledDocValue>
         ) : (
           <StyledDocValue data-testid="stHelpMemberDocString">
+            {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank docs use the fallback */}
             {docString || "No docs available"}
           </StyledDocValue>
         )}

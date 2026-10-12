@@ -21,14 +21,15 @@ export const showDevelopmentOptions = (
   hostIsOwner: boolean | undefined,
   toolbarMode: Config.ToolbarMode
 ): boolean => {
-  if (toolbarMode == Config.ToolbarMode.DEVELOPER) {
+  if (toolbarMode === Config.ToolbarMode.DEVELOPER) {
     return true
   }
   if (
-    Config.ToolbarMode.VIEWER == toolbarMode ||
-    Config.ToolbarMode.MINIMAL == toolbarMode
+    Config.ToolbarMode.VIEWER === toolbarMode ||
+    Config.ToolbarMode.MINIMAL === toolbarMode
   ) {
     return false
   }
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false hostIsOwner still allows localhost
   return hostIsOwner || isLocalhost()
 }

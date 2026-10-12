@@ -15,9 +15,9 @@
  */
 
 import {
-  MouseEvent,
-  ReactElement,
-  ReactNode,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -27,13 +27,13 @@ import {
 
 import { getLogger } from "loglevel"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   isMobile,
   NavigationContext,
   SidebarConfigContext,
 } from "@streamlit/lib"
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import { localStorageAvailable, notNullOrUndefined } from "@streamlit/utils"
 
 import NavSection from "./NavSection"

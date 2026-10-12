@@ -17,9 +17,7 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING, Any, Final, Literal
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Any, Final, Literal, Self
 
 from streamlit.errors import NoSessionContext
 from streamlit.proto.Element_pb2 import Element as ElementProto

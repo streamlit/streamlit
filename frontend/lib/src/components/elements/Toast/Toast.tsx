@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect } from "react"
+import { memo, type ReactElement, useEffect } from "react"
 
-import { Toast as ToastProto } from "@streamlit/protobuf"
+import type { Toast as ToastProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
@@ -34,7 +34,10 @@ export interface ToastProps {
   toastId: string
 }
 
-function Toast({ element, toastId }: Readonly<ToastProps>): ReactElement {
+function Toast({
+  element,
+  toastId,
+}: Readonly<ToastProps>): ReactElement | null {
   const { body, icon, duration } = element
   const theme = useEmotionTheme()
 
@@ -97,7 +100,7 @@ function Toast({ element, toastId }: Readonly<ToastProps>): ReactElement {
     />
   )
 
-  return <>{theme.inSidebar && sidebarErrorMessage}</>
+  return theme.inSidebar ? sidebarErrorMessage : null
 }
 
 export default memo(Toast)

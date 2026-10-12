@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { AppRoot, HostCommunicationManager } from "@streamlit/lib"
+import type { AppRoot, HostCommunicationManager } from "@streamlit/lib"
 import {
   type AppPage,
   Navigation,
-  NewSession,
-  PageConfig,
+  type NewSession,
+  type PageConfig,
 } from "@streamlit/protobuf"
 
 interface AppNavigationState {
@@ -101,10 +101,8 @@ export class AppNavigation {
     }
 
     this.mainScriptHash = newSession.mainScriptHash
-    // Initialize to the config value if provided
-    if (this.hideSidebarNav === null) {
-      this.hideSidebarNav = newSession.config?.hideSidebarNav ?? null
-    }
+    // Null means unset. A stored false is an explicit choice and must stick.
+    this.hideSidebarNav ??= newSession.config?.hideSidebarNav ?? null
 
     return [
       {

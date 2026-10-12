@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon/TooltipIcon"
@@ -53,7 +53,7 @@ export function BaseButtonTooltip({
       <StyledTooltipNormal>
         <TooltipIcon
           content={help}
-          placement={placement || Placement.TOP}
+          placement={placement ?? Placement.TOP}
           containerWidth={containerWidth}
           constrainWidth={constrainWidth}
           onMouseEnterDelay={HELP_TOOLTIP_HOVER_DELAY_MS}

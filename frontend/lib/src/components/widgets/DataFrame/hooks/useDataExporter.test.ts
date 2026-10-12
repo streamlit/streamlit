@@ -19,7 +19,7 @@ import { Field, Int64, Utf8 } from "apache-arrow"
 import { showSaveFilePicker } from "native-file-system-adapter"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   NumberColumn,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"

@@ -18,12 +18,12 @@ import { useCallback } from "react"
 
 import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
-import { SignalValue, View as VegaView } from "vega"
+import type { SignalValue, View as VegaView } from "vega"
 
 import { debounce, notNullOrUndefined } from "~lib/util/utils"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import type { VegaLiteChartElement } from "./arrowUtils"
 
 /**
  * Debounce time for triggering a widget state update
@@ -106,6 +106,7 @@ export const useVegaLiteSelections = (
 
             // Get the current widget state
             const currentWidgetState = JSON.parse(
+              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank widget state parses as an empty object
               widgetMgr.getStringValue(widgetInfo) || "{}"
             )
 
@@ -113,6 +114,7 @@ export const useVegaLiteSelections = (
             const updatedSelections = {
               selection: {
                 ...currentWidgetState?.selection,
+                // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy signal still falls back to an empty selection
                 [name]: processedSelection || {},
               } as VegaLiteState,
             }

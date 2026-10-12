@@ -53,6 +53,7 @@ from streamlit.errors import (
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_background_refresh
 from streamlit.runtime.caching.cache_errors import (
+    CachedFunctionReturnedAwaitableError,
     CachedStFunctionInBackgroundModeWarning,
     CacheError,
     CacheKeyNotFoundError,
@@ -99,6 +100,7 @@ CacheScope: TypeAlias = Literal["global", "session"]
 # How a cache entry is refreshed once its ttl expires.
 RefreshMode: TypeAlias = Literal["foreground", "background"]
 
+
 # Unset or invalid config still hard-expires background caches at 2 * ttl.
 _DEFAULT_BACKGROUND_REFRESH_TTL_MULTIPLIER: Final = 2.0
 
@@ -136,6 +138,27 @@ class CacheInvalidationToken:
 AsyncComputeClaim: TypeAlias = tuple[
     concurrent.futures.Future[None], bool, CacheInvalidationToken | None
 ]
+
+
+def _reject_awaitable_return_value(
+    cache_type: CacheType, func: Callable[..., Any], value: Any
+) -> None:
+    """Raise if a synchronous cached function returned an awaitable.
+
+    Closes unstarted native coroutines so Python does not warn that they were
+    never awaited. Leaves started coroutines and other awaitables untouched
+    because the caller may still own their lifecycle.
+    """
+    if not inspect.isawaitable(value):
+        return
+
+    if (
+        inspect.iscoroutine(value)
+        and inspect.getcoroutinestate(value) == inspect.CORO_CREATED
+    ):
+        value.close()
+
+    raise CachedFunctionReturnedAwaitableError(cache_type, func, value)
 
 
 def _warn_background_refresh_ttl_multiplier(configured: object, reason: str) -> None:
@@ -822,6 +845,9 @@ class CachedFunc(Generic[P, R]):
             ):
                 computed_value = self._info.func(*func_args, **func_kwargs)
 
+            _reject_awaitable_return_value(
+                self._info.cache_type, self._info.func, computed_value
+            )
             return self._store_computed_value(cache, value_key, computed_value)
 
     def _store_computed_value(
@@ -1072,6 +1098,9 @@ class CachedFunc(Generic[P, R]):
         """
         try:
             new_value = self._info.func(*func_args, **func_kwargs)
+            _reject_awaitable_return_value(
+                self._info.cache_type, self._info.func, new_value
+            )
             cache.write_background_refresh_result(
                 value_key,
                 new_value,

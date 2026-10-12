@@ -24,13 +24,13 @@ import {
 
 import {
   FlexContext,
-  IFlexContext,
+  type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { type FormsData, WidgetStateManager } from "~lib/WidgetStateManager"
 
-import ButtonGroup, { Props } from "./ButtonGroup"
+import ButtonGroup, { type Props } from "./ButtonGroup"
 
 const materialIconNames = ["icon", "icon_2", "icon_3", "icon_4"]
 const defaultSelectedIndex = 2
@@ -1196,5 +1196,218 @@ describe("ButtonGroup wrap", () => {
     expect(group).not.toHaveAttribute("data-can-scroll-start")
     expect(group).not.toHaveAttribute("data-can-scroll-end")
     expect(group).not.toHaveStyle("overflow-x: auto")
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  const simpleOptions = [
+    ButtonGroupProto.Option.create({ content: "apple" }),
+    ButtonGroupProto.Option.create({ content: "banana" }),
+    ButtonGroupProto.Option.create({ content: "cherry" }),
+  ]
+
+  /** Render pills with spies so tests can assert whether a commit schedules a rerun. */
+  function renderWithRerunSpy(
+    elementProps: Partial<ButtonGroupProto> = {},
+    formsDataChanged: (formsData: FormsData) => void = vi.fn()
+  ): {
+    user: ReturnType<typeof userEvent.setup>
+    props: Props
+    setStringArrayValueSpy: ReturnType<typeof vi.spyOn>
+    sendRerunBackMsg: ReturnType<typeof vi.fn>
+  } {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged,
+    })
+    const props = getProps(
+      {
+        style: ButtonGroupProto.Style.PILLS,
+        options: simpleOptions,
+        ...elementProps,
+      },
+      { widgetMgr }
+    )
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<ButtonGroup {...props} />)
+
+    return { user, props, setStringArrayValueSpy, sendRerunBackMsg }
+  }
+
+  it.each([
+    {
+      label: "selecting a pill",
+      elementProps: {
+        clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+        default: [],
+        ignoreRerun: true,
+      },
+      buttonIndex: 0,
+      expected: ["apple"],
+    },
+    {
+      label: "deselecting a pill",
+      elementProps: {
+        clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+        default: [0],
+        required: false,
+        ignoreRerun: true,
+      },
+      buttonIndex: 0,
+      expected: [],
+    },
+    {
+      label: "adding a multi-select pill",
+      elementProps: {
+        clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+        default: [0],
+        ignoreRerun: true,
+      },
+      buttonIndex: 1,
+      expected: ["apple", "banana"],
+    },
+    {
+      label: "removing a multi-select pill",
+      elementProps: {
+        clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+        default: [0, 1],
+        ignoreRerun: true,
+      },
+      buttonIndex: 1,
+      expected: ["apple"],
+    },
+  ])(
+    "passes triggerRerun: false when $label",
+    async ({ elementProps, buttonIndex, expected }) => {
+      const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+        renderWithRerunSpy(elementProps)
+      setStringArrayValueSpy.mockClear()
+      sendRerunBackMsg.mockClear()
+
+      await user.click(getButtonGroupButtons()[buttonIndex])
+
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        expected,
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+      await flushScheduledRerun()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    }
+  )
+
+  it.each([
+    ["when ignoreRerun is false", { ignoreRerun: false }],
+    ["when ignoreRerun is omitted", {}],
+  ] as const)(
+    "reruns and omits triggerRerun %s",
+    async (_label, extraProps) => {
+      const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+        renderWithRerunSpy({
+          clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+          default: [0],
+          ...extraProps,
+        })
+      setStringArrayValueSpy.mockClear()
+      sendRerunBackMsg.mockClear()
+
+      await user.click(getButtonGroupButtons()[1])
+
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        ["banana"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+      await flushScheduledRerun()
+      expect(sendRerunBackMsg).toHaveBeenCalled()
+    }
+  )
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    let pendingFormIds = new Set<string>()
+    const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+      renderWithRerunSpy(
+        {
+          clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+          default: [],
+          ignoreRerun: true,
+          formId: "testForm",
+        },
+        newData => {
+          pendingFormIds = newData.formsWithPendingChanges
+        }
+      )
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(getButtonGroupButtons()[0])
+
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["apple"],
+      {
+        formId: "testForm",
+        fragmentId: undefined,
+        fromUser: true,
+        triggerRerun: false,
+      }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not write when required=true and the selected pill is clicked", async () => {
+    const { user, props, setStringArrayValueSpy } = renderWithRerunSpy({
+      clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+      required: true,
+      default: [0],
+      ignoreRerun: true,
+    })
+
+    // Mount syncs the required selection without a user commit.
+    expect(setStringArrayValueSpy).toHaveBeenCalledTimes(1)
+    expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+      props.element.id,
+      ["apple"],
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: false,
+        triggerRerun: false,
+      }
+    )
+
+    await user.click(getButtonGroupButtons()[0])
+
+    expect(setStringArrayValueSpy).toHaveBeenCalledTimes(1)
   })
 })

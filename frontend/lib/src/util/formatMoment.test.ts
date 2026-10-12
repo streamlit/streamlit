@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import moment, { Moment } from "moment-timezone"
+import moment, { type Moment } from "moment-timezone"
 import {
   afterAll,
   afterEach,

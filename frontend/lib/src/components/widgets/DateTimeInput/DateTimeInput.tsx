@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -26,12 +26,12 @@ import {
 
 import {
   CalendarDate,
-  CalendarDateTime,
+  type CalendarDateTime,
   getLocalTimeZone,
   today,
 } from "@internationalized/date"
 
-import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
+import type { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -39,12 +39,12 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   calendarDateTimeToIso,
   createDateTimeErrorMessage,
-  DateTimeValidationErrorType,
+  type DateTimeValidationErrorType,
   formatCalendarDateTime,
   getCurrStateFromProto,
   getDefaultStateFromProto,

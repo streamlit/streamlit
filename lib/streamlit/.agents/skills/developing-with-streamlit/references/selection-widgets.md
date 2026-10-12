@@ -13,6 +13,9 @@ Use `st.segmented_control` or `st.pills` when you want all options visible at on
 | `st.pills` | 2-5 options, multi-select, all visible |
 | `st.selectbox` | Many options, single select, dropdown |
 | `st.multiselect` | Many options, multi-select, dropdown |
+| `st.feedback` | Ratings: thumbs up/down, faces, or stars |
+
+For thousands of values, see [High-cardinality options](#high-cardinality-options).
 
 ## Segmented control (options visible, single select)
 
@@ -54,7 +57,7 @@ country = st.selectbox(
 )
 ```
 
-Dropdowns scale better than radio/pills for long lists.
+Dropdowns scale better than radio/pills for long lists, but the whole option list still travels to the browser. Past a few thousand values, see [High-cardinality options](#high-cardinality-options).
 
 ## Multiselect (many options, multi-select)
 
@@ -62,6 +65,22 @@ Dropdowns scale better than radio/pills for long lists.
 countries = st.multiselect(
     "Select countries", ["USA", "UK", "Canada", "Germany", "France", ...]
 )
+```
+
+## Feedback (ratings)
+
+Use `st.feedback` for thumbs, faces, or star ratings instead of building one from buttons or `st.segmented_control`. It returns an integer while an option is selected (including a `default` before any click) and `None` otherwise. Higher is more positive:
+
+- `"thumbs"`: `1` is thumbs-up and `0` is thumbs-down, even though thumbs-up is shown first.
+- `"faces"`: `0` (least satisfied) through `4` (most satisfied).
+- `"stars"`: `0` through `4`. The displayed star count is the value plus one.
+
+Check `rating is not None`, not `if rating`: `0` is a real selection, so a truthiness check skips it.
+
+```python
+rating = st.feedback("stars")
+if rating is not None:
+    st.caption(f"Thanks for the {rating + 1}-star rating!")
 ```
 
 ## Keep options on one row with `wrap`
@@ -86,6 +105,64 @@ with st.form("filters"):
     )
     st.form_submit_button("Apply")
 ```
+
+## High-cardinality options
+
+Keep option lists in the low thousands. Every option is serialized into the widget's message and matched client-side on each keystroke; a million 16-character labels is roughly 16 MB.
+
+Don't fetch a table to derive options: query the distinct values with a bound, precomputing them into their own table when the base table is large. If the domain outgrows the bound, search it rather than truncate:
+
+```python
+conn = st.connection("sql")
+
+# BAD: pulls every row into the app for one dropdown; can exhaust app memory
+df = conn.query("select * from orders")
+customer = st.selectbox("Customer", df["customer"].unique())
+
+# GOOD: the database does the work and returns a bounded list
+customer = st.selectbox(
+    "Customer",
+    conn.query(
+        "select distinct customer from orders order by customer limit 1000", ttl=3600
+    )["customer"],
+)
+```
+
+Past a few thousand, search:
+
+```python
+conn = st.connection("sql")
+
+
+def like_pattern(text: str) -> str:
+    """Return a contains-style LIKE pattern that treats user input literally."""
+    for char in ("!", "%", "_"):
+        text = text.replace(char, "!" + char)
+    return f"%{text}%"
+
+
+term = st.text_input(
+    "Customer", type="search", live="300ms", placeholder="Type to search…"
+)
+customer = None
+if len(term) >= 2:
+    # Query a precomputed distinct-value table, not the base orders table.
+    matches = conn.query(
+        "select customer from customers where customer like :term escape '!'"
+        " order by customer limit 50",
+        params={"term": like_pattern(term)},
+        ttl=60,
+    )["customer"]
+    customer = st.selectbox(
+        "Matches", matches, index=None, label_visibility="collapsed"
+    )
+```
+
+- `live="300ms"` debounces, so typing doesn't hit the database on every keystroke, and `index=None` keeps the first match from applying before the user picks.
+- Escape `%` and `_` and declare an `escape` character, or a typed `%` matches far more than the user asked for.
+- Pass `ttl` as a number: `conn.query` caches forever by default and takes no `max_entries`.
+- `st.connection("sql")` binds `:name`; Snowflake binds `?` and uppercases unquoted columns.
+- When the rest of the app is expensive, wrap this in `@st.fragment` (see `performance.md`), publish the choice through Session State, and `st.rerun()` on change, or dependents keep showing the old value.
 
 ## Toggle vs checkbox
 
@@ -150,6 +227,7 @@ country = st.selectbox(
 - [st.pills](https://docs.streamlit.io/develop/api-reference/widgets/st.pills)
 - [st.selectbox](https://docs.streamlit.io/develop/api-reference/widgets/st.selectbox)
 - [st.multiselect](https://docs.streamlit.io/develop/api-reference/widgets/st.multiselect)
+- [st.feedback](https://docs.streamlit.io/develop/api-reference/widgets/st.feedback)
 - [st.toggle](https://docs.streamlit.io/develop/api-reference/widgets/st.toggle)
 - [st.checkbox](https://docs.streamlit.io/develop/api-reference/widgets/st.checkbox)
 - [st.form](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)

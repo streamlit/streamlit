@@ -70,6 +70,52 @@ def test_get_chat_input_accept_file_proto_value_invalid() -> None:
         utils.get_chat_input_accept_file_proto_value("invalid")  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize(
+    ("alt", "allow_empty", "expected"),
+    [
+        (None, False, None),
+        (None, True, None),
+        ("A description", False, "A description"),
+        ("  padded  ", False, "padded"),
+        ("", False, None),
+        ("   ", False, None),
+        ("", True, ""),
+        ("   ", True, None),
+        (123, False, "123"),
+    ],
+)
+def test_normalize_alt(
+    alt: object | None, allow_empty: bool, expected: str | None
+) -> None:
+    """Verify normalize_alt strip / empty / decorative contract."""
+    assert utils.normalize_alt(alt, allow_empty=allow_empty) == expected
+
+
+@patch("streamlit.elements.lib.utils._LOGGER.warning")
+def test_normalize_alt_logs_empty(mock_warning: MagicMock) -> None:
+    """Empty alt on non-decorative commands must be logged."""
+    assert utils.normalize_alt("") is None
+    mock_warning.assert_called_once()
+    assert "empty or whitespace-only" in mock_warning.call_args.args[1]
+    assert mock_warning.call_args.kwargs["stack_info"] is True
+
+
+@patch("streamlit.elements.lib.utils._LOGGER.warning")
+def test_normalize_alt_logs_whitespace(mock_warning: MagicMock) -> None:
+    """Whitespace-only alt must be logged even when allow_empty is True."""
+    assert utils.normalize_alt("   ", allow_empty=True) is None
+    mock_warning.assert_called_once()
+
+
+@patch("streamlit.elements.lib.utils._LOGGER.warning")
+def test_normalize_alt_decorative_empty_does_not_log(
+    mock_warning: MagicMock,
+) -> None:
+    """Decorative empty string on image/pyplot must not log."""
+    assert utils.normalize_alt("", allow_empty=True) == ""
+    mock_warning.assert_not_called()
+
+
 @pytest.mark.parametrize("element_id", ["", None])
 def test_register_element_id_falsy_returns_early(element_id: Any) -> None:
     """Verify falsy element_id returns without registering."""

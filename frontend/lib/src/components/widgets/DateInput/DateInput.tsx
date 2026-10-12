@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -24,9 +24,9 @@ import {
   useState,
 } from "react"
 
-import { CalendarDate, getLocalTimeZone, today } from "@internationalized/date"
+import type { CalendarDate } from "@internationalized/date"
 
-import { DateInput as DateInputProto } from "@streamlit/protobuf"
+import type { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -34,16 +34,18 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   calendarDateToIso,
   createDateErrorMessage,
-  DateValidationErrorType,
+  datesEqual,
+  type DateValidationErrorType,
   formatCalendarDate,
+  getFocusedDateFallback,
   getInitialFocusedDate,
   getMaxDate as getMaxCalendarDate,
   getMinDate,
@@ -123,7 +125,7 @@ function DateInput({
   // visible-month. Seeded with a concrete date so it stays controlled for
   // the component's entire lifetime (see getInitialFocusedDate).
   const [focusedValue, setFocusedValue] = useState<CalendarDate>(() =>
-    getInitialFocusedDate(value, minDateCalendar)
+    getInitialFocusedDate(value, minDateCalendar, maxDateCalendar)
   )
 
   const enableQuickSelect = useMemo(() => {
@@ -309,22 +311,23 @@ function DateInput({
     if (singleValue) {
       setFocusedValue(singleValue)
     } else {
-      // After clear: reset to today (clamped to minDate) so the calendar
-      // shows a sensible month instead of the stale previous value.
-      const now = today(getLocalTimeZone())
-      setFocusedValue(now.compare(minDateCalendar) < 0 ? minDateCalendar : now)
+      // No committed value (initial render or after a clear): show today,
+      // clamped to the widget's bounds, rather than a stale month.
+      const fallback = getFocusedDateFallback(minDateCalendar, maxDateCalendar)
+      setFocusedValue(prev => (datesEqual(prev, fallback) ? prev : fallback))
     }
-  }, [element.isRange, singleValue, minDateCalendar])
+  }, [element.isRange, singleValue, minDateCalendar, maxDateCalendar])
 
   useEffect(() => {
     if (!element.isRange) return
     if (rangeStartValue) {
       setFocusedValue(rangeStartValue)
     } else {
-      const now = today(getLocalTimeZone())
-      setFocusedValue(now.compare(minDateCalendar) < 0 ? minDateCalendar : now)
+      // Same fallback as single mode — see above.
+      const fallback = getFocusedDateFallback(minDateCalendar, maxDateCalendar)
+      setFocusedValue(prev => (datesEqual(prev, fallback) ? prev : fallback))
     }
-  }, [element.isRange, rangeStartValue, minDateCalendar])
+  }, [element.isRange, rangeStartValue, minDateCalendar, maxDateCalendar])
 
   return (
     <div className="stDateInput" data-testid="stDateInput">
@@ -424,6 +427,10 @@ function updateWidgetMgrState(
       formId: element.formId,
       fragmentId,
       fromUser: vws.fromUser,
+      // on_change="ignore" buffers the value without scheduling a rerun.
+      // WidgetStateManager ignores triggerRerun inside forms (the form owns
+      // commit timing).
+      ...(element.ignoreRerun ? { triggerRerun: false } : {}),
     })
   }
 }

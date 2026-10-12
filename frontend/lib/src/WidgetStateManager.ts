@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { Draft, produce } from "immer"
+import { type Draft, produce } from "immer"
 import { getLogger } from "loglevel"
 import { type Long, util } from "protobufjs/minimal"
 import queryString from "query-string"
-import { Signal, SignalConnection } from "typed-signals"
+import { Signal, type SignalConnection } from "typed-signals"
 
 import {
   type ArrowTable,
@@ -28,7 +28,7 @@ import {
   SInt64Array,
   StringArray,
   StringTriggerValue,
-  Button as SubmitButtonProto,
+  type Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
 } from "@streamlit/protobuf"
@@ -37,6 +37,7 @@ import { assertNever } from "~lib/util/assertNever"
 import {
   isNullOrUndefined,
   isValidFormId,
+  normalizeQueryString,
   notNullOrUndefined,
 } from "~lib/util/utils"
 
@@ -566,10 +567,8 @@ export class WidgetStateManager {
     // If we already have a pending trigger for this widget in the current
     // macrotask, append to it instead of overwriting so multiple triggers are
     // delivered in a single backend message.
-    let widgetState = this.getWidgetState(widget)
-    if (widgetState === undefined) {
-      widgetState = this.createWidgetState(widget, update)
-    }
+    const widgetState =
+      this.getWidgetState(widget) ?? this.createWidgetState(widget, update)
 
     if (value === undefined) {
       // Simple boolean trigger.
@@ -1177,9 +1176,7 @@ export class WidgetStateManager {
     // Update the stored fragmentId if we don't have one yet. If multiple calls
     // happen and at least one of them specifies a fragmentId, we keep the
     // first non-undefined value.
-    if (this.scheduledFragmentId === undefined) {
-      this.scheduledFragmentId = fragmentId
-    }
+    this.scheduledFragmentId ??= fragmentId
 
     // If we already have a scheduled fragmentId and a new (different) one is
     // provided in the same macrotask, log a warning and proceed with the first
@@ -1495,7 +1492,7 @@ export class WidgetStateManager {
       .replaceAll("%20", "+")
 
     // Skip replaceState if the URL wouldn't actually change
-    const currentSearch = window.location.search.replace(/^\?/, "")
+    const currentSearch = normalizeQueryString(window.location.search)
     if (newSearch === currentSearch) {
       return
     }

@@ -33,7 +33,7 @@ from click.testing import CliRunner
 from streamlit.web import cli, skills
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator, Iterator
 
 
 def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
@@ -59,7 +59,7 @@ _needs_permission_bits = pytest.mark.skipif(
 
 
 @contextmanager
-def _unreadable(*dirs: Path) -> Iterator[None]:
+def _unreadable(*dirs: Path) -> Generator[None, None, None]:
     """Set ``dirs`` to mode 0o000 so ``lstat()`` fails, then restore 0o700.
 
     Restores even on test failure: pytest cannot clean up a 0o000 ``tmp_path``.
@@ -466,6 +466,22 @@ class TestFindProjectRoot:
         ):
             result = skills._find_project_root(app_dir)
         assert result == app_dir
+
+    def test_treats_unresolvable_paths_as_not_home(self, tmp_path: Path) -> None:
+        """OSError while resolving a candidate path must not abort the search."""
+        start = tmp_path / "proj"
+        start.mkdir()
+        (start / ".claude").mkdir()
+
+        original_resolve = Path.resolve
+
+        def fake_resolve(self: Path, *args: object, **kwargs: object) -> Path:
+            if self == start:
+                raise OSError("cannot resolve")
+            return original_resolve(self, *args, **kwargs)
+
+        with patch.object(Path, "resolve", fake_resolve):
+            assert skills._find_project_root(start) == start
 
 
 class TestGetProjectTargetDirs:
@@ -4044,6 +4060,27 @@ class TestSymlinkBlocker:
         ):
             assert skills._symlink_blocker(tmp_path, source) == "symlinks_unsupported"
 
+    def test_reports_unsupported_for_generic_oserror(self, tmp_path: Path) -> None:
+        """Unclassified OSError from the probe is treated as unsupported."""
+        source = tmp_path / "source"
+        source.mkdir()
+        with patch.object(
+            skills.Path, "symlink_to", side_effect=OSError(errno.EIO, "io error")
+        ):
+            assert skills._symlink_blocker(tmp_path, source) == "symlinks_unsupported"
+
+
+class TestFindGitRoot:
+    """Tests for _find_git_root."""
+
+    def test_returns_none_when_walk_budget_is_exhausted(self, tmp_path: Path) -> None:
+        """A ``.git`` directory beyond the walk budget is treated as missing."""
+        nested = tmp_path / "a" / "b" / "c"
+        nested.mkdir(parents=True)
+        (tmp_path / ".git").mkdir()
+        with patch.object(skills, "_MAX_REPO_ROOT_WALK_DEPTH", 1):
+            assert skills._find_git_root(str(nested)) is None
+
 
 class TestClassifyWriteError:
     """classify_write_error maps OSError codes to actionable reasons."""
@@ -4213,14 +4250,16 @@ class TestMetaSkillPackaging:
         not match files outside the published skill trees.
         """
         import glob as globmod
-
-        import toml
+        import tomllib
 
         pyproject = Path(__file__).resolve().parents[3] / "pyproject.toml"
         if not pyproject.is_file():  # pragma: no cover - unusual layout
             pytest.skip("lib/pyproject.toml not found in this layout")
 
-        globs = toml.load(pyproject)["tool"]["setuptools"]["package-data"]["streamlit"]
+        with pyproject.open("rb") as pyproject_file:
+            globs = tomllib.load(pyproject_file)["tool"]["setuptools"]["package-data"][
+                "streamlit"
+            ]
         # <streamlit pkg>/.agents/skills -> <streamlit pkg>
         pkg_dir = skills._get_source_skills_dir().parents[1]
 

@@ -96,7 +96,8 @@ class TextMixin:
             - ``False``: The text stays on one line. Overflow is truncated
               with an ellipsis. Newlines in the body are not shown as extra
               lines. Truncation only appears when the element is
-              narrower than its text.
+              narrower than its text. Hovering truncated text reveals
+              the full text, including when ``help`` is set.
 
         Examples
         --------

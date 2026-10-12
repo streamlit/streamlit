@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { MutableRefObject, useCallback, useEffect, useState } from "react"
+import { type MutableRefObject, useCallback, useEffect, useState } from "react"
 
 export const useIsOverflowing = (
   ref: MutableRefObject<HTMLElement | null>,

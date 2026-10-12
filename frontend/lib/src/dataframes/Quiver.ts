@@ -16,19 +16,23 @@
 
 // Private members use _.
 
-import { Field, Vector } from "apache-arrow"
+import { type Field, Vector } from "apache-arrow"
 
-import { ArrowData } from "@streamlit/protobuf"
+import type { ArrowData } from "@streamlit/protobuf"
 
 import { hashString } from "~lib/util/utils"
 
 import {
-  ColumnNames,
-  Data,
-  IndexData,
+  type ColumnNames,
+  type Data,
+  type IndexData,
   parseArrowIpcBytes,
 } from "./arrowParseUtils"
-import { ArrowType, DataFrameCellType, DataType } from "./arrowTypeUtils"
+import {
+  type ArrowType,
+  DataFrameCellType,
+  type DataType,
+} from "./arrowTypeUtils"
 
 /**
  * Pandas Styler data from proto message.
@@ -279,13 +283,15 @@ export class Quiver {
   private getIndexValue(rowIndex: number, columnIndex: number): DataType {
     const index = this._pandasIndexData[columnIndex]
     const value =
-      index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
+      index instanceof Vector
+        ? (index.get(rowIndex) as DataType)
+        : index[rowIndex]
     return value
   }
 
   /** Get the raw value of a data cell. */
   private getDataValue(rowIndex: number, columnIndex: number): DataType {
-    return this._data.getChildAt(columnIndex)?.get(rowIndex)
+    return this._data.getChildAt(columnIndex)?.get(rowIndex) as DataType
   }
 }
 

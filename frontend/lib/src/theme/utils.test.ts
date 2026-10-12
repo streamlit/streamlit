@@ -16,12 +16,12 @@
 
 import { darken, lighten, mix, transparentize } from "color2k"
 import { getLogger } from "loglevel"
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import { CustomThemeConfig } from "@streamlit/protobuf"
 
 import { baseTheme, darkTheme, lightTheme } from "~lib/theme/themeConfigs"
-import { ThemeConfig } from "~lib/theme/types"
+import type { ThemeConfig } from "~lib/theme/types"
 import {
   AUTO_THEME_NAME,
   bgColorToBaseString,
@@ -112,8 +112,8 @@ describe("Styling utils", () => {
   // These tests verify theme integration only
   describe("theme.shadows (integration)", () => {
     it("light and dark themes have shadows with the same property keys", () => {
-      const lightKeys = Object.keys(lightTheme.emotion.shadows).sort()
-      const darkKeys = Object.keys(darkTheme.emotion.shadows).sort()
+      const lightKeys = Object.keys(lightTheme.emotion.shadows).toSorted()
+      const darkKeys = Object.keys(darkTheme.emotion.shadows).toSorted()
 
       expect(lightKeys).toEqual(darkKeys)
     })
@@ -1113,6 +1113,48 @@ describe("createEmotionTheme", () => {
     expect(theme.colors.dataframeHeaderBackgroundColor).toBe(
       theme.colors.bgMix
     )
+  })
+
+  it("sets the dataframeHeaderTextColor if configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      dataframeHeaderTextColor: "#FFC0CB",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderTextColor).toBe("#FFC0CB")
+  })
+
+  it("uses default dataframeHeaderTextColor if not configured", () => {
+    const theme = createEmotionTheme({})
+    expect(theme.colors.dataframeHeaderTextColor).toBe(
+      theme.colors.fadedText60
+    )
+  })
+
+  it("derives dataframeHeaderTextColor from custom textColor", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      textColor: "#123456",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderTextColor).toBe(
+      theme.colors.fadedText60
+    )
+    expect(theme.colors.dataframeHeaderTextColor).not.toBe("#123456")
+  })
+
+  it("keeps configured dataframeHeaderTextColor when textColor is also set", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      textColor: "#123456",
+      dataframeHeaderTextColor: "#FFC0CB",
+    }
+
+    const theme = createEmotionTheme(themeInput)
+    expect(theme.colors.dataframeHeaderTextColor).toBe("#FFC0CB")
+    expect(theme.colors.dataframeHeaderTextColor).not.toBe(
+      theme.colors.fadedText60
+    )
+    expect(theme.colors.bodyText).toBe("#123456")
   })
 
   it.each(["codeBackgroundColor", "dataframeHeaderBackgroundColor"] as const)(
@@ -4602,6 +4644,21 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
     })
 
+    it("treats a blank sidebar backgroundColor as unset", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "lightgray",
+        sidebar: {
+          backgroundColor: "",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
+    })
+
     it("uses configured sidebar secondaryBackgroundColor when provided", () => {
       const mainTheme = createTheme(CUSTOM_THEME_NAME, {
         backgroundColor: "white",
@@ -4617,6 +4674,21 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
       // Should use configured sidebar secondary background
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe("blue")
+    })
+
+    it("treats a blank sidebar secondaryBackgroundColor as unset", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "lightgray",
+        sidebar: {
+          secondaryBackgroundColor: "",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
     })
 
     it("applies sidebar theme overrides", () => {

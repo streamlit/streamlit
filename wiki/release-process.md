@@ -46,7 +46,15 @@ as the release candidate.
 
 1. Confirm the selected nightly workflow completed successfully, including
    Python, JavaScript, and Playwright tests.
-2. Record its full tag. A cutoff for a `1.60.0` release typically has a nightly
+2. Confirm that same nightly succeeded in the Streamlit in Snowflake (SiS) e2e
+   test environment. Those tests run daily against the latest nightly, so
+   results for a given nightly typically appear the following day. Check
+   the Snowflake-internal
+   [E2E Test History](https://app.datadoghq.com/dashboard/mxw-tig-4xn/e2e-test-history?refresh_mode=sliding&tpl_var_test.name%5B0%5D=%2AOSS%2A&tpl_var_test.owner%5B0%5D=Streamlit&tpl_var_test.service%5B0%5D=e2e-streamlit-cujs&tpl_var_test.type%5B0%5D=e2e&live=true)
+   Datadog dashboard (filtered to Streamlit-owned `*OSS*` tests) and verify
+   that all tests and setup passed for the nightly used in the release. Adjust
+   the dashboard date range to include the day after that nightly if needed.
+3. Record its full tag. A cutoff for a `1.60.0` release typically has a nightly
    tag like `1.59.1.dev20260725` (not `1.60.1.dev20260725`), because the
    nightly version increments the patch component of the latest PyPI release
    by one.

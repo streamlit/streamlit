@@ -28,5 +28,10 @@ message IFrame {
   bool scrolling = 7;
   optional int32 tab_index = 8;
 
+  // Author-provided accessible name, mapped to the iframe `title`. Unset when
+  // omitted or when an empty / whitespace-only value was normalized away.
+  // The frontend falls back to "st.iframe" when unset — an iframe must have a title.
+  optional string alt = 9;
+
   reserved 3, 4, 5;
 }

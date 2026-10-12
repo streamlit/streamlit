@@ -25,9 +25,11 @@ from streamlit.elements.lib.js_number import JSNumber
 from streamlit.elements.widgets.number_input import _LOGGER, NumberInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidMinMaxError,
     StreamlitInvalidWidthError,
     StreamlitMixedNumericTypesError,
     StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
     StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
@@ -78,6 +80,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         assert c.default == 0.0
         assert c.HasField("default")
         assert not c.disabled
+        assert not c.required
         assert c.placeholder == ""
 
     def test_just_disabled(self):
@@ -86,6 +89,40 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.number_input
         assert c.disabled
+
+    @parameterized.expand([(True,), (False,)])
+    def test_required_sets_proto_field(self, required: bool) -> None:
+        """Test that required is marshalled to the proto field."""
+        st.number_input("the label", required=required)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.required is required
+
+    def test_required_is_in_unkeyed_widget_id(self) -> None:
+        """Test that toggling required without a key changes the widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.number_input("the label", required=False)
+            id1 = self.get_delta_from_queue().new_element.number_input.id
+            st.number_input("the label", required=True)
+            id2 = self.get_delta_from_queue().new_element.number_input.id
+            assert id1 != id2
+
+    def test_required_not_in_keyed_widget_id(self) -> None:
+        """With `key_as_main_identity`, the widget ID derives from the user key rather
+        than command parameters. Changing `required` therefore preserves this ID.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.number_input("the label", key="number_input_key", required=False)
+            id1 = self.get_delta_from_queue().new_element.number_input.id
+            st.number_input("the label", key="number_input_key", required=True)
+            id2 = self.get_delta_from_queue().new_element.number_input.id
+            assert id1 == id2
 
     def test_placeholder(self):
         """Test that it can be called with placeholder param."""
@@ -497,17 +534,17 @@ class NumberInputTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             # Integer tests
-            (6, -10, 0),
-            (-11, -10, 0),
+            (6, -10, 0, StreamlitValueAboveMaxError),
+            (-11, -10, 0, StreamlitValueBelowMinError),
             # Float tests
-            (-11.0, -10.0, 0.0),
-            (6.0, -10.0, 0.0),
+            (6.0, -10.0, 0.0, StreamlitValueAboveMaxError),
+            (-11.0, -10.0, 0.0, StreamlitValueBelowMinError),
         ]
     )
     def test_should_raise_exception_when_default_out_of_bounds_min_and_max_defined(
-        self, value, min_value, max_value
+        self, value, min_value, max_value, expected_error
     ):
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(expected_error):
             st.number_input(
                 "My Label", value=value, min_value=min_value, max_value=max_value
             )
@@ -515,7 +552,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
     def test_should_raise_exception_when_default_lt_min_and_max_is_none(self):
         value = -11.0
         min_value = -10.0
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueBelowMinError):
             st.number_input("My Label", value=value, min_value=min_value)
 
     def test_should_raise_exception_when_default_gt_max_and_min_is_none(self):
@@ -523,6 +560,45 @@ class NumberInputTest(DeltaGeneratorTestCase):
         max_value = 10
         with pytest.raises(StreamlitValueAboveMaxError):
             st.number_input("My Label", value=value, max_value=max_value)
+
+    @parameterized.expand(
+        [
+            # Integer: value="min", an in-range-looking value, and None.
+            (10, 1, "min"),
+            (10, 1, 5),
+            (10, 1, None),
+            # Float: same value variants.
+            (10.5, 1.0, "min"),
+            (10.5, 1.0, 5.0),
+            (10.5, 1.0, None),
+        ]
+    )
+    def test_min_max_exception(self, min_value, max_value, value):
+        """Inverted bounds raise StreamlitInvalidMinMaxError."""
+        with pytest.raises(StreamlitInvalidMinMaxError, match="cannot be greater than"):
+            st.number_input(
+                "the label", min_value=min_value, max_value=max_value, value=value
+            )
+
+    @parameterized.expand(
+        [
+            (10, 10, "min"),
+            (10, 10, 10),
+            (10, 10, None),
+            (1.5, 1.5, "min"),
+            (1.5, 1.5, 1.5),
+            (1.5, 1.5, None),
+        ]
+    )
+    def test_min_equals_max_is_allowed(self, min_value, max_value, value):
+        """Equal bounds remain a valid single-value range."""
+        st.number_input(
+            "the label", min_value=min_value, max_value=max_value, value=value
+        )
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.min == min_value
+        assert c.max == max_value
 
     def test_session_state_value_out_of_range_resets_to_default(self):
         """Test that out of range session_state values reset to default.
@@ -601,6 +677,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
                 min_value=1,
                 max_value=20,
                 step=2,
+                required=True,
             )
             c2 = self.get_delta_from_queue().new_element.number_input
             id2 = c2.id

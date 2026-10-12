@@ -546,7 +546,9 @@ export function layoutWithThemeDefaults(
       ...themeDefaults.font,
       ...(layout.font as Record<string, unknown> | undefined),
     },
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank paper color uses the theme
     paper_bgcolor: layout.paper_bgcolor || themeDefaults.paper_bgcolor,
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank plot color uses the theme
     plot_bgcolor: layout.plot_bgcolor || themeDefaults.plot_bgcolor,
   }
 }

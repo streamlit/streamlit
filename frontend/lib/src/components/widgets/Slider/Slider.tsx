@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -34,16 +34,16 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import {
   arrayComparator,
   useExecuteWhenChanged,
 } from "~lib/hooks/useExecuteWhenChanged"
-import { formatMoment, MomentKind } from "~lib/util/formatMoment"
+import { formatMoment, type MomentKind } from "~lib/util/formatMoment"
 import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
+import type { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
 
 import {
   StyledRASlider,

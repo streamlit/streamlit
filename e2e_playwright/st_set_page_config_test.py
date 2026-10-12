@@ -114,7 +114,7 @@ def test_with_collapsed_sidebar(app: Page):
     click_button(app, "Collapsed Sidebar")
     expect(app).to_have_title("Collapsed Sidebar")
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
+    expect(sidebar).to_have_attribute("data-collapsed", "true")
     expect_no_exception(app)
 
 
@@ -125,7 +125,7 @@ def test_with_expanded_sidebar(app: Page):
     click_button(app, "Expanded Sidebar")
     expect(app).to_have_title("Expanded Sidebar")
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(sidebar).to_have_attribute("data-collapsed", "false")
     expect_no_exception(app)
 
 
@@ -137,7 +137,7 @@ def test_with_locked_sidebar(app: Page):
     expect(app).to_have_title("Locked Sidebar")
 
     sidebar = app.get_by_test_id("stSidebar")
-    expect(sidebar).to_have_attribute("aria-expanded", "true")
+    expect(sidebar).to_have_attribute("data-collapsed", "false")
 
     # Collapse button must not be in the DOM (locked sidebar cannot be closed)
     expect(app.get_by_test_id("stSidebarCollapseButton")).not_to_be_attached()
@@ -162,7 +162,7 @@ def test_with_locked_sidebar_on_narrow_viewport(app: Page):
 
     sidebar = app.get_by_test_id("stSidebar")
     # On mobile the lock degrades — sidebar starts collapsed
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
+    expect(sidebar).to_have_attribute("data-collapsed", "true")
 
     # Expand button in the header should be visible (sidebar can be opened)
     expect(app.get_by_test_id("stExpandSidebarButton")).to_be_visible()
@@ -299,7 +299,7 @@ def test_set_page_config_sidebar_additive(app: Page):
     expect(app).to_have_title("Updated")
     sidebar = app.get_by_test_id("stSidebar")
     # Sidebar set to None should inherit config from previous call
-    expect(sidebar).to_have_attribute("aria-expanded", "false")
+    expect(sidebar).to_have_attribute("data-collapsed", "true")
 
 
 # Webkit (safari) doesn't support screencast on linux machines, so menu item

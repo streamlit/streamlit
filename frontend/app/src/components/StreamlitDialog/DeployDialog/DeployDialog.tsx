@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import { ReactElement, ReactNode, useCallback } from "react"
+import { type ReactElement, type ReactNode, useCallback } from "react"
 
 import StreamlitLogo from "@streamlit/app/src/assets/svg/logo.svg"
 import Rocket from "@streamlit/app/src/assets/svg/rocket.svg"
 import Snowflake from "@streamlit/app/src/assets/svg/snowflake.svg"
-import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
+import type { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 import DetachedHead from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/DetachedHead"
 import ModuleIsNotAdded from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/ModuleIsNotAdded"
 import NoRepositoryDetected from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/NoRepositoryDetected"
-import { PlainEventHandler } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import type { PlainEventHandler } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
+import type { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   DEPLOY_URL,
   SNOWFLAKE_LEARN_MORE_URL,
@@ -152,7 +152,7 @@ export function DeployDialog(
           <StyledDeployCardBody $flexGrow={1}>
             <img
               src={StreamlitLogo}
-              alt={"Streamlit Logo"}
+              alt=""
               data-testid={"stDeployDialogCommunityCloudIcon"}
             />
             <StyledHeader>Streamlit Community Cloud</StyledHeader>
@@ -189,7 +189,7 @@ export function DeployDialog(
           <StyledDeployCardBody $flexGrow={1}>
             <img
               src={Snowflake}
-              alt={"Snowflake"}
+              alt=""
               data-testid={"stDeployDialogSnowflakeDeploymentIcon"}
             />
             <StyledHeader>Snowflake</StyledHeader>
@@ -236,7 +236,7 @@ export function DeployDialog(
           <StyledDeployCardBody $flexGrow={2}>
             <img
               src={Rocket}
-              alt={"Rocket"}
+              alt=""
               data-testid={"stDeployDialogCustomDeploymentIcon"}
             />
             <StyledHeader>Other platforms</StyledHeader>

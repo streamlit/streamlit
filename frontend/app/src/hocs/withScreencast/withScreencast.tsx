@@ -15,9 +15,9 @@
  */
 
 import {
-  ComponentType,
-  FC,
-  PropsWithChildren,
+  type ComponentType,
+  type FC,
+  type PropsWithChildren,
   useCallback,
   useRef,
   useState,
@@ -72,7 +72,7 @@ function withScreencast<P extends InjectedProps>(
     const [recordAudio, setRecordAudio] = useState(false)
     const [outputBlob, setOutputBlob] = useState<Blob | undefined>(undefined)
     const [currentState, setCurrentState] = useState<Steps>(
-      testOverride || "OFF"
+      testOverride ?? "OFF"
     )
 
     // Toggle audio recording
@@ -113,8 +113,10 @@ function withScreencast<P extends InjectedProps>(
       recorderRef.current = new ScreenCastRecorder({
         recordAudio,
         onErrorOrStop: () => {
-          stopRecording().catch(err =>
-            LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
+          stopRecording().catch((err: unknown) =>
+            LOG.warn(
+              `withScreencast.stopRecording threw an error: ${String(err)}`
+            )
           )
         },
       })
@@ -145,8 +147,10 @@ function withScreencast<P extends InjectedProps>(
         }
 
         // If we are currently in any other state, stop any ongoing recording
-        stopRecording().catch(err =>
-          LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
+        stopRecording().catch((err: unknown) =>
+          LOG.warn(
+            `withScreencast.stopRecording threw an error: ${String(err)}`
+          )
         )
       },
       [currentState, stopRecording]
@@ -162,8 +166,10 @@ function withScreencast<P extends InjectedProps>(
       if (hasStarted) {
         setCurrentState("RECORDING")
       } else {
-        stopRecording().catch(err =>
-          LOG.warn(`withScreencast.stopRecording threw an error: ${err}`)
+        stopRecording().catch((err: unknown) =>
+          LOG.warn(
+            `withScreencast.stopRecording threw an error: ${String(err)}`
+          )
         )
       }
     }, [stopRecording])
@@ -217,6 +223,7 @@ function withScreencast<P extends InjectedProps>(
 
   // Set the display name for easier debugging
   ComponentWithScreencast.displayName = `withScreencast(${
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank displayName falls through to the function name
     WrappedComponent.displayName || WrappedComponent.name || "Component"
   })`
 

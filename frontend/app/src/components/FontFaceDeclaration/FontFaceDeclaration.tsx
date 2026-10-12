@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
 import { css, Global } from "@emotion/react"
 
-import { type FontFace as FontFaceProto } from "@streamlit/protobuf"
+import type { FontFace as FontFaceProto } from "@streamlit/protobuf"
 
 interface BackwardCompatibleFontFace extends FontFaceProto.$Properties {
   // Legacy custom-theme payloads may still send deprecated weight.
@@ -36,6 +36,7 @@ const FontFaceDeclaration = ({
     const { family, weight, weightRange, url, style, unicodeRange } = font
     // weight is deprecated in favour of weightRange, but we support it for
     // backwards compatibility.
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank weightRange falls back to the legacy weight
     const resolvedWeight = weightRange || weight
     return `
       @font-face {

@@ -27,7 +27,7 @@
 name = "streamlit-dev"
 version = "0.0.0"
 description = "Development environment for Streamlit"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 # The published package metadata remains in lib/pyproject.toml. This requirement
 # makes its runtime dependencies part of the development lock graph, while the
 # source mapping below keeps the package editable.
@@ -36,19 +36,30 @@ dependencies = ["streamlit"]
 [tool.uv]
 # The development toolchain is the default local environment.
 default-groups = ["dev"]
-# Keep this floor low enough for Dependabot's bundled uv.
-# Raise it when Dependabot ships a newer uv and we want a tighter floor.
+# Keep this floor compatible with Dependabot's bundled uv and downstream CI
+# consumers that create environments from this repository.
+# Check their compatibility before raising it.
 required-version = ">=0.11.8"
-# Resolve the development lock only for the currently supported Python range.
-environments = ["python_version < '3.15'"]
+# Resolve the development lock only for supported Python and runtime environments.
+# The bound is exclusive: keep it one minor version above the newest supported Python.
+environments = ["python_version < '3.16' and sys_platform != 'emscripten'"]
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
-# Explicit pandas version constraints by Python version:
-# - Python 3.10: use pandas 2.x (pandas 3.x requires Python >= 3.11)
-# - Python 3.11+: use pandas 3.x
+# Pandas 3.x is the current major on every supported Python. Keep the dev lock
+# there; the published package still allows older pandas releases.
 override-dependencies = [
-  "pandas>=1.4.0,<3; python_version < '3.11'",
-  "pandas>=3.0.0,<4; python_version >= '3.11'",
+  "pandas>=3.0.0,<4",
+  # A marker on an override replaces every PyArrow requirement, so both sides
+  # are listed. Below 3.15, keep <24 so the dev lock stays on 23.0.1.
+  # snowflake-connector-python 4.8.0's pandas extra requires PyArrow <24 on
+  # Python >=3.14. The <3.15 override also covers 3.11-3.13, where that extra
+  # does not cap PyArrow. Drop the <24 side once that extra allows PyArrow >=24.
+  # On 3.15, require >=26. Earlier releases have no CPython 3.15 wheels, and
+  # the pandas extra would otherwise lock 23.0.1. E2E runs on 3.15, so
+  # regenerate st.table snapshots on this interpreter: PyArrow 26 prints
+  # list-of-dict keys in insertion order, and Python <3.15 (PyArrow 23) does not.
+  "pyarrow>=10.0.1,!=25.0.0,<24; python_version < '3.15'",
+  "pyarrow>=26,<27; python_version >= '3.15'",
 ]
 
 [tool.uv.sources]
@@ -63,7 +74,7 @@ streamlit = { path = "lib", editable = true }
 # a version constraint when it is functionally required:
 #   - Exact pins (==) for tools we deliberately hold back and let Dependabot bump on
 #     its own PRs (ty, mypy, ruff, playwright).
-#   - Upper caps (<) for versions known to break us (numpy, pytest, pandas-stubs);
+#   - Upper caps (<) for versions known to break us (numpy, pytest);
 #     these are mirrored by `ignore` entries in .github/dependabot.yml.
 #   - `!=` exclusions of a single known-broken release (pytest-rerunfailures,
 #     pytest-github-actions-annotate-failures); these need no dependabot.yml entry,
@@ -88,15 +99,21 @@ dev = [
   { include-group = "test" },
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.78",
+  "ty==0.0.84",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.16.6",
+  "ruff==0.16.10",
   # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy==2.3.1",
-  # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
-  # Streamlit still type-checks as Python 3.10.
-  "numpy<2.5",
+  "mypy==2.4.0",
+  # Pin NumPy by Python version:
+  # - Below 3.15, stay under 2.5. NumPy 2.5 stubs use Python 3.12 syntax that
+  #   mypy cannot parse while Streamlit type-checks as 3.11, the oldest
+  #   supported version. The 3.15 CI leg skips make python-types for that reason.
+  # - On 3.15 and newer, require at least 2.5. Earlier releases declare 3.15
+  #   support and publish a source distribution, but no CPython 3.15 wheel, so
+  #   uv would lock 2.4.6.
+  "numpy<2.5; python_version < '3.15'",
+  "numpy>=2.5,<3; python_version >= '3.15'",
   "mypy-protobuf",
   "semver",
   "setuptools",
@@ -109,14 +126,8 @@ dev = [
   "types-pytz",
   "types-requests",
   "types-setuptools",
-  "types-toml",
   "types-Authlib",
-  # Cap pandas-stubs below 3.0.0: mypy/ty check against the installed stubs, and 2.x
-  # vs 3.x disagree, so a `# type: ignore` needed on one major is flagged unused on the
-  # other -- no single source state passes the whole type-check matrix (Python 3.10 ->
-  # 3.14). 3.0.0+ also require Python >= 3.11 (we still support 3.10). Mirrored by an
-  # `ignore` in dependabot.yml so Dependabot doesn't try to widen past the cap.
-  "pandas-stubs<3.0.0",
+  "pandas-stubs",
 ]
 
 # Test dependencies
@@ -129,14 +140,12 @@ test = [
   "parameterized",
   "requests-mock",
   "testfixtures",
-  # tomli is the backport of tomllib for Python <3.11:
-  "tomli; python_version < '3.11'",
   # Install the same optional dependency sets users get from these extras, so tests
   # exercise the real extra dependency graphs instead of a hand-maintained copy:
   #   - auth -> Authlib, httpx
   #   - charts -> matplotlib, graphviz, plotly, orjson
   #   - pdf -> streamlit-pdf
-  #   - performance -> orjson, uvloop
+  #   - performance -> httptools, orjson, uvloop
   "streamlit[auth,charts,pdf,performance]",
   # Test-only packages not provided by any extra:
   "seaborn",
@@ -153,7 +162,7 @@ test = [
   "httpx2",
   # Playwright and E2E test dependencies:
   # We pin playwright to an exact version to avoid new browser versions breaking our CI.
-  "playwright==1.62.0",
+  "playwright==1.63.0",
   "pytest-playwright",
   "pixelmatch",
   "pytest-xdist",
@@ -198,7 +207,8 @@ integration = [
 # =============================================================================
 
 [tool.ruff]
-target-version = "py310"
+# Oldest supported Python. Keep in sync with mypy and ty.
+target-version = "py311"
 line-length = 88
 extend-exclude = [
   # Autogenerated files:
@@ -398,7 +408,8 @@ suppress-none-returning = true
 # =============================================================================
 
 [tool.mypy]
-python_version = "3.10"
+# Oldest supported Python. Keep in sync with ruff and ty.
+python_version = "3.11"
 cache_dir = ".mypy_cache"
 incremental = true
 files = [
@@ -474,9 +485,6 @@ module = [
   "yfinance.*",
   # SQLAlchemy is optional and its stubs are only installed with integration extras
   "sqlalchemy.*",
-  # tomllib is only available in Python 3.11+, tomli is the fallback for Python 3.10
-  "tomllib",
-  "tomli",
 ]
 ignore_missing_imports = true
 
@@ -490,6 +498,8 @@ ignore_missing_imports = true
 # `lib/streamlit/typing.py` does NOT shadow the standard-library `typing` module
 # (a first-party top-level `typing` corrupts stdlib type resolution and panics ty).
 [tool.ty.environment]
+# Oldest supported Python. Keep in sync with ruff and mypy.
+python-version = "3.11"
 root = ["./lib"]
 
 [tool.ty.src]

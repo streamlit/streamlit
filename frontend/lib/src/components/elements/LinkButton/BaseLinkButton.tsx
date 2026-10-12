@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { forwardRef, memo, ReactElement } from "react"
+import { forwardRef, memo, type ReactElement } from "react"
 
 import {
   BaseButtonKind,
   BaseButtonSize,
-  BaseLinkButtonProps as BaseLinkButtonPropsT,
+  type BaseLinkButtonProps as BaseLinkButtonPropsT,
   StyledPrimaryLinkButton,
   StyledSecondaryLinkButton,
   StyledTertiaryLinkButton,
@@ -46,10 +46,10 @@ const BaseLinkButton = forwardRef<
     <ComponentType
       ref={ref}
       kind={kind}
-      size={size || BaseButtonSize.MEDIUM}
+      size={size ?? BaseButtonSize.MEDIUM}
       containerWidth={true}
-      disabled={disabled || false}
-      autoFocus={autoFocus || false}
+      disabled={disabled ?? false}
+      autoFocus={autoFocus ?? false}
       href={href}
       target={target}
       rel={rel}

@@ -16,7 +16,10 @@
 
 import { useMemo } from "react"
 
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import {
+  DynamicIcon,
+  getIconAccessibleName,
+} from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 import { formatShortcutForDisplay } from "~lib/hooks/useRegisterShortcut"
@@ -27,6 +30,7 @@ import {
   StyledButtonLabel,
   StyledButtonMainLabel,
   StyledButtonShortcut,
+  StyledVisuallyHidden,
 } from "./styled-components"
 
 export interface DynamicButtonLabelProps {
@@ -44,9 +48,8 @@ export interface DynamicButtonLabelProps {
    * When true, add a native browser tooltip (`title`) exposing the full label so
    * a label truncated with an ellipsis (`wrap=false`) can still be read on hover.
    * The tooltip uses the rendered plain text (the button's accessible name), so
-   * a Markdown label is shown without its raw syntax. Because it is a native
-   * `title`, the browser shows it on hover whenever it is set, regardless of
-   * whether the label is actually clipped.
+   * a Markdown label is shown without its raw syntax. The title is attached only
+   * when that label is actually clipped.
    */
   addTitleTooltip?: boolean
 }
@@ -71,12 +74,21 @@ export const DynamicButtonLabel = ({
     label
   )
 
+  // Icon glyphs are aria-hidden, so an icon-only control would have no accessible
+  // name. Use hidden text rather than aria-label here: this component does not own
+  // the button, and content-based naming lets a parent aria-label take precedence.
+  const iconOnlyAccessibleName =
+    icon && !label?.trim() ? getIconAccessibleName(icon) : undefined
+
   return (
     <StyledButtonLabel ref={titleRef} $truncate={truncate}>
       <StyledButtonMainLabel
         data-has-shortcut={Boolean(displayShortcut)}
         $truncate={truncate}
       >
+        {iconOnlyAccessibleName && (
+          <StyledVisuallyHidden>{iconOnlyAccessibleName}</StyledVisuallyHidden>
+        )}
         {icon && iconPosition === "left" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}

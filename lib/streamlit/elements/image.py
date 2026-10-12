@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
@@ -39,8 +39,15 @@ from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import Width
+
+_USE_COLUMN_WIDTH_REMOVED_WARNING: Final = (
+    "`use_column_width` was removed and has no effect. "
+    "Use `width='stretch'`, `width='content'`, or an integer pixel value instead."
+)
 
 
 class ImageMixin:
@@ -58,6 +65,9 @@ class ImageMixin:
         *,
         use_container_width: bool | None = None,
         link: str | None = None,
+        # Compatibility no-op for pre-1.61 callers.
+        use_column_width: Any = None,
+        alt: str | Sequence[str | None] | None = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -149,16 +159,48 @@ class ImageMixin:
 
             This parameter is only supported when displaying a single image.
 
+        use_column_width : any
+            This parameter is kept purely for compatibility.
+
+            .. deprecated::
+                ``use_column_width`` is deprecated, has no effect, and will be
+                fully removed in a future version. Use ``width="stretch"``,
+                ``width="content"``, or an integer pixel value instead.
+
+        alt : str, sequence of str or None, or None
+            A description of the image(s) for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the image.
+
+            An empty string (``""``) marks the image as decorative. Whitespace-
+            only values are treated as ``None`` and logged. For multiple
+            images, pass a sequence of the same length (use ``None`` to skip
+            an image, or ``""`` for a decorative entry). A single string with
+            several images raises a ``StreamlitAPIException``.
+
+            Prefer describing what the image shows rather than repeating a
+            visible ``caption``. Caption and ``alt`` are independent; a
+            caption never becomes the image's ``alt``.
+
         Examples
         --------
         >>> import streamlit as st
-        >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
+        >>> st.image(
+        ...     "sunrise.jpg",
+        ...     caption="Sunrise by the mountains",
+        ...     alt="Sunrise over a mountain ridge",
+        ... )
 
         .. output::
            https://doc-image.streamlit.app/
            height: 710px
 
         """
+        if use_column_width is not None:
+            # Keep the keyword so pre-1.61 callers do not raise TypeError, but
+            # ignore the value so width and use_container_width stay authoritative.
+            show_deprecation_warning(_USE_COLUMN_WIDTH_REMOVED_WARNING)
+
         if use_container_width is not None:
             show_deprecation_warning(
                 make_deprecated_name_warning(
@@ -192,6 +234,7 @@ class ImageMixin:
             clamp,
             channels,
             output_format,
+            alt=alt,
         )
 
         if link:

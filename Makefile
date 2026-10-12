@@ -536,6 +536,11 @@ update-notices:
 	# Normalize line endings to LF (yarn output may contain CRLF from some packages)
 	perl -i -pe 's/\r$$//' NOTICES
 
+	# yarn-plugin-licenses can omit transitive dependencies reached through a
+	# patched virtual package. Each fallback fails when it is no longer needed.
+	node ./scripts/append_missing_dependency_license.mjs NOTICES frontend/node_modules/@linaria/react
+	node ./scripts/append_missing_dependency_license.mjs NOTICES frontend/node_modules/react-number-format
+
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code/Source-Code.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans/Source-Sans.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Serif/Source-Serif.LICENSE

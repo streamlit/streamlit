@@ -18,13 +18,13 @@ import { type MutableRefObject, useCallback, useMemo } from "react"
 
 import { getCellFromArrow } from "~lib/components/widgets/DataFrame/arrowUtils"
 import {
-  BaseColumn,
+  type BaseColumn,
   valuesEqual,
 } from "~lib/components/widgets/DataFrame/columns"
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 
-import EditingState from "./EditingState"
+import type EditingState from "./EditingState"
 
 interface UseEditReconciliationParams {
   data: Quiver

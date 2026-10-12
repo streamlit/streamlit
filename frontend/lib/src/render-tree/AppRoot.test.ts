@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import { Delta as DeltaProto, Logo as LogoProto } from "@streamlit/protobuf"
 
 import { NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { AppRoot } from "./AppRoot"
 import { BlockNode } from "./BlockNode"
-import { ElementNode } from "./ElementNode"
+import type { ElementNode } from "./ElementNode"
 import {
   block,
   FAKE_SCRIPT_HASH,

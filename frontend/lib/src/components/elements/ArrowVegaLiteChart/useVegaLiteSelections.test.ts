@@ -15,13 +15,13 @@
  */
 
 import { act, renderHook } from "@testing-library/react"
-import { View as VegaView } from "vega"
-import { Mock, Mocked } from "vitest"
+import type { View as VegaView } from "vega"
+import type { Mock, Mocked } from "vitest"
 
 import { debounce } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import type { VegaLiteChartElement } from "./arrowUtils"
 import { useVegaLiteSelections } from "./useVegaLiteSelections"
 
 // Mock the debounce so we can control how/when it is invoked.

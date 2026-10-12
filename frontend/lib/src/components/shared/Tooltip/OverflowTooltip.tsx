@@ -14,10 +14,16 @@
  * limitations under the License.
  */
 
-import { ReactElement, ReactNode, useEffect, useRef, useState } from "react"
+import {
+  type ReactElement,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { StyledEllipsizedDiv, StyledWrapper } from "./styled-components"
-import Tooltip, { Placement } from "./Tooltip"
+import Tooltip, { type Placement } from "./Tooltip"
 
 interface OverflowTooltipProps {
   content: ReactNode

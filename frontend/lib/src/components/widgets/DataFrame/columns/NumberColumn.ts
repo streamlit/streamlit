@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
+import {
+  type GridCell,
+  GridCellKind,
+  type NumberCell,
+} from "@glideapps/glide-data-grid"
 
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
 import {
@@ -27,8 +31,8 @@ import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   countDecimals,
   getErrorCell,
   mergeColumnParameters,
@@ -233,7 +237,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
       } as NumberCell
     },
     getCellValue(cell: NumberCell): number | null {
-      return cell.data === undefined ? null : cell.data
+      return cell.data ?? null
     },
     valuesEqual(a: unknown, b: unknown): boolean {
       // Compare numerically so a string like "5" and the number 5 match.

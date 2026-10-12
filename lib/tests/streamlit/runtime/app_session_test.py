@@ -623,25 +623,6 @@ class AppSessionTest(unittest.TestCase):
 
     @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
     @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg", MagicMock())
-    def test_resets_debug_last_backmsg_id_on_script_finished(self):
-        session = _create_test_session()
-        session._create_scriptrunner(initial_rerun_data=RerunData())
-        session._debug_last_backmsg_id = "some_backmsg_id"
-
-        with patch(
-            "streamlit.runtime.app_session.asyncio.get_running_loop",
-            return_value=session._event_loop,
-        ):
-            session._handle_scriptrunner_event_on_event_loop(
-                sender=session._scriptrunner,
-                event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-                forward_msg=ForwardMsg(),
-            )
-
-            assert session._debug_last_backmsg_id is None
-
-    @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
-    @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg", MagicMock())
     def test_sets_state_to_not_running_on_rerun_event(self):
         session = _create_test_session()
         session._create_scriptrunner(initial_rerun_data=RerunData())
@@ -682,29 +663,6 @@ class AppSessionTest(unittest.TestCase):
         session._script_cache.clear.assert_called_once()
 
         assert not session.request_rerun.called
-
-    @patch.object(
-        PagesManager,
-        "get_pages",
-        MagicMock(
-            return_value={
-                "hash1": {"page_name": "page_1", "icon": "", "script_path": "script1"},
-                "hash2": {
-                    "page_name": "page_2",
-                    "icon": "🎉",
-                    "script_path": "script2",
-                },
-            }
-        ),
-    )
-    def test_tags_fwd_msgs_with_last_backmsg_id_if_set(self):
-        session = _create_test_session()
-        session._debug_last_backmsg_id = "some backmsg id"
-
-        msg = ForwardMsg()
-        session._enqueue_forward_msg(msg)
-
-        assert msg.debug_last_backmsg_id == "some backmsg id"
 
     @patch("streamlit.runtime.app_session.config.on_config_parsed")
     @patch(
@@ -1005,6 +963,7 @@ def _mock_get_options_for_section(
         "textColor": "black",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
+        "dataframeHeaderTextColor": "white",
         "redColor": "red",
         "orangeColor": "orange",
         "yellowColor": "yellow",
@@ -1079,6 +1038,7 @@ def _mock_get_options_for_section(
         "codeTextColor": "#09ab3b",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
+        "dataframeHeaderTextColor": "white",
         "chartCategoricalColors": [
             "#7fc97f",
             "#beaed4",
@@ -1596,15 +1556,6 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         if not expect_stack_trace:
             assert b"app_session.py" not in serialized
 
-    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner", MagicMock())
-    async def test_handle_backmsg_handles_debug_ids(self):
-        session = _create_test_session(asyncio.get_running_loop())
-        msg = BackMsg(
-            rerun_script=session._client_state, debug_last_backmsg_id="some backmsg"
-        )
-        session.handle_backmsg(msg)
-        assert session._debug_last_backmsg_id == "some backmsg"
-
     @patch("streamlit.runtime.app_session._LOGGER")
     async def test_handles_app_heartbeat_backmsg(self, patched_logger):
         session = _create_test_session(asyncio.get_running_loop())
@@ -1753,6 +1704,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "dataframeHeaderTextColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
                     "chartDivergingColors": None,
@@ -1819,6 +1771,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "dataframeHeaderTextColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
                     "chartDivergingColors": None,
@@ -1885,6 +1838,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "dataframeHeaderTextColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
                     "chartDivergingColors": None,
@@ -1931,6 +1885,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "codeTextColor": None,
                         "codeBackgroundColor": None,
                         "dataframeHeaderBackgroundColor": None,
+                        "dataframeHeaderTextColor": None,
                         "redColor": None,
                         "orangeColor": None,
                         "yellowColor": None,
@@ -1990,6 +1945,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.HasField(
             "dataframe_header_background_color"
         )
+        assert not new_session_msg.custom_theme.HasField("dataframe_header_text_color")
         assert not new_session_msg.custom_theme.HasField("red_color")
         assert not new_session_msg.custom_theme.HasField("orange_color")
         assert not new_session_msg.custom_theme.HasField("yellow_color")
@@ -2038,6 +1994,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "dataframe_header_background_color"
         )
+        assert not new_session_msg.custom_theme.sidebar.HasField(
+            "dataframe_header_text_color"
+        )
         assert not new_session_msg.custom_theme.sidebar.HasField("red_color")
         assert not new_session_msg.custom_theme.sidebar.HasField("orange_color")
         assert not new_session_msg.custom_theme.sidebar.HasField("yellow_color")
@@ -2085,6 +2044,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert (
             new_session_msg.custom_theme.dataframe_header_background_color == "purple"
         )
+        assert new_session_msg.custom_theme.dataframe_header_text_color == "white"
         assert new_session_msg.custom_theme.red_color == "#7d353b"
         assert new_session_msg.custom_theme.orange_color == "#d95a00"
         assert new_session_msg.custom_theme.yellow_color == "#916e10"
@@ -2220,6 +2180,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert (
             new_session_msg.custom_theme.sidebar.dataframe_header_background_color
             == "purple"
+        )
+        assert (
+            new_session_msg.custom_theme.sidebar.dataframe_header_text_color == "white"
         )
         assert new_session_msg.custom_theme.sidebar.red_color == "red"
         assert new_session_msg.custom_theme.sidebar.orange_color == "orange"

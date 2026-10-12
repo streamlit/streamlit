@@ -216,7 +216,7 @@ class HashTest(unittest.TestCase):
         assert get_hash(naive_datetime1) != get_hash(naive_datetime3)
 
     def test_datetime_aware(self):
-        tz_info = datetime.timezone.utc
+        tz_info = datetime.UTC
         aware_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
         aware_datetime1_copy = datetime.datetime(
             2007, 12, 23, 15, 45, 55, tzinfo=tz_info
@@ -324,7 +324,16 @@ class HashTest(unittest.TestCase):
         assert is_type(a, "builtins.getset_descriptor")
 
         assert get_hash(a) == get_hash(a)
-        assert get_hash(a) != get_hash(b)
+        # Python 3.15 shares object's __dict__ descriptor, so
+        # A.__dict__["__dict__"] and B.__dict__["__dict__"] are one object and
+        # hash the same. On 3.11-3.14 each class has its own descriptor.
+        if a is b:
+            assert get_hash(a) == get_hash(b)
+        else:
+            assert get_hash(a) != get_hash(b)
+
+        # Distinct builtin descriptors stay distinct on every supported version.
+        assert get_hash(int.__dict__["real"]) != get_hash(int.__dict__["imag"])
 
     def test_dict(self):
         assert get_hash({1: 1}) == get_hash({1: 1})

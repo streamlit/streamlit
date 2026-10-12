@@ -173,3 +173,22 @@ v_12h_seconds = st.time_input(
     key="time_input_12h_seconds",
 )
 st.write("Value 12h+sec:", v_12h_seconds)
+
+# --- on_change="ignore" time input ---
+# Run counter so test_time_input_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_time = st.time_input(
+    "Ignore change time input",
+    value=time(8, 45),
+    key="ignore_time",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore time value:", ignore_time)
+
+if st.button("Apply ignore time", key="apply_ignore_time"):
+    st.write("Applied ignore time value:", ignore_time)

@@ -32,7 +32,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import CameraInput, { Props } from "./CameraInput"
+import CameraInput, { type Props } from "./CameraInput"
 import { WebcamPermission } from "./WebcamComponent"
 
 // Records the props passed to the (mocked) react-webcam on each render so tests
@@ -91,7 +91,7 @@ const getProps = (
       sendRerunBackMsg: vi.fn(),
       formsDataChanged: vi.fn(),
     }),
-    // @ts-expect-error
+    // @ts-expect-error - upload client fixture does not implement FileUploadClient
     uploadClient: {
       uploadFile: vi.fn().mockImplementation(() => {
         return Promise.resolve()
@@ -575,6 +575,211 @@ describe("CameraInput widget", () => {
           fromUser: true,
         }
       )
+    })
+  })
+
+  describe("on_change='ignore' mode", () => {
+    // Let a scheduled rerun flush before asserting whether one was sent.
+    // This suite uses fake timers, so do not use a real setTimeout(0).
+    async function flushScheduledRerun(): Promise<void> {
+      await act(async () => {
+        await vi.runAllTimersAsync()
+      })
+    }
+
+    function createWidgetMgrWithRerunSpy(): {
+      widgetMgr: WidgetStateManager
+      sendRerunBackMsg: ReturnType<typeof vi.fn>
+    } {
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      return { widgetMgr, sendRerunBackMsg }
+    }
+
+    it("passes triggerRerun: false when ignoreRerun is true", async () => {
+      const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
+      const props = getProps(
+        { ignoreRerun: true },
+        { widgetMgr, testOverride: WebcamPermission.SUCCESS }
+      )
+      fetchMocker.mockResponse("")
+      const setFileUploaderStateValueSpy = vi.spyOn(
+        props.widgetMgr,
+        "setFileUploaderStateValue"
+      )
+
+      render(<CameraInput {...props} />)
+      setFileUploaderStateValueSpy.mockClear()
+      sendRerunBackMsg.mockClear()
+
+      const takePhotoButton = screen.getByRole("button", {
+        name: "Take Photo",
+      })
+      await act(async () => {
+        takePhotoButton.click()
+        await vi.runAllTimersAsync()
+      })
+
+      await waitFor(() => {
+        expect(setFileUploaderStateValueSpy).toHaveBeenCalled()
+      })
+      expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        expect.anything(),
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+      await flushScheduledRerun()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      expect(screen.getByText("Clear photo")).toBeVisible()
+    })
+
+    it("does not pass triggerRerun when ignoreRerun is false", async () => {
+      const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
+      const props = getProps(
+        { ignoreRerun: false },
+        { widgetMgr, testOverride: WebcamPermission.SUCCESS }
+      )
+      fetchMocker.mockResponse("")
+      const setFileUploaderStateValueSpy = vi.spyOn(
+        props.widgetMgr,
+        "setFileUploaderStateValue"
+      )
+
+      render(<CameraInput {...props} />)
+      setFileUploaderStateValueSpy.mockClear()
+      sendRerunBackMsg.mockClear()
+
+      const takePhotoButton = screen.getByRole("button", {
+        name: "Take Photo",
+      })
+      await act(async () => {
+        takePhotoButton.click()
+        await vi.runAllTimersAsync()
+      })
+
+      await waitFor(() => {
+        expect(setFileUploaderStateValueSpy).toHaveBeenCalled()
+      })
+      expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        expect.anything(),
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+      await flushScheduledRerun()
+      expect(sendRerunBackMsg).toHaveBeenCalled()
+    })
+
+    it("passes triggerRerun: false when a captured photo is cleared", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const { widgetMgr, sendRerunBackMsg } = createWidgetMgrWithRerunSpy()
+      const props = getProps({ ignoreRerun: true }, { widgetMgr })
+      const setFileUploaderStateValueSpy = vi.spyOn(
+        props.widgetMgr,
+        "setFileUploaderStateValue"
+      )
+
+      props.widgetMgr.setFileUploaderStateValue(
+        props.element.id,
+        buildFileUploaderStateProto([
+          {
+            fileId: "test-photo.jpg",
+            uploadUrl: "test-photo.jpg",
+            deleteUrl: "test-photo.jpg",
+          },
+        ]),
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
+      )
+
+      render(<CameraInput {...props} />)
+      setFileUploaderStateValueSpy.mockClear()
+      sendRerunBackMsg.mockClear()
+
+      const clearButton = screen.getByRole("button", { name: /Clear photo/i })
+      await user.click(clearButton)
+
+      await waitFor(() => {
+        expect(setFileUploaderStateValueSpy).toHaveBeenCalled()
+      })
+      expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        buildFileUploaderStateProto([]),
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+      await flushScheduledRerun()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    })
+
+    it("does not change form batching when ignoreRerun is true", async () => {
+      const sendRerunBackMsg = vi.fn()
+      let pendingFormIds = new Set<string>()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(newData => {
+          pendingFormIds = newData.formsWithPendingChanges
+        }),
+      })
+      const props = getProps(
+        {
+          ignoreRerun: true,
+          formId: "testForm",
+        },
+        { widgetMgr, testOverride: WebcamPermission.SUCCESS }
+      )
+      fetchMocker.mockResponse("")
+      const setFileUploaderStateValueSpy = vi.spyOn(
+        props.widgetMgr,
+        "setFileUploaderStateValue"
+      )
+
+      render(<CameraInput {...props} />)
+      setFileUploaderStateValueSpy.mockClear()
+      sendRerunBackMsg.mockClear()
+
+      const takePhotoButton = screen.getByRole("button", {
+        name: "Take Photo",
+      })
+      await act(async () => {
+        takePhotoButton.click()
+        await vi.runAllTimersAsync()
+      })
+
+      await waitFor(() => {
+        expect(setFileUploaderStateValueSpy).toHaveBeenCalled()
+      })
+      expect(setFileUploaderStateValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        expect.anything(),
+        {
+          formId: "testForm",
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+      await flushScheduledRerun()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      expect(pendingFormIds).toEqual(new Set(["testForm"]))
     })
   })
 

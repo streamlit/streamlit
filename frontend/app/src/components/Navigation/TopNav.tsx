@@ -18,9 +18,9 @@ import { useCallback, useContext, useMemo } from "react"
 
 import Overflow from "rc-overflow"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import { NavigationContext } from "@streamlit/lib"
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import SidebarNavLink from "./SidebarNavLink"
@@ -79,7 +79,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
         return (
           <TopNavSection
             sections={[item]}
-            title={item[0].sectionHeader || ""}
+            title={item[0].sectionHeader ?? ""}
             handlePageChange={onPageChange}
             endpoints={endpoints}
             pageLinkBaseUrl={pageLinkBaseUrl}

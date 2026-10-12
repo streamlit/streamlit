@@ -17,13 +17,13 @@
 import { memo } from "react"
 
 import { Add } from "@emotion-icons/material-rounded"
-import { Accept, FileRejection, useDropzone } from "react-dropzone"
+import { type Accept, type FileRejection, useDropzone } from "react-dropzone"
 
 import Icon from "~lib/components/shared/Icon/Icon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { StyledSendIconButton } from "~lib/components/widgets/ChatInput/styled-components"
 import { formatTypesForDisplay } from "~lib/util/FileHelper"
-import { AcceptFileValue } from "~lib/util/utils"
+import type { AcceptFileValue } from "~lib/util/utils"
 
 import {
   configureFileInputProps,

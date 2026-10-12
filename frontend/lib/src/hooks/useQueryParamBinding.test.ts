@@ -17,7 +17,7 @@
 import { renderHook } from "@testing-library/react"
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { useQueryParamBinding } from "./useQueryParamBinding"
 

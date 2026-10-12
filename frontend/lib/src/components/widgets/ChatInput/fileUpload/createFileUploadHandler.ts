@@ -16,11 +16,12 @@
 
 import type { AxiosProgressEvent } from "axios"
 
-import { type FileURLs } from "@streamlit/protobuf"
+import type { FileURLs } from "@streamlit/protobuf"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
-import { FileUploadClient } from "~lib/FileUploadClient"
-import { WidgetInfo } from "~lib/WidgetStateManager"
+import type { FileUploadClient } from "~lib/FileUploadClient"
+import { formatRejectionMessage } from "~lib/util/ErrorHandling"
+import type { WidgetInfo } from "~lib/WidgetStateManager"
 
 interface CreateUploadFileParams {
   getNextLocalFileId: () => number
@@ -64,17 +65,14 @@ export const createUploadFileHandler =
 
     uploadClient
       .uploadFile(
-        {
-          formId: "", // TODO[kajarnec] fix this probably with uploadFile refactoring
-          ...element,
-        },
+        { id: element.id, formId: element.formId ?? "" },
         fileURLs.uploadUrl as string,
         file,
         e => onUploadProgress(e, uploadingFileInfo.id),
         abortController.signal
       )
       .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
-      .catch(err => {
+      .catch((err: unknown) => {
         // If this was an abort error, we don't show the user an error -
         // the cancellation was in response to an action they took.
         if (!(err instanceof DOMException && err.name === "AbortError")) {
@@ -82,7 +80,7 @@ export const createUploadFileHandler =
             uploadingFileInfo.id,
             uploadingFileInfo.setStatus({
               type: "error",
-              errorMessage: err ? err.toString() : "Unknown error",
+              errorMessage: formatRejectionMessage(err),
             })
           )
         }

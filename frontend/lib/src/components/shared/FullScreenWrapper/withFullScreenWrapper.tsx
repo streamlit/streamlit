@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ComponentType, ReactElement } from "react"
+import type { ComponentType, ReactElement } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
 
@@ -31,6 +31,7 @@ function withFullScreenWrapper<P extends object>(
     )
   }
   ComponentWithFullScreenWrapper.displayName = `withFullScreenWrapper(${
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank displayName falls through to the function name
     WrappedComponent.displayName || WrappedComponent.name
   })`
 

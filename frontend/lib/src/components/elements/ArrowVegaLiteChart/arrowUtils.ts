@@ -16,13 +16,13 @@
 
 import {
   DataFrameCellType,
-  DataType,
+  type DataType,
   getTimezone,
   isDatetimeType,
   isDateType,
   isNumericType,
 } from "~lib/dataframes/arrowTypeUtils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 const MagicFields = {
@@ -64,6 +64,13 @@ export interface VegaLiteChartElement {
 
   /** The form ID if the chart has activated selections and is used within a form. */
   formId: string
+
+  /**
+   * Accessible name from the author `alt` parameter. Applied as Vega-Lite
+   * `description` (→ aria-label on role="graphics-document") when non-empty.
+   * Never present in the hashed protobuf `spec` string.
+   */
+  alt?: string
 }
 
 /** A mapping of `ArrowNamedDataSet.proto`. */

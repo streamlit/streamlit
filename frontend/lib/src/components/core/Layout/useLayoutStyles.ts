@@ -16,13 +16,21 @@
 
 import { useContext, useMemo } from "react"
 
-import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
+import type {
+  Block as BlockProto,
+  Element,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { convertRemToPx } from "~lib/theme/utils"
 import { assertNever } from "~lib/util/assertNever"
 
-import { FlexContext, IFlexContext } from "./FlexContext"
-import { Direction, getTextAlignmentStyle, MinFlexElementWidth } from "./utils"
+import { FlexContext, type IFlexContext } from "./FlexContext"
+import {
+  Direction,
+  getTextAlignmentStyle,
+  type MinFlexElementWidth,
+} from "./utils"
 
 type SubElement = {
   useContainerWidth?: boolean | null
@@ -92,10 +100,10 @@ export type UseLayoutStylesArgs = {
 }
 
 const isPositiveNumber = (value: unknown): value is number =>
-  typeof value === "number" && value >= 0 && !isNaN(value)
+  typeof value === "number" && value >= 0 && !Number.isNaN(value)
 
 const isNonZeroPositiveNumber = (value: unknown): value is number =>
-  typeof value === "number" && value > 0 && !isNaN(value)
+  typeof value === "number" && value > 0 && !Number.isNaN(value)
 
 enum DimensionType {
   PIXEL = "pixel",
@@ -128,11 +136,15 @@ const getWidth = (
   // since some integrations cache the messages and we want to ensure that the FE
   // can still support old message formats.
   const isStretch =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false useStretch still lets the sub-element flag count
     element.widthConfig?.useStretch || subElement?.widthConfig?.useStretch
   const isContent =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false useContent still lets the sub-element flag count
     element?.widthConfig?.useContent || subElement?.widthConfig?.useContent
   const isPixel =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a 0 element width must fall through to the === 0 check below
     element?.widthConfig?.pixelWidth ||
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a 0 sub-element width must not hide the element === 0 check below
     subElement?.widthConfig?.pixelWidth ||
     element.widthConfig?.pixelWidth === 0
   const isRem = element.widthConfig?.remWidth
@@ -287,6 +299,9 @@ export type UseLayoutStylesShape = {
   flex?: React.CSSProperties["flex"]
   minWidth?: React.CSSProperties["minWidth"]
   textAlign?: React.CSSProperties["textAlign"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
 }
 
 /**
@@ -349,11 +364,26 @@ export const useLayoutStyles = ({
 
     const heightConfig = getHeight(element, subElement)
     let height: React.CSSProperties["height"]
+    let alignSelf: React.CSSProperties["alignSelf"]
+    let minHeight: React.CSSProperties["minHeight"]
+    let maxHeight: React.CSSProperties["maxHeight"]
     let overflow: React.CSSProperties["overflow"] = "visible"
 
     switch (heightConfig.type) {
       case DimensionType.STRETCH:
-        height = "100%"
+        if (direction === Direction.HORIZONTAL) {
+          // A percentage height can't resolve against a content-sized row, so
+          // stretch along the cross axis to match the tallest sibling instead.
+          height = "auto"
+          alignSelf = "stretch"
+          // Percentage min/max heights resolve only when the row has a
+          // definite height (pixel or stretched), where they keep the element
+          // exactly as tall as the row.
+          minHeight = "100%"
+          maxHeight = "100%"
+        } else {
+          height = "100%"
+        }
         break
       case DimensionType.CONTENT:
         height = "auto"
@@ -392,6 +422,9 @@ export const useLayoutStyles = ({
       flex,
       minWidth,
       textAlign,
+      alignSelf,
+      minHeight,
+      maxHeight,
     }
 
     return {

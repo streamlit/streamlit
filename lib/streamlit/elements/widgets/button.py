@@ -50,7 +50,11 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import Page, _validate_registered_page
+from streamlit.navigation.page import (
+    Page,
+    _raise_if_unsafe_page_path,
+    _validate_registered_page,
+)
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
@@ -67,6 +71,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.state.query_params import process_query_params
 from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
@@ -314,9 +319,9 @@ class ButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. Icons and keyboard shortcuts
-            remain visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. Icons and
+            keyboard shortcuts remain visible.
 
         Returns
         -------
@@ -661,9 +666,9 @@ class ButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. Icons and keyboard shortcuts
-            remain visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. Icons and
+            keyboard shortcuts remain visible.
 
         Returns
         -------
@@ -1094,9 +1099,9 @@ class ButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. Icons and keyboard shortcuts
-            remain visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. Icons and
+            keyboard shortcuts remain visible.
 
         Returns
         -------
@@ -1219,7 +1224,8 @@ class ButtonMixin:
         icon : str or None
             An optional emoji or icon to display next to the link label. If
             ``icon`` is ``None`` (default), the icon is inferred from the
-            ``Page`` object or no icon is displayed. If ``icon`` is a
+            ``Page`` object or no icon is displayed. Pass ``icon=""`` to show
+            no icon even when the page has one. If ``icon`` is a non-empty
             string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
@@ -1386,10 +1392,10 @@ class ButtonMixin:
         key = to_key(key)
         label = "" if label is None else to_str(label)
 
-        on_click_callback: WidgetCallback | None = (
-            None
-            if on_click is None or on_click in {"ignore", "rerun"}
-            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
+        on_click_callback = validate_on_change_mode(
+            on_click,
+            supported_modes=("rerun", "ignore"),
+            param_name="on_click",
         )
 
         normalized_shortcut: str | None = None
@@ -1432,10 +1438,16 @@ class ButtonMixin:
         download_button_proto.type = type
         if wrap is not None:
             download_button_proto.wrap = wrap
-        marshall_file(
-            self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
-        )
         download_button_proto.disabled = disabled
+        marshall_file(
+            self.dg._get_delta_path_str(),
+            data,
+            download_button_proto,
+            mime,
+            file_name,
+            disabled=disabled,
+            element_id=element_id,
+        )
 
         if help is not None:
             download_button_proto.help = to_help_str(help)
@@ -1496,13 +1508,13 @@ class ButtonMixin:
     ) -> bool | DeltaGenerator:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        on_click_callback = validate_on_change_mode(
+            on_click,
+            supported_modes=("rerun", "ignore"),
+            param_name="on_click",
+        )
         ignore_rerun = on_click == "ignore"
         is_rerun_mode = not ignore_rerun
-        on_click_callback: WidgetCallback | None = (
-            None
-            if on_click in {"ignore", "rerun"}
-            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
-        )
 
         link_button_proto = LinkButtonProto()
         normalized_shortcut = (
@@ -1654,6 +1666,8 @@ class ButtonMixin:
                     "page_link", page_link_proto, layout_config=layout_config
                 )
 
+            _raise_if_unsafe_page_path(page)
+
             ctx_main_script = ""
             all_app_pages = {}
             ctx_main_script = ctx.main_script_path
@@ -1712,6 +1726,11 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        on_click = validate_on_change_mode(
+            on_click,
+            supported_modes=(),
+            param_name="on_click",
+        )
 
         normalized_shortcut: str | None = None
         if shortcut is not None:
@@ -1842,9 +1861,24 @@ def marshall_file(
     proto_download_button: DownloadButtonProto,
     mimetype: str | None,
     file_name: str | None = None,
+    *,
+    disabled: bool = False,
+    element_id: str = "",
 ) -> None:
+    # A disabled button must not leave an executable generator behind: clients
+    # can send deferred-file requests directly, regardless of the UI state.
+    # Revoke ids from earlier enabled runs, even if this run passes static data.
+    if disabled and runtime.exists():
+        runtime.get_instance().media_file_mgr.remove_deferred(
+            coordinates, element_id=element_id
+        )
+
     # Check if data is a callable (for deferred downloads)
     if callable(data):
+        if disabled:
+            proto_download_button.url = ""
+            return
+
         if not runtime.exists():
             # When running in "raw mode", we can't access the MediaFileManager.
             proto_download_button.url = ""
@@ -1861,6 +1895,7 @@ def marshall_file(
             mimetype,
             coordinates,
             file_name=file_name,
+            element_id=element_id,
         )
         proto_download_button.deferred_file_id = file_id
         proto_download_button.url = ""  # No URL yet, will be generated on click

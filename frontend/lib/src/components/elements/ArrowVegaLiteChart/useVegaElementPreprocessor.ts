@@ -20,7 +20,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import type { VegaLiteChartElement } from "./arrowUtils"
 import { resolveNamedColorsInSpec } from "./colorUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
 
@@ -224,9 +224,19 @@ const generateSpec = (
   selectionMode: string[],
   theme: EmotionTheme,
   containerWidth: number,
-  containerHeight?: number
+  containerHeight?: number,
+  alt: string = ""
 ): VegaLiteSpec => {
-  const spec = JSON.parse(inputSpec)
+  const spec = JSON.parse(inputSpec) as VegaLiteSpec & {
+    title?: string | { text?: string; limit?: number }
+    padding?: { bottom?: number }
+    config?: object
+  }
+
+  // Author `alt` wins over any top-level description already in the spec JSON.
+  if (alt) {
+    spec.description = alt
+  }
 
   // Normalize legacy "0"/non-positive sizing semantics: Historically, a
   // top-level width/height of 0 behaved like "unspecified" (Vega-Lite fell back
@@ -257,17 +267,16 @@ const generateSpec = (
   sanitizeUsermetaEmbedOptions(spec)
 
   if (spec.title) {
-    if (typeof spec.title === "string") {
-      spec.title = { text: spec.title }
-    }
-
-    spec.title.limit =
+    const title =
+      typeof spec.title === "string" ? { text: spec.title } : spec.title
+    title.limit =
       // Preserve existing limit if it exists,
-      spec.title.limit ??
+      title.limit ??
       // Otherwise, calculate the width - 40px to give some padding, especially
       // for the ... menu button. If the width is less than 40px, we set it to
       // 0 to avoid negative values.
       Math.max(containerWidth - 40, 0)
+    spec.title = title
   }
 
   // Only apply a container-derived height when we have a positive measurement.
@@ -311,6 +320,7 @@ const generateSpec = (
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- falsy padding, including 0, is replaced so bottom can be set
   if (!spec.padding) {
     spec.padding = {}
   }
@@ -354,6 +364,7 @@ export const useVegaElementPreprocessor = (
     datasets,
     vegaLiteTheme,
     selectionMode: inputSelectionMode,
+    alt = "",
   } = element
 
   // Selection Mode is an array, so we want to update it only when the contents
@@ -378,7 +389,8 @@ export const useVegaElementPreprocessor = (
         selectionMode,
         theme,
         0, // Use 0 for container dimensions
-        0
+        0,
+        alt
       ),
     [
       inputSpec,
@@ -387,6 +399,7 @@ export const useVegaElementPreprocessor = (
       vegaLiteTheme,
       selectionMode,
       theme,
+      alt,
     ]
   )
 
@@ -451,7 +464,8 @@ export const useVegaElementPreprocessor = (
         selectionMode,
         theme,
         containerWidth,
-        containerHeight
+        containerHeight,
+        alt
       ),
     [
       inputSpec,
@@ -462,6 +476,7 @@ export const useVegaElementPreprocessor = (
       theme,
       containerWidth,
       containerHeight,
+      alt,
     ]
   )
 
@@ -477,6 +492,7 @@ export const useVegaElementPreprocessor = (
     data,
     datasets,
     useContainerWidth,
+    alt,
     baseSpecKey,
   }
 }

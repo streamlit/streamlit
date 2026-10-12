@@ -135,3 +135,21 @@ bound_toggle_true = st.toggle(
     bind="query-params",
 )
 st.write("bound toggle true value:", bound_toggle_true)
+
+# --- on_change="ignore" toggle ---
+# Run counter so test_toggle_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_toggle = st.toggle(
+    "Ignore change toggle",
+    key="ignore_toggle",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore toggle value:", ignore_toggle)
+
+if st.button("Apply ignore toggle", key="apply_ignore_toggle"):
+    st.write("Applied ignore toggle value:", ignore_toggle)

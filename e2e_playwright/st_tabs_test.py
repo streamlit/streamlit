@@ -16,7 +16,13 @@ import re
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -29,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
 
 def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_tabs = themed_app.get_by_test_id("stTabs")
-    expect(st_tabs).to_have_count(19)
+    expect(st_tabs).to_have_count(21)
 
     assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
     assert_snapshot(st_tabs.nth(1), name="st_tabs-text_input")
@@ -534,3 +540,80 @@ def test_tabs_stretch_height_fills_parent(
 
     stretch_tabs.scroll_into_view_if_needed()
     assert_snapshot(stretch_tabs, name="st_tabs-stretch_height_in_container")
+
+
+# --- bind="query-params" Tests ---
+
+QP_DOG_IN_URL = re.compile(r"[?&]qp_tabs=QP(\+|%20)Dog")
+QP_OWL_IN_URL = re.compile(r"[?&]qp_tabs=QP(\+|%20)Owl")
+QP_ALPHA_IN_URL = re.compile(r"[?&]qp_tabs_default=QP(\+|%20)Alpha")
+
+
+def test_tabs_query_param_binding_url_sync(app: Page):
+    """Test bound-tab URL updates, default omission, and default= behavior."""
+    qp_tabs = get_element_by_key(app, "qp_tabs")
+
+    # Initially on default tab — URL must not have the param
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_tabs="))
+    expect(app.get_by_text("Active tab: QP Cat", exact=True)).to_be_visible()
+
+    qp_tabs.get_by_role("tab", name="QP Dog").click()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(QP_DOG_IN_URL)
+    expect(qp_tabs.get_by_text("QP Dog tab content")).to_be_visible()
+    expect(app.get_by_text("Active tab: QP Dog", exact=True)).to_be_visible()
+
+    # Switch back to default tab — URL param should be removed
+    qp_tabs.get_by_role("tab", name="QP Cat").click()
+    wait_for_app_run(app)
+
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_tabs="))
+    expect(app.get_by_text("Active tab: QP Cat", exact=True)).to_be_visible()
+
+    qp_default_tabs = get_element_by_key(app, "qp_tabs_default")
+
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_tabs_default="))
+    expect(qp_default_tabs.get_by_role("tab", name="QP Beta")).to_have_attribute(
+        "aria-selected", "true"
+    )
+
+    qp_default_tabs.get_by_role("tab", name="QP Alpha").click()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(QP_ALPHA_IN_URL)
+
+    qp_default_tabs.get_by_role("tab", name="QP Beta").click()
+    wait_for_app_run(app)
+
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_tabs_default="))
+
+
+def test_tabs_query_param_seeding_from_url(page: Page, app_base_url: str):
+    """Test that a bound tab starts selected when seeded from URL."""
+    page.goto(build_app_url(app_base_url, query={"qp_tabs": "QP Owl"}))
+    wait_for_app_loaded(page)
+
+    qp_tabs = get_element_by_key(page, "qp_tabs")
+    expect(qp_tabs.get_by_role("tab", name="QP Owl")).to_have_attribute(
+        "aria-selected", "true"
+    )
+    expect(qp_tabs.get_by_text("QP Owl tab content")).to_be_visible()
+    expect(page).to_have_url(QP_OWL_IN_URL)
+    expect(page.get_by_text("Active tab: QP Owl", exact=True)).to_be_visible()
+
+    # The other bound tabs stay at their default tab, so their params are omitted.
+    expect(page).not_to_have_url(re.compile(r"[?&]qp_tabs_default="))
+
+
+def test_tabs_query_param_invalid_value(page: Page, app_base_url: str):
+    """Test that invalid URL tab labels fall back to the default tab."""
+    page.goto(build_app_url(app_base_url, query={"qp_tabs": "NotATab"}))
+    wait_for_app_loaded(page)
+
+    qp_tabs = get_element_by_key(page, "qp_tabs")
+    expect(qp_tabs.get_by_role("tab", name="QP Cat")).to_have_attribute(
+        "aria-selected", "true"
+    )
+    expect(page).not_to_have_url(re.compile(r"[?&]qp_tabs="))
+    expect(page.get_by_text("Active tab: QP Cat", exact=True)).to_be_visible()

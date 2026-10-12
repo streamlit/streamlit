@@ -104,6 +104,40 @@ def _register_component(
     return component_key
 
 
+def _ensure_component_on_active_runtime(
+    component_key: str,
+    html: str | None,
+    css: str | None,
+    js: str | None,
+) -> None:
+    """Register captured HTML, CSS, and JS on the active runtime if needed.
+
+    Do this when that name is missing or still a manifest placeholder.
+    ``component()`` runs when the module is imported, which can be a different
+    manager than the runtime executing the script. AppTest creates a new
+    runtime per instance. Leave a definition the script already registered,
+    including an explicit empty ``component()`` call. Return immediately when
+    there is no script run or runtime, so this path does not create a
+    throwaway manager.
+    """
+    from streamlit.runtime import Runtime
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        get_script_run_ctx,
+    )
+
+    # Suppress the missing-context warning here. The mount that follows logs it.
+    if get_script_run_ctx(suppress_warning=True) is None or not Runtime.exists():
+        return
+
+    manager = Runtime.instance().bidi_component_registry
+    manager.ensure_definition_if_missing_or_placeholder(
+        component_key=component_key,
+        html=html,
+        css=css,
+        js=js,
+    )
+
+
 def _create_component_callable(
     name: str,
     *,
@@ -192,6 +226,8 @@ def _create_component_callable(
                 "(`st.components.v2.component(..., isolate_styles=...)`).",
                 show_in_browser=False,
             )
+
+        _ensure_component_on_active_runtime(component_key, html, css, js)
 
         return st._bidi_component(
             component_key,
@@ -500,13 +536,13 @@ def component(
         export default function(component) {
             const { setStateValue, parentElement } = component;
             const sidebar = document.querySelector('section.stSidebar');
-            const initialState = sidebar.getAttribute('aria-expanded') === 'true';
+            const initialState = sidebar.getAttribute('data-collapsed') === 'false';
 
-            // Create observer to watch for aria-expanded attribute changes
+            // Observe `data-collapsed` and report sidebar expansion-state changes.
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'aria-expanded') {
-                        const newIsExpanded = sidebar.getAttribute('aria-expanded') === 'true';
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'data-collapsed') {
+                        const newIsExpanded = sidebar.getAttribute('data-collapsed') === 'false';
                         setStateValue('expanded', newIsExpanded);
                     }
                 });
@@ -515,7 +551,7 @@ def component(
             // Start observing
             observer.observe(sidebar, {
                 attributes: true,
-                attributeFilter: ['aria-expanded']
+                attributeFilter: ['data-collapsed']
             });
 
             // Set initial state

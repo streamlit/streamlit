@@ -28,7 +28,7 @@ import { getLogger } from "loglevel"
 import { CustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
-import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
+import type { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import { LocalStore } from "~lib/util/storageUtils"
 import {
   isDarkThemeInQueryParams,
@@ -42,12 +42,13 @@ import { fonts } from "./primitives/typography"
 import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
 import type {
   CachedTheme,
+  DerivedColors,
   EmotionTheme,
+  EmotionThemeColors,
   ThemeConfig,
   ThemeSelection,
   ThemeSpacing,
 } from "./types"
-import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
@@ -92,7 +93,7 @@ export function sortThemeInputKeys(obj: unknown): unknown {
   if (typeof obj === "object") {
     const sorted: Record<string, unknown> = {}
     Object.keys(obj)
-      .sort()
+      .toSorted()
       .forEach(key => {
         sorted[key] = sortThemeInputKeys((obj as Record<string, unknown>)[key])
       })
@@ -431,13 +432,13 @@ export const parseRadius = (
   } else if (processedRadius === "full") {
     radiusValue = 1.4
   } else if (processedRadius.endsWith("rem")) {
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
   } else if (processedRadius.endsWith("px")) {
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
     cssUnit = "px"
-  } else if (!isNaN(parseFloat(processedRadius))) {
+  } else if (!Number.isNaN(Number.parseFloat(processedRadius))) {
     // Fallback: if the value can be parsed as a number, treat it as pixels
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
     cssUnit = "px"
   }
 
@@ -461,7 +462,7 @@ export const parseFontSize = (
     // If string, check its valid (ends with "rem" or "px")
     // and can be parsed as a number
     const processedFontSize = fontSize.trim().toLowerCase()
-    const parsedFontSize = parseFloat(processedFontSize)
+    const parsedFontSize = Number.parseFloat(processedFontSize)
     if (
       parsedFontSize &&
       (processedFontSize.endsWith("rem") || processedFontSize.endsWith("px"))
@@ -547,7 +548,7 @@ const convertHeadingFontSizeToRem = (
     return validatedSize
   } else if (validatedSize?.endsWith("px")) {
     // Convert the font size to rem, and round to nearest 8th
-    const remValue = parseFloat(validatedSize) / baseFontSize
+    const remValue = Number.parseFloat(validatedSize) / baseFontSize
     return `${remValue}rem`
   }
 
@@ -586,7 +587,8 @@ const setHeadingFontSizes = (
 
       // If valid configured value, overwrite the default heading font size
       if (convertedSize) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font sizes have no index signature
         headingFontSizesOverrides[headingFontSizeKey] = convertedSize
       }
     })
@@ -665,7 +667,8 @@ const setFontWeights = (
           inSidebar
         )
       ) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font weights have no index signature
         fontWeightOverrides[headingFontWeightKey] = weight
       }
     })
@@ -725,7 +728,7 @@ export const createEmotionTheme = (
 
   const parsedColors = Object.entries(customColors).reduce(
     (colorsArg: Record<string, string>, [key, color]) => {
-      // @ts-expect-error
+      // @ts-expect-error - remaining theme values are not all typed as color strings
       const validatedColor = parseColor(color, key, inSidebar)
       if (validatedColor) {
         colorsArg[key] = validatedColor
@@ -744,6 +747,7 @@ export const createEmotionTheme = (
     textColor: bodyText,
     dataframeBorderColor,
     dataframeHeaderBackgroundColor,
+    dataframeHeaderTextColor,
     borderColor,
     linkColor,
     codeTextColor,
@@ -813,6 +817,13 @@ export const createEmotionTheme = (
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
     dataframeHeaderBackgroundColor ??
     conditionalOverrides.colors.dataframeHeaderBackgroundColor
+
+  // Use the configured header text color when set. Otherwise keep the
+  // fadedText60 default from createEmotionColors (which already tracks
+  // textColor).
+  conditionalOverrides.colors.dataframeHeaderTextColor =
+    dataframeHeaderTextColor ??
+    conditionalOverrides.colors.dataframeHeaderTextColor
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
@@ -919,7 +930,7 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(baseRadius)) {
     const [radiusValue, cssUnit] = parseRadius(baseRadius)
 
-    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+    if (notNullOrUndefined(radiusValue) && !Number.isNaN(radiusValue)) {
       const radiusWithCssUnit = addCssUnit(radiusValue, cssUnit)
       conditionalOverrides.radii.default = radiusWithCssUnit
 
@@ -955,7 +966,7 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(buttonRadius)) {
     const [radiusValue, cssUnit] = parseRadius(buttonRadius)
 
-    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+    if (notNullOrUndefined(radiusValue) && !Number.isNaN(radiusValue)) {
       // If valid buttonRadius set, override baseRadius fallback
       conditionalOverrides.radii.button = addCssUnit(radiusValue, cssUnit)
     } else {
@@ -1004,7 +1015,7 @@ export const createEmotionTheme = (
     )
     if (parsedSize) {
       // Additional validation: must be greater than 0
-      const numericValue = parseFloat(parsedSize)
+      const numericValue = Number.parseFloat(parsedSize)
       if (numericValue <= 0) {
         LOG.warn(
           `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
@@ -1155,11 +1166,7 @@ export const createTheme = (
   const bgColor = completedThemeInput.backgroundColor
   const startingTheme = merge(
     cloneDeep(
-      baseThemeConfig
-        ? baseThemeConfig
-        : getLuminance(bgColor) > 0.5
-          ? lightTheme
-          : darkTheme
+      baseThemeConfig ?? (getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme)
     ),
     { emotion: { inSidebar } }
   )
@@ -1347,7 +1354,7 @@ export function addCssUnit(n: number, unit: "px" | "rem"): string {
 }
 
 function roundToTwoDecimals(n: number): number {
-  return parseFloat(n.toFixed(2))
+  return Number.parseFloat(n.toFixed(2))
 }
 
 export function blend(color: string, background: string | undefined): string {
@@ -1366,18 +1373,21 @@ export function blend(color: string, background: string | undefined): string {
 /**
  * Convert a CSS rem value to pixels.
  * @param cssValue: a string containing a value in rem units with or without the "rem" unit suffix
+ * @param rootFontSizePx: optional root font size. Prefer `theme.fontSizes.baseFontSize`
+ *   so the conversion matches the theme even before `html { font-size }` is applied.
  * @returns pixel value of the given rem value
  */
-export const convertRemToPx = (cssValue: string): number => {
-  const remValue = parseFloat(cssValue.replace(/rem$/, ""))
-  return (
-    // TODO(lukasmasuch): We might want to somehow cache this value at some point.
-    // However, I did experimented with the performance of calling this, and
-    // it seems not like a big deal to call it many times.
-    remValue *
-    // We fallback to 16px if the fontSize is not defined (should only happen in tests)
-    (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
-  )
+export const convertRemToPx = (
+  cssValue: string,
+  rootFontSizePx?: number
+): number => {
+  const remValue = Number.parseFloat(cssValue.replace(/rem$/, ""))
+  const fontSize =
+    rootFontSizePx ??
+    // Fall back to the live root font size, then 16px (tests without a document style).
+    (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) ||
+      16)
+  return remValue * fontSize
 }
 
 /**
@@ -1428,7 +1438,7 @@ export const handleSectionInheritance = (
   // and light or dark variant sections
   const { light, dark, sidebar: baseSidebar, ...commonTheme } = themeInput
   const variantSection = isLightTheme ? light : dark
-  const { sidebar: variantSidebar, ...variantTheme } = variantSection || {}
+  const { sidebar: variantSidebar, ...variantTheme } = variantSection ?? {}
 
   // Merge common theme properties with variant overrides (excluding sidebars for now)
   // Note: base is set explicitly based on variant and is merged last to ensure it overrides
@@ -1558,7 +1568,7 @@ const setSidebarHeadingFontSizes = (
   ]
 
   // Merge config overrides with sidebar defaults (for arrays, merge replaces at each index)
-  return merge([], defaultHeadingFontSizes, configHeadingFontSizes || [])
+  return merge([], defaultHeadingFontSizes, configHeadingFontSizes ?? [])
 }
 
 /**
@@ -1572,10 +1582,12 @@ export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   const { bgColor, secondaryBg } = activeTheme.emotion.colors
 
   // Either use the configured background color or secondary background from main theme:
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank background color means unset
   const sidebarBackground = sidebarThemeInput?.backgroundColor || secondaryBg
 
   // Either use the configured secondary background color or background from main theme:
   const secondaryBackgroundColor =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank secondary background color means unset
     sidebarThemeInput?.secondaryBackgroundColor || bgColor
 
   // Handle configured vs. default header font sizes for sidebar

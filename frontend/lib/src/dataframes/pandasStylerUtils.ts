@@ -18,7 +18,7 @@
  * Utility functions to get Pandas styler information from a Quiver object.
  */
 
-import { Quiver } from "./Quiver"
+import type { Quiver } from "./Quiver"
 
 /**
  * A styled header object with information from Pandas Styler.
