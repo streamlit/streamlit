@@ -49,6 +49,10 @@ import type {
   StreamlitEndpoints,
 } from "./types"
 import { buildWsUri } from "./utils"
+import {
+  formatWebsocketCloseLog,
+  isNormalWebsocketClosure,
+} from "./websocketCloseDiagnostics"
 
 export interface Args {
   /** The application's SessionInfo instance */
@@ -719,9 +723,14 @@ export class WebsocketConnection {
       }
     })
 
-    this.websocket.addEventListener("close", () => {
+    this.websocket.addEventListener("close", (event: CloseEvent) => {
       if (checkWebsocket()) {
-        LOG.warn("WebSocket onclose")
+        const closeLog = formatWebsocketCloseLog(event, this.state)
+        if (isNormalWebsocketClosure(event.code, event.wasClean)) {
+          LOG.info(closeLog)
+        } else {
+          LOG.warn(closeLog)
+        }
         this.closeConnection()
         this.stepFsm("CONNECTION_CLOSED")
       }
