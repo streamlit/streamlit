@@ -205,8 +205,6 @@ agents is the half nobody owns.
    rather than seeing or changing what the human is looking at — not their filters,
    uploads, or session state; and it does not inherit the asking user's identity unless
    the deployment maps it, which matters in an app with per-user data access.
-6. **Fall back deliberately.** Detect a browser-only element and hand off to browser
-   automation instead of silently returning incomplete output.
 
 ## Proposal
 
@@ -297,8 +295,8 @@ the start and holds a session until it idles out.
 **There is no read or delete route.** An `interact` with no changes is an explicit rerun,
 apart from collecting a timed-out run, and can repeat side effects like any rerun. A
 client rarely needs a read: nothing changes an agent session between interactions, since
-`run_every` timers belong to the browser and no other client shares the session, so the
-last snapshot stays current. A non-executing read arrives with follow-up #4.
+`run_every` timers belong to the browser, a file edit waits for the next interaction, and
+no other client shares the session, so the last snapshot stays current. A non-executing read arrives with follow-up #4.
 
 **An agent session is an ordinary Streamlit session with a different client.** The
 runtime treats it as one more browser tab, which settles what it shares and what it does
@@ -311,7 +309,8 @@ not:
   interactions until the session is reclaimed.
 - **The script on disk:** an edit takes effect on the session's next interaction, with
   its session state kept, so a coding agent can edit and re-check in one session, or omit
-  `session_id` for a clean start.
+  `session_id` for a clean start. `server.runOnSave` does not apply: an edit never starts
+  a run the client did not ask for.
 - **Absent, because a browser supplies it:** `st.context.headers` and `cookies` are
   empty, and its URL, theme, and embedding fields are `None` rather than guessed.
   Timezone and locale are `None` too unless the request states them in `context`, which
@@ -741,7 +740,8 @@ Until then, v1 checks three things itself, each refused with `invalid_value`:
   and a one-item list are interchangeable, because single-select button groups and single
   sliders carry one value in a list.
 - **The options.** A value must be one of the widget's `options`, the most common
-  mistake, and the error lists the legal values.
+  mistake, and the error lists the legal values. A widget with `accept_new_options` also
+  takes new text, as it does in the browser.
 - **That the widget can read it.** Its own deserializer must accept the value, because
   one it cannot read raises in the app's run, and on every later run too.
 

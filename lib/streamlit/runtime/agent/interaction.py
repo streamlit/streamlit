@@ -342,6 +342,9 @@ class AgentSessionRegistry:
         session = AgentSession(
             handle=handle, session_id=session_id, client=client, user_info=user_info
         )
+        # An edit applies on the next interaction, as with `runOnSave` off, so a
+        # client is never handed the result of a run it did not ask for.
+        _app_session(self._runtime, session)._run_on_save = False
         self._sessions[handle] = session
         return session
 
