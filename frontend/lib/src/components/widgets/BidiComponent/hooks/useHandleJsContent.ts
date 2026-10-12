@@ -75,10 +75,6 @@ const loadAndRunModule = async <T extends FrontendState>({
     ) => CleanupFunction | void | Promise<CleanupFunction | void>
   }
 
-  if (!module) {
-    throw new Error("JS module does not exist.")
-  }
-
   if (!module.default || typeof module.default !== "function") {
     throw new Error("JS module does not have a default export function.")
   }

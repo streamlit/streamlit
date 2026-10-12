@@ -125,9 +125,6 @@ export function getDataSets(
   const datasetMapping: { [dataset: string]: Quiver } = {}
 
   datasets.forEach((x: WrappedNamedDataset) => {
-    if (!x) {
-      return
-    }
     const name = x.hasName ? x.name : null
     datasetMapping[name as string] = x.data
   })

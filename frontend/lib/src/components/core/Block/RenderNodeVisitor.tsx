@@ -164,10 +164,6 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
    * }
    */
   static collectReactElements(props: BlockPropsWithoutWidth): ReactElement[] {
-    if (!props.node.children) {
-      return []
-    }
-
     const visitor = new RenderNodeVisitor(props)
     // Visit all the children nodes and collect the react elements
     props.node.children.forEach(childNode => childNode.accept(visitor))
