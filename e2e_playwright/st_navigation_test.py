@@ -69,17 +69,83 @@ def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
     app.keyboard.press("Tab")
     expect(skip_link).to_be_focused()
 
+    content_top_before_focus = app.get_by_test_id("stMainBlockContainer").evaluate(
+        "el => el.getBoundingClientRect().top"
+    )
+    scroll_before_focus = main.evaluate("el => el.scrollTop")
+
     app.keyboard.press("Enter")
     expect(main).to_be_focused()
     # Skip activation must not write #stMain (embed hosts mirror hashchange).
     expect(app).not_to_have_url(re.compile(r"#stMain"))
     assert app.evaluate("() => window.location.hash") == hash_before
 
-    # Focus ring is an inset box-shadow on sticky ::before (scroll-pin coverage
-    # needs an overflowing page; this fixture stays within the viewport).
+    # Focusing main must not shift content (preventScroll + sticky ring layout).
+    assert main.evaluate("el => el.scrollTop") == scroll_before_focus
+    content_top_after_focus = app.get_by_test_id("stMainBlockContainer").evaluate(
+        "el => el.getBoundingClientRect().top"
+    )
+    assert abs(content_top_after_focus - content_top_before_focus) < 1
+
     ring_shadow = main.evaluate("el => getComputedStyle(el, '::before').boxShadow")
     assert ring_shadow != "none"
     assert "inset" in ring_shadow
+
+    # Overflow the scrollport, then confirm the sticky ring stays under the header.
+    main.evaluate(
+        """el => {
+            const spacer = document.createElement("div");
+            spacer.dataset.testid = "stMainScrollSpacer";
+            spacer.style.height = "2000px";
+            spacer.style.flexShrink = "0";
+            spacer.style.width = "100%";
+            el.appendChild(spacer);
+        }"""
+    )
+    assert main.evaluate("el => el.scrollHeight > el.clientHeight")
+
+    # Mirror ::before sticky offset/height with a real node so we can read
+    # painted top (pseudo-elements have no getBoundingClientRect).
+    main.evaluate(
+        """el => {
+            const before = getComputedStyle(el, "::before");
+            const probe = document.createElement("div");
+            probe.dataset.testid = "stMainFocusRingProbe";
+            probe.setAttribute("aria-hidden", "true");
+            Object.assign(probe.style, {
+                position: before.position,
+                top: before.top,
+                height: before.height,
+                flexShrink: "0",
+                alignSelf: "stretch",
+                width: "100%",
+                pointerEvents: "none",
+            });
+            el.insertBefore(probe, el.firstChild);
+        }"""
+    )
+
+    content_top_before_scroll = app.get_by_test_id("stMainBlockContainer").evaluate(
+        "el => el.getBoundingClientRect().top"
+    )
+    main.evaluate("el => { el.scrollTop = 400 }")
+    assert main.evaluate("el => el.scrollTop") > 0
+    content_top_after_scroll = app.get_by_test_id("stMainBlockContainer").evaluate(
+        "el => el.getBoundingClientRect().top"
+    )
+    assert content_top_after_scroll < content_top_before_scroll - 100
+
+    scrolled_shadow = main.evaluate("el => getComputedStyle(el, '::before').boxShadow")
+    assert scrolled_shadow != "none"
+    assert "inset" in scrolled_shadow
+
+    header_bottom = app.get_by_test_id("stHeader").evaluate(
+        "el => el.getBoundingClientRect().bottom"
+    )
+    probe_top = app.get_by_test_id("stMainFocusRingProbe").evaluate(
+        "el => el.getBoundingClientRect().top"
+    )
+    assert abs(probe_top - header_bottom) < 2
 
 
 def test_top_navigation_mode_shows_top_nav_only(app: Page) -> None:
