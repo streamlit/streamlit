@@ -69,6 +69,27 @@ describe("sanitizeWebsocketCloseReason", () => {
     )
   })
 
+  it("replaces control characters with spaces instead of joining words", () => {
+    expect(sanitizeWebsocketCloseReason("Going\naway")).toBe("Going away")
+  })
+
+  it("redacts a URL even when a newline precedes the scheme", () => {
+    const sanitized = sanitizeWebsocketCloseReason(
+      "see\nhttps://secret.example/a"
+    )
+    expect(sanitized).toBe("see [redacted]")
+    expect(sanitized).not.toContain("secret.example")
+  })
+
+  it("redacts a JWT even when a newline precedes the token", () => {
+    const jwt =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0In0.signaturevalue"
+    const sanitized = sanitizeWebsocketCloseReason(`auth\n${jwt}`)
+    expect(sanitized).toBe("auth [redacted]")
+    expect(sanitized).not.toContain(jwt)
+    expect(sanitized).not.toContain("eyJzdWIiOiIxMjM0In0")
+  })
+
   it("rewrites double quotes so the reason log field stays intact", () => {
     expect(sanitizeWebsocketCloseReason('say "hi"')).toBe("say 'hi'")
   })
@@ -123,6 +144,18 @@ describe("sanitizeWebsocketCloseReason", () => {
     expect(sanitized).toContain("[redacted]")
     expect(sanitized).not.toContain(paddedOnce)
     expect(sanitized).not.toContain(paddedTwice)
+  })
+
+  it("redacts long tokens that start with a non-word character", () => {
+    const leadingPlus = `+${"a".repeat(31)}`
+    const leadingSlash = `/${"a".repeat(31)}`
+    const sanitized = sanitizeWebsocketCloseReason(
+      `token=${leadingPlus} other=${leadingSlash}`
+    )
+
+    expect(sanitized).toContain("[redacted]")
+    expect(sanitized).not.toContain(leadingPlus)
+    expect(sanitized).not.toContain(leadingSlash)
   })
 })
 

@@ -17,8 +17,8 @@
 import type { ConnectionState } from "./ConnectionState"
 
 /**
- * Placeholder logged when the close frame has no usable reason string.
- * Distinguishes "the server sent nothing" from a redacted sensitive value.
+ * Placeholder the close logger writes when the close event has no printable
+ * reason, so an empty reason stays distinct from a redacted value.
  */
 export const MISSING_WEBSOCKET_CLOSE_REASON = "(no close reason)"
 
@@ -27,7 +27,7 @@ const REDACTED_CLOSE_REASON = "[redacted]"
 /** RFC 6455 normal closure. */
 export const WEBSOCKET_NORMAL_CLOSURE_CODE = 1000
 
-/** RFC 6455 close-code labels for browser-console diagnostics. */
+/** Close-code labels for browser-console diagnostics (RFC 6455 and the IANA registry). */
 const WEBSOCKET_CLOSE_CODE_LABELS: Record<number, string> = {
   1000: "normal closure",
   1001: "going away",
@@ -52,10 +52,16 @@ const UUID_RE =
   /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi
 /** Compact JWT form starts with a base64url `{"` header (`eyJ`). */
 const JWT_RE = /\beyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g
-const LONG_TOKEN_RE = /\b[A-Za-z0-9+/=_-]{32,}/g
+/**
+ * 32+ character token-like strings. No word boundaries: `=`, `+`, `/`, and `-`
+ * are non-word characters, so a leading `\b` would miss tokens that start with
+ * those, and a trailing `\b` would miss base64 padding. The 32-character
+ * minimum leaves ordinary words and hostnames intact.
+ */
+const LONG_TOKEN_RE = /[A-Za-z0-9+/=_-]{32,}/g
 
 /**
- * True when the close is a clean RFC 6455 normal closure (code 1000 with wasClean).
+ * Returns whether the close is a clean RFC 6455 normal closure (code 1000 with wasClean).
  */
 export function isNormalWebsocketClosure(
   code: number,
@@ -65,14 +71,15 @@ export function isNormalWebsocketClosure(
 }
 
 /**
- * Redact a close reason before writing it to the browser console:
+ * Redacts a close reason for browser-console output:
+ * - Replaces control characters with spaces
  * - Empty reasons become {@link MISSING_WEBSOCKET_CLOSE_REASON}
  * - URLs, UUIDs, JWTs, and long token-like strings are replaced with "[redacted]"
- * - Double quotes are rewritten so the reason="..." field stays intact
+ * - Double quotes are rewritten as single quotes so the reason="..." field stays intact
  */
 export function sanitizeWebsocketCloseReason(reason: string): string {
   const sanitized = reason
-    .replace(CONTROL_CHARS_RE, "")
+    .replace(CONTROL_CHARS_RE, " ")
     .replace(URL_RE, REDACTED_CLOSE_REASON)
     .replace(UUID_RE, REDACTED_CLOSE_REASON)
     .replace(JWT_RE, REDACTED_CLOSE_REASON)
@@ -83,14 +90,18 @@ export function sanitizeWebsocketCloseReason(reason: string): string {
   return sanitized === "" ? MISSING_WEBSOCKET_CLOSE_REASON : sanitized
 }
 
-/** RFC 6455 label for `code`, or "unknown" when the code is unrecognized. */
+/**
+ * Returns the close-code label for `code`, or "unknown" when the code is unrecognized.
+ */
 export function getWebsocketCloseCodeLabel(code: number): string {
   return WEBSOCKET_CLOSE_CODE_LABELS[code] ?? "unknown"
 }
 
 /**
- * Format a WebSocket close summary for the browser console only.
- * Callers must not forward this string through sendClientError or telemetry.
+ * Formats a WebSocket close summary for the browser console.
+ *
+ * Redaction is best-effort (it misses scheme-less URLs and short secrets), so
+ * callers must not forward this string through sendClientError or telemetry.
  */
 export function formatWebsocketCloseLog(
   event: Pick<CloseEvent, "code" | "reason" | "wasClean">,
