@@ -93,7 +93,11 @@ jobs:
         run: make python-lint
         env:
           RUFF_OUTPUT_FORMAT: github
+      # NumPy >=2.5 is required on Python 3.15 because earlier releases have no
+      # cp315 wheels. Those stubs use Python 3.12 syntax, and mypy/ty type-check
+      # as 3.11, so this leg cannot run make python-types. 3.11–3.14 still do.
       - name: Run Type Checkers
+        if: env.PYTHON_VERSION != '3.15'
         run: make python-types
         env:
           TY_OUTPUT_FORMAT: github

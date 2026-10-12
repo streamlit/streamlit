@@ -36,6 +36,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Database :: Front-Ends",
   "Topic :: Office/Business :: Financial :: Spreadsheet",
   "Topic :: Scientific/Engineering :: Information Analysis",
@@ -77,10 +78,12 @@ dependencies = [
   # Release builds generate Python protobuf code with protoc 26.1, whose
   # corresponding minimum runtime version is protobuf 5.26.1.
   "protobuf>=5.26.1,<8",
-  # 10.0.1 is the first release that publishes Python 3.11 wheels.
+  # 10.0.1 is the first release with Python 3.11 wheels.
+  # 26.0.0 is the first release with CPython 3.15 wheels, so the cap is <27.
+  # See https://github.com/streamlit/streamlit/issues/17422.
   # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
   # See https://github.com/apache/arrow/issues/50471.
-  "pyarrow>=10.0.1,!=25.0.0,<26",
+  "pyarrow>=10.0.1,!=25.0.0,<27",
   "requests>=2.27,<3",
   # Writes credentials and `streamlit config show` output. Reading uses stdlib tomllib.
   "tomli-w>=1.0.0,<2",
@@ -132,7 +135,8 @@ sql = ["SQLAlchemy>=2.0.0"]
 # Optional dependency for better performance:
 performance = [
   # httptools speeds up HTTP parsing in uvicorn. Without it, uvicorn falls back
-  # to its pure-Python h11 parser:
+  # to its pure-Python h11 parser. 0.9.0 is the first release with CPython 3.15
+  # wheels; the floor stays 0.6.3 so older Python can keep earlier releases.
   "httptools>=0.6.3",
   # orjson speeds up large plotly figure processing by 5-10x:
   "orjson>=3.5.0",

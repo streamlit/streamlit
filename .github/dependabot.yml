@@ -162,6 +162,9 @@ updates:
       - dependency-name: "numpy"
         # NumPy 2.5 stubs use Python 3.12 syntax that mypy cannot parse while
         # Streamlit type-checks as Python 3.11, the oldest supported version.
+        # Python 3.15 requires NumPy >=2.5 in pyproject.toml because earlier
+        # releases have no 3.15 wheels. This ignore stops Dependabot from
+        # lifting the <2.5 cap used below Python 3.15.
         versions: [">=2.5.0"]
       - dependency-name: "pytest"
         # pytest >= 9.1.0 is causing issues and is not yet supported.
