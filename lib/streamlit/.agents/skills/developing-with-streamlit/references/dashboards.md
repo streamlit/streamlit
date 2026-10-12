@@ -155,6 +155,53 @@ with col2:
 
 The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible. Keep the card title outside the `with` block so it stays stable while the body loads, and cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. See `performance.md` for more on parallel fragments and caching.
 
+## Fan-out caching: many cards, one query
+
+When several cards draw from the *same* source data, call one `@st.cache_data` loader with the same arguments from each parallel fragment. The cache's per-key lock runs the query once and every card shares that one result, so N cards cost one query instead of N. Add `refresh_mode="background"` so an expired entry serves instantly and refreshes off-thread, keeping all cards consistent without blocking.
+
+```python
+@st.cache_data(ttl="5m", refresh_mode="background")
+def load_sales(region):  # one query, shared by every card
+    return db.query("SELECT ... WHERE region = %(region)s", {"region": region})
+
+
+@st.fragment(parallel=True)
+def revenue_card(region):
+    with st.container(border=True):
+        st.subheader("Revenue by region")
+        sales = load_sales(region)  # same key as the other cards → runs once
+        st.bar_chart(sales, x="region", y="revenue", alt="Revenue by region")
+
+
+@st.fragment(parallel=True)
+def orders_card(region):
+    with st.container(border=True):
+        st.subheader("Recent orders")
+        sales = load_sales(region)  # cache hit — shares the one result
+        st.dataframe(sales.head(10), hide_index=True, alt="Recent orders")
+
+
+region = st.selectbox("Region", regions)  # control in the main script
+col1, col2 = st.columns(2)
+with col1:
+    revenue_card(region)
+with col2:
+    orders_card(region)
+```
+
+Keep the filter (`region`) in the main script, not inside a card. A main-script widget reruns the whole script and refreshes every card together; a widget *inside* a parallel fragment only reruns that card, and while the other cards are still loading it waits for them to finish before it applies. Put controls that must stay responsive during a slow load in the main script. See `performance.md` for `refresh_mode="background"` caveats.
+
+## Which tool when
+
+Reach for the smallest tool that fixes the bottleneck:
+
+- **Repeated or expensive data loads** → `@st.cache_data` (add `ttl`/`max_entries`; `refresh_mode="background"` for stale-while-revalidate). Cache the source data, filter cheaply outside the cache.
+- **Independent slow cards** → `@st.fragment(parallel=True)` so they load concurrently (total time ≈ slowest card).
+- **Many cards, one source query** → fan-out caching (above).
+- **A section that should refresh on its own** (live metrics/clock) → `@st.fragment(run_every=...)`.
+- **Filters/controls that must stay responsive while cards load** → keep them in the main script, not inside a card.
+- **One very slow (30s+) operation that shouldn't freeze the app** → `st.background_task` (see `performance.md`).
+
 ## Sidebar filters
 
 Put filters in the sidebar to maximize dashboard space:
