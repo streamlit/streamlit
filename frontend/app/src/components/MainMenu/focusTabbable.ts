@@ -21,9 +21,10 @@
  * prunes the entire inert subtree so descendants are never visited).
  *
  * Note: this uses document order, not tab order — positive tabIndex values
- * are not visited first. This is sufficient for MainMenu's focus routing
- * (header-bar neighbors use no positive tabIndex) but should not be reused
- * as a general-purpose tab-order utility without sorting by tabIndex.
+ * are not visited first. This is sufficient for header-bar focus routing
+ * (MainMenu and top nav section menus), where neighbors use no positive
+ * tabIndex, but should not be reused as a general-purpose tab-order utility
+ * without sorting by tabIndex.
  */
 function acceptTabbableNode(node: Node): number {
   if (!(node instanceof HTMLElement)) return NodeFilter.FILTER_SKIP

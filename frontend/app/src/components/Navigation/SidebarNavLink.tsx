@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { MouseEvent, ReactElement } from "react"
+import { type MouseEvent, type ReactElement, useCallback } from "react"
 
 import {
   DynamicIcon,
@@ -44,8 +44,13 @@ export interface SidebarNavLinkProps {
   externalUrl?: string | null
   /** Roving tabindex for top-nav dropdown menu keyboard navigation. */
   menuTabIndex?: number
-  /** Ref callback for the underlying anchor (top-nav dropdown menus). */
-  itemRef?: (element: HTMLAnchorElement | null) => void
+  /**
+   * Receives the anchor element so top-nav dropdown menus can move focus
+   * between items.
+   */
+  setItemRef?: (index: number, element: HTMLAnchorElement | null) => void
+  /** Index passed to setItemRef for top-nav dropdown menus. */
+  itemIndex?: number
 }
 
 const SidebarNavLink = ({
@@ -60,7 +65,8 @@ const SidebarNavLink = ({
   isExternal,
   externalUrl,
   menuTabIndex,
-  itemRef,
+  setItemRef,
+  itemIndex,
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
   // If connection state not connected, or host has disabled inputs,
@@ -83,16 +89,26 @@ const SidebarNavLink = ({
   // External pages can never be the current page
   const effectiveIsActive = isExternal ? false : isActive
 
+  const setAnchorRef = useCallback(
+    (element: HTMLAnchorElement | null): void => {
+      if (setItemRef && itemIndex !== undefined) {
+        setItemRef(itemIndex, element)
+      }
+    },
+    [setItemRef, itemIndex]
+  )
+
   return (
     <StyledSidebarNavLinkContainer
       disabled={disableSidebarNavLinks}
       data-testid={navLinkContainerTestId}
     >
       <StyledSidebarNavLink
-        ref={itemRef}
+        ref={setAnchorRef}
         data-testid={navLinkTestId}
         isActive={effectiveIsActive}
         disabled={disableSidebarNavLinks}
+        isInDropdown={isInDropdown}
         href={isExternal ? (externalUrl ?? pageUrl) : pageUrl}
         onClick={onClick}
         aria-current={effectiveIsActive ? "page" : undefined}

@@ -16,6 +16,7 @@
 
 import {
   type FocusEvent,
+  Fragment,
   type KeyboardEvent,
   useCallback,
   useId,
@@ -71,7 +72,7 @@ interface TopNavSectionProps {
 }
 
 /** Why the menu was closed — drives focus-return behavior. */
-type CloseReason = "escape" | "tab" | "shift-tab" | "other"
+type CloseReason = "tab" | "shift-tab" | "other"
 
 const TopNavSection = ({
   title,
@@ -85,6 +86,7 @@ const TopNavSection = ({
 }: TopNavSectionProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false)
   const menuId = useId()
+  const triggerId = useId()
   const theme = useEmotionTheme()
   const showSections = sections.length > 1
 
@@ -143,7 +145,18 @@ const TopNavSection = ({
         } else if (reason === "shift-tab") {
           focusPrevTabbable(button)
         } else {
-          button.focus()
+          // Escape / item activation: menu unmounts and focus would fall to
+          // body — restore the trigger. Outside click already focused its
+          // target; do not overwrite that.
+          const active = document.activeElement
+          if (
+            !active ||
+            active === document.body ||
+            active === button ||
+            !button.ownerDocument.contains(active)
+          ) {
+            button.focus()
+          }
         }
       }
     }
@@ -163,14 +176,20 @@ const TopNavSection = ({
     menuItemLinksRef.current[index]?.focus()
   }, [])
 
-  const setLinkRef = useCallback(
-    (index: number) =>
-      (element: HTMLAnchorElement | null): void => {
-        menuItemLinksRef.current[index] = element
-      },
+  // Stable ref setter so SidebarNavLink can memoize its callback (avoids
+  // creating a new closure per item per render).
+  const setItemRef = useCallback(
+    (index: number, element: HTMLAnchorElement | null): void => {
+      menuItemLinksRef.current[index] = element
+    },
     []
   )
 
+  /**
+   * Focuses the item chosen at open (ArrowUp selects the last page, otherwise
+   * the first). Child anchor refs run first, so the target exists. Resets the
+   * index so a later open does not reuse it.
+   */
   const menuListRef = useCallback((node: HTMLDivElement | null): void => {
     if (node) {
       const index = Math.min(
@@ -200,6 +219,8 @@ const TopNavSection = ({
     }
 
     const target = event.target
+    // Anchors activate on Enter. Space activates a menuitem and must not
+    // scroll the page.
     if (
       event.key === " " &&
       target instanceof HTMLAnchorElement &&
@@ -318,7 +339,8 @@ const TopNavSection = ({
           isExternal={isExternal}
           externalUrl={getExternalPageUrl(item)}
           menuTabIndex={clampedIndex === currentLinkIndex ? 0 : -1}
-          itemRef={setLinkRef(currentLinkIndex)}
+          setItemRef={setItemRef}
+          itemIndex={currentLinkIndex}
         >
           {pageName}
         </SidebarNavLink>
@@ -328,8 +350,7 @@ const TopNavSection = ({
 
   const popoverContent = sections.map((section, sectionIndex) => {
     const sectionName = section[0].sectionHeader ?? ""
-    const sectionLabel =
-      sectionName.trim() || (section[0].pageName ?? "").trim()
+    const trimmedSectionName = sectionName.trim()
     const links = section.map((item, itemIndex) =>
       renderPageLink(item, sectionLinkOffsets[sectionIndex] + itemIndex)
     )
@@ -338,13 +359,21 @@ const TopNavSection = ({
       return links
     }
 
-    const sectionKey = `${section[0].pageScriptHash ?? ""}-${sectionLabel}`
+    const sectionKey = `${section[0].pageScriptHash ?? ""}-${sectionIndex}`
+
+    // Overflow entries with no section header stay plain menuitems — do not
+    // invent a visible header from the page name.
+    if (!trimmedSectionName) {
+      return <Fragment key={sectionKey}>{links}</Fragment>
+    }
+
+    const headerId = `${menuId}-section-${sectionIndex}`
 
     return (
-      <div key={sectionKey} role="group" aria-label={sectionLabel}>
-        <StyledSectionName>
+      <div key={sectionKey} role="group" aria-labelledby={headerId}>
+        <StyledSectionName id={headerId}>
           <StreamlitMarkdown
-            source={sectionName || sectionLabel}
+            source={sectionName}
             allowHTML={false}
             isLabel
             disableLinks
@@ -361,6 +390,7 @@ const TopNavSection = ({
     <>
       <StyledNavSection
         ref={setNavSectionRef}
+        id={triggerId}
         type="button"
         onClick={handleTriggerClick}
         onKeyDown={handleTriggerKeyDown}
@@ -401,7 +431,7 @@ const TopNavSection = ({
               id={menuId}
               data-testid="stTopNavPopover"
               role="menu"
-              aria-label={title}
+              aria-labelledby={triggerId}
               onFocus={handleMenuFocus}
               onKeyDown={handleMenuKeyDown}
             >

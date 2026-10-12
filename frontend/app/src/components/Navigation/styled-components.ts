@@ -110,11 +110,12 @@ interface StyledSidebarNavLinkProps {
   isActive: boolean
   disabled: boolean
   isTopNav?: boolean
+  isInDropdown?: boolean
   label?: string
 }
 
 export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
-  ({ theme, isActive, disabled }) => {
+  ({ theme, isActive, disabled, isInDropdown }) => {
     const defaultPageLinkStyles = {
       textDecoration: "none",
       fontWeight: isActive ? theme.fontWeights.bold : theme.fontWeights.normal,
@@ -155,6 +156,10 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
       "&:focus-visible": {
         backgroundColor: theme.colors.darkenedBgMix15,
+        // Match main-menu menuitems when arrow keys land on dropdown links.
+        ...(isInDropdown && {
+          boxShadow: theme.shadows.focusRingMuted,
+        }),
       },
 
       [`@media print`]: {
