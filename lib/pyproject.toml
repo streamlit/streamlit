@@ -79,7 +79,8 @@ dependencies = [
   # corresponding minimum runtime version is protobuf 5.26.1.
   "protobuf>=5.26.1,<8",
   # 10.0.1 is the first release with Python 3.11 wheels.
-  # 26.0.0 is the first release with CPython 3.15 wheels, so the cap is <27.
+  # 26.0.0 is the first release with CPython 3.15 wheels. Cap at the next
+  # major (<27) so 26.x can install.
   # See https://github.com/streamlit/streamlit/issues/17422.
   # PyArrow 25.0.0 can segfault when first imported from a short-lived worker thread.
   # See https://github.com/apache/arrow/issues/50471.

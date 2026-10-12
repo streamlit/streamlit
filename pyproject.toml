@@ -41,7 +41,7 @@ default-groups = ["dev"]
 # Check their compatibility before raising it.
 required-version = ">=0.11.8"
 # Resolve the development lock only for supported Python and runtime environments.
-# Include Python 3.15: the comparison is exclusive, so the bound is 3.16.
+# The bound is exclusive: keep it one minor version above the newest supported Python.
 environments = ["python_version < '3.16' and sys_platform != 'emscripten'"]
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
@@ -50,10 +50,12 @@ exclude-newer = "24 hours"
 override-dependencies = [
   "pandas>=3.0.0,<4",
   # A marker on an override replaces every PyArrow requirement, so both sides
-  # are listed. Below 3.15, keep <24: snowflake-connector-python 4.8.0's pandas
-  # extra requires that on Python 3.14, and the dev lock stays on 23.0.1.
-  # On 3.15, require >=26. Earlier releases have no cp315 wheels, and that
-  # extra would otherwise lock 23.0.1.
+  # are listed. Below 3.15, keep <24 so the dev lock stays on 23.0.1.
+  # snowflake-connector-python 4.8.0's pandas extra requires PyArrow <24 on
+  # Python >=3.14. The <3.15 override also covers 3.11-3.13, where that extra
+  # does not cap PyArrow. Drop the <24 side once that extra allows PyArrow >=24.
+  # On 3.15, require >=26. Earlier releases have no CPython 3.15 wheels, and
+  # the pandas extra would otherwise lock 23.0.1.
   "pyarrow>=10.0.1,!=25.0.0,<24; python_version < '3.15'",
   "pyarrow>=26,<27; python_version >= '3.15'",
 ]
