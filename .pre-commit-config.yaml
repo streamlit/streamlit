@@ -89,6 +89,12 @@ repos:
           |^scripts/generate_agent_rules\.py$
           |^scripts/assets/code-review-instructions\.md$
           |^Makefile$
+      - id: skill-file-size
+        name: Check agent skill files fit in one Cortex Code read
+        entry: ./scripts/check_skill_file_size.py
+        language: system
+        pass_filenames: false
+        files: ^(lib/streamlit/\.agents/|scripts/check_skill_file_size\.py$)
       - id: vscode-devcontainer-sync
         name: Check VSCode/devcontainer sync
         entry: ./scripts/sync_vscode_devcontainer.py --check
