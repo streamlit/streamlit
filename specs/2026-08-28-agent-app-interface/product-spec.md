@@ -620,8 +620,31 @@ Rules:
   `status`, `observed_at`, and error codes — is server-generated.
 - **The `status` field reports the run, not the transport.** `ready` means the run chain
   settled and the app did not raise. See [When a run fails](#when-a-run-fails).
-- **Versioned.** Additive optional fields are compatible within `schema_version: 1`;
-  clients tolerate unknown fields and unknown element types.
+- **Values are plain JSON, encoded one way everywhere**, as the table after these rules
+  lists. The same encoding applies to `value`, `props`, and table rows, and is what a
+  request sends back.
+- **Versioned, and self-describing.** Additive optional fields are compatible within
+  `schema_version: 1`; clients tolerate unknown fields and unknown element types. The
+  rest moves with Streamlit: each app serves the OpenAPI document for its own version,
+  and the element vocabulary is the API of the Streamlit it runs, so a client that reads
+  the description, as a model does on every connection, picks up a change with the
+  upgrade. Only a script that hard-codes element types or `props` names relies on the
+  additive rule, and authored keys keep its addressing stable.
+
+| Python value                        | JSON                                                    | Example                                       | JSON Schema format                                                      |
+| ----------------------------------- | ------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------- |
+| `date`                              | ISO 8601 text                                           | `"2026-10-12"`                                | `date`                                                                  |
+| `datetime`, `time`                  | ISO 8601 text, with an offset only when the value has one | `"2026-10-12T09:30:00+00:00"`, `"09:30:00"` | `date-time`, `time` with an offset; none without one, which the standard requires |
+| `timedelta`                         | Seconds                                                 | `5400.0`                                      | None: `duration` would be ISO text such as `"PT1H30M"`, harder to compute with |
+| `Decimal`                           | String, to keep its digits                              | `"0.10"`                                      | `decimal`, from OpenAPI's format registry                               |
+| NaN, infinity, a missing table cell | `null`                                                  | `null`                                        | —                                                                       |
+| `bytes`                             | Its size                                                | `{"bytes": 3}`                                | None: `byte` would be base64 content, which stays behind `data.url`     |
+| `Enum`                              | Its value                                               | `"red"`                                       | That of the value                                                       |
+| Set, tuple                          | List                                                    | `["a", "b"]`                                  | —                                                                       |
+| Range widget value                  | Two-item list                                           | `[20, 80]`                                    | —                                                                       |
+| Option object                       | Its `format_func` label                                 | `"December"`                                  | — (an `enum` of the labels)                                             |
+| Integer                             | Number, at any size                                     | `9223372036854775807`                         | `int64`, from OpenAPI                                                   |
+| Anything else                       | `str(value)`                                            | `"Point(1, 2)"`                               | None                                                                    |
 
 ### When a run fails
 
@@ -812,9 +835,8 @@ It is about row count, not payload size: an eagerly sent 5,000-row table is inco
 because only its first 100 rows are inlined, so every truncated preview gets a URL,
 however small the table is in bytes. The cap is a row count set high enough that most
 filtered tables come back complete. **A preview must never look like the complete answer
-to an aggregate question**: should a response budget be added
-([open question 3](#open-questions)), a document over it fails the request rather than
-being truncated silently.
+to an aggregate question**, and nothing else is truncated either: large content moves
+behind a URL instead (follow-up #9).
 
 Charts and maps:
 
@@ -825,10 +847,9 @@ Charts and maps:
   `spec_omitted`; content a template adds, such as a "DRAFT" annotation, a shape, or an
   image, is kept, since removing decoration must not remove meaning. Base64 typed arrays
   (`bdata`), which a model cannot read, are expanded into numbers. Nothing that holds data
-  is dropped at any size: the traces are the figure's data, and serving a large
-  specification behind `data.url` is the answer open question 3 points to. Serving an
-  ECharts `dataset.source` as Arrow, as `st.map` serves its table, is a potential
-  follow-up.
+  is dropped at any size: the traces are the figure's data. Serving a large
+  specification behind `data.url`, and an ECharts `dataset.source` as Arrow as `st.map`
+  serves its table, is follow-up #9.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
   a Deck.gl layer, so a map's `data` is the columns it plots from the author's table,
   which is all its browser receives, described like a dataframe's, and the generated
@@ -908,8 +929,8 @@ tests rather than for tuning per app.
 | Request body                           | 25 MB, then `request_too_large`; the same bound as a WebSocket message | `server.maxWidgetStateSize`                                  |
 | Preview rows per table                 | 100                                                   | `server.agentPreviewRows` (hidden)                                            |
 | Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
-| Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 3](#open-questions))                                    |
-| Response size                          | No cap                                                | [Open question 3](#open-questions)                                            |
+| Chart specification                    | No cap; the theme template is dropped                 | Fixed; follow-up #9 serves large ones behind `data.url`                       |
+| Response size                          | No cap                                                | Follow-up #9                                                                  |
 | Wait for a follow-up run to start      | 50 ms after a run finishes: a quiet-period heuristic, not proof the chain settled | Fixed; to be replaced by the script runner's shutdown signal before v1 ships |
 | `data.url` lifetime                    | While the element that produced it is still rendered  | Fixed; a fetch-now handle, never persisted                                    |
 | Who may call                           | The WebSocket's Host allow-list; no web page unless its origin is listed | `server.allowedHosts`, `server.corsAllowedOrigins`              |
@@ -942,8 +963,8 @@ This is a new programmatic execution surface and needs an explicit review.
   values, local paths, or source.
 - **Bound everything.** v1 bounds in-flight interactions per session, sessions, request
   bytes, preview rows, served data, and the wait for a run; see
-  [Limits and configuration](#limits-and-configuration). Response size and request rate
-  are still open, and are among the gates on default-on.
+  [Limits and configuration](#limits-and-configuration). Compact responses (follow-up
+  #9) and request rate limits are among the gates on default-on.
 - **Audit without content.** Each interaction is logged, at debug level, with a digest
   of its session handle, the request fields it used, its outcome, and its latency —
   never the handle itself, labels, values, table contents, or queries.
@@ -1018,10 +1039,10 @@ and the rest of it is what stands between opt-in and on-by-default:
 
 | Concern               | Why it is new                                                                                                                                                                                         | In v1                                                                                                                                                                                                                                                      | Before default-on                                                                                  |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | A response budget, and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
+| Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | Compact responses (follow-up #9), and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
 | Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits, and per-caller session quotas, so one anonymous client cannot hold every slot. |
 | Cross-origin requests | A page on another site can make a visitor's browser send a request to any app that browser can reach, including, through DNS rebinding, an app on the visitor's own machine. | No cookie is read, and any request carrying an `Origin` not listed in `server.corsAllowedOrigins` is refused. A same-origin rule would not stop rebinding, since a rebound page is same-origin with the `Host` it sends, but browsers send `Origin` on every POST and programmatic clients send none, so this refuses web pages without turning away an agent. No browser caller loses anything: the route sends no CORS headers, so no other origin could read a response. | —                                                                                                  |
-| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here. | A credential flow that maps an `st.login` user to an agent ([open question 1](#open-questions)). |
+| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here. | Agent sign-in for `st.login` apps (follow-up #10). |
 
 That keeps the decision reversible. An app opts in, deployments that authenticate every
 path — an auth proxy, a private Community Cloud app, SiS — gate the route exactly as they
@@ -1134,15 +1155,14 @@ considered while building the prototype:
 - A browser-versus-agent fidelity harness.
 - Building the snapshot's values on the script thread.
 - Running queries over a large table on the server instead of paging it to the model.
-- Serving ECharts datasets as Arrow, and recommending dataframe-backed charts for apps
-  agents read.
+- Recommending dataframe-backed charts for apps agents read.
 - A per-key note on how each sent value landed.
 - A non-executing read of the last snapshot (part of follow-up #4).
 
 Settling on the script runner's shutdown instead of the 50 ms quiet period is not on
 this list: it is a correctness fix that v1 makes.
 
-1. **On by default.** A credential flow that maps an `st.login` user to an agent, the
+1. **On by default.** Agent sign-in for `st.login` apps (follow-up #10), the
    response and rate budgets and per-caller quotas that make bulk access and request
    volume safe, per-platform routing, and session affinity for multi-worker deployments
    — then flip the default for all of Streamlit at once, with `server.enableAgentApi`
@@ -1193,9 +1213,33 @@ this list: it is a correctness fix that v1 makes.
    Dataframe row and column selection is the smaller, most common case, and its state is
    already a JSON value the runtime validates; chart selections, whose point identity is
    library-specific, follow. Then uploads, including `st.chat_input` attachments;
-   `st.data_editor` edits; deferred downloads; per-action JSON Schema; and the browser's
+   `st.data_editor` edits; deferred downloads; per-action JSON Schema, which would give
+   each entry in `actions` the schema of the value it accepts, built from named
+   encodings defined once in the OpenAPI document with standard JSON Schema formats
+   (`date`, `date-time`, `time`) and the element's own constraints (`enum` for options,
+   bounds), so the encodings above become machine-readable per key; and the browser's
    half of forms and bound parameters — applying `clear_on_submit` and rewriting a
    bound parameter when its widget is set.
+9. **Compact responses.** Large content moves to media storage, the pattern tables
+   already use, instead of staying inline: an oversized figure specification or option
+   list is served behind `data.url`, readable through `get_data`, with a short summary
+   in the snapshot, and an ECharts `dataset.source` is served as Arrow, as `st.map`
+   serves its table. Nothing that holds data or a legal value is truncated. A page of a
+   few Plotly charts can reach a megabyte per response, and a selectbox of a few
+   hundred options adds tens of kilobytes to every call on its page.
+10. **Agent sign-in for `st.login` apps.** In v1 an app that uses `st.login` shows
+    agents its signed-out state: its identity is a signed cookie the browser gets at
+    the end of the OAuth/OIDC redirect, which an agent cannot present. Every other
+    source of identity already works, including trusted headers from an
+    authenticating proxy or platform. The expected default for a tool that needs a
+    login is MCP's authorization flow, which ChatGPT and Claude already offer for
+    connectors: the server is an OAuth resource server that names an authorization
+    server, and the client runs the sign-in once in a browser and sends a bearer
+    token with every call. For Streamlit that means accepting a token from the
+    provider `st.login` is configured with and mapping its claims into `st.user`
+    exactly as `st.login` does, fronting the provider as a thin OAuth proxy where it
+    cannot register MCP clients itself. The HTTP API accepts the same token. App-issued
+    API keys are what to avoid: they would be a second identity system.
 
 ## Beyond the app surface
 
@@ -1286,45 +1330,15 @@ v1 ships when:
 
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until a credential flow maps them. Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
+| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until agent sign-in lands (follow-up #10). Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
 | No breaking API changes    | ✅ Additive: `server.enableAgentApi`, off in v1, its budget options, new routes under `/_stcore/agent/`, and the discovery hint in `index.html`. No `st.*` signature changes. One behavior is sharper: an `st.context` field the client never sent reads as `None` rather than an empty default. Browser apps never see it, because the frontend always sends every field, and an explicitly sent `0` or `False` is kept, since the fields track presence. Flipping the default later is itself a reviewed change, not a silent one. |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either, since it is written by hand rather than on the MCP SDK.                                                                                                                                                                                                                                                                                                                                                                                          |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
 | Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: off by default in v1 with on-by-default as the goal, open to any program that can reach the app once on but refusing unlisted web origins, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, and identity mapping — the gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
 | Any docs changes needed?   | Protocol reference and coverage matrix, an authoring guide ("write `key=`, explain the app in the app"), verification guidance next to `AppTest` and Playwright, and a security/deployment page.                                                                                                                                                                                                                                                                                                              |
-| Any other risks?           | The snapshot is a long-lived compatibility surface and needs a version field and a written stability policy from the first release. Adoption risk: if it stays experimental too long, the ecosystem standardizes on browser automation instead.                                                                                                                                                                                                                                                               |
+| Any other risks?           | The snapshot is a compatibility surface for scripts that hard-code it; it carries `schema_version` and changes additively within it, while clients that read the served description pick up changes with each Streamlit release. Adoption risk: if it stays experimental too long, the ecosystem standardizes on browser automation instead.                                                                                                                                                                                                                                                               |
 
 ## Open questions
 
-1. Which hosted credential flow can map an agent to the correct `st.user` without
-   introducing a second identity system? A browser's signed auth cookie is not a general
-   agent credential.
-2. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
-   times, and datetimes as ISO 8601 text, decimals as strings, durations as seconds,
-   non-finite numbers as `null`, ranges as two-item lists, and object-valued options as
-   their `format_func` labels. Integers beyond 2^53 are still plain JSON numbers, which
-   JavaScript parsers round. These must be settled before v1 ships, with or without
-   per-action schemas.
-3. **Does the response need a budget, and how should it be met?** The response document
-   is unbounded, and two things dominate a large one: a selectbox over a few thousand
-   values puts all of them in every snapshot of its page, and a figure carries its traces,
-   so a 20,000-point scatter or a page of a dozen Plotly figures is half a megabyte.
-   Truncation is the wrong answer to both, because the omitted options are exactly the
-   values a request may legally send, and the traces are the figure's data. Table
-   previews are the one case where truncation is safe, because a `url` serves the rest.
-   The candidate answer is to extend that pattern — serve oversized option lists and
-   figure specifications behind `data.url`, which MCP clients can read through
-   `get_data` — rather than to cap and discard. The cost is real for chat clients: a
-   page of a few Plotly charts can reach a megabyte per response, and a selectbox of a
-   few hundred options adds tens of kilobytes to every call on its page.
-4. **What stability does the snapshot promise, and where does a public contract live?**
-   The document is a compatibility surface from its first release: clients will key on
-   element types, `props` names, and error codes, and every command's description becomes
-   part of it. That needs a written policy before v1 ships — what `schema_version`
-   guarantees, which changes are additive, and whether the first release is labeled
-   experimental so the shape can still move. The path is part of the same decision.
-   `/_stcore/` is Streamlit's internal namespace, next to the WebSocket and health
-   routes, which keeps the interface clear of routes an `st.App` author defines, but it
-   also signals "not a contract". Keeping it there with `v1` carrying the stability, or
-   moving to a prefix that reads as public, should be decided before clients depend on
-   either.
+None at the moment: the questions this spec raised are settled in the sections above or
+recorded as [follow-ups](#follow-ups).
