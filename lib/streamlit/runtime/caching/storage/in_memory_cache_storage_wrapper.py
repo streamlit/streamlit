@@ -258,15 +258,16 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                     generation,
                     access_version,
                 )
-            if should_warn:
-                _LOGGER.warning(
-                    "Streamlit kept a value from %s that is larger than max_size and "
-                    "dropped every other in-memory entry for that function. Increase "
-                    "max_size to cache more than one value.",
-                    self.function_display_name,
-                )
             self._global_budget.enforce_budget((self._global_storage_id, key))
-            return True
+        if should_warn:
+            _LOGGER.warning(
+                "Streamlit kept a value from %s even though it is larger than "
+                "max_size and dropped other in-memory entries for that function "
+                "when they existed. Increase max_size to cache more than one value.",
+                self.function_display_name,
+                stack_info=True,
+            )
+        return True
 
     def _remove_from_mem_cache(self, key: str) -> None:
         with self._mem_cache_lock:

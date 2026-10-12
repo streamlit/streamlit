@@ -17,8 +17,9 @@
 This is a small, dependency-free replacement for ``cachetools.TTLCache`` that
 preserves the exact subset of behavior Streamlit relies on:
 
-- Entries are evicted least-recently-used first once ``maxsize`` is exceeded,
-  where recency is refreshed both on read and on write.
+- Entries are evicted least-recently-used first once aggregate size (entry count
+  by default, or ``getsizeof`` totals) exceeds ``maxsize``, or once ``max_count``
+  is exceeded. Recency is refreshed both on read and on write.
 - Every entry shares the same ``ttl``, so write order is also expiry order.
   Expired entries are reported as absent on reads (``__getitem__`` /
   ``in``) but are only actually removed by a write, by ``expire()``, or by a

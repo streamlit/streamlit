@@ -217,10 +217,10 @@ class GlobalCacheBudget(StatsProvider):
                 return
             self._warned = True
         _LOGGER.warning(
-            "Streamlit cached a value from %s that is larger than "
-            "server.maxCachedDataSize. Older in-memory st.cache_data entries were "
-            "evicted when available. Raise server.maxCachedDataSize, or set it to "
-            '"0" to disable the process-wide budget.',
+            "Streamlit cached a value from %s that alone exceeds "
+            "server.maxCachedDataSize, so it evicted other in-memory st.cache_data "
+            "entries when any existed. Raise server.maxCachedDataSize, or set it "
+            'to "0" to disable the process-wide budget.',
             function_display_name,
         )
 
@@ -293,7 +293,8 @@ class GlobalCacheBudget(StatsProvider):
             return (
                 self._max_bytes is not None
                 and self._total_bytes > self._max_bytes
-                and all(entry_key == protected for entry_key in self._entries)
+                and len(self._entries) == 1
+                and protected in self._entries
             )
 
     def enforce_budget(self, protected: tuple[int, str]) -> None:
@@ -327,8 +328,10 @@ class GlobalCacheBudget(StatsProvider):
                 if evicted:
                     with self._lock:
                         self._global_evictions += 1
-                # If a read changed the entry after selection, skip it for this pass.
-                # A later write retries enforcement with a fresh global LRU snapshot.
+                else:
+                    # A concurrent read changed this entry after selection. Leave it
+                    # cached; the next write enforces against a fresh LRU snapshot.
+                    continue
 
     def get_stats(
         self, family_names: Sequence[str] | None = None

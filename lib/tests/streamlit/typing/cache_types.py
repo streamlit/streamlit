@@ -33,6 +33,12 @@ if TYPE_CHECKING:
 
     assert_type(cached_data_fn_with_max_size(1), bool)
 
+    @st.cache_data(max_size=1024)
+    def cached_data_fn_with_integer_max_size(arg1: int) -> bool:
+        return True
+
+    assert_type(cached_data_fn_with_integer_max_size(1), bool)
+
     @st.cache_data(ttl="1h", refresh_mode="background")
     def cached_data_fn_background(arg1: int, arg2: str) -> bool:
         return True

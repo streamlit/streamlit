@@ -640,7 +640,9 @@ class CacheDataAPI:
             is larger than ``max_size``, Streamlit evicts every other entry for this
             function, keeps that value, and logs a warning. With ``persist="disk"``,
             only the in-memory copy is dropped; a later read can load the disk copy
-            again. This measures pickled bytes, not process RSS.
+            again. This limits pickled bytes, not the total memory used by the Python
+            process. With ``scope="session"``, the limit applies separately to each
+            session's cache, while ``server.maxCachedDataSize`` counts every session.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is

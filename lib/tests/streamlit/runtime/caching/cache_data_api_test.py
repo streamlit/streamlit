@@ -337,19 +337,21 @@ If you think this is actually a Streamlit bug, please
 
     def test_max_size_evicts_by_serialized_bytes(self) -> None:
         """A per-function byte limit evicts entries by serialized size."""
-        executions = 0
+        executions: dict[str, int] = {}
 
-        @st.cache_data(max_size="500B")
+        @st.cache_data(max_size="1MiB")
         def foo(key: str) -> bytes:
-            nonlocal executions
-            executions += 1
-            return bytes(300)
+            executions[key] = executions.get(key, 0) + 1
+            return bytes(400_000)
 
         foo("a")
         foo("b")
         foo("a")
+        foo("c")
+        foo("a")
+        foo("b")
 
-        assert executions == 3
+        assert executions == {"a": 1, "b": 2, "c": 1}
 
     def test_oversized_value_remains_cached(self) -> None:
         """A single value larger than max_size remains cached."""
