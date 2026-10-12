@@ -631,19 +631,20 @@ Rules:
   upgrade. Only a script that hard-codes element types or `props` names relies on the
   additive rule, and authored keys keep its addressing stable.
 
-| Python value                       | JSON                                         | Example                              |
-| ---------------------------------- | -------------------------------------------- | ------------------------------------ |
-| `date`, `time`, `datetime`         | ISO 8601 text, with an offset only when the value has one | `"2026-10-12"`, `"09:30:00"`, `"2026-10-12T09:30:00+00:00"` |
-| `timedelta`                        | Seconds                                      | `5400.0`                             |
-| `Decimal`                          | String, to keep its digits                   | `"0.10"`                             |
-| NaN, infinity, a missing table cell | `null`                                      | `null`                               |
-| `bytes`                            | Its size                                     | `{"bytes": 3}`                       |
-| `Enum`                             | Its value                                    | `"red"`                              |
-| Set, tuple                         | List                                         | `["a", "b"]`                         |
-| Range widget value                 | Two-item list                                | `[20, 80]`                           |
-| Option object                      | Its `format_func` label                      | `"December"`                         |
-| Integer                            | Number, at any size                          | `9223372036854775807`                |
-| Anything else                      | `str(value)`                                 | `"Point(1, 2)"`                      |
+| Python value                        | JSON                                                    | Example                                       | JSON Schema format                                                      |
+| ----------------------------------- | ------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------- |
+| `date`                              | ISO 8601 text                                           | `"2026-10-12"`                                | `date`                                                                  |
+| `datetime`, `time`                  | ISO 8601 text, with an offset only when the value has one | `"2026-10-12T09:30:00+00:00"`, `"09:30:00"` | `date-time`, `time` with an offset; none without one, which the standard requires |
+| `timedelta`                         | Seconds                                                 | `5400.0`                                      | None: `duration` would be ISO text such as `"PT1H30M"`, harder to compute with |
+| `Decimal`                           | String, to keep its digits                              | `"0.10"`                                      | `decimal`, from OpenAPI's format registry                               |
+| NaN, infinity, a missing table cell | `null`                                                  | `null`                                        | —                                                                       |
+| `bytes`                             | Its size                                                | `{"bytes": 3}`                                | None: `byte` would be base64 content, which stays behind `data.url`     |
+| `Enum`                              | Its value                                               | `"red"`                                       | That of the value                                                       |
+| Set, tuple                          | List                                                    | `["a", "b"]`                                  | —                                                                       |
+| Range widget value                  | Two-item list                                           | `[20, 80]`                                    | —                                                                       |
+| Option object                       | Its `format_func` label                                 | `"December"`                                  | — (an `enum` of the labels)                                             |
+| Integer                             | Number, at any size                                     | `9223372036854775807`                         | `int64`, from OpenAPI                                                   |
+| Anything else                       | `str(value)`                                            | `"Point(1, 2)"`                               | None                                                                    |
 
 ### When a run fails
 
