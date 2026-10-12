@@ -285,6 +285,36 @@ showSidebarBorder = true           # [theme]-only
 
 Radius keywords: `"none"`, `"small"` (0.35rem), `"medium"` (0.5rem), `"large"` (1rem), `"full"` (1.4rem).
 
+## Content padding
+
+Control the gap between Streamlit chrome and the first/last author widgets.
+
+Values are quoted strings:
+
+- `"1rem"` or `"16px"` — prefer rem so spacing scales with font size
+- `"16"` — a unitless number is pixels (`"1.5"` → `1.5px`)
+- `"0"`, `"0rem"`, and `"0px"` — zero is valid
+- Unquoted TOML numbers (`paddingTop = 0`) are ignored
+- Negatives, `%`, and other CSS units log a warning and fall back to the built-in spacing
+
+`paddingLeft` and `paddingRight` are not recognized. Different `[theme.light]` and `[theme.dark]` values change page height when the user toggles modes.
+
+```toml
+[theme]
+paddingTop = "1rem"
+paddingBottom = "2rem"
+
+[theme.sidebar]
+paddingTop = "0.5rem"      # Overrides [theme]; inherits if unset
+paddingBottom = "1rem"
+```
+
+**Main `paddingTop`:** Gap *below* visible header chrome. Streamlit adds header height automatically so content clears the overlay — `"0"` is flush under the header, not the top of the viewport. Embed options leave a configured value as-is (for example `?embed=true&embed_options=show_padding`). In a bare embed with no header chrome, a very small value (including `"0"`) can clip the first element's overlay toolbar (dataframe/chart); leave the key unset for the built-in compact-embed clearance, or use a small non-zero gap. Print uses the configured value alone (no header reservation), so small values may overlap a printed logo.
+
+**Sidebar `paddingTop`:** Gap before the first sidebar widget. With sidebar page nav, that is nav → first widget; without page nav, header/logo row → first widget.
+
+**`paddingBottom`:** Replaces the default bottom inset in main or sidebar. Does not affect sticky `st.bottom` content.
+
 ## Sidebar customization
 
 Affects sidebar chrome and widgets only (not the main block). `showSidebarBorder` stays on `[theme]`.
