@@ -21,12 +21,14 @@ import sys
 import types
 from io import StringIO
 from unittest import IsolatedAsyncioTestCase, TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
 
 from streamlit import config
+from streamlit.errors import StreamlitSecretNotFoundError
 from streamlit.runtime.runtime import Runtime
+from streamlit.runtime.secrets import Secrets
 from streamlit.web import bootstrap
 from tests import testutil
 from tests.testutil import patch_config_options
@@ -542,6 +544,80 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
                 "server.port": 8502,
             },
         )
+
+
+class BootstrapSecretsLoadTest(TestCase):
+    """Eager secrets loading in ``prepare_streamlit_environment``."""
+
+    MOCK_SECRETS_PATH = "/mock/secrets.toml"
+
+    def setUp(self) -> None:
+        self._prev_environ = dict(os.environ)
+        self.secrets = Secrets()
+
+    def tearDown(self) -> None:
+        os.environ.clear()
+        os.environ.update(self._prev_environ)
+
+    def _prepare_with_secrets_file(self, contents: str | None) -> None:
+        open_patch = (
+            patch("builtins.open", mock_open(read_data=contents))
+            if contents is not None
+            else patch("builtins.open", side_effect=FileNotFoundError())
+        )
+        with (
+            patch.object(bootstrap, "secrets", self.secrets),
+            patch(
+                "streamlit.config.get_option",
+                return_value=[self.MOCK_SECRETS_PATH],
+            ),
+            patch("streamlit.watcher.path_watcher.watch_file"),
+            patch.object(bootstrap, "_initialize_mimetypes"),
+            patch.object(bootstrap, "_fix_pydeck_mapbox_api_warning"),
+            patch.object(bootstrap, "_maybe_print_static_folder_warning"),
+            open_patch,
+        ):
+            bootstrap.prepare_streamlit_environment("app.py")
+
+    def test_absent_secrets_file_is_non_fatal(self) -> None:
+        """Missing secrets.toml must not log an error or prevent startup."""
+        with patch.object(bootstrap._LOGGER, "exception") as mock_log:
+            self._prepare_with_secrets_file(contents=None)
+        mock_log.assert_not_called()
+        assert os.environ.get("SMTP_PASSWORD") is None
+
+    def test_malformed_secrets_toml_logs_path_and_parser_detail(self) -> None:
+        """Malformed TOML must log a precise, secret-safe diagnostic at startup."""
+        with self.assertLogs(bootstrap._LOGGER, level="ERROR") as logs:
+            self._prepare_with_secrets_file(
+                'SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = ---\n'
+            )
+
+        assert logs.records
+        record = logs.records[0]
+        assert "Failed to load secrets.toml file" in record.getMessage()
+        assert record.exc_info is not None
+        exc = record.exc_info[1]
+        assert isinstance(exc, StreamlitSecretNotFoundError)
+        diagnostic = str(exc)
+        error = exc.exec_kwargs["error"]
+        assert "Error parsing secrets file" in diagnostic
+        assert self.MOCK_SECRETS_PATH in diagnostic
+        assert error
+        assert error in diagnostic
+        assert "synthetic-secret-value" not in diagnostic
+        assert "synthetic-secret-value" not in error
+        assert os.environ.get("SMTP_PASSWORD") is None
+
+    def test_valid_top_level_secrets_are_promoted_to_environ(self) -> None:
+        """Valid scalar secrets are still copied into ``os.environ`` at startup."""
+        with patch.object(bootstrap._LOGGER, "exception") as mock_log:
+            self._prepare_with_secrets_file(
+                'SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = 587\n'
+            )
+        mock_log.assert_not_called()
+        assert os.environ["SMTP_PASSWORD"] == "synthetic-secret-value"
+        assert os.environ["SMTP_PORT"] == "587"
 
 
 class BootstrapRunTest(IsolatedAsyncioTestCase):

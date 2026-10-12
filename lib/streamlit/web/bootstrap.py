@@ -240,7 +240,7 @@ def prepare_streamlit_environment(main_script_path: str) -> None:
     _initialize_mimetypes()
     _fix_pydeck_mapbox_api_warning()
 
-    # Load secrets.toml if it exists
+    # Missing secrets files are ignored. Parse errors are logged and startup continues.
     try:
         secrets.load_if_toml_exists()
     except Exception:
