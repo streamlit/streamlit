@@ -4,9 +4,9 @@ Ready-to-use theme configs. Each file in `configs/` is a complete theme
 block — paste into your app's `.streamlit/config.toml`, or adapt into a
 shared brand file and point each app’s `theme.base` at it.
 
-**Encourage first:** shared `theme.base` inheritance for org-wide brand,
-then per-app overrides. Pick single-mode or dual-mode from the goal
-below — neither is the default for every app.
+**Start with** a shared `theme.base` file for org-wide branding, then
+override per app. Choose single-mode or dual-mode from the goal below;
+neither is the default.
 
 | Goal | Approach |
 |------|----------|
@@ -18,8 +18,8 @@ below — neither is the default for every app.
 
 | Theme | Modes | Primary | Notes |
 |-------|-------|---------|-------|
-| **shadcn-dual** | Light + dark | `#18181B` / `#3F3F46` | Neutral brand look with per-mode sidebars |
-| **dense-dashboard** | Light + dark | `#1D4ED8` / `#1E40AF` | Compact `paddingTop`/`paddingBottom` for KPI dashboards |
+| **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Neutral brand look with per-mode sidebars |
+| **dense-dashboard** | Light + dark | `#1D4ED8` / `#2563EB` | Compact `paddingTop`/`paddingBottom` for KPI dashboards |
 
 ## Single-mode (locked appearance)
 

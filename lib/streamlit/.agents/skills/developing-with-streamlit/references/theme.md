@@ -313,7 +313,12 @@ paddingTop = "0.5rem"      # Overrides [theme]; inherits if unset
 paddingBottom = "1rem"
 ```
 
-**Main `paddingTop`:** Gap *below* visible header chrome. Streamlit adds header height automatically so content clears the overlay — `"0"` is flush under the header, not the top of the viewport. Embed options leave a configured value as-is (for example `?embed=true&embed_options=show_padding`). In a bare embed with no header chrome, a very small value (including `"0"`) can clip the first element's overlay toolbar (dataframe/chart); leave the key unset for the built-in compact-embed clearance, or use a small non-zero gap. Print uses the configured value alone (no header reservation), so small values may overlap a printed logo.
+**Main `paddingTop`:** Gap *below* visible header chrome.
+
+- Streamlit adds header height automatically so content clears the overlay — `"0"` is flush under the header, not the top of the viewport.
+- Embed options leave a configured value as-is (for example `?embed=true&embed_options=show_padding`).
+- In a bare embed with no header chrome, a very small value (including `"0"`) can clip the first element's overlay toolbar (dataframe/chart); leave the key unset for the built-in compact-embed clearance, or use a small non-zero gap.
+- Print uses the configured value alone (no header reservation), so small values may overlap a printed logo.
 
 **Sidebar `paddingTop`:** Gap before the first sidebar widget. With sidebar page nav, that is nav → first widget; without page nav, header/logo row → first widget.
 
@@ -502,22 +507,22 @@ Most options hot-reload on save + rerun. `fontFaces` additions and updates apply
 
 Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Choose single-mode or dual-mode from the goal — dual-mode is only for keeping the settings appearance toggle.
 
-| Theme | Mode | Primary | Notes |
-|-------|------|---------|-------|
-| **shadcn-dual** | Light + dark | `#18181B` / `#3F3F46` | Dual-mode + sidebars when users should toggle appearance |
-| **dense-dashboard** | Light + dark | `#1D4ED8` / `#1E40AF` | Dual-mode + tighter `paddingTop`/`paddingBottom` for KPI layouts |
-| **dracula** | Dark (locked) | `#BD93F9` | Fira Sans, JetBrains Mono |
-| **financial-dashboard** | Dark (locked) | `#60A5FA` | Inter, JetBrains Mono |
-| **fluent** | Light (locked) | `#0078D4` | Segoe UI, Cascadia Code |
-| **jupyter** | Light (locked) | `#F37626` | Source Sans 3, Source Code Pro |
-| **material-ui** | Light (locked) | `#6750A4` | Roboto, Roboto Mono |
-| **minimal** | Dark (locked) | `#6366F1` | Inter, JetBrains Mono |
-| **nord** | Dark (locked) | `#88C0D0` | Inter, JetBrains Mono |
-| **one-dark-pro** | Dark (locked) | `#61AFEF` | IBM Plex Sans, JetBrains Mono |
-| **shadcn** | Light (locked) | `#18181B` | Inter, JetBrains Mono |
-| **solarized-light** | Light (locked) | `#268BD2` | Source Sans 3, Source Code Pro |
-| **ubuntu** | Light (locked) | `#E95420` | Ubuntu, Ubuntu Mono |
-| **vscode** | Dark (locked) | `#0078D4` | Segoe UI, Fira Code |
+| Theme | Mode | Primary | Fonts | Notes |
+|-------|------|---------|-------|-------|
+| **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Inter, JetBrains Mono | Dual-mode + sidebars when users should toggle appearance |
+| **dense-dashboard** | Light + dark | `#1D4ED8` / `#2563EB` | Inter, JetBrains Mono | Dual-mode + compact `paddingTop`/`paddingBottom` for KPI layouts |
+| **dracula** | Dark (locked) | `#BD93F9` | Fira Sans, JetBrains Mono | |
+| **financial-dashboard** | Dark (locked) | `#60A5FA` | Inter, JetBrains Mono | |
+| **fluent** | Light (locked) | `#0078D4` | Segoe UI, Cascadia Code | |
+| **jupyter** | Light (locked) | `#F37626` | Source Sans 3, Source Code Pro | |
+| **material-ui** | Light (locked) | `#6750A4` | Roboto, Roboto Mono | |
+| **minimal** | Dark (locked) | `#6366F1` | Inter, JetBrains Mono | |
+| **nord** | Dark (locked) | `#88C0D0` | Inter, JetBrains Mono | |
+| **one-dark-pro** | Dark (locked) | `#61AFEF` | IBM Plex Sans, JetBrains Mono | |
+| **shadcn** | Light (locked) | `#18181B` | Inter, JetBrains Mono | |
+| **solarized-light** | Light (locked) | `#268BD2` | Source Sans 3, Source Code Pro | |
+| **ubuntu** | Light (locked) | `#E95420` | Ubuntu, Ubuntu Mono | |
+| **vscode** | Dark (locked) | `#0078D4` | Segoe UI, Fira Code | |
 
 See `assets/templates/themes/README.md`. For org-wide brand, put shared keys in a `theme.base` file and override per app. Use dual-mode templates (or split a single-mode template into light/dark) only when the app should toggle.
 

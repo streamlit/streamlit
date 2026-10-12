@@ -15,13 +15,13 @@ codeFontSize = "13px"
 headingFontSizes = ["28px", "22px", "18px", "16px", "14px", "12px"]
 headingFontWeights = [700, 600, 600, 600, 500, 500]
 linkUnderline = false
-paddingTop = "2rem"
+paddingTop = "0.5rem"
 paddingBottom = "3rem"
 
 [theme.light]
 primaryColor = "#1D4ED8"
-backgroundColor = "#F8FAFC"
-secondaryBackgroundColor = "#FFFFFF"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F1F5F9"
 codeBackgroundColor = "#F1F5F9"
 textColor = "#0F172A"
 linkColor = "#1D4ED8"
@@ -61,7 +61,7 @@ dataframeHeaderBackgroundColor = "#E2E8F0"
 dataframeHeaderTextColor = "#0F172A"
 
 [theme.dark]
-primaryColor = "#1E40AF"
+primaryColor = "#2563EB"
 backgroundColor = "#0F172A"
 secondaryBackgroundColor = "#1E293B"
 codeBackgroundColor = "#1E293B"
@@ -103,7 +103,7 @@ dataframeHeaderBackgroundColor = "#1E293B"
 dataframeHeaderTextColor = "#F8FAFC"
 
 [theme.sidebar]
-paddingTop = "1rem"
+paddingTop = "0.5rem"
 paddingBottom = "1.5rem"
 
 [theme.light.sidebar]
@@ -121,5 +121,5 @@ secondaryBackgroundColor = "#1E293B"
 codeBackgroundColor = "#1E293B"
 textColor = "#F1F5F9"
 borderColor = "#334155"
-primaryColor = "#1E40AF"
+primaryColor = "#2563EB"
 linkColor = "#60A5FA"
