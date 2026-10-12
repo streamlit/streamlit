@@ -1125,21 +1125,25 @@ describe("BlockNodeRenderer container types", () => {
   ])(
     "derives the panel's definite height from %s tab container",
     (_label, heightConfig, expected) => {
-      vi.spyOn(RenderNodeVisitor, "collectReactElements").mockReturnValue([
-        <DefiniteHeightProbe key="probe" />,
-      ])
-      const tab = makeVerticalBlock([text("tab body")], {
-        tab: { label: "Tab 0" },
-      })
-      renderWithContexts(
-        makeBlockNodeComponent(
-          makeVerticalBlock([tab], { tabContainer: {}, heightConfig })
+      const collectElements = vi
+        .spyOn(RenderNodeVisitor, "collectReactElements")
+        .mockReturnValue([<DefiniteHeightProbe key="probe" />])
+      try {
+        const tab = makeVerticalBlock([text("tab body")], {
+          tab: { label: "Tab 0" },
+        })
+        renderWithContexts(
+          makeBlockNodeComponent(
+            makeVerticalBlock([tab], { tabContainer: {}, heightConfig })
+          )
         )
-      )
 
-      expect(screen.getByTestId("definiteHeightProbe")).toHaveTextContent(
-        expected
-      )
+        expect(screen.getByTestId("definiteHeightProbe")).toHaveTextContent(
+          expected
+        )
+      } finally {
+        collectElements.mockRestore()
+      }
     }
   )
 
