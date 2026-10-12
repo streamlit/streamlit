@@ -71,6 +71,29 @@ const TWO_PAGE_SECTION: AppPage.$Properties[][] = [
   ],
 ]
 
+const THREE_PAGE_SECTION: AppPage.$Properties[][] = [
+  [
+    {
+      pageScriptHash: "page_a",
+      pageName: "Page A",
+      urlPathname: "page_a",
+      isDefault: true,
+    },
+    {
+      pageScriptHash: "page_b",
+      pageName: "Page B",
+      urlPathname: "page_b",
+      isDefault: false,
+    },
+    {
+      pageScriptHash: "page_c",
+      pageName: "Page C",
+      urlPathname: "page_c",
+      isDefault: false,
+    },
+  ],
+]
+
 const MULTI_OVERFLOW_SECTIONS: AppPage.$Properties[][] = [
   [
     {
@@ -510,6 +533,35 @@ describe("TopNavSection", () => {
       expect(within(popover).getAllByText("Page One")).toHaveLength(1)
       expect(within(popover).getAllByText("Page Two")).toHaveLength(1)
       expect(within(popover).getAllByRole("menuitem")).toHaveLength(2)
+    })
+
+    it("moves focus to a remaining item when sections shrink while open", async () => {
+      const user = userEvent.setup()
+      const { rerender } = renderWithContexts(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: THREE_PAGE_SECTION,
+            title: "Group",
+          })}
+        />
+      )
+
+      await openPopover(user)
+      await user.keyboard("{End}")
+      expect(screen.getByText("Page C").closest("a")).toHaveFocus()
+
+      rerender(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: TWO_PAGE_SECTION,
+            title: "Group",
+          })}
+        />
+      )
+
+      expect(screen.queryByText("Page C")).not.toBeInTheDocument()
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
+      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
     })
   })
 })

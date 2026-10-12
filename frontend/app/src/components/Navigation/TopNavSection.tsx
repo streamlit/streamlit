@@ -178,6 +178,29 @@ const TopNavSection = ({
     menuItemLinksRef.current[index]?.focus()
   }, [])
 
+  // When overflow shrinks while open, the focused link can unmount. Updating
+  // tabIndex alone does not move focus — restore it to a remaining item (or
+  // close if nothing is left).
+  useLayoutEffect(() => {
+    if (!open) {
+      return
+    }
+    if (flatLinkCount === 0) {
+      closeMenu("other")
+      return
+    }
+    if (focusedIndex !== clampedIndex) {
+      focusLinkAtIndex(clampedIndex)
+    }
+  }, [
+    open,
+    flatLinkCount,
+    focusedIndex,
+    clampedIndex,
+    closeMenu,
+    focusLinkAtIndex,
+  ])
+
   // Stable ref setter so SidebarNavLink can memoize its callback (avoids
   // creating a new closure per item per render).
   const setMenuItemRef = useCallback(
