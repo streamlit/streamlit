@@ -119,10 +119,7 @@ export const StyledSidebarUserContent =
       paddingTop = hasPageNavAbove ? theme.spacing.twoXL : 0
     }
 
-    const paddingBottom =
-      theme.paddingBottom !== undefined
-        ? theme.paddingBottom
-        : theme.sizes.sidebarTopSpace
+    const paddingBottom = theme.paddingBottom ?? theme.sizes.sidebarTopSpace
 
     return { paddingTop, paddingBottom }
   })
