@@ -194,7 +194,7 @@ st.line_chart(load_sales(), alt="Sales over time")
 Cache expensive work at the right granularity. Cache source data or expensive computation, then apply cheap interactive filters outside the cached function.
 
 ```python
-# BAD: Unbounded cache with one entry per filter value
+# BAD: One cache entry per filter value with no workload-specific limit
 @st.cache_data
 def load_filtered_orders(region: str) -> pd.DataFrame:
     orders = fetch_orders()

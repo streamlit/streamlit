@@ -704,6 +704,42 @@ def test_async_max_entries_still_evicts() -> None:
     assert calls == [1, 2, 1]
 
 
+def test_async_max_size_insert_after_concurrent_hit_evicts_lru() -> None:
+    """An async miss can finish and evict the entry touched before its insert."""
+    calls: list[int] = []
+
+    @st.cache_data(max_size="1kb")
+    async def load(
+        x: int,
+        _started: asyncio.Event | None = None,
+        _release: asyncio.Event | None = None,
+    ) -> bytes:
+        calls.append(x)
+        if _started is not None and _release is not None:
+            _started.set()
+            await _release.wait()
+        return bytes([x]) * 700
+
+    async def run_race() -> None:
+        assert await load(1) == bytes([1]) * 700
+
+        started = asyncio.Event()
+        release = asyncio.Event()
+        second_load = asyncio.create_task(load(2, started, release))
+        await started.wait()
+
+        # Keep key 1 current while key 2 is computing outside the cache locks.
+        assert await load(1) == bytes([1]) * 700
+        release.set()
+        assert await second_load == bytes([2]) * 700
+
+        # Both serialized entries cannot fit, so the completed miss evicts key 1.
+        assert await load(1) == bytes([1]) * 700
+
+    asyncio.run(run_race())
+    assert calls == [1, 2, 1]
+
+
 def test_sync_function_path_is_unchanged() -> None:
     """Sync cached functions still return values directly, not awaitables."""
 

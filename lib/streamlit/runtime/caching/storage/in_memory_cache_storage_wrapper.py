@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.caching.global_cache_budget import get_global_cache_budget
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
     CacheStorage,
     CacheStorageContext,
@@ -67,10 +68,27 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self.function_display_name = context.function_display_name
         self._ttl_seconds = context.ttl_seconds
         self._max_entries = context.max_entries
+        self._max_size_bytes = context.max_size_bytes
+        self._pending_removals: list[tuple[str, int]] = []
+        self._generations: dict[str, int] = {}
+        self._access_versions: dict[str, int] = {}
+        self._next_generation = 0
+        self._next_access_version = 0
+        self._next_event_sequence = 0
+        self._oversized_warning_emitted = False
+        self._global_budget = get_global_cache_budget()
+        self._global_storage_id = self._global_budget.register(self)
         self._mem_cache: TTLCache[str, bytes] = TTLCache(
-            maxsize=self.max_entries,
+            maxsize=(
+                self.max_entries
+                if self._max_size_bytes is None
+                else self._max_size_bytes
+            ),
             ttl=self.ttl_seconds,
             timer=cache_utils.TTLCACHE_TIMER,
+            getsizeof=None if self._max_size_bytes is None else len,
+            max_count=None if self._max_size_bytes is None else self._max_entries,
+            on_remove=self._on_mem_cache_remove,
         )
         self._mem_cache_lock = threading.Lock()
         self._persist_storage = persist_storage
@@ -82,6 +100,10 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     @property
     def max_entries(self) -> float:
         return float(self._max_entries) if self._max_entries is not None else math.inf
+
+    @property
+    def max_size_bytes(self) -> int | None:
+        return self._max_size_bytes
 
     @property
     def stats_families(self) -> Sequence[str]:
@@ -111,6 +133,13 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self._write_to_mem_cache(key, value)
         self._persist_storage.set(key, value)
 
+    def set_if_present(self, key: str, value: bytes) -> bool:
+        """Replace an in-memory value only if it has not been evicted."""
+        written = self._write_to_mem_cache(key, value, require_present=True)
+        if written:
+            self._persist_storage.set(key, value)
+        return written
+
     def delete(self, key: str) -> None:
         """Delete a given key."""
         self._remove_from_mem_cache(key)
@@ -120,6 +149,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         """Delete all keys for the in memory cache, and also the persistent storage."""
         with self._mem_cache_lock:
             self._mem_cache.clear()
+            removals = self._take_pending_removals()
+            self._report_removals(removals)
         self._persist_storage.clear()
 
     def get_stats(
@@ -127,6 +158,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
     ) -> dict[str, list[CacheStat]]:
         """Returns stats in bytes for the cache memory storage per item."""
         with self._mem_cache_lock:
+            self._mem_cache.expire()
             stats = [
                 CacheStat(
                     category_name="st_cache_data",
@@ -135,6 +167,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 )
                 for item in self._mem_cache.values()
             ]
+            removals = self._take_pending_removals()
+            self._report_removals(removals)
         if not stats:
             return {}
         # In general, get_stats methods need to be able to return only requested stat
@@ -144,22 +178,134 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def close(self) -> None:
         """Closes the cache storage."""
+        with self._mem_cache_lock:
+            self._mem_cache.clear()
+            removals = self._take_pending_removals()
+            self._report_removals(removals)
+        self._global_budget.unregister(self._global_storage_id)
         self._persist_storage.close()
 
     def _read_from_mem_cache(self, key: str) -> bytes:
         with self._mem_cache_lock:
             if key in self._mem_cache:
                 entry = bytes(self._mem_cache[key])
+                generation = self._generations[key]
+                self._next_access_version += 1
+                access_version = self._next_access_version
+                self._access_versions[key] = access_version
+                self._global_budget.record_read(
+                    self._global_storage_id,
+                    key,
+                    generation,
+                    access_version,
+                    self._new_event_sequence(),
+                )
                 _LOGGER.debug("Memory cache HIT: %s", key)
-                return entry
+            else:
+                _LOGGER.debug("Memory cache MISS: %s", key)
+                raise CacheStorageKeyNotFoundError("Key not found in mem cache")
 
-            _LOGGER.debug("Memory cache MISS: %s", key)
-            raise CacheStorageKeyNotFoundError("Key not found in mem cache")
+        return entry
 
-    def _write_to_mem_cache(self, key: str, entry_bytes: bytes) -> None:
-        with self._mem_cache_lock:
-            self._mem_cache[key] = entry_bytes
+    def _write_to_mem_cache(
+        self, key: str, entry_bytes: bytes, *, require_present: bool = False
+    ) -> bool:
+        should_warn = False
+        with self._global_budget.write_enforcement():
+            with self._mem_cache_lock:
+                if require_present and key not in self._mem_cache:
+                    return False
+                if (
+                    self._max_size_bytes is not None
+                    and len(entry_bytes) > self._max_size_bytes
+                    and not self._oversized_warning_emitted
+                ):
+                    self._oversized_warning_emitted = True
+                    should_warn = True
+                self._mem_cache[key] = entry_bytes
+                self._next_generation += 1
+                generation = self._next_generation
+                self._generations[key] = generation
+                self._next_access_version += 1
+                access_version = self._next_access_version
+                self._access_versions[key] = access_version
+                removals = self._take_pending_removals()
+                self._report_removals(removals)
+                self._global_budget.record_write(
+                    self._global_storage_id,
+                    key,
+                    len(entry_bytes),
+                    generation,
+                    access_version,
+                    self._new_event_sequence(),
+                )
+            if should_warn:
+                _LOGGER.warning(
+                    "A cached value for %s is larger than its configured max_size. "
+                    "The value is retained because Streamlit never rejects a cache write.",
+                    self.function_display_name,
+                )
+            self._global_budget.enforce_budget((self._global_storage_id, key))
+            return True
 
     def _remove_from_mem_cache(self, key: str) -> None:
         with self._mem_cache_lock:
-            self._mem_cache.pop(key, None)
+            try:
+                del self._mem_cache[key]
+            except KeyError:
+                pass
+            removals = self._take_pending_removals()
+            self._report_removals(removals)
+
+    def _on_mem_cache_remove(self, key: str, _value: bytes) -> None:
+        generation = self._generations.pop(key, None)
+        self._access_versions.pop(key, None)
+        if generation is not None:
+            self._pending_removals.append((key, generation))
+
+    def _take_pending_removals(self) -> list[tuple[str, int]]:
+        removals = self._pending_removals
+        self._pending_removals = []
+        return removals
+
+    def _report_removals(self, removals: list[tuple[str, int]]) -> None:
+        for key, generation in removals:
+            self._global_budget.record_removal(
+                self._global_storage_id,
+                key,
+                generation,
+                self._new_event_sequence(),
+            )
+
+    def _new_event_sequence(self) -> int:
+        self._next_event_sequence += 1
+        return self._next_event_sequence
+
+    def _evict_from_mem_cache(
+        self,
+        key: str,
+        expected_generation: int,
+        expected_access_version: int,
+    ) -> bool:
+        """Remove one in-memory entry without touching persistent storage."""
+        with self._mem_cache_lock:
+            if (
+                self._generations.get(key) != expected_generation
+                or self._access_versions.get(key) != expected_access_version
+            ):
+                return False
+            if key not in self._mem_cache:
+                try:
+                    del self._mem_cache[key]
+                except KeyError:
+                    pass
+                removals = self._take_pending_removals()
+                self._report_removals(removals)
+                return False
+            try:
+                del self._mem_cache[key]
+            except KeyError:
+                pass
+            removals = self._take_pending_removals()
+            self._report_removals(removals)
+        return True

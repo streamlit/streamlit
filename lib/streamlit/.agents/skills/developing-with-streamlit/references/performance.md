@@ -122,12 +122,15 @@ them — that loop may already be closed on a later rerun, and the object will r
 `Event loop closed`. Cache results that stay valid across loops, such as API payloads,
 dataframes, and config.
 
-### Prevent unbounded cache growth
+### Bound cache growth
 
-**Important:** Caches without `ttl` or `max_entries` can grow indefinitely and cause memory issues. For any cached function that stores changing objects (user-specific data, parameterized queries), set limits:
+By default, Streamlit applies a 2 GiB process-wide budget to the combined serialized
+size of in-memory `st.cache_data` entries. For any cached function that stores changing
+objects (user-specific data, parameterized queries), set a tighter limit that matches
+its workload:
 
 ```python
-# BAD: Unbounded cache - memory will grow indefinitely
+# BAD: No workload-specific limit
 @st.cache_data
 def get_user_data(user_id):
     return fetch_user(user_id)
@@ -143,9 +146,25 @@ def get_user_data(user_id):
 @st.cache_data(max_entries=100)
 def get_user_data(user_id):
     return fetch_user(user_id)
+
+
+# GOOD: Bounded by serialized byte size
+@st.cache_data(max_size="500MB")
+def get_large_report(report_id):
+    return build_report(report_id)
 ```
 
-Use `ttl` for time-based expiration OR `max_entries` for size-based limits. You usually don't need both.
+Use `ttl` for time-based expiration, `max_entries` for a count limit, and `max_size`
+when values vary substantially in size. These limits can be combined. `max_entries`
+and `max_size` evict least-recently-used entries, while `ttl` expires entries based on
+age. `max_size` measures serialized bytes, not live Python heap size or process RSS.
+A single value larger than `max_size` is retained and logs a warning.
+
+The process-wide `server.maxCachedDataSize` setting covers global and session-scoped
+data caches. Set it to an explicit unit string such as `"4gb"`, or to `0` to disable
+the safety net. It also retains a newly written value if that value alone exceeds the
+budget. With `persist="disk"`, both byte limits evict only the in-memory copy and do
+not bound disk usage.
 
 ## Fragments
 

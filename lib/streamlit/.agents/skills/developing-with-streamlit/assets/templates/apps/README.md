@@ -154,10 +154,11 @@ instead, where the fragment reruns sequentially.
 
 ### Data Loading with Caching
 
-Cache the expensive load and bound it with a `ttl` (and/or `max_entries`) so the
-cache stays fresh and doesn't grow without limit. Use a custom spinner message
-for loaders that run directly in the page. Use `show_spinner=False` only when a
-surrounding loading UI, such as `st.skeleton`, already provides feedback:
+Cache the expensive load. Use a `ttl` to keep data fresh, and add `max_entries`
+or `max_size` when a loader needs a tighter count or serialized-byte limit. Use
+a custom spinner message for loaders that run directly in the page. Use
+`show_spinner=False` only when a surrounding loading UI, such as `st.skeleton`,
+already provides feedback:
 
 ```python
 @st.cache_data(ttl="1h", show_spinner="Loading metric data...")
@@ -172,7 +173,8 @@ def load_metric_data() -> pd.DataFrame:
 
 Guidelines: real-time data → `ttl="1m"`; metrics/reports → `ttl="5m"`–`"15m"`;
 reference data → `ttl="1h"` or more; static data → no TTL. Use `max_entries` for
-parameterized loaders so per-argument entries stay bounded.
+parameterized loaders and `max_size` when cached values vary substantially in
+serialized size.
 
 ## Dependencies
 

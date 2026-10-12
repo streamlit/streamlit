@@ -31,6 +31,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit import file_util
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitIncompatibleParametersError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
@@ -41,13 +42,15 @@ from streamlit.runtime.caching import cached_message_replay
 from streamlit.runtime.caching.cache_data_api import (
     DataCache,
     _data_caches,
+    clear_session_cache,
     get_data_cache_stats_provider,
 )
-from streamlit.runtime.caching.cache_errors import CacheError
+from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
 from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
     ElementMsgData,
 )
+from streamlit.runtime.caching.global_cache_budget import GlobalCacheBudget
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.caching.storage import (
     CacheStorage,
@@ -61,6 +64,9 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     DummyCacheStorage,
     MemoryCacheStorageManager,
+)
+from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
+    InMemoryCacheStorageWrapper,
 )
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
@@ -115,6 +121,7 @@ class CacheDataTest(unittest.TestCase):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
         st.cache_data.clear()
+        Runtime._instance = None
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -135,6 +142,47 @@ class CacheDataTest(unittest.TestCase):
 
         assert r1 == [1, 1]
         assert r2 == [0, 1]
+
+    def test_global_budget_accounts_global_and_session_scoped_caches(self) -> None:
+        budget = GlobalCacheBudget(max_bytes=1_000_000, read_config=False)
+        calls = {"global": 0, "session": 0}
+
+        @st.cache_data
+        def global_value() -> bytes:
+            calls["global"] += 1
+            return b"global"
+
+        @st.cache_data(scope="session")
+        def session_value() -> bytes:
+            calls["session"] += 1
+            return b"session"
+
+        with (
+            patch(
+                "streamlit.runtime.caching.storage."
+                "in_memory_cache_storage_wrapper.get_global_cache_budget",
+                return_value=budget,
+            ),
+            patch(
+                "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw"
+            ) as get_session_id,
+        ):
+            assert global_value() == b"global"
+            get_session_id.return_value = "session-a"
+            assert session_value() == b"session"
+            get_session_id.return_value = "session-b"
+            assert session_value() == b"session"
+
+            all_scopes_bytes = budget.total_bytes
+            clear_session_cache("session-a")
+            assert 0 < budget.total_bytes < all_scopes_bytes
+
+            assert global_value() == b"global"
+            assert session_value() == b"session"
+            get_session_id.return_value = "session-a"
+            assert session_value() == b"session"
+
+        assert calls == {"global": 1, "session": 3}
 
     def test_cached_member_function_with_hash_func(self):
         """@st.cache_data can be applied to class member functions
@@ -285,6 +333,53 @@ If you think this is actually a Streamlit bug, please
         # So the call to foo() should return the new value 2
         assert example_instance.foo(1) == 2
 
+    def test_max_size_evicts_by_serialized_bytes(self) -> None:
+        executions = 0
+
+        @st.cache_data(max_size="500B")
+        def foo(key: str) -> bytes:
+            nonlocal executions
+            executions += 1
+            return bytes(300)
+
+        foo("a")
+        foo("b")
+        foo("a")
+
+        assert executions == 3
+
+    def test_oversized_value_remains_cached(self) -> None:
+        executions = 0
+
+        @st.cache_data(max_size=1)
+        def foo() -> bytes:
+            nonlocal executions
+            executions += 1
+            return bytes(100)
+
+        assert foo() == bytes(100)
+        assert foo() == bytes(100)
+        assert executions == 1
+
+    @parameterized.expand(
+        [
+            ("boolean", True),
+            ("zero", 0),
+            ("negative", -1),
+            ("unitless_string", "10"),
+            ("unknown_unit", "10XB"),
+            ("float", 1.5),
+        ]
+    )
+    def test_invalid_max_size_fails_at_decoration(
+        self, _name: str, max_size: object
+    ) -> None:
+        with pytest.raises(StreamlitAPIException):
+
+            @st.cache_data(max_size=max_size)  # type: ignore[arg-type]
+            def foo() -> int:
+                return 1
+
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
@@ -297,6 +392,7 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
 
     def tearDown(self) -> None:
         st.cache_data.clear()
+        Runtime._instance = None
         super().tearDown()
 
     @patch("streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_write")
@@ -586,6 +682,7 @@ class CacheDataStatsProviderTest(unittest.TestCase):
 
     def tearDown(self):
         st.cache_data.clear()
+        Runtime._instance = None
 
     def test_no_stats(self):
         assert get_data_cache_stats_provider().get_stats() == {}
@@ -653,6 +750,11 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.cache_storage_manager = AlwaysFailingTestCacheStorageManager()
         Runtime._instance = mock_runtime
+
+    def tearDown(self) -> None:
+        st.cache_data.clear()
+        Runtime._instance = None
+        super().tearDown()
 
     def test_error_logged_and_raised_on_improperly_configured_cache_data(self):
         with (
@@ -911,6 +1013,7 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
 
     def tearDown(self) -> None:
         st.cache_data.clear()
+        Runtime._instance = None
 
     def _cache(self, key: str, **kwargs: Any) -> DataCache[Any]:
         params: dict[str, Any] = {
@@ -1054,8 +1157,8 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         fg_cache.write_result("vk", 456, [])
         assert fg_cache.read_result("vk").stored_at is None
 
-    def test_background_writeback_checks_presence_without_reading_value(self) -> None:
-        """A background write-back doesn't deserialize the existing cached value."""
+    def test_background_writeback_atomically_checks_presence(self) -> None:
+        """A background write-back cannot repopulate an entry during eviction."""
         cache = _data_caches.get_cache(
             key="bg_presence",
             persist=None,
@@ -1067,7 +1170,11 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         cache.write_result("vk", 123, [])
 
         with (
-            patch.object(cache.storage, "has", wraps=cache.storage.has) as mock_has,
+            patch.object(
+                cache.storage,
+                "set_if_present",
+                wraps=cache.storage.set_if_present,
+            ) as mock_set_if_present,
             patch.object(cache.storage, "get", wraps=cache.storage.get) as mock_get,
         ):
             cache.write_background_refresh_result(
@@ -1076,10 +1183,36 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
                 expected_generation=cache.generation,
                 expected_key_generation=cache.key_generation("vk"),
             )
-            mock_has.assert_called_once_with("vk")
+            mock_set_if_present.assert_called_once()
             mock_get.assert_not_called()
 
         assert cache.read_result("vk").value == 456
+
+    def test_background_writeback_does_not_repopulate_globally_evicted_entry(
+        self,
+    ) -> None:
+        """A refresh finishing after memory eviction leaves the key absent."""
+        cache = self._background_cache("bg_global_eviction")
+        storage = cache.storage
+        assert isinstance(storage, InMemoryCacheStorageWrapper)
+        expected_generation = cache.generation
+        expected_key_generation = cache.key_generation("vk")
+
+        assert storage._evict_from_mem_cache(
+            "vk",
+            expected_generation=storage._generations["vk"],
+            expected_access_version=storage._access_versions["vk"],
+        )
+
+        cache.write_background_refresh_result(
+            "vk",
+            456,
+            expected_generation=expected_generation,
+            expected_key_generation=expected_key_generation,
+        )
+
+        with pytest.raises(CacheKeyNotFoundError):
+            cache.read_result("vk")
 
     def test_cache_recreated_on_mode_change(self) -> None:
         """Changing refresh_mode across reruns rebuilds the cache."""

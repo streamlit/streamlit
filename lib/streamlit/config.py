@@ -954,6 +954,19 @@ _create_option(
     type_=bool,
 )
 
+_create_option(
+    "server.maxCachedDataSize",
+    description="""
+        Maximum combined serialized size of all @st.cache_data in-memory caches.
+        Use an explicit unit string such as "2gb" or "500mb", or 0 (or "0") to
+        disable the process-wide budget. When exceeded, Streamlit evicts globally
+        least-recently-used entries. This bounds serialized cache size, not
+        process RSS, and does not limit persisted disk entries.
+    """,
+    default_val="2gb",
+    type_=str,
+)
+
 
 @_create_option("server.cookieSecret", type_=str, sensitive=True)
 @util.memoize

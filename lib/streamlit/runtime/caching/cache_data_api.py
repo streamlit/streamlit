@@ -32,7 +32,7 @@ from typing import (
 from typing_extensions import ParamSpec
 
 import streamlit as st
-from streamlit import runtime
+from streamlit import byte_util, runtime
 from streamlit.errors import StreamlitIncompatibleParametersError, StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.runtime.caching import cache_utils
@@ -98,6 +98,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
 
     persist: CachePersistType
     max_entries: int | None
+    max_size_bytes: int | None
     ttl: float | timedelta | str | None
 
     def __init__(
@@ -105,6 +106,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         func: Callable[P, R],
         persist: CachePersistType,
         max_entries: int | None,
+        max_size_bytes: int | None,
         ttl: float | timedelta | str | None,
         show_spinner: bool | str,
         show_time: bool = False,
@@ -122,6 +124,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         )
         self.persist = persist
         self.max_entries = max_entries
+        self.max_size_bytes = max_size_bytes
         self.ttl = ttl
 
         self.validate_params()
@@ -139,6 +142,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
             key=function_key,
             persist=self.persist,
             max_entries=self.max_entries,
+            max_size_bytes=self.max_size_bytes,
             ttl=self.ttl,
             display_name=self.display_name,
             scope=self.scope,
@@ -158,6 +162,7 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
             function_name=function_name,
             persist=self.persist,
             max_entries=self.max_entries,
+            max_size_bytes=self.max_size_bytes,
             ttl=self.ttl,
         )
 
@@ -183,6 +188,7 @@ class DataCaches(StatsProvider):
         display_name: str,
         scope: CacheScope = "global",
         refresh_mode: RefreshMode = "foreground",
+        max_size_bytes: int | None = None,
     ) -> DataCache[Any]:
         """Return the mem cache for the given key.
 
@@ -217,6 +223,7 @@ class DataCaches(StatsProvider):
                 cache is not None
                 and cache.fresh_ttl_seconds == fresh_ttl_seconds
                 and cache.max_entries == max_entries
+                and cache.max_size_bytes == max_size_bytes
                 and cache.persist == persist
                 and cache.refresh_mode == refresh_mode
             ):
@@ -229,21 +236,24 @@ class DataCaches(StatsProvider):
                 cache.mark_detached()
                 _LOGGER.debug(
                     "Closing existing DataCache storage "
-                    "(key=%s, persist=%s, max_entries=%s, ttl=%s) "
+                    "(key=%s, persist=%s, max_entries=%s, max_size=%s, ttl=%s) "
                     "before creating new one with different params",
                     key,
                     persist,
                     max_entries,
+                    max_size_bytes,
                     ttl,
                 )
                 cache.storage.close()
 
             # Create a new cache object and put it in our dict
             _LOGGER.debug(
-                "Creating new DataCache (key=%s, persist=%s, max_entries=%s, ttl=%s)",
+                "Creating new DataCache "
+                "(key=%s, persist=%s, max_entries=%s, max_size=%s, ttl=%s)",
                 key,
                 persist,
                 max_entries,
+                max_size_bytes,
                 ttl,
             )
 
@@ -257,6 +267,7 @@ class DataCaches(StatsProvider):
                 function_name=display_name,
                 ttl_seconds=hard_ttl_seconds,
                 max_entries=max_entries,
+                max_size_bytes=max_size_bytes,
                 persist=persist,
             )
             cache_storage_manager = self.get_storage_manager()
@@ -267,6 +278,7 @@ class DataCaches(StatsProvider):
                 storage=storage,
                 persist=persist,
                 max_entries=max_entries,
+                max_size_bytes=max_size_bytes,
                 ttl_seconds=hard_ttl_seconds,
                 fresh_ttl_seconds=fresh_ttl_seconds,
                 display_name=display_name,
@@ -300,6 +312,11 @@ class DataCaches(StatsProvider):
             for data_caches in self._function_caches.values():
                 for data_cache in data_caches.values():
                     data_cache.mark_detached()
+            all_caches = [
+                data_cache
+                for data_caches in self._function_caches.values()
+                for data_cache in data_caches.values()
+            ]
 
             try:
                 # try to remove in optimal way if such ability provided by
@@ -308,10 +325,10 @@ class DataCaches(StatsProvider):
                 # available storages one by one
                 self.get_storage_manager().clear_all()
             except NotImplementedError:
-                for data_caches in self._function_caches.values():
-                    for data_cache in data_caches.values():
-                        data_cache.clear()
-                        data_cache.storage.close()
+                for data_cache in all_caches:
+                    data_cache.clear()
+            for data_cache in all_caches:
+                data_cache.storage.close()
             self._function_caches = {}
 
     def get_stats(
@@ -345,6 +362,7 @@ class DataCaches(StatsProvider):
         persist: CachePersistType,
         max_entries: int | None,
         ttl: int | float | timedelta | str | None,
+        max_size_bytes: int | None = None,
     ) -> None:
         """Validate that the cache params are valid for given storage.
 
@@ -362,6 +380,7 @@ class DataCaches(StatsProvider):
             function_name=function_name,
             ttl_seconds=ttl_seconds,
             max_entries=max_entries,
+            max_size_bytes=max_size_bytes,
             persist=persist,
         )
         try:
@@ -381,6 +400,7 @@ class DataCaches(StatsProvider):
         persist: CachePersistType,
         ttl_seconds: float | None,
         max_entries: int | None,
+        max_size_bytes: int | None = None,
     ) -> CacheStorageContext:
         return CacheStorageContext(
             function_key=function_key,
@@ -388,6 +408,7 @@ class DataCaches(StatsProvider):
             ttl_seconds=ttl_seconds,
             max_entries=max_entries,
             persist=persist,
+            max_size_bytes=max_size_bytes,
         )
 
     def get_storage_manager(self) -> CacheStorageManager:
@@ -447,6 +468,7 @@ class CacheDataAPI:
         *,
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
+        max_size: int | str | None = None,
         show_spinner: bool | str = True,
         show_time: bool = False,
         persist: CachePersistType | bool = None,
@@ -461,6 +483,7 @@ class CacheDataAPI:
         *,
         ttl: float | timedelta | str | None = None,
         max_entries: int | None = None,
+        max_size: int | str | None = None,
         show_spinner: bool | str = True,
         show_time: bool = False,
         persist: CachePersistType | bool = None,
@@ -472,6 +495,7 @@ class CacheDataAPI:
             func,  # ty: ignore[invalid-argument-type]
             ttl=ttl,
             max_entries=max_entries,
+            max_size=max_size,
             persist=persist,
             show_spinner=show_spinner,
             show_time=show_time,
@@ -486,6 +510,7 @@ class CacheDataAPI:
         *,
         ttl: float | timedelta | str | None,
         max_entries: int | None,
+        max_size: int | str | None,
         show_spinner: bool | str,
         show_time: bool = False,
         persist: CachePersistType | bool,
@@ -561,6 +586,18 @@ class CacheDataAPI:
             The maximum number of entries to keep in the cache, or None
             for an unbounded cache. When a new entry is added to a full cache,
             the oldest cached entry will be removed. Defaults to None.
+
+        max_size : int, str, or None
+            The maximum total serialized size of this function's in-memory cache.
+            An integer is interpreted as bytes. A string must include a unit, such
+            as ``"500MB"`` or ``"1.5GiB"``. When the limit is exceeded, the least
+            recently used entries are removed until the cache fits.
+
+            This limit measures pickled bytes, not live Python heap usage or process
+            RSS. It applies only to the in-memory layer when ``persist="disk"``.
+            A single value larger than the limit is retained rather than rejected.
+            Defaults to None, which disables the per-function limit; the
+            process-wide ``server.maxCachedDataSize`` budget may still apply.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
@@ -743,6 +780,8 @@ class CacheDataAPI:
         if scope not in {"global", "session"}:
             raise StreamlitValueError("scope", ["'global'", "'session'"])
 
+        max_size_bytes = byte_util.to_bytes(max_size)
+
         validate_refresh_mode(
             refresh_mode,
             time_to_seconds(ttl, coerce_none_to_inf=False),
@@ -767,6 +806,7 @@ class CacheDataAPI:
                     show_spinner=show_spinner,
                     show_time=show_time,
                     max_entries=max_entries,
+                    max_size_bytes=max_size_bytes,
                     ttl=ttl,
                     hash_funcs=hash_funcs,
                     scope=scope,
@@ -784,6 +824,7 @@ class CacheDataAPI:
                 show_spinner=show_spinner,
                 show_time=show_time,
                 max_entries=max_entries,
+                max_size_bytes=max_size_bytes,
                 ttl=ttl,
                 hash_funcs=hash_funcs,
                 scope=scope,
@@ -808,6 +849,7 @@ class DataCache(Cache[R]):
         max_entries: int | None,
         ttl_seconds: float | None,
         display_name: str,
+        max_size_bytes: int | None = None,
         fresh_ttl_seconds: float | None = None,
         refresh_mode: RefreshMode = "foreground",
     ) -> None:
@@ -819,6 +861,7 @@ class DataCache(Cache[R]):
         # within the fresh window is tracked separately via CachedResult.stored_at.
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
+        self.max_size_bytes = max_size_bytes
         self.persist = persist
         self.refresh_mode = refresh_mode
         # The user-facing freshness ttl (equals ttl_seconds in foreground mode).
@@ -989,6 +1032,10 @@ class DataCache(Cache[R]):
             # Presence check: only write back if the entry still exists. A hard-expired
             # / evicted / cleared entry should stay gone so the next access is a miss.
             try:
+                set_if_present = getattr(self.storage, "set_if_present", None)
+                if callable(set_if_present):
+                    set_if_present(value_key, pickled_entry)
+                    return
                 if not self.storage.has(value_key):
                     return
             except CacheStorageError:
