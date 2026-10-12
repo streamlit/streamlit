@@ -170,17 +170,7 @@ For **beautifying/improving an app**, read in order:
 3. `references/layouts.md`
 4. `references/selection-widgets.md`
 
-**Theme decision tree** (when polishing or branding; always via `.streamlit/config.toml` unless the user explicitly asks for CSS):
-
-1. Same brand across many apps? → shared TOML/URL via `theme.base`, then per-app overrides in each app’s `config.toml` (see `theme.md`)
-2. Shared across modes? → put fonts, radii, borders, and padding on `[theme]` (keys that should apply to both light and dark)
-3. Locked single look, or user can toggle light/dark?
-   - Locked → set colors on `[theme]` only (`base = "light"` or `"dark"`)
-   - Toggle → put per-mode colors on `[theme.light]` and `[theme.dark]`; do not put mode-specific palettes on `[theme]` (they apply to both modes). See `shadcn-dual` or the dual-mode example in `theme.md`
-4. Sidebar should contrast or match? → per-mode sidebar colors on `[theme.light.sidebar]` / `[theme.dark.sidebar]` when toggling; shared sidebar padding can sit on `[theme.sidebar]`
-5. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` on the section for that mode (light, dark, or locked `[theme]`)
-6. Tighten whitespace / dense dashboard? → `paddingTop` / `paddingBottom` (main and sidebar); `dense-dashboard` is a ready example
-7. CSS / `st.html` `<style>` → only if the user explicitly requests CSS
+Configure themes via `.streamlit/config.toml` (not CSS unless the user asks). Follow the decision table and key-placement rules in `references/theme.md`.
 
 For **building a dashboard**, read:
 1. `references/dashboards.md`

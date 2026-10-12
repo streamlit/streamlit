@@ -20,6 +20,18 @@ Theme options can't be changed from the script (`st.set_option` rejects them). S
 | Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` |
 | Tighter page / sidebar spacing | `paddingTop` / `paddingBottom` (prefer over `.block-container` CSS) |
 
+**Where to put keys**
+
+1. Same brand across many apps? → shared TOML/URL via `theme.base`, then per-app overrides (relative paths resolve from the `streamlit run` working directory)
+2. Shared across modes? → put fonts, radii, `showWidgetBorder` / `showSidebarBorder`, and padding on `[theme]` (only keys that should apply to both light and dark)
+3. Locked single look, or user can toggle light/dark?
+   - Locked → set colors on `[theme]` only (`base = "light"` or `"dark"`)
+   - Toggle → put per-mode colors on `[theme.light]` and `[theme.dark]`; do not put mode-specific palettes on `[theme]` (they apply to both modes). See `shadcn-dual` or the dual-mode example below
+4. Sidebar should contrast or match? → `[theme.sidebar]` for a locked theme; `[theme.light.sidebar]` / `[theme.dark.sidebar]` when the appearance toggle stays on. Shared sidebar padding can sit on `[theme.sidebar]`
+5. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` on the section for that mode (light, dark, or locked `[theme]`)
+6. Tighten whitespace / dense dashboard? → `paddingTop` / `paddingBottom` (main and sidebar); `dense-dashboard` is a ready example
+7. CSS / `st.html` `<style>` → only if the user explicitly requests CSS
+
 ## Contents
 
 - [Valid theme sections](#valid-theme-sections)
@@ -63,6 +75,7 @@ All other theme keys may be set in any of the six sections:
 - Dataframe chrome and chart palettes
 - Fonts (`font`, `headingFont`, `headingFontSizes`, `headingFontWeights`, `codeFont*`, `linkUnderline`)
 - Radii and `showWidgetBorder`
+- `paddingTop` / `paddingBottom`
 
 ## How theme config is applied
 
