@@ -93,14 +93,17 @@ export function withStreamlitConnection<ArgType = any>(
     }
 
     /**
-     * Error boundary function. This will be called if our wrapped
-     * component throws an error. We store the caught error in our state,
-     * and display it in the next render().
+     * Error boundary function. React passes the raw thrown value, which is
+     * not always an Error. Store an Error so the next render can read
+     * `message` without throwing again.
      */
     public static getDerivedStateFromError = (
-      error: Error
+      error: unknown
     ): Partial<WrapperState> => {
-      return { componentError: error }
+      return {
+        componentError:
+          error instanceof Error ? error : new Error(String(error)),
+      }
     }
 
     public override componentDidMount = (): void => {
