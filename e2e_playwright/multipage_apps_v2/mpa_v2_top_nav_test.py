@@ -120,8 +120,8 @@ def test_top_nav_with_sections(app: Page):
     section_a_trigger.click()
 
     # Wait for pages to become visible after clicking section
-    page1_in_popover = app.get_by_role("link", name="Page 1")
-    page2_in_popover = app.get_by_role("link", name="Page 2")
+    page1_in_popover = app.get_by_role("menuitem", name="Page 1")
+    page2_in_popover = app.get_by_role("menuitem", name="Page 2")
     expect(page1_in_popover).to_be_visible()
     expect(page2_in_popover).to_be_visible()
 
@@ -149,9 +149,9 @@ def test_top_nav_with_single_section(app: Page):
     section_trigger.click()
 
     # Wait for all 3 pages to become visible in the popover
-    page1_in_popover = app.get_by_role("link", name="Page 1")
-    page2_in_popover = app.get_by_role("link", name="Page 2")
-    page3_in_popover = app.get_by_role("link", name="Page 3")
+    page1_in_popover = app.get_by_role("menuitem", name="Page 1")
+    page2_in_popover = app.get_by_role("menuitem", name="Page 2")
+    page3_in_popover = app.get_by_role("menuitem", name="Page 3")
 
     expect(page1_in_popover).to_be_visible()
     expect(page2_in_popover).to_be_visible()
@@ -208,8 +208,8 @@ def test_top_nav_section_headers_support_markdown(app: Page):
     bold_section_trigger.click()
 
     # Wait for popover with pages
-    page1_in_popover = app.get_by_role("link", name="Page 1")
-    page2_in_popover = app.get_by_role("link", name="Page 2")
+    page1_in_popover = app.get_by_role("menuitem", name="Page 1")
+    page2_in_popover = app.get_by_role("menuitem", name="Page 2")
     expect(page1_in_popover).to_be_visible()
     expect(page2_in_popover).to_be_visible()
 
@@ -372,7 +372,7 @@ def test_top_nav_visual_regression(app: Page, assert_snapshot: ImageCompareFunct
     single_section_trigger.click()
 
     # Wait for popover with 3 pages
-    page3_in_popover = app.get_by_role("link", name="Page 3")
+    page3_in_popover = app.get_by_role("menuitem", name="Page 3")
     expect(page3_in_popover).to_be_visible()
 
     # Take screenshot of single section popover
@@ -424,8 +424,8 @@ def test_mixed_empty_and_named_sections(app: Page):
     admin_trigger.click()
 
     # Wait for Admin section pages to be visible
-    settings_link = app.get_by_role("link", name="Settings")
-    users_link = app.get_by_role("link", name="Users")
+    settings_link = app.get_by_role("menuitem", name="Settings")
+    users_link = app.get_by_role("menuitem", name="Users")
     expect(settings_link).to_be_visible()
     expect(users_link).to_be_visible()
 
@@ -438,7 +438,7 @@ def test_mixed_empty_and_named_sections(app: Page):
     reports_trigger.click()
 
     # Verify Reports section has only one page
-    analytics_link = app.get_by_role("link", name="Analytics")
+    analytics_link = app.get_by_role("menuitem", name="Analytics")
     expect(analytics_link).to_be_visible()
 
     # Navigate to Analytics
@@ -520,7 +520,7 @@ def test_mixed_sections_visual_regression(
     admin_trigger.click()
 
     # Wait for dropdown to open
-    settings_link = app.get_by_role("link", name="Settings")
+    settings_link = app.get_by_role("menuitem", name="Settings")
     expect(settings_link).to_be_visible()
 
     # Capture Admin section popover
@@ -535,7 +535,7 @@ def test_mixed_sections_visual_regression(
     reports_trigger.click()
 
     # Wait for Reports dropdown
-    analytics_link = app.get_by_role("link", name="Analytics")
+    analytics_link = app.get_by_role("menuitem", name="Analytics")
     expect(analytics_link).to_be_visible()
 
     # Capture Reports section popover (single item)
