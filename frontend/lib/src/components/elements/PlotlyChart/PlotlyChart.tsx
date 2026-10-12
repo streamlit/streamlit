@@ -144,9 +144,10 @@ export function PlotlyChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [element.id, element.spec])
 
-  // A container-sized chart takes its height only from its parent. Without a
-  // definite parent height, it falls back to the figure's height or the
-  // default height. Fullscreen already provides a definite size.
+  // Size-contain stretch-width, stretch-height charts so the rendered
+  // plot can't grow its parent's height. Without a definite parent
+  // height, the box falls back to the figure's `layout.height` or the
+  // default height. Fullscreen sets its own size.
   const isSizeContained =
     !isFullScreen &&
     shouldWidthStretch(widthConfig) &&
@@ -369,14 +370,16 @@ export function PlotlyChart({
           MIN_WIDTH
         )
 
+  // Plotly.js replaces layout.height below 10 with its default of 450,
+  // which paints out of a size-contained box. Hide the plot instead of
+  // passing that height.
+  const hidesShrunkPlot =
+    isSizeContained && !hasFallbackHeight && chartContainerHeight < 10
+
   let calculatedHeight =
-    chartContainerHeight > 0
+    chartContainerHeight >= 10
       ? chartContainerHeight
-      : // A 0px size-contained box has no fallback height. Don't draw the
-        // previous figure height out of that box onto the elements below.
-        isSizeContained && !hasFallbackHeight
-        ? 0
-        : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
+      : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
 
   if (isFullScreen) {
     calculatedWidth = width
@@ -561,7 +564,10 @@ export function PlotlyChart({
           // Hide the plotly chart if the width is not defined yet
           // to prevent flickering issues.
           visibility:
-            plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
+            hidesShrunkPlot || plotlyFigure.layout?.width === undefined
+              ? "hidden"
+              : undefined,
+          display: hidesShrunkPlot ? "none" : undefined,
           // If the scrollbars are activated, it leads to flickering issues.
           // We don't need overflow here since the parent container and plot dimensions are in sync.
           overflow: "hidden",

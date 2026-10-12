@@ -915,8 +915,7 @@ class VegaChartsMixin:
               minimum height and can shrink to zero when the other elements
               fill the container. Use an integer height to keep the chart
               visible there. Otherwise, the chart uses its default height and
-              still grows to match a taller sibling. Facet, repeat, and concat
-              charts stay empty until a parent has a fixed height.
+              still grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -1190,8 +1189,7 @@ class VegaChartsMixin:
               minimum height and can shrink to zero when the other elements
               fill the container. Use an integer height to keep the chart
               visible there. Otherwise, the chart uses its default height and
-              still grows to match a taller sibling. Facet, repeat, and concat
-              charts stay empty until a parent has a fixed height.
+              still grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -1524,8 +1522,7 @@ class VegaChartsMixin:
               minimum height and can shrink to zero when the other elements
               fill the container. Use an integer height to keep the chart
               visible there. Otherwise, the chart uses its default height and
-              still grows to match a taller sibling. Facet, repeat, and concat
-              charts stay empty until a parent has a fixed height.
+              still grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -1850,8 +1847,7 @@ class VegaChartsMixin:
               minimum height and can shrink to zero when the other elements
               fill the container. Use an integer height to keep the chart
               visible there. Otherwise, the chart uses its default height and
-              still grows to match a taller sibling. Facet, repeat, and concat
-              charts stay empty until a parent has a fixed height.
+              still grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.

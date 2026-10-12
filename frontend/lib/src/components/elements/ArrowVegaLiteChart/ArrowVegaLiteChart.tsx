@@ -143,6 +143,7 @@ export function hasNestedComposition(spec: string | object): boolean {
  */
 const COMPOSITION_KEYS = ["facet", "repeat", "concat", "hconcat", "vconcat"]
 
+/** Vega-Lite spec string or object. `undefined` for invalid JSON, null, and arrays. */
 const parseSpecObject = (
   spec: string | object
 ): Record<string, unknown> | undefined => {
@@ -311,9 +312,11 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // container height to every child view, so a fallback box would reserve one
   // panel and paint the rest over the elements that follow.
   const isSizeContained = useStretchHeight && isSingleView
-  // A container height feeds back into a content-height row unless the chart
-  // is size-contained, already has a pixel height, or sits in a container
-  // with a definite height. Fullscreen measures its own frame.
+  // Whether Vega sizes the chart to its measured container height.
+  // A composition without a definite parent height skips this, because
+  // its rendered height would feed back into a content-height row.
+  // Size-contained, pixel-height, and fullscreen charts always get a
+  // stable height to measure.
   const passesContainerHeight =
     useStretchHeight &&
     (isFullScreen ||
