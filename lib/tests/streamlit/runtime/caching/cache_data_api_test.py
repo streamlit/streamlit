@@ -365,6 +365,50 @@ If you think this is actually a Streamlit bug, please
         assert foo() == bytes(100)
         assert executions == 1
 
+    def test_cache_recreated_when_max_size_changes(self) -> None:
+        """A changed max_size replaces and closes the previous function cache."""
+        common_kwargs = {
+            "key": "max_size_change",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "max_size_change",
+        }
+        first = _data_caches.get_cache(**common_kwargs, max_size_bytes=100)
+        second = _data_caches.get_cache(**common_kwargs, max_size_bytes=200)
+
+        assert second is not first
+        assert first.is_active is False
+        assert isinstance(first.storage, InMemoryCacheStorageWrapper)
+        assert first.storage._closed is True
+
+    def test_existing_cache_does_not_wait_for_lifecycle_lock(self) -> None:
+        """A cache hit is not blocked by unrelated cache lifecycle work."""
+        kwargs = {
+            "key": "existing_cache",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "existing_cache",
+        }
+        cache = _data_caches.get_cache(**kwargs)
+        returned: list[DataCache[Any]] = []
+
+        _data_caches._lifecycle_lock.acquire()
+        try:
+            lookup = threading.Thread(
+                target=lambda: returned.append(_data_caches.get_cache(**kwargs))
+            )
+            lookup.start()
+            lookup.join(timeout=1)
+            completed_without_lifecycle_lock = not lookup.is_alive()
+        finally:
+            _data_caches._lifecycle_lock.release()
+        lookup.join(timeout=5)
+
+        assert completed_without_lifecycle_lock
+        assert returned == [cache]
+
     @parameterized.expand(
         [
             ("boolean", True),

@@ -79,6 +79,17 @@ def _create_storage(
         return InMemoryCacheStorageWrapper(DummyCacheStorage(), context)
 
 
+def test_budget_from_config_uses_configured_limit() -> None:
+    """The runtime budget is constructed from server.maxCachedDataSize."""
+    with patch(
+        "streamlit.runtime.caching.global_cache_budget.config.get_option",
+        return_value="1KiB",
+    ):
+        budget = GlobalCacheBudget.from_config()
+
+    assert budget._max_bytes == 1024
+
+
 def test_budget_evicts_globally_least_recently_used_entry() -> None:
     """A write over budget evicts the globally least-recently-used entry."""
     budget = GlobalCacheBudget(max_bytes=6)

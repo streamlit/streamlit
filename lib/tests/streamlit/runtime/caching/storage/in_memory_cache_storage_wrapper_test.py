@@ -124,7 +124,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             assert wrapped_storage.get("some-key") == b"some-value"
             mock_persist_get.assert_not_called()
 
-    def test_memory_read_uses_one_ttl_timer_value(self):
+    def test_memory_read_uses_one_ttl_timer_value(self) -> None:
         """An entry cannot expire between separate membership and value lookups."""
         context = CacheStorageContext(
             function_key="func-key",
@@ -234,7 +234,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             wrapped_storage.close()
             mock_persist_close.assert_called_once()
 
-    def test_max_size_and_max_entries_are_both_enforced(self):
+    def test_max_size_and_max_entries_are_both_enforced(self) -> None:
         """Byte and entry-count limits are enforced together."""
         context = CacheStorageContext(
             function_key="func-key",
@@ -255,7 +255,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         assert wrapped_storage._read_from_mem_cache("b") == b"bb"
         assert wrapped_storage._read_from_mem_cache("c") == b"c"
 
-    def test_oversized_entry_is_retained_and_warns_once(self):
+    def test_oversized_entry_is_retained_and_warns_once(self) -> None:
         """A lone oversized entry is retained and warns only once."""
         context = CacheStorageContext(
             function_key="func-key",
@@ -276,7 +276,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         assert wrapped_storage.get("second") == b"larger"
         warning.assert_called_once()
 
-    def test_byte_eviction_preserves_persisted_entry(self):
+    def test_byte_eviction_preserves_persisted_entry(self) -> None:
         """Byte eviction leaves the persisted copy available for reload."""
         context = CacheStorageContext(
             function_key="func-key",
@@ -297,7 +297,7 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             assert wrapped_storage.get("a") == b"aa"
             persist_get.assert_called_once_with("a")
 
-    def test_set_if_present_does_not_repopulate_evicted_entry(self):
+    def test_set_if_present_does_not_repopulate_evicted_entry(self) -> None:
         """Conditional writes cannot repopulate an entry after eviction."""
         context = CacheStorageContext(
             function_key="func-key",

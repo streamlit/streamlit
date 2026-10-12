@@ -68,10 +68,12 @@ class ConfigTest(unittest.TestCase):
 
         config._delete_option("_test.tomlTest")
 
-    def test_max_cached_data_size_default(self):
+    def test_max_cached_data_size_default(self) -> None:
+        """The global cache budget defaults to 2 GiB."""
         assert config.get_option("server.maxCachedDataSize") == "2gb"
 
-    def test_max_cached_data_size_accepts_toml_disable_sentinel(self):
+    def test_max_cached_data_size_accepts_toml_disable_sentinel(self) -> None:
+        """TOML accepts numeric or string zero to disable the global budget."""
         for value in ("0", '"0"'):
             config._update_config_with_toml(
                 f"[server]\nmaxCachedDataSize = {value}", "<test definition>"
@@ -84,7 +86,10 @@ class ConfigTest(unittest.TestCase):
                 is None
             )
 
-    def test_max_cached_data_size_rejects_unitless_nonzero_toml_integer(self):
+    def test_max_cached_data_size_rejects_unitless_nonzero_toml_integer(
+        self,
+    ) -> None:
+        """A nonzero global budget requires an explicit binary unit."""
         config._update_config_with_toml(
             "[server]\nmaxCachedDataSize = 500", "<test definition>"
         )

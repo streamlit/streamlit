@@ -112,10 +112,12 @@ class GlobalCacheBudget(StatsProvider):
             self._unregister_locked(storage_id)
 
     def _drain_pending_unregisters_locked(self) -> None:
-        while True:
+        while not self._pending_unregisters.empty():
             try:
                 storage_id = self._pending_unregisters.get_nowait()
             except queue.Empty:
+                # SimpleQueue.empty() is advisory because weakref callbacks can run
+                # concurrently. A newly queued ID is drained on the next operation.
                 return
             self._unregister_locked(storage_id)
 
@@ -185,28 +187,44 @@ class GlobalCacheBudget(StatsProvider):
                 current.access_version = access_version
                 self._entries.move_to_end(entry_key)
 
-    def record_removal(self, storage_id: int, key: str, generation: int) -> None:
+    def record_removals(
+        self, storage_id: int, removals: Sequence[tuple[str, int]]
+    ) -> None:
         if self._max_bytes is None:
             return
-        entry_key = (storage_id, key)
         with self._lock:
             self._drain_pending_unregisters_locked()
-            current = self._entries.get(entry_key)
-            if current is not None and current.generation == generation:
+            storage_entries = self._storage_entries.get(storage_id)
+            for key, generation in removals:
+                entry_key = (storage_id, key)
+                current = self._entries.get(entry_key)
+                if current is None or current.generation != generation:
+                    continue
                 self._total_bytes -= self._entries.pop(entry_key).size
-                storage_entries = self._storage_entries.get(storage_id)
                 if storage_entries is not None:
                     storage_entries.discard(key)
 
-    def _warn_once(self) -> None:
+    def _warn_once(self, function_display_name: str) -> None:
         with self._lock:
             if self._warned:
                 return
             self._warned = True
         _LOGGER.warning(
-            "A st.cache_data value larger than server.maxCachedDataSize was kept. "
-            "Streamlit does not reject cache writes. Raise the limit, or set it to "
-            '"0" to disable the process-wide budget.'
+            "Streamlit cached a value from %s that is larger than "
+            "server.maxCachedDataSize. Older in-memory st.cache_data entries were "
+            "evicted when available. Raise server.maxCachedDataSize, or set it to "
+            '"0" to disable the process-wide budget.',
+            function_display_name,
+        )
+
+    def _storage_display_name(self, storage_id: int) -> str:
+        with self._lock:
+            storage_ref = self._storages.get(storage_id)
+            storage = storage_ref() if storage_ref is not None else None
+        return (
+            storage.function_display_name
+            if storage is not None
+            else "an unknown cached function"
         )
 
     def _reap_expired_entries(self) -> None:
@@ -268,7 +286,7 @@ class GlobalCacheBudget(StatsProvider):
                 victim = self._reserve_victim(protected)
                 if victim is None:
                     if self.total_bytes > self._max_bytes:
-                        self._warn_once()
+                        self._warn_once(self._storage_display_name(protected[0]))
                     return
                 storage, key, record = victim
                 evicted = storage._evict_from_mem_cache(
@@ -303,19 +321,21 @@ class GlobalCacheBudget(StatsProvider):
         }
 
 
-_global_cache_budget: GlobalCacheBudget | None = None
+class _GlobalCacheBudgetHolder:
+    budget: GlobalCacheBudget | None = None
+
+
+_GLOBAL_CACHE_BUDGET_HOLDER = _GlobalCacheBudgetHolder()
 _GLOBAL_CACHE_BUDGET_LOCK = threading.Lock()
 
 
 def get_global_cache_budget() -> GlobalCacheBudget:
     """Return the lazily configured process-wide data-cache budget."""
-    global _global_cache_budget  # noqa: PLW0603
-
-    budget = _global_cache_budget
+    budget = _GLOBAL_CACHE_BUDGET_HOLDER.budget
     if budget is None:
         with _GLOBAL_CACHE_BUDGET_LOCK:
-            budget = _global_cache_budget
+            budget = _GLOBAL_CACHE_BUDGET_HOLDER.budget
             if budget is None:
                 budget = GlobalCacheBudget.from_config()
-                _global_cache_budget = budget
+                _GLOBAL_CACHE_BUDGET_HOLDER.budget = budget
     return budget

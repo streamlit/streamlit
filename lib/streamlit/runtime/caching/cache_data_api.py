@@ -24,6 +24,7 @@ from typing import (
     Final,
     Literal,
     TypeAlias,
+    TypeGuard,
     TypeVar,
     cast,
     overload,
@@ -185,6 +186,25 @@ class DataCaches(StatsProvider):
     def stats_families(self) -> Sequence[str]:
         return (CACHE_MEMORY_FAMILY,)
 
+    @staticmethod
+    def _cache_matches(
+        cache: DataCache[Any] | None,
+        *,
+        fresh_ttl_seconds: float | None,
+        max_entries: int | None,
+        max_size_bytes: int | None,
+        persist: CachePersistType,
+        refresh_mode: RefreshMode,
+    ) -> TypeGuard[DataCache[Any]]:
+        return (
+            cache is not None
+            and cache.fresh_ttl_seconds == fresh_ttl_seconds
+            and cache.max_entries == max_entries
+            and cache.max_size_bytes == max_size_bytes
+            and cache.persist == persist
+            and cache.refresh_mode == refresh_mode
+        )
+
     def get_cache(
         self,
         key: str,
@@ -217,20 +237,34 @@ class DataCaches(StatsProvider):
         else:
             session_id = get_session_id_or_throw()
 
-        # Cache replacement can wait for a committed write and close storage. Keep
-        # those operations outside _caches_lock so unrelated registry readers are not
-        # blocked behind storage I/O.
+        # Keep the existing-cache hot path off the lifecycle lock, which can be held
+        # while another cache is detached or its storage is closed.
+        with self._caches_lock:
+            session_caches = self._function_caches.get(session_id)
+            cache = None if session_caches is None else session_caches.get(key)
+            if self._cache_matches(
+                cache,
+                fresh_ttl_seconds=fresh_ttl_seconds,
+                max_entries=max_entries,
+                max_size_bytes=max_size_bytes,
+                persist=persist,
+                refresh_mode=refresh_mode,
+            ):
+                return cache
+
+        # Cache creation and replacement are serialized. Re-check after taking the
+        # lifecycle lock because another thread may have installed the cache.
         with self._lifecycle_lock:
             with self._caches_lock:
                 session_caches = self._function_caches.setdefault(session_id, {})
                 cache = session_caches.get(key)
-                if (
-                    cache is not None
-                    and cache.fresh_ttl_seconds == fresh_ttl_seconds
-                    and cache.max_entries == max_entries
-                    and cache.max_size_bytes == max_size_bytes
-                    and cache.persist == persist
-                    and cache.refresh_mode == refresh_mode
+                if self._cache_matches(
+                    cache,
+                    fresh_ttl_seconds=fresh_ttl_seconds,
+                    max_entries=max_entries,
+                    max_size_bytes=max_size_bytes,
+                    persist=persist,
+                    refresh_mode=refresh_mode,
                 ):
                     return cache
                 if cache is not None:

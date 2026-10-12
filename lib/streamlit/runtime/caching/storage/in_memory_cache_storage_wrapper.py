@@ -258,8 +258,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             if should_warn:
                 _LOGGER.warning(
                     "A cached value for %s is larger than its max_size, so Streamlit "
-                    "evicted all other entries from this function's cache. Increase "
-                    "max_size to keep more than one value.",
+                    "evicted all other in-memory entries from this function's cache. "
+                    "Increase max_size to keep more than one value.",
                     self.function_display_name,
                 )
             self._global_budget.enforce_budget((self._global_storage_id, key))
@@ -284,12 +284,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         return removals
 
     def _report_removals(self, removals: list[tuple[str, int]]) -> None:
-        for key, generation in removals:
-            self._global_budget.record_removal(
-                self._global_storage_id,
-                key,
-                generation,
-            )
+        if removals:
+            self._global_budget.record_removals(self._global_storage_id, removals)
 
     def _reap_expired_entries(self) -> None:
         """Remove expired memory entries and publish their released bytes."""

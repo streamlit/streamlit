@@ -45,6 +45,10 @@ _CONFIG_MAX_CACHED_DATA_SIZE_ERROR: Final = (
     "`server.maxCachedDataSize` requires an explicit unit string, such as "
     '"2gb" or "500mb". Use "0" to disable the global cache budget.'
 )
+_CONFIG_MAX_CACHED_DATA_SIZE_ZERO_ERROR: Final = (
+    '`server.maxCachedDataSize` must be positive. Use "0" without a unit to '
+    "disable the global cache budget."
+)
 
 
 def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
@@ -66,10 +70,13 @@ def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
     elif isinstance(value, str):
         match = _BYTE_SIZE_RE.fullmatch(value)
         if match is None:
-            raise StreamlitAPIException(
-                f"Invalid byte size {value!r}. Use a positive value with an explicit "
-                'unit, such as "500MB", "1.5GB", or "200KiB".',
-                error_id="cache-data-max-size-invalid-format",
+            raise StreamlitValueError(
+                "max_size",
+                ["a positive byte size"],
+                detail=(
+                    "Use a positive value with an explicit unit, such as "
+                    '"500MB", "1.5GB", or "200KiB".'
+                ),
             )
         value_text = match.group("value")
         whole, _, fraction = value_text.partition(".")
@@ -95,6 +102,12 @@ def config_max_cached_data_size_to_bytes(value: object) -> int | None:
     if not isinstance(value, str):
         raise StreamlitAPIException(
             _CONFIG_MAX_CACHED_DATA_SIZE_ERROR,
+            error_id="config-max-cached-data-size-invalid",
+        )
+    match = _BYTE_SIZE_RE.fullmatch(value)
+    if match is not None and int(match.group("value").replace(".", "")) == 0:
+        raise StreamlitAPIException(
+            _CONFIG_MAX_CACHED_DATA_SIZE_ZERO_ERROR,
             error_id="config-max-cached-data-size-invalid",
         )
     try:
