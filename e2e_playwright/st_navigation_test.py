@@ -46,7 +46,7 @@ def test_sidebar_navigation_mode_shows_sidebar_nav_only(app: Page) -> None:
     expect(app.get_by_test_id("stTopNavLink")).not_to_be_visible()
 
 
-def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
+def test_app_shell_landmarks_skip_link_and_focus_ring(app: Page) -> None:
     """Shell exposes main and page-nav landmarks, a skip link into main, and a focus ring on main."""
     main = app.get_by_role("main")
     expect(main).to_be_attached()
@@ -81,7 +81,7 @@ def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
     assert app.evaluate("() => window.location.hash") == hash_before
 
     # Focusing main must not shift content (preventScroll + sticky ring layout).
-    assert main.evaluate("el => el.scrollTop") == scroll_before_focus
+    expect(main).to_have_js_property("scrollTop", scroll_before_focus)
     content_top_after_focus = app.get_by_test_id("stMainBlockContainer").evaluate(
         "el => el.getBoundingClientRect().top"
     )
@@ -104,8 +104,9 @@ def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
     )
     assert main.evaluate("el => el.scrollHeight > el.clientHeight")
 
-    # Mirror ::before sticky offset/height with a real node so we can read
-    # painted top (pseudo-elements have no getBoundingClientRect).
+    # Mirror ::before sticky geometry with a real node so we can read painted
+    # top (pseudo-elements have no getBoundingClientRect). Include the negative
+    # marginBottom — that is what keeps the ring from taking layout flow.
     main.evaluate(
         """el => {
             const before = getComputedStyle(el, "::before");
@@ -116,6 +117,7 @@ def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
                 position: before.position,
                 top: before.top,
                 height: before.height,
+                marginBottom: before.marginBottom,
                 flexShrink: "0",
                 alignSelf: "stretch",
                 width: "100%",
@@ -142,9 +144,9 @@ def test_app_shell_landmarks_and_skip_link(app: Page) -> None:
     header_bottom = app.get_by_test_id("stHeader").evaluate(
         "el => el.getBoundingClientRect().bottom"
     )
-    probe_top = app.get_by_test_id("stMainFocusRingProbe").evaluate(
-        "el => el.getBoundingClientRect().top"
-    )
+    probe = app.get_by_test_id("stMainFocusRingProbe")
+    expect(probe).to_be_attached()
+    probe_top = probe.evaluate("el => el.getBoundingClientRect().top")
     assert abs(probe_top - header_bottom) < 2
 
 

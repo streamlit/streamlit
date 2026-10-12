@@ -41,7 +41,7 @@ export const StyledAppViewContainer = styled.div({
 })
 
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values --
- * The visually hidden clip pattern needs literal px values. Focused styles use theme tokens.
+ * The unfocused clip pattern needs literal px values. Focused styles use theme tokens.
  */
 /**
  * Visually hidden until keyboard focus, then shown above app chrome so users
@@ -112,7 +112,8 @@ export const StyledAppViewMain = styled.main<StyledAppViewMainProps>(
       // Inset ring frames the area below the absolutely positioned header.
       // Use the muted ring because stMain is a scroll region, not an actionable control.
       // Sticky + negative margin pins the ring to the scrollport so it does not
-      // scroll away with content; z-index keeps it above the sticky bottom container.
+      // scroll away with content. Stacked above the sticky bottom container (for
+      // example the chat input). The header is a sibling and still paints over the top.
       "&:focus-visible::before": {
         content: '""',
         pointerEvents: "none",
@@ -123,7 +124,6 @@ export const StyledAppViewMain = styled.main<StyledAppViewMainProps>(
         width: theme.sizes.full,
         height: focusRingHeight,
         marginBottom: `calc(-1 * (${focusRingHeight}))`,
-        // Above main content and sticky bottom; header (sibling) still paints over the top.
         zIndex: theme.zIndices.bottom + 1,
         boxShadow: `inset ${theme.shadows.focusRingMuted}`,
       },

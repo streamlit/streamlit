@@ -25,9 +25,10 @@ export const MAIN_ELEMENT_ID = "stMain"
  * Skip link that moves focus to the main landmark (WCAG 2.4.1).
  * Hidden until it receives keyboard focus.
  *
- * Keeps `href="#stMain"` as the no-JS fallback, but prevents the default
- * fragment navigation on activation so we do not write `location.hash` or
- * fire `hashchange` (which AppView forwards to embed hosts as UPDATE_HASH).
+ * Keeps `href` so the element is a real, keyboard-activatable link, but
+ * prevents default navigation so activation does not write `location.hash`
+ * or fire `hashchange` (which AppView forwards to embedding hosts as
+ * UPDATE_HASH).
  */
 function SkipToContentLink(): ReactElement {
   const handleClick = (event: MouseEvent<HTMLAnchorElement>): void => {

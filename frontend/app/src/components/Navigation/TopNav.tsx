@@ -46,10 +46,10 @@ export interface Props {
 type OverflowNavItem = AppPage.$Properties | AppPage.$Properties[]
 
 /**
- * Responsive top navigation rendered as the "App pages" `<nav>` landmark.
- * Landmark attributes are passed to rc-overflow's root (the measured flex
- * host); wrapping it in another element shrinks the measured width and
- * causes a false "N more" overflow.
+ * Responsive top navigation, rendered as the "App pages" `<nav>` landmark.
+ * Pass landmark attributes to rc-overflow's root, which is the measured flex host.
+ * Wrapping that root in another element shrinks the measured width and shows a
+ * false "N more" overflow.
  */
 const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =

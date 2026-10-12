@@ -266,8 +266,8 @@ export const StyledNavSectionContainer = styled.div(({ theme }) => ({
   },
 }))
 
-// TopNav styled components. The rc-overflow root is the <nav> landmark itself,
-// so responsive collapse measures the correct width.
+// TopNav styled components. StyledOverflowContainer is rc-overflow's root and
+// the "App pages" <nav> landmark (see TopNav).
 export const StyledOverflowContainer = styled.nav(({ theme }) => ({
   display: "flex",
   alignItems: "center",
