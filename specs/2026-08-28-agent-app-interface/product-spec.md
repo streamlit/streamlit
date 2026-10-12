@@ -620,6 +620,12 @@ Rules:
   `status`, `observed_at`, and error codes — is server-generated.
 - **The `status` field reports the run, not the transport.** `ready` means the run chain
   settled and the app did not raise. See [When a run fails](#when-a-run-fails).
+- **Values are plain JSON, encoded one way everywhere.** Dates, times, and datetimes are
+  ISO 8601 text, with an offset only when the value has one; decimals are strings, to
+  keep their digits; durations are seconds; NaN and infinity are `null`; binary data is
+  its size, `{"bytes": <length>}`; a range is a two-item list; an option object is its
+  `format_func` label; integers are plain numbers at any size. The same encoding applies
+  to `value`, `props`, and table rows, and is what a request sends back.
 - **Versioned, and self-describing.** Additive optional fields are compatible within
   `schema_version: 1`; clients tolerate unknown fields and unknown element types. The
   rest moves with Streamlit: each app serves the OpenAPI document for its own version,
@@ -1318,9 +1324,5 @@ v1 ships when:
 
 ## Open questions
 
-1. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
-   times, and datetimes as ISO 8601 text, decimals as strings, durations as seconds,
-   non-finite numbers as `null`, ranges as two-item lists, and object-valued options as
-   their `format_func` labels. Integers beyond 2^53 are still plain JSON numbers, which
-   JavaScript parsers round. These must be settled before v1 ships, with or without
-   per-action schemas.
+None at the moment: the questions this spec raised are settled in the sections above or
+recorded as [follow-ups](#follow-ups).
