@@ -124,11 +124,11 @@ function renderAppView(
   }
 ): ReturnType<typeof renderWithContexts> {
   const sidebarConfigContextValues = getSidebarConfigContextOutput(
-    overrides?.sidebarConfigContext || {}
+    overrides?.sidebarConfigContext ?? {}
   )
 
   const navigationContextValues = getNavigationContextOutput(
-    overrides?.navigationContext || {}
+    overrides?.navigationContext ?? {}
   )
 
   return renderWithContexts(<AppView {...getProps(props)} />, {
