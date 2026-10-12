@@ -55,7 +55,9 @@ override-dependencies = [
   # Python >=3.14. The <3.15 override also covers 3.11-3.13, where that extra
   # does not cap PyArrow. Drop the <24 side once that extra allows PyArrow >=24.
   # On 3.15, require >=26. Earlier releases have no CPython 3.15 wheels, and
-  # the pandas extra would otherwise lock 23.0.1.
+  # the pandas extra would otherwise lock 23.0.1. E2E runs on 3.15, so
+  # regenerate st.table snapshots on this interpreter: PyArrow 26 prints
+  # list-of-dict keys in insertion order, and Python <3.15 (PyArrow 23) does not.
   "pyarrow>=10.0.1,!=25.0.0,<24; python_version < '3.15'",
   "pyarrow>=26,<27; python_version >= '3.15'",
 ]
