@@ -1305,9 +1305,12 @@ v1 ships when:
 
 ## Open questions
 
-1. Which hosted credential flow can map an agent to the correct `st.user` without
-   introducing a second identity system? A browser's signed auth cookie is not a general
-   agent credential.
+1. **How does an app that uses `st.login` authenticate an agent?** Only `st.login`'s
+   OAuth/OIDC sign-in is affected: public apps, apps behind an authenticating proxy or
+   platform (trusted headers), and apps with their own login form already work. Its
+   identity is a signed cookie the browser gets at the end of a redirect, which an agent
+   cannot present, so the question is which credential flow maps an agent to the right
+   `st.user` without a second identity system.
 2. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
    times, and datetimes as ISO 8601 text, decimals as strings, durations as seconds,
    non-finite numbers as `null`, ranges as two-item lists, and object-valued options as
