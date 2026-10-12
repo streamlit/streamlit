@@ -214,12 +214,14 @@ enumerate them: look a command up in the Streamlit API reference at \
 https://docs.streamlit.io/develop/api-reference and its parameters are the \
 props you will see here.
 
-Three fields are deliberately distinct:
+Four fields are deliberately distinct:
 
 - `props` is how the element was built, from the author's arguments. It also \
 carries a display element's content, so an `st.metric` number is `props.value`.
 - `value` is what a widget holds now, after the last run's reconciliation, and \
 in the form a later request may send back. Absent for display elements.
+- `value_schema` is the JSON Schema of what a request sends the element: its \
+shape, not its legal values, which are in `props`.
 - `data` is what Streamlit derived rather than the author wrote -- a column \
 schema, row counts, a bounded preview, a chart specification -- kept separate \
 so a reader never has to guess which keys are real parameters.
@@ -583,7 +585,8 @@ def schemas() -> dict[str, Any]:
                         "state, and it cannot be sent on a creating call, "
                         "because keys only exist once the app has run.\n\n"
                         "Refused with `invalid_value`:\n"
-                        "- The wrong JSON type. A number counts as text only "
+                        "- The wrong JSON type, which the element's "
+                        "`value_schema` states. A number counts as text only "
                         "where it names an option, and dates and times are ISO "
                         "text, a date or time slider's included. A single "
                         "value and a one-item list are interchangeable for a "

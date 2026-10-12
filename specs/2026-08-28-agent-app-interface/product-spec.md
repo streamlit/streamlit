@@ -519,7 +519,8 @@ is authored and the button falls back to its element ID; the collapsed expander 
 carries its `children`, `label`, and `icon`, which would otherwise be invisible to a
 non-browser client; and the dataframe shows the `props`/`data` split, with only
 `column_config` above the line. Data representation, including what `data.url` is and is
-not, is [its own section](#data-charts-and-media-in-v1).
+not, is [its own section](#data-charts-and-media-in-v1), and the selectbox's
+`value_schema` is explained in [Actions in v1](#actions-in-v1).
 
 Rules:
 
@@ -735,7 +736,44 @@ The agent path should call those validators rather than keep its own, provided e
 reports the violation and lets the caller decide: the browser path coerces, and the agent
 path rejects with `invalid_value`, because a silently reset value reads as success.
 
-Until then, v1 checks three things itself, each refused with `invalid_value`:
+**Every element that takes a value carries its JSON Schema, describing shape, not legal
+values.** Sending the wrong JSON type is the commonest invalid request, and the element
+vocabulary does not say that dates are ISO text or that a range is a two-item list. So
+a widget, and a trigger with a payload such as `st.chat_input`, carries a
+`value_schema` beside its `value`:
+
+```json
+{
+  "type": "date_input",
+  "key": "period",
+  "props": { "label": "Period", "disabled": false },
+  "value_schema": {
+    "type": "array",
+    "items": { "type": "string", "format": "date" },
+    "minItems": 2,
+    "maxItems": 2
+  },
+  "value": ["2026-01-01", "2026-03-31"]
+}
+```
+
+- **It describes the form `value` is reported in**, so sending that back always
+  matches: option labels as strings, `integer` for a whole-number slider, a format for
+  dates, and a two-item list for a range.
+- **Legal values stay in `props`.** No `enum` and no bounds: `options`, `min_value`,
+  `max_value`, and `max_chars` are already there under the names models know, copying
+  an option list would double the largest part of many snapshots, and bounds would make
+  the schema stricter than v1, which resets an out-of-range number rather than refusing
+  it. `null` clears a widget that can be empty.
+- **Each command declares it, with the rest of its description.** Only the command knows
+  for certain whether it holds a range, a whole number, or a date, including while it is
+  empty, so an empty `st.feedback` still says `integer`. A few shared building blocks
+  keep each declaration to one line, and the coverage test fails for a widget without
+  one. A value with a richer shape, such as a dataframe selection, is declared the same
+  way.
+
+Until #16203 moves the checks into the widgets, v1 checks three things itself, each
+refused with `invalid_value`:
 
 - **The JSON type**, which the element's `value_schema` states. A number is not text except
   where it names an option, and dates and times are ISO text, even for a slider that
@@ -805,42 +843,6 @@ would make the app do something wrong. Two sit on that line today:
   just does not clear, and its next submit resends what a browser would have cleared.
 
 Doing the rest of either is [follow-up #8](#follow-ups).
-
-**Every element that takes a value carries its JSON Schema, describing shape, not legal
-values.** Sending the wrong JSON type is the commonest invalid request, and the element
-vocabulary does not say that dates are ISO text or that a range is a two-item list. So
-a widget, and a trigger with a payload such as `st.chat_input`, carries a
-`value_schema` beside its `value`:
-
-```json
-{
-  "type": "date_input",
-  "key": "period",
-  "props": { "label": "Period", "disabled": false },
-  "value_schema": {
-    "type": "array",
-    "items": { "type": "string", "format": "date" },
-    "minItems": 2,
-    "maxItems": 2
-  },
-  "value": ["2026-01-01", "2026-03-31"]
-}
-```
-
-- **It describes the form `value` is reported in**, so sending that back always
-  matches: option labels as strings, `integer` for a whole-number slider, a format for
-  dates, and a two-item list for a range.
-- **Legal values stay in `props`.** No `enum` and no bounds: `options`, `min_value`,
-  `max_value`, and `max_chars` are already there under the names models know, copying
-  an option list would double the largest part of many snapshots, and bounds would make
-  the schema stricter than v1, which resets an out-of-range number rather than refusing
-  it. `null` clears a widget that can be empty.
-- **Each command declares it, with the rest of its description.** Only the command knows
-  for certain whether it holds a range, a whole number, or a date, including while it is
-  empty, so an empty `st.feedback` still says `integer`. A few shared building blocks
-  keep each declaration to one line, and the coverage test fails for a widget without
-  one. A value with a richer shape, such as a dataframe selection, is declared the same
-  way.
 
 **Every action must be treated as consequential.** A selectbox can trigger a database
 write just as a button can, so Streamlit does not label any action read-only, idempotent,
