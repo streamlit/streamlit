@@ -907,10 +907,15 @@ class VegaChartsMixin:
 
             - ``"content"`` (default): The height of the element matches the
               height of its content.
-            - ``"stretch"``: The height of the element matches the height of
-              its content or the height of the parent container, whichever is
-              larger. If the element is not in a parent container, the height
-              of the element matches the height of its content.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. Inside a
+              container that already has a fixed height, the chart keeps no
+              minimum height and can shrink to zero when the other elements
+              fill the container. Use an integer height to keep the chart
+              visible there. Otherwise, the chart uses its default height
+              (350 pixels) and still grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -1176,10 +1181,15 @@ class VegaChartsMixin:
 
             - ``"content"`` (default): The height of the element matches the
               height of its content.
-            - ``"stretch"``: The height of the element matches the height of
-              its content or the height of the parent container, whichever is
-              larger. If the element is not in a parent container, the height
-              of the element matches the height of its content.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. Inside a
+              container that already has a fixed height, the chart keeps no
+              minimum height and can shrink to zero when the other elements
+              fill the container. Use an integer height to keep the chart
+              visible there. Otherwise, the chart uses its default height
+              (350 pixels) and still grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -1504,10 +1514,15 @@ class VegaChartsMixin:
 
             - ``"content"`` (default): The height of the element matches the
               height of its content.
-            - ``"stretch"``: The height of the element matches the height of
-              its content or the height of the parent container, whichever is
-              larger. If the element is not in a parent container, the height
-              of the element matches the height of its content.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. Inside a
+              container that already has a fixed height, the chart keeps no
+              minimum height and can shrink to zero when the other elements
+              fill the container. Use an integer height to keep the chart
+              visible there. Otherwise, the chart uses its default height
+              (350 pixels) and still grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -1824,10 +1839,15 @@ class VegaChartsMixin:
 
             - ``"content"`` (default): The height of the element matches the
               height of its content.
-            - ``"stretch"``: The height of the element matches the height of
-              its content or the height of the parent container, whichever is
-              larger. If the element is not in a parent container, the height
-              of the element matches the height of its content.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. Inside a
+              container that already has a fixed height, the chart keeps no
+              minimum height and can shrink to zero when the other elements
+              fill the container. Use an integer height to keep the chart
+              visible there. Otherwise, the chart uses its default height
+              (350 pixels) and still grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -2056,10 +2076,17 @@ class VegaChartsMixin:
 
             - ``"content"`` (default): The height of the element matches the
               height of its content.
-            - ``"stretch"``: The height of the element matches the height of
-              its content or the height of the parent container, whichever is
-              larger. If the element is not in a parent container, the height
-              of the element matches the height of its content.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. Inside a
+              container that already has a fixed height, the chart keeps no
+              minimum height and can shrink to zero when the other elements
+              fill the container. Use an integer height to keep the chart
+              visible there. Otherwise, the chart uses its default height
+              (350 pixels) and still grows to match a taller sibling.
+              Facet, repeat, and concat charts stay empty until an ancestor
+              has a fixed height.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -2307,10 +2334,17 @@ class VegaChartsMixin:
 
             - ``"content"`` (default): The height of the element matches the
               height of its content.
-            - ``"stretch"``: The height of the element matches the height of
-              its content or the height of the parent container, whichever is
-              larger. If the element is not in a parent container, the height
-              of the element matches the height of its content.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. Inside a
+              container that already has a fixed height, the chart keeps no
+              minimum height and can shrink to zero when the other elements
+              fill the container. Use an integer height to keep the chart
+              visible there. Otherwise, the chart uses its default height
+              (350 pixels) and still grows to match a taller sibling.
+              Facet, repeat, and concat charts stay empty until an ancestor
+              has a fixed height.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.

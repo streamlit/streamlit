@@ -77,6 +77,9 @@ The modes are:
 When the height on an element is set to "stretch", the element should expand to fill available vertical space according to these rules:
 
 - The element's display height should not exceed the height of its parent container.
+- Vega and Plotly stretch charts fall back to their default height when `FlexContext.hasDefiniteHeight` is false (see `hasStretchHeightFallback()` in `FlexContext.tsx`).
+  - No definite height: top level, content-height containers, and content-height rows.
+  - Definite height: a pixel-height container or tab panel, or a stretch container or tab panel that fills one. Charts there shrink to their siblings, so a title plus a stretch chart does not make a fixed-height card scroll.
 
 Examples:
 
@@ -365,3 +368,6 @@ Look for:
 - HTML elements interior to the component that may need `height: 100%` to stretch.
 - In horizontal layouts, a percentage `height` in `styleOverrides`, or a wrapper that doesn't forward `alignSelf`, `minHeight`, and `maxHeight` from `useLayoutStyles`, blocks the row stretch.
 - If it is a graph it may need the container height provided to the graphing library. The `useCalculatedDimensions` hook (in `frontend/lib/src/hooks/useCalculatedDimensions.ts`) can be utilized to measure the container height.
+- If a graph sizes itself from its measured container, that size can feed back into the container (it collapses to 0px, or never shrinks). Size-contain the measured container (`contain: "size"` plus `containIntrinsicHeight` as the fallback; see `ArrowVegaLiteChart` and `PlotlyChart`).
+- Keep that container `display: block`. An inline-block baseline can still grow the parent's line box.
+- Containment drops content width. A content-width single-view Vega chart needs `containIntrinsicWidth` (spec width, or `defaultChartWidth`). Compositions are not size-contained.
