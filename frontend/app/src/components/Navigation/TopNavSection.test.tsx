@@ -360,6 +360,32 @@ describe("TopNavSection", () => {
       expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
     })
 
+    it("does not activate menuitems via keyboard when widgets are disabled", async () => {
+      const handlePageChange = vi.fn()
+      const user = userEvent.setup()
+      renderWithContexts(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: TWO_PAGE_SECTION,
+            title: "Group",
+            handlePageChange,
+            widgetsDisabled: true,
+          })}
+        />
+      )
+
+      await openPopover(user)
+      const focused = screen.getByText("Page A").closest("a")
+      expect(focused).toHaveAttribute("aria-disabled", "true")
+      expect(focused).toHaveFocus()
+
+      await user.keyboard(" ")
+      await user.keyboard("{Enter}")
+
+      expect(handlePageChange).not.toHaveBeenCalled()
+      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
+    })
+
     it("exposes menu semantics labelled by the trigger", async () => {
       const user = userEvent.setup()
       renderWithContexts(

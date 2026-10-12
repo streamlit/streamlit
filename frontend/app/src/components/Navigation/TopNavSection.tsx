@@ -94,7 +94,8 @@ const TopNavSection = ({
   const menuItemLinksRef = useRef<Array<HTMLAnchorElement | null>>([])
   const closeReasonRef = useRef<CloseReason>("other")
   const prevOpenRef = useRef(false)
-  const openFocusIndexRef = useRef(0)
+  /** Item index to focus when the menu mounts (ArrowUp opens on the last). */
+  const initialFocusIndexRef = useRef(0)
 
   const flatLinkCount = useMemo(
     () => sections.reduce((count, section) => count + section.length, 0),
@@ -113,6 +114,7 @@ const TopNavSection = ({
   const lastLinkIndex = Math.max(0, flatLinkCount - 1)
 
   const [focusedIndex, setFocusedIndex] = useState(0)
+  /** Focused item index. Clamped because sections can shrink while the menu is open (overflow recalculation); -1 when there are no links. */
   const clampedIndex =
     flatLinkCount === 0 ? -1 : Math.min(focusedIndex, lastLinkIndex)
 
@@ -178,7 +180,7 @@ const TopNavSection = ({
 
   // Stable ref setter so SidebarNavLink can memoize its callback (avoids
   // creating a new closure per item per render).
-  const setItemRef = useCallback(
+  const setMenuItemRef = useCallback(
     (index: number, element: HTMLAnchorElement | null): void => {
       menuItemLinksRef.current[index] = element
     },
@@ -193,10 +195,10 @@ const TopNavSection = ({
   const menuListRef = useCallback((node: HTMLDivElement | null): void => {
     if (node) {
       const index = Math.min(
-        openFocusIndexRef.current,
+        initialFocusIndexRef.current,
         Math.max(0, menuItemLinksRef.current.length - 1)
       )
-      openFocusIndexRef.current = 0
+      initialFocusIndexRef.current = 0
       menuItemLinksRef.current[index]?.focus()
       setFocusedIndex(index)
     }
@@ -219,15 +221,17 @@ const TopNavSection = ({
     }
 
     const target = event.target
-    // Anchors activate on Enter. Space activates a menuitem and must not
-    // scroll the page.
+    // Menuitems activate on Space as well as Enter (anchors natively handle
+    // only Enter); prevent the default page scroll.
     if (
-      event.key === " " &&
+      (event.key === " " || event.key === "Enter") &&
       target instanceof HTMLAnchorElement &&
       target.getAttribute("role") === "menuitem"
     ) {
       event.preventDefault()
-      target.click()
+      if (!widgetsDisabled) {
+        target.click()
+      }
       return
     }
 
@@ -262,9 +266,9 @@ const TopNavSection = ({
     }
   }
 
-  const openMenu = useCallback((): void => {
-    openFocusIndexRef.current = 0
-    setFocusedIndex(0)
+  const openMenuAt = useCallback((index: number): void => {
+    initialFocusIndexRef.current = index
+    setFocusedIndex(index)
     setOpen(true)
   }, [])
 
@@ -272,7 +276,7 @@ const TopNavSection = ({
     if (open) {
       closeMenu("other")
     } else {
-      openMenu()
+      openMenuAt(0)
     }
   }
 
@@ -285,14 +289,10 @@ const TopNavSection = ({
 
     if (event.key === "ArrowDown") {
       event.preventDefault()
-      openFocusIndexRef.current = 0
-      setFocusedIndex(0)
-      setOpen(true)
+      openMenuAt(0)
     } else if (event.key === "ArrowUp") {
       event.preventDefault()
-      openFocusIndexRef.current = lastLinkIndex
-      setFocusedIndex(lastLinkIndex)
-      setOpen(true)
+      openMenuAt(lastLinkIndex)
     }
   }
 
@@ -310,6 +310,10 @@ const TopNavSection = ({
   ): React.ReactElement => {
     const isExternal = isExternalPage(item)
     const handleClick = (e: React.MouseEvent): void => {
+      if (widgetsDisabled) {
+        e.preventDefault()
+        return
+      }
       if (isExternal) {
         closeMenu()
         return
@@ -339,8 +343,8 @@ const TopNavSection = ({
           isExternal={isExternal}
           externalUrl={getExternalPageUrl(item)}
           menuTabIndex={clampedIndex === currentLinkIndex ? 0 : -1}
-          setItemRef={setItemRef}
-          itemIndex={currentLinkIndex}
+          setMenuItemRef={setMenuItemRef}
+          menuItemIndex={currentLinkIndex}
         >
           {pageName}
         </SidebarNavLink>
@@ -361,8 +365,8 @@ const TopNavSection = ({
 
     const sectionKey = `${section[0].pageScriptHash ?? ""}-${sectionIndex}`
 
-    // Overflow entries with no section header stay plain menuitems — do not
-    // invent a visible header from the page name.
+    // Sectionless overflow pages render as plain menuitems, without a header
+    // or group wrapper.
     if (!trimmedSectionName) {
       return <Fragment key={sectionKey}>{links}</Fragment>
     }

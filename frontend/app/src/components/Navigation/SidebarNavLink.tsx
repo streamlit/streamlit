@@ -44,13 +44,10 @@ export interface SidebarNavLinkProps {
   externalUrl?: string | null
   /** Roving tabindex for top-nav dropdown menu keyboard navigation. */
   menuTabIndex?: number
-  /**
-   * Receives the anchor element so top-nav dropdown menus can move focus
-   * between items.
-   */
-  setItemRef?: (index: number, element: HTMLAnchorElement | null) => void
-  /** Index passed to setItemRef for top-nav dropdown menus. */
-  itemIndex?: number
+  /** Stores the anchor so top-nav dropdown menus can move focus between items. */
+  setMenuItemRef?: (index: number, element: HTMLAnchorElement | null) => void
+  /** Index for setMenuItemRef in top-nav dropdown menus. */
+  menuItemIndex?: number
 }
 
 const SidebarNavLink = ({
@@ -65,8 +62,8 @@ const SidebarNavLink = ({
   isExternal,
   externalUrl,
   menuTabIndex,
-  setItemRef,
-  itemIndex,
+  setMenuItemRef,
+  menuItemIndex,
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
   // If connection state not connected, or host has disabled inputs,
@@ -91,11 +88,11 @@ const SidebarNavLink = ({
 
   const setAnchorRef = useCallback(
     (element: HTMLAnchorElement | null): void => {
-      if (setItemRef && itemIndex !== undefined) {
-        setItemRef(itemIndex, element)
+      if (setMenuItemRef && menuItemIndex !== undefined) {
+        setMenuItemRef(menuItemIndex, element)
       }
     },
-    [setItemRef, itemIndex]
+    [setMenuItemRef, menuItemIndex]
   )
 
   return (
@@ -112,6 +109,10 @@ const SidebarNavLink = ({
         href={isExternal ? (externalUrl ?? pageUrl) : pageUrl}
         onClick={onClick}
         aria-current={effectiveIsActive ? "page" : undefined}
+        // Dropdown menuitems stay focusable when disabled (WAI-ARIA); pointer-events block clicks.
+        aria-disabled={
+          isInDropdown && disableSidebarNavLinks ? true : undefined
+        }
         target={isExternal ? "_blank" : undefined}
         rel={isExternal ? "noopener noreferrer" : undefined}
         role={isInDropdown ? "menuitem" : undefined}
