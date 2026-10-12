@@ -1200,6 +1200,29 @@ describe("TimeInput widget", () => {
     expect(minuteSegment).toHaveTextContent("45")
   })
 
+  it("does not write null again when an optional empty field is cleared and blurred", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ default: undefined, required: false })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    setStringValueSpy.mockClear()
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.keyboard("09")
+    await user.click(minuteSegment)
+    await user.keyboard("30")
+    await user.click(hourSegment)
+    await user.keyboard("{Backspace}{Backspace}")
+    await user.click(minuteSegment)
+    await user.keyboard("{Backspace}{Backspace}")
+    await user.click(document.body)
+
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(minuteSegment).toHaveTextContent("mm")
+  })
+
   it("clears paste error state when form is cleared", async () => {
     const user = userEvent.setup()
     const props = getProps({ formId: "form", default: "12:45" })
@@ -2246,6 +2269,27 @@ const createFormWidgetMgr = (): {
   }
 }
 
+it("does not submit a dirty field while a paste error is visible", async () => {
+  const user = userEvent.setup()
+  const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+  const props = getProps({ formId: "form", default: "12:45" }, { widgetMgr })
+  render(<TimeInput {...props} />)
+
+  const [hourSegment] = screen.getAllByRole("spinbutton")
+  await user.click(hourSegment)
+  await user.keyboard("11")
+  await user.paste("99:99")
+
+  expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+
+  act(() => {
+    widgetMgr.submitForm("form", undefined)
+  })
+
+  expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  expect(screen.getByTestId("stTimeInputError")).toBeVisible()
+})
+
 describe("required", () => {
   const getRequiredEmptyProps = (
     elementProps: Partial<TimeInputProto> = {},
@@ -2835,6 +2879,44 @@ describe("required", () => {
       "This field is required."
     )
 
+    // An ordinary rerun does not send setValue, so the empty display stays.
+    rerender(
+      <TimeInput
+        {...props}
+        element={TimeInputProto.create({
+          ...props.element,
+          value: "12:45",
+          required: true,
+          default: undefined,
+        })}
+      />
+    )
+
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(minuteSegment).toHaveTextContent("mm")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+  })
+
+  it("restores a dirty empty display when session state sets the same time", async () => {
+    const user = userEvent.setup()
+    const props = getRequiredEmptyProps({
+      value: "12:45",
+      setValue: true,
+    })
+    const { rerender } = render(<TimeInput {...props} />)
+
+    const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await clearAllSegments(user)
+    await user.click(document.body)
+
+    expect(hourSegment).toHaveTextContent("HH")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+
     rerender(
       <TimeInput
         {...props}
@@ -2848,8 +2930,27 @@ describe("required", () => {
       />
     )
 
-    expect(hourSegment).toHaveTextContent("HH")
-    expect(minuteSegment).toHaveTextContent("mm")
+    expect(hourSegment).toHaveAttribute("aria-valuenow", "12")
+    expect(minuteSegment).toHaveAttribute("aria-valuenow", "45")
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("does not submit a form on Enter after clearing a required field", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    vi.spyOn(widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+    const props = getRequiredEmptyProps(
+      { formId: "form", value: "12:45", setValue: true },
+      { widgetMgr }
+    )
+    render(<TimeInput {...props} />)
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await clearAllSegments(user)
+    await user.keyboard("{Enter}")
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
     expect(screen.getByRole("alert")).toHaveTextContent(
       "This field is required."
     )

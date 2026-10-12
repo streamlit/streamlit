@@ -189,10 +189,22 @@ function TimeInput({
   // has a non-empty uncommitted edit, so a session-state or fragment update
   // does not drop those keystrokes. Still apply it over a dirty empty
   // display (a programmatic refill) and over this component's own commit.
-  // An unchanged value is left alone, so a blocked required clear stays
-  // empty when another widget reruns.
+  // An ordinary rerun leaves a blocked required clear empty. A session-state
+  // assignment sends setValue even when the time is unchanged, and that
+  // assignment replaces the empty display.
   const [prevValue, setPrevValue] = useState(value)
-  if (prevValue !== value) {
+  if (
+    element.setValue &&
+    prevValue === value &&
+    dirty &&
+    isNullOrUndefined(displayValue)
+  ) {
+    setDisplayValue(value)
+    setDirty(false)
+    setHasRequiredError(false)
+    setValidationError(null)
+    setPasteOverride(null)
+  } else if (prevValue !== value) {
     setPrevValue(value)
     setValidationError(null)
     setPasteOverride(null)
@@ -205,16 +217,12 @@ function TimeInput({
 
     if (!keepUncommittedEdit) {
       setDisplayValue(value)
-      // An in-form empty commit updates `value` in the same turn the submit
-      // validator paints the required error. Keep that error. Other value
-      // changes, including a programmatic None, clear it.
-      if (
-        !(
-          userCommittedThisValue &&
-          hasRequiredError &&
-          isNullOrUndefined(value)
-        )
-      ) {
+      // On Enter in a form, this widget stages null and the submit validator
+      // paints the required error in the same event. Keep that error. Any
+      // other value change, including a programmatic None, clears it.
+      const keepInFormRequiredError =
+        userCommittedThisValue && hasRequiredError && isNullOrUndefined(value)
+      if (!keepInFormRequiredError) {
         setDirty(false)
         setHasRequiredError(false)
       }
@@ -330,7 +338,7 @@ function TimeInput({
    * blocks an empty commit, so Enter does not submit the form.
    *
    * - Clean, unchanged display: no write, so an unedited blur does not rerun.
-   * - Outside a form, a dirty empty display still runs the required check.
+   * - Outside a form, a dirty empty required display still runs the check.
    *   The check paints the error and keeps the last committed value.
    * - Inside a form, an empty display is staged. The submit validator paints
    *   the error.
@@ -339,14 +347,15 @@ function TimeInput({
     const next = displayValueRef.current
     const current = valueRef.current
     const isDirty = dirtyRef.current
-    if (next === current && !(isDirty && next === null)) {
+    // A non-required field that is already empty must not write null again.
+    if (next === current && !(isDirty && next === null && element.required)) {
       if (isDirty) {
         setDirty(false)
       }
       return true
     }
     return commitDisplayValue(next, { skipRequired: inForm })
-  }, [commitDisplayValue, inForm])
+  }, [commitDisplayValue, element.required, inForm])
 
   /**
    * Called by TimeField on every committed segment change.
@@ -713,13 +722,17 @@ function TimeInput({
   /**
    * Returns false to abort the form submit.
    *
-   * A dirty field commits first, and that commit does not skip required.
+   * A visible paste error blocks submit before a dirty commit. A
+   * submit-button click blurs first, which clears that error, so the click
+   * still submits the last committed value. Enter checks the error before
+   * calling submit.
+   * A dirty field then commits, and that commit does not skip required.
    * A clean empty required field paints the error without writing.
-   * A visible paste error blocks submit. A submit-button click blurs
-   * first, which clears that error, so the click still submits the last
-   * committed value.
    */
   formSubmitValidatorRef.current = () => {
+    if (validationError) {
+      return false
+    }
     if (dirtyRef.current) {
       return commitDisplayValue(displayValueRef.current)
     }
@@ -727,7 +740,7 @@ function TimeInput({
       setHasRequiredError(true)
       return false
     }
-    return !validationError
+    return true
   }
 
   useEffect(() => {
