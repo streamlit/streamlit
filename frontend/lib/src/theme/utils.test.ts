@@ -3746,6 +3746,45 @@ describe("theme overrides", () => {
     )
   })
 
+  it("applies padding from preloaded LIGHT_THEME and DARK_THEME independently", async () => {
+    window.__streamlit = {
+      LIGHT_THEME: {
+        paddingTop: "1rem",
+        paddingBottom: "2rem",
+      },
+      DARK_THEME: {
+        paddingTop: "0.5rem",
+        paddingBottom: "3rem",
+      },
+    }
+
+    const module = await import("./utils")
+    const mergedLight = module.getMergedLightTheme()
+    const mergedDark = module.getMergedDarkTheme()
+
+    expect(mergedLight.emotion.paddingTop).toBe("1rem")
+    expect(mergedLight.emotion.paddingBottom).toBe("2rem")
+    expect(mergedDark.emotion.paddingTop).toBe("0.5rem")
+    expect(mergedDark.emotion.paddingBottom).toBe("3rem")
+  })
+
+  it("falls back when preloaded host padding is invalid and keeps other fields", async () => {
+    window.__streamlit = {
+      LIGHT_THEME: {
+        primaryColor: "purple",
+        paddingTop: "50%",
+        paddingBottom: "-1rem",
+      },
+    }
+
+    const module = await import("./utils")
+    const mergedLight = module.getMergedLightTheme()
+
+    expect(mergedLight.emotion.colors.primary).toBe("purple")
+    expect(mergedLight.emotion.paddingTop).toBeUndefined()
+    expect(mergedLight.emotion.paddingBottom).toBeUndefined()
+  })
+
   it("maintains original theme if no global themes are specified", async () => {
     const module = await import("./utils")
     expect(module.getMergedLightTheme()).toEqual(lightTheme)
@@ -4977,6 +5016,64 @@ describe("Sidebar theme creation", () => {
       expect(mainTheme.emotion.paddingTop).toBeUndefined()
       expect(mainTheme.emotion.paddingBottom).toBeUndefined()
       expect(sidebarTheme.emotion.paddingBottom).toBe("3rem")
+    })
+  })
+
+  describe("SET_CUSTOM_THEME_CONFIG host padding", () => {
+    // setImportedTheme builds a theme via createTheme(CustomThemeConfig) without
+    // section inheritance — same entry point exercised here.
+
+    it("applies top-level and sidebar padding from a host theme payload", () => {
+      const hostPayload = {
+        primaryColor: "#1A6CE7",
+        paddingTop: "1rem",
+        paddingBottom: "2rem",
+        sidebar: {
+          paddingTop: "0.5rem",
+          paddingBottom: "3rem",
+        },
+      }
+      const themeConfigProto = new CustomThemeConfig(hostPayload)
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, themeConfigProto)
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(mainTheme.emotion.colors.primary).toBe("#1A6CE7")
+      expect(mainTheme.emotion.paddingTop).toBe("1rem")
+      expect(mainTheme.emotion.paddingBottom).toBe("2rem")
+      expect(sidebarTheme.emotion.paddingTop).toBe("0.5rem")
+      expect(sidebarTheme.emotion.paddingBottom).toBe("3rem")
+    })
+
+    it("falls back invalid host padding and still applies other theme fields", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const hostPayload = {
+        primaryColor: "#FF0000",
+        paddingTop: "50%",
+        paddingBottom: "1vh",
+      }
+      const themeConfigProto = new CustomThemeConfig(hostPayload)
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, themeConfigProto)
+
+      expect(mainTheme.emotion.colors.primary).toBe("#FF0000")
+      expect(mainTheme.emotion.paddingTop).toBeUndefined()
+      expect(mainTheme.emotion.paddingBottom).toBeUndefined()
+      expect(logWarningSpy).toHaveBeenCalled()
+    })
+
+    it("falls back non-string host padding without breaking the theme update", () => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      // Bypass CustomThemeConfig coercion so parsePadding sees a bare number,
+      // matching a host payload that reaches createEmotionTheme unstringified.
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        primaryColor: "#00AA00",
+        paddingTop: 16 as unknown as string,
+        paddingBottom: true as unknown as string,
+      })
+
+      expect(mainTheme.emotion.colors.primary).toBe("#00AA00")
+      expect(mainTheme.emotion.paddingTop).toBeUndefined()
+      expect(mainTheme.emotion.paddingBottom).toBeUndefined()
+      expect(logWarningSpy).toHaveBeenCalled()
     })
   })
 })
