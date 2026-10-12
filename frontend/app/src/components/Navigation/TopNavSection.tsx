@@ -89,7 +89,7 @@ const TopNavSection = ({
   const showSections = sections.length > 1
 
   const triggerRef = useRef<HTMLButtonElement | null>(null)
-  const linkRefs = useRef<Array<HTMLAnchorElement | null>>([])
+  const menuItemLinksRef = useRef<Array<HTMLAnchorElement | null>>([])
   const closeReasonRef = useRef<CloseReason>("other")
   const prevOpenRef = useRef(false)
   const openFocusIndexRef = useRef(0)
@@ -160,13 +160,13 @@ const TopNavSection = ({
 
   const focusLinkAtIndex = useCallback((index: number): void => {
     setFocusedIndex(index)
-    linkRefs.current[index]?.focus()
+    menuItemLinksRef.current[index]?.focus()
   }, [])
 
   const setLinkRef = useCallback(
     (index: number) =>
       (element: HTMLAnchorElement | null): void => {
-        linkRefs.current[index] = element
+        menuItemLinksRef.current[index] = element
       },
     []
   )
@@ -175,10 +175,10 @@ const TopNavSection = ({
     if (node) {
       const index = Math.min(
         openFocusIndexRef.current,
-        Math.max(0, linkRefs.current.length - 1)
+        Math.max(0, menuItemLinksRef.current.length - 1)
       )
       openFocusIndexRef.current = 0
-      linkRefs.current[index]?.focus()
+      menuItemLinksRef.current[index]?.focus()
       setFocusedIndex(index)
     }
   }, [])
@@ -188,7 +188,7 @@ const TopNavSection = ({
     if (!(target instanceof HTMLAnchorElement)) {
       return
     }
-    const index = linkRefs.current.findIndex(el => el === target)
+    const index = menuItemLinksRef.current.findIndex(el => el === target)
     if (index !== -1) {
       setFocusedIndex(index)
     }
