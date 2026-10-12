@@ -125,6 +125,8 @@ Unset sidebar `backgroundColor` falls back to the resolved main `secondaryBackgr
 
 Host one brand file (path or URL). Each app points `theme.base` at it and overrides as needed.
 
+Put **cross-app brand** keys in that shared file: colors, fonts, radii, borders, chart/dataframe brand palettes, and optional light/dark brand pairs. Keep **app-specific** tweaks in each app’s `config.toml` (for example `paddingTop` / `paddingBottom`, a denser sidebar, or a one-off primary). Do not park a single app’s layout quirks in the shared brand file.
+
 Use approved HTTPS sources for remote `theme.base` and Google Fonts URLs; self-host the theme file or fonts when external disclosure or availability matters.
 
 **`brand-theme.toml`** — `[theme]` is the shared layer and supplies the light colors; `[theme.dark]` overrides those keys in dark mode. A key set only on `[theme]` still applies in dark mode:

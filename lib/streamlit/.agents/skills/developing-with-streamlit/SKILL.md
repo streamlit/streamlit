@@ -196,7 +196,7 @@ When **editing an existing app**, use templates as reference for best practices:
 - Apply consistent patterns from templates to improve the existing code
 
 When applying a **custom theme**, use a config from `assets/templates/themes/configs/`:
-- Prefer `theme.base` (shared corporate/brand TOML or URL) when several apps should inherit the same look, then override per app
+- Prefer `theme.base` (shared corporate/brand TOML or URL) when several apps should inherit the same brand tokens, then override per app for layout-specific tweaks
 - Choose **single-mode** (dracula, financial-dashboard, fluent, jupyter, material-ui, minimal, nord, one-dark-pro, shadcn, solarized-light, ubuntu, vscode) for a locked look
 - Choose **dual-mode** (`shadcn-dual`, `dense-dashboard`) only when the settings appearance toggle should stay available
 - Copy the chosen file to the app's `.streamlit/config.toml` (or point `theme.base` at a shared file)
