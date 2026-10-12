@@ -185,11 +185,8 @@ export const StyledAppViewBlockContainer =
       // Configured value replaces the aesthetic inset regardless of
       // showPadding / hasBottom. Unset keeps the built-in spacing.
       const bottomPadding =
-        theme.paddingBottom !== undefined
-          ? theme.paddingBottom
-          : showPadding && !hasBottom
-            ? "10rem"
-            : theme.spacing.lg
+        theme.paddingBottom ??
+        (showPadding && !hasBottom ? "10rem" : theme.spacing.lg)
 
       return {
         width: theme.sizes.full,
