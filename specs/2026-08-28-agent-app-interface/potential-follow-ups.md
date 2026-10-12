@@ -133,10 +133,10 @@ output.
 
 ## Browser-versus-agent fidelity harness
 
-The spec's success criteria require every advertised interaction to match an equivalent
-browser session on callback order, resulting widget values, and emitted output. Nothing
-checks that yet. A harness would drive one app with the same inputs through Playwright
-and through `interact`, then compare the two.
+The spec's success criteria require four representative flows to match an equivalent
+browser session on callback order, resulting widget values, and emitted output. A
+harness would extend that to every command: drive one app with the same inputs through
+Playwright and through `interact`, then compare the two.
 
 It matters because every divergence found so far was found by accident: the
 `clear_on_submit` reset, the `bind="query-params"` URL write-back, the widget states a
