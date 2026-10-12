@@ -1181,6 +1181,7 @@ class TimeWidgetsMixin:
                 "time_input",
                 key=element_id,
                 action="value",
+                value_schema=agent_spec.STRING,
                 label=label,
                 # Times serialize as ISO 8601, which is also what the public
                 # API accepts back.
@@ -1689,6 +1690,9 @@ class TimeWidgetsMixin:
                 "datetime_input",
                 key=element_id,
                 action="value",
+                # Reported without an offset, which the standard `date-time`
+                # format requires.
+                value_schema=agent_spec.STRING,
                 label=label,
                 # The resolved bounds, which are always present: st.date_input
                 # and st.datetime_input default to a window around the value
@@ -2252,6 +2256,9 @@ class TimeWidgetsMixin:
                 "date_input",
                 key=element_id,
                 action="value",
+                value_schema=agent_spec.range_of(agent_spec.DATE)
+                if parsed_values.is_range
+                else agent_spec.DATE,
                 label=label,
                 min_value=date_input_proto.min or None,
                 max_value=date_input_proto.max or None,

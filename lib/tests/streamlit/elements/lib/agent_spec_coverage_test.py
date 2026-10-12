@@ -56,7 +56,15 @@ if TYPE_CHECKING:
 
 # Keywords of `agent_spec.element` and `agent_spec.block` that are not props.
 _RESERVED_KEYWORDS = frozenset(
-    {"key", "action", "support", "data_url", "data_summary", "transparent"}
+    {
+        "key",
+        "action",
+        "value_schema",
+        "support",
+        "data_url",
+        "data_summary",
+        "transparent",
+    }
 )
 
 # Why a parameter is not in its command's `props`.
@@ -241,7 +249,14 @@ class AgentDescriptionCoverageTest(DeltaGeneratorTestCase):
     """Hold each command's description to its signature."""
 
     def _described_names(self, command: str) -> set[str] | None:
-        """The prop names `command` passes when it describes itself, or None.
+        """The prop names `command` passes when it describes itself, or None."""
+        own = self._own_calls(command)
+        if not own:
+            return None
+        return {name for keywords in own for name in keywords} - _RESERVED_KEYWORDS
+
+    def _own_calls(self, command: str) -> list[dict[str, Any]]:
+        """The keywords of every description `command` builds for itself.
 
         Runs every element mock for the command with recording forced on, so
         commands with several code paths, such as a dataframe with and without
@@ -266,10 +281,20 @@ class AgentDescriptionCoverageTest(DeltaGeneratorTestCase):
             for producer in _PRODUCERS[command]:
                 producer()
 
-        own = [keywords for name, keywords in calls if name == command]
-        if not own:
-            return None
-        return {name for keywords in own for name in keywords} - _RESERVED_KEYWORDS
+        return [keywords for name, keywords in calls if name == command]
+
+    @parameterized.expand(_DESCRIBED_COMMANDS)
+    def test_values_declare_their_schema(self, command: str) -> None:
+        """A widget that holds a value says what JSON a request sends it."""
+        undeclared = [
+            keywords
+            for keywords in self._own_calls(command)
+            if keywords.get("action") == "value" and not keywords.get("value_schema")
+        ]
+        assert not undeclared, (
+            f"st.{command} has `action='value'` but no `value_schema`. Pass the "
+            "JSON Schema of its value, built from the constants in agent_spec."
+        )
 
     @parameterized.expand(_DESCRIBED_COMMANDS)
     def test_description_matches_signature(self, command: str) -> None:

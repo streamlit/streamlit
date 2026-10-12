@@ -458,6 +458,7 @@ class MenuButtonMixin:
                 # A payload-bearing trigger: the fired option is the trigger's
                 # value.
                 action="trigger",
+                value_schema=agent_spec.STRING,
                 label=label,
                 options=list(menu_button_proto.options),
                 help=help,

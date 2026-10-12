@@ -378,6 +378,7 @@ class PaginationMixin:
                 "pagination",
                 key=element_id,
                 action="value",
+                value_schema=agent_spec.INTEGER,
                 num_pages=num_pages,
                 disabled=disabled,
             ),

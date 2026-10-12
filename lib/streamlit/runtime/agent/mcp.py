@@ -95,6 +95,9 @@ named after the Streamlit API.
 keys through `widget_state`, several at once in one rerun; fire one `trigger` \
 key, with a `value` payload for `st.chat_input` or `st.menu_button`. Use only \
 keys from the latest result.
+- An element's `value_schema` is the JSON Schema of the value it takes, such \
+as a `date` string or a two-item list for a range; its `options` and bounds \
+say which values are legal.
 - An `st.form`'s fields go together with one of its submit triggers.
 - `page`, a `url_path` from `pages`, and `query_params` navigate, and cannot \
 be combined with widget changes.

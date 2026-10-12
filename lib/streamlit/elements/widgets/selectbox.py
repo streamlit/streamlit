@@ -830,6 +830,7 @@ class SelectboxMixin:
                 "selectbox",
                 key=element_id,
                 action="value",
+                value_schema=agent_spec.STRING,
                 label=label,
                 # The formatted options, not the author's Python objects:
                 # these are the strings a client has to send back to set the

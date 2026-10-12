@@ -603,6 +603,7 @@ class CheckboxMixin:
                 "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
                 key=element_id,
                 action="value",
+                value_schema=agent_spec.BOOLEAN,
                 label=label,
                 help=help,
                 disabled=disabled,

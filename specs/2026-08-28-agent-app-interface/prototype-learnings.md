@@ -1170,6 +1170,34 @@ as a limit; and a slider is temporal only when its default is a date or time, ju
 its own deserializer, so a string sent to a numeric slider gets the numeric error, and a
 temporal one takes ISO text only rather than raw microseconds.
 
+## 7l. A value schema per element, declared by the command
+
+Wrong JSON types were the most frequent invalid request across the trials, and the
+vocabulary does not say that dates are ISO text or a range is two items. So every
+element that takes a value now carries `value_schema`, the JSON Schema of its shape,
+beside `value`.
+
+- **Declared, not derived.** The first version derived the schema in the agent layer
+  from the widget's registered value type and the Python value it held. It worked, but
+  only by guessing: a tuple meant a range, and an empty widget fell back to its wire
+  type, so an empty `st.feedback` read `string` and a `date_input` with `value=None` lost
+  its `date` format. The command knows all of this for certain when it builds its
+  description, so each one now passes `value_schema` to `agent_spec.element`, built from
+  shared constants (`STRING`, `INTEGER`, `DATE`, `range_of`, ...), one line per widget.
+  The coverage test fails for an `action="value"` description without one.
+- **On the element, not in `actions`.** It describes `value` and sits beside it; a
+  client reads the element for `options` and bounds anyway, and `actions` stays an index.
+- **Shape only.** No `enum` or bounds: those are in `props`, an option list is often the
+  largest part of a snapshot, and bounds would claim a refusal that v1 does not make,
+  since it resets an out-of-range number. Option widgets are `STRING`, since they take
+  their labels.
+- **No `date-time` or `time` format where the value has no offset**, which the standard
+  requires: `st.time_input`, `st.datetime_input`, and time sliders report naive values.
+
+A probe across every v1 widget, including stateful tabs, expanders, and popovers,
+confirms each reported value matches its own `value_schema` and sending all of them back
+is accepted.
+
 ## 8. Open questions the prototype surfaced
 
 1. **How is "the run chain settled" defined?** The prototype's grace period is a

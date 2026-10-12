@@ -46,7 +46,8 @@ How every `st.*` command describes itself, with no consumer yet.
 
 - `ForwardMsgMetadata.agent_props` in `ForwardMsg.proto`.
 - `elements/lib/agent_spec.py` and `runtime/agent/json_encoding.py`: `element`, `block`,
-  the recording gate, dropping unset parameters, `described_column_config`.
+  the recording gate, dropping unset parameters, `described_column_config`, and the
+  `value_schema` building blocks each widget declares its value's JSON shape with.
 - `DeltaGenerator._enqueue` and `_block` carry the description, the transparent wrapper
   gets one, and cache replay records it and drops it when replaying into a browser
   session.
@@ -64,7 +65,8 @@ check their own command's call.
 **Tests:** `agent_spec` unit tests; `agent_spec_coverage_test.py`, already in the
 prototype, which runs every element mock with recording forced on and checks each
 description against its command's signature in both directions (the spec's coverage
-criterion); a test that a normal session never sets `agent_props`; cache replay in both
+criterion) and requires a `value_schema` wherever `action="value"`; a test that a normal
+session never sets `agent_props`; cache replay in both
 directions.
 
 ### PR 2: Snapshot builder
@@ -134,9 +136,10 @@ cookie not authenticating a call, and the app shell still loading with the new
   value back.
 - The `context` request field (timezone and locale).
 
-**Tests:** unit tests for encoding and rejection per widget type; codec fixtures for
-dates and date ranges, decimals, large integers, non-finite numbers, nulls,
-object-valued options, and options that share a label; e2e for a form with two submit
+**Tests:** unit tests for encoding and rejection per widget type, and that every widget's
+reported value matches its own `value_schema`; codec fixtures for dates and date ranges,
+decimals, large integers, non-finite numbers, nulls, object-valued options, and options
+that share a label; e2e for a form with two submit
 buttons, a `format_func` round trip, a chat flow, and a widget that appears only after
 another changes.
 

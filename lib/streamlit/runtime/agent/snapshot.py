@@ -493,6 +493,8 @@ class _SnapshotBuilder:
         # has to walk up the tree to find out why a node is not in `actions`.
         if support := description.get("support") or inherited_support:
             result["support"] = support
+        if value_schema := description.get("value_schema"):
+            result["value_schema"] = value_schema
         return result
 
     def _widget_value(

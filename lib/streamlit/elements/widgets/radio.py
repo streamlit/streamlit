@@ -637,6 +637,7 @@ class RadioMixin:
                 "radio",
                 key=element_id,
                 action="value",
+                value_schema=agent_spec.STRING,
                 label=label,
                 # The formatted options a client must send back, not the
                 # author's Python objects.

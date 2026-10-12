@@ -649,6 +649,9 @@ class SelectSliderMixin:
                 "select_slider",
                 key=element_id,
                 action="value",
+                value_schema=agent_spec.range_of(agent_spec.STRING)
+                if actual_is_range
+                else agent_spec.STRING,
                 label=label,
                 options=formatted_options,
                 help=help,

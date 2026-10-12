@@ -29,6 +29,7 @@ its proto, in the same function, from the same arguments::
             "selectbox",
             key=element_id,
             action="value",
+            value_schema=agent_spec.STRING,
             label=label,
             options=formatted_options,
             help=help,
@@ -41,7 +42,9 @@ its proto, in the same function, from the same arguments::
 
 The element ``type`` is the command name and every keyword is one of the
 command's own parameter names, so the description is written and reviewed by
-whoever owns the command. Because it is built from the arguments rather than
+whoever owns the command. A widget also states the JSON shape of its value,
+``value_schema``, which only the command knows for certain: whether it holds a
+range, a whole number, or a date. Because it is built from the arguments rather than
 from the proto, it carries what the proto cannot: the command's identity where
 several commands share a payload, and parameters that never reach the wire.
 
@@ -92,6 +95,28 @@ _PROPS_KEY: Final = "props"
 _TRANSPARENT_KEY: Final = "transparent"
 _DATA_URL_KEY: Final = "data_url"
 _DATA_SUMMARY_KEY: Final = "data_summary"
+_VALUE_SCHEMA_KEY: Final = "value_schema"
+
+# Building blocks for ``value_schema``: the JSON Schema of the value a request
+# sends an element, in the form the snapshot reports it. They describe shape
+# only; legal values -- options, bounds, ``max_chars`` -- are the element's
+# props. A widget that lists options takes their ``format_func`` labels, so it
+# is described as ``STRING`` whatever the options are.
+STRING: Final[dict[str, Any]] = {"type": "string"}
+INTEGER: Final[dict[str, Any]] = {"type": "integer"}
+NUMBER: Final[dict[str, Any]] = {"type": "number"}
+BOOLEAN: Final[dict[str, Any]] = {"type": "boolean"}
+DATE: Final[dict[str, Any]] = {"type": "string", "format": "date"}
+
+
+def list_of(items: dict[str, Any]) -> dict[str, Any]:
+    """Any number of values, such as a multiselect's."""
+    return {"type": "array", "items": items}
+
+
+def range_of(items: dict[str, Any]) -> dict[str, Any]:
+    """Two values, lowest first: a slider's or a date input's range."""
+    return {"type": "array", "items": items, "minItems": 2, "maxItems": 2}
 
 
 # Sessions created by the agent API. The registry that creates them owns this
@@ -170,6 +195,7 @@ def element(
     *,
     key: str | None = None,
     action: ActionKind | None = None,
+    value_schema: dict[str, Any] | None = None,
     support: SupportReason | None = None,
     data_url: str | None = None,
     data_summary: dict[str, Any] | None = None,
@@ -192,6 +218,10 @@ def element(
     action
         Whether the element holds a value that can be set or is a trigger that
         can be fired. Omit for display elements.
+    value_schema
+        The JSON Schema of the value a request sends: required with
+        ``action="value"``, and for a trigger that carries a payload. Built from
+        the constants above.
     support
         Why the element is not fully usable, when it is not.
     data_url
@@ -210,6 +240,8 @@ def element(
         value changes what the element means, so "absent" is never ambiguous.
     """
     extra: dict[str, Any] = {}
+    if value_schema is not None:
+        extra[_VALUE_SCHEMA_KEY] = value_schema
     if data_url is not None:
         extra[_DATA_URL_KEY] = data_url
     if data_summary is not None:
@@ -340,6 +372,7 @@ def block(
     *,
     key: str | None = None,
     action: ActionKind | None = None,
+    value_schema: dict[str, Any] | None = None,
     support: SupportReason | None = None,
     transparent: bool = False,
     **props: Any,
@@ -349,10 +382,15 @@ def block(
     ``transparent`` marks an internal wrapper with no public counterpart, whose
     children belong to the parent container.
 
-    ``action`` is for a container that is a widget in its own right, such as
-    ``st.tabs(on_change="rerun")``, whose value is the open tab.
+    ``action`` and ``value_schema`` are for a container that is a widget in its
+    own right, such as ``st.tabs(on_change="rerun")``, whose value is the open
+    tab.
     """
-    extra = {_TRANSPARENT_KEY: True} if transparent else None
+    extra: dict[str, Any] = {}
+    if transparent:
+        extra[_TRANSPARENT_KEY] = True
+    if value_schema is not None:
+        extra[_VALUE_SCHEMA_KEY] = value_schema
     return _json_description(
         command, props, key=key, action=action, support=support, extra=extra
     )

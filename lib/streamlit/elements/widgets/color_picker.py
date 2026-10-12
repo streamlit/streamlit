@@ -404,6 +404,7 @@ class ColorPickerMixin:
                 "color_picker",
                 key=element_id,
                 action="value",
+                value_schema=agent_spec.STRING,
                 label=label,
                 help=help,
                 disabled=disabled,

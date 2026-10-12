@@ -437,6 +437,7 @@ right now. Naming follows the public API, for the reason above:
               "filter_mode": "fuzzy",
               "on_change": "rerun"
             },
+            "value_schema": { "type": "string" },
             "value": "All"
           },
           {
@@ -583,9 +584,9 @@ Rules:
   authored `key` where the element has one, is the identity.
 - **The `actions` list is an index, not a duplicate.** It lists the key of every element that
   can be set (`value`) or fired (`trigger`) right now, so a model can see the action space
-  at a glance; type and constraints are read from the element in the tree. A `disabled`
-  widget appears in the tree but not in `actions`. Form membership is visible from
-  nesting.
+  at a glance; meaning, `value_schema`, and constraints are read from the element in the
+  tree. A `disabled` widget appears in the tree but not in `actions`. Form membership is
+  visible from nesting.
 - **Unsupported things stay visible, on the element itself.** An element that is not
   fully supported carries a `support` field with a machine-readable reason, and absent
   means fully supported. There are two: `browser_required` where what renders may differ
@@ -629,7 +630,8 @@ Rules:
   additive rule, and authored keys keep its addressing stable.
 - **Values are plain JSON, encoded one way everywhere**, as the table below lists. The
   same encoding applies to `value`, `props`, and table rows, and is what a request sends
-  back.
+  back; each element's `value_schema` states it for that element, with the format in
+  the last column.
 
 | Python value                        | JSON                                                    | Example                                       | JSON Schema format                                                      |
 | ----------------------------------- | ------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------- |
@@ -735,10 +737,11 @@ path rejects with `invalid_value`, because a silently reset value reads as succe
 
 Until then, v1 checks three things itself, each refused with `invalid_value`:
 
-- **The JSON type.** A number is not text except where it names an option, and dates and
-  times are ISO text, even for a slider that carries them as microseconds. A single value
-  and a one-item list are interchangeable, because single-select button groups and single
-  sliders carry one value in a list.
+- **The JSON type**, which the element's `value_schema` states. A number is not text except
+  where it names an option, and dates and times are ISO text, even for a slider that
+  carries them as microseconds. The server is a little more lenient than the schema: a
+  single value and a one-item list are interchangeable, because single-select button
+  groups and single sliders carry one value in a list.
 - **The options.** A value must be one of the widget's `options`, the most common
   mistake, and the error lists the legal values. A widget with `accept_new_options` also
   takes new text, as it does in the browser.
@@ -803,9 +806,41 @@ would make the app do something wrong. Two sit on that line today:
 
 Doing the rest of either is [follow-up #8](#follow-ups).
 
-Actions do not carry a JSON Schema in v1. The element's `type` plus its constraint
-properties (`options`, `min_value`, `max_value`, `max_chars`, `required`, `validate`)
-already tell a model what to send; a schema per action is part of follow-up #8.
+**Every element that takes a value carries its JSON Schema, describing shape, not legal
+values.** Sending the wrong JSON type is the commonest invalid request, and the element
+vocabulary does not say that dates are ISO text or that a range is a two-item list. So
+a widget, and a trigger with a payload such as `st.chat_input`, carries a
+`value_schema` beside its `value`:
+
+```json
+{
+  "type": "date_input",
+  "key": "period",
+  "props": { "label": "Period", "disabled": false },
+  "value_schema": {
+    "type": "array",
+    "items": { "type": "string", "format": "date" },
+    "minItems": 2,
+    "maxItems": 2
+  },
+  "value": ["2026-01-01", "2026-03-31"]
+}
+```
+
+- **It describes the form `value` is reported in**, so sending that back always
+  matches: option labels as strings, `integer` for a whole-number slider, a format for
+  dates, and a two-item list for a range.
+- **Legal values stay in `props`.** No `enum` and no bounds: `options`, `min_value`,
+  `max_value`, and `max_chars` are already there under the names models know, copying
+  an option list would double the largest part of many snapshots, and bounds would make
+  the schema stricter than v1, which resets an out-of-range number rather than refusing
+  it. `null` clears a widget that can be empty.
+- **Each command declares it, with the rest of its description.** Only the command knows
+  for certain whether it holds a range, a whole number, or a date, including while it is
+  empty, so an empty `st.feedback` still says `integer`. A few shared building blocks
+  keep each declaration to one line, and the coverage test fails for a widget without
+  one. A value with a richer shape, such as a dataframe selection, is declared the same
+  way.
 
 **Every action must be treated as consequential.** A selectbox can trigger a database
 write just as a button can, so Streamlit does not label any action read-only, idempotent,
@@ -1126,7 +1161,8 @@ and `st.caption` both produce markdown, or that a command wrote the wrong name. 
 runs each command's existing element mock with recording on and checks what it reported
 against the command's signature in both directions: every `props` key is a parameter or a
 documented derived addition, and every parameter is reported or listed as omitted with a
-reason. Streamlit already requires a mock for every public command, so a new command or
+reason. It also requires a `value_schema` on every element that takes a value.
+Streamlit already requires a mock for every public command, so a new command or
 parameter fails CI until someone decides what an agent sees. The test proves the paths the
 mocks exercise, not every branch; `undescribed_types` reports a gap it misses to clients
 at runtime. Generating the names from `gather_metrics`, which already wraps every command,
@@ -1194,14 +1230,11 @@ numbered for reference rather than ranked.
    drill down, so without them an agent stops short of the detail views.
    Dataframe row and column selection is the smaller, most common case, and its state is
    already a JSON value the runtime validates; chart selections, whose point identity is
-   library-specific, follow. Then uploads, including `st.chat_input` attachments;
-   `st.data_editor` edits; deferred downloads; per-action JSON Schema, which would give
-   each entry in `actions` the schema of the value it accepts, built from named
-   encodings defined once in the OpenAPI document with standard JSON Schema formats
-   (`date`, `date-time`, `time`) and the element's own constraints (`enum` for options,
-   bounds), so the encodings above become machine-readable per key; and the browser's
-   half of forms and bound parameters — applying `clear_on_submit` and rewriting a
-   bound parameter when its widget is set.
+   library-specific, follow. Each declares its `value_schema` as every widget does, with
+   the object shape its selection has. Then uploads, including
+   `st.chat_input` attachments; `st.data_editor` edits; deferred downloads; and the
+   browser's half of forms and bound parameters — applying `clear_on_submit` and
+   rewriting a bound parameter when its widget is set.
 9. **Compact responses.** Large content moves to media storage, the pattern tables
    already use, instead of staying inline: an oversized figure specification or option
    list is served behind `data.url`, readable through `get_data`, with a short summary
@@ -1290,8 +1323,8 @@ v1 ships when:
 - JSON encodings are pinned, each with a codec test fixture, for dates, datetimes,
   decimals, large integers, non-finite numbers, ranges, nulls, and object-valued options,
   including options that share a label.
-- Whatever the snapshot reports as the value of an element in `actions` can be sent
-  straight back, except a label several options share.
+- Whatever the snapshot reports as the value of an element in `actions` matches its
+  `value_schema` and can be sent straight back, except a label several options share.
 - A filtered dashboard, a form with two submit buttons, a chat flow, and a multi-turn
   dialog all complete without a browser, through Streamlit's production execution path,
   and conformance tests show each matches an equivalent browser session on callback

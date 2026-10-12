@@ -1291,6 +1291,13 @@ class SliderMixin:
             slider_proto.set_value = True
 
         layout_config = create_layout_config(width=width)
+        # Times and datetimes are reported without an offset, which the
+        # standard `time` and `date-time` formats require.
+        value_item = {
+            SliderProto.INT: agent_spec.INTEGER,
+            SliderProto.FLOAT: agent_spec.NUMBER,
+            SliderProto.DATE: agent_spec.DATE,
+        }.get(data_type, agent_spec.STRING)
 
         self.dg._enqueue(
             "slider",
@@ -1301,6 +1308,9 @@ class SliderMixin:
                 "slider",
                 key=element_id,
                 action="value",
+                value_schema=value_item
+                if single_value
+                else agent_spec.range_of(value_item),
                 label=label,
                 min_value=described_bounds[0],
                 max_value=described_bounds[1],

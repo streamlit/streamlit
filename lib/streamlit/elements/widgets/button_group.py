@@ -1532,6 +1532,9 @@ class ButtonGroupMixin:
                 "pills" if style == "pills" else "segmented_control",
                 key=element_id,
                 action="value",
+                value_schema=agent_spec.STRING
+                if selection_mode == "single"
+                else agent_spec.list_of(agent_spec.STRING),
                 label=label,
                 # The labels the widget accepts, not the proto's display
                 # content, which moves a leading icon into its own field.

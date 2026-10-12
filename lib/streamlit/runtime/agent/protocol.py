@@ -497,8 +497,8 @@ unchanged.
 **The response is the schema.** Which controls exist, and what values they \
 accept, depends on what the app rendered on its last run -- conditional \
 widgets appear and disappear. So no static document can describe the action \
-space: read `actions` and the elements' `options` and bounds from the snapshot \
-you just received, and act on keys you just read.
+space: read `actions`, and each element's `value_schema`, `options`, and \
+bounds, from the snapshot you just received, and act on keys you just read.
 
 **The element vocabulary is the Streamlit API.** An element's `type` is a \
 public command name and its `props` keys are that command's parameter names, \
@@ -818,9 +818,9 @@ def schemas() -> dict[str, Any]:
                     "description": (
                         "An index of everything you may do right now, so the "
                         "action space is visible at a glance. It is an index, "
-                        "not a duplicate: read each element's type and "
-                        "constraints from the tree. A disabled element appears "
-                        "in the tree but not here."
+                        "not a duplicate: read each element's meaning, "
+                        "`value_schema`, and constraints from the tree. A "
+                        "disabled element appears in the tree but not here."
                     ),
                 },
                 "undescribed_types": {
@@ -896,6 +896,23 @@ def schemas() -> dict[str, Any]:
                         "in `props` instead, so an `st.metric` number is "
                         "`props.value`."
                     )
+                },
+                "value_schema": {
+                    "type": "object",
+                    "additionalProperties": True,
+                    "description": (
+                        "A JSON Schema for the value a request sends this "
+                        "element: its `widget_state` entry, or the `value` of a "
+                        "trigger that carries one, such as `st.chat_input`. "
+                        "Absent on elements that take no value.\n\n"
+                        "It describes the shape, in the form `value` is "
+                        "reported, so sending that back always matches: the "
+                        "JSON type, a `format` for dates, and "
+                        "`minItems`/`maxItems` of 2 for a range. The legal "
+                        "values are the element's `props` -- `options`, "
+                        "bounds, `max_chars` -- and `null` clears a widget "
+                        "that can be empty."
+                    ),
                 },
                 "data": {
                     "$ref": "#/components/schemas/ElementData",

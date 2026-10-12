@@ -957,6 +957,9 @@ class NumberInputMixin:
                 "number_input",
                 key=element_id,
                 action="value",
+                value_schema=agent_spec.INTEGER
+                if data_type == NumberInputProto.INT
+                else agent_spec.NUMBER,
                 label=label,
                 # The authored bounds, absent when the author set none: unset
                 # bounds were backfilled with JavaScript safe-number sentinels

@@ -356,6 +356,8 @@ class FeedbackMixin:
                 "feedback",
                 key=element_id,
                 action="value",
+                # The index of the chosen option.
+                value_schema=agent_spec.INTEGER,
                 options=options,
                 disabled=disabled,
             ),

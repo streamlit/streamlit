@@ -1175,6 +1175,7 @@ class ChatMixin:
             # A payload-bearing trigger: the request carries the prompt text
             # as the trigger's value.
             action="trigger",
+            value_schema=agent_spec.STRING,
             placeholder=placeholder,
             max_chars=max_chars,
             accept_file=accept_file,
