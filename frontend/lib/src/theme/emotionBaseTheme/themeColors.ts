@@ -25,8 +25,9 @@ export const requiredThemeColors = {
   primary: colors.red70,
   secondary: colors.blue70, // Used in progress bar
 
-  // Solid design defaults for the named palette (main / background / text).
-  // These are not steps in primitives/colors.ts.
+  // Named palette defaults (main / background / text) come from the design
+  // spec, not the primitives scale. Backgrounds are opaque and tuned for the
+  // default `bgColor`.
   redColor: "#D94A57",
   orangeColor: "#E0682B",
   yellowColor: "#BB8300",
