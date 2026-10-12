@@ -236,6 +236,7 @@ If unset, header text/icons use a faded `textColor`. Selected-column header text
 
 ```toml
 [theme]
+# Pick one `font` value; the commented-out lines are alternatives.
 font = "sans-serif"  # or "serif" / "monospace"
 # font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
 # font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
@@ -315,8 +316,8 @@ See [Choose a config shape](#choose-a-config-shape) for locked vs toggle layouts
 **Runtime:** `st.context.theme.type` is `"light"` or `"dark"`—use for logos or third-party pieces that ignore theme tokens; keep colors/fonts in config. The value comes from the active theme's background color (CSS does not change it) and can be wrong on the first run of a session and right after a Settings appearance change, until the next rerun.
 
 ```python
-if st.context.theme.type == "dark":
-    ...
+logo = "logo-light.png" if st.context.theme.type == "dark" else "logo-dark.png"
+st.image(logo, alt="Company logo")
 ```
 
 ## Design principles
