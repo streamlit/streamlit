@@ -22,10 +22,12 @@ import pickle
 import re
 import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from unittest.mock import MagicMock, Mock, mock_open, patch
 
 import numpy as np
+import pandas as pd
 import pytest
 from parameterized import parameterized
 
@@ -137,6 +139,134 @@ class CacheDataTest(unittest.TestCase):
 
         assert r1 == [1, 1]
         assert r2 == [0, 1]
+
+    def test_cow_dataframe_hit_shares_data_and_isolates_mutation(self) -> None:
+        """CoW hits share buffers while isolating data, axes, and metadata."""
+        calls = 0
+
+        @st.cache_data(copy="cow")
+        def get_data() -> pd.DataFrame:
+            nonlocal calls
+            calls += 1
+            result = pd.DataFrame({"value": [1, 2], "label": ["a", "b"]})
+            result.attrs["metadata"] = {"source": "cache"}
+            return result
+
+        first = get_data()
+        second = get_data()
+
+        assert calls == 1
+        assert np.shares_memory(first["value"].to_numpy(), second["value"].to_numpy())
+
+        first.loc[0, "value"] = 99
+        first.index.name = "changed"
+        first.columns.name = "changed"
+        first.attrs["metadata"]["source"] = "caller"
+
+        third = get_data()
+        assert third.loc[0, "value"] == 1
+        assert third.index.name is None
+        assert third.columns.name is None
+        assert third.attrs == {"metadata": {"source": "cache"}}
+
+    def test_cow_nested_dashboard_return_is_isolated(self) -> None:
+        """The dashboard's tuple of DataFrames and timestamp is supported."""
+
+        @st.cache_data(copy="cow")
+        def prepare() -> tuple[pd.DataFrame, pd.DataFrame, pd.Timestamp]:
+            return (
+                pd.DataFrame({"area": ["A"], "score": [1]}),
+                pd.DataFrame({"org": ["O"], "score": [2]}),
+                pd.Timestamp("2026-10-12"),
+            )
+
+        first = prepare()
+        first[0].loc[0, "score"] = 100
+        first[1].loc[0, "score"] = 200
+
+        second = prepare()
+        assert second[0].loc[0, "score"] == 1
+        assert second[1].loc[0, "score"] == 2
+        assert second[2] == pd.Timestamp("2026-10-12")
+
+    def test_cow_concurrent_readers_isolate_mutation(self) -> None:
+        """Concurrent callers cannot mutate each other or the cached baseline."""
+
+        @st.cache_data(copy="cow")
+        def get_data() -> pd.DataFrame:
+            return pd.DataFrame({"value": range(1000)})
+
+        get_data()
+        barrier = threading.Barrier(8)
+
+        def read_and_mutate(marker: int) -> int:
+            result = get_data()
+            barrier.wait()
+            result.loc[0, "value"] = marker
+            return int(result.loc[0, "value"])
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            observed = list(executor.map(read_and_mutate, range(10, 18)))
+
+        assert observed == list(range(10, 18))
+        assert get_data().loc[0, "value"] == 0
+
+    def test_cow_clear_and_lru_eviction_recompute_values(self) -> None:
+        """Function clear and max_entries eviction remove CoW baselines."""
+        calls: list[int] = []
+
+        @st.cache_data(copy="cow", max_entries=1)
+        def get_data(key: int) -> pd.DataFrame:
+            calls.append(key)
+            return pd.DataFrame({"key": [key]})
+
+        get_data(1)
+        get_data(2)
+        get_data(1)
+        assert calls == [1, 2, 1]
+
+        get_data.clear()
+        get_data(1)
+        assert calls == [1, 2, 1, 1]
+
+    def test_cow_rejects_unsupported_nested_mutable_value(self) -> None:
+        """Unsupported values fail instead of being shared between callers."""
+
+        @st.cache_data(copy="cow")
+        def get_data() -> dict[str, set[int]]:
+            return {"mutable": {1, 2}}
+
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"cannot safely isolate the return value\['mutable'\]",
+        ):
+            get_data()
+
+    def test_cow_rejects_mutable_dataframe_object_cell(self) -> None:
+        """Mutable Python objects inside object columns are not shared silently."""
+
+        @st.cache_data(copy="cow")
+        def get_data() -> pd.DataFrame:
+            return pd.DataFrame({"nested": [["mutable"]]})
+
+        with pytest.raises(StreamlitAPIException, match="column 0 cell"):
+            get_data()
+
+    def test_invalid_copy_mode_raises(self) -> None:
+        """An unknown cache copy mode is rejected at decoration time."""
+        with pytest.raises(StreamlitValueError, match="copy"):
+
+            @st.cache_data(copy="shared")  # type: ignore[arg-type]
+            def get_data() -> int:
+                return 1
+
+    def test_cow_cannot_be_persisted(self) -> None:
+        """Process-local CoW entries cannot be combined with disk persistence."""
+        with pytest.raises(StreamlitIncompatibleParametersError, match=r'copy="cow"'):
+
+            @st.cache_data(copy="cow", persist="disk")
+            def get_data() -> pd.DataFrame:
+                return pd.DataFrame({"value": [1]})
 
     def test_cached_member_function_with_hash_func(self):
         """@st.cache_data can be applied to class member functions
