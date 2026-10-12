@@ -66,6 +66,9 @@ from streamlit.runtime.caching.storage.cache_storage_protocol import (
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
+from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
+    InMemoryCacheStorageWrapper,
+)
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.stats import (
     CACHE_MEMORY_FAMILY,
@@ -172,6 +175,9 @@ class DataCaches(StatsProvider):
 
     def __init__(self) -> None:
         self._caches_lock = threading.Lock()
+        # Serialize cache creation, replacement, and clearing without holding the
+        # registry lock across storage I/O.
+        self._lifecycle_lock = threading.Lock()
         # Map of session IDs to map of function keys to caches.
         self._function_caches: dict[str | None, dict[str, DataCache[Any]]] = {}
 
@@ -211,28 +217,28 @@ class DataCaches(StatsProvider):
         else:
             session_id = get_session_id_or_throw()
 
-        # Get the existing cache, if it exists, and validate that its params
-        # haven't changed.
-        with self._caches_lock:
-            session_caches = self._function_caches.get(session_id)
-            if session_caches is None:
-                session_caches = self._function_caches[session_id] = {}
+        # Cache replacement can wait for a committed write and close storage. Keep
+        # those operations outside _caches_lock so unrelated registry readers are not
+        # blocked behind storage I/O.
+        with self._lifecycle_lock:
+            with self._caches_lock:
+                session_caches = self._function_caches.setdefault(session_id, {})
+                cache = session_caches.get(key)
+                if (
+                    cache is not None
+                    and cache.fresh_ttl_seconds == fresh_ttl_seconds
+                    and cache.max_entries == max_entries
+                    and cache.max_size_bytes == max_size_bytes
+                    and cache.persist == persist
+                    and cache.refresh_mode == refresh_mode
+                ):
+                    return cache
+                if cache is not None:
+                    del session_caches[key]
 
-            cache = session_caches.get(key)
-            if (
-                cache is not None
-                and cache.fresh_ttl_seconds == fresh_ttl_seconds
-                and cache.max_entries == max_entries
-                and cache.max_size_bytes == max_size_bytes
-                and cache.persist == persist
-                and cache.refresh_mode == refresh_mode
-            ):
-                return cache
-
-            # Close the existing cache's storage, if it exists.
             if cache is not None:
-                # Detach the old cache so any in-flight background refresh is discarded
-                # rather than written back to a replaced cache.
+                # Detach the old cache so any in-flight result is committed before
+                # replacement, then discarded by closing the old storage.
                 cache.mark_detached()
                 _LOGGER.debug(
                     "Closing existing DataCache storage "
@@ -246,7 +252,6 @@ class DataCaches(StatsProvider):
                 )
                 cache.storage.close()
 
-            # Create a new cache object and put it in our dict
             _LOGGER.debug(
                 "Creating new DataCache "
                 "(key=%s, persist=%s, max_entries=%s, max_size=%s, ttl=%s)",
@@ -261,7 +266,6 @@ class DataCaches(StatsProvider):
             hard_ttl_seconds = cache_utils.get_hard_ttl_seconds(
                 refresh_mode, fresh_ttl_seconds
             )
-
             cache_context = self.create_cache_storage_context(
                 function_key=key,
                 function_name=display_name,
@@ -270,9 +274,7 @@ class DataCaches(StatsProvider):
                 max_size_bytes=max_size_bytes,
                 persist=persist,
             )
-            cache_storage_manager = self.get_storage_manager()
-            storage = cache_storage_manager.create(cache_context)
-
+            storage = self.get_storage_manager().create(cache_context)
             cache = DataCache(
                 key=key,
                 storage=storage,
@@ -284,40 +286,39 @@ class DataCaches(StatsProvider):
                 display_name=display_name,
                 refresh_mode=refresh_mode,
             )
-            self._function_caches[session_id][key] = cache
+            with self._caches_lock:
+                self._function_caches.setdefault(session_id, {})[key] = cache
             return cache
 
     def clear_session(self, session_id: str) -> None:
         """Clears all caches for the given session ID."""
-        # Hold the lock while removing the cache, but release it while clearing.
-        with self._caches_lock:
-            session_caches = self._function_caches.get(session_id)
-            if session_caches is not None:
-                del self._function_caches[session_id]
+        with self._lifecycle_lock:
+            # Hold the registry lock while removing the cache, but release it before
+            # waiting for writes or touching storage.
+            with self._caches_lock:
+                session_caches = self._function_caches.pop(session_id, None)
 
-        if session_caches is not None:
-            for cache in session_caches.values():
-                # Detach so a background refresh that completes after the session
-                # ended is discarded rather than repopulating the cache.
-                cache.mark_detached()
-                cache.clear()
-                cache.storage.close()
+            if session_caches is not None:
+                for cache in session_caches.values():
+                    cache.mark_detached()
+                    cache.clear()
+                    cache.storage.close()
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
-        with self._caches_lock:
-            # Detach every cache so in-flight background refreshes are discarded, even
-            # on the optimized storage-manager clear_all path (which doesn't iterate
-            # individual caches).
-            for data_caches in self._function_caches.values():
-                for data_cache in data_caches.values():
-                    data_cache.mark_detached()
-            all_caches = [
-                data_cache
-                for data_caches in self._function_caches.values()
-                for data_cache in data_caches.values()
-            ]
+        with self._lifecycle_lock:
+            with self._caches_lock:
+                all_caches = [
+                    data_cache
+                    for data_caches in self._function_caches.values()
+                    for data_cache in data_caches.values()
+                ]
+                self._function_caches = {}
 
+            # Wait for committed writes before clearing storage. Since detached caches
+            # reject later writes, neither memory nor disk can be restored afterward.
+            for data_cache in all_caches:
+                data_cache.mark_detached()
             try:
                 # try to remove in optimal way if such ability provided by
                 # storage manager clear_all method;
@@ -329,7 +330,6 @@ class DataCaches(StatsProvider):
                     data_cache.clear()
             for data_cache in all_caches:
                 data_cache.storage.close()
-            self._function_caches = {}
 
     def get_stats(
         self,
@@ -588,18 +588,19 @@ class CacheDataAPI:
             the least recently used cached entry will be removed. Defaults to None.
 
         max_size : int, str, or None
-            The maximum total serialized size of this function's in-memory cache.
-            An integer is interpreted as bytes. A string must include a unit, such
-            as ``"500MB"`` or ``"1.5GiB"``. Units use powers of 1024, so ``"MB"``
-            and ``"MiB"`` are equivalent. When the limit is exceeded, the least
-            recently used entries are removed until the cache fits.
+            Maximum pickled size of this function's in-memory cache. An integer is
+            a byte count. A string must include a unit, such as ``"500MB"`` or
+            ``"1.5GiB"``. Units are powers of 1024, so ``"MB"`` and ``"MiB"`` are
+            the same. ``None`` (default) disables this per-function limit.
+            ``server.maxCachedDataSize`` still defaults to ``"2gb"`` across
+            in-memory ``st.cache_data`` caches.
 
-            This limit measures pickled bytes, not live Python heap usage or process
-            RSS. It applies only to the in-memory layer when ``persist="disk"``.
-            A single value larger than the limit is retained rather than rejected,
-            after evicting every other entry in this function's cache. If this is
-            ``None`` (default), the per-function limit is disabled; the process-wide
-            ``server.maxCachedDataSize`` budget still defaults to ``"2gb"``.
+            On a write that would exceed the limit, Streamlit drops
+            least-recently-used entries until the new value fits. One value larger
+            than the limit is kept, after every other entry in this function's cache
+            is evicted, and Streamlit logs a warning once. With ``persist="disk"``,
+            only the in-memory copy is dropped; a later read can load the disk copy
+            again. This measures pickled bytes, not process RSS.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
@@ -679,6 +680,12 @@ class CacheDataAPI:
         >>>
         >>> d3 = fetch_and_clean_data(DATA_URL_2)
         >>> # This is a different URL, so the function executes.
+
+        Limit a function's in-memory cache by its pickled size:
+
+        >>> @st.cache_data(max_size="500MB")
+        ... def load_large_dataset(path):
+        ...     return read_dataset(path)
 
         To cache an async function, await the decorated function from an async entry
         point:
@@ -782,7 +789,7 @@ class CacheDataAPI:
         if scope not in {"global", "session"}:
             raise StreamlitValueError("scope", ["'global'", "'session'"])
 
-        max_size_bytes = byte_util.to_bytes(max_size)
+        max_size_bytes = byte_util.cache_data_max_size_to_bytes(max_size)
 
         validate_refresh_mode(
             refresh_mode,
@@ -938,7 +945,7 @@ class DataCache(Cache[R]):
         with self._write_lock:
             if not self.is_active:
                 return
-        self.storage.set(value_key, pickled_entry)
+            self.storage.set(value_key, pickled_entry)
 
     def _pickle_result(
         self, value_key: str, value: R, messages: list[MsgData]
@@ -1041,15 +1048,16 @@ class DataCache(Cache[R]):
                 return
             # Presence check: only write back if the entry still exists. A hard-expired
             # / evicted / cleared entry should stay gone so the next access is a miss.
+            if isinstance(self.storage, InMemoryCacheStorageWrapper):
+                self.storage.set_if_present(value_key, pickled_entry)
+                return
             try:
-                set_if_present = getattr(self.storage, "set_if_present", None)
-                if callable(set_if_present):
-                    set_if_present(value_key, pickled_entry)
-                    return
                 if not self.storage.has(value_key):
                     return
             except CacheStorageError:
                 return
+            # Keep the write outside the presence-check exception handler so storage
+            # write failures still propagate.
             self.storage.set(value_key, pickled_entry)
 
     def _clear(self, key: str | None = None) -> None:

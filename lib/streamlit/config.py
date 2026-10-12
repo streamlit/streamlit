@@ -27,7 +27,7 @@ from collections import OrderedDict
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Final, Literal
 
-from streamlit import config_util, development, env_util, file_util, util
+from streamlit import byte_util, config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
 from streamlit.signal_util import Signal
@@ -958,12 +958,12 @@ _create_option(
     "server.maxCachedDataSize",
     description="""
         Maximum combined serialized size of all @st.cache_data in-memory caches.
-        Use a binary unit string such as "2gb" or "500mb" (powers of 1024; "mb"
-        and "mib" are equivalent). Unlike server.maxUploadSize, a bare nonzero
-        number is rejected. Use 0 or "0" to disable the process-wide budget. When
-        exceeded, Streamlit evicts globally least-recently-used entries. This
-        bounds pickled cache bytes, not process RSS, and does not delete persisted
-        disk entries. Streamlit reads this value when the server starts.
+        Use a string with a binary unit, such as "2gb" or "500mb" (powers of
+        1024, so "mb" and "mib" are equivalent). Numbers without a unit are
+        rejected, except 0, which disables the budget. When exceeded, Streamlit
+        evicts globally least-recently-used entries. This bounds pickled cache
+        bytes, not process RSS, and does not delete persisted disk entries.
+        Streamlit reads this value when the server starts.
     """,
     default_val="2gb",
     type_=str,
@@ -3112,6 +3112,17 @@ def _check_conflicts() -> None:
     from streamlit.logger import get_logger
 
     logger: Final = get_logger(__name__)
+
+    # Validate this option at config-load time so an invalid value is reported as a
+    # config error instead of failing later during Runtime construction.
+    try:
+        byte_util.config_max_cached_data_size_to_bytes(
+            get_option("server.maxCachedDataSize")
+        )
+    except StreamlitAPIException as exc:
+        raise RuntimeError(
+            f"Invalid value for config option server.maxCachedDataSize: {exc}"
+        ) from exc
 
     if get_option("global.developmentMode"):
         if not _is_unset("server.port"):

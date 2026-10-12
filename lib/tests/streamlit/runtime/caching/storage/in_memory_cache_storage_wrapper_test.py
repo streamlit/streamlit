@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from testfixtures import TempDirectory
@@ -123,6 +123,25 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         ) as mock_persist_get:
             assert wrapped_storage.get("some-key") == b"some-value"
             mock_persist_get.assert_not_called()
+
+    def test_memory_read_uses_one_ttl_timer_value(self):
+        """An entry cannot expire between separate membership and value lookups."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            ttl_seconds=0.5,
+        )
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=DummyCacheStorage(), context=context
+        )
+        wrapped_storage._mem_cache._timer = lambda: 0.0
+        wrapped_storage.set("some-key", b"some-value")
+
+        timer = Mock(side_effect=[0.0, 1.0])
+        wrapped_storage._mem_cache._timer = timer
+
+        assert wrapped_storage.get("some-key") == b"some-value"
+        timer.assert_called_once_with()
 
     def test_has_key_in_memory_storage_does_not_check_persist_storage(self):
         context = self.get_storage_context()

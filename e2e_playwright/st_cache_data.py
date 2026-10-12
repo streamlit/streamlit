@@ -185,3 +185,41 @@ if st.session_state.get("run_cache_data_background_refresh_test", False):
         f"Background refresh value: {background_refresh_value(background_refresh_key)}"
     )
     background_refresh_with_display(background_refresh_key)
+
+
+@st.cache_resource(show_spinner=False)
+def max_size_execution_counts(session_key: str) -> dict[str, int]:  # noqa: ARG001
+    return {}
+
+
+@st.cache_data(max_size="1KiB", show_spinner=False)
+def max_size_lru_value(session_key: str, key: str) -> bytes:
+    counts = max_size_execution_counts(session_key)
+    counts[key] = counts.get(key, 0) + 1
+    return bytes(200)
+
+
+@st.cache_data(max_size="1B", show_spinner=False)
+def max_size_oversized_value(session_key: str) -> bytes:
+    counts = max_size_execution_counts(session_key)
+    counts["oversized"] = counts.get("oversized", 0) + 1
+    return bytes(200)
+
+
+if st.button("Run cache_data max_size test"):
+    max_size_key = uuid.uuid4().hex
+    max_size_lru_value(max_size_key, "a")
+    max_size_lru_value(max_size_key, "b")
+    max_size_lru_value(max_size_key, "a")
+    max_size_lru_value(max_size_key, "c")
+    max_size_lru_value(max_size_key, "b")
+    max_size_oversized_value(max_size_key)
+    max_size_oversized_value(max_size_key)
+    counts = max_size_execution_counts(max_size_key)
+    st.session_state.cache_data_max_size_result = (
+        f"a={counts.get('a', 0)}, b={counts.get('b', 0)}, "
+        f"c={counts.get('c', 0)}; oversized={counts.get('oversized', 0)}"
+    )
+
+if result := st.session_state.get("cache_data_max_size_result"):
+    st.markdown(f"cache_data max_size executions: {result}")

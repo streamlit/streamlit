@@ -81,7 +81,7 @@ def _create_storage(
 
 def test_budget_evicts_globally_least_recently_used_entry() -> None:
     """A write over budget evicts the globally least-recently-used entry."""
-    budget = GlobalCacheBudget(max_bytes=6, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=6)
     first = _create_storage(budget, "first")
     second = _create_storage(budget, "second")
 
@@ -102,9 +102,33 @@ def test_budget_evicts_globally_least_recently_used_entry() -> None:
     assert stats[0].labels == {"reason": "global_budget"}
 
 
+def test_budget_reaps_newer_expired_entry_before_evicting_live_lru() -> None:
+    """Expired bytes are reconciled before a live global LRU victim is chosen."""
+    budget = GlobalCacheBudget(max_bytes=6)
+    live = _create_storage(budget, "live")
+    expiring = _create_storage(budget, "expiring", ttl_seconds=1)
+    writer = _create_storage(budget, "writer")
+    now = 0.0
+    expiring._mem_cache._timer = lambda: now
+
+    live.set("older-live", b"aaa")
+    expiring.set("newer-expired", b"bbb")
+    now = 2.0
+
+    # Without a global expiry reconciliation, "older-live" is selected first
+    # even though dropping the newer expired value alone satisfies the budget.
+    writer.set("new", b"c")
+
+    assert live.get("older-live") == b"aaa"
+    with pytest.raises(CacheStorageKeyNotFoundError):
+        expiring.get("newer-expired")
+    assert writer.get("new") == b"c"
+    assert budget.total_bytes == 4
+
+
 def test_budget_retains_current_oversized_entry_and_warns_once() -> None:
     """A lone value over budget remains cached and emits one warning."""
-    budget = GlobalCacheBudget(max_bytes=2, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=2)
     storage = _create_storage(budget, "oversized")
 
     with patch(
@@ -122,7 +146,7 @@ def test_budget_retains_current_oversized_entry_and_warns_once() -> None:
 
 def test_disabled_budget_does_not_track_entries() -> None:
     """A disabled budget neither tracks nor evicts cache entries."""
-    budget = GlobalCacheBudget(max_bytes=None, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=None)
     storage = _create_storage(budget, "disabled")
 
     storage.set("key", b"value")
@@ -133,7 +157,7 @@ def test_disabled_budget_does_not_track_entries() -> None:
 
 def test_global_budget_warning_is_emitted_once() -> None:
     """Only uncontainable writes warn, and they warn once."""
-    budget = GlobalCacheBudget(max_bytes=2, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=2)
     storage = _create_storage(budget, "warning")
 
     with patch(
@@ -150,7 +174,7 @@ def test_global_budget_warning_is_emitted_once() -> None:
 
 def test_global_eviction_preserves_persistent_storage() -> None:
     """Global eviction removes only the in-memory copy of persisted data."""
-    budget = GlobalCacheBudget(max_bytes=2, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=2)
     persistent = _DictStorage()
     context = CacheStorageContext(
         function_key="persistent",
@@ -173,7 +197,7 @@ def test_global_eviction_preserves_persistent_storage() -> None:
 
 def test_close_and_local_eviction_remove_accounting() -> None:
     """Local eviction and close remove bytes from global accounting."""
-    budget = GlobalCacheBudget(max_bytes=100, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=100)
     persistent = _DictStorage()
     context = CacheStorageContext(
         function_key="local",
@@ -201,22 +225,9 @@ def test_close_and_local_eviction_remove_accounting() -> None:
     assert "late" not in storage._mem_cache
 
 
-def test_stale_and_reordered_events_do_not_create_phantom_bytes() -> None:
-    """Stale and reordered events cannot overwrite current accounting."""
-    budget = GlobalCacheBudget(max_bytes=100, read_config=False)
-    storage = _create_storage(budget, "generation")
-    storage_id = storage._global_storage_id
-
-    budget.record_write(storage_id, "key", 2, 2, 2, 2)
-    budget.record_write(storage_id, "key", 9, 1, 1, 1)
-    budget.record_removal(storage_id, "key", 1, 1)
-
-    assert budget.total_bytes == 2
-
-
 def test_victim_selection_resolves_only_the_oldest_storage() -> None:
     """Victim selection resolves only the oldest eligible storage reference."""
-    budget = GlobalCacheBudget(max_bytes=100, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=100)
     first = _create_storage(budget, "first")
     second = _create_storage(budget, "second")
     first.set("old", b"aa")
@@ -239,7 +250,7 @@ def test_victim_selection_resolves_only_the_oldest_storage() -> None:
 
 def test_weakref_cleanup_does_not_reenter_budget_lock() -> None:
     """Cyclic GC can queue storage cleanup while the budget lock is held."""
-    budget = GlobalCacheBudget(max_bytes=100, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=100)
     storage = _create_storage(budget, "collected")
     storage.set("key", b"value")
     storage_ref = weakref.ref(storage)
@@ -262,7 +273,7 @@ def test_weakref_cleanup_does_not_reenter_budget_lock() -> None:
 
 def test_read_between_selection_and_eviction_retries_current_lru() -> None:
     """A read after victim selection makes eviction retry with the current LRU."""
-    budget = GlobalCacheBudget(max_bytes=6, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=6)
     first = _create_storage(budget, "first")
     second = _create_storage(budget, "second")
     first.set("a", b"aaa")
@@ -297,7 +308,7 @@ def test_read_between_selection_and_eviction_retries_current_lru() -> None:
 
 def test_overlapping_writes_are_serialized_through_enforcement() -> None:
     """Overlapping writes keep each insertion protected through enforcement."""
-    budget = GlobalCacheBudget(max_bytes=6, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=6)
     first = _create_storage(budget, "first")
     second = _create_storage(budget, "second")
 
@@ -363,7 +374,7 @@ def test_overlapping_writes_are_serialized_through_enforcement() -> None:
 
 def test_concurrent_read_cannot_make_inflight_write_evict_itself() -> None:
     """A concurrent read cannot make an in-flight write evict itself."""
-    budget = GlobalCacheBudget(max_bytes=6, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=6)
     old_storage = _create_storage(budget, "old")
     writer_storage = _create_storage(budget, "writer")
     old_storage.set("old", b"aaa")
@@ -400,7 +411,7 @@ def test_selected_victim_removed_concurrently_is_reconciled(
     remove: str,
 ) -> None:
     """Concurrent victim removal is reconciled before selecting another entry."""
-    budget = GlobalCacheBudget(max_bytes=6, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=6)
     first = _create_storage(budget, "first")
     second = _create_storage(budget, "second")
     first.set("a", b"aaa")
@@ -436,9 +447,11 @@ def test_selected_victim_removed_concurrently_is_reconciled(
 
 def test_selected_victim_expired_concurrently_is_reconciled() -> None:
     """Concurrent victim expiry is reconciled before enforcement completes."""
-    budget = GlobalCacheBudget(max_bytes=6, read_config=False)
-    first = _create_storage(budget, "first", ttl_seconds=0)
+    budget = GlobalCacheBudget(max_bytes=6)
+    first = _create_storage(budget, "first", ttl_seconds=1)
     second = _create_storage(budget, "second")
+    now = 0.0
+    first._mem_cache._timer = lambda: now
     first.set("expired", b"aaa")
     second.set("b", b"bbb")
 
@@ -459,6 +472,7 @@ def test_selected_victim_expired_concurrently_is_reconciled() -> None:
         assert selected.wait(timeout=5)
 
         # Stats collection reaps the expired selected key and publishes its removal.
+        now = 2.0
         assert first.get_stats() == {}
         continue_eviction.set()
         global_writer.join(timeout=5)
@@ -471,7 +485,7 @@ def test_selected_victim_expired_concurrently_is_reconciled() -> None:
 
 def test_unique_key_churn_keeps_coordinator_metadata_bounded() -> None:
     """Unique-key churn does not retain per-key coordinator metadata."""
-    budget = GlobalCacheBudget(max_bytes=1024, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=1024)
     storage = _create_storage(budget, "churn")
 
     for index in range(2000):
@@ -482,12 +496,11 @@ def test_unique_key_churn_keeps_coordinator_metadata_bounded() -> None:
     assert budget.total_bytes == 0
     assert not budget._entries
     assert budget._storage_entries[storage._global_storage_id] == set()
-    assert len(budget._last_event_sequences) == 1
 
 
 def test_concurrent_writes_do_not_evict_each_other() -> None:
     """Concurrent writes leave exactly one live entry under a one-byte budget."""
-    budget = GlobalCacheBudget(max_bytes=1, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=1)
     storages = [_create_storage(budget, f"storage-{index}") for index in range(2)]
     barrier = threading.Barrier(2)
 
@@ -507,7 +520,7 @@ def test_concurrent_writes_do_not_evict_each_other() -> None:
 
 def test_concurrent_writes_and_clears_do_not_deadlock_or_leave_phantom_bytes() -> None:
     """Concurrent writes and clears finish with exact bounded accounting."""
-    budget = GlobalCacheBudget(max_bytes=64, read_config=False)
+    budget = GlobalCacheBudget(max_bytes=64)
     storages = [_create_storage(budget, f"storage-{index}") for index in range(4)]
 
     def exercise(index: int) -> None:

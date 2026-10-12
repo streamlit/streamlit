@@ -47,8 +47,8 @@ _CONFIG_MAX_CACHED_DATA_SIZE_ERROR: Final = (
 )
 
 
-def to_bytes(value: int | str | None) -> int | None:
-    """Convert a positive byte-size value to bytes.
+def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
+    """Convert an ``st.cache_data`` max-size value to bytes.
 
     Integers are interpreted as bytes. Strings require an explicit binary unit
     (for example, ``"500MB"`` or ``"1.5GiB"``).
@@ -98,7 +98,7 @@ def config_max_cached_data_size_to_bytes(value: object) -> int | None:
             error_id="config-max-cached-data-size-invalid",
         )
     try:
-        return to_bytes(value)
+        return cache_data_max_size_to_bytes(value)
     except StreamlitAPIException as exc:
         raise StreamlitAPIException(
             _CONFIG_MAX_CACHED_DATA_SIZE_ERROR,

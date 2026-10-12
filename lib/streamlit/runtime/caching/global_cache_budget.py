@@ -41,7 +41,7 @@ _LOGGER: Final = get_logger(__name__)
 CACHE_DATA_EVICTIONS_FAMILY: Final = "cache_data_evictions"
 
 
-@dataclass(frozen=True)
+@dataclass
 class _EntryRecord:
     size: int
     generation: int
@@ -51,22 +51,14 @@ class _EntryRecord:
 class GlobalCacheBudget(StatsProvider):
     """Enforce one LRU byte budget across in-memory ``st.cache_data`` storages.
 
-    Storages report events with a generation that changes on every write, an
-    access version that changes on every read or write, and a per-storage event
-    sequence. These counters prevent stale removals, stale eviction selections,
-    and reordered notifications from corrupting global accounting.
+    Storages report every write, read, and removal. Because a victim is chosen
+    without holding its storage's lock, each record carries the entry's write
+    generation and access version. Eviction is skipped if either changed, so a
+    concurrent read or rewrite cannot make the budget evict the wrong entry.
     """
 
-    def __init__(
-        self, max_bytes: int | None = None, *, read_config: bool = True
-    ) -> None:
-        self._max_bytes = (
-            config_max_cached_data_size_to_bytes(
-                config.get_option("server.maxCachedDataSize")
-            )
-            if read_config
-            else max_bytes
-        )
+    def __init__(self, max_bytes: int | None) -> None:
+        self._max_bytes = max_bytes
         self._lock = threading.Lock()
         # Serialize insertion accounting and enforcement so an entry cannot become
         # eligible for another writer's eviction before its own write is enforced.
@@ -78,13 +70,18 @@ class GlobalCacheBudget(StatsProvider):
         self._pending_unregisters: queue.SimpleQueue[int] = queue.SimpleQueue()
         self._entries: OrderedDict[tuple[int, str], _EntryRecord] = OrderedDict()
         self._storage_entries: dict[int, set[str]] = {}
-        # Each storage publishes numbered events under its own lock. Keeping the
-        # newest sequence per storage prevents a stale notification from
-        # resurrecting a removed entry.
-        self._last_event_sequences: dict[int, int] = {}
         self._total_bytes = 0
         self._global_evictions = 0
         self._warned = False
+
+    @classmethod
+    def from_config(cls) -> GlobalCacheBudget:
+        """Create a budget from ``server.maxCachedDataSize``."""
+        return cls(
+            config_max_cached_data_size_to_bytes(
+                config.get_option("server.maxCachedDataSize")
+            )
+        )
 
     @property
     def stats_families(self) -> Sequence[str]:
@@ -107,7 +104,6 @@ class GlobalCacheBudget(StatsProvider):
 
             self._storages[storage_id] = weakref.ref(storage, unregister_storage)
             self._storage_entries[storage_id] = set()
-            self._last_event_sequences[storage_id] = 0
         return storage_id
 
     def unregister(self, storage_id: int) -> None:
@@ -125,22 +121,14 @@ class GlobalCacheBudget(StatsProvider):
 
     def _unregister_locked(self, storage_id: int) -> None:
         self._storages.pop(storage_id, None)
-        self._last_event_sequences.pop(storage_id, None)
         for key in self._storage_entries.pop(storage_id, set()):
             record = self._entries.pop((storage_id, key), None)
             if record is not None:
                 self._total_bytes -= record.size
 
-    def _accept_event_locked(self, storage_id: int, event_sequence: int) -> bool:
-        last_sequence = self._last_event_sequences.get(storage_id)
-        if last_sequence is None or event_sequence <= last_sequence:
-            return False
-        self._last_event_sequences[storage_id] = event_sequence
-        return True
-
     @contextmanager
     def write_enforcement(self) -> Generator[None, None, None]:
-        """Keep one insertion protected through its budget enforcement."""
+        """Serialize writes until each new entry completes its own budget check."""
         if self._max_bytes is None:
             yield
             return
@@ -154,18 +142,13 @@ class GlobalCacheBudget(StatsProvider):
         size: int,
         generation: int,
         access_version: int,
-        event_sequence: int,
     ) -> None:
         if self._max_bytes is None:
             return
         entry_key = (storage_id, key)
         with self._lock:
             self._drain_pending_unregisters_locked()
-            if not self._accept_event_locked(storage_id, event_sequence):
-                return
             current = self._entries.get(entry_key)
-            if current is not None and current.generation > generation:
-                return
             if current is not None:
                 self._total_bytes -= current.size
             self._entries[entry_key] = _EntryRecord(
@@ -173,7 +156,11 @@ class GlobalCacheBudget(StatsProvider):
                 generation=generation,
                 access_version=access_version,
             )
-            self._storage_entries[storage_id].add(key)
+            storage_entries = self._storage_entries.get(storage_id)
+            if storage_entries is None:
+                self._entries.pop(entry_key)
+                return
+            storage_entries.add(key)
             self._entries.move_to_end(entry_key)
             self._total_bytes += size
 
@@ -183,44 +170,33 @@ class GlobalCacheBudget(StatsProvider):
         key: str,
         generation: int,
         access_version: int,
-        event_sequence: int,
     ) -> None:
         if self._max_bytes is None:
             return
         entry_key = (storage_id, key)
         with self._lock:
             self._drain_pending_unregisters_locked()
-            if not self._accept_event_locked(storage_id, event_sequence):
-                return
             current = self._entries.get(entry_key)
             if (
                 current is not None
                 and current.generation == generation
                 and access_version >= current.access_version
             ):
-                self._entries[entry_key] = _EntryRecord(
-                    size=current.size,
-                    generation=generation,
-                    access_version=access_version,
-                )
+                current.access_version = access_version
                 self._entries.move_to_end(entry_key)
 
-    def record_removal(
-        self, storage_id: int, key: str, generation: int, event_sequence: int
-    ) -> None:
+    def record_removal(self, storage_id: int, key: str, generation: int) -> None:
         if self._max_bytes is None:
             return
         entry_key = (storage_id, key)
         with self._lock:
             self._drain_pending_unregisters_locked()
-            if not self._accept_event_locked(storage_id, event_sequence):
-                return
             current = self._entries.get(entry_key)
-            if current is not None and current.generation > generation:
-                return
-            if current is not None:
+            if current is not None and current.generation == generation:
                 self._total_bytes -= self._entries.pop(entry_key).size
-                self._storage_entries[storage_id].discard(key)
+                storage_entries = self._storage_entries.get(storage_id)
+                if storage_entries is not None:
+                    storage_entries.discard(key)
 
     def _warn_once(self) -> None:
         with self._lock:
@@ -228,12 +204,23 @@ class GlobalCacheBudget(StatsProvider):
                 return
             self._warned = True
         _LOGGER.warning(
-            "The combined st.cache_data in-memory cache exceeded "
-            "server.maxCachedDataSize. Streamlit evicts older least-recently-used "
-            "entries when available, but keeps a newly written value even when it "
-            "alone exceeds the budget. Increase the config value or set it to "
-            '"0" to disable this process-wide budget.'
+            "A st.cache_data value larger than server.maxCachedDataSize was kept. "
+            "Streamlit does not reject cache writes. Raise the limit, or set it to "
+            '"0" to disable the process-wide budget.'
         )
+
+    def _reap_expired_entries(self) -> None:
+        # Snapshot weak references without taking a storage lock while the budget
+        # lock is held. Each storage reports removals back under its own lock.
+        with self._lock:
+            self._drain_pending_unregisters_locked()
+            storages = [
+                storage
+                for storage_ref in self._storages.values()
+                if (storage := storage_ref()) is not None
+            ]
+        for storage in storages:
+            storage._reap_expired_entries()
 
     def _reserve_victim(
         self, protected: tuple[int, str]
@@ -259,13 +246,24 @@ class GlobalCacheBudget(StatsProvider):
                     if self._total_bytes <= self._max_bytes:
                         return None
                     continue
-                return storage, entry_key[1], record
+                # Snapshot versions while holding the budget lock. The live record is
+                # mutated in place on reads to keep allocations off the hit path.
+                return (
+                    storage,
+                    entry_key[1],
+                    _EntryRecord(record.size, record.generation, record.access_version),
+                )
             return None
 
     def enforce_budget(self, protected: tuple[int, str]) -> None:
         if self._max_bytes is None:
             return
         with self._enforcement_lock:
+            if self.total_bytes <= self._max_bytes:
+                return
+            # TTL expiry is local to each memory cache. Reconcile all expired entries
+            # before selecting from the remaining live global LRU.
+            self._reap_expired_entries()
             while True:
                 victim = self._reserve_victim(protected)
                 if victim is None:
@@ -281,9 +279,9 @@ class GlobalCacheBudget(StatsProvider):
                 if evicted:
                     with self._lock:
                         self._global_evictions += 1
-                # A read, write, clear, or expiry publishes its updated state
-                # before releasing the wrapper lock. Select again from the
-                # actual current global LRU until the budget is satisfied.
+                # If the entry changed since selection, eviction is skipped. Storages
+                # publish every change before releasing their lock, so the next
+                # selection sees current state and the loop makes progress.
 
     def get_stats(
         self, family_names: Sequence[str] | None = None
@@ -305,17 +303,19 @@ class GlobalCacheBudget(StatsProvider):
         }
 
 
-_GLOBAL_CACHE_BUDGET: list[GlobalCacheBudget | None] = [None]
+_global_cache_budget: GlobalCacheBudget | None = None
 _GLOBAL_CACHE_BUDGET_LOCK = threading.Lock()
 
 
 def get_global_cache_budget() -> GlobalCacheBudget:
     """Return the lazily configured process-wide data-cache budget."""
-    budget = _GLOBAL_CACHE_BUDGET[0]
+    global _global_cache_budget  # noqa: PLW0603
+
+    budget = _global_cache_budget
     if budget is None:
         with _GLOBAL_CACHE_BUDGET_LOCK:
-            budget = _GLOBAL_CACHE_BUDGET[0]
+            budget = _global_cache_budget
             if budget is None:
-                budget = GlobalCacheBudget()
-                _GLOBAL_CACHE_BUDGET[0] = budget
+                budget = GlobalCacheBudget.from_config()
+                _global_cache_budget = budget
     return budget

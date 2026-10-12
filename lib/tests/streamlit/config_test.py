@@ -93,6 +93,11 @@ class ConfigTest(unittest.TestCase):
             config_max_cached_data_size_to_bytes(
                 config.get_option("server.maxCachedDataSize")
             )
+        with pytest.raises(
+            RuntimeError,
+            match=r"Invalid value for config option server\.maxCachedDataSize",
+        ):
+            config._check_conflicts()
 
     def _create_theme_config_options(self):
         """Create a list of the valid config options for the [theme] section."""

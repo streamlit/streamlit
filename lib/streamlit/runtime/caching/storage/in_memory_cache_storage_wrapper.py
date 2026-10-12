@@ -76,7 +76,6 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self._access_versions: dict[str, int] = {}
         self._next_generation = 0
         self._next_access_version = 0
-        self._next_event_sequence = 0
         self._oversized_warning_emitted = False
         self._global_budget = get_global_cache_budget()
         self._global_storage_id = self._global_budget.register(self)
@@ -201,8 +200,14 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def _read_from_mem_cache(self, key: str) -> bytes:
         with self._mem_cache_lock:
-            if key in self._mem_cache:
+            try:
                 entry = bytes(self._mem_cache[key])
+            except KeyError:
+                _LOGGER.debug("Memory cache MISS: %s", key)
+                raise CacheStorageKeyNotFoundError(
+                    "Key not found in mem cache"
+                ) from None
+            else:
                 generation = self._generations[key]
                 self._next_access_version += 1
                 access_version = self._next_access_version
@@ -212,12 +217,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                     key,
                     generation,
                     access_version,
-                    self._new_event_sequence(),
                 )
                 _LOGGER.debug("Memory cache HIT: %s", key)
-            else:
-                _LOGGER.debug("Memory cache MISS: %s", key)
-                raise CacheStorageKeyNotFoundError("Key not found in mem cache")
 
         return entry
 
@@ -253,12 +254,12 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                     len(entry_bytes),
                     generation,
                     access_version,
-                    self._new_event_sequence(),
                 )
             if should_warn:
                 _LOGGER.warning(
-                    "A cached value for %s is larger than its configured max_size. "
-                    "The value is retained because Streamlit never rejects a cache write.",
+                    "A cached value for %s is larger than its max_size, so Streamlit "
+                    "evicted all other entries from this function's cache. Increase "
+                    "max_size to keep more than one value.",
                     self.function_display_name,
                 )
             self._global_budget.enforce_budget((self._global_storage_id, key))
@@ -288,12 +289,14 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 self._global_storage_id,
                 key,
                 generation,
-                self._new_event_sequence(),
             )
 
-    def _new_event_sequence(self) -> int:
-        self._next_event_sequence += 1
-        return self._next_event_sequence
+    def _reap_expired_entries(self) -> None:
+        """Remove expired memory entries and publish their released bytes."""
+        with self._mem_cache_lock:
+            self._mem_cache.expire()
+            removals = self._take_pending_removals()
+            self._report_removals(removals)
 
     def _evict_from_mem_cache(
         self,
@@ -309,8 +312,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             ):
                 return False
             if key not in self._mem_cache:
-                # Expired entries fail membership checks but remain stored until
-                # deletion publishes their removal to the global budget.
+                # An expired entry is hidden from "in" but still counted by the
+                # global budget. Delete it so its bytes are released.
                 with contextlib.suppress(KeyError):
                     del self._mem_cache[key]
                 removals = self._take_pending_removals()

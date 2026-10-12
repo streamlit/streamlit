@@ -20,6 +20,7 @@ import logging
 import os
 import pickle
 import re
+import tempfile
 import threading
 import unittest
 from typing import Any
@@ -145,7 +146,7 @@ class CacheDataTest(unittest.TestCase):
 
     def test_global_budget_accounts_global_and_session_scoped_caches(self) -> None:
         """The global budget includes both global and session-scoped data caches."""
-        budget = GlobalCacheBudget(max_bytes=1_000_000, read_config=False)
+        budget = GlobalCacheBudget(max_bytes=1_000_000)
         calls = {"global": 0, "session": 0}
 
         @st.cache_data
@@ -508,6 +509,70 @@ class CacheDataPersistTest(DeltaGeneratorTestCase):
         with patch("os.path.isdir", MagicMock(return_value=False)):
             st.cache_data.clear()
             mock_rmtree.assert_not_called()
+
+    def test_clear_all_removes_inflight_disk_write(self) -> None:
+        """A committed disk write finishes before clear_all removes its file."""
+        with (
+            tempfile.TemporaryDirectory() as cache_dir,
+            patch(
+                "streamlit.runtime.caching.storage.local_disk_cache_storage."
+                "get_cache_folder_path",
+                return_value=cache_dir,
+            ),
+        ):
+            cache = _data_caches.get_cache(
+                key="disk_write_race",
+                persist="disk",
+                max_entries=None,
+                ttl=None,
+                display_name="disk_write_race",
+            )
+            storage = cache.storage
+            assert isinstance(storage, InMemoryCacheStorageWrapper)
+            original_set = storage._persist_storage.set
+            storage_write_started = threading.Event()
+            continue_storage_write = threading.Event()
+            detach_started = threading.Event()
+
+            def delayed_set(key: str, value: bytes) -> None:
+                storage_write_started.set()
+                assert continue_storage_write.wait(timeout=5)
+                original_set(key, value)
+
+            original_mark_detached = cache.mark_detached
+
+            def observed_mark_detached() -> None:
+                detach_started.set()
+                original_mark_detached()
+
+            with (
+                patch.object(storage._persist_storage, "set", side_effect=delayed_set),
+                patch.object(
+                    cache, "mark_detached", side_effect=observed_mark_detached
+                ),
+            ):
+                writer = threading.Thread(target=cache.write_result, args=("vk", 1, []))
+                writer.start()
+                assert storage_write_started.wait(timeout=5)
+
+                clearer = threading.Thread(target=_data_caches.clear_all)
+                clearer.start()
+                assert detach_started.wait(timeout=5)
+
+                # clear_all may wait for the committed write, but it must not hold
+                # the registry lock while doing so.
+                assert _data_caches._caches_lock.acquire(timeout=1)
+                _data_caches._caches_lock.release()
+
+                continue_storage_write.set()
+                writer.join(timeout=5)
+                clearer.join(timeout=5)
+
+            assert not writer.is_alive()
+            assert not clearer.is_alive()
+            assert not os.path.exists(cache_dir)
+            with pytest.raises(CacheKeyNotFoundError):
+                cache.read_result("vk")
 
     @patch("streamlit.file_util.os.stat", MagicMock())
     @patch(
@@ -1269,7 +1334,7 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
             )
 
     def test_sync_write_is_discarded_if_cache_detaches_during_pickle(self) -> None:
-        """A synchronous result cannot repopulate a detached cache."""
+        """A synchronous result cannot repopulate a cache detached while pickling."""
         cache = self._cache("sync_detached")
         pickle_started = threading.Event()
         continue_pickle = threading.Event()
@@ -1294,11 +1359,12 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         assert not writer.is_alive()
         storage_set.assert_not_called()
 
-    def test_detach_does_not_wait_for_storage_write(self) -> None:
-        """Detaching a cache does not hold the registry behind a storage write."""
-        cache = self._cache("detach_during_storage_write")
+    def test_clear_waits_for_inflight_sync_write_then_removes_it(self) -> None:
+        """A per-function clear cannot be followed by an older committed write."""
+        cache = self._cache("clear_during_storage_write")
         storage_write_started = threading.Event()
         continue_storage_write = threading.Event()
+        clear_completed = threading.Event()
         original_set = cache.storage.set
 
         def delayed_set(key: str, value: bytes) -> None:
@@ -1311,14 +1377,22 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
             writer.start()
             assert storage_write_started.wait(timeout=5)
 
-            detacher = threading.Thread(target=cache.mark_detached)
-            detacher.start()
-            detacher.join(timeout=2)
+            def clear_cache() -> None:
+                cache.clear()
+                clear_completed.set()
+
+            clearer = threading.Thread(target=clear_cache)
+            clearer.start()
+            assert not clear_completed.wait(timeout=0.1)
             continue_storage_write.set()
             writer.join(timeout=5)
+            clearer.join(timeout=5)
 
-        assert not detacher.is_alive()
         assert not writer.is_alive()
+        assert not clearer.is_alive()
+        assert clear_completed.is_set()
+        with pytest.raises(CacheKeyNotFoundError):
+            cache.read_result("vk")
 
     def test_background_writeback_raises_on_unpicklable_value(self) -> None:
         """Unpicklable background refresh results surface as CacheError."""

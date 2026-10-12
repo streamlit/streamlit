@@ -18,7 +18,10 @@ from decimal import Inexact, localcontext
 
 import pytest
 
-from streamlit.byte_util import config_max_cached_data_size_to_bytes, to_bytes
+from streamlit.byte_util import (
+    cache_data_max_size_to_bytes,
+    config_max_cached_data_size_to_bytes,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
@@ -41,9 +44,11 @@ from streamlit.errors import (
         (".5 kib", 512),
     ],
 )
-def test_to_bytes(value: int | str | None, expected: int | None) -> None:
+def test_cache_data_max_size_to_bytes(
+    value: int | str | None, expected: int | None
+) -> None:
     """Supported byte-size values convert to their binary byte count."""
-    assert to_bytes(value) == expected
+    assert cache_data_max_size_to_bytes(value) == expected
 
 
 @pytest.mark.parametrize(
@@ -53,21 +58,21 @@ def test_to_bytes(value: int | str | None, expected: int | None) -> None:
 def test_to_bytes_rejects_invalid_values(value: object) -> None:
     """Malformed, nonpositive, and incorrectly typed values are rejected."""
     with pytest.raises(StreamlitAPIException):
-        to_bytes(value)  # type: ignore[arg-type]
+        cache_data_max_size_to_bytes(value)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("value", [True, False, 1.5])
 def test_to_bytes_uses_shared_type_error(value: object) -> None:
     """Incorrect value types use the shared parameter-type error."""
     with pytest.raises(StreamlitInvalidParameterTypeError):
-        to_bytes(value)  # type: ignore[arg-type]
+        cache_data_max_size_to_bytes(value)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("value", [0, -1, "0MB", ".0001B"])
 def test_to_bytes_uses_shared_value_error(value: int | str) -> None:
     """Nonpositive byte counts use the shared parameter-value error."""
     with pytest.raises(StreamlitValueError):
-        to_bytes(value)
+        cache_data_max_size_to_bytes(value)
 
 
 def test_to_bytes_ignores_decimal_context() -> None:
@@ -75,7 +80,7 @@ def test_to_bytes_ignores_decimal_context() -> None:
     with localcontext() as context:
         context.prec = 2
         context.traps[Inexact] = True
-        assert to_bytes("1.1MB") == 11 * 1024**2 // 10
+        assert cache_data_max_size_to_bytes("1.1MB") == 11 * 1024**2 // 10
 
 
 @pytest.mark.parametrize("value", [0, "0"])

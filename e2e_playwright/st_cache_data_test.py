@@ -77,6 +77,17 @@ def test_that_replay_element_works_as_expected(app: Page):
     expect(app.get_by_text("Cache return 1")).to_be_visible()
 
 
+def test_cache_data_max_size_eviction_and_oversized_entry(app: Page) -> None:
+    """max_size evicts the LRU entry while retaining a lone oversized value."""
+    click_button(app, "Run cache_data max_size test")
+    expect(
+        app.get_by_text(
+            "cache_data max_size executions: a=1, b=2, c=1; oversized=1",
+            exact=True,
+        )
+    ).to_be_visible()
+
+
 @pytest.mark.only_browser("chromium")
 def test_async_cache_data_miss_hit_spinner_and_replay(
     app: Page, app_server_extra_env: dict[str, str]
