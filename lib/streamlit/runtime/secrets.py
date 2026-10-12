@@ -187,7 +187,8 @@ class Secrets(Mapping[str, Any]):
 
             return True
         except StreamlitSecretNotFoundError:
-            # Missing files and unloadable paths are both "secrets unavailable".
+            # Treat missing and unloadable secrets alike; startup logs load
+            # errors separately.
             return False
 
     def _reset(self) -> None:
@@ -514,7 +515,6 @@ class Secrets(Mapping[str, Any]):
             "_programmatic_secrets",
             "file_change_listener",
             "load_if_toml_exists",
-            "_parse",
         }:
             super().__setattr__(key, value)
         else:

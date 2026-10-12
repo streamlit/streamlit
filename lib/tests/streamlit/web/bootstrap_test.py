@@ -25,12 +25,13 @@ from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
+from starlette.middleware.sessions import SessionMiddleware
 
 from streamlit import config
-from streamlit.errors import StreamlitSecretNotFoundError
 from streamlit.runtime.runtime import Runtime
 from streamlit.runtime.secrets import Secrets
 from streamlit.web import bootstrap
+from streamlit.web.server.starlette.starlette_app import create_streamlit_middleware
 from tests import testutil
 from tests.testutil import patch_config_options
 
@@ -373,7 +374,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         assert not re.search(r"(?<!Local )(?<!Network )URL:", out)
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
-    @patch("streamlit.web.bootstrap.secrets._parse", Mock())
+    @patch.object(Secrets, "_parse", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
     def test_maybe_print_static_folder_warning_called_once_on_server_start(
@@ -498,7 +499,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
-    @patch("streamlit.web.bootstrap.secrets._parse")
+    @patch.object(Secrets, "_parse")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
         bootstrap._on_server_start(Mock())
@@ -508,7 +509,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._LOGGER.exception")
-    @patch("streamlit.web.bootstrap.secrets._parse")
+    @patch.object(Secrets, "_parse")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):
         """If secrets throws an error on startup, we catch and log it."""
         mock_exception = Exception("Secrets exploded!")
@@ -562,6 +563,7 @@ class BootstrapSecretsLoadTest(TestCase):
 
     @contextmanager
     def _secrets_patches(self, contents: str | None):
+        """Patch startup so ``contents`` is the secrets file. ``None`` means the file is absent."""
         open_patch = (
             patch("builtins.open", mock_open(read_data=contents))
             if contents is not None
@@ -607,17 +609,11 @@ class BootstrapSecretsLoadTest(TestCase):
 
         assert len(logs.records) == 1
         record = logs.records[0]
-        assert "Failed to load secrets.toml file" in record.getMessage()
-        assert record.exc_info is not None
-        assert isinstance(record.exc_info[1], StreamlitSecretNotFoundError)
+        assert "Failed to load secrets:" in record.getMessage()
+        assert "Error parsing secrets file" in record.getMessage()
 
     def test_malformed_secrets_do_not_abort_middleware_construction(self) -> None:
-        """Session middleware is built before ``prepare_streamlit_environment``."""
-        from starlette.middleware.sessions import SessionMiddleware
-
-        from streamlit.web.server.starlette.starlette_app import (
-            create_streamlit_middleware,
-        )
+        """Malformed secrets.toml uses the config cookie secret, then startup logs the parse error."""
 
         malformed = 'SMTP_PASSWORD = "synthetic-secret-value"\nSMTP_PORT = ---\n'
         with self._secrets_patches(malformed):
@@ -632,9 +628,8 @@ class BootstrapSecretsLoadTest(TestCase):
 
         assert len(logs.records) == 1
         record = logs.records[0]
-        assert "Failed to load secrets.toml file" in record.getMessage()
-        assert record.exc_info is not None
-        assert isinstance(record.exc_info[1], StreamlitSecretNotFoundError)
+        assert "Failed to load secrets:" in record.getMessage()
+        assert "Error parsing secrets file" in record.getMessage()
 
     def test_valid_top_level_secrets_are_promoted_to_environ(self) -> None:
         """Valid scalar secrets are still copied into ``os.environ`` at startup."""

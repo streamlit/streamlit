@@ -241,15 +241,16 @@ def prepare_streamlit_environment(main_script_path: str) -> None:
     _initialize_mimetypes()
     _fix_pydeck_mapbox_api_warning()
 
-    # load_if_toml_exists() is a non-raising probe used by cookie/XSRF/auth
-    # setup during app construction, which runs before this function. Call
-    # the strict parser here so a malformed file is logged once without
-    # aborting startup. Missing files stay silent.
+    # Log a malformed or unloadable secrets file once, then continue startup.
+    # Cookie middleware already called load_if_toml_exists() while building
+    # the app, and that probe must not raise. XSRF and auth use the same
+    # probe later. Missing files stay silent.
     try:
         secrets._parse()
     except StreamlitSecretNotFoundError as exc:
         if exc.error_id != "no-secrets-found":
-            _LOGGER.exception("Failed to load secrets.toml file")
+            # User config error: put the parser text in the message, skip traceback.
+            _LOGGER.error("Failed to load secrets: %s", exc)  # noqa: TRY400
     except Exception:
         _LOGGER.exception("Failed to load secrets.toml file")
 
