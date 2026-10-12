@@ -1024,7 +1024,7 @@ and the rest of it is what stands between opt-in and on-by-default:
 | Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | Compact responses (follow-up #9), and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
 | Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits, and per-caller session quotas, so one anonymous client cannot hold every slot. |
 | Cross-origin requests | A page on another site can make a visitor's browser send a request to any app that browser can reach, including, through DNS rebinding, an app on the visitor's own machine. | No cookie is read, and any request carrying an `Origin` not listed in `server.corsAllowedOrigins` is refused. A same-origin rule would not stop rebinding, since a rebound page is same-origin with the `Host` it sends, but browsers send `Origin` on every POST and programmatic clients send none, so this refuses web pages without turning away an agent. No browser caller loses anything: the route sends no CORS headers, so no other origin could read a response. | —                                                                                                  |
-| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here. | A credential flow that maps an `st.login` user to an agent ([open question 1](#open-questions)). |
+| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here. | Agent sign-in for `st.login` apps (follow-up #10). |
 
 That keeps the decision reversible. An app opts in, deployments that authenticate every
 path — an auth proxy, a private Community Cloud app, SiS — gate the route exactly as they
@@ -1144,7 +1144,7 @@ considered while building the prototype:
 Settling on the script runner's shutdown instead of the 50 ms quiet period is not on
 this list: it is a correctness fix that v1 makes.
 
-1. **On by default.** A credential flow that maps an `st.login` user to an agent, the
+1. **On by default.** Agent sign-in for `st.login` apps (follow-up #10), the
    response and rate budgets and per-caller quotas that make bulk access and request
    volume safe, per-platform routing, and session affinity for multi-worker deployments
    — then flip the default for all of Streamlit at once, with `server.enableAgentApi`
@@ -1205,6 +1205,19 @@ this list: it is a correctness fix that v1 makes.
    serves its table. Nothing that holds data or a legal value is truncated. A page of a
    few Plotly charts can reach a megabyte per response, and a selectbox of a few
    hundred options adds tens of kilobytes to every call on its page.
+10. **Agent sign-in for `st.login` apps.** In v1 an app that uses `st.login` shows
+    agents its signed-out state: its identity is a signed cookie the browser gets at
+    the end of the OAuth/OIDC redirect, which an agent cannot present. Every other
+    source of identity already works, including trusted headers from an
+    authenticating proxy or platform. The expected default for a tool that needs a
+    login is MCP's authorization flow, which ChatGPT and Claude already offer for
+    connectors: the server is an OAuth resource server that names an authorization
+    server, and the client runs the sign-in once in a browser and sends a bearer
+    token with every call. For Streamlit that means accepting a token from the
+    provider `st.login` is configured with and mapping its claims into `st.user`
+    exactly as `st.login` does, fronting the provider as a thin OAuth proxy where it
+    cannot register MCP clients itself. The HTTP API accepts the same token. App-issued
+    API keys are what to avoid: they would be a second identity system.
 
 ## Beyond the app surface
 
@@ -1295,7 +1308,7 @@ v1 ships when:
 
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until a credential flow maps them. Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
+| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until agent sign-in lands (follow-up #10). Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
 | No breaking API changes    | ✅ Additive: `server.enableAgentApi`, off in v1, its budget options, new routes under `/_stcore/agent/`, and the discovery hint in `index.html`. No `st.*` signature changes. One behavior is sharper: an `st.context` field the client never sent reads as `None` rather than an empty default. Browser apps never see it, because the frontend always sends every field, and an explicitly sent `0` or `False` is kept, since the fields track presence. Flipping the default later is itself a reviewed change, not a silent one. |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either, since it is written by hand rather than on the MCP SDK.                                                                                                                                                                                                                                                                                                                                                                                          |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
@@ -1305,13 +1318,7 @@ v1 ships when:
 
 ## Open questions
 
-1. **How does an app that uses `st.login` authenticate an agent?** Only `st.login`'s
-   OAuth/OIDC sign-in is affected: public apps, apps behind an authenticating proxy or
-   platform (trusted headers), and apps with their own login form already work. Its
-   identity is a signed cookie the browser gets at the end of a redirect, which an agent
-   cannot present, so the question is which credential flow maps an agent to the right
-   `st.user` without a second identity system.
-2. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
+1. **Are the prototype's JSON encodings the ones to standardize?** It reports dates,
    times, and datetimes as ISO 8601 text, decimals as strings, durations as seconds,
    non-finite numbers as `null`, ranges as two-item lists, and object-valued options as
    their `format_func` labels. Integers beyond 2^53 are still plain JSON numbers, which
