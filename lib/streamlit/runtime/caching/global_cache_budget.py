@@ -217,10 +217,10 @@ class GlobalCacheBudget(StatsProvider):
                 return
             self._warned = True
         _LOGGER.warning(
-            "Streamlit cached a value from %s that alone exceeds "
-            "server.maxCachedDataSize, so it evicted other in-memory st.cache_data "
-            "entries when any existed. Raise server.maxCachedDataSize, or set it "
-            'to "0" to disable the process-wide budget.',
+            "A value from %s is larger than server.maxCachedDataSize. Streamlit "
+            "kept that value and evicted every other in-memory st.cache_data entry. "
+            "Raise server.maxCachedDataSize, or set it to "
+            '"0" to disable the process-wide budget.',
             function_display_name,
         )
 

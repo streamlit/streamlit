@@ -86,7 +86,7 @@ def test_cache_data_max_size_to_bytes_ignores_decimal_context() -> None:
 
 
 def test_parsers_reject_long_numeric_tokens_with_streamlit_errors() -> None:
-    """Pathological digit counts cannot leak Python's native int error."""
+    """Very long numbers raise Streamlit errors instead of Python's integer error."""
     value = f"{'1' * 5000}MB"
 
     with pytest.raises(StreamlitValueError):

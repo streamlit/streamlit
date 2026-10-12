@@ -634,6 +634,8 @@ class CacheDataAPI:
             Units are powers of 1024, so ``"MB"`` and ``"MiB"`` are equivalent.
             If this is ``None`` (default), this function has no per-function limit.
             The process-wide ``server.maxCachedDataSize`` budget applies.
+            Reading a cached value refreshes its recency, so a value that is still
+            used is evicted after values that are not.
 
             On a write that would exceed the limit, Streamlit drops
             least-recently-used entries until the new value fits. If a single value
