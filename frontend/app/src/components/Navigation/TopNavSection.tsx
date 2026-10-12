@@ -300,13 +300,14 @@ const TopNavSection = ({
       closeMenu()
     }
 
-    const pageName = String(item.pageName || "")
+    const pageName = item.pageName ?? ""
 
     return (
       <StyledTopNavSidebarNavLinkContainer
         key={`${item.pageScriptHash}-${pageName}`}
       >
         <SidebarNavLink
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank icon means no icon
           icon={item.icon || null}
           isTopNav={true}
           isInDropdown={true}
@@ -326,9 +327,9 @@ const TopNavSection = ({
   }
 
   const popoverContent = sections.map((section, sectionIndex) => {
-    const sectionName = section[0].sectionHeader || ""
+    const sectionName = section[0].sectionHeader ?? ""
     const sectionLabel =
-      sectionName.trim() || String(section[0].pageName || "").trim()
+      sectionName.trim() || (section[0].pageName ?? "").trim()
     const links = section.map((item, itemIndex) =>
       renderPageLink(item, sectionLinkOffsets[sectionIndex] + itemIndex)
     )
