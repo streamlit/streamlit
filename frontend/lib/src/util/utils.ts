@@ -549,7 +549,7 @@ function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
     if (iframe.contentWindow === null) return false
     const doc = iframe.contentDocument ?? iframe.contentWindow.document
     const html = doc.body.innerHTML
-    return html !== null && html !== ""
+    return html !== ""
   } catch {
     return false
   }
