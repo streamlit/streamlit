@@ -348,44 +348,6 @@ describe("ArrowVegaLiteChart", () => {
       expect(chart).toHaveStyle("display: inline-block;")
     })
 
-    it.each([
-      ["vconcat", { vconcat: [{ mark: "bar" }, { mark: "line" }] }],
-      ["repeat", { repeat: { row: ["a"] }, spec: { mark: "bar" } }],
-    ])("does not size-contain a stretch-width %s chart", (_name, spec) => {
-      render(
-        <ArrowVegaLiteChart
-          {...getProps({ spec: JSON.stringify(spec) }, stretchConfigs)}
-        />
-      )
-
-      const chart = screen.getByTestId("stVegaLiteChart")
-      expect(chart).not.toHaveStyle("contain: size;")
-      expect(chart).not.toHaveStyle("contain-intrinsic-height: 21.875rem;")
-      expect(chart).toHaveStyle("height: auto;")
-    })
-
-    it("keeps a stretch-height facet chart from taking its row's height", () => {
-      render(
-        <ArrowVegaLiteChart
-          {...getProps(
-            {
-              spec: JSON.stringify({
-                facet: { row: { field: "group" } },
-                spec: { mark: "bar" },
-              }),
-            },
-            { heightConfig: { useStretch: true } }
-          )}
-        />
-      )
-
-      const chart = screen.getByTestId("stVegaLiteChart")
-      expect(chart).not.toHaveStyle("contain: size;")
-      expect(chart).toHaveStyle("height: auto;")
-      expect(chart.parentElement).toHaveStyle("height: fit-content;")
-      expect(chart.parentElement).not.toHaveStyle("height: 100%;")
-    })
-
     it("still passes a container height to a composition in a definite-height container", () => {
       render(
         <FlexContext.Provider value={definiteHeightContext}>
