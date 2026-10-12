@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from decimal import Inexact, localcontext
+
 import pytest
 
 from streamlit.byte_util import config_max_cached_data_size_to_bytes, to_bytes
@@ -66,6 +68,14 @@ def test_to_bytes_uses_shared_value_error(value: int | str) -> None:
     """Nonpositive byte counts use the shared parameter-value error."""
     with pytest.raises(StreamlitValueError):
         to_bytes(value)
+
+
+def test_to_bytes_ignores_decimal_context() -> None:
+    """App decimal settings cannot round or reject a valid byte size."""
+    with localcontext() as context:
+        context.prec = 2
+        context.traps[Inexact] = True
+        assert to_bytes("1.1MB") == 11 * 1024**2 // 10
 
 
 @pytest.mark.parametrize("value", [0, "0"])

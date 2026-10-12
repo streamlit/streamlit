@@ -1294,6 +1294,32 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         assert not writer.is_alive()
         storage_set.assert_not_called()
 
+    def test_detach_does_not_wait_for_storage_write(self) -> None:
+        """Detaching a cache does not hold the registry behind a storage write."""
+        cache = self._cache("detach_during_storage_write")
+        storage_write_started = threading.Event()
+        continue_storage_write = threading.Event()
+        original_set = cache.storage.set
+
+        def delayed_set(key: str, value: bytes) -> None:
+            storage_write_started.set()
+            assert continue_storage_write.wait(timeout=5)
+            original_set(key, value)
+
+        with patch.object(cache.storage, "set", side_effect=delayed_set):
+            writer = threading.Thread(target=cache.write_result, args=("vk", 1, []))
+            writer.start()
+            assert storage_write_started.wait(timeout=5)
+
+            detacher = threading.Thread(target=cache.mark_detached)
+            detacher.start()
+            detacher.join(timeout=2)
+            continue_storage_write.set()
+            writer.join(timeout=5)
+
+        assert not detacher.is_alive()
+        assert not writer.is_alive()
+
     def test_background_writeback_raises_on_unpicklable_value(self) -> None:
         """Unpicklable background refresh results surface as CacheError."""
         cache = self._background_cache("bg_unpicklable")

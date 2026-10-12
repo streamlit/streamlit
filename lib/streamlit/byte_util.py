@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import re
-from decimal import Decimal
 from typing import Final
 
 from streamlit.errors import (
@@ -72,8 +71,11 @@ def to_bytes(value: int | str | None) -> int | None:
                 'unit, such as "500MB", "1.5GB", or "200KiB".',
                 error_id="cache-data-max-size-invalid-format",
             )
-        parsed = Decimal(match.group("value"))
-        size = int(parsed * _MULTIPLIERS[match.group("unit").lower()])
+        value_text = match.group("value")
+        whole, _, fraction = value_text.partition(".")
+        digits = f"{whole or '0'}{fraction}"
+        denominator = 10 ** len(fraction)
+        size = int(digits) * _MULTIPLIERS[match.group("unit").lower()] // denominator
     else:
         raise StreamlitInvalidParameterTypeError(
             "max_size", type(value).__name__, ["int", "str"]

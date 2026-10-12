@@ -132,7 +132,7 @@ def test_disabled_budget_does_not_track_entries() -> None:
 
 
 def test_global_budget_warning_is_emitted_once() -> None:
-    """Repeated global evictions emit only one warning."""
+    """Only uncontainable writes warn, and they warn once."""
     budget = GlobalCacheBudget(max_bytes=2, read_config=False)
     storage = _create_storage(budget, "warning")
 
@@ -141,7 +141,9 @@ def test_global_budget_warning_is_emitted_once() -> None:
     ) as warning:
         storage.set("a", b"aa")
         storage.set("b", b"bb")
-        storage.set("c", b"cc")
+        warning.assert_not_called()
+        storage.set("large", b"large")
+        storage.set("larger", b"larger")
 
     warning.assert_called_once()
 
@@ -479,6 +481,7 @@ def test_unique_key_churn_keeps_coordinator_metadata_bounded() -> None:
 
     assert budget.total_bytes == 0
     assert not budget._entries
+    assert budget._storage_entries[storage._global_storage_id] == set()
     assert len(budget._last_event_sequences) == 1
 
 

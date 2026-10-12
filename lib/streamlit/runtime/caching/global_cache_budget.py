@@ -77,6 +77,7 @@ class GlobalCacheBudget(StatsProvider):
         ] = {}
         self._pending_unregisters: queue.SimpleQueue[int] = queue.SimpleQueue()
         self._entries: OrderedDict[tuple[int, str], _EntryRecord] = OrderedDict()
+        self._storage_entries: dict[int, set[str]] = {}
         # Each storage publishes numbered events under its own lock. Keeping the
         # newest sequence per storage prevents a stale notification from
         # resurrecting a removed entry.
@@ -105,6 +106,7 @@ class GlobalCacheBudget(StatsProvider):
                 self._pending_unregisters.put(storage_id)
 
             self._storages[storage_id] = weakref.ref(storage, unregister_storage)
+            self._storage_entries[storage_id] = set()
             self._last_event_sequences[storage_id] = 0
         return storage_id
 
@@ -124,10 +126,10 @@ class GlobalCacheBudget(StatsProvider):
     def _unregister_locked(self, storage_id: int) -> None:
         self._storages.pop(storage_id, None)
         self._last_event_sequences.pop(storage_id, None)
-        for entry_key in [
-            entry_key for entry_key in self._entries if entry_key[0] == storage_id
-        ]:
-            self._total_bytes -= self._entries.pop(entry_key).size
+        for key in self._storage_entries.pop(storage_id, set()):
+            record = self._entries.pop((storage_id, key), None)
+            if record is not None:
+                self._total_bytes -= record.size
 
     def _accept_event_locked(self, storage_id: int, event_sequence: int) -> bool:
         last_sequence = self._last_event_sequences.get(storage_id)
@@ -171,6 +173,7 @@ class GlobalCacheBudget(StatsProvider):
                 generation=generation,
                 access_version=access_version,
             )
+            self._storage_entries[storage_id].add(key)
             self._entries.move_to_end(entry_key)
             self._total_bytes += size
 
@@ -217,6 +220,7 @@ class GlobalCacheBudget(StatsProvider):
                 return
             if current is not None:
                 self._total_bytes -= self._entries.pop(entry_key).size
+                self._storage_entries[storage_id].discard(key)
 
     def _warn_once(self) -> None:
         with self._lock:
@@ -251,7 +255,7 @@ class GlobalCacheBudget(StatsProvider):
                 storage_ref = self._storages.get(entry_key[0])
                 storage = storage_ref() if storage_ref is not None else None
                 if storage is None:
-                    self._total_bytes -= self._entries.pop(entry_key).size
+                    self._unregister_locked(entry_key[0])
                     if self._total_bytes <= self._max_bytes:
                         return None
                     continue
@@ -277,7 +281,6 @@ class GlobalCacheBudget(StatsProvider):
                 if evicted:
                     with self._lock:
                         self._global_evictions += 1
-                    self._warn_once()
                 # A read, write, clear, or expiry publishes its updated state
                 # before releasing the wrapper lock. Select again from the
                 # actual current global LRU until the budget is satisfied.

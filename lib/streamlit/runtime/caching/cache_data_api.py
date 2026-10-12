@@ -585,7 +585,7 @@ class CacheDataAPI:
         max_entries : int or None
             The maximum number of entries to keep in the cache, or None
             for an unbounded cache. When a new entry is added to a full cache,
-            the oldest cached entry will be removed. Defaults to None.
+            the least recently used cached entry will be removed. Defaults to None.
 
         max_size : int, str, or None
             The maximum total serialized size of this function's in-memory cache.
@@ -596,10 +596,10 @@ class CacheDataAPI:
 
             This limit measures pickled bytes, not live Python heap usage or process
             RSS. It applies only to the in-memory layer when ``persist="disk"``.
-            A single value larger than the limit is retained rather than rejected.
-            Defaults to None, which disables the per-function limit; the
-            process-wide ``server.maxCachedDataSize`` budget still defaults to
-            ``"2gb"``.
+            A single value larger than the limit is retained rather than rejected,
+            after evicting every other entry in this function's cache. If this is
+            ``None`` (default), the per-function limit is disabled; the process-wide
+            ``server.maxCachedDataSize`` budget still defaults to ``"2gb"``.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
@@ -938,7 +938,7 @@ class DataCache(Cache[R]):
         with self._write_lock:
             if not self.is_active:
                 return
-            self.storage.set(value_key, pickled_entry)
+        self.storage.set(value_key, pickled_entry)
 
     def _pickle_result(
         self, value_key: str, value: R, messages: list[MsgData]
