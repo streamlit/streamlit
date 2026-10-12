@@ -156,6 +156,7 @@ function ButtonActionMenu({
                   // instead of forcing a single line (which would overflow).
                   allowWrap
                   // Provide aria-label for icon-only menu items (where text is empty)
+                  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty label text falls through to the icon, then the raw label
                   aria-label={text || icon || label}
                 >
                   {icon && <DynamicIcon size="base" iconValue={icon} />}

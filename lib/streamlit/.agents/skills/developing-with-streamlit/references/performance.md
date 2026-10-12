@@ -337,6 +337,24 @@ Caveats for `on_change="ignore"`:
 - Inside `st.form`, `on_change="ignore"` has no effect; the form already defers commits until submit.
 - `st.file_uploader`, `st.camera_input`, and `st.audio_input` still upload the file, photo, or recording immediately; only the rerun is deferred.
 
+## Client-side validation
+
+Use client-side validation and limits whenever the widget already supports them. They catch bad input in the browser, which avoids a rerun and gives the user immediate feedback.
+
+- `st.text_input`: `validate`, `required`, `max_chars`, and `type` (`type="email"` and `type="url"` check the format by default).
+- `st.text_area` and `st.chat_input`: `max_chars`.
+- `st.number_input`: `min_value`, `max_value`, `step`, and `required`.
+- `st.date_input` and `st.datetime_input`: `min_value` and `max_value`. `st.datetime_input` also takes `step`.
+- `st.data_editor`: the same kinds of limits via `st.column_config`.
+- `st.file_uploader`: `type` rejects a disallowed file before upload.
+
+```python
+email = st.text_input("Email", type="email", required=True)
+qty = st.number_input("Quantity", min_value=1, max_value=99, step=1)
+```
+
+These checks are a UX guardrail, not a security boundary. See [Widget input constraints are mostly client-side](session-state.md#widget-input-constraints-are-mostly-client-side).
+
 ## Conditional rendering
 
 **This is critical and often missed.**
@@ -472,7 +490,7 @@ with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work r
 
 Avoid standalone `st.empty()`/`st.skeleton()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
 
-For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes. Keep fragment writes inside the fragment body; if a fragment must write to an outside container, claim that slot during the initial full-app run.
+For independent slow sections, prefer `@st.fragment(parallel=True)` so each fills in as its own work completes. Keep a parallel fragment's output inside its own body: during a full-app run it runs on a separate thread, and writing to a container created outside it raises an error, even if that container was created earlier in the run.
 
 ## Perceived performance (loading states)
 

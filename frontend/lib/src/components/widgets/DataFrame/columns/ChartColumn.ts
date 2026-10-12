@@ -247,7 +247,7 @@ function BaseChartColumn(
         return null
       }
 
-      return cell.data?.values === undefined ? null : cell.data?.values
+      return cell.data?.values ?? null
     },
   }
 }

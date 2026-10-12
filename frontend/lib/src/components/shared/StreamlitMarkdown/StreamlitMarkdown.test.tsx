@@ -383,6 +383,18 @@ describe("linkReference", () => {
     expect(screen.getByText("Streamlit")).toHaveAttribute("target", "_blank")
   })
 
+  it("treats a blank target and rel as unset", () => {
+    render(
+      <LinkWithTargetBlank href="https://example.com" target="" rel="">
+        Example
+      </LinkWithTargetBlank>
+    )
+
+    const link = screen.getByRole("link", { name: "Example" })
+    expect(link).toHaveAttribute("target", "_blank")
+    expect(link).toHaveAttribute("rel", "noopener noreferrer")
+  })
+
   it("renders a link without title", () => {
     const body =
       "Everybody loves [The Internet Archive](https://archive.org/)."
@@ -621,6 +633,40 @@ describe("StreamlitMarkdown", () => {
     expect(heading).not.toHaveAttribute("aria-labelledby")
   })
 
+  it("treats a blank anchor as unset and generates one from the heading text", () => {
+    render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="">
+            Hello World
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    expect(screen.getByRole("heading")).toHaveAttribute("id", "hello-world")
+  })
+
+  it("hides the anchor in the sidebar when hideAnchor is false", () => {
+    render(
+      <IsSidebarContext.Provider value={true}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements
+            tag="h2"
+            anchor="my-anchor"
+            hideAnchor={false}
+          >
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    expect(
+      screen.queryByRole("link", { name: "Link to heading" })
+    ).not.toBeInTheDocument()
+  })
+
   it("updates heading anchor when text changes across reruns (no explicit anchor)", () => {
     const { rerender } = render(
       <IsSidebarContext.Provider value={false}>
@@ -752,6 +798,20 @@ describe("StreamlitMarkdown", () => {
     expect(image).toHaveStyle("user-select: none")
   })
 
+  it("keeps adjacent text when rendering a streamlit logo", () => {
+    render(
+      <StreamlitMarkdown
+        source={":streamlit: Rocks"}
+        allowHTML={false}
+        isLabel
+      />
+    )
+    const image = screen.getByRole("img", { name: "Streamlit logo" })
+    expect(image.tagName.toLowerCase()).toBe("img")
+    expect(image).not.toHaveTextContent("Rocks")
+    expect(image.parentElement).toHaveTextContent("Rocks")
+  })
+
   it("renders material icons with allowHTML=true", async () => {
     const source = `:material/search: Icon`
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
@@ -759,6 +819,8 @@ describe("StreamlitMarkdown", () => {
     const tagName = markdown.nodeName.toLowerCase()
     expect(tagName).toBe("span")
     expect(markdown).toHaveStyle("font-family: Material Symbols Rounded")
+    expect(markdown).not.toHaveTextContent("Icon")
+    expect(markdown.parentElement).toHaveTextContent("Icon")
   })
 
   // Typographical symbol replacements
@@ -1122,7 +1184,36 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toHaveStyle(`user-select: none`)
     expect(markdown).toHaveStyle(`vertical-align: bottom`)
     expect(markdown).toHaveAttribute("translate", "no")
+    expect(markdown).not.toHaveTextContent("Icon")
+    expect(markdown.parentElement).toHaveTextContent("Icon")
   })
+
+  it.each([
+    {
+      source: ":material/search: Icon",
+      adjacent: "Icon",
+      iconName: "search icon",
+    },
+    {
+      source: "Hello :material/search:",
+      adjacent: "Hello",
+      iconName: "search icon",
+    },
+    {
+      source: ":material/settings: Section",
+      adjacent: "Section",
+      iconName: "settings icon",
+    },
+  ])(
+    "keeps adjacent copy next to a material icon ($source)",
+    ({ source, adjacent, iconName }) => {
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const icon = screen.getByRole("img", { name: iconName })
+      expect(icon.tagName.toLowerCase()).toBe("span")
+      expect(icon).not.toHaveTextContent(adjacent)
+      expect(icon.parentElement).toHaveTextContent(adjacent)
+    }
+  )
 
   it("does not remove unknown directive", () => {
     const source = `test :foo test:test :`

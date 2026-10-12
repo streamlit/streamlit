@@ -12,10 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from playwright.sync_api import Page
+from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import get_element_by_key
+from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.shared.app_utils import (
+    click_toggle,
+    get_element_by_key,
+    get_text_area,
+)
+
+# Match theme.sizes.defaultChartHeight (21.875rem) and defaultChartWidth (25rem).
+DEFAULT_CHART_HEIGHT_PX = 350
+DEFAULT_CHART_WIDTH_PX = 400
+# Figure layout.height in the app. Distinct from Plotly's 450px default.
+PLOTLY_FIGURE_HEIGHT_PX = 320
 
 CONTAINER_KEYS = [
     "container-horizontal-align-left",
@@ -36,8 +46,185 @@ CONTAINER_KEYS = [
 ]
 
 
+def _height(locator: Locator) -> int | None:
+    box = locator.bounding_box()
+    return round(box["height"]) if box else None
+
+
+def _expect_chart_drawn(chart: Locator, width_px: int) -> None:
+    """Assert that Vega drew across its box instead of only reserving space."""
+    drawing = chart.locator("canvas, svg").first
+    expect(drawing).to_be_visible()
+    expect(drawing).to_have_css("width", f"{width_px}px")
+
+
 def test_layouts_container_alignment(app: Page, assert_snapshot: ImageCompareFunction):
     """Snapshot test for each top-level container in st_layouts_container_alignment.py."""
     for key in CONTAINER_KEYS:
         locator = get_element_by_key(app, key)
         assert_snapshot(locator, name=f"st_layouts_container_alignment-{key}")
+
+
+def _expect_heights_match(
+    app: Page, tallest: Locator, stretched: list[Locator]
+) -> None:
+    def _heights_match() -> bool:
+        tallest_height = _height(tallest)
+        return bool(tallest_height) and all(
+            _height(locator) == tallest_height for locator in stretched
+        )
+
+    wait_until(app, _heights_match)
+
+
+def test_stretch_height_in_horizontal_container(app: Page):
+    """Stretch-height children grow to the tallest element in their row."""
+    row = get_element_by_key(app, "container-horizontal-stretch-height")
+    tallest = get_element_by_key(app, "stretch-height-tallest")
+    stretch_metric = row.get_by_test_id("stMetric")
+    content_card = get_element_by_key(app, "stretch-height-content-card")
+    expect(stretch_metric).to_be_visible()
+    _expect_heights_match(
+        app, tallest, [get_element_by_key(app, "stretch-height-card"), stretch_metric]
+    )
+
+    # The chart and the dataframe size themselves from their container.
+    data_row = get_element_by_key(app, "container-horizontal-stretch-height-data")
+    chart_and_dataframe = data_row.get_by_test_id("stFullScreenFrame")
+    expect(chart_and_dataframe).to_have_count(2)
+    _expect_heights_match(
+        app,
+        get_element_by_key(app, "stretch-height-data-tallest"),
+        chart_and_dataframe.all(),
+    )
+
+    # A stretch-height text area fills the row and keeps its pixel width.
+    stretch_text_area = get_text_area(app, "Stretch text area")
+    _expect_heights_match(
+        app,
+        get_element_by_key(app, "stretch-height-input-tallest"),
+        [stretch_text_area],
+    )
+    expect(stretch_text_area).to_have_css("width", "200px")
+
+    # Content-height siblings keep their own height.
+    def _content_card_is_shorter() -> bool:
+        content_height = _height(content_card)
+        tallest_height = _height(tallest)
+        return (
+            content_height is not None
+            and tallest_height is not None
+            and content_height < tallest_height
+        )
+
+    wait_until(app, _content_card_is_shorter)
+
+
+def test_stretch_chart_default_height_in_horizontal_container(app: Page):
+    """Stretch charts fall back to their default height and shrink back with the row."""
+    fallback_chart = get_element_by_key(
+        app, "container-horizontal-stretch-chart-fallback"
+    ).get_by_test_id("stVegaLiteChart")
+    # A short sibling doesn't squash the chart to the button height.
+    expect(fallback_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
+
+    # A content-width chart keeps its default width instead of collapsing.
+    content_width_chart = get_element_by_key(
+        app, "container-horizontal-content-width-chart"
+    ).get_by_test_id("stVegaLiteChart")
+    expect(content_width_chart).to_have_css("width", f"{DEFAULT_CHART_WIDTH_PX}px")
+    expect(content_width_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
+    _expect_chart_drawn(content_width_chart, DEFAULT_CHART_WIDTH_PX)
+    pixel_height_chart = get_element_by_key(
+        app, "container-horizontal-content-width-pixel-height-chart"
+    ).get_by_test_id("stVegaLiteChart")
+    expect(pixel_height_chart).to_have_css("width", f"{DEFAULT_CHART_WIDTH_PX}px")
+    expect(pixel_height_chart).to_have_css("height", "200px")
+    _expect_chart_drawn(pixel_height_chart, DEFAULT_CHART_WIDTH_PX)
+
+    # Plotly falls back to the figure height, and the plot actually draws.
+    plotly_chart = get_element_by_key(
+        app, "container-horizontal-stretch-plotly-fallback"
+    ).get_by_test_id("stPlotlyChart")
+    expect(plotly_chart).to_have_css("height", f"{PLOTLY_FIGURE_HEIGHT_PX}px")
+    expect(plotly_chart.locator("svg.main-svg, canvas").first).to_be_visible()
+
+    shrink_row = get_element_by_key(app, "container-horizontal-stretch-chart-shrink")
+    shrink_card = get_element_by_key(app, "stretch-chart-shrink-card")
+    shrink_chart = shrink_row.get_by_test_id("stVegaLiteChart")
+    _expect_heights_match(app, shrink_card, [shrink_chart])
+
+    click_toggle(app, "Tall card")
+    # The chart returns to its default height instead of keeping the height
+    # of the tall card it rendered at.
+    expect(shrink_chart).to_have_css("height", f"{DEFAULT_CHART_HEIGHT_PX}px")
+
+    # A vconcat chart has no single-view fallback. It must not reserve the
+    # default chart height or paint over the element below the row.
+    composition_row = get_element_by_key(
+        app, "container-horizontal-stretch-composition"
+    )
+    composition_chart = composition_row.get_by_test_id("stVegaLiteChart")
+    below_composition = get_element_by_key(app, "below-stretch-composition")
+    expect(composition_chart).not_to_have_css("contain", "size")
+
+    def _composition_stays_in_row() -> bool:
+        chart_height = _height(composition_chart)
+        row_box = composition_row.bounding_box()
+        below_box = below_composition.bounding_box()
+        return (
+            chart_height is not None
+            and chart_height < DEFAULT_CHART_HEIGHT_PX
+            and row_box is not None
+            and below_box is not None
+            and below_box["y"] + 1 >= row_box["y"] + row_box["height"]
+        )
+
+    wait_until(app, _composition_stays_in_row)
+    expect(composition_chart.locator("canvas, svg")).to_have_count(0)
+
+
+def _content_fits(locator: Locator) -> bool:
+    """Whether the element's content fits without overflowing it."""
+    # Allow 1px because scrollHeight and clientHeight round fractional heights
+    # differently.
+    return bool(locator.evaluate("el => el.scrollHeight - el.clientHeight <= 1"))
+
+
+def test_stretch_charts_fit_containers_with_definite_height(app: Page):
+    """Stretch charts shrink to fit their siblings in definite-height containers."""
+    for container in (
+        get_element_by_key(app, "fixed-card-title-and-chart"),
+        get_element_by_key(app, "fixed-row-stretch-kpi-cards"),
+        get_element_by_key(app, "fixed-tabs-title-and-chart").get_by_role("tabpanel"),
+    ):
+        charts = container.get_by_test_id("stVegaLiteChart")
+        expect(charts.first).to_be_visible()
+
+        def _charts_fit(
+            container: Locator = container, charts: Locator = charts
+        ) -> bool:
+            heights = [_height(chart) for chart in charts.all()]
+            return _content_fits(container) and all(
+                height is not None and 0 < height < DEFAULT_CHART_HEIGHT_PX
+                for height in heights
+            )
+
+        # The container must not scroll because of the chart's default height.
+        wait_until(app, _charts_fit)
+
+
+def test_checkbox_alignment_in_horizontal_container(app: Page):
+    """Bottom-aligned rows use the same 8px checkbox and toggle margin as columns."""
+    bottom_row = get_element_by_key(app, "container-horizontal-bottom-checkboxes")
+    bottom_checkboxes = bottom_row.get_by_test_id("stCheckbox")
+    expect(bottom_checkboxes).to_have_count(2)
+    for index in range(2):
+        expect(bottom_checkboxes.nth(index)).to_have_css("margin-bottom", "8px")
+
+    # The default top alignment must not pick up the margin.
+    top_checkbox = get_element_by_key(
+        app, "container-horizontal-top-checkboxes"
+    ).get_by_test_id("stCheckbox")
+    expect(top_checkbox).to_have_css("margin-bottom", "0px")
+    expect(top_checkbox).to_have_css("margin-top", "0px")

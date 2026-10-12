@@ -40,6 +40,7 @@ from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.source_util import page_icon_and_name
 from streamlit.testing.v1.element_tree import (
+    AudioInput,
     Block,
     BlockList,
     Button,
@@ -533,7 +534,7 @@ class AppTest:
             fragment_storage=self._fragment_storage,
         )
 
-        # Register any files from FileUploader widgets with the file manager
+        # Register recordings and uploads before the script reads them.
         self._register_uploaded_files(script_runner)
 
         with patch_config_options({"global.appTest": True}):
@@ -571,12 +572,17 @@ class AppTest:
         return self
 
     def _register_uploaded_files(self, script_runner: LocalScriptRunner) -> None:
-        """Register files from FileUploader widgets with the file manager."""
+        """Register bytes for file-upload widgets with the file manager.
+
+        Covers ``st.file_uploader`` and ``st.audio_input``. Both widgets
+        deserialize ``file_uploader_state_value`` through
+        ``MemoryUploadedFileManager``.
+        """
         from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
         submitted = _submitted_form_ids(self._tree)
         form_clears = _form_clear_flags(self._tree)
-        for widget in self._tree.file_uploader:
+        for widget in (*self._tree.file_uploader, *self._tree.audio_input):
             form_id = _widget_form_id(widget)
             saved_files = widget._files
             if form_id and form_id not in submitted:
@@ -759,6 +765,20 @@ class AppTest:
             return all ``st.checkbox`` within the associated container.
         """
         return self._tree.sidebar
+
+    @property
+    def audio_input(self) -> WidgetList[AudioInput]:
+        """Sequence of all ``st.audio_input`` widgets.
+
+        Returns
+        -------
+        WidgetList of AudioInput
+            Sequence of all ``st.audio_input`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.audio_input[0]`` for the first widget or
+            ``at.audio_input(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.audio_input
 
     @property
     def button(self) -> WidgetList[Button]:

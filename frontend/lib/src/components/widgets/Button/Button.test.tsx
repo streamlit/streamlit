@@ -35,6 +35,7 @@ vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
   formatShortcutForDisplay: vi.fn(
     (shortcut: string | null | undefined) =>
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty shortcut displays as nothing
       shortcut?.replaceAll("+", " + ") || undefined
   ),
 }))

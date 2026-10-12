@@ -4644,6 +4644,21 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
     })
 
+    it("treats a blank sidebar backgroundColor as unset", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "lightgray",
+        sidebar: {
+          backgroundColor: "",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
+    })
+
     it("uses configured sidebar secondaryBackgroundColor when provided", () => {
       const mainTheme = createTheme(CUSTOM_THEME_NAME, {
         backgroundColor: "white",
@@ -4659,6 +4674,21 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
       // Should use configured sidebar secondary background
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe("blue")
+    })
+
+    it("treats a blank sidebar secondaryBackgroundColor as unset", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "lightgray",
+        sidebar: {
+          secondaryBackgroundColor: "",
+        },
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
     })
 
     it("applies sidebar theme overrides", () => {

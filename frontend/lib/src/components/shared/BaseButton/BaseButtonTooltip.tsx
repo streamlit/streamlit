@@ -53,7 +53,7 @@ export function BaseButtonTooltip({
       <StyledTooltipNormal>
         <TooltipIcon
           content={help}
-          placement={placement || Placement.TOP}
+          placement={placement ?? Placement.TOP}
           containerWidth={containerWidth}
           constrainWidth={constrainWidth}
           onMouseEnterDelay={HELP_TOOLTIP_HOVER_DELAY_MS}

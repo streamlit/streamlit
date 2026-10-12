@@ -204,6 +204,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
         } else {
           // Use user provided display_text unless it's null, undefined, or an empty string.
           // If it's any of those falsy values, use the href.
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank display text falls back to the href
           displayText = configuredDisplayText || href
         }
       }

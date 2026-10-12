@@ -145,9 +145,7 @@ export function useSkillsCalloutSlot(
 ): boolean {
   const { claimCallout, releaseCallout } = useContext(SkillsInstallContext)
   const tokenRef = useRef<symbol | null>(null)
-  if (tokenRef.current === null) {
-    tokenRef.current = Symbol("skillsCalloutSlot")
-  }
+  tokenRef.current ??= Symbol("skillsCalloutSlot")
   const [ownsSlot, setOwnsSlot] = useState(false)
 
   // Claim once, when first eligible. Skip while not eligible or already owning,

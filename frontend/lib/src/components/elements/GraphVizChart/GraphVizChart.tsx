@@ -154,6 +154,7 @@ function GraphVizChart({
   // computes to an empty accessible name, which is worse than none.
   // Use role="figure" rather than "img" so GraphViz SVG links stay in the
   // accessibility tree.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const accessibleName = element.alt?.trim() || undefined
 
   return (

@@ -655,6 +655,15 @@ export default defineConfig([
       "streamlit-custom/enforce-memo": "error",
     },
   },
+  // `||` drops 0, "", and false. Keep `||` where a blank string or false
+  // means unset, and where `||` combines booleans. Use `??` where only
+  // null and undefined mean missing, including an explicit 0.
+  {
+    files: ["**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/prefer-nullish-coalescing": "error",
+    },
+  },
   // Styled components files
   {
     files: ["**/styled-components.ts", "**/styled-components.tsx"],

@@ -83,7 +83,7 @@ export const uploadFiles = async ({
 
       try {
         await uploadClient.uploadFile(
-          { id: fileUrl.fileId, formId: widgetInfo.formId || "" }, // TODO SEE IF DOWNSTREAM LOGIC CAN BE SIMPLIFIED
+          { id: fileUrl.fileId, formId: widgetInfo.formId ?? "" }, // TODO SEE IF DOWNSTREAM LOGIC CAN BE SIMPLIFIED
           fileUrl.uploadUrl,
           file,
           undefined, // onUploadProgress

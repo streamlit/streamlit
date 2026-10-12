@@ -244,7 +244,7 @@ function ProgressColumn(
       if (cell.kind === GridCellKind.Loading) {
         return null
       }
-      return cell.data?.value === undefined ? null : cell.data?.value
+      return cell.data?.value ?? null
     },
   }
 }

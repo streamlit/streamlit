@@ -40,6 +40,7 @@ import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
@@ -83,8 +84,6 @@ export interface Props {
   widgetMgr: WidgetStateManager
   fragmentId?: string
 }
-
-const REQUIRED_FIELD_MESSAGE = "This field is required."
 
 const NumberInput: React.FC<Props> = ({
   disabled,
@@ -372,16 +371,12 @@ const NumberInput: React.FC<Props> = ({
   // Clear the stored error once it is no longer visible. Keyed widgets preserve
   // local state across required changes and programmatic values, so otherwise
   // re-enabling required could resurrect a stale error.
-  const requiredError =
-    element.required &&
-    hasRequiredError &&
+  const requiredError = requiredFieldError(
+    element.required,
+    hasRequiredError,
     isRequiredEmpty(currentNumericValue)
-      ? REQUIRED_FIELD_MESSAGE
-      : null
-  if (
-    hasRequiredError &&
-    (!element.required || !isRequiredEmpty(currentNumericValue))
-  ) {
+  )
+  if (hasRequiredError && requiredError === null) {
     setHasRequiredError(false)
   }
   const displayedError = requiredError ?? validationError

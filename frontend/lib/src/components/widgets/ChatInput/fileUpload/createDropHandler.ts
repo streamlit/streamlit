@@ -78,6 +78,7 @@ const filterFiles = (
         errors: [
           {
             code: FileErrorCode.FileInvalidType,
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank message should still explain the rejection
             message: validation.errorMessage || "File type not allowed.",
           },
         ],
