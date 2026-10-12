@@ -100,6 +100,7 @@ class CacheStorageContext:
 
     max_size_bytes : int or None
         The maximum serialized size of the in-memory cache in bytes.
+        If None, the cache storage will not limit its byte size.
 
     persist : Literal["disk"] or None
         The persistence mode for the cache storage.

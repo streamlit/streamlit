@@ -960,12 +960,12 @@ _create_option(
         Maximum combined serialized size of all @st.cache_data in-memory caches.
         Use a string with a binary unit, such as "2gb" or "500mb" (powers of
         1024, so "mb" and "mib" are equivalent). Numbers without a unit are
-        rejected, except 0, which disables the budget. When the total exceeds
-        this limit, Streamlit evicts globally least-recently-used in-memory
-        entries. A single value larger than the limit is kept, so the total can
-        stay above the setting. This limits serialized cache bytes, not the
-        process's overall memory, and does not delete persisted disk entries.
-        Streamlit reads this value when the server starts.
+        rejected, except 0 or "0", which disables the budget. When the total
+        exceeds this limit, Streamlit evicts globally least-recently-used
+        in-memory entries. A single value larger than the limit is kept, so the
+        total can stay above the setting. This limits serialized cache bytes,
+        not the process's overall memory, and does not delete persisted disk
+        entries. Streamlit reads this value when the server starts.
     """,
     default_val="2gb",
     type_=str,

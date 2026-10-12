@@ -162,7 +162,7 @@ A single value larger than `max_size` is retained and logs a warning.
 
 The process-wide `server.maxCachedDataSize` setting covers global and session-scoped
 data caches. Set it to a binary unit string such as `"4gb"` (powers of 1024, so `"gb"`
-and `"gib"` are equivalent), or to `0` to disable the safety net. It also retains a
+and `"gib"` are equivalent), or to `"0"` to disable the safety net. It also retains a
 newly written value if that value alone exceeds the budget. With `persist="disk"`,
 both byte limits evict only the in-memory copy and do not bound disk usage.
 

@@ -253,6 +253,7 @@ class GlobalCacheBudget(StatsProvider):
         protected: tuple[int, str],
         excluded: set[tuple[int, str]],
     ) -> tuple[InMemoryCacheStorageWrapper, str, _EntryRecord] | None:
+        """Select the global LRU candidate, excluding protected and tried entries."""
         with self._lock:
             self._drain_pending_unregisters_locked()
             if self._max_bytes is None or self._total_bytes <= self._max_bytes:
