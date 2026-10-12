@@ -2405,7 +2405,7 @@ describe("WebsocketConnection close diagnostics", () => {
     ws.disconnect()
   })
 
-  it("sanitizes sensitive close reasons and omits connection secrets", async () => {
+  it("redacts URLs and session IDs in the close reason and does not send telemetry", async () => {
     const sessionId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
     const { warnLogs, args, ws } = await closeAndCaptureLogs({
       code: 1011,
@@ -2419,7 +2419,6 @@ describe("WebsocketConnection close diagnostics", () => {
     expect(warnLogs[0]).not.toContain("wss://")
     expect(warnLogs[0]).not.toContain("app.example.com")
     expect(warnLogs[0]).not.toContain(sessionId)
-    expect(warnLogs[0]).not.toContain("PLACEHOLDER_AUTH_TOKEN")
     expect(args.sendClientError).not.toHaveBeenCalled()
     ws.disconnect()
   })

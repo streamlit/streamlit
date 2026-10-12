@@ -97,6 +97,33 @@ describe("sanitizeWebsocketCloseReason", () => {
     expect(sanitized).not.toContain(jwt)
     expect(sanitized).not.toContain(token)
   })
+
+  it("preserves version numbers and dotted diagnostic text", () => {
+    expect(
+      sanitizeWebsocketCloseReason("Unsupported protocol version 1.2.3")
+    ).toBe("Unsupported protocol version 1.2.3")
+    expect(sanitizeWebsocketCloseReason("failed.to.connect")).toBe(
+      "failed.to.connect"
+    )
+    expect(sanitizeWebsocketCloseReason("host.example.com")).toBe(
+      "host.example.com"
+    )
+    expect(sanitizeWebsocketCloseReason("connection.reset.by.peer")).toBe(
+      "connection.reset.by.peer"
+    )
+  })
+
+  it("redacts long tokens that end in base64 padding", () => {
+    const paddedOnce = `${"a".repeat(31)}=`
+    const paddedTwice = `${"a".repeat(30)}==`
+    const sanitized = sanitizeWebsocketCloseReason(
+      `token=${paddedOnce} other=${paddedTwice}`
+    )
+
+    expect(sanitized).toContain("[redacted]")
+    expect(sanitized).not.toContain(paddedOnce)
+    expect(sanitized).not.toContain(paddedTwice)
+  })
 })
 
 describe("formatWebsocketCloseLog", () => {

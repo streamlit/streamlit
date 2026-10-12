@@ -50,12 +50,12 @@ const CONTROL_CHARS_RE = /\p{Cc}+/gu
 const URL_RE = /\b(?:https?|wss?):\/\/\S+/gi
 const UUID_RE =
   /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi
-const JWT_RE = /\b[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g
-const LONG_TOKEN_RE = /\b[A-Za-z0-9+/=_-]{32,}\b/g
+/** Compact JWT form starts with a base64url `{"` header (`eyJ`). */
+const JWT_RE = /\beyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g
+const LONG_TOKEN_RE = /\b[A-Za-z0-9+/=_-]{32,}/g
 
 /**
- * True when the close is a clean RFC 6455 normal closure. Callers log those
- * at info and every other close at warning.
+ * True when the close is a clean RFC 6455 normal closure (code 1000 with wasClean).
  */
 export function isNormalWebsocketClosure(
   code: number,
@@ -65,11 +65,10 @@ export function isNormalWebsocketClosure(
 }
 
 /**
- * Return a console-safe close reason so session IDs and auth material never
- * reach the browser console:
+ * Redact a close reason before writing it to the browser console:
  * - Empty reasons become {@link MISSING_WEBSOCKET_CLOSE_REASON}
- * - URLs, UUIDs, JWTs, and long token-like strings are redacted
- * - Double quotes are rewritten so the reason="..." log field stays intact
+ * - URLs, UUIDs, JWTs, and long token-like strings are replaced with "[redacted]"
+ * - Double quotes are rewritten so the reason="..." field stays intact
  */
 export function sanitizeWebsocketCloseReason(reason: string): string {
   const sanitized = reason
