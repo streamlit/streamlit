@@ -20,17 +20,14 @@ Theme options can't be changed from the script (`st.set_option` rejects them). S
 | Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` |
 | Tighter page / sidebar spacing | `paddingTop` / `paddingBottom` (prefer over `.block-container` CSS) |
 
-**Where to put keys**
+Relative `theme.base` paths resolve from the `streamlit run` working directory, not from `config.toml`.
 
-1. Same brand across many apps? → shared TOML/URL via `theme.base`, then per-app overrides (relative paths resolve from the `streamlit run` working directory)
-2. Shared across modes? → put fonts, radii, `showWidgetBorder` / `showSidebarBorder`, and padding on `[theme]` (only keys that should apply to both light and dark)
-3. Locked single look, or user can toggle light/dark?
-   - Locked → set colors on `[theme]` only (`base = "light"` or `"dark"`)
-   - Toggle → put per-mode colors on `[theme.light]` and `[theme.dark]`; do not put mode-specific palettes on `[theme]` (they apply to both modes). See `shadcn-dual` or the dual-mode example below
-4. Sidebar should contrast or match? → `[theme.sidebar]` for a locked theme; `[theme.light.sidebar]` / `[theme.dark.sidebar]` when the appearance toggle stays on. Shared sidebar padding can sit on `[theme.sidebar]`
-5. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` on the section for that mode (light, dark, or locked `[theme]`)
-6. Tighten whitespace / dense dashboard? → `paddingTop` / `paddingBottom` (main and sidebar); `dense-dashboard` is a ready example
-7. CSS / `st.html` `<style>` → only if the user explicitly requests CSS
+**Where to put keys** (placement the table above leaves out)
+
+1. Shared across modes? → put fonts, radii, `showWidgetBorder` / `showSidebarBorder`, and padding on `[theme]` (only keys that should apply to both light and dark)
+2. Toggle light/dark? → put per-mode colors on `[theme.light]` and `[theme.dark]`; do not put mode-specific palettes on `[theme]` (they apply to both modes). See `shadcn-dual` or the dual-mode example below
+3. Sidebar should contrast or match? → `[theme.sidebar]` for a locked theme; `[theme.light.sidebar]` / `[theme.dark.sidebar]` when the appearance toggle stays on. Shared sidebar padding can sit on `[theme.sidebar]`
+4. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` on the section for that mode (light, dark, or locked `[theme]`)
 
 ## Contents
 
@@ -537,7 +534,7 @@ Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config
 | **ubuntu** | Light (locked) | `#E95420` | Ubuntu, Ubuntu Mono | |
 | **vscode** | Dark (locked) | `#0078D4` | Segoe UI, Fira Code | |
 
-See `assets/templates/themes/README.md`. For org-wide brand, put shared keys in a `theme.base` file and override per app. Use dual-mode templates (or split a single-mode template into light/dark) only when the app should toggle.
+See `assets/templates/themes/README.md`. To support the toggle with a single-mode template, split it into `[theme.light]` / `[theme.dark]` following the dual-mode example above.
 
 ## References
 

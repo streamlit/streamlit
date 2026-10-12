@@ -188,7 +188,7 @@ When creating a **new dashboard app**, prefer starting from a template in `asset
   - `dashboard-seattle-weather` — public dataset exploration
   - `dashboard-stock-peers` — financial peer analysis
 - If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
-- Pair new dashboards with a theme from `assets/templates/themes/configs/` (use `theme.base` for org-wide brand; `dense-dashboard` when compact padding helps)
+- Pair new dashboards with a theme from `assets/templates/themes/configs/` (use `theme.base` for org-wide brand; use `dense-dashboard` only when the app should keep the appearance toggle and use compact padding)
 - See `assets/templates/apps/README.md` for template descriptions
 
 When **editing an existing app**, use templates as reference for best practices:

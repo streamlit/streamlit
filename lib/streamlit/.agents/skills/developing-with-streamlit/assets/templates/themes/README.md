@@ -5,11 +5,11 @@ block — paste into your app's `.streamlit/config.toml`, or adapt into a
 shared brand file and point each app’s `theme.base` at it.
 
 When several apps share a brand, put the shared keys in one `theme.base`
-file and override per app (relative `theme.base` paths resolve from the
-`streamlit run` working directory, not from `config.toml`). Otherwise,
-copy a template straight into `.streamlit/config.toml`. Choose
-single-mode or dual-mode from the goal below. Neither mode is the
-default for a new app.
+file and override per app. Streamlit resolves a relative `theme.base`
+path from the `streamlit run` working directory, not from `config.toml`.
+Otherwise, copy a template straight into `.streamlit/config.toml`. Pick
+single-mode or dual-mode from the goal below; a new app should toggle
+light and dark only when that toggle is wanted.
 
 | Goal | Approach |
 |------|----------|
