@@ -191,6 +191,22 @@ describe("PlotlyChart Component", () => {
       expect(chart).toHaveStyle("contain-intrinsic-height: 450px;")
     })
 
+    it("treats a figure height below 10 as a missing height", () => {
+      chartDimensions.height = 0
+      renderComponent({
+        ...stretchConfigs,
+        element: new PlotlyChartProto({
+          ...DEFAULT_ELEMENT,
+          spec: JSON.stringify({ data: [], layout: { height: 5 } }),
+        }),
+      })
+
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 450px;")
+      expect(getLastPlotProps().style?.display).toBeUndefined()
+      expect(getLastPlotProps().layout?.height).toBe(450)
+    })
+
     it("falls back to the figure's own height when it has one", () => {
       renderComponent({
         ...stretchConfigs,
