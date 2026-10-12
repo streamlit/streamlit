@@ -75,7 +75,7 @@ export const ElementContainer = memo(function ElementContainer({
 }: ElementContainerProps): ReactElement {
   const { isFullScreen } = useContext(ViewStateContext)
 
-  const elementType = node.element.type || ""
+  const elementType = node.element.type ?? ""
   const elementId = getElementId(node.element)
   const userKey = getKeyFromId(elementId)
 

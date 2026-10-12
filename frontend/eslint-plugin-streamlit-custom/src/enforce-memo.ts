@@ -102,7 +102,7 @@ const enforceMemo = createRule<[], MessageIds>({
         hocPatternCache.set(componentName, hocVarNames)
       }
 
-      const hocVarNames = hocPatternCache.get(componentName) || []
+      const hocVarNames = hocPatternCache.get(componentName) ?? []
 
       // Check if any of the HOC variables are exported with memo
       for (const hocVarName of hocVarNames) {

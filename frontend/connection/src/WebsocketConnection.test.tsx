@@ -1691,6 +1691,7 @@ describe("WebsocketConnection auth token handling", () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     globalThis.fetch = originalFetch
     globalThis.WebSocket = originalWebSocket
     pingServerSpy.mockRestore()
@@ -1772,6 +1773,58 @@ describe("WebsocketConnection auth token handling", () => {
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
       ["streamlit", "iAmAnAuthToken", "lastSessionId"]
+    )
+    expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
+  })
+
+  const mockDocumentCookieReadFailure = (): void => {
+    vi.spyOn(document, "cookie", "get").mockImplementation(() => {
+      throw new DOMException(
+        "The document is sandboxed and lacks the 'allow-same-origin' flag.",
+        "SecurityError"
+      )
+    })
+  }
+
+  it("uses the placeholder auth token when document.cookie throws", async () => {
+    mockDocumentCookieReadFailure()
+
+    const resetHostAuthToken = vi.fn()
+    const ws = new WebsocketConnection(createMockArgs({ resetHostAuthToken }))
+
+    // Set correct state for this action
+    // @ts-expect-error - state is private
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - connectToWebSocket is private
+    await ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "PLACEHOLDER_AUTH_TOKEN"]
+    )
+    expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
+  })
+
+  it("prefers the host auth token when document.cookie throws", async () => {
+    mockDocumentCookieReadFailure()
+
+    const resetHostAuthToken = vi.fn()
+    const ws = new WebsocketConnection(
+      createMockArgs({
+        claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
+        resetHostAuthToken,
+      })
+    )
+
+    // Set correct state for this action
+    // @ts-expect-error - state is private
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - connectToWebSocket is private
+    await ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "iAmAnAuthToken"]
     )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
