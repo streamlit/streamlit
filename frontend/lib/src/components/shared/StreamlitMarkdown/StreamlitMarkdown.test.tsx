@@ -1146,6 +1146,9 @@ describe("StreamlitMarkdown", () => {
   it("colours text properly", () => {
     const textColors = mockTheme.emotion.colors
 
+    // Pin one independent hex so wiring is not only theme-to-theme.
+    expect(textColors.redTextColor).toBe("#9E303B")
+
     const colorMapping = new Map([
       ["red", textColors.redTextColor],
       ["orange", textColors.orangeTextColor],

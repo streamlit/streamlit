@@ -16,8 +16,7 @@
 
 import { colors } from "~lib/theme/primitives/colors"
 
-// Used by emotionBaseTheme and mockTheme — hex allowed under lib/src/theme/**
-// (streamlit-custom/no-hardcoded-theme-values is off for theme files).
+/** Light-theme defaults shared by `emotionBaseTheme` and `mockTheme`. */
 export const requiredThemeColors = {
   bgColor: colors.white,
   secondaryBg: colors.gray20,
@@ -26,8 +25,8 @@ export const requiredThemeColors = {
   primary: colors.red70,
   secondary: colors.blue70, // Used in progress bar
 
-  // Default main theme colors (light theme)
-  // Hex from design handoff (Color 70 / Bg 10 / Text 90); see work-tmp/new_default_theme/.
+  // Solid design defaults for the named palette (main / background / text).
+  // These are not steps in primitives/colors.ts.
   redColor: "#D94A57",
   orangeColor: "#E0682B",
   yellowColor: "#BB8300",
@@ -36,7 +35,6 @@ export const requiredThemeColors = {
   violetColor: "#9B5DE5",
   grayColor: "#6B7280",
 
-  // Default background theme colors (light theme)
   redBackgroundColor: "#FFF1F2",
   orangeBackgroundColor: "#FFF6ED",
   yellowBackgroundColor: "#FFFAE5",
@@ -45,7 +43,6 @@ export const requiredThemeColors = {
   violetBackgroundColor: "#F8F2FF",
   grayBackgroundColor: "#F5F4F2",
 
-  // Default text theme colors (light theme)
   redTextColor: "#9E303B",
   orangeTextColor: "#9B4519",
   yellowTextColor: "#956B0F",

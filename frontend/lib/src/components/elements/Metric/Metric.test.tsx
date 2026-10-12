@@ -174,6 +174,9 @@ describe("Metric element", () => {
   it("renders correct red based on props", () => {
     const props = getProps()
     render(<Metric {...props} />)
+    // Pin independent hexes so wiring is not only theme-to-theme.
+    expect(mockTheme.emotion.colors.redTextColor).toBe("#9E303B")
+    expect(mockTheme.emotion.colors.redBackgroundColor).toBe("#FFF1F2")
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
       `color: ${mockTheme.emotion.colors.redTextColor}`
     )

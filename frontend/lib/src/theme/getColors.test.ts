@@ -54,7 +54,7 @@ describe("computeDerivedColors", () => {
 
 describe("getDividerColors", () => {
   describe("light theme", () => {
-    it("returns correct divider primitive colors for light theme", () => {
+    it("returns the default divider colors for the light theme", () => {
       expect(hasLightBackgroundColor(lightTheme.emotion)).toBe(true)
       const result = getDividerColors(lightTheme.emotion)
 
@@ -121,7 +121,7 @@ describe("getDividerColors", () => {
   })
 
   describe("dark theme", () => {
-    it("returns correct divider primitive colors for dark theme", () => {
+    it("returns the default divider colors for the dark theme", () => {
       expect(hasLightBackgroundColor(darkTheme.emotion)).toBe(false)
       const result = getDividerColors(darkTheme.emotion)
 
@@ -193,6 +193,13 @@ describe("getThemeBackgroundColors", () => {
     const result = getThemeBackgroundColors(lightTheme.emotion)
     const colors = lightTheme.emotion.colors
 
+    expect(result.redbg).toBe("#FFF1F2")
+    expect(result.orangebg).toBe("#FFF6ED")
+    expect(result.yellowbg).toBe("#FFFAE5")
+    expect(result.bluebg).toBe("#EDF5FF")
+    expect(result.greenbg).toBe("#F1FBF6")
+    expect(result.violetbg).toBe("#F8F2FF")
+    expect(result.graybg).toBe("#F5F4F2")
     expect(result.redbg).toBe(colors.redBackgroundColor)
     expect(result.orangebg).toBe(colors.orangeBackgroundColor)
     expect(result.yellowbg).toBe(colors.yellowBackgroundColor)
@@ -208,6 +215,13 @@ describe("getThemeBackgroundColors", () => {
     const result = getThemeBackgroundColors(darkTheme.emotion)
     const colors = darkTheme.emotion.colors
 
+    expect(result.redbg).toBe("#412023")
+    expect(result.orangebg).toBe("#342414")
+    expect(result.yellowbg).toBe("#302917")
+    expect(result.bluebg).toBe("#1E2A3D")
+    expect(result.greenbg).toBe("#0E2F24")
+    expect(result.violetbg).toBe("#332244")
+    expect(result.graybg).toBe("#2C2925")
     expect(result.redbg).toBe(colors.redBackgroundColor)
     expect(result.orangebg).toBe(colors.orangeBackgroundColor)
     expect(result.yellowbg).toBe(colors.yellowBackgroundColor)
@@ -225,6 +239,13 @@ describe("getMarkdownTextColors", () => {
     const result = getMarkdownTextColors(lightTheme.emotion)
     const colors = lightTheme.emotion.colors
 
+    expect(result.red).toBe("#9E303B")
+    expect(result.orange).toBe("#9B4519")
+    expect(result.yellow).toBe("#956B0F")
+    expect(result.blue).toBe("#244FB4")
+    expect(result.green).toBe("#0C5A44")
+    expect(result.violet).toBe("#6F33B8")
+    expect(result.gray).toBe("#686255")
     expect(result.red).toBe(colors.redTextColor)
     expect(result.orange).toBe(colors.orangeTextColor)
     expect(result.yellow).toBe(colors.yellowTextColor)
@@ -240,6 +261,13 @@ describe("getMarkdownTextColors", () => {
     const result = getMarkdownTextColors(darkTheme.emotion)
     const colors = darkTheme.emotion.colors
 
+    expect(result.red).toBe("#F2919A")
+    expect(result.orange).toBe("#F2A56D")
+    expect(result.yellow).toBe("#FBD54F")
+    expect(result.blue).toBe("#85B8F8")
+    expect(result.green).toBe("#7ED5B0")
+    expect(result.violet).toBe("#BF8EF7")
+    expect(result.gray).toBe("#B8B3A8")
     expect(result.red).toBe(colors.redTextColor)
     expect(result.orange).toBe(colors.orangeTextColor)
     expect(result.yellow).toBe(colors.yellowTextColor)
