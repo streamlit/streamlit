@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import contextlib
 import math
 import threading
 from typing import TYPE_CHECKING
@@ -250,10 +251,8 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def _remove_from_mem_cache(self, key: str) -> None:
         with self._mem_cache_lock:
-            try:
+            with contextlib.suppress(KeyError):
                 del self._mem_cache[key]
-            except KeyError:
-                pass
             removals = self._take_pending_removals()
             self._report_removals(removals)
 
@@ -295,17 +294,13 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             ):
                 return False
             if key not in self._mem_cache:
-                try:
+                with contextlib.suppress(KeyError):
                     del self._mem_cache[key]
-                except KeyError:
-                    pass
                 removals = self._take_pending_removals()
                 self._report_removals(removals)
                 return False
-            try:
+            with contextlib.suppress(KeyError):
                 del self._mem_cache[key]
-            except KeyError:
-                pass
             removals = self._take_pending_removals()
             self._report_removals(removals)
         return True
