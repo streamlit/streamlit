@@ -24,8 +24,8 @@ from e2e_playwright.shared.app_utils import (
 # Match theme.sizes.defaultChartHeight (21.875rem) and defaultChartWidth (25rem).
 DEFAULT_CHART_HEIGHT_PX = 350
 DEFAULT_CHART_WIDTH_PX = 400
-# Matches DEFAULT_PLOTLY_HEIGHT in PlotlyChart.tsx.
-DEFAULT_PLOTLY_HEIGHT_PX = 450
+# Figure layout.height in the app. Distinct from Plotly's 450px default.
+PLOTLY_FIGURE_HEIGHT_PX = 320
 
 CONTAINER_KEYS = [
     "container-horizontal-align-left",
@@ -142,11 +142,12 @@ def test_stretch_chart_default_height_in_horizontal_container(app: Page):
     expect(pixel_height_chart).to_have_css("height", "200px")
     _expect_chart_drawn(pixel_height_chart, DEFAULT_CHART_WIDTH_PX)
 
-    # Plotly falls back to its default figure height.
+    # Plotly falls back to the figure height, and the plot actually draws.
     plotly_chart = get_element_by_key(
         app, "container-horizontal-stretch-plotly-fallback"
     ).get_by_test_id("stPlotlyChart")
-    expect(plotly_chart).to_have_css("height", f"{DEFAULT_PLOTLY_HEIGHT_PX}px")
+    expect(plotly_chart).to_have_css("height", f"{PLOTLY_FIGURE_HEIGHT_PX}px")
+    expect(plotly_chart.locator("svg.main-svg, canvas").first).to_be_visible()
 
     shrink_row = get_element_by_key(app, "container-horizontal-stretch-chart-shrink")
     shrink_card = get_element_by_key(app, "stretch-chart-shrink-card")
