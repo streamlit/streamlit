@@ -333,8 +333,17 @@ const ArrowVegaLiteChart: FC<Props> = ({
       Boolean(heightConfig?.pixelHeight))
 
   // Height of Vega's parameter-binding controls, which it renders inside the
-  // chart container below the chart.
-  const [bindingsHeight, setBindingsHeight] = useState(0)
+  // chart container below the chart. The measurement is tied to the spec that
+  // produced it, so a chart that no longer has bindings does not keep the
+  // previous height subtracted when its view is created.
+  const [bindingMeasurement, setBindingMeasurement] = useState({
+    spec: inputElement.spec,
+    height: 0,
+  })
+  const bindingsHeight =
+    bindingMeasurement.spec === inputElement.spec
+      ? bindingMeasurement.height
+      : 0
 
   // The dimensions to apply to the chart. Facet charts in fullscreen use
   // fullScreenWidth; outside fullscreen they use natural sizing (0). Non-facet
@@ -552,21 +561,25 @@ const ArrowVegaLiteChart: FC<Props> = ({
       "form.vega-bindings"
     )
     if (!bindingsForm?.querySelector(".vega-bind")) {
-      setBindingsHeight(0)
+      setBindingMeasurement({ spec: inputElement.spec, height: 0 })
       return
     }
 
     const observer = new ResizeObserver(entries => {
       const entry = entries[0]
-      setBindingsHeight(
-        entry?.borderBoxSize?.[0]?.blockSize ?? entry?.contentRect?.height ?? 0
-      )
+      setBindingMeasurement({
+        spec: inputElement.spec,
+        height:
+          entry?.borderBoxSize?.[0]?.blockSize ??
+          entry?.contentRect?.height ??
+          0,
+      })
     })
     observer.observe(bindingsForm)
     return () => {
       observer.disconnect()
     }
-  }, [isViewReady, forceStretchHeight, containerRef])
+  }, [isViewReady, forceStretchHeight, containerRef, inputElement.spec])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so

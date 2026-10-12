@@ -45,7 +45,7 @@ vi.mock("react-plotly.js", () => ({
   default: (props: unknown) => MockPlot(props),
 }))
 
-// Mock dependencies. Tests override `chartDimensions.height` for the shrink guard.
+// Mock dependencies. Tests override chartDimensions.height to simulate the measured container height.
 const chartDimensions = vi.hoisted(() => ({
   height: 450,
 }))

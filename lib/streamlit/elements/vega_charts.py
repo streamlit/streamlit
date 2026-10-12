@@ -2090,7 +2090,8 @@ class VegaChartsMixin:
               visible there. Otherwise, the chart uses its default height
               (350px at the default font size) and still grows to match a
               taller sibling. Facet, repeat, and concat charts stay empty
-              unless a fixed height reaches them through stretch containers.
+              unless they are inside a fixed-height container, either
+              directly or through stretch containers.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -2348,7 +2349,8 @@ class VegaChartsMixin:
               visible there. Otherwise, the chart uses its default height
               (350px at the default font size) and still grows to match a
               taller sibling. Facet, repeat, and concat charts stay empty
-              unless a fixed height reaches them through stretch containers.
+              unless they are inside a fixed-height container, either
+              directly or through stretch containers.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.

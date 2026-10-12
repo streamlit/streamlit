@@ -335,6 +335,20 @@ with st.container(height=250, key="fixed-parent-stretch-tabs"):
         for line in range(12):
             st.write(f"Tab line {line}")
 
+# Short stretch blocks still fill the fixed parent. A stretch code block
+# scrolls inside the card instead of growing it to the full source.
+with st.container(height=250, key="fixed-parent-short-stretch-form"):
+    with st.form("short_stretch_form", height="stretch"):
+        st.text_input("Short form input")
+
+with st.container(height=250, key="fixed-parent-short-stretch-card"):
+    with st.container(border=True, height="stretch", key="short-stretch-card"):
+        st.write("One line")
+
+with st.container(height=300, key="fixed-parent-stretch-code"):
+    with st.container(border=True, height="stretch", key="stretch-code-card"):
+        st.code("\n".join(str(line) for line in range(80)), height="stretch")
+
 with st.container(horizontal=True, key="container-horizontal-stretch-graphviz"):
     st.graphviz_chart(
         "digraph { run -> intr; intr -> runbl; runbl -> run }", height="stretch"

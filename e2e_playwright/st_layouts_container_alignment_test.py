@@ -256,12 +256,74 @@ def test_stretch_blocks_grow_in_fixed_height_parents(app: Page):
 
         wait_until(app, _grows_past_parent)
 
+    # A short stretch form and container still fill the fixed parent.
+    for block, parent_key in (
+        (
+            get_element_by_key(app, "fixed-parent-short-stretch-form").get_by_test_id(
+                "stForm"
+            ),
+            "fixed-parent-short-stretch-form",
+        ),
+        (
+            get_element_by_key(app, "short-stretch-card"),
+            "fixed-parent-short-stretch-card",
+        ),
+    ):
+        parent = get_element_by_key(app, parent_key)
+        expect(block).to_be_visible()
+
+        def _fills_parent(block: Locator = block, parent: Locator = parent) -> bool:
+            block_height = _height(block)
+            parent_height = _height(parent)
+            return (
+                _content_fits(parent)
+                and block_height is not None
+                and parent_height is not None
+                and block_height <= parent_height
+                and block_height > parent_height * 0.7
+            )
+
+        wait_until(app, _fills_parent)
+
     # Stretch tabs stay capped at the parent and scroll inside the panel.
-    tab_panel = get_element_by_key(app, "fixed-parent-stretch-tabs").get_by_role(
-        "tabpanel"
-    )
+    tab_parent = get_element_by_key(app, "fixed-parent-stretch-tabs")
+    tab_panel = tab_parent.get_by_role("tabpanel")
     expect(tab_panel).to_be_visible()
-    wait_until(app, lambda: _scrolls(tab_panel))
+
+    def _tabs_stay_capped() -> bool:
+        panel_height = _height(tab_panel)
+        parent_height = _height(tab_parent)
+        return (
+            _scrolls(tab_panel)
+            and _content_fits(tab_parent)
+            and panel_height is not None
+            and parent_height is not None
+            and panel_height <= parent_height
+        )
+
+    wait_until(app, _tabs_stay_capped)
+
+    # Stretch code scrolls inside the card instead of growing it.
+    code_parent = get_element_by_key(app, "fixed-parent-stretch-code")
+    code_card = get_element_by_key(app, "stretch-code-card")
+    code = code_card.get_by_test_id("stCode")
+    expect(code).to_be_visible()
+
+    def _code_scrolls_inside_card() -> bool:
+        card_height = _height(code_card)
+        parent_height = _height(code_parent)
+        code_scrolls = bool(
+            code.evaluate("el => el.scrollHeight - el.clientHeight > 1")
+        )
+        return (
+            _content_fits(code_parent)
+            and code_scrolls
+            and card_height is not None
+            and parent_height is not None
+            and card_height <= parent_height
+        )
+
+    wait_until(app, _code_scrolls_inside_card)
 
 
 def test_graphviz_and_text_area_keep_usable_size_in_rows(app: Page):

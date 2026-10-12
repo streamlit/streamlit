@@ -77,7 +77,7 @@ The modes are:
 When the height on an element is set to "stretch", the element should expand to fill available vertical space according to these rules:
 
 - The element's display height should not exceed the height of its parent container.
-- Exception: stretch-height containers and forms fill the parent but grow to fit taller content instead of letting it spill past their border. Tabs keep the cap and scroll inside the active panel.
+- Exception: stretch-height containers and forms fill the parent but grow to fit taller content instead of letting it spill past their border. Tabs keep the cap and scroll inside the active panel. A stretch element with a specified width inside that container is size-contained, so it scrolls instead of growing the container to its content.
 - Vega and Plotly stretch charts fall back to their default height when `FlexContext.hasDefiniteHeight` is false (see `hasStretchHeightFallback()` in `FlexContext.tsx`).
   - No definite height: top level, content-height containers, and content-height rows.
   - Definite height: a pixel-height container or tab panel, or a stretch container or tab panel that fills one. Charts there shrink to their siblings, so a title plus a stretch chart does not make a fixed-height card scroll.

@@ -25,6 +25,7 @@ const vegaEmbedMock = vi.hoisted(() => ({
   exportToPng: vi.fn(),
   isViewReady: false,
   lastSpec: undefined as { height?: number } | undefined,
+  createdHeights: [] as Array<number | undefined>,
 }))
 const mockWriteText = vi.fn()
 
@@ -35,7 +36,10 @@ vi.mock("./useVegaEmbed", () => ({
     // Satisfy hooks rule by calling a React hook in this mock
     const _memo = useMemo(() => null, [])
     return {
-      createView: () => Promise.resolve(null),
+      createView: (_container: unknown, spec: { height?: number }) => {
+        vegaEmbedMock.createdHeights.push(spec?.height)
+        return Promise.resolve(null)
+      },
       updateView: () => Promise.resolve(null),
       finalizeView: () => {},
       resizeView: () => Promise.resolve(false),
@@ -111,6 +115,7 @@ describe("ArrowVegaLiteChart", () => {
     mockWindowLocation("localhost")
     vegaEmbedMock.exportToPng.mockResolvedValue("data:image/png;base64,mock")
     vegaEmbedMock.isViewReady = false
+    vegaEmbedMock.createdHeights = []
     mockWriteText.mockReset()
     mockWriteText.mockResolvedValue(undefined)
     Object.defineProperty(navigator, "clipboard", {
@@ -476,6 +481,47 @@ describe("ArrowVegaLiteChart", () => {
 
         expect(observedCallbacks.has(bindingsForm)).toBe(false)
         expect(vegaEmbedMock.lastSpec?.height).toBe(200)
+      })
+
+      it("does not keep a previous binding height when the spec changes", () => {
+        const container = document.createElement("div")
+        vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+          elementRef: { current: container },
+          values: [250, 400],
+        })
+        const { rerender } = render(
+          <ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />
+        )
+        expect(vegaEmbedMock.createdHeights.at(-1)).toBe(400)
+
+        const bindingsForm = appendBindingsForm(true)
+        vegaEmbedMock.isViewReady = true
+        rerender(<ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />)
+        const resizeBindings = observedCallbacks.get(bindingsForm)
+        act(() => {
+          resizeBindings?.(
+            [
+              { borderBoxSize: [{ blockSize: 68, inlineSize: 250 }] },
+            ] as unknown as ResizeObserverEntry[],
+            {} as ResizeObserver
+          )
+        })
+        expect(vegaEmbedMock.lastSpec?.height).toBe(332)
+
+        bindingsForm.remove()
+        const createdBefore = vegaEmbedMock.createdHeights.length
+        rerender(
+          <ArrowVegaLiteChart
+            {...getProps(
+              { spec: JSON.stringify({ mark: "line" }) },
+              stretchConfigs
+            )}
+          />
+        )
+
+        const created = vegaEmbedMock.createdHeights.slice(createdBefore)
+        expect(created.length).toBeGreaterThan(0)
+        expect(created.every(height => height === 400)).toBe(true)
       })
 
       it("ignores a bindings form without binding controls", () => {

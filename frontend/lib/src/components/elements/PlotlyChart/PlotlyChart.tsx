@@ -78,6 +78,7 @@ const RESET_SELECTION_TIMEOUT_MS = 50
 const DEFAULT_PLOTLY_HEIGHT = 450
 const PLOTLY_MIN_LAYOUT_HEIGHT = 10
 
+/** Returns `height` when Plotly.js accepts it (>= 10); otherwise Plotly's 450px default. */
 const plotlyLayoutHeight = (height: number | undefined): number =>
   height !== undefined && height >= PLOTLY_MIN_LAYOUT_HEIGHT
     ? height

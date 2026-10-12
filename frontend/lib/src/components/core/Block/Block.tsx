@@ -266,9 +266,8 @@ export const FlexBoxContainer = (
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
     // Block height:
     // - pixel: set here so the block can scroll.
-    // - stretch: fill the LayoutWrapper, which does the sizing, through
-    //   `flex: 1`. An auto height keeps the block from shrinking below its
-    //   content, so taller content grows the wrapper.
+    // - stretch: `flex: 1` fills the LayoutWrapper, which does the sizing. An
+    //   auto height lets taller content grow the wrapper instead of overflowing.
     height: props.node.deltaBlock.heightConfig?.useStretch
       ? "auto"
       : layout_styles.height,
