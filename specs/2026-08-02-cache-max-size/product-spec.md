@@ -84,13 +84,14 @@ st.cache_data(
 
 | Parameter  | Type                 | Default | Description                                                                                                                                 |
 |------------|----------------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------|
-| `max_size` | `int`, `str`, `None` | `None`  | Maximum total serialized size of the cache. `None` = no per-function cap (the process-wide `server.maxCachedDataSize` budget may still apply). |
+| `max_size` | `int`, `str`, `None` | `None`  | Maximum total serialized size of the cache. `None` = no per-function cap (the process-wide `server.maxCacheDataSize` budget may still apply). |
 
 `max_size` accepts either an integer number of **bytes**, or a human-readable **string**
 with a unit (`"500MB"`, `"1.5GB"`, `"200KB"`) — mirroring how `ttl` already accepts either
 a number of seconds or a string like `"1h30m"`. When the cache's total serialized size
 would exceed `max_size`, the least-recently-used entries are evicted (same LRU order as
-`max_entries`) until it fits.
+`max_entries`) until it fits. A single result larger than `max_size` is still cached, and
+Streamlit logs a warning (see [Behavior](#behavior)).
 
 ```python
 import streamlit as st
@@ -124,6 +125,29 @@ an unpickled dataframe occupies more memory than its pickle — so `max_size` is
 predictable proxy for cache memory, not a hard cap on the app's total RAM. This trade-off
 is called out explicitly in the docstring.
 
+**Unit options for a bare number.** The unit of an unsuffixed `max_size` is a lasting public
+choice, so the alternatives are recorded here:
+
+**Option 1 — `int` in bytes, or a unit string. ✅ RECOMMENDED**
+- Pros: Follows `ttl` (a number is the base unit, a string carries the unit). Bytes are what
+  `len(pickled_bytes)` measures, so a computed byte count can be passed directly.
+- Cons: `max_size=500` means 500 bytes: the cache keeps one entry and logs the oversized-entry
+  warning, and a reader could mistake the number for an entry count. Megabyte-based size
+  options (`server.maxUploadSize`, `server.maxMessageSize`, `max_upload_size` on
+  `st.file_uploader` / `st.chat_input`) read differently.
+
+**Option 2 — unit strings only (reject `int`).**
+- Pros: No ambiguous numbers.
+- Cons: Breaks with the `ttl` pattern and forces formatting a computed byte count as a string.
+
+**Option 3 — `int` in megabytes.**
+- Pros: Matches `server.maxUploadSize` and `max_upload_size`.
+- Cons: Hides the unit at the call site, cannot express sub-megabyte caps, and differs from
+  `ttl`.
+
+With Option 1, the docstring states the byte unit up front, and the oversized-entry warning
+catches `max_size=500`-style mistakes on the first write.
+
 ### Part 2 — a safe default via a global memory budget (config)
 
 To help the majority who never set anything, add a process-wide default budget for the
@@ -132,11 +156,13 @@ combined serialized size of **all** `st.cache_data` in-memory caches:
 ```toml
 # .streamlit/config.toml
 [server]
-maxCachedDataSize = "2gb"   # applies across all @st.cache_data functions
+maxCacheDataSize = "2gb"   # applies across all @st.cache_data functions
 ```
 
 The option lives under `[server]` next to the other size caps (`server.maxUploadSize`,
-`server.maxMessageSize`).
+`server.maxMessageSize`) and follows their `max{Noun}Size` pattern. It is named after
+`st.cache_data`, the only cache it bounds. `server.maxCacheSize` was rejected because it
+reads as if it also covered `st.cache_resource`.
 
 When the combined size of all `st.cache_data` caches exceeds this budget, Streamlit evicts
 globally least-recently-used entries (across functions) until it fits. A per-function
@@ -151,7 +177,7 @@ from unbounded cache growth but does not guarantee the process stays up: it coun
 serialized values only (not unpickled copies or cache metadata), and a single entry larger
 than the budget is still stored.
 
-`maxCachedDataSize` defaults to `"2gb"`. The alternatives considered are documented in
+`maxCacheDataSize` defaults to `"2gb"`. The alternatives considered are documented in
 [Default-value options](#default-value-options-for-the-global-budget) below.
 
 ### Behavior
@@ -193,7 +219,7 @@ than the budget is still stored.
 ### Default-value options for the global budget
 
 The parameter (Part 1) is uncontroversial and low-risk. The main judgment call was what
-`maxCachedDataSize` should default to; this proposal selects 2 GB. Alternatives are ordered
+`maxCacheDataSize` should default to; this proposal selects 2 GB. Alternatives are ordered
 from safest-but-least-effective to most-protective:
 
 **Option A — default off (`0` / unlimited), opt-in only.**
@@ -207,7 +233,8 @@ from safest-but-least-effective to most-protective:
   and override. Directly addresses the crash-instead-of-degrade use case.
 - Cons: It's a behavior change — an app that legitimately relied on caching >2 GB of
   serialized data now recomputes evicted entries (slower, but not broken). The value is a
-  heuristic, not tailored to the machine.
+  heuristic, not tailored to the machine. Both are mitigated by documenting the default,
+  the one-time eviction warning (Option D), and the config override.
 
 **Option C — fraction of available memory (e.g. 50% of total RAM).**
 - Pros: Adapts to the deployment; a big machine gets a big budget.
@@ -228,9 +255,11 @@ from safest-but-least-effective to most-protective:
 for the default global budget, combined with the Option D one-time warning (so developers
 who hit the budget are told why entries are being evicted and how to tune it). Start with a
 conservative, clearly documented 2 GB default to reduce the chance of disrupting apps that
-legitimately cache large amounts of data, and revisit it based on telemetry and customer
-feedback. This gives explicit developers precise control while giving the silent majority
-a safety net that degrades instead of crashes.
+legitimately cache large amounts of data, and revisit it based on eviction metrics (see the
+tech spec's [Metrics](./tech-spec.md#metrics)) and customer feedback. The release notes call
+out the new default and how to restore unbounded caching (`"0"`). This gives explicit
+developers precise control while giving the silent majority a safety net that degrades
+instead of crashes.
 
 ### Technical feasibility (validated against the current implementation)
 
@@ -291,6 +320,6 @@ can be revisited if there's clear demand.
 | Works on SiS, Cloud, etc?  | ⚠️ Pure Python, no new dependency. SiS's cache storage manager may enforce its own cache limits and ignore `max_size`, the same way it may ignore `max_entries`. The library default stays `"2gb"`, but SiS keeps the global budget off (`"0"`) until SiS confirms a non-zero default. |
 | No breaking API changes    | ✅ `max_size` is a new optional parameter defaulting to `None`. ⚠️ A non-zero global default (Option B/C) is a behavior change — but only evicts recomputable data, never errors. Option A avoids even that. |
 | No new dependencies        | ✅ Byte sizes come from `len(pickled_bytes)`. Option C (memory-fraction default) is the only variant that would need memory detection; the recommendation (Option B) avoids it. |
-| Metrics collected          | ✅ `cache_memory_bytes` already reports per-cache serialized size. `max_size` adoption and global-budget eviction counts need explicit instrumentation (tech spec).         |
+| Metrics collected          | ✅ `cache_memory_bytes` already reports per-cache serialized size, and the existing `cache_data` command metrics record `max_size` usage. Global-budget eviction counts need a new counter (tech spec). |
 | Any security/legal impact? | ✅ None for `max_size`. A future `evict=`/`getsizeof=` callable could expose cache contents cross-session — that's why it's out of scope.                                    |
-| Any docs changes needed?   | ✅ Document `max_size` on `st.cache_data`, the `maxCachedDataSize` config option, the "serialized size, not RSS" caveat, and that `st.cache_resource` is unaffected.        |
+| Any docs changes needed?   | ✅ Document `max_size` on `st.cache_data`, the `maxCacheDataSize` config option, the "serialized size, not RSS" caveat, and that `st.cache_resource` is unaffected.        |

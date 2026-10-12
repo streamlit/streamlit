@@ -109,7 +109,10 @@ Plumbing path (all additive):
 4. `CacheStorageContext`: append `max_size_bytes: int | None = None` after `persist`
    (frozen public dataclass; a defaulted last field keeps existing positional
    construction working). A custom `CacheStorageManager` that does not wrap its storage in
-   `InMemoryCacheStorageWrapper` ignores both `max_size` and the global budget.
+   `InMemoryCacheStorageWrapper` ignores both `max_size` and the global budget. Streamlit
+   cannot tell whether a custom storage enforces the limits, so it does not warn; such a
+   manager should warn from its own `check_context` when `max_size_bytes` is set, the way
+   `LocalDiskCacheStorageManager` warns about `ttl` combined with `persist="disk"`.
 5. `InMemoryCacheStorageWrapper.__init__`: when `context.max_size_bytes` is set, build the
    `TTLCache` with `maxsize=max_size_bytes` **and** `getsizeof=len` (bytes). When
    `max_entries` is *also* set we need both a count cap and a byte cap — see below.
@@ -131,13 +134,14 @@ flag.
 ### Part 3 — global default budget (cross-cache LRU)
 
 A per-function cap can't bound *total* `cache_data` memory, so the global budget
-(`config: server.maxCachedDataSize`) needs process-wide accounting and a global victim
+(`config: server.maxCacheDataSize`) needs process-wide accounting and a global victim
 selection. Design:
 
 - **Central registry**: a process-global `GlobalCacheBudget` singleton tracks
-  `(storage_id, key) -> size` and a running total, plus a monotonically increasing access
-  tick recorded on every read/write. `InMemoryCacheStorageWrapper` reports writes, reads
-  (recency bump), and deletions to it under its existing lock.
+  `(storage_id, key) -> size` in access order and a running total.
+  `InMemoryCacheStorageWrapper` reports writes and deletions to it under its existing lock.
+  Reads only record recency, without taking the global lock (see
+  [Performance](#performance)).
 - **Internal eviction/expire hook**: reporting only the wrapper's public `set`/`get`/
   `delete` is not enough. `TTLCache.__setitem__` / `expire()` can drop entries via
   internal `popitem` (the same path `max_entries` / `max_size` / TTL use today) without
@@ -147,7 +151,7 @@ selection. Design:
   `TTLCleanupCache.on_release`, or reconcile `currsize` / known keys before vs after the
   mem write) so every in-memory removal — explicit or internal — decrements the budget.
 - **Eviction (memory-only)**: on a write that pushes the global total over the budget, pop
-  the globally-oldest `(storage, key)` (smallest access tick) and remove it from that
+  the globally least-recently-used `(storage_id, key)` and remove it from that
   storage's **in-memory** front cache only, repeating until under budget. Do **not** call
   the storage's public `delete` — that also wipes `_persist_storage` and would destroy
   `persist="disk"` entries, diverging from today's `max_entries` behavior (`TTLCache`
@@ -175,27 +179,45 @@ selection. Design:
   budget, not only the wrapper's `clear()`. In production, `st.cache_data.clear()` calls
   `DataCaches.clear_all()` → `LocalDiskCacheStorageManager.clear_all()`, which deletes the
   disk folder without calling any wrapper `clear()`; `clear_session()` and decorator-param
-  changes call `storage.close()`. So `DataCaches.clear_all()` resets the budget, the
-  wrapper's `close()` unregisters its storage, and the registry holds only weak references
-  to storages so a replaced cache is not pinned. A disk-to-memory promotion (memory miss,
-  disk hit) counts as a budget write, and each removal decrements the total exactly once
-  (an internal `popitem` callback and `_evict_from_mem_cache` must not both subtract).
+  changes call `storage.close()`. So `DataCaches.clear_all()` unregisters every storage, the
+  wrapper's `close()` unregisters its own, and the registry holds only weak references to
+  storages so a replaced cache is not pinned. The budget counts only reports from
+  registered storages, and (un)registration happens under the global lock. This matters
+  because the synchronous miss path calls `DataCache.write_result` without checking
+  `mark_detached()`: a write that finishes on a dropped cache must not re-add bytes after
+  the drop. A disk-to-memory promotion (memory miss, disk hit) counts as a budget write, and
+  each removal decrements the total exactly once (an internal `popitem` callback and
+  `_evict_from_mem_cache` must not both subtract).
+
+#### Performance
+
+Today a cache hit contends only on its own storage's `_mem_cache_lock`, and the budget keeps
+it that way. A hit appends `(storage_id, key)` to a bounded recency buffer
+(`collections.deque(maxlen=...)`, whose `append` is thread-safe) instead of taking the
+global lock. Writes, which already pay for pickling, take the global lock, drain the buffer
+into the `OrderedDict`, and then pick victims. Hints for keys that are no longer tracked are
+skipped. A full buffer drops its oldest hints, which only makes the recency order
+approximate; the byte total stays exact. When the budget is disabled (`"0"`), neither path
+touches the global structure.
+
+Acceptance bar: with the budget enabled and the app under budget, median and p99 cache-hit
+latency stay within 5% of the budget-disabled baseline at 1 and 50 concurrent sessions. If
+the implementation misses that bar, v1 ships the approximate sweep below instead.
 
 **Alternative considered — approximate/lazy global enforcement.** Instead of exact global
 LRU, periodically (e.g. every N writes or on a timer) sum per-cache `currsize` values and,
 if over budget, evict from the largest cache. Simpler and lock-light, but less precise and
 can overshoot the budget between sweeps. Viable as a v1 if the exact global LRU proves too
 invasive; the product behavior ("evict oldest across caches") is best served by the exact
-design, so we start there and fall back to the sweep if the cache-hit latency benchmark
-(see [Testing](#testing)) shows the global bookkeeping regresses hits for apps under
-budget.
+design, so we start there and fall back to the sweep if the implementation misses the
+[Performance](#performance) acceptance bar.
 
 ### Config option
 
 ```python
 # config.py
 _create_option(
-    "server.maxCachedDataSize",
+    "server.maxCacheDataSize",
     description="""
         Maximum combined serialized size of all @st.cache_data in-memory caches.
         Requires an explicit unit string like "2gb"/"500mb" (or "0" to disable).
@@ -215,10 +237,10 @@ layered on top (see below).
 `server.maxMessageSize`) use `type_=int` in **megabytes**. Reusing that pattern here would
 clash with the `max_size` parameter's unit-string UX (`"500MB"`) and with the recommended
 default (`"2gb"`). Accepting bare ints as **bytes** would be a worse footgun: a user who
-writes `maxCachedDataSize = 500` (or `1`) almost certainly expects MB-scale behavior from
+writes `maxCacheDataSize = 500` (or `1`) almost certainly expects MB-scale behavior from
 the other `server.*` size options, not 500 bytes.
 
-Therefore `server.maxCachedDataSize` **requires an explicit unit for any non-zero
+Therefore `server.maxCacheDataSize` **requires an explicit unit for any non-zero
 value**. Accepted forms:
 
 - Unit string: `"2gb"`, `"500mb"`, `"1024KB"`, … (same `to_bytes` grammar as `max_size`)
@@ -228,9 +250,17 @@ value**. Accepted forms:
 Bare non-zero integers (`500`, `1`, …) and unit-less numeric strings (`"500"`) are
 **rejected** with a clear config error pointing at the unit requirement. Because the
 option is `type_=str`, document that values in `config.toml` are written as strings
-(`maxCachedDataSize = "2gb"`, `maxCachedDataSize = "0"`). The Python `max_size`
+(`maxCacheDataSize = "2gb"`, `maxCacheDataSize = "0"`). The Python `max_size`
 parameter still accepts int-as-bytes — that is a different surface (call-site API, not
 `server.*` config) and is unaffected.
+
+### Metrics
+
+- `max_size` adoption needs no new instrumentation: the `cache_data` decorator is wrapped in
+  `gather_metrics`, which already records the parameters each decorator call uses.
+- Global-budget evictions are counted in a new `CounterStat` family exposed next to
+  `cache_memory_bytes` on `/_stcore/metrics`, so operators can see whether the default
+  budget evicts and the 2 GB value can be tuned from real eviction rates.
 
 ## Testing
 
@@ -252,10 +282,12 @@ parameter still accepts int-as-bytes — that is a different surface (call-site 
   path; concurrency/lock-order stress test (many caches, concurrent read/write/delete and
   cache replacement) with no deadlock; budget respected under churn; total returns to zero
   after each production drop path (`DataCaches.clear_all()` with
-  `LocalDiskCacheStorageManager`, `clear_session()`, replacement via `close()`) and counts
-  disk-to-memory promotions.
-- Performance: a cache-hit latency benchmark with many concurrent sessions, with the global
-  budget enabled vs. disabled, for an app that stays under budget.
+  `LocalDiskCacheStorageManager`, `clear_session()`, replacement via `close()`), stays at
+  zero when a write completes on a detached cache after `st.cache_data.clear()`, and counts
+  disk-to-memory promotions; the eviction counter increments once per evicted entry.
+- Performance: the cache-hit latency benchmark from [Performance](#performance) (budget
+  enabled vs. disabled, 1 and 50 concurrent sessions, app under budget), checked against
+  its acceptance bar.
 - Global-budget warning (Option D): the one-time warning emitted when the global budget
   first starts evicting fires once per process (throttled), carries the expected copy, and
   does not fire when the budget is disabled (`0`) or never exceeded.
