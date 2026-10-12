@@ -817,9 +817,8 @@ It is about row count, not payload size: an eagerly sent 5,000-row table is inco
 because only its first 100 rows are inlined, so every truncated preview gets a URL,
 however small the table is in bytes. The cap is a row count set high enough that most
 filtered tables come back complete. **A preview must never look like the complete answer
-to an aggregate question**: should a response budget be added
-([open question 3](#open-questions)), a document over it fails the request rather than
-being truncated silently.
+to an aggregate question**, and nothing else is truncated either: large content moves
+behind a URL instead (follow-up #9).
 
 Charts and maps:
 
@@ -830,10 +829,9 @@ Charts and maps:
   `spec_omitted`; content a template adds, such as a "DRAFT" annotation, a shape, or an
   image, is kept, since removing decoration must not remove meaning. Base64 typed arrays
   (`bdata`), which a model cannot read, are expanded into numbers. Nothing that holds data
-  is dropped at any size: the traces are the figure's data, and serving a large
-  specification behind `data.url` is the answer open question 3 points to. Serving an
-  ECharts `dataset.source` as Arrow, as `st.map` serves its table, is a potential
-  follow-up.
+  is dropped at any size: the traces are the figure's data. Serving a large
+  specification behind `data.url`, and an ECharts `dataset.source` as Arrow as `st.map`
+  serves its table, is follow-up #9.
 - **A rendering specification is not a data contract.** `st.map` compiles its points into
   a Deck.gl layer, so a map's `data` is the columns it plots from the author's table,
   which is all its browser receives, described like a dataframe's, and the generated
@@ -913,8 +911,8 @@ tests rather than for tuning per app.
 | Request body                           | 25 MB, then `request_too_large`; the same bound as a WebSocket message | `server.maxWidgetStateSize`                                  |
 | Preview rows per table                 | 100                                                   | `server.agentPreviewRows` (hidden)                                            |
 | Data served behind `data.url`          | 200 MB per element, then `data.unavailable`           | `server.maxMessageSize`, shared with the WebSocket                            |
-| Chart specification                    | No cap; the theme template is dropped                 | Fixed ([open question 3](#open-questions))                                    |
-| Response size                          | No cap                                                | [Open question 3](#open-questions)                                            |
+| Chart specification                    | No cap; the theme template is dropped                 | Fixed; follow-up #9 serves large ones behind `data.url`                       |
+| Response size                          | No cap                                                | Follow-up #9                                                                  |
 | Wait for a follow-up run to start      | 50 ms after a run finishes: a quiet-period heuristic, not proof the chain settled | Fixed; to be replaced by the script runner's shutdown signal before v1 ships |
 | `data.url` lifetime                    | While the element that produced it is still rendered  | Fixed; a fetch-now handle, never persisted                                    |
 | Who may call                           | The WebSocket's Host allow-list; no web page unless its origin is listed | `server.allowedHosts`, `server.corsAllowedOrigins`              |
@@ -947,8 +945,8 @@ This is a new programmatic execution surface and needs an explicit review.
   values, local paths, or source.
 - **Bound everything.** v1 bounds in-flight interactions per session, sessions, request
   bytes, preview rows, served data, and the wait for a run; see
-  [Limits and configuration](#limits-and-configuration). Response size and request rate
-  are still open, and are among the gates on default-on.
+  [Limits and configuration](#limits-and-configuration). Compact responses (follow-up
+  #9) and request rate limits are among the gates on default-on.
 - **Audit without content.** Each interaction is logged, at debug level, with a digest
   of its session handle, the request fields it used, its outcome, and its latency —
   never the handle itself, labels, values, table contents, or queries.
@@ -1023,7 +1021,7 @@ and the rest of it is what stands between opt-in and on-by-default:
 
 | Concern               | Why it is new                                                                                                                                                                                         | In v1                                                                                                                                                                                                                                                      | Before default-on                                                                                  |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | A response budget, and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
+| Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | Compact responses (follow-up #9), and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
 | Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits, and per-caller session quotas, so one anonymous client cannot hold every slot. |
 | Cross-origin requests | A page on another site can make a visitor's browser send a request to any app that browser can reach, including, through DNS rebinding, an app on the visitor's own machine. | No cookie is read, and any request carrying an `Origin` not listed in `server.corsAllowedOrigins` is refused. A same-origin rule would not stop rebinding, since a rebound page is same-origin with the `Host` it sends, but browsers send `Origin` on every POST and programmatic clients send none, so this refuses web pages without turning away an agent. No browser caller loses anything: the route sends no CORS headers, so no other origin could read a response. | —                                                                                                  |
 | Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here. | A credential flow that maps an `st.login` user to an agent ([open question 1](#open-questions)). |
@@ -1139,8 +1137,7 @@ considered while building the prototype:
 - A browser-versus-agent fidelity harness.
 - Building the snapshot's values on the script thread.
 - Running queries over a large table on the server instead of paging it to the model.
-- Serving ECharts datasets as Arrow, and recommending dataframe-backed charts for apps
-  agents read.
+- Recommending dataframe-backed charts for apps agents read.
 - A per-key note on how each sent value landed.
 - A non-executing read of the last snapshot (part of follow-up #4).
 
@@ -1201,6 +1198,13 @@ this list: it is a correctness fix that v1 makes.
    `st.data_editor` edits; deferred downloads; per-action JSON Schema; and the browser's
    half of forms and bound parameters — applying `clear_on_submit` and rewriting a
    bound parameter when its widget is set.
+9. **Compact responses.** Large content moves to media storage, the pattern tables
+   already use, instead of staying inline: an oversized figure specification or option
+   list is served behind `data.url`, readable through `get_data`, with a short summary
+   in the snapshot, and an ECharts `dataset.source` is served as Arrow, as `st.map`
+   serves its table. Nothing that holds data or a legal value is truncated. A page of a
+   few Plotly charts can reach a megabyte per response, and a selectbox of a few
+   hundred options adds tens of kilobytes to every call on its page.
 
 ## Beyond the app surface
 
@@ -1310,15 +1314,3 @@ v1 ships when:
    their `format_func` labels. Integers beyond 2^53 are still plain JSON numbers, which
    JavaScript parsers round. These must be settled before v1 ships, with or without
    per-action schemas.
-3. **Does the response need a budget, and how should it be met?** The response document
-   is unbounded, and two things dominate a large one: a selectbox over a few thousand
-   values puts all of them in every snapshot of its page, and a figure carries its traces,
-   so a 20,000-point scatter or a page of a dozen Plotly figures is half a megabyte.
-   Truncation is the wrong answer to both, because the omitted options are exactly the
-   values a request may legally send, and the traces are the figure's data. Table
-   previews are the one case where truncation is safe, because a `url` serves the rest.
-   The candidate answer is to extend that pattern — serve oversized option lists and
-   figure specifications behind `data.url`, which MCP clients can read through
-   `get_data` — rather than to cap and discard. The cost is real for chat clients: a
-   page of a few Plotly charts can reach a megabyte per response, and a selectbox of a
-   few hundred options adds tens of kilobytes to every call on its page.
