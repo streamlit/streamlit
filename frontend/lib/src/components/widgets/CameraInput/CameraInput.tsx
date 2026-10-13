@@ -49,6 +49,7 @@ import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper
 import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import useTimeout from "~lib/hooks/useTimeout"
+import { formatRejectionMessage } from "~lib/util/ErrorHandling"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -172,9 +173,7 @@ const CameraInput = ({
   const initialStateRef = useRef<ReturnType<typeof createInitialFiles> | null>(
     null
   )
-  if (initialStateRef.current === null) {
-    initialStateRef.current = createInitialFiles(element, widgetMgr)
-  }
+  initialStateRef.current ??= createInitialFiles(element, widgetMgr)
   const {
     files: initialFiles,
     nextLocalId: initialNextLocalId,
@@ -416,7 +415,7 @@ const CameraInput = ({
           abortController.signal
         )
         .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
-        .catch(err => {
+        .catch((err: unknown) => {
           // If this was an abort error, we don't show the user an error -
           // the cancellation was in response to an action they took.
           if (!(err instanceof DOMException && err.name === "AbortError")) {
@@ -424,7 +423,7 @@ const CameraInput = ({
               uploadingFileInfo.id,
               uploadingFileInfo.setStatus({
                 type: "error",
-                errorMessage: err ? err.toString() : "Unknown error",
+                errorMessage: formatRejectionMessage(err),
               })
             )
           }
@@ -503,7 +502,7 @@ const CameraInput = ({
           setMinShutterEffectPassed(true)
           return
         })
-        .catch(err => {
+        .catch((err: unknown) => {
           LOG.error(err)
         })
         .finally(() => {
@@ -575,6 +574,10 @@ const CameraInput = ({
         formId: element.formId,
         fragmentId,
         fromUser: true,
+        // on_change="ignore" buffers the value without scheduling a rerun.
+        // WidgetStateManager ignores triggerRerun inside forms (the form owns
+        // commit timing).
+        ...(element.ignoreRerun ? { triggerRerun: false } : {}),
       })
     }
   }, [status, files, widgetMgr, element, fragmentId])

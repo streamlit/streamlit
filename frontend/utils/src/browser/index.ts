@@ -15,11 +15,22 @@
  */
 
 /**
- * Returns cookie value
+ * Returns the named cookie's value, or undefined when the cookie is missing
+ * or this document cannot read cookies (for example, a sandboxed iframe
+ * without `allow-same-origin`).
  */
 export function getCookie(name: string): string | undefined {
-  const r = document.cookie.match(`\\b${name}=([^;]*)\\b`)
-  return r ? r[1] : undefined
+  // Match the name only after this read, so an invalid name still throws
+  // SyntaxError.
+  let cookies: string
+  try {
+    cookies = document.cookie
+  } catch {
+    return undefined
+  }
+
+  const match = cookies.match(`\\b${name}=([^;]*)\\b`)
+  return match ? match[1] : undefined
 }
 
 // Method taken from

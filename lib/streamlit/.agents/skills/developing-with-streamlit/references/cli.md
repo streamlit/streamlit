@@ -8,7 +8,7 @@ The Streamlit CLI is the primary tool for running Streamlit applications and man
 ### Basic syntax
 
 ```bash
-streamlit run [<entrypoint>] [-- config options] [script args]
+streamlit run [<entrypoint>] [--<section>.<option>=<value> ...] [-- script args]
 ```
 
 ### Entrypoint options
@@ -59,7 +59,7 @@ Using `uv run` is the recommended approach because it:
 
 ## Setting configuration with `streamlit run`
 
-Configuration options follow the pattern `--<section>.<option>=<value>` and must come after the script name.
+Configuration options follow the pattern `--<section>.<option>=<value>`. Put them before any ` -- `: everything after ` -- ` goes to the script's `sys.argv`, not to Streamlit.
 
 > **Recommendation:** For persistent configuration, use `.streamlit/config.toml` in your project directory instead of command-line flags. This keeps your run command simple and makes configuration easier to manage and share with your team.
 
@@ -70,9 +70,11 @@ streamlit run app.py --server.port=8080
 streamlit run app.py --server.headless=true
 streamlit run app.py --server.runOnSave=true
 streamlit run app.py --server.address=0.0.0.0
-streamlit run app.py --client.showErrorDetails=false
+streamlit run app.py --client.showErrorDetails=none
 streamlit run app.py --theme.primaryColor=blue
 ```
+
+Nested theme flags follow the same pattern, for example `--theme.sidebar.backgroundColor` or `--theme.light.primaryColor`. Prefer `.streamlit/config.toml` for persistent themes. See `theme.md` for section inheritance, shared `theme.base` files, and `STREAMLIT_THEME_*` names.
 
 ### Combining multiple options
 
@@ -81,7 +83,7 @@ streamlit run app.py \
     --server.port=8080 \
     --server.headless=true \
     --theme.primaryColor=blue \
-    --client.showErrorDetails=false
+    --client.showErrorDetails=none
 ```
 
 ## Passing arguments to your script

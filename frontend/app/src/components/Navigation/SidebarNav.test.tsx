@@ -18,14 +18,14 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import * as LibModule from "@streamlit/lib"
-import { mockEndpoints, NavigationContextProps } from "@streamlit/lib"
+import { mockEndpoints, type NavigationContextProps } from "@streamlit/lib"
 import {
   renderWithContexts,
-  RenderWithContextsOptions,
+  type RenderWithContextsOptions,
 } from "@streamlit/lib/testing"
 import { type AppPage, PageConfig } from "@streamlit/protobuf"
 
-import SidebarNav, { Props } from "./SidebarNav"
+import SidebarNav, { type Props } from "./SidebarNav"
 
 vi.mock("~lib/util/Hooks", async () => ({
   __esModule: true,
@@ -180,11 +180,11 @@ function renderSidebarNav(
   }
 ): ReturnType<typeof renderWithContexts> {
   const sidebarConfigContextValues = getSidebarConfigContextOutput(
-    overrides?.sidebarConfigContext || {}
+    overrides?.sidebarConfigContext ?? {}
   )
 
   const navigationContextValues = getNavigationContextOutput(
-    overrides?.navigationContext || {}
+    overrides?.navigationContext ?? {}
   )
 
   return renderWithContexts(<SidebarNav {...getProps(props)} />, {
@@ -207,6 +207,13 @@ describe("SidebarNav", () => {
 
     expect(screen.getByText("streamlit app")).toBeInTheDocument()
     expect(screen.getByText("my other page")).toBeInTheDocument()
+  })
+
+  it("exposes a named navigation landmark", () => {
+    renderSidebarNav()
+
+    const nav = screen.getByRole("navigation", { name: "App pages" })
+    expect(nav).toHaveAttribute("data-testid", "stSidebarNav")
   })
 
   describe("page links", () => {

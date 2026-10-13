@@ -15,7 +15,7 @@
  */
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
-import { GridCellKind, NumberCell } from "@glideapps/glide-data-grid"
+import { GridCellKind, type NumberCell } from "@glideapps/glide-data-grid"
 import {
   DurationNanosecond,
   Field,
@@ -25,13 +25,13 @@ import {
 } from "apache-arrow"
 
 import {
-  ArrowType,
+  type ArrowType,
   DataFrameCellType,
-  DataType,
+  type DataType,
 } from "~lib/dataframes/arrowTypeUtils"
 
-import NumberColumn, { NumberColumnParams } from "./NumberColumn"
-import { BaseColumnProps, ErrorCell, isErrorCell } from "./utils"
+import NumberColumn, { type NumberColumnParams } from "./NumberColumn"
+import { type BaseColumnProps, type ErrorCell, isErrorCell } from "./utils"
 
 const MOCK_FLOAT_ARROW_TYPE: ArrowType = {
   type: DataFrameCellType.DATA,

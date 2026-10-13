@@ -21,7 +21,7 @@ import { ConnectionState } from "@streamlit/connection"
 import { ScriptRunState } from "@streamlit/lib"
 import { render } from "@streamlit/lib/testing"
 
-import StatusWidget, { StatusWidgetProps } from "./StatusWidget"
+import StatusWidget, { type StatusWidgetProps } from "./StatusWidget"
 
 const getProps = (
   propOverrides: Partial<StatusWidgetProps> = {}

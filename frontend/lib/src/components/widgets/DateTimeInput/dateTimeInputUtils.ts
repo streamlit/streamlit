@@ -359,6 +359,10 @@ export function updateWidgetMgrState(
       formId: element.formId,
       fragmentId,
       fromUser: vws.fromUser,
+      // on_change="ignore" buffers the value without scheduling a rerun.
+      // WidgetStateManager ignores triggerRerun inside forms (the form owns
+      // commit timing).
+      ...(element.ignoreRerun ? { triggerRerun: false } : {}),
     })
   }
 

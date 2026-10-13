@@ -88,6 +88,17 @@ describe("migratePlotlyMapboxFigure", () => {
     expect(migratePlotlyMapboxFigure(figure)).toEqual(figure)
   })
 
+  it.each([null, 42, "figure", [{ type: "scatter" }]])(
+    "returns an empty figure when the spec is not a record (%j)",
+    value => {
+      expect(migratePlotlyMapboxFigure(value)).toEqual({
+        data: [],
+        layout: {},
+        frames: null,
+      })
+    }
+  )
+
   it("rewrites official Mapbox style URLs to built-in MapLibre names", () => {
     const figure = migratePlotlyMapboxFigure({
       data: [{ type: "scattermapbox" }],

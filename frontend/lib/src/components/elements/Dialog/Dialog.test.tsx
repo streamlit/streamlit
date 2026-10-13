@@ -23,7 +23,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Dialog, { Props as DialogProps } from "./Dialog"
+import Dialog, { type Props as DialogProps } from "./Dialog"
 
 const getProps = (
   elementProps: Partial<BlockProto.Dialog> = {},

@@ -24,18 +24,30 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
+_MAIN_MENU_VERSION_PLACEHOLDER = "Made with Streamlit vX.XX.X"
+
+
+def _redact_main_menu_version(page: Page) -> None:
+    """Replace the version footer with a stable placeholder.
+
+    Nightly builds display ``1.x.x.dev`` (see ``formatDisplayVersion``), which is
+    wider than a release version. Menu rows are ``width: 100%``, so that extra
+    width would change snapshots of individual items as well as the popover.
+    """
+    # The version footer lives outside role="menu" (inside the popover wrapper).
+    page.get_by_test_id("stMainMenuPopover").get_by_text(
+        re.compile(r"^Made with Streamlit v")
+    ).evaluate(
+        "(el, text) => { el.textContent = text }",
+        _MAIN_MENU_VERSION_PLACEHOLDER,
+    )
+
 
 def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunction):
     themed_app.get_by_test_id("stMainMenu").click()
+    _redact_main_menu_version(themed_app)
 
-    # Replace version with placeholder so snapshots don't change across versions.
-    # The version footer lives outside role="menu" (inside the popover wrapper).
-    popover = themed_app.get_by_test_id("stMainMenuPopover")
-    popover.get_by_text(re.compile(r"^Made with Streamlit v")).evaluate(
-        "el => (el.textContent = 'Made with Streamlit vX.XX.X')"
-    )
-
-    assert_snapshot(popover, name="main_menu")
+    assert_snapshot(themed_app.get_by_test_id("stMainMenuPopover"), name="main_menu")
 
 
 def test_main_menu_closes_on_escape(app: Page):
@@ -347,6 +359,9 @@ def test_auto_rerun_toggle_with_custom_border_color(
     toggle = app.get_by_test_id("stMainMenuItem-autoRerun")
     expect(toggle).to_be_visible()
     expect(toggle).to_have_attribute("aria-checked", "false")
+
+    # Pin the footer width before snapshotting the full-width toggle row.
+    _redact_main_menu_version(app)
 
     assert_snapshot(toggle, name="main_menu-auto_rerun-custom-theme")
 

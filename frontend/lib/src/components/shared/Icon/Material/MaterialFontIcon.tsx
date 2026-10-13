@@ -39,9 +39,10 @@ const getDefaultProps = ({
   padding,
   color,
 }: Partial<StyledMaterialIconProps>): StyledMaterialIconProps => ({
-  size: size || "md",
-  margin: margin || "",
-  padding: padding || "",
+  size: size ?? "md",
+  margin: margin ?? "",
+  padding: padding ?? "",
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank color inherits
   color: color || "inherit",
 })
 
@@ -52,7 +53,10 @@ const MaterialFontIcon = ({
   return (
     <StyledMaterialIcon
       {...getDefaultProps(props)}
-      data-testid={props.testid || "stIconMaterial"}
+      data-testid={props.testid ?? "stIconMaterial"}
+      // Decorative by default; icon-only controls must name the control
+      // (aria-label / visually-hidden text), not this ligature span.
+      aria-hidden="true"
       // Prevent the icon text from being translated
       // this would break the icon display in the UI.
       // https://github.com/streamlit/streamlit/issues/10168

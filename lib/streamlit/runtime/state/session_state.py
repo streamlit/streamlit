@@ -703,7 +703,7 @@ class SessionState:
         for key_or_wid in self:
             try:
                 self._old_state[key_or_wid] = self[key_or_wid]
-            except KeyError:  # noqa: PERF203
+            except KeyError:
                 # handle key errors from widget state not having metadata gracefully
                 # https://github.com/streamlit/streamlit/issues/7206
                 pass
@@ -2029,7 +2029,7 @@ class SessionState:
         for k in self:
             try:
                 pickle.dumps(self[k])
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 err_msg = (
                     f"Cannot serialize the value (of type `{type(self[k])}`) of '{k}' in "
                     "st.session_state. Streamlit has been configured to use "

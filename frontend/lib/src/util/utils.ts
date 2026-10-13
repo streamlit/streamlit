@@ -375,7 +375,8 @@ export function isFromWindows(): boolean {
 }
 
 /**
- * Sets cookie value
+ * Sets a cookie value. Silently skips the write when the document cannot
+ * store cookies (for example, a sandboxed iframe without `allow-same-origin`).
  */
 export function setCookie(
   name: string,
@@ -386,7 +387,12 @@ export function setCookie(
   const expirationStr: string = expirationDate
     ? `expires=${expirationDate.toUTCString()};`
     : ""
-  document.cookie = `${name}=${value};${expirationStr}path=/`
+  try {
+    document.cookie = `${name}=${value};${expirationStr}path=/`
+  } catch {
+    // Cookie writes are best-effort; callers must not rely on the value
+    // persisting.
+  }
 }
 
 export function isValidElementId(
@@ -409,8 +415,8 @@ export function getElementId(element: Element): string | undefined {
   const elementId = get(element as unknown as Record<string, unknown>, [
     requireNonNull(element.type),
     "id",
-  ])
-  if (elementId && isValidElementId(elementId)) {
+  ]) as unknown
+  if (typeof elementId === "string" && isValidElementId(elementId)) {
     // We only care about valid element IDs (with the correct prefix)
     return elementId
   }
@@ -541,9 +547,9 @@ function findAnIFrameWithClassName(
 function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
   try {
     if (iframe.contentWindow === null) return false
-    const doc = iframe.contentDocument || iframe.contentWindow.document
+    const doc = iframe.contentDocument ?? iframe.contentWindow.document
     const html = doc.body.innerHTML
-    return html !== null && html !== ""
+    return html !== ""
   } catch {
     return false
   }
@@ -674,7 +680,7 @@ export function keysToSnakeCase(
       }
 
       if (Array.isArray(value)) {
-        value = value.map(item =>
+        value = (value as unknown[]).map(item =>
           item !== null && typeof item === "object"
             ? keysToSnakeCase(item as Record<string, unknown>)
             : item

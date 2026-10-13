@@ -23,7 +23,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Expander, { ExpanderProps } from "./Expander"
+import Expander, { type ExpanderProps } from "./Expander"
 
 const createWidgetMgr = (): WidgetStateManager =>
   new WidgetStateManager({
@@ -69,6 +69,34 @@ describe("Expander container", () => {
     )
     const list = screen.queryByRole("list")
     expect(list).not.toBeInTheDocument()
+  })
+
+  it("names an empty-label expander from its material icon", () => {
+    const props = getProps({
+      label: "",
+      icon: ":material/info:",
+      expanded: false,
+    })
+    render(
+      <Expander {...props}>
+        <div>content</div>
+      </Expander>
+    )
+
+    const summary = screen.getByTestId("stExpander").querySelector("summary")
+    expect(summary).toHaveAccessibleName("info icon")
+  })
+
+  it("falls back to a generic name when label and icon are empty", () => {
+    const props = getProps({ label: "", icon: "", expanded: false })
+    render(
+      <Expander {...props}>
+        <div>content</div>
+      </Expander>
+    )
+
+    const summary = screen.getByTestId("stExpander").querySelector("summary")
+    expect(summary).toHaveAccessibleName("Expander")
   })
 
   it("renders expander label as expected", () => {
@@ -736,6 +764,35 @@ describe("step mode (type=STEP)", () => {
     )
 
     expect(getSummary()).toHaveAccessibleName("Loading data — running")
+  })
+
+  it.each([
+    ["running", State.RUNNING, "spinner", "Step — running"],
+    ["complete", State.COMPLETE, ":material/check:", "Step — complete"],
+    ["error", State.ERROR, ":material/error:", "Step — error"],
+  ])(
+    "keeps status text in the name for a blank-label %s step with a state icon",
+    (_description, state, icon, expectedName) => {
+      // st.status always sets icon from state; blank labels must not pick up
+      // that glyph name ("Loading" / "check icon") ahead of "Step".
+      render(
+        <Expander {...getStepProps({ label: "", state, icon })}>
+          <div>test</div>
+        </Expander>
+      )
+
+      expect(getSummary()).toHaveAccessibleName(expectedName)
+    }
+  )
+
+  it("names a blank-label step from its user icon when there is no status state", () => {
+    render(
+      <Expander {...getStepProps({ label: "", icon: "🚨" })}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(getSummary()).toHaveAccessibleName("🚨")
   })
 
   it("announces the status state for a step without content", () => {

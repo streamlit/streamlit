@@ -21,11 +21,11 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import * as UseFloatingOverlay from "~lib/hooks/useFloatingOverlay"
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 import { iconSizes } from "~lib/theme/primitives/iconSizes"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Popover, { clampPopoverSize, PopoverProps } from "./Popover"
+import Popover, { clampPopoverSize, type PopoverProps } from "./Popover"
 
 const createWidgetMgr = (): WidgetStateManager =>
   new WidgetStateManager({
@@ -91,6 +91,8 @@ describe("Popover container", () => {
   )
 
   describe("wrap=false", () => {
+    mockEllipsizedLabels()
+
     it("keeps the chevron visible and sets the full label as a native title", () => {
       const props = getProps({
         label: "A very long popover label",

@@ -69,10 +69,10 @@ const loadAndRunModule = async <T extends FrontendState>({
   parentElement: HTMLElement | ShadowRoot
   widgetMgr: WidgetStateManager
 }): Promise<CleanupFunction | void> => {
-  const module = await import(/* @vite-ignore */ moduleUrl)
-
-  if (!module) {
-    throw new Error("JS module does not exist.")
+  const module = (await import(/* @vite-ignore */ moduleUrl)) as {
+    default?: (
+      args: FrontendRendererArgs
+    ) => CleanupFunction | void | Promise<CleanupFunction | void>
   }
 
   if (!module.default || typeof module.default !== "function") {
@@ -242,7 +242,7 @@ export const useHandleJsContent = ({
 
       void Promise.resolve(cleanup)
         .then(result => result?.())
-        .catch(error => {
+        .catch((error: unknown) => {
           LOG.error("Failed to run custom component cleanup", error)
         })
     }
@@ -364,7 +364,7 @@ export const useHandleJsContent = ({
             // chain; `result?.(); return` would drop async cleanup rejections.
             return result?.()
           })
-          .catch(error => {
+          .catch((error: unknown) => {
             LOG.error("Failed to run custom component cleanup", error)
           })
       }

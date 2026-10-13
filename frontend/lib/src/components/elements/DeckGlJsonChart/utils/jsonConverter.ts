@@ -110,9 +110,10 @@ const dropUnregisteredExtensions = (json: JsonObject): JsonObject => {
     return json
   }
 
+  const layers: unknown[] = jsonLayers
   return {
     ...json,
-    layers: jsonLayers.map(layer => {
+    layers: layers.map((layer: unknown) => {
       if (
         isNullOrUndefined(layer) ||
         typeof layer !== "object" ||
@@ -126,12 +127,13 @@ const dropUnregisteredExtensions = (json: JsonObject): JsonObject => {
         return layer
       }
 
-      const kept = layerObj.extensions.filter(isRegisteredExtensionJson)
-      if (kept.length === layerObj.extensions.length) {
+      const extensions: unknown[] = layerObj.extensions
+      const kept = extensions.filter(isRegisteredExtensionJson)
+      if (kept.length === extensions.length) {
         return layer
       }
 
-      const dropped = layerObj.extensions
+      const dropped = extensions
         .filter(extension => !isRegisteredExtensionJson(extension))
         .map(describeExtension)
       LOG.warn(

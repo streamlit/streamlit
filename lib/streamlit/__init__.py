@@ -329,14 +329,50 @@ import streamlit.components.v2  # noqa: F401
 # ``st.*`` names stay type errors. mypy only honors the unaliased
 # ``TYPE_CHECKING`` name here; an alias made unknown names type-check as
 # valid. Deleting it afterward keeps it off the public ``st`` surface.
+from types import ModuleType as _ModuleType
 from typing import TYPE_CHECKING
+
+
+class _MissingStreamlitAttributeMessage:
+    """Lazy ``AttributeError`` argument for a missing top-level ``st.*`` name.
+
+    ``hasattr``, ``getattr`` with a default, and ``from streamlit import``
+    catch this error without formatting it. The suggestion text is built
+    only when ``str()`` runs, so those lookups do not import
+    ``streamlit.command_suggestions`` or ``difflib``.
+    """
+
+    def __init__(self, name: str, module: _ModuleType) -> None:
+        self._name = name
+        self._module = module
+
+    def __str__(self) -> str:
+        try:
+            # Import the submodule directly so a failed load hits the fallback
+            # below. ``from streamlit import`` looks the name up first and
+            # re-enters ``__getattr__``.
+            import streamlit.command_suggestions as command_suggestions  # noqa: PLR0402
+
+            return command_suggestions.missing_streamlit_attribute_message(
+                self._name, self._module
+            )
+        except Exception:  # pragma: no cover - defensive
+            return f"module 'streamlit' has no attribute '{self._name}'"
+
 
 if not TYPE_CHECKING:
 
     def __getattr__(name: str) -> object:
-        from streamlit.command_suggestions import raise_missing_streamlit_attribute
+        import sys
 
-        raise_missing_streamlit_attribute(name)
+        module = sys.modules[__name__]
+        # Telemetry records AttributeError.name and .obj as
+        # AttributeError:<attribute> instead of parsing the message.
+        raise AttributeError(
+            _MissingStreamlitAttributeMessage(name, module),
+            name=name,
+            obj=module,
+        )
 
 
 # Drop TYPE_CHECKING so it is not a public ``st`` name.

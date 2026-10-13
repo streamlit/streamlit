@@ -19,7 +19,7 @@ import {
   isNamedColor,
   NAMED_COLOR_CONFIG,
   NAMED_COLORS,
-  NamedColor,
+  type NamedColor,
 } from "./namedColors"
 
 describe("namedColors", () => {

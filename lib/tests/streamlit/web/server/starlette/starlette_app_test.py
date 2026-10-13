@@ -70,7 +70,7 @@ from streamlit.web.server.starlette.starlette_static_routes import (
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterator
+    from collections.abc import AsyncGenerator, Iterator
 
     from starlette.requests import Request
 
@@ -2165,7 +2165,7 @@ class TestAppLifespan:
         """Test that App stores the user-provided lifespan context manager."""
 
         @asynccontextmanager
-        async def lifespan(app: App) -> AsyncIterator[dict[str, Any]]:
+        async def lifespan(app: App) -> AsyncGenerator[dict[str, Any], None]:
             yield {"key": "value"}
 
         app = App("main.py", lifespan=lifespan)
@@ -2727,7 +2727,7 @@ class TestAppAsgi:
         shutdown_count = 0
 
         @asynccontextmanager
-        async def lifespan(app: App) -> AsyncIterator[dict[str, Any]]:
+        async def lifespan(app: App) -> AsyncGenerator[dict[str, Any], None]:
             nonlocal startup_count, shutdown_count
             startup_count += 1
             yield {"model": "loaded", "version": "1.0"}
@@ -2810,7 +2810,7 @@ class TestAppAsgi:
         startup_called = False
 
         @asynccontextmanager
-        async def lifespan(app: App) -> AsyncIterator[None]:
+        async def lifespan(app: App) -> AsyncGenerator[None, None]:
             nonlocal startup_called
             startup_called = True
             yield
@@ -3217,7 +3217,7 @@ class TestAppSecrets:
         startup_called = False
 
         @asynccontextmanager
-        async def lifespan(app: App) -> AsyncIterator[dict[str, Any]]:
+        async def lifespan(app: App) -> AsyncGenerator[dict[str, Any], None]:
             nonlocal startup_called
             startup_called = True
             yield {"loaded": True}

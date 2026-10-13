@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { ReactElement, ReactNode, useContext } from "react"
+import { type ReactElement, type ReactNode, useContext } from "react"
 
+import { SIDEBAR_ELEMENT_ID } from "@streamlit/app/src/components/Sidebar/utils"
 import {
   BaseButton,
   BaseButtonKind,
@@ -36,7 +37,7 @@ import {
 export interface HeaderProps {
   hasSidebar: boolean
   isSidebarOpen: boolean
-  onToggleSidebar(): void
+  onToggleSidebar: () => void
   navigation?: ReactNode
   rightContent?: ReactNode
   logoComponent?: ReactNode
@@ -64,8 +65,10 @@ const Header = ({
 
   // Check if there's any content to display at all
   const hasAnyContent =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false flag still lets later header content count
     shouldShowLogo ||
     shouldShowExpandButton ||
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- missing navigation still lets right content count
     navigation ||
     shouldShowRightContent
 
@@ -92,6 +95,9 @@ const Header = ({
                     kind={BaseButtonKind.HEADER_NO_PADDING}
                     onClick={onToggleSidebar}
                     data-testid="stExpandSidebarButton"
+                    aria-label="Expand sidebar"
+                    aria-expanded={isSidebarOpen}
+                    aria-controls={SIDEBAR_ELEMENT_ID}
                   >
                     <DynamicIcon
                       size="xl"

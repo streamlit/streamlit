@@ -24,7 +24,7 @@ import re
 import secrets
 import threading
 from collections import OrderedDict
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Final, Literal
 
 from streamlit import config_util, development, env_util, file_util, util
@@ -93,7 +93,7 @@ _DEFINED_BY_ENV_VAR: Final = "environment variable"
 _LOGGER: Final = logging.getLogger(__name__)
 
 
-class ShowErrorDetailsConfigOptions(str, Enum):
+class ShowErrorDetailsConfigOptions(StrEnum):
     """Valid options for the "client.showErrorDetails" config."""
 
     FULL = "full"
@@ -115,7 +115,7 @@ class ShowErrorDetailsConfigOptions(str, Enum):
         # (e.g. st.set_option("client.showErrorDetails", False)).
 
 
-class CustomThemeCategories(str, Enum):
+class CustomThemeCategories(StrEnum):
     """Theme categories that can be set with custom theme config."""
 
     SIDEBAR = "sidebar"
@@ -2415,6 +2415,81 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "paddingTop",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The gap under the header to the first widget in the main content area
+        or sidebar.
+
+        Set this as a quoted string in "rem" or "px" (for example "1rem",
+        "16px", or "16"). A numeric string without a unit is treated as
+        pixels ("16" is 16px; "1.5" is 1.5px). Zero is allowed ("0", "0rem",
+        "0px"). An integer or float without quotes is ignored. Negative
+        values, percentages, and other CSS units are rejected and fall back to
+        the default.
+
+        Prefer rem (for example "1.5rem") so spacing scales with font size.
+
+        Main area: The value is the gap below any visible header chrome
+        (toolbar, logo, expand button, top nav). Streamlit adds the header
+        height automatically so content clears the overlay. A value of "0"
+        places the first widget flush under that chrome (not flush to the top
+        of the viewport). Embed options such as show_padding / show_toolbar
+        do not override a configured value. In a bare embed with no header
+        chrome, the configured value is used alone — very small values
+        (including "0") can clip the first element's overlay toolbar. Leave
+        this unset for compact embeds that need the default clearance, or use
+        a small non-zero gap. Print uses the configured value with no header
+        reservation. If unset, Streamlit uses its built-in defaults
+        (typically 6rem, or 8rem with top nav).
+
+        Sidebar: The same gap under the sidebar's own chrome (the logo and
+        collapse row, plus page navigation when it is shown). Streamlit does
+        not add the main header height on top of this value. With page
+        navigation, the gap is from the nav to the first widget. Without page
+        navigation, the gap is from the header row to the first widget. If
+        unset, Streamlit uses its built-in sidebar spacing.
+    """,
+    type_=str,
+)
+
+_create_theme_options(
+    "paddingBottom",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The aesthetic bottom inset after the last widget in the main content
+        area or sidebar.
+
+        Set this as a quoted string in "rem" or "px" (for example "2rem" or
+        "32px"). A numeric string without a unit is treated as pixels. Zero
+        is allowed. An integer or float without quotes is ignored. Negative
+        values, percentages, and other CSS units are rejected and fall back
+        to the default.
+
+        When set, this replaces Streamlit's built-in bottom spacing: typically
+        10rem in the main area with no st.bottom content (or 1rem when
+        st.bottom is present), and 6rem in the sidebar. Sticky st.bottom
+        content is not affected. Horizontal padding is not configurable yet.
+        If unset, Streamlit uses its built-in defaults.
+    """,
+    type_=str,
+)
+
+_create_theme_options(
     "borderColor",
     categories=[
         "theme",
@@ -2852,9 +2927,9 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
 
     """
     try:
-        import toml
+        import tomllib
 
-        parsed_config_file = toml.loads(raw_toml)
+        parsed_config_file = tomllib.loads(raw_toml)
     except Exception:
         # Catching any parsing exception to prevent this from breaking our
         # config change watcher logic.

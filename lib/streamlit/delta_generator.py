@@ -121,6 +121,7 @@ from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
+    is_fragment_callback_warning_suppressed,
 )
 
 if TYPE_CHECKING:
@@ -187,14 +188,23 @@ def _maybe_print_fragment_callback_warning() -> None:
     # on this thread, since ScriptRunContext.reset() and add_script_run_ctx()
     # are the only public entry points for binding ctx, and both seed
     # ThreadState. ThreadState.get() is therefore safe here without a guard.
-    if ctx and ThreadState.get().in_fragment_callback:
-        warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
+    if not ctx or not ThreadState.get().in_fragment_callback:
+        return
 
-        logger.get_logger("root").warning(
-            f"\n  {warning} A fragment rerun was triggered with a callback that displays one or more elements. "
-            "During a fragment rerun, within a callback, displaying elements is not officially supported because "
-            "those elements will replace the existing elements at the top of your app."
-        )
+    # The internal yield-point placeholder is not a user element. The runner
+    # raises in _enqueue_forward_msg before sending it. Skip the warning for
+    # that write. Read the flag only on this path so ordinary element writes
+    # skip the ContextVar lookup.
+    if is_fragment_callback_warning_suppressed():
+        return
+
+    warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
+
+    logger.get_logger("root").warning(
+        f"\n  {warning} A fragment rerun was triggered with a callback that displays one or more elements. "
+        "During a fragment rerun, within a callback, displaying elements is not officially supported because "
+        "those elements will replace the existing elements at the top of your app."
+    )
 
 
 class DeltaGenerator(

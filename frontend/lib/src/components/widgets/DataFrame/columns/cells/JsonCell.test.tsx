@@ -23,14 +23,15 @@ import {
   GridCellKind,
   type TextCell,
 } from "@glideapps/glide-data-grid"
+import type * as GlideDataGrid from "@glideapps/glide-data-grid"
 import { cleanup, screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
 vi.mock("@glideapps/glide-data-grid", async () => {
-  const actual = await vi.importActual<
-    typeof import("@glideapps/glide-data-grid")
-  >("@glideapps/glide-data-grid")
+  const actual = await vi.importActual<typeof GlideDataGrid>(
+    "@glideapps/glide-data-grid"
+  )
   return {
     ...actual,
     drawTextCell: vi.fn(),
@@ -39,7 +40,9 @@ vi.mock("@glideapps/glide-data-grid", async () => {
 
 vi.mock("./JsonViewer", () => ({
   JsonViewer: (props: { jsonValue: unknown }) => (
-    <div data-testid="json-viewer">{String(props.jsonValue)}</div>
+    <div data-testid="json-viewer" data-value-type={typeof props.jsonValue}>
+      {String(props.jsonValue)}
+    </div>
   ),
 }))
 
@@ -208,6 +211,66 @@ describe("JsonCell renderer", () => {
       '{"fallback":true}'
     )
   })
+
+  it("JsonCellEditor keeps an empty-string value instead of the display fallback", () => {
+    const value = {
+      kind: GridCellKind.Custom,
+      data: {
+        kind: "json-cell",
+        value: "",
+        displayValue: '{"fallback":true}',
+      },
+      allowOverlay: true,
+      copyData: "",
+    } as unknown as JsonCell
+
+    render(
+      <JsonCellEditor
+        theme={mockTheme}
+        value={value}
+        onChange={vi.fn()}
+        isHighlighted={false}
+      />
+    )
+
+    expect(screen.getByTestId("json-viewer")).toHaveTextContent(/^$/)
+    expect(screen.getByTestId("json-viewer")).not.toHaveTextContent("fallback")
+  })
+
+  it.each([
+    { value: 0, displayValue: "0", valueType: "number" },
+    { value: false, displayValue: "false", valueType: "boolean" },
+  ])(
+    "JsonCellEditor keeps falsy $value instead of the display string",
+    ({ value, displayValue, valueType }) => {
+      const cell = {
+        kind: GridCellKind.Custom,
+        data: {
+          kind: "json-cell",
+          value,
+          displayValue,
+        },
+        allowOverlay: true,
+        copyData: "",
+      } as unknown as JsonCell
+
+      render(
+        <JsonCellEditor
+          theme={mockTheme}
+          value={cell}
+          onChange={vi.fn()}
+          isHighlighted={false}
+        />
+      )
+
+      const viewer = screen.getByTestId("json-viewer")
+      // JsonColumn pairs these values with display strings "0" and "false".
+      // The type distinguishes the stored value from that display string.
+      expect(viewer).toHaveAttribute("data-value-type", valueType)
+      expect(viewer).not.toHaveAttribute("data-value-type", "string")
+      expect(viewer).toHaveTextContent(displayValue)
+    }
+  )
 
   it("JsonTextCellEditor renders JsonViewer with text cell data", () => {
     const textCell = {

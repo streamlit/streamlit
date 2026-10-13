@@ -16,7 +16,7 @@
 
 import { screen } from "@testing-library/react"
 import { graphviz } from "d3-graphviz"
-import { Mock, MockInstance } from "vitest"
+import type { Mock, MockInstance } from "vitest"
 
 import { GraphVizChart as GraphVizChartProto } from "@streamlit/protobuf"
 
@@ -24,7 +24,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 
 import GraphVizChart, {
-  GraphVizChartProps,
+  type GraphVizChartProps,
   LOG,
   sanitizeGraphVizLinkUris,
 } from "./GraphVizChart"
@@ -48,7 +48,7 @@ const createChainableMethods = (renderDotImpl?: Mock): MockGraphvizChain => {
     scale: () => chainable,
     engine: () => chainable,
     renderDot:
-      renderDotImpl ||
+      renderDotImpl ??
       vi.fn((_spec: string, callback?: () => void) => {
         callback?.()
 
@@ -115,7 +115,7 @@ describe("GraphVizChart Element", () => {
   })
 
   afterEach(() => {
-    // @ts-expect-error
+    // @ts-expect-error - graphviz is not typed as a vitest mock
     graphviz.mockClear()
   })
 
@@ -129,6 +129,28 @@ describe("GraphVizChart Element", () => {
 
     expect(logErrorSpy).not.toHaveBeenCalled()
     expect(graphviz).toHaveBeenCalled()
+  })
+
+  it("keeps the natural SVG size for a stretch-height chart", () => {
+    const chain = createChainableMethods()
+    const widthSpy = vi.spyOn(chain, "width")
+    const heightSpy = vi.spyOn(chain, "height")
+    ;(graphviz as Mock).mockReturnValue(chain)
+
+    render(
+      <GraphVizChart
+        {...getProps()}
+        widthConfig={{ useContent: true }}
+        heightConfig={{ useStretch: true }}
+      />
+    )
+
+    expect(chain.renderDot).toHaveBeenCalled()
+    // Measured sizes written into the SVG would feed back into the layout.
+    expect(widthSpy).not.toHaveBeenCalled()
+    expect(heightSpy).not.toHaveBeenCalled()
+    // CSS scales the chart to the stretched height instead.
+    expect(screen.getByTestId("stGraphVizChart")).toHaveStyle("height: 100%;")
   })
 
   it("should update chart and log error when crashes", () => {
@@ -179,6 +201,11 @@ describe("GraphVizChart Element", () => {
           name: "Directed graph of Hello to World",
         })
       ).toBeVisible()
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Directed graph of Hello to World$/,
+        })
+      ).toBeInTheDocument()
     })
 
     it("omits role and aria-label when alt is not provided", () => {

@@ -17,13 +17,13 @@
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { DatePickerType } from "@glideapps/glide-data-grid-cells"
+import type { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import { DateDay, Field, Time, Timestamp, TimeUnit } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import DateTimeColumn, { DateColumn, TimeColumn } from "./DateTimeColumn"
-import { BaseColumnProps, isErrorCell } from "./utils"
+import { type BaseColumnProps, isErrorCell } from "./utils"
 
 const MOCK_DATETIME_COLUMN_TEMPLATE: BaseColumnProps = {
   id: "1",
@@ -331,6 +331,18 @@ describe("DateTimeColumn", () => {
     expect((mockCell as DatePickerType).data.displayDate).toEqual(
       "2023-04-25 10:30:00+00:00"
     )
+  })
+
+  it("keeps a zero UTC offset on empty cells", () => {
+    const mockColumn = DateTimeColumn({
+      ...MOCK_DATETIME_COLUMN_TEMPLATE,
+      columnTypeOptions: {
+        timezone: "UTC",
+      },
+    })
+    const mockCell = mockColumn.getCell(null)
+
+    expect((mockCell as DatePickerType).data.timezoneOffset).toBe(0)
   })
 
   it("returns false for validateInput when value is null and column is required", () => {

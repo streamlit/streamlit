@@ -15,7 +15,7 @@
  */
 
 import {
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -35,16 +35,16 @@ import {
   saveSidebarState,
   shouldCollapse,
 } from "@streamlit/app/src/components/Sidebar/utils"
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
-  AppNode,
-  AppRoot,
+  type AppNode,
+  type AppRoot,
   BlockNode,
-  ComponentRegistry,
+  type ComponentRegistry,
   ContainerContentsWrapper,
   ElementNode,
-  FileUploadClient,
-  IGuestToHostMessage,
+  type FileUploadClient,
+  type IGuestToHostMessage,
   NavigationContext,
   Profiler,
   SidebarConfigContext,
@@ -56,11 +56,12 @@ import {
   useEmotionTheme,
   useExecuteWhenChanged,
   useWindowDimensionsContext,
-  WidgetStateManager,
+  type WidgetStateManager,
 } from "@streamlit/lib"
 import { Navigation } from "@streamlit/protobuf"
 
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
+import SkipToContentLink, { MAIN_ELEMENT_ID } from "./SkipToContentLink"
 import {
   StyledAppViewBlockContainer,
   StyledAppViewBlockSpacer,
@@ -384,6 +385,7 @@ function AppView(props: AppViewProps): ReactElement {
     shouldShowNavigation(appPages)
 
   const hasHeaderUserContent =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false flag still lets later header content count
     shouldShowLogo || shouldShowExpandButton || shouldShowTopNav || showToolbar
 
   // The tabindex is required to support scrolling by arrow keys.
@@ -393,6 +395,7 @@ function AppView(props: AppViewProps): ReactElement {
       data-testid="stAppViewContainer"
       data-layout={layout}
     >
+      <SkipToContentLink />
       {showSidebar && (
         <Profiler id="Sidebar">
           <ThemedSidebar
@@ -427,6 +430,7 @@ function AppView(props: AppViewProps): ReactElement {
           showToolbar={showToolbar}
         />
         <Component
+          id={MAIN_ELEMENT_ID}
           tabIndex={0}
           isEmbedded={embedded}
           disableScrolling={disableScrolling}

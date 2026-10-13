@@ -264,8 +264,6 @@ class AppSession:
         self._session_state = SessionState()
         self._user_info = user_info
 
-        self._debug_last_backmsg_id: str | None = None
-
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
         self._backend_operation_dispatcher = self._create_backend_operation_dispatcher()
@@ -425,10 +423,6 @@ class AppSession:
             The message to enqueue
 
         """
-
-        if self._debug_last_backmsg_id:
-            msg.debug_last_backmsg_id = self._debug_last_backmsg_id
-
         self._browser_queue.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
@@ -438,9 +432,6 @@ class AppSession:
         try:
             msg_type = msg.WhichOneof("type")
             if msg_type == "rerun_script":
-                if msg.debug_last_backmsg_id:
-                    self._debug_last_backmsg_id = msg.debug_last_backmsg_id
-
                 self._handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "load_git_info":
                 self._handle_git_information_request()
@@ -841,7 +832,6 @@ class AppSession:
                 status = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
 
             self._enqueue_forward_msg(self._create_script_finished_message(status))
-            self._debug_last_backmsg_id = None
 
             if event in {
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
@@ -1352,7 +1342,7 @@ def _parse_and_populate_chart_colors(
         for color in colors:
             try:
                 msg_field.append(color)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.%s config option: %s.",
                     config_key,
@@ -1371,7 +1361,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         # and cannot directly be set on the protobuf.
         if (
             option_name
-            not in {
+            in {
                 "base",
                 "font",
                 "fontFaces",
@@ -1383,9 +1373,26 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 "chartSequentialColors",
                 "chartDivergingColors",
             }
-            and option_val is not None
+            or option_val is None
         ):
-            setattr(msg, to_snake_case(option_name), option_val)
+            continue
+
+        # Protobuf string fields reject non-string values, so an unquoted TOML
+        # number (e.g. `paddingTop = 0`) would raise TypeError and break
+        # session startup.
+        if option_name in {"paddingTop", "paddingBottom"} and not isinstance(
+            option_val, str
+        ):
+            _LOGGER.warning(
+                'Theme option %s.%s must be a quoted string (for example "0" or '
+                '"1rem"), got %r. Ignoring.',
+                section,
+                option_name,
+                option_val,
+            )
+            continue
+
+        setattr(msg, to_snake_case(option_name), option_val)
 
     # NOTE: If unset, base will default to the protobuf enum zero value,
     # which is BaseTheme.LIGHT. This is why we don't handle the case
@@ -1445,7 +1452,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                     ):
                         font_face["weight_range"] = str(font_face["weight_range"])
                 msg.font_faces.append(ParseDict(font_face, FontFace()))
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.fontFaces config option: %s.",
                     font_face,
@@ -1484,7 +1491,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         for size in heading_font_sizes:
             try:
                 msg.heading_font_sizes.append(size)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.headingFontSizes config option: %s.",
                     size,
@@ -1525,7 +1532,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         for weight in heading_weights:
             try:
                 msg.heading_font_weights.append(weight)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.headingFontWeights config option: %s.",
                     weight,

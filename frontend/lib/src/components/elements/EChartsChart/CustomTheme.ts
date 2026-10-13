@@ -35,6 +35,96 @@ export const STREAMLIT_THEME = "streamlit"
  */
 export type EChartsOptionObject = Record<string, unknown>
 
+const TOOLTIP_FRACTION_DIGITS = 4
+
+const TOOLTIP_SIGNIFICANT_DIGITS = 6
+
+// Reused across tooltip updates. The digit options are a fixed set, so a
+// hover should not construct a new formatter for every series value.
+const scientificTooltipFormat = new Intl.NumberFormat("en-US", {
+  notation: "scientific",
+  maximumSignificantDigits: TOOLTIP_SIGNIFICANT_DIGITS,
+})
+
+const significantTooltipFormat = new Intl.NumberFormat("en-US", {
+  maximumSignificantDigits: TOOLTIP_SIGNIFICANT_DIGITS,
+  useGrouping: true,
+})
+
+const shortTooltipFormat = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: TOOLTIP_FRACTION_DIGITS,
+  useGrouping: true,
+})
+
+const paddedTooltipFormat = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: TOOLTIP_FRACTION_DIGITS,
+  maximumFractionDigits: TOOLTIP_FRACTION_DIGITS,
+  useGrouping: true,
+})
+
+function formatTooltipItem(value: unknown): string {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? formatTooltipNumber(value) : "-"
+  }
+  if (typeof value === "string") {
+    // Blank text is missing. Other strings, including numeric ones, pass
+    // through so an id or year is not grouped.
+    return value.trim() === "" ? "-" : value
+  }
+  // Chart specs are JSON, so booleans are the only other expected type.
+  // Anything else (null, Date, bigint) renders as a dash.
+  if (typeof value === "boolean") {
+    return String(value)
+  }
+  return "-"
+}
+
+/**
+ * Choose the formatter for tooltip numbers of magnitude 1 or greater.
+ *
+ * Pad to four fraction digits only when rounding changed the value, so
+ * readers can tell it was rounded (``76.2380``). Exact shorter values stay
+ * short (``12.5``, integers). Binary float noise such as ``1.1 + 2.2`` also
+ * fails that equality check, so those values pad (``3.3000``).
+ */
+function selectOrdinaryTooltipFormat(value: number): Intl.NumberFormat {
+  const rounded = Number(value.toFixed(TOOLTIP_FRACTION_DIGITS))
+  return rounded === value ? shortTooltipFormat : paddedTooltipFormat
+}
+
+function formatTooltipNumber(value: number): string {
+  if (Object.is(value, -0)) {
+    return "0"
+  }
+  const absolute = Math.abs(value)
+  // Values below 0.0001 use scientific notation instead of rounding to zero.
+  if (absolute !== 0 && absolute < 10 ** -TOOLTIP_FRACTION_DIGITS) {
+    return scientificTooltipFormat.format(value)
+  }
+  // Four decimal places would clip a small fraction (0.000123456 → 0.0001).
+  const format =
+    absolute >= 1
+      ? selectOrdinaryTooltipFormat(value)
+      : significantTooltipFormat
+  return format.format(value)
+}
+
+/**
+ * Tooltip ``valueFormatter`` for the Streamlit theme.
+ *
+ * Returns plain text that ECharts escapes: one string, or one string per
+ * entry for multi-value points such as candlesticks. An option
+ * ``tooltip.formatter`` replaces this. ``tooltip.valueFormatter`` would too,
+ * but the chart spec is JSON and cannot carry that callback.
+ */
+export function formatEChartsTooltipValue(value: unknown): string | string[] {
+  if (Array.isArray(value)) {
+    return value.map(item => formatTooltipItem(item))
+  }
+  return formatTooltipItem(value)
+}
+
 /**
  * Build the per-axis theming defaults shared by all axis types
  * (``categoryAxis``/``valueAxis``/``logAxis``/``timeAxis`` as well as the
@@ -63,6 +153,12 @@ function buildAxisDefaults(
       color: labelColor,
       fontFamily: theme.genericFonts.bodyFont,
       fontSize,
+      // ECharts' default margin is a fixed 8px. Scale the gap with the base font.
+      margin: convertRemToPx(theme.spacing.sm),
+      // Paint a page-colored stroke around the glyphs so a series or gridline
+      // that crosses a label stays readable.
+      textBorderColor: theme.colors.bgColor,
+      textBorderWidth: 2,
     },
     nameTextStyle: {
       color: labelColor,
@@ -196,7 +292,16 @@ export function buildStreamlitEChartsTheme(
         color: colors.bodyText,
         fontFamily: genericFonts.bodyFont,
         fontSize: bodyFontSize,
+        // ECharts paints tooltip values at weight 900 when fontWeight is unset.
+        // Use the theme's normal weight so values match the series name.
+        fontWeight: theme.fontWeights.normal,
       },
+      // Returns plain text, which ECharts HTML-escapes. Never set an HTML
+      // formatter here (see the product spec's tooltip XSS note). This
+      // replaces ECharts' time-aware default, so a time or ordinal dimension
+      // that is itself the tooltip value is shortened like any other number.
+      // On an ordinary time-series chart the date stays in the header.
+      valueFormatter: formatEChartsTooltipValue,
     },
     categoryAxis: axisDefaults,
     valueAxis: axisDefaults,
@@ -837,7 +942,7 @@ function withBottoms(
       : { ...(value as Record<string, unknown>), bottom }
   }
   if (Array.isArray(value)) {
-    return value.map(item => {
+    return (value as unknown[]).map((item: unknown) => {
       if (!isPlainObject(item)) {
         return item
       }
@@ -1004,9 +1109,10 @@ function buildDefaultGrid(
  *
  * Only keys the user has not set are written, so explicit user values (e.g.
  * ``series[0].itemStyle.color`` or a top-level ``color``) always survive. For
- * security, it never injects a tooltip/label ``formatter`` and never changes
- * ``tooltip.renderMode`` — ECharts' default escaping of tooltip/label values is
- * relied upon.
+ * security, this function never injects a tooltip or label formatter and never
+ * changes ``tooltip.renderMode``. ECharts escapes tooltip and label text by
+ * default. The theme ``valueFormatter`` shortens tooltip numbers and returns
+ * plain text that ECharts escapes.
  *
  * Timeline specs nest the chart under ``baseOption``, which is where ECharts
  * reads ``aria`` and ``grid`` from, so the defaults are filled in there instead.
@@ -1132,7 +1238,7 @@ export function withDefaultSeriesCursor(
     }
     return {
       ...withSeries,
-      media: media.map(entry => {
+      media: (media as unknown[]).map((entry: unknown) => {
         if (!isPlainObject(entry)) {
           return entry
         }
@@ -1165,7 +1271,7 @@ export function withDefaultSeriesCursor(
   if (Array.isArray(result.options)) {
     result = {
       ...result,
-      options: result.options.map(tick =>
+      options: (result.options as unknown[]).map((tick: unknown) =>
         isPlainObject(tick)
           ? applyCursorToMedia(tick as EChartsOptionObject)
           : tick
@@ -1224,7 +1330,7 @@ export function applyAltToOption(
     }
     return {
       ...target,
-      media: media.map(entry => {
+      media: (media as unknown[]).map((entry: unknown) => {
         if (!isPlainObject(entry)) {
           return entry
         }
@@ -1260,7 +1366,7 @@ export function applyAltToOption(
   if (Array.isArray(result.options)) {
     result = {
       ...result,
-      options: result.options.map(tick =>
+      options: (result.options as unknown[]).map((tick: unknown) =>
         isPlainObject(tick)
           ? applyToVariant(tick as EChartsOptionObject)
           : tick

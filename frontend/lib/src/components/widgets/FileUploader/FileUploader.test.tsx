@@ -35,7 +35,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import FileUploader, { Props } from "./FileUploader"
+import FileUploader, { type Props } from "./FileUploader"
 
 const createFile = (
   filename = "filename.txt",
@@ -111,7 +111,7 @@ const getProps = (
       sendRerunBackMsg: vi.fn(),
       formsDataChanged: vi.fn(),
     }),
-    // @ts-expect-error
+    // @ts-expect-error - upload client fixture does not implement FileUploadClient
     uploadClient: {
       uploadFile: vi.fn().mockImplementation(() => {
         return Promise.resolve()

@@ -22,7 +22,7 @@ import {
 } from "@emotion-icons/material-outlined"
 import { FloatingPortal } from "@floating-ui/react"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   convertRemToPx,
   Icon,
@@ -73,7 +73,7 @@ const TopNavSection = ({
 
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open,
     placement: "bottom-start",
     offsetPx: convertRemToPx(theme.spacing.twoXS),
@@ -82,8 +82,8 @@ const TopNavSection = ({
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: open,
     onClose: () => setOpen(false),
-    floatingSetFn: refs.setFloating,
-    referenceSetFn: refs.setReference,
+    floatingSetFn: setFloating,
+    referenceSetFn: setReference,
     restoreFocusFn: () => triggerRef.current?.focus(),
   })
 
@@ -123,15 +123,14 @@ const TopNavSection = ({
         setOpen(false)
       }
 
-      // Convert potentially null pageName to string safely
-      const pageName = String(item.pageName || "")
+      const pageName = item.pageName ?? ""
 
       return (
         <Fragment key={`${item.pageScriptHash}-${pageName}`}>
           {index === 0 && showSections && (
             <StyledSectionName>
               <StreamlitMarkdown
-                source={sectionName || ""}
+                source={sectionName ?? ""}
                 allowHTML={false}
                 isLabel
                 disableLinks
@@ -142,6 +141,7 @@ const TopNavSection = ({
           )}
           <StyledTopNavSidebarNavLinkContainer>
             <SidebarNavLink
+              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank icon means no icon
               icon={item.icon || null}
               isTopNav={true}
               isInDropdown={true}

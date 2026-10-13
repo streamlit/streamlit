@@ -455,7 +455,7 @@ class MetricMixin:
             for val in convert_anything_to_list(chart_data):
                 try:
                     prepared_data.append(float(val))
-                except Exception as ex:  # noqa: PERF203
+                except Exception as ex:
                     raise StreamlitAPIException(
                         "Only numeric values are supported for chart data sequence. The "
                         f"value '{val}' is of type {type(val)} and "

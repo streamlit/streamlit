@@ -60,12 +60,18 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversionError
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
+    OnChangeMode,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -788,11 +794,12 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> list[T]:
         pass
 
@@ -810,11 +817,12 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> dict[str, T]:
         pass
 
@@ -832,11 +840,12 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> set[T]:
         pass
 
@@ -854,11 +863,12 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> EditableData:
         pass
 
@@ -876,11 +886,12 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> pd.DataFrame:
         pass
 
@@ -898,11 +909,12 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        alt: str | None = None,
     ) -> DataTypes:
         """Display a data editor widget.
 
@@ -1080,8 +1092,30 @@ class DataEditorMixin:
                 specific rows when the data is reordered. Omit ``key`` to reset
                 all edits whenever the data changes.
 
-        on_change : callable
-            An optional callback invoked when this data_editor's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the data editor should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the data editor. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a cell edit (Enter, Tab, or leaving the cell),
+              pastes, adds a row, deletes a row, or clears cell contents.
+              Typing in an open cell editor does not rerun the app until the
+              edit is committed.
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits an edit. The data editor still updates in the UI. The
+              new value is available on the next rerun triggered by something
+              else, such as another widget interaction. Ignored commits are
+              held in the browser and are lost if the page is refreshed
+              before that rerun. Inside ``st.form``, this has no effect: the
+              form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -1099,6 +1133,18 @@ class DataEditorMixin:
             ``None`` (default), missing values are displayed as "None". To
             leave a cell empty, use an empty string (``""``). Other common
             values are ``"null"``, ``"NaN"`` and ``"-"``.
+
+        alt : str or None
+            A short, plain-text accessible name for the data editor. If this is
+            ``None`` (default), the grid has no element-level accessible name.
+            Cell values remain available through the grid's own accessibility
+            tree.
+
+            An empty or whitespace-only string is treated the same as ``None``.
+
+            Prefer naming what the data is (for example, "Editable customer
+            list") rather than pasting cell contents. This is a short name
+            for findability, not a full text alternative for the table.
 
         Returns
         -------
@@ -1201,9 +1247,9 @@ class DataEditorMixin:
         import pyarrow as pa
 
         key = to_key(key)
-        on_change = validate_on_change_mode(
+        on_change_callback = validate_on_change_mode(
             on_change,
-            supported_modes=(),
+            supported_modes=("rerun", "ignore"),
         )
 
         validate_width(width, allow_content=True)
@@ -1217,7 +1263,7 @@ class DataEditorMixin:
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None,
             writes_allowed=False,
         )
@@ -1392,6 +1438,8 @@ class DataEditorMixin:
                 include_row_count=True,
             )
 
+        normalized_alt = normalize_alt(alt)
+
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
@@ -1406,11 +1454,15 @@ class DataEditorMixin:
             num_rows=num_rows,
             row_height=row_height,
             placeholder=placeholder,
+            alt=normalized_alt,
             **signature_kwargs,
         )
 
         proto = DataframeProto()
         proto.id = element_id
+
+        if normalized_alt is not None:
+            proto.alt = normalized_alt
 
         if row_height:
             proto.row_height = row_height
@@ -1473,9 +1525,12 @@ class DataEditorMixin:
 
         serde = DataEditorSerde()
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            proto.ignore_rerun = True
+
         widget_state = register_widget(
             proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,

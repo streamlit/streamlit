@@ -4,6 +4,22 @@ Use `st.App` when a Streamlit app needs ASGI-level composition: custom HTTP rout
 
 Do not create an ASGI wrapper for a simple app that only needs Streamlit UI and ordinary Streamlit configuration. When the app does need advanced server features, prefer a script-path wrapper (`st.App("streamlit_app.py")`) launched with `streamlit run asgi_app.py`, or a same-file callable entrypoint (`st.App(main)`) when you want the UI and launcher in one module.
 
+## Contents
+
+- [When to use it](#when-to-use-it)
+- [Basic ASGI wrapper](#basic-asgi-wrapper)
+- [Direct Python launchers with App.run()](#direct-python-launchers-with-apprun)
+- [Script paths](#script-paths)
+- [Custom routes](#custom-routes)
+- [Middleware](#middleware)
+- [Lifespan hooks](#lifespan-hooks)
+- [Mount another ASGI app inside Streamlit](#mount-another-asgi-app-inside-streamlit)
+- [Mount Streamlit inside FastAPI](#mount-streamlit-inside-fastapi)
+- [Programmatic secrets](#programmatic-secrets)
+- [Error handling](#error-handling)
+- [Limitations and cautions](#limitations-and-cautions)
+- [References](#references)
+
 ## When to use it
 
 Use `st.App` for:

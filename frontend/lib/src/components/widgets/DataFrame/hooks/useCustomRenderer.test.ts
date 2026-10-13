@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-import { Theme as GlideTheme, GridCellKind } from "@glideapps/glide-data-grid"
+import {
+  type Theme as GlideTheme,
+  GridCellKind,
+} from "@glideapps/glide-data-grid"
 import { renderHook } from "@testing-library/react"
 import { Field, Int64, Utf8 } from "apache-arrow"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   getErrorCell,
   NumberColumn,
   TextColumn,

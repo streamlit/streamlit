@@ -17,14 +17,6 @@
 /// <reference types="vite/client" />
 /// <reference types="vitest/globals" />
 
-declare module "@loaders.gl/core"
-
-declare module "@loaders.gl/csv"
-
-declare module "@loaders.gl/gltf"
-
-declare module "native-file-system-adapter"
-
 // Type definition for an internal component in react-color. We need to override
 // some of it to fix a bug in the color picker that triggers a security error when
 // the color picker is closed in a cross-origin iframe, see `BaseColorPicker.tsx`.

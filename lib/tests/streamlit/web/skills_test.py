@@ -33,7 +33,7 @@ from click.testing import CliRunner
 from streamlit.web import cli, skills
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator, Iterator
 
 
 def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
@@ -59,7 +59,7 @@ _needs_permission_bits = pytest.mark.skipif(
 
 
 @contextmanager
-def _unreadable(*dirs: Path) -> Iterator[None]:
+def _unreadable(*dirs: Path) -> Generator[None, None, None]:
     """Set ``dirs`` to mode 0o000 so ``lstat()`` fails, then restore 0o700.
 
     Restores even on test failure: pytest cannot clean up a 0o000 ``tmp_path``.
@@ -4250,14 +4250,16 @@ class TestMetaSkillPackaging:
         not match files outside the published skill trees.
         """
         import glob as globmod
-
-        import toml
+        import tomllib
 
         pyproject = Path(__file__).resolve().parents[3] / "pyproject.toml"
         if not pyproject.is_file():  # pragma: no cover - unusual layout
             pytest.skip("lib/pyproject.toml not found in this layout")
 
-        globs = toml.load(pyproject)["tool"]["setuptools"]["package-data"]["streamlit"]
+        with pyproject.open("rb") as pyproject_file:
+            globs = tomllib.load(pyproject_file)["tool"]["setuptools"]["package-data"][
+                "streamlit"
+            ]
         # <streamlit pkg>/.agents/skills -> <streamlit pkg>
         pkg_dir = skills._get_source_skills_dir().parents[1]
 

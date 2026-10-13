@@ -17,11 +17,14 @@
 import { Field, Int64, List, Struct, Utf8 } from "apache-arrow"
 import { describe, expect, it } from "vitest"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
-import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import {
+  type ArrowType,
+  DataFrameCellType,
+} from "~lib/dataframes/arrowTypeUtils"
 
 import {
-  ActiveColumnSort,
+  type ActiveColumnSort,
   applySortIndicator,
   getNextColumnSort,
   isServerSortableColumn,

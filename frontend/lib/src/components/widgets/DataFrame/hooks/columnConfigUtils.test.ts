@@ -15,7 +15,7 @@
  */
 
 import { updateColumnConfigTypeProps } from "./columnConfigUtils"
-import { ColumnConfigProps } from "./useColumnLoader"
+import type { ColumnConfigProps } from "./useColumnLoader"
 
 describe("updateColumnConfigTypeProps", () => {
   it("should create new column config when none exists", () => {

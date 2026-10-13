@@ -18,7 +18,7 @@ import { useCallback, useContext, useMemo } from "react"
 
 import Overflow from "rc-overflow"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import { NavigationContext } from "@streamlit/lib"
 import type { AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
@@ -45,6 +45,12 @@ export interface Props {
 /** A top-nav overflow item: one page, or a section (array of pages). */
 type OverflowNavItem = AppPage.$Properties | AppPage.$Properties[]
 
+/**
+ * Responsive top navigation, rendered as the "App pages" `<nav>` landmark.
+ * Pass landmark attributes to rc-overflow's root, which is the measured flex host.
+ * Wrapping that root in another element shrinks the measured width and shows a
+ * false "N more" overflow.
+ */
 const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =
     useContext(NavigationContext)
@@ -79,7 +85,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
         return (
           <TopNavSection
             sections={[item]}
-            title={item[0].sectionHeader || ""}
+            title={item[0].sectionHeader ?? ""}
             handlePageChange={onPageChange}
             endpoints={endpoints}
             pageLinkBaseUrl={pageLinkBaseUrl}
@@ -164,6 +170,8 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   return (
     <Overflow<OverflowNavItem>
       component={StyledOverflowContainer}
+      aria-label="App pages"
+      data-testid="stTopNav"
       itemKey={itemKey}
       data={data}
       maxCount={"responsive"}

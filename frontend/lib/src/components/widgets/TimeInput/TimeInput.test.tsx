@@ -26,7 +26,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import TimeInput, { Props } from "./TimeInput"
+import TimeInput, { type Props } from "./TimeInput"
 
 function lastItem<T>(items: T[]): T {
   const last = items.at(-1)

@@ -21,7 +21,11 @@ import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import renderer, { MediaCell, MediaCellEditor, MediaType } from "./MediaCell"
+import renderer, {
+  type MediaCell,
+  MediaCellEditor,
+  type MediaType,
+} from "./MediaCell"
 
 describe("MediaCell renderer", () => {
   const mockTheme = {

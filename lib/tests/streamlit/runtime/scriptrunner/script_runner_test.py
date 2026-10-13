@@ -20,6 +20,7 @@ import asyncio
 import functools
 import os
 import sys
+import threading
 import time
 import unittest
 from typing import TYPE_CHECKING, Any
@@ -36,6 +37,9 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    MemoryCacheStorageManager,
+)
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import (
     MemoryFragmentStorage,
@@ -83,6 +87,12 @@ text_utf = "complete! 👨‍🎤"
 text_utf2 = "complete2! 👨‍🎤"
 text_no_encoding = text_utf
 text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
+
+# Cache-waiter tests disable runner.postScriptGC because its gc.collect(2)
+# runs on the script thread after every execution (including between reruns)
+# and can outlast these tests' waits under coverage. This timeout is only
+# slack for a busy runner.
+_CACHE_WAITER_THREAD_TIMEOUT_SECS = 5
 
 
 def _create_widget(id: str, states: WidgetStates) -> WidgetState:
@@ -1754,6 +1764,26 @@ class ScriptRunnerTest(unittest.TestCase):
         Runtime._instance.media_file_mgr.remove_orphaned_files.assert_called_once()
         Runtime._instance.dataframe_source_mgr.remove_orphaned_sources.assert_called_once()
 
+    def test_orphan_cleanup_skipped_when_runtime_missing(self) -> None:
+        """Orphan cleanup is skipped when no Runtime singleton exists.
+
+        Without the gate, ``runtime.get_instance()`` raises ``RuntimeError`` on the
+        script thread, which surfaces as an unhandled thread exception rather than a
+        clean failure.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        Runtime._instance = None
+
+        # has_script_started=True so only the missing-Runtime gate is under test.
+        with patch("streamlit.runtime.get_instance") as mock_get_instance:
+            scriptrunner._on_script_finished(
+                _finished_run_ctx(has_script_started=True),
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                premature_stop=False,
+            )
+
+        mock_get_instance.assert_not_called()
+
     def test_stale_widget_removal_skipped_when_stopped_for_rerun(self):
         """A run stopped for rerun must reset triggers without dropping widgets.
 
@@ -1976,6 +2006,93 @@ class ScriptRunnerTest(unittest.TestCase):
 
         self._assert_no_exceptions(scriptrunner)
         assert len(join_calls) == 1
+
+    def _start_cache_compute_owner_and_create_waiter(
+        self,
+    ) -> tuple[TestScriptRunner, TestScriptRunner, threading.Event, threading.Event]:
+        st.cache_data.clear()
+        Runtime.instance().cache_storage_manager = MemoryCacheStorageManager()
+        owner_compute_started = threading.Event()
+        release_compute = threading.Event()
+        waiter_call_started = threading.Event()
+        owner = TestScriptRunner("cancellable_cache_wait.py")
+        waiter = TestScriptRunner("cancellable_cache_wait.py")
+        owner._session_state["compute_started"] = owner_compute_started
+        owner._session_state["release_compute"] = release_compute
+        owner._session_state["cache_call_started"] = threading.Event()
+        waiter._session_state["compute_started"] = threading.Event()
+        waiter._session_state["release_compute"] = release_compute
+        waiter._session_state["cache_call_started"] = waiter_call_started
+
+        owner.start()
+        try:
+            assert owner_compute_started.wait(timeout=1)
+        except BaseException:
+            release_compute.set()
+            if owner._script_thread is not None:
+                owner._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
+            raise
+        return owner, waiter, release_compute, waiter_call_started
+
+    @testutil.patch_config_options({"runner.postScriptGC": False})
+    def test_stop_ends_cache_waiter_while_owner_keeps_computing(self):
+        """Stopping a cache waiter does not interrupt the compute owner."""
+        owner, waiter, release_compute, waiter_call_started = (
+            self._start_cache_compute_owner_and_create_waiter()
+        )
+
+        try:
+            waiter.start()
+            assert waiter_call_started.wait(timeout=1)
+
+            waiter.request_stop()
+            assert waiter._script_thread is not None
+            waiter._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
+            assert not waiter._script_thread.is_alive()
+            assert not release_compute.is_set()
+        finally:
+            release_compute.set()
+            if owner._script_thread is not None:
+                owner._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
+            if waiter._script_thread is not None:
+                waiter._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
+
+        assert owner._script_thread is not None
+        assert not owner._script_thread.is_alive()
+        self._assert_no_exceptions(owner)
+        self._assert_no_exceptions(waiter)
+
+    @testutil.patch_config_options({"runner.postScriptGC": False})
+    def test_rerun_restarts_cache_waiter_before_owner_finishes(self):
+        """A slow rerun restarts a cache waiter before the owner finishes."""
+        owner, waiter, release_compute, waiter_call_started = (
+            self._start_cache_compute_owner_and_create_waiter()
+        )
+
+        try:
+            waiter.start()
+            assert waiter_call_started.wait(timeout=1)
+            waiter_call_started.clear()
+
+            # This is the request path used when runner.fastReruns is false.
+            waiter.request_rerun(RerunData())
+            assert waiter_call_started.wait(timeout=1)
+            assert waiter.events.count(ScriptRunnerEvent.SCRIPT_STARTED) == 2
+            assert not release_compute.is_set()
+        finally:
+            release_compute.set()
+            if owner._script_thread is not None:
+                owner._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
+            if waiter._script_thread is not None:
+                waiter._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
+
+        assert owner._script_thread is not None
+        assert waiter._script_thread is not None
+        assert not owner._script_thread.is_alive()
+        assert not waiter._script_thread.is_alive()
+        self._assert_no_exceptions(owner)
+        self._assert_no_exceptions(waiter)
+        self._assert_text_deltas(waiter, ["cached value"])
 
     def test_parallel_coordinator_drain_on_rerun_exception(self):
         """When ``exec()`` raises RerunException (e.g. user code calls

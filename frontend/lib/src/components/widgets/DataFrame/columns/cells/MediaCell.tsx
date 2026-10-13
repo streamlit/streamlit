@@ -106,7 +106,7 @@ const renderer: CustomRenderer<MediaCell> = {
     ctx.save()
     ctx.font = `${theme.bubbleHeight}px ${genericFonts.iconFont}`
     ctx.fillStyle = theme.textLight
-    ctx.textAlign = cell.contentAlign || "center"
+    ctx.textAlign = cell.contentAlign ?? "center"
     ctx.textBaseline = "middle"
 
     let x: number

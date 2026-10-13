@@ -172,11 +172,13 @@ class Secrets(Mapping[str, Any]):
         self.file_change_listener = Signal()
 
     def load_if_toml_exists(self) -> bool:
-        """Load secrets.toml files from disk if they exists. If none exist,
-        no exception will be raised. (If a file exists but is malformed,
-        an exception *will* be raised.).
+        """Load secrets.toml files from disk if they exist.
 
-        Returns True if a secrets.toml file was successfully parsed, False otherwise.
+        Returns True if a secrets.toml file was successfully parsed. Returns
+        False when no secrets file is present, or when a configured path
+        cannot be loaded (parse error, invalid path, or a directory entry
+        that is not a folder). Callers use this as a boolean availability
+        probe and must not rely on it to raise.
 
         Thread-safe.
         """
@@ -185,7 +187,8 @@ class Secrets(Mapping[str, Any]):
 
             return True
         except StreamlitSecretNotFoundError:
-            # No secrets.toml files exist. That's fine.
+            # Treat missing and unloadable secrets alike; startup logs load
+            # errors separately.
             return False
 
     def _reset(self) -> None:
@@ -216,11 +219,11 @@ class Secrets(Mapping[str, Any]):
             # the default config for secrets contains two paths. It's likely one of will not have secrets file.
             return {}, False
 
-        import toml
+        import tomllib
 
         try:
-            secrets.update(toml.loads(secrets_file_str))
-        except (TypeError, toml.TomlDecodeError) as ex:
+            secrets.update(tomllib.loads(secrets_file_str))
+        except (TypeError, tomllib.TOMLDecodeError) as ex:
             raise StreamlitSecretNotFoundError(
                 "Error parsing secrets file at {path}: {error}",
                 path=path,
@@ -297,8 +300,10 @@ class Secrets(Mapping[str, Any]):
 
         Raises
         ------
-            StreamlitSecretNotFoundError
-            Raised if secrets.toml doesn't exist.
+        StreamlitSecretNotFoundError
+            Raised when no secrets file exists, or when a configured path
+            cannot be loaded (parse error, invalid path, or a directory
+            entry that is not a folder).
 
         """
         # Avoid taking a lock for the common case where secrets are already
@@ -448,7 +453,7 @@ class Secrets(Mapping[str, Any]):
                             self._on_secrets_changed,
                             watcher_type="poll",
                         )
-                except (StreamlitMaxRetriesError, FileNotFoundError):  # noqa: PERF203
+                except (StreamlitMaxRetriesError, FileNotFoundError):
                     # A user may only have one secrets.toml file defined, so we'd expect
                     # exceptions to be raised here when attempting to install a
                     # watcher on the nonexistent ones.

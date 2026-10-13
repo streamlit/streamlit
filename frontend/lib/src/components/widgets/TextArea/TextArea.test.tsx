@@ -27,7 +27,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import TextArea, { Props } from "./TextArea"
+import TextArea, { type Props } from "./TextArea"
 
 // Mock Element for tests
 class MockElement implements Element {
@@ -264,6 +264,26 @@ describe("TextArea widget", () => {
 
     expect(screen.getByTestId("InputInstructions")).toBeInTheDocument()
   })
+
+  it.each([
+    ["stretch", { useStretch: true }, "100%"],
+    ["content", { useContent: true }, "auto"],
+    ["pixel", { pixelHeight: 200 }, "auto"],
+  ])(
+    "only fills its element container with %s height",
+    (_label, heightConfig, expectedHeight) => {
+      render(
+        <TextArea
+          {...getProps({}, { outerElement: new Element({ heightConfig }) })}
+        />
+      )
+
+      const container = screen.getByTestId("stTextArea")
+      expect(container).toHaveStyle({ height: expectedHeight })
+      // Keeps the input instructions anchored to the field.
+      expect(container).toHaveStyle({ position: "relative" })
+    }
+  )
 
   it("initializes auto-expand height once width is available", () => {
     const resizeObserverSpy = vi

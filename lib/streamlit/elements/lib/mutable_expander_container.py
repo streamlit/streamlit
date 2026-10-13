@@ -16,9 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Literal, Self
 
 from streamlit.delta_generator import DeltaGenerator
 

@@ -17,12 +17,12 @@
 import { screen, waitFor } from "@testing-library/react"
 import { vi } from "vitest"
 
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 import * as utils from "~lib/util/utils"
 
 import {
   DynamicButtonLabel,
-  DynamicButtonLabelProps,
+  type DynamicButtonLabelProps,
 } from "./DynamicButtonLabel"
 
 const getProps = (
@@ -34,6 +34,7 @@ const getProps = (
 })
 
 describe("DynamicButtonLabel", () => {
+  mockEllipsizedLabels()
   it("renders without crashing", () => {
     render(<DynamicButtonLabel {...getProps()} />)
     const buttonLabel = screen.getByText("Button Label")
@@ -48,10 +49,43 @@ describe("DynamicButtonLabel", () => {
     expect(screen.queryByTestId("stIconEmoji")).toBeNull()
   })
 
-  it("renders icon with no label", () => {
-    render(<DynamicButtonLabel {...getProps({ label: "" })} />)
+  it("names an emoji-only button from its icon", () => {
+    render(
+      <button type="button">
+        <DynamicButtonLabel {...getProps({ label: "" })} />
+      </button>
+    )
     expect(screen.getByTestId("stIconEmoji")).toHaveTextContent("😀")
     expect(screen.queryByTestId("stMarkdownContainer")).toBeNull()
+    // Icon glyphs are aria-hidden; expose a name for icon-only controls.
+    expect(screen.getByRole("button", { name: "😀" })).toBeVisible()
+  })
+
+  it("exposes a visually-hidden name for icon-only material buttons", () => {
+    render(
+      <button type="button">
+        <DynamicButtonLabel
+          {...getProps({ icon: ":material/thumb_up:", label: "" })}
+        />
+      </button>
+    )
+    expect(screen.getByRole("button", { name: "thumb_up icon" })).toBeVisible()
+    expect(screen.getByTestId("stIconMaterial")).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    )
+  })
+
+  it("does not add a visually-hidden name when a visible label is present", () => {
+    render(
+      <button type="button">
+        <DynamicButtonLabel
+          {...getProps({ icon: ":material/thumb_up:", label: "Approve" })}
+        />
+      </button>
+    )
+    expect(screen.getByRole("button", { name: "Approve" })).toBeVisible()
+    expect(screen.queryByText("thumb_up icon")).not.toBeInTheDocument()
   })
 
   it("renders an emoji icon", () => {
@@ -142,14 +176,22 @@ describe("DynamicButtonLabel", () => {
   })
 
   it("adds a native title tooltip with the full label when enabled", () => {
-    render(<DynamicButtonLabel {...getProps({ addTitleTooltip: true })} />)
+    render(
+      <DynamicButtonLabel
+        {...getProps({ addTitleTooltip: true, wrap: false })}
+      />
+    )
     expect(screen.getByTitle("Button Label")).toBeVisible()
   })
 
   it("uses the plain text of a Markdown label for the title", () => {
     render(
       <DynamicButtonLabel
-        {...getProps({ label: "**Bold** report", addTitleTooltip: true })}
+        {...getProps({
+          label: "**Bold** report",
+          addTitleTooltip: true,
+          wrap: false,
+        })}
       />
     )
     // The title is the rendered plain text, not the raw Markdown source.
@@ -160,7 +202,11 @@ describe("DynamicButtonLabel", () => {
   it("re-syncs the title when markdown DOM content changes asynchronously", async () => {
     render(
       <DynamicButtonLabel
-        {...getProps({ label: "First label", addTitleTooltip: true })}
+        {...getProps({
+          label: "First label",
+          addTitleTooltip: true,
+          wrap: false,
+        })}
       />
     )
     expect(screen.getByTitle("First label")).toBeVisible()

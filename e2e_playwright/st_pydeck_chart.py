@@ -558,6 +558,34 @@ def globe_view_subtest():
     )
 
 
+def tooltip_position_subtest():
+    st.pydeck_chart(
+        pdk.Deck(
+            map_provider=None,
+            tooltip={"text": "Test point"},
+            initial_view_state=pdk.ViewState(
+                latitude=37.76,
+                longitude=-122.4,
+                zoom=12,
+                pitch=0,
+                bearing=0,
+            ),
+            layers=[
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=pd.DataFrame({"lat": [37.76], "lon": [-122.4]}),
+                    get_position="[lon, lat]",
+                    get_fill_color=[200, 30, 0, 220],
+                    get_radius=40,
+                    radius_min_pixels=40,
+                    pickable=True,
+                ),
+            ],
+        ),
+        height=500,
+    )
+
+
 def alt_chart_subtest():
     st.write("## Accessible name (`alt`)")
 

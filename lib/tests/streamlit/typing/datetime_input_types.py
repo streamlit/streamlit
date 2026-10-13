@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     from datetime import date, datetime, time, timedelta
@@ -100,6 +98,19 @@ if TYPE_CHECKING:
         ),
         datetime,
     )
+    assert_type(
+        datetime_input("foo", datetime(2025, 11, 19, 16, 45), on_change=None),
+        datetime,
+    )
+    assert_type(
+        datetime_input("foo", datetime(2025, 11, 19, 16, 45), on_change="rerun"),
+        datetime,
+    )
+    assert_type(
+        datetime_input("foo", datetime(2025, 11, 19, 16, 45), on_change="ignore"),
+        datetime,
+    )
+    assert_type(datetime_input("foo", value=None, on_change="ignore"), datetime | None)
 
     # With key and help
     assert_type(

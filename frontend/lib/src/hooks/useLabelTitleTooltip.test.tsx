@@ -14,25 +14,38 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { CSSProperties, ReactElement } from "react"
 
 import { screen, waitFor } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 
-import { useLabelTitleTooltip } from "./useLabelTitleTooltip"
+import {
+  MARKDOWN_ELLIPSIS_CLASS,
+  useLabelTitleTooltip,
+} from "./useLabelTitleTooltip"
+
+const ELLIPSIS_STYLE: CSSProperties = {
+  display: "block",
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+}
 
 interface HarnessProps {
   addTitleTooltip: boolean
   label: string
   /** Optional rendered label content (simulates Markdown plain text). */
   labelContent?: string
+  /** When false, the label box overflows without painting an ellipsis. */
+  ellipsis?: boolean
 }
 
 function LabelTitleHarness({
   addTitleTooltip,
   label,
   labelContent,
+  ellipsis = true,
 }: HarnessProps): ReactElement {
   const { titleRef, labelTextRef } = useLabelTitleTooltip(
     addTitleTooltip,
@@ -40,7 +53,11 @@ function LabelTitleHarness({
   )
 
   return (
-    <div ref={titleRef} data-testid="title-host">
+    <div
+      ref={titleRef}
+      data-testid="title-host"
+      style={ellipsis ? ELLIPSIS_STYLE : undefined}
+    >
       <span ref={labelTextRef} data-testid="label-text">
         {labelContent ?? label}
       </span>
@@ -54,6 +71,8 @@ function MissingLabelHarness(): ReactElement {
 }
 
 describe("useLabelTitleTooltip", () => {
+  const layout = mockEllipsizedLabels()
+
   it("sets a native title from the rendered label text when enabled", () => {
     render(
       <LabelTitleHarness
@@ -78,7 +97,7 @@ describe("useLabelTitleTooltip", () => {
     function BlockGapHarness(): ReactElement {
       const { titleRef, labelTextRef } = useLabelTitleTooltip(true, "one two")
       return (
-        <div ref={titleRef} data-testid="title-host">
+        <div ref={titleRef} data-testid="title-host" style={ELLIPSIS_STYLE}>
           <span ref={labelTextRef} data-testid="label-text">
             <p>one</p>
             <p>two</p>
@@ -166,5 +185,182 @@ describe("useLabelTitleTooltip", () => {
     render(<MissingLabelHarness />)
 
     expect(screen.getByTestId("title-host")).not.toHaveAttribute("title")
+  })
+
+  it("does not set a title when the label is fully visible", () => {
+    layout.setWidths(100, 100)
+    render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+
+    expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+  })
+
+  it("ignores a 1px overflow and treats a larger overflow as clipped", () => {
+    layout.setWidths(101, 100)
+    const { unmount } = render(
+      <LabelTitleHarness addTitleTooltip={true} label="Plain label" />
+    )
+    expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+
+    unmount()
+    layout.setWidths(102, 100)
+    render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+    expect(screen.getByTitle("Plain label")).toBeVisible()
+  })
+
+  it("does not set a title when the box overflows without an ellipsis", () => {
+    render(
+      <LabelTitleHarness
+        addTitleTooltip={true}
+        label="Plain label"
+        ellipsis={false}
+      />
+    )
+
+    expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+  })
+
+  it("reads ellipsis from a descendant when the text wrapper has no box", () => {
+    function ContentsHarness(): ReactElement {
+      const { titleRef, labelTextRef } = useLabelTitleTooltip(true, "Clipped")
+      return (
+        <div ref={titleRef} data-testid="title-host">
+          <span ref={labelTextRef} style={{ display: "contents" }}>
+            <span className={MARKDOWN_ELLIPSIS_CLASS} style={ELLIPSIS_STYLE}>
+              Clipped
+            </span>
+          </span>
+        </div>
+      )
+    }
+
+    render(<ContentsHarness />)
+
+    expect(screen.getByTitle("Clipped")).toBeVisible()
+  })
+
+  it("measures a hidden label once it is laid out, then stops watching size", () => {
+    const observers: Array<{
+      callback: ResizeObserverCallback
+      disconnect: ReturnType<typeof vi.fn>
+    }> = []
+    class ResizeObserverSpy {
+      public observe = vi.fn()
+      public unobserve = vi.fn()
+      public disconnect = vi.fn()
+
+      constructor(callback: ResizeObserverCallback) {
+        observers.push({ callback, disconnect: this.disconnect })
+      }
+    }
+
+    const OriginalResizeObserver = globalThis.ResizeObserver
+    globalThis.ResizeObserver = ResizeObserverSpy
+
+    try {
+      layout.setWidths(0, 0)
+      render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+      expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+      expect(observers).toHaveLength(1)
+
+      layout.setWidths(200, 100)
+      observers[0].callback([], {} as ResizeObserver)
+      expect(screen.getByTitle("Plain label")).toBeVisible()
+      expect(observers[0].disconnect).toHaveBeenCalled()
+    } finally {
+      globalThis.ResizeObserver = OriginalResizeObserver
+    }
+  })
+
+  it("remeasures overflow once document fonts finish loading", async () => {
+    let resolveReady: () => void = () => undefined
+    const ready = new Promise<void>(resolve => {
+      resolveReady = resolve
+    })
+    const originalFonts = Object.getOwnPropertyDescriptor(document, "fonts")
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { ready, status: "loading" },
+    })
+
+    try {
+      layout.setWidths(100, 100)
+      render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+      expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+
+      layout.setWidths(200, 100)
+      expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+
+      resolveReady()
+      await waitFor(() => {
+        expect(screen.getByTitle("Plain label")).toBeVisible()
+      })
+    } finally {
+      if (originalFonts) {
+        Object.defineProperty(document, "fonts", originalFonts)
+      } else {
+        Reflect.deleteProperty(document, "fonts")
+      }
+    }
+  })
+
+  it("clears the title when fonts finish loading and the label fits", async () => {
+    let resolveReady: () => void = () => undefined
+    const ready = new Promise<void>(resolve => {
+      resolveReady = resolve
+    })
+    const originalFonts = Object.getOwnPropertyDescriptor(document, "fonts")
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { ready, status: "loading" },
+    })
+
+    try {
+      layout.setWidths(200, 100)
+      render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+      expect(screen.getByTitle("Plain label")).toBeVisible()
+
+      layout.setWidths(100, 100)
+      expect(screen.getByTitle("Plain label")).toBeVisible()
+
+      resolveReady()
+      await waitFor(() => {
+        expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+      })
+    } finally {
+      if (originalFonts) {
+        Object.defineProperty(document, "fonts", originalFonts)
+      } else {
+        Reflect.deleteProperty(document, "fonts")
+      }
+    }
+  })
+
+  it("does not measure again when document fonts are already loaded", async () => {
+    let resolveReady: () => void = () => undefined
+    const ready = new Promise<void>(resolve => {
+      resolveReady = resolve
+    })
+    const originalFonts = Object.getOwnPropertyDescriptor(document, "fonts")
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { ready, status: "loaded" },
+    })
+
+    try {
+      layout.setWidths(100, 100)
+      render(<LabelTitleHarness addTitleTooltip={true} label="Plain label" />)
+
+      layout.setWidths(200, 100)
+      resolveReady()
+      await ready
+
+      expect(screen.queryByTitle("Plain label")).not.toBeInTheDocument()
+    } finally {
+      if (originalFonts) {
+        Object.defineProperty(document, "fonts", originalFonts)
+      } else {
+        Reflect.deleteProperty(document, "fonts")
+      }
+    }
   })
 })

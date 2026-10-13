@@ -145,11 +145,12 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
 }): ReactElement => {
   const scrollbarGutterSize = useScrollbarGutterSize()
 
-  const { refs, floatingStyles, context } = useFloatingOverlay({
-    open: isOpen,
-    placement: "bottom-end",
-    offsetPx: COLUMN_MENU_OFFSET,
-  })
+  const { floatingStyles, context, setFloating, setReference } =
+    useFloatingOverlay({
+      open: isOpen,
+      placement: "bottom-end",
+      offsetPx: COLUMN_MENU_OFFSET,
+    })
 
   // useOverlayDismissal provides click-outside and Escape handlers.
   // setReferenceRef (passed to the wrapper div below) excludes the trigger from
@@ -157,8 +158,8 @@ const ColumnVisibilityMenu: React.FC<ColumnVisibilityMenuProps> = ({
   const { panelRef, setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen,
     onClose,
-    floatingSetFn: refs.setFloating,
-    referenceSetFn: refs.setReference,
+    floatingSetFn: setFloating,
+    referenceSetFn: setReference,
   })
 
   // Determine column visibility based on hidden property and column order:

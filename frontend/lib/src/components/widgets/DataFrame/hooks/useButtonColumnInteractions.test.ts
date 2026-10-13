@@ -24,11 +24,11 @@ import { Field, Utf8 } from "apache-arrow"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
-import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import ButtonColumn from "~lib/components/widgets/DataFrame/columns/ButtonColumn"
 import type { ButtonInteractionTheme } from "~lib/components/widgets/DataFrame/columns/cells/ButtonCell"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import useButtonColumnInteractions from "./useButtonColumnInteractions"
 import { COLUMN_POSITION_PREFIX } from "./useColumnLoader"

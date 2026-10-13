@@ -15,7 +15,7 @@
  */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
+import type { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { Field, List, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"

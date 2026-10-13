@@ -352,7 +352,7 @@ function ChatInput({
         // Fire-and-forget deletion - errors are not critical to user flow
         uploadClient
           .deleteFile(file.status.fileUrls.deleteUrl)
-          .catch(error => {
+          .catch((error: unknown) => {
             // Log deletion errors for observability, but don't block the user
             // File may already be deleted or server unavailable
             LOG.error("Failed to delete file from server:", error)
@@ -561,7 +561,7 @@ function ChatInput({
         setFiles(prevFiles => updateFile(id, fileInfo, prevFiles))
       },
       uploadClient,
-      element,
+      element: { id: element.id, formId: "" },
       onUploadProgress: (e: AxiosProgressEvent, fileId: number) => {
         setFiles(prevFiles => {
           const file = getFile(fileId, prevFiles)
@@ -705,6 +705,7 @@ function ChatInput({
         // because it comes from a protobuf string field. Normalize falsy values
         // to null so the run-scope matcher treats them as full-script runs.
         setSubmittedRunScope({
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- protobuf "" means a full-script run
           fragmentId: fragmentId || null,
           scriptRunIdAtSubmit: scriptRunId,
           scriptRunFinishedSequence,
@@ -764,10 +765,7 @@ function ChatInput({
         // 2. Upload audio file with progress tracking
         uploadAbortControllerRef.current = new AbortController()
         await uploadClient.uploadFile(
-          {
-            formId: "",
-            ...element,
-          },
+          { id: element.id, formId: "" },
           fileUrls.uploadUrl as string,
           audioFile,
           () => {

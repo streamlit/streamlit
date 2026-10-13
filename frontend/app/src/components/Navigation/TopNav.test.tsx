@@ -17,11 +17,11 @@
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { mockEndpoints, NavigationContextProps } from "@streamlit/lib"
+import { mockEndpoints, type NavigationContextProps } from "@streamlit/lib"
 import { renderWithContexts } from "@streamlit/lib/testing"
 import type { AppPage } from "@streamlit/protobuf"
 
-import TopNav, { Props } from "./TopNav"
+import TopNav, { type Props } from "./TopNav"
 
 // Mock rc-overflow to render all items without responsive behavior
 vi.mock("rc-overflow", () => ({
@@ -29,16 +29,20 @@ vi.mock("rc-overflow", () => ({
     data,
     renderItem,
     itemKey,
+    component: Component = "div",
+    ...rest
   }: {
     data: unknown[]
     renderItem: (item: unknown, info: unknown) => React.ReactNode
     itemKey: (item: unknown) => string
+    component?: React.ElementType
+    [key: string]: unknown
   }) => (
-    <div data-testid="mock-overflow">
+    <Component {...rest}>
       {data.map(item => (
         <div key={itemKey(item)}>{renderItem(item, {})}</div>
       ))}
-    </div>
+    </Component>
   ),
 }))
 
@@ -68,7 +72,7 @@ function renderTopNav(
   }
 ): ReturnType<typeof renderWithContexts> {
   const navigationContextValues = getNavigationContextOutput(
-    overrides?.navigationContext || {}
+    overrides?.navigationContext ?? {}
   )
 
   return renderWithContexts(<TopNav {...getProps(props)} />, {
@@ -77,6 +81,28 @@ function renderTopNav(
 }
 
 describe("TopNav", () => {
+  it("exposes a named navigation landmark", () => {
+    const appPages: AppPage.$Properties[] = [
+      {
+        pageScriptHash: "page_1",
+        pageName: "page 1",
+        urlPathname: "page_1",
+        isDefault: true,
+      },
+      {
+        pageScriptHash: "page_2",
+        pageName: "page 2",
+        urlPathname: "page_2",
+        isDefault: false,
+      },
+    ]
+
+    renderTopNav({}, { navigationContext: { appPages } })
+
+    const nav = screen.getByRole("navigation", { name: "App pages" })
+    expect(nav).toHaveAttribute("data-testid", "stTopNav")
+  })
+
   describe("hidden pages", () => {
     it("does not render hidden pages in the navigation", () => {
       const appPages: AppPage.$Properties[] = [

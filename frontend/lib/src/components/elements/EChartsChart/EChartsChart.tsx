@@ -513,6 +513,9 @@ export function EChartsChart({
     element.theme,
   ])
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
+  const labelContext = element.alt?.trim() || undefined
+
   return (
     <StyledEChartsChartRoot isStretchHeight={isStretchHeight}>
       <StyledEChartsChartFill isStretchHeight={isStretchHeight}>
@@ -527,12 +530,14 @@ export function EChartsChart({
             onExpand={expand}
             onCollapse={collapse}
             disableFullscreenMode={disableFullscreenMode}
+            labelContext={labelContext}
           >
             {chartInstance !== null && (
               <ToolbarAction
                 label={`Download as ${downloadType.toUpperCase()}`}
                 icon={FileDownload}
                 onClick={handleDownloadChart}
+                labelContext={labelContext}
               />
             )}
           </Toolbar>

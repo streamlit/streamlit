@@ -17,13 +17,16 @@
 import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
+import {
+  ImageList as ImageListProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 
-import ImageList, { ImageListProps } from "./ImageList"
+import ImageList, { type ImageListProps } from "./ImageList"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -433,6 +436,169 @@ describe("ImageList Element", () => {
 
     await user.click(screen.getByLabelText("Close fullscreen"))
     expect(document.body.style.overflow).toBe("unset")
+  })
+
+  describe("toolbar accessible name", () => {
+    it("uses a plain Fullscreen label for multi-image lists", () => {
+      render(<ImageList {...getProps()} />)
+
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+    })
+
+    it("composes a single-image caption into the Fullscreen aria-label", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Black Square as PNG.",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Black Square as PNG\.$/,
+        })
+      ).toBeInTheDocument()
+    })
+
+    it("prefers a single-image alt over caption for the Fullscreen aria-label", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Visible caption",
+                url: "/media/mockImage1.jpeg",
+                alt: "Sunrise over a mountain ridge",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Sunrise over a mountain ridge$/,
+        })
+      ).toBeInTheDocument()
+    })
+
+    it("composes rendered caption plain text, not markdown source", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "**Revenue** by quarter",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Revenue by quarter$/,
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Fullscreen: \*\*Revenue\*\*/,
+        })
+      ).not.toBeInTheDocument()
+    })
+
+    it("inserts spaces between caption block nodes in the Fullscreen name", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Line one\n\nLine two",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Line one Line two$/,
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Fullscreen: Line oneLine two/,
+        })
+      ).not.toBeInTheDocument()
+    })
+
+    it("omits caption context when the caption renders no text", () => {
+      render(
+        <ImageList
+          {...getProps({
+            imgs: [{ caption: "---", url: "/media/mockImage1.jpeg" }],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+    })
+
+    it("drops caption context when rerendering from one image to a gallery", () => {
+      const { rerender } = render(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Black Square as PNG.",
+                url: "/media/mockImage1.jpeg",
+              },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: /^Fullscreen: Black Square as PNG\.$/,
+        })
+      ).toBeInTheDocument()
+
+      rerender(
+        <ImageList
+          {...getProps({
+            imgs: [
+              {
+                caption: "Black Square as PNG.",
+                url: "/media/mockImage1.jpeg",
+              },
+              { caption: "b", url: "/media/mockImage2.jpeg" },
+            ],
+          })}
+        />
+      )
+
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: /Fullscreen: Black Square/,
+        })
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe("crossOrigin attribute", () => {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GridCellKind, ImageCell } from "@glideapps/glide-data-grid"
+import { GridCellKind, type ImageCell } from "@glideapps/glide-data-grid"
 import { Field, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"

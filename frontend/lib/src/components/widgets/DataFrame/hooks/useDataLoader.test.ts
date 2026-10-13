@@ -23,7 +23,7 @@ import { Field, Utf8 } from "apache-arrow"
 import type { ArrowData } from "@streamlit/protobuf"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   isErrorCell,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"

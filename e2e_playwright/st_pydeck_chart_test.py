@@ -15,7 +15,11 @@
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     get_element_by_key,
@@ -291,7 +295,13 @@ def test_pydeck_chart_alt_sets_accessible_name(app: Page) -> None:
     # Mapbox zoom controls are chromium-only in CI, so assert Fullscreen only.
     labeled.hover()
     expect(labeled.get_by_test_id("stElementToolbar")).to_have_css("opacity", "1")
-    expect(labeled.get_by_role("button", name="Fullscreen")).to_be_visible()
+    expect(
+        labeled.get_by_role(
+            "button",
+            name="Fullscreen: Scatter map of sample points near San Francisco",
+            exact=True,
+        )
+    ).to_be_visible()
 
     unlabeled = get_element_by_key(app, "pydeck_without_alt").get_by_test_id(
         "stDeckGlJsonChart"
@@ -299,3 +309,59 @@ def test_pydeck_chart_alt_sets_accessible_name(app: Page) -> None:
     expect(unlabeled).not_to_have_attribute("role")
     expect(unlabeled).not_to_have_attribute("aria-label")
     expect(unlabeled).to_have_accessible_name("")
+
+
+# Firefox CI never inserts `.deck-tooltip` on hover. Chromium and WebKit do.
+@pytest.mark.skip_browser("firefox")
+def test_pydeck_tooltip_stays_near_cursor(app: Page) -> None:
+    """The tooltip origin stays within 16px of the cursor."""
+    chart = select_subtest(app, "tooltip_position_subtest")
+    wait_for_chart_canvas(chart)
+
+    # The canvas is the pick surface. With map_provider=None, deck does not
+    # mount #view-default-view; it only creates that node for a basemap.
+    canvas = chart.locator("canvas")
+    expect(canvas).to_be_visible()
+    canvas.scroll_into_view_if_needed()
+
+    tooltip = chart.locator(".deck-tooltip")
+    expect(tooltip).to_be_hidden()
+
+    # Hit-testing is flaky in CI, which is why other pydeck clicks use
+    # force=True. The corner probe below checks that the widget root does
+    # not sit on top of the canvas.
+    canvas.hover(force=True)
+
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_have_text("Test point")
+
+    def tooltip_is_at_cursor() -> None:
+        canvas_box = canvas.bounding_box()
+        tooltip_box = tooltip.bounding_box()
+        assert canvas_box is not None
+        assert tooltip_box is not None
+        # Playwright hovers the center of the canvas.
+        cursor_x = canvas_box["x"] + canvas_box["width"] / 2
+        cursor_y = canvas_box["y"] + canvas_box["height"] / 2
+        dx = tooltip_box["x"] - cursor_x
+        dy = tooltip_box["y"] - cursor_y
+        assert abs(dx) < 16, f"tooltip offset dx={dx} dy={dy}"
+        assert abs(dy) < 16, f"tooltip offset dx={dx} dy={dy}"
+
+    wait_until(app, tooltip_is_at_cursor)
+
+    # The widget root must not receive the hit. Probe 20px in from the
+    # canvas's bottom-left, away from the centered point and the app header.
+    corner_probe = canvas.evaluate(
+        """(element) => {
+            const rect = element.getBoundingClientRect()
+            const target = document.elementFromPoint(rect.left + 20, rect.bottom - 20)
+            const chart = element.closest('[data-testid="stDeckGlJsonChart"]')
+            return {
+                isWidgetsRoot: Boolean(target?.closest(".deck-widgets-root")),
+                insideChart: Boolean(target && chart?.contains(target)),
+            }
+        }"""
+    )
+    assert corner_probe["insideChart"], corner_probe
+    assert corner_probe["isWidgetsRoot"] is False, corner_probe

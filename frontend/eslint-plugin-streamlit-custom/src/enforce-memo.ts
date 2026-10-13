@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { AST_NODE_TYPES, TSESTree } from "@typescript-eslint/utils"
-import { RuleFix, RuleFixer } from "@typescript-eslint/utils/ts-eslint"
+import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils"
+import type { RuleFix, RuleFixer } from "@typescript-eslint/utils/ts-eslint"
 
 import { createRule } from "./utils/createRule"
 
@@ -102,7 +102,7 @@ const enforceMemo = createRule<[], MessageIds>({
         hocPatternCache.set(componentName, hocVarNames)
       }
 
-      const hocVarNames = hocPatternCache.get(componentName) || []
+      const hocVarNames = hocPatternCache.get(componentName) ?? []
 
       // Check if any of the HOC variables are exported with memo
       for (const hocVarName of hocVarNames) {
@@ -273,8 +273,6 @@ const enforceMemo = createRule<[], MessageIds>({
       node: TSESTree.Node,
       results: TSESTree.ReturnStatement[] = []
     ): TSESTree.ReturnStatement[] => {
-      if (!node) return results
-
       if (node.type === AST_NODE_TYPES.ReturnStatement) {
         results.push(node)
       } else if ("body" in node && node.body) {

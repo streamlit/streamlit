@@ -16,7 +16,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 
 import {
   computeBooleanStatistics,
@@ -26,7 +26,7 @@ import {
   computeStatistics,
   computeTextStatistics,
   createLabeledBarDatum,
-  DateTimeStatistics,
+  type DateTimeStatistics,
   formatChartCount,
   formatChartPercent,
   formatCountWithPercent,

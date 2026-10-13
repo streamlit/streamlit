@@ -165,15 +165,16 @@ class StPagesTest(DeltaGeneratorTestCase):
             ("forward_then_backslash_unc", "/\\server\\share\\page.py"),
             ("backslash_then_forward_unc", "\\/server/share/page.py"),
             ("extended_unc", "\\\\?\\UNC\\server\\share\\page.py"),
+            ("extended_local", "\\\\?\\C:\\app\\page.py"),
             ("device_namespace", "\\\\.\\device\\page.py"),
             ("path_object", Path("\\\\server\\share\\page.py")),
         ]
     )
     @patch("streamlit.env_util.IS_WINDOWS", True)
-    def test_rejects_windows_network_paths_before_resolving(
+    def test_rejects_unsafe_windows_paths_before_resolving(
         self, _name: str, page: str | Path
     ) -> None:
-        """Windows network paths are rejected before any filesystem access.
+        """Windows network and device paths are rejected before filesystem access.
 
         This includes mixed-separator spellings (``/\\``, ``\\/``) that Windows
         normalizes to a UNC root when resolving.

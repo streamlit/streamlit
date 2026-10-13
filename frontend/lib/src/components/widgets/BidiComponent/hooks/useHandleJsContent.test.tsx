@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   BidiComponentContext,
-  BidiComponentContextShape,
+  type BidiComponentContextShape,
 } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { LOG } from "~lib/components/widgets/BidiComponent/utils/logger"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"

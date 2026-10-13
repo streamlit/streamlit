@@ -55,6 +55,10 @@ import type { DeckGlElementState, DeckGLProps } from "./types"
 import { EMPTY_STATE, useDeckGl } from "./useDeckGl"
 import { shouldShowBasemap } from "./utils/mapShell"
 
+// CSV/GLTF loaders must be registered globally so pydeck JSON layers can
+// resolve those types. loaders.gl marks registerLoaders deprecated in favor of
+// per-call loader lists, which pydeck JSON does not provide.
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- see comment above
 registerLoaders([CSVLoader, GLTFLoader])
 
 const EMPTY_SELECTION = EMPTY_STATE.selection
@@ -131,7 +135,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
       const { index, object } = info
 
-      const layerId = `${info.layer?.id || null}`
+      const layerId = `${info.layer?.id ?? null}`
       const currState = selection
       /** true if a user clicked outside of any layer */
       const isResetClick = index === -1
@@ -231,6 +235,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   // Name the chart only when alt is non-blank. Pair aria-label with
   // role="figure" so the name is exposed on this generic div without
   // role="img", which would make the toolbar and Mapbox controls presentational.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
   const accessibleName = element.alt?.trim() || undefined
 
   return (
@@ -249,12 +254,14 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
         onCollapse={collapse}
         target={StyledDeckGlChart}
         locked={hasActiveSelection && !disabled ? true : undefined}
+        labelContext={accessibleName}
       >
         {hasActiveSelection && !disabled && (
           <ToolbarAction
             label="Clear selection"
             onClick={handleClearSelectionClick}
             icon={Close}
+            labelContext={accessibleName}
           />
         )}
       </Toolbar>
