@@ -3236,6 +3236,16 @@ def test_populate_config_msg_disable_data_export(disable_data_export: bool) -> N
     assert msg.disable_data_export is disable_data_export
 
 
+@pytest.mark.parametrize("enable_agent_api", [True, False])
+def test_populate_config_msg_enable_agent_api(enable_agent_api: bool) -> None:
+    """enable_agent_api mirrors server.enableAgentApi."""
+    with patch_config_options({"server.enableAgentApi": enable_agent_api}):
+        msg = Config()
+        app_session._populate_config_msg(msg)
+
+    assert msg.enable_agent_api is enable_agent_api
+
+
 # ---- Tests for handle_backmsg dispatch and small handlers ----
 
 

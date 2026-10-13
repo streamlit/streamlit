@@ -1597,6 +1597,7 @@ export class App extends PureComponent<Props, State> {
       const themeInput = newSessionProto.customTheme as CustomThemeConfig
 
       this.processThemeInput(themeInput)
+      this.agentViewState.setEnabled(config.enableAgentApi)
       this.setState({
         allowRunOnSave: config.allowRunOnSave,
         hideTopBar: config.hideTopBar,
