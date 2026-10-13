@@ -27,7 +27,7 @@ export async function encodeToWav(
   blob: Blob,
   targetSampleRate: number | null = 16000
 ): Promise<Blob> {
-  if (!blob || blob.size === 0) {
+  if (blob.size === 0) {
     throw new Error("Invalid or empty blob provided")
   }
 
