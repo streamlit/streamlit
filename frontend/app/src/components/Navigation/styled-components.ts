@@ -55,7 +55,7 @@ const getNavTextColor = (
     : transparentize(theme.colors.bodyText, 0.25)
 }
 
-export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
+export const StyledSidebarNavContainer = styled.nav(({ theme }) => ({
   position: "relative",
   fontFamily: theme.genericFonts.bodyFont,
 }))
@@ -266,8 +266,9 @@ export const StyledNavSectionContainer = styled.div(({ theme }) => ({
   },
 }))
 
-// TopNav styled components
-export const StyledOverflowContainer = styled.div(({ theme }) => ({
+// TopNav styled components. StyledOverflowContainer is rc-overflow's root and
+// the "App pages" <nav> landmark (see TopNav).
+export const StyledOverflowContainer = styled.nav(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   width: "100%",
