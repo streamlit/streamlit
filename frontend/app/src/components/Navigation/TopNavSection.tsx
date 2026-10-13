@@ -114,7 +114,10 @@ const TopNavSection = ({
   const lastLinkIndex = Math.max(0, flatLinkCount - 1)
 
   const [focusedIndex, setFocusedIndex] = useState(0)
-  /** Focused item index. Clamped because sections can shrink while the menu is open (overflow recalculation); -1 when there are no links. */
+  /**
+   * Index of the roving-focus menu item, or -1 when there are no links.
+   * Clamped because overflow recalculation can shrink `sections` while open.
+   */
   const clampedIndex =
     flatLinkCount === 0 ? -1 : Math.min(focusedIndex, lastLinkIndex)
 
@@ -147,9 +150,10 @@ const TopNavSection = ({
         } else if (reason === "shift-tab") {
           focusPrevTabbable(button)
         } else {
-          // Escape / item activation: menu unmounts and focus would fall to
-          // body — restore the trigger. Outside click already focused its
-          // target; do not overwrite that.
+          // Escape and item activation unmount the menu and drop focus to body,
+          // so restore it to the trigger. Outside clicks close on capture-phase
+          // pointerdown before the browser moves focus; activeElement may still
+          // be body here, but the later focus move lands on the clicked target.
           const active = document.activeElement
           if (
             !active ||
@@ -178,9 +182,9 @@ const TopNavSection = ({
     menuItemLinksRef.current[index]?.focus()
   }, [])
 
-  // When overflow changes while open, the focused link can unmount even if its
-  // index is still in range (items removed from the front). Clamp alone is not
-  // enough — restore focus when the active element is no longer a menu item.
+  // Keep the roving index on the focused node when overflow changes the menu
+  // while open. Restore focus only if that node unmounted (for example when
+  // leading items move back into the nav bar, or the focused page itself leaves).
   useLayoutEffect(() => {
     if (!open) {
       return
@@ -190,10 +194,14 @@ const TopNavSection = ({
       return
     }
     const active = document.activeElement
-    const activeIsMenuItem = menuItemLinksRef.current.some(el => el === active)
-    if (!activeIsMenuItem || focusedIndex !== clampedIndex) {
-      focusLinkAtIndex(clampedIndex)
+    const activeIndex = menuItemLinksRef.current.findIndex(el => el === active)
+    if (activeIndex !== -1) {
+      if (activeIndex !== focusedIndex) {
+        setFocusedIndex(activeIndex)
+      }
+      return
     }
+    focusLinkAtIndex(clampedIndex)
   }, [
     open,
     flatLinkCount,
@@ -204,8 +212,8 @@ const TopNavSection = ({
     sections,
   ])
 
-  // Stable ref setter so SidebarNavLink can memoize its callback (avoids
-  // creating a new closure per item per render).
+  // Keep the ref setter stable so focus changes do not detach and reattach
+  // every menuitem ref.
   const setMenuItemRef = useCallback(
     (index: number, element: HTMLAnchorElement | null): void => {
       menuItemLinksRef.current[index] = element
@@ -214,9 +222,9 @@ const TopNavSection = ({
   )
 
   /**
-   * Focuses the item chosen at open (ArrowUp selects the last page, otherwise
-   * the first). Child anchor refs run first, so the target exists. Resets the
-   * index so a later open does not reuse it.
+   * Focuses the initial menu item on mount (last item for ArrowUp, first item
+   * otherwise). Resets `initialFocusIndexRef` so subsequent opens default to
+   * the first item.
    */
   const menuListRef = useCallback((node: HTMLDivElement | null): void => {
     if (node) {
@@ -261,6 +269,8 @@ const TopNavSection = ({
       return
     }
 
+    // Escape closes through useOverlayDismissal. The layout effect then focuses
+    // the trigger.
     switch (event.key) {
       case "ArrowDown": {
         event.preventDefault()

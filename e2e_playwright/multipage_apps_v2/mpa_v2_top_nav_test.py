@@ -453,11 +453,10 @@ def test_mixed_empty_and_named_sections(app: Page):
 
 
 def test_top_nav_section_keyboard_and_aria(app: Page):
-    """Test keyboard dismissal and ARIA state for top nav section popovers.
+    """Test opening, dismissal, focus management, and ARIA for top-nav section menus.
 
-    Escape must close the popover and return focus to the trigger, while
-    aria-expanded reflects the open or closed state. ArrowDown opens the menu
-    and moves focus to the first page link (#17339).
+    Escape closes the popover and returns focus to the trigger. ArrowDown opens
+    the menu and moves focus to the first page.
     """
     app.set_viewport_size({"width": 1280, "height": 800})
 
@@ -482,7 +481,7 @@ def test_top_nav_section_keyboard_and_aria(app: Page):
     expect(app.get_by_test_id("stTopNavPopover")).not_to_be_visible()
     expect(section_trigger).to_be_focused()
 
-    # ArrowDown opens the menu and focuses the first dropdown link
+    # ArrowDown opens the menu and focuses the first menu item.
     section_trigger.focus()
     app.keyboard.press("ArrowDown")
     expect(section_trigger).to_have_attribute("aria-expanded", "true")

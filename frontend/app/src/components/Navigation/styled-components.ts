@@ -156,7 +156,7 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
       "&:focus-visible": {
         backgroundColor: theme.colors.darkenedBgMix15,
-        // Match main-menu menuitems when arrow keys land on dropdown links.
+        // Use the main menu's focus ring for keyboard-focused top-nav dropdown items.
         ...(isInDropdown && {
           boxShadow: theme.shadows.focusRingMuted,
         }),
@@ -278,7 +278,11 @@ export const StyledOverflowContainer = styled.div(({ theme }) => ({
   width: "100%",
   flexShrink: 1,
   overflow: "hidden",
-  padding: `0 ${theme.spacing.lg}`,
+  paddingInline: theme.spacing.lg,
+  // overflow:hidden clips the 0.2rem focus ring on section triggers and links.
+  // Vertical padding makes room; negative margin keeps header layout unchanged.
+  paddingBlock: theme.sizes.focusRingWidth,
+  marginBlock: `-${theme.sizes.focusRingWidth}`,
 }))
 
 interface StyledNavSectionProps {
@@ -300,6 +304,7 @@ export const StyledNavSection = styled.button<StyledNavSectionProps>(
     lineHeight: theme.lineHeights.menuItem,
     fontSize: theme.fontSizes.sm,
     padding: `0 ${theme.spacing.sm}`,
+    minHeight: theme.sizes.headerItemHeight,
     color: getNavTextColor(theme, false, false, true),
     borderRadius: theme.radii.default,
     marginRight: theme.spacing.twoXS,
@@ -310,8 +315,10 @@ export const StyledNavSection = styled.button<StyledNavSectionProps>(
     "&:hover": {
       backgroundColor: theme.colors.darkenedBgMix15,
     },
-    "&:focus-visible": {
+    "&:focus": {
       outline: "none",
+    },
+    "&:focus-visible": {
       boxShadow: theme.shadows.focusRingMuted,
     },
   })

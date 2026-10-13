@@ -607,5 +607,50 @@ describe("TopNavSection", () => {
       expect(screen.getByText("Page B").closest("a")).toHaveFocus()
       expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
     })
+
+    it("syncs roving index when leading pages leave but focus stays on a later page", async () => {
+      const user = userEvent.setup()
+      const { rerender } = renderWithContexts(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: THREE_PAGE_SECTION,
+            title: "Group",
+          })}
+        />
+      )
+
+      const popover = await openPopover(user)
+      await user.keyboard("{ArrowDown}")
+      expect(within(popover).getByText("Page B").closest("a")).toHaveFocus()
+
+      rerender(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: [
+              [
+                {
+                  pageScriptHash: "page_b",
+                  pageName: "Page B",
+                  urlPathname: "page_b",
+                  isDefault: false,
+                },
+                {
+                  pageScriptHash: "page_c",
+                  pageName: "Page C",
+                  urlPathname: "page_c",
+                  isDefault: false,
+                },
+              ],
+            ],
+            title: "Group",
+          })}
+        />
+      )
+
+      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
+      await user.keyboard("{ArrowDown}")
+      expect(screen.getByText("Page C").closest("a")).toHaveFocus()
+    })
   })
 })
