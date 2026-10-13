@@ -308,6 +308,25 @@ describe("TopNavSection", () => {
       expect(within(popover).getAllByRole("menuitem")).toHaveLength(2)
     })
 
+    it("keeps groups distinct when section headers differ only by whitespace", async () => {
+      const user = userEvent.setup()
+      renderWithContexts(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: [
+              [page("admin", "Admin Page", "Admin")],
+              [page("spaced", "Spaced Page", " Admin")],
+            ],
+            title: "More",
+          })}
+        />
+      )
+      const popover = await openPopover(user)
+      expect(within(popover).getAllByRole("group")).toHaveLength(2)
+      expect(within(popover).getByText("Admin Page")).toBeVisible()
+      expect(within(popover).getByText("Spaced Page")).toBeVisible()
+    })
+
     it("keeps the focused page tabbable when earlier pages leave the menu", async () => {
       const user = userEvent.setup()
       const three = [

@@ -411,13 +411,16 @@ const TopNavSection = ({
       return links
     }
 
-    // Named groups key by section header (same identity TopNav uses). Sectionless
-    // rows key by page hash so dropping a leading overflow entry does not remount
-    // the groups that remain.
-    const sectionKey =
-      trimmedSectionName ||
-      section[0].pageScriptHash ||
-      `section-${sectionIndex}`
+    // Named groups key by the original sectionHeader (same identity TopNav
+    // uses; keep whitespace so "Admin" and " Admin" stay distinct). Trim only
+    // when deciding whether to show a header. Sectionless rows key by page
+    // hash so dropping a leading overflow entry does not remount survivors.
+    let sectionKey: string
+    if (sectionName) {
+      sectionKey = sectionName
+    } else {
+      sectionKey = section[0].pageScriptHash ?? `section-${sectionIndex}`
+    }
 
     // Sectionless overflow pages render as plain menuitems, without a header
     // or group wrapper.
