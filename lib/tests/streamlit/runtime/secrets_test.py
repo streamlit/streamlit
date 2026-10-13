@@ -306,6 +306,20 @@ class SecretsTest(unittest.TestCase):
             self.secrets.new_secret = "123"
         assert str(cm.value) == "Secrets does not support attribute assignment."
 
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_item_assignment_raises_type_error(self, *mocks: object) -> None:
+        """Verify that item assignment raises TypeError."""
+        with pytest.raises(TypeError, match="does not support item assignment"):
+            self.secrets["new_secret"] = "123"
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("builtins.open", new_callable=mock_open, read_data=MOCK_TOML)
+    def test_item_deletion_raises_type_error(self, *mocks: object) -> None:
+        """Verify that item deletion raises TypeError."""
+        with pytest.raises(TypeError, match="does not support item deletion"):
+            del self.secrets["db_username"]
+
 
 class MultipleSecretsFilesTest(unittest.TestCase):
     """Tests for st.secrets with multiple secrets.toml files."""
@@ -539,6 +553,17 @@ class AttrDictTest(unittest.TestCase):
         attr_dict.to_dict()["x"]["y"] = "zed"
         assert attr_dict.x.y == "z"
         assert d["x"]["y"] == "z"
+
+    def test_attr_dict_rejects_mutation(self) -> None:
+        """Item and attribute writes raise TypeError."""
+        attr_dict = AttrDict({"user": "jane"})
+
+        with pytest.raises(TypeError, match="does not support item assignment"):
+            attr_dict["user"] = "joan"
+        with pytest.raises(TypeError, match="does not support attribute assignment"):
+            attr_dict.user = "joan"
+        with pytest.raises(TypeError, match="does not support item deletion"):
+            del attr_dict["user"]
 
 
 class SecretsFallbackTest(DeltaGeneratorTestCase):
