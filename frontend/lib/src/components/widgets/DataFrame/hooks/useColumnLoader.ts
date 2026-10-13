@@ -162,11 +162,6 @@ export function applyColumnConfig(
   columnProps: BaseColumnProps,
   columnConfigMapping: Map<string | number, ColumnConfigProps>
 ): BaseColumnProps {
-  if (!columnConfigMapping) {
-    // No column config configured
-    return columnProps
-  }
-
   let columnConfig: ColumnConfigProps = {}
 
   // Merge all possible ways to provide column config for a specific column:

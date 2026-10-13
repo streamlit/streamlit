@@ -78,10 +78,6 @@ function Video({
 
   // Create a stable dependency for checking subtitle source urls
   const subtitleSrcArrString = useMemo(() => {
-    if (!subtitles) {
-      return JSON.stringify([])
-    }
-
     return JSON.stringify(
       subtitles.map(subtitle => endpoints.buildMediaURL(`${subtitle.url}`))
     )

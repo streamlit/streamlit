@@ -58,7 +58,7 @@ function getJsxNameText(name: TSESTree.JSXTagNameExpression): string | null {
 }
 
 function isAriaHiddenTruthy(attr: TSESTree.JSXAttribute): boolean {
-  if (attr.value === null || attr.value === undefined) {
+  if (attr.value === null) {
     // <div aria-hidden />
     return true
   }
@@ -104,7 +104,7 @@ function getTabIndexValue(
     return null
   }
 
-  if (attr.value === null || attr.value === undefined) {
+  if (attr.value === null) {
     // <div tabIndex /> is uncommon; treat as focusable.
     return 0
   }

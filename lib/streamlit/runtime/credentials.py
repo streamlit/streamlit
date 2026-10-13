@@ -23,7 +23,7 @@ import textwrap
 from typing import Final, NamedTuple, NoReturn, cast
 from uuid import uuid4
 
-from streamlit import cli_util, config, env_util, file_util, util
+from streamlit import cli_util, config, env_util, file_util, toml_writer, util
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
@@ -213,14 +213,11 @@ class Credentials:
         # Create intermediate directories if necessary
         os.makedirs(os.path.dirname(self._conf_file), exist_ok=True)
 
-        # activate() only saves valid activations, whose email is a str.
-        # Fall back to "" because tomli-w cannot serialize None.
+        # TOML has no null, so a missing email is stored as an empty string.
         email = self.activation.email or ""
 
-        import tomli_w
-
         with open(self._conf_file, "w", encoding="utf-8") as f:
-            f.write(tomli_w.dumps({"general": {"email": email}}))
+            f.write(toml_writer.dumps({"general": {"email": email}}))
 
         try:
             _send_email(self.activation.email)
