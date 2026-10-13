@@ -390,6 +390,36 @@ describe("TopNavSection", () => {
       expect(screen.getByText("Page B").closest("a")).toHaveFocus()
     })
 
+    it("moves focus to the preceding control when overflow empties while open", async () => {
+      const user = userEvent.setup()
+      const { rerender } = renderWithContexts(
+        <div>
+          <button type="button">Visible Page</button>
+          <TopNavSection
+            {...getDefaultProps({
+              sections: TWO_PAGE_SECTION,
+              title: "2 more",
+            })}
+          />
+        </div>
+      )
+      await openPopover(user)
+      expect(screen.getByText("Page A").closest("a")).toHaveFocus()
+
+      rerender(
+        <div>
+          <button type="button">Visible Page</button>
+          <TopNavSection
+            {...getDefaultProps({ sections: [], title: "2 more" })}
+          />
+        </div>
+      )
+      expect(screen.queryByTestId("stTopNavSection")).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: "Visible Page" })
+      ).toHaveFocus()
+    })
+
     it("leaves focus on an outside click target when the menu closes", async () => {
       const user = userEvent.setup()
       renderWithContexts(

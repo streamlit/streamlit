@@ -94,6 +94,8 @@ const TopNavSection = ({
   const menuItemLinksRef = useRef<Array<HTMLAnchorElement | null>>([])
   const closeReasonRef = useRef<CloseReason>("other")
   const prevOpenRef = useRef(false)
+  const openRef = useRef(open)
+  openRef.current = open
   /** Item index to focus when the menu mounts (ArrowUp opens on the last). */
   const initialFocusIndexRef = useRef(0)
 
@@ -150,9 +152,10 @@ const TopNavSection = ({
         } else if (reason === "shift-tab") {
           focusPrevTabbable(button)
         } else {
-          // Return focus to the trigger when closing drops it to body (Escape or
-          // activating a page). If focus already moved elsewhere, leave it.
-          // An outside click runs this before the browser focuses the clicked control.
+          // Return focus to the trigger unless another control already holds it.
+          // Escape and page activation unmount the focused menuitem, dropping focus
+          // to body. An outside click runs this on pointerdown, before mousedown
+          // moves focus to the clicked control, so that control still wins.
           const active = document.activeElement
           if (
             !active ||
@@ -164,12 +167,33 @@ const TopNavSection = ({
           }
         }
       }
+      // Drop trailing slots from a larger open menu so length matches mounts.
+      menuItemLinksRef.current = []
     }
     prevOpenRef.current = open
   }, [open])
 
   const setNavSectionRef = useCallback(
     (node: HTMLButtonElement | null): void => {
+      // rc-overflow can clear "N more" while the menu is open. The trigger then
+      // unmounts in this commit (refs clear before layout effects), so hand focus
+      // to the preceding header control — usually the page that just became
+      // visible — before the button disappears.
+      if (node === null && triggerRef.current && openRef.current) {
+        const dying = triggerRef.current
+        const active = document.activeElement
+        const activeInMenu =
+          active instanceof HTMLElement &&
+          menuItemLinksRef.current.some(el => el === active)
+        if (
+          !active ||
+          active === document.body ||
+          active === dying ||
+          activeInMenu
+        ) {
+          focusPrevTabbable(dying)
+        }
+      }
       triggerRef.current = node
       setReferenceRef(node)
     },
@@ -191,6 +215,8 @@ const TopNavSection = ({
       closeMenu("other")
       return
     }
+    // Truncate after shrink so length matches mounted items (not stale nulls).
+    menuItemLinksRef.current.length = flatLinkCount
     const active = document.activeElement
     const activeIndex =
       active instanceof HTMLElement
@@ -214,6 +240,7 @@ const TopNavSection = ({
     clampedIndex,
     closeMenu,
     focusLinkAtIndex,
+    // sections: re-run when overflow swaps pages without changing the count.
     sections,
   ])
 
@@ -234,9 +261,10 @@ const TopNavSection = ({
    */
   const menuListRef = useCallback((node: HTMLDivElement | null): void => {
     if (node) {
+      const mountedCount = menuItemLinksRef.current.filter(Boolean).length
       const index = Math.min(
         initialFocusIndexRef.current,
-        Math.max(0, menuItemLinksRef.current.length - 1)
+        Math.max(0, mountedCount - 1)
       )
       initialFocusIndexRef.current = 0
       menuItemLinksRef.current[index]?.focus()
@@ -265,8 +293,9 @@ const TopNavSection = ({
       target instanceof HTMLAnchorElement &&
       target.getAttribute("role") === "menuitem"
     ) {
-      // Space needs a synthetic click (anchors only activate on Enter natively).
-      // Leave Enter alone when enabled so Ctrl/Cmd+Enter keeps browser modifiers.
+      // Anchors activate on Enter, not Space, so Space synthesizes a click.
+      // Leave Enter to the browser so modifier keys reach the click handler.
+      // That handler still keeps internal pages in-app.
       if (event.key === " ") {
         event.preventDefault()
         if (!widgetsDisabled) {
@@ -411,10 +440,11 @@ const TopNavSection = ({
       return links
     }
 
-    // Named groups key by the original sectionHeader (same identity TopNav
-    // uses; keep whitespace so "Admin" and " Admin" stay distinct). Trim only
-    // when deciding whether to show a header. Sectionless rows key by page
-    // hash so dropping a leading overflow entry does not remount survivors.
+    // Stable keys keep a focused menuitem mounted when the overflow list shrinks.
+    // A changed key remounts the row and drops keyboard focus.
+    // - Named section: original sectionHeader, including whitespace, matching TopNav.
+    // - Sectionless page: that page's script hash.
+    // Trim the header only to decide whether to render a group label.
     let sectionKey: string
     if (sectionName) {
       sectionKey = sectionName
