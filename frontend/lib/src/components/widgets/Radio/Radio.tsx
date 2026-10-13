@@ -23,6 +23,7 @@ import {
   useBasicWidgetState,
   type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useFormStringLabelRefresh } from "~lib/hooks/useFormLabelRefresh"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -74,6 +75,16 @@ function Radio({
 
   const { horizontal, options, captions, label, labelVisibility, help } =
     element
+
+  useFormStringLabelRefresh({
+    widgetId: element.id,
+    formId: element.formId,
+    previousLabels: element.previousLabels,
+    options,
+    value,
+    setValue: setValueWithSource,
+    serverSetValue: Boolean(element.setValue),
+  })
 
   const onChange = useCallback(
     (selectedIndex: number): void => {

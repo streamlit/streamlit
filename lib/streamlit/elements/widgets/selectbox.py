@@ -33,7 +33,10 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.options_selector_utils import (
     SelectWidgetFilterMode,
     create_mappings,
+    index_for_option_label,
+    is_option_value,
     maybe_coerce_enum,
+    remember_option_labels,
     resolve_value_against_options,
     validate_select_widget_filter_mode,
 )
@@ -84,6 +87,8 @@ class SelectboxSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_option_index: int | None
     format_func: Callable[[Any], str]
+    # Set by deserialize: True when the browser string was a formatted option.
+    formatted_label_match: bool
 
     def __init__(
         self,
@@ -93,6 +98,7 @@ class SelectboxSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
+        prior_label_to_index: dict[str, int] | None = None,
     ) -> None:
         """Initialize the SelectboxSerde.
 
@@ -125,6 +131,10 @@ class SelectboxSerde(Generic[T]):
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
         self.format_func = format_func
+        self.formatted_label_match = False
+        # Labels from earlier runs, while the options themselves stayed put.
+        # A form submits the label from the run when the user picked it.
+        self.prior_label_to_index = prior_label_to_index or {}
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
@@ -161,13 +171,24 @@ class SelectboxSerde(Generic[T]):
         # Check if the option is pointing to a generic option type T,
         # otherwise return the option itself.
         if ui_value is None:
+            # Defaults are not a browser selection.
+            self.formatted_label_match = False
             return (
                 self.options[self.default_option_index]
                 if self.default_option_index is not None and len(self.options) > 0
                 else None
             )
 
-        option_index = self.formatted_option_to_option_index.get(ui_value)
+        option_index = index_for_option_label(
+            ui_value,
+            self.formatted_option_to_option_index,
+            self.prior_label_to_index,
+            len(self.options),
+        )
+        # Record provenance for the caller. A later equality check cannot tell
+        # a selected option from typed text that happens to equal its value.
+        # An earlier label for the same options is still that option.
+        self.formatted_label_match = option_index is not None
         return self.options[option_index] if option_index is not None else ui_value
 
 
@@ -765,12 +786,25 @@ class SelectboxMixin:
         if isinstance(on_change, str) and on_change == "ignore":
             selectbox_proto.ignore_rerun = True
 
+        # accept_new_options leaves typed text alone. An older label can equal
+        # that text, so those widgets do not reuse it. A form otherwise keeps
+        # the pending selection in the browser until submit.
+        prior_label_to_index, previous_labels = remember_option_labels(
+            element_id,
+            opt,
+            formatted_options,
+            form_id=selectbox_proto.form_id,
+            allow_stale_labels=not accept_new_options,
+        )
+        if previous_labels:
+            selectbox_proto.previous_labels[:] = previous_labels
         serde = SelectboxSerde(
             opt,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_option_index=index,
             format_func=format_func,
+            prior_label_to_index=prior_label_to_index,
         )
         widget_state = register_widget(
             selectbox_proto.id,
@@ -811,8 +845,30 @@ class SelectboxMixin:
                 widget_state.incoming_serialized_value,
             )
 
-        if value_needs_reset or widget_state.value_changed:
-            serialized_value = serde.serialize(current_value)
+        serialized_value = serde.serialize(current_value)
+        # The frontend tracks the selection by the label it was sent. Push the
+        # new label when format_func changes it for a real option, or a later
+        # rerun clears the widget (gh-17175). Typed text stays as entered, even
+        # when it equals an option's value or format_func maps it onto a label.
+        # Compare the wire label first so an unchanged rerun skips the scan.
+        labels_changed = (
+            serialized_value is not None
+            and widget_state.incoming_serialized_value is not None
+            and widget_state.incoming_serialized_value != serialized_value
+            and is_option_value(
+                current_value,
+                serialized_value,
+                opt,
+                formatted_option_to_option_index,
+                formatted_options=formatted_options,
+                from_formatted_label=widget_state.incoming_formatted_label_match,
+            )
+        )
+        should_set_value = (
+            value_needs_reset or widget_state.value_changed or labels_changed
+        )
+
+        if should_set_value:
             if serialized_value is not None:
                 selectbox_proto.raw_value = serialized_value
             selectbox_proto.set_value = True
@@ -825,7 +881,7 @@ class SelectboxMixin:
             "selectbox",
             selectbox_proto,
             layout_config=layout_config,
-            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            has_one_shot_effect=should_set_value,
         )
         return current_value
 

@@ -40,7 +40,11 @@ message Radio {
   // committed. Inside a form, this flag has no effect because the form batches
   // values until submit.
   bool ignore_rerun = 15;
-  // Next: 16
+  // Formatted labels from the previous run, aligned with `options`, when the
+  // option sequence is unchanged. A form holds its selection in the browser
+  // until submit, so the frontend rewrites that pending label in place.
+  repeated string previous_labels = 16;
+  // Next: 17
 
   reserved 7;
 }

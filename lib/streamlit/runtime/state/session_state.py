@@ -162,6 +162,24 @@ class WStates(MutableMapping[str, Any]):
 
     states: dict[str, WState] = field(default_factory=dict)
     widget_metadata: dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
+    # Raw labels the browser sent, keyed by widget id. Kept after
+    # deserialization so register_widget can detect format_func label changes.
+    # Re-serializing would call a live format_func that may already return the
+    # new label (gh-17175).
+    frontend_string_values: dict[str, str] = field(default_factory=dict)
+    frontend_string_array_values: dict[str, list[str]] = field(default_factory=dict)
+    # Whether each stored browser label matched a formatted option when it was
+    # deserialized. Typed text can equal an option's value, so equality is not
+    # enough to tell a selection from accept_new_options input.
+    frontend_string_matched_option: dict[str, bool] = field(default_factory=dict)
+    frontend_string_array_matched_option: dict[str, list[bool]] = field(
+        default_factory=dict
+    )
+    # Earlier formatted labels for a widget, kept while its options stay the
+    # same. A form selection is the label from the run when the user picked
+    # it, and that label is not submitted until later. Values are
+    # ``_FormattedLabelMemory`` from options_selector_utils.
+    formatted_label_memory: dict[str, Any] = field(default_factory=dict)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -208,6 +226,7 @@ class WStates(MutableMapping[str, Any]):
             value = value.data
 
         deserialized = metadata.deserializer(value)
+        self._record_formatted_label_match(k, metadata.deserializer)
 
         # Update metadata to reflect information from WidgetState proto
         self.set_widget_metadata(
@@ -222,9 +241,16 @@ class WStates(MutableMapping[str, Any]):
 
     def __setitem__(self, k: str, v: WState) -> None:
         self.states[k] = v
+        # Only a frontend proto carries a browser label. __getitem__ writes
+        # Value straight into `states`, so deserializing keeps that label.
+        if isinstance(v, Serialized):
+            self._remember_frontend_wire(k, v.value)
+        else:
+            self._forget_frontend_wire(k)
 
     def __delitem__(self, k: str) -> None:
         del self.states[k]
+        self._forget_frontend_wire(k)
 
     def __len__(self) -> int:
         return len(self.states)
@@ -250,6 +276,52 @@ class WStates(MutableMapping[str, Any]):
         """
         self.states.update(other.states)
         self.widget_metadata.update(other.widget_metadata)
+        self.frontend_string_values.update(other.frontend_string_values)
+        self.frontend_string_array_values.update(other.frontend_string_array_values)
+        self.frontend_string_matched_option.update(other.frontend_string_matched_option)
+        self.frontend_string_array_matched_option.update(
+            other.frontend_string_array_matched_option
+        )
+        self.formatted_label_memory.update(other.formatted_label_memory)
+
+    def _remember_frontend_wire(self, widget_id: str, proto: WidgetStateProto) -> None:
+        """Save a string or string-array payload and drop any other value type."""
+        field_name = proto.WhichOneof("value")
+        if field_name == "string_value":
+            self.frontend_string_values[widget_id] = proto.string_value
+            self.frontend_string_array_values.pop(widget_id, None)
+        elif field_name == "string_array_value":
+            self.frontend_string_array_values[widget_id] = list(
+                proto.string_array_value.data
+            )
+            self.frontend_string_values.pop(widget_id, None)
+        else:
+            self._forget_frontend_wire(widget_id)
+        # The new proto has not been deserialized yet, so drop any match
+        # recorded for the previous payload.
+        self.frontend_string_matched_option.pop(widget_id, None)
+        self.frontend_string_array_matched_option.pop(widget_id, None)
+
+    def _forget_frontend_wire(self, widget_id: str) -> None:
+        self.frontend_string_values.pop(widget_id, None)
+        self.frontend_string_array_values.pop(widget_id, None)
+        self.frontend_string_matched_option.pop(widget_id, None)
+        self.frontend_string_array_matched_option.pop(widget_id, None)
+
+    def _record_formatted_label_match(self, widget_id: str, deserializer: Any) -> None:
+        """Copy a serde's label-match flag onto this widget, if it recorded one."""
+        serde = getattr(deserializer, "__self__", None)
+        match = (
+            getattr(serde, "formatted_label_match", None) if serde is not None else None
+        )
+        if isinstance(match, bool):
+            self.frontend_string_matched_option[widget_id] = match
+            self.frontend_string_array_matched_option.pop(widget_id, None)
+        elif isinstance(match, list):
+            self.frontend_string_array_matched_option[widget_id] = [
+                bool(item) for item in match
+            ]
+            self.frontend_string_matched_option.pop(widget_id, None)
 
     def set_widget_from_proto(self, widget_state: WidgetStateProto) -> None:
         """Set a widget's serialized value, overwriting any existing value it has."""
@@ -278,6 +350,30 @@ class WStates(MutableMapping[str, Any]):
                 fragment_ids_this_run,
             )
         }
+        # Replacing `states` above skips __delitem__, which drops wire payloads.
+        # Forget payloads for widgets that are no longer stored.
+        stale_wire_ids = (
+            set(self.frontend_string_values)
+            | set(self.frontend_string_array_values)
+            | set(self.frontend_string_matched_option)
+            | set(self.frontend_string_array_matched_option)
+        ) - set(self.states)
+        for widget_id in stale_wire_ids:
+            self._forget_frontend_wire(widget_id)
+        # Label history is not a widget value, so compact keeps it. Drop it
+        # with the same staleness rule as widget state: a fragment run must
+        # not forget labels for widgets it did not execute.
+        stale_memory_ids = [
+            widget_id
+            for widget_id in self.formatted_label_memory
+            if _is_stale_widget(
+                self.widget_metadata.get(widget_id),
+                active_widget_ids,
+                fragment_ids_this_run,
+            )
+        ]
+        for widget_id in stale_memory_ids:
+            del self.formatted_label_memory[widget_id]
 
     def get_serialized(self, k: str) -> WidgetStateProto | None:
         """Get the serialized value of the widget with the given id.
@@ -715,6 +811,7 @@ class SessionState:
         self._old_state.clear()
         self._new_session_state.clear()
         self._new_widget_state.clear()
+        self._new_widget_state.formatted_label_memory.clear()
         self._key_id_mapper.clear()
         self._query_param_bound_widget_ids.clear()
         self._persist_tracker.clear()
@@ -1556,6 +1653,11 @@ class SessionState:
         left untouched.
         """
         removed = self._new_widget_state.states.pop(widget_id, None) is not None
+        # states.pop skips __delitem__, which forgets the browser label. A
+        # finished run prunes that label later; an interrupted run
+        # (remove_stale_widgets=False) would otherwise leave it for the next
+        # register_widget.
+        self._new_widget_state._forget_frontend_wire(widget_id)
         removed = self._old_state.pop(widget_id, None) is not None or removed
         removed = self._old_state.pop(user_key, None) is not None or removed
         return removed
@@ -1574,27 +1676,42 @@ class SessionState:
         widget_id = metadata.id
         ctx = get_script_run_ctx()
 
-        # Capture the stored wire value *before* swapping in this run's
-        # serializer, so it reflects the value as it was actually stored (using
-        # the serializer it was stored with). For string and string-array widgets
-        # we expose this so callers can reconcile a stored value against freshly
-        # computed state without re-deriving it from the deserialized value.
+        # Prefer the browser payload captured when the frontend value arrived,
+        # before this run's serializer is installed. Callbacks deserialize the
+        # proto first; re-serializing would call format_func and can already
+        # return the new label (gh-17175).
         incoming_serialized_value: str | None = None
         incoming_serialized_values: list[str] | None = None
+        # Set when the captured wire belongs to a value this run discarded.
+        discard_incoming_wire = False
+        widget_state = self._new_widget_state
         if metadata.value_type == "string_value":
-            stored_proto = self._new_widget_state.get_serialized(widget_id)
-            if (
-                stored_proto is not None
-                and stored_proto.WhichOneof("value") == "string_value"
-            ):
-                incoming_serialized_value = stored_proto.string_value
+            if widget_id in widget_state.frontend_string_values:
+                incoming_serialized_value = widget_state.frontend_string_values[
+                    widget_id
+                ]
+            else:
+                stored_proto = widget_state.get_serialized(widget_id)
+                if (
+                    stored_proto is not None
+                    and stored_proto.WhichOneof("value") == "string_value"
+                ):
+                    incoming_serialized_value = stored_proto.string_value
         elif metadata.value_type == "string_array_value":
-            stored_proto = self._new_widget_state.get_serialized(widget_id)
-            if (
-                stored_proto is not None
-                and stored_proto.WhichOneof("value") == "string_array_value"
-            ):
-                incoming_serialized_values = list(stored_proto.string_array_value.data)
+            if widget_id in widget_state.frontend_string_array_values:
+                # Copy so a caller cannot mutate the stored browser payload.
+                incoming_serialized_values = list(
+                    widget_state.frontend_string_array_values[widget_id]
+                )
+            else:
+                stored_proto = widget_state.get_serialized(widget_id)
+                if (
+                    stored_proto is not None
+                    and stored_proto.WhichOneof("value") == "string_array_value"
+                ):
+                    incoming_serialized_values = list(
+                        stored_proto.string_array_value.data
+                    )
 
         self._set_widget_metadata(metadata)
         if user_key is not None:
@@ -1614,6 +1731,7 @@ class SessionState:
             if url_binding_resolved:
                 incoming_serialized_value = None
                 incoming_serialized_values = None
+                discard_incoming_wire = True
         elif metadata.bind is None and user_key is not None:
             # Widget stopped using bind — clean up any stale binding
             self._query_param_bound_widget_ids.discard(widget_id)
@@ -1662,6 +1780,7 @@ class SessionState:
             # an option that differs from the value we resolve below.
             incoming_serialized_value = None
             incoming_serialized_values = None
+            discard_incoming_wire = True
             if user_key is None or user_key not in self._new_session_state:
                 # No programmatic value is taking over resolution, so the discard
                 # itself changes the resolved value; flag the frontend to re-sync.
@@ -1791,11 +1910,28 @@ class SessionState:
             or disabled_value_discarded
         )
 
+        # Read after self[widget_id] above, which deserializes a pending proto
+        # and records whether each browser string matched a formatted label.
+        incoming_formatted_label_match: bool | None = None
+        incoming_formatted_label_matches: list[bool] | None = None
+        if not discard_incoming_wire:
+            if widget_id in widget_state.frontend_string_matched_option:
+                incoming_formatted_label_match = (
+                    widget_state.frontend_string_matched_option[widget_id]
+                )
+            stored_label_matches = (
+                widget_state.frontend_string_array_matched_option.get(widget_id)
+            )
+            if stored_label_matches is not None:
+                incoming_formatted_label_matches = list(stored_label_matches)
+
         return RegisterWidgetResult(
             widget_value,
             widget_value_changed,
             incoming_serialized_value=incoming_serialized_value,
             incoming_serialized_values=incoming_serialized_values,
+            incoming_formatted_label_match=incoming_formatted_label_match,
+            incoming_formatted_label_matches=incoming_formatted_label_matches,
         )
 
     def _handle_query_param_binding(

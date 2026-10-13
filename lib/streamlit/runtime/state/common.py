@@ -242,12 +242,22 @@ class RegisterWidgetResult(Generic[T_co]):
         labels (not re-derived from the deserialized ``value``), callers can
         detect that a stored selection's formatted label changed between runs
         even when the deserialized value is unchanged.
+    incoming_formatted_label_match : bool or None
+        Whether ``incoming_serialized_value`` matched a formatted option when
+        it was deserialized. ``False`` means the browser string was typed text,
+        which can equal an option's value. ``None`` when no string payload was
+        deserialized.
+    incoming_formatted_label_matches : list of bool or None
+        Per-item counterpart of ``incoming_formatted_label_match`` for array
+        widgets. Aligned with ``incoming_serialized_values``.
     """
 
     value: T_co
     value_changed: bool
     incoming_serialized_value: str | None = None
     incoming_serialized_values: list[str] | None = None
+    incoming_formatted_label_match: bool | None = None
+    incoming_formatted_label_matches: list[bool] | None = None
 
     @classmethod
     def failure(

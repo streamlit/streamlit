@@ -59,6 +59,7 @@ import {
   SHIFT_VIEWPORT_PADDING,
   useFloatingOverlay,
 } from "~lib/hooks/useFloatingOverlay"
+import { useFormStringArrayLabelRefresh } from "~lib/hooks/useFormLabelRefresh"
 import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import {
   CREATABLE_ID,
@@ -251,6 +252,17 @@ const Multiselect: FC<Props> = props => {
     fragmentId,
     formClearBehavior: "resetValueOnly",
     queryParamBinding,
+  })
+
+  useFormStringArrayLabelRefresh({
+    widgetId: element.id,
+    formId: element.formId,
+    previousLabels: element.previousLabels,
+    options: element.options,
+    value,
+    setValue: setValueWithSource,
+    serverSetValue: Boolean(element.setValue),
+    match: "first",
   })
 
   // Local filter state — filterActive is derived from inputValue to avoid sync issues

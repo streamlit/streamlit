@@ -14,8 +14,10 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from collections import OrderedDict
+from dataclasses import dataclass, replace
 from enum import Enum, EnumMeta
+from itertools import starmap
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, cast, overload
 
 from streamlit import config, logger
@@ -34,13 +36,16 @@ from streamlit.type_util import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
 
     from streamlit.runtime.state.common import RegisterWidgetResult
 
 _LOGGER: Final = logger.get_logger(__name__)
 
 _FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
+# A clock-based format_func adds one label per option per rerun. Keep enough
+# history for a form that sits open across many reruns, then drop the oldest.
+_MAX_REMEMBERED_LABELS: Final = 512
 _Value = TypeVar("_Value")
 T = TypeVar("T")
 
@@ -342,6 +347,188 @@ def create_mappings(
         formatted_options,
         formatted_option_to_option_mapping,
     )
+
+
+def is_option_value(
+    value: Any,
+    serialized_label: str | None,
+    options: Sequence[Any],
+    formatted_option_to_option_index: dict[str, int],
+    *,
+    formatted_options: Sequence[str],
+    from_formatted_label: bool | None,
+) -> bool:
+    """Return whether `value` is a real option, not text the user typed.
+
+    ``from_formatted_label`` is whether deserialization matched the browser
+    string to a formatted option. Equality is not that proof: with
+    ``accept_new_options``, typed text can equal an option's value, and
+    ``format_func`` can map that text onto an option label. ``None`` means the
+    caller has no provenance and equality is the only signal.
+
+    Duplicate labels keep only the last option in the index, while multiselect
+    deserializes the first match, so every option with this label is checked
+    against the labels ``create_mappings`` already computed. Custom options are
+    deepcopied and may not compare equal; typed text is a string, so a
+    non-string value is still the option and is not scanned again.
+    """
+    if from_formatted_label is False or serialized_label is None:
+        return False
+    option_index = formatted_option_to_option_index.get(serialized_label)
+    if option_index is None:
+        return False
+    # Typed text is a string. Skip the per-option scan for everything else:
+    # a deepcopy without ``__eq__`` would otherwise walk the whole list.
+    if not isinstance(value, str):
+        return True
+    if _values_equal(options[option_index], value):
+        return True
+    # Duplicate labels: the map keeps the last option. An earlier option can
+    # still be the selection. Compare the labels already computed for this run.
+    for option, label in zip(options, formatted_options, strict=False):
+        if label == serialized_label and _values_equal(option, value):
+            return True
+    return False
+
+
+def _values_equal(left: Any, right: Any) -> bool:
+    """Compare two option values, treating ambiguous comparisons as unequal."""
+    try:
+        return bool(left == right)
+    except Exception:
+        return False
+
+
+@dataclass
+class _FormattedLabelMemory:
+    """Labels from earlier runs of one widget, while its options stay the same."""
+
+    options: tuple[Any, ...]
+    last_labels: tuple[str, ...]
+    label_to_index: OrderedDict[str, int]
+    # Multiselect deserializes the first duplicate label. Other widgets keep
+    # the last, matching ``create_mappings``.
+    first_match: bool = False
+
+
+def apply_formatted_label_memory(
+    memory: dict[str, _FormattedLabelMemory],
+    widget_id: str,
+    options: Sequence[Any],
+    formatted_options: Sequence[str],
+    *,
+    first_match: bool = False,
+) -> tuple[dict[str, int], tuple[str, ...]]:
+    """Remember this run's labels and return labels from earlier runs.
+
+    The first item maps every remembered label to its option index, not
+    including this run. The second is the immediately previous label list.
+    Both are empty when ``options`` changed or this is the first run.
+
+    A form keeps the user's selection in the browser until submit. That
+    selection is still the label from the run when they picked it, so later
+    runs need the older label to recover the option.
+    """
+    current_options = tuple(options)
+    current_labels = tuple(formatted_options)
+    stored = memory.get(widget_id)
+    if (
+        stored is None
+        or stored.first_match != first_match
+        or not _same_option_sequence(stored.options, current_options)
+    ):
+        memory[widget_id] = _FormattedLabelMemory(
+            options=current_options,
+            last_labels=current_labels,
+            label_to_index=_label_index(current_labels, first_match=first_match),
+            first_match=first_match,
+        )
+        return {}, ()
+
+    prior = dict(stored.label_to_index)
+    previous_labels = stored.last_labels
+    stored.last_labels = current_labels
+    for label, index in _label_index(
+        current_labels, first_match=stored.first_match
+    ).items():
+        stored.label_to_index[label] = index
+        stored.label_to_index.move_to_end(label)
+    # Keep at least the previous generation. A flat cap drops it when one
+    # option list is already longer than the cap.
+    max_labels = max(_MAX_REMEMBERED_LABELS, 2 * len(current_labels))
+    while len(stored.label_to_index) > max_labels:
+        stored.label_to_index.popitem(last=False)
+    return prior, previous_labels
+
+
+def remember_option_labels(
+    widget_id: str,
+    options: Sequence[Any],
+    formatted_options: Sequence[str],
+    *,
+    form_id: str,
+    allow_stale_labels: bool,
+    first_match: bool = False,
+) -> tuple[dict[str, int], tuple[str, ...]]:
+    """Record this run's labels.
+
+    Returns the prior label index for deserialization, and the previous label
+    list to send into a form. The proto list is empty outside forms and when
+    the labels did not change. Both are empty when stale labels must not be
+    reused, which is how ``accept_new_options`` keeps typed text.
+    """
+    prior, previous = get_session_state().note_formatted_labels(
+        widget_id, options, formatted_options, first_match=first_match
+    )
+    if not allow_stale_labels:
+        return {}, ()
+    if not form_id or not previous or previous == tuple(formatted_options):
+        return prior, ()
+    return prior, previous
+
+
+def index_for_option_label(
+    label: str,
+    current: Mapping[str, int],
+    prior: Mapping[str, int],
+    option_count: int,
+) -> int | None:
+    """Return the option index for a browser label.
+
+    Current labels win. A label from an earlier run is used only when the
+    option sequence is unchanged, which is what ``prior`` records.
+    """
+    index = current.get(label)
+    if index is not None:
+        return index
+    prior_index = prior.get(label)
+    if prior_index is None or not 0 <= prior_index < option_count:
+        return None
+    return prior_index
+
+
+def _label_index(
+    labels: tuple[str, ...], *, first_match: bool = False
+) -> OrderedDict[str, int]:
+    """Map each label to its index.
+
+    Duplicate labels keep the last index, unless ``first_match`` is set.
+    Either way the label moves to the end so eviction drops older labels first.
+    """
+    index: OrderedDict[str, int] = OrderedDict()
+    for position, label in enumerate(labels):
+        if first_match and label in index:
+            index.move_to_end(label)
+            continue
+        index[label] = position
+        index.move_to_end(label)
+    return index
+
+
+def _same_option_sequence(previous: tuple[Any, ...], current: tuple[Any, ...]) -> bool:
+    if len(previous) != len(current):
+        return False
+    return all(starmap(_values_equal, zip(previous, current, strict=True)))
 
 
 def validate_and_sync_value_with_options(

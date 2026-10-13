@@ -37,8 +37,10 @@ from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
+from streamlit.proto.WidgetStates_pb2 import WidgetState
 from streamlit.runtime.state.widgets import register_widget_from_metadata
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.element_tree import Selectbox
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import (
@@ -1123,3 +1125,393 @@ class SelectboxOnChangeModeTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue(1).new_element.selectbox
         assert c.ignore_rerun is True
+
+
+def test_selectbox_resends_new_label_when_format_func_output_changes():
+    """A label change re-sends the fresh label instead of losing the selection.
+
+    The frontend tracks the selection by label and resends it verbatim, so the
+    backend must push the new label or a later rerun resets the widget.
+    Regression test for gh-17175.
+    """
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+
+        def on_change() -> None:
+            st.session_state["callback_count"] = (
+                st.session_state.get("callback_count", 0) + 1
+            )
+
+        st.selectbox(
+            "Pick one",
+            ["D", "E"],
+            format_func=lambda x: f"{x} ({count})",
+            index=None,
+            key="picker",
+            on_change=on_change,
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").select("E").run()
+    assert at.selectbox(key="picker").value == "E"
+    assert at.session_state["callback_count"] == 1
+
+    # The count behind the label changes without the user touching the widget.
+    at.session_state["callback_count"] = 0
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.selectbox(key="picker")
+    assert picker.value == "E"
+    assert picker.proto.set_value is True
+    assert picker.proto.raw_value == "E (3)"
+    # Only the display string changed, so on_change must not fire.
+    assert at.session_state["callback_count"] == 0
+
+    # With the labels unchanged, nothing is re-sent.
+    at = at.run()
+    assert at.selectbox(key="picker").value == "E"
+    assert at.selectbox(key="picker").proto.set_value is False
+    assert at.session_state["callback_count"] == 0
+
+
+def test_selectbox_label_change_does_not_rewrite_user_entered_value(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """User-entered text (accept_new_options) is not rewritten when labels change."""
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        # AppTest would format every value. The browser leaves typed text unchanged.
+        ws = WidgetState(id=self.id)
+        if self.value is not None:
+            label = self.format_func(self.value)
+            ws.string_value = label if label in self.options else str(self.value)
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+        st.selectbox(
+            "Pick one",
+            ["D", "E"],
+            format_func=lambda x: f"{x} ({count})",
+            index=None,
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").set_value("custom").run()
+    assert at.selectbox(key="picker").value == "custom"
+
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.selectbox(key="picker")
+    assert picker.value == "custom"
+    assert picker.proto.set_value is False
+
+
+def test_selectbox_does_not_rewrite_typed_text_that_formats_to_an_option(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Typed text stays typed when format_func maps it onto an option label.
+
+    options [1, 2] format as "Item 1" and "Item 2". Typing "1" must not be
+    pushed back as "Item 1", or the next rerun selects the integer option.
+    """
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        # The browser keeps typed text. It applies set_value when the server
+        # replaces that text with an option label.
+        ws = WidgetState(id=self.id)
+        if self.value is None:
+            return ws
+        if self.proto.set_value and self.proto.raw_value:
+            ws.string_value = self.proto.raw_value
+            return ws
+        ws.string_value = (
+            str(self.value)
+            if isinstance(self.value, str)
+            else str(self.format_func(self.value))
+        )
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        st.selectbox(
+            "Pick one",
+            [1, 2],
+            format_func=lambda option: f"Item {int(option)}",
+            index=None,
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").set_value("1").run()
+    assert at.selectbox(key="picker").value == "1"
+
+    at = at.run()
+    picker = at.selectbox(key="picker")
+    assert picker.value == "1"
+    assert picker.proto.set_value is False
+
+
+def test_selectbox_resends_label_when_format_func_reads_session_state(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """A live format_func still refreshes the label the browser is holding.
+
+    AppTest would reformat the outgoing value, so this keeps the previous
+    label the way the browser does. Regression test for gh-17175.
+    """
+    held: dict[str, str | None] = {"label": None}
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        # Keep the label last pushed to the browser.
+        ws = WidgetState(id=self.id)
+        if self.value is None:
+            return ws
+        if self.proto.set_value and self.proto.raw_value:
+            held["label"] = self.proto.raw_value
+        elif held["label"] is None:
+            held["label"] = str(self.format_func(self.value))
+        ws.string_value = held["label"] or ""
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        def fmt(option: str) -> str:
+            return f"{option} ({st.session_state.get('count', 2)})"
+
+        st.selectbox(
+            "Pick one",
+            ["D", "E"],
+            format_func=fmt,
+            index=None,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").select("E").run()
+    assert at.selectbox(key="picker").value == "E"
+
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.selectbox(key="picker")
+    assert picker.value == "E"
+    assert picker.proto.set_value is True
+    assert picker.proto.raw_value == "E (3)"
+
+    at = at.run()
+    assert at.selectbox(key="picker").value == "E"
+    assert at.selectbox(key="picker").proto.set_value is False
+
+
+def test_selectbox_does_not_rewrite_typed_text_equal_to_an_option(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Typed text that equals an option value stays typed.
+
+    options ["a"] display as "Item A". Typing "a" deserializes as the string
+    "a"; pushing format_func's "Item A" would replace what the user typed.
+    """
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        # The browser sends typed text verbatim. set_value would replace it.
+        ws = WidgetState(id=self.id)
+        if self.proto.set_value and self.proto.raw_value:
+            ws.string_value = self.proto.raw_value
+            return ws
+        if self.value is not None:
+            ws.string_value = str(self.value)
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        st.selectbox(
+            "Pick one",
+            ["a"],
+            format_func=lambda _option: "Item A",
+            index=None,
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").set_value("a").run()
+    picker = at.selectbox(key="picker")
+    assert picker.value == "a"
+    assert picker.proto.set_value is False
+
+    at = at.run()
+    picker = at.selectbox(key="picker")
+    assert picker.value == "a"
+    assert picker.proto.set_value is False
+
+
+def test_selectbox_resends_label_for_option_equal_to_typed_text() -> None:
+    """Selecting the option "a" still refreshes when its label changes.
+
+    The same string is typed text in the test above. Provenance is which
+    browser string was deserialized, not equality with the option.
+    """
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+        st.selectbox(
+            "Pick one",
+            ["a"],
+            format_func=lambda option: f"Item {option} ({count})",
+            index=None,
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.selectbox(key="picker").select("a").run()
+    assert at.selectbox(key="picker").value == "a"
+
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.selectbox(key="picker")
+    assert picker.value == "a"
+    assert picker.proto.set_value is True
+    assert picker.proto.raw_value == "Item a (3)"
+
+
+def _click(at: AppTest, label: str) -> AppTest:
+    for button in at.button:
+        if button.label == label:
+            return button.click().run()
+    raise AssertionError(f"No button labeled {label!r}")
+
+
+def test_pending_form_selectbox_keeps_option_when_labels_change(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Submit still returns the option when the form held an older label.
+
+    The selection stays in the browser until submit, so the server sees the
+    label from the run when the user picked it. The proto also carries that
+    previous list so the control can show the new label before submit.
+    """
+    send_stale = {"on": False}
+    widget_id = {"id": ""}
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        ws = WidgetState(id=self.id)
+        if send_stale["on"] and self.id == widget_id["id"]:
+            ws.string_value = "E (0)"
+            return ws
+        if self.index is not None and len(self.options) > 0:
+            ws.string_value = self.options[self.index]
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        if st.button("Bump"):
+            st.session_state["count"] = st.session_state.get("count", 0) + 1
+
+        def fmt(option: str) -> str:
+            return f"{option} ({st.session_state.get('count', 0)})"
+
+        with st.form("pending"):
+            st.selectbox(
+                "Pending",
+                ["D", "E", "F"],
+                index=None,
+                format_func=fmt,
+                key="pending",
+            )
+            st.form_submit_button("Submit pending")
+
+    at = AppTest.from_function(script).run()
+    widget_id["id"] = at.selectbox(key="pending").id
+    at = _click(at, "Bump")
+
+    pending = at.selectbox(key="pending")
+    assert list(pending.proto.options) == ["D (1)", "E (1)", "F (1)"]
+    assert list(pending.proto.previous_labels) == ["D (0)", "E (0)", "F (0)"]
+    assert pending.value is None
+
+    at = _click(at, "Bump")
+    assert list(at.selectbox(key="pending").proto.previous_labels) == [
+        "D (1)",
+        "E (1)",
+        "F (1)",
+    ]
+
+    send_stale["on"] = True
+    at = _click(at, "Submit pending")
+    pending = at.selectbox(key="pending")
+    assert pending.value == "E"
+    assert pending.proto.set_value is True
+    assert pending.proto.raw_value == "E (2)"
+
+
+def test_pending_form_selectbox_drops_label_when_options_change(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An older label is not applied to a different option sequence."""
+    send_stale = {"on": False}
+    widget_id = {"id": ""}
+
+    def frontend_widget_state(self: Selectbox) -> WidgetState:
+        ws = WidgetState(id=self.id)
+        if send_stale["on"] and self.id == widget_id["id"]:
+            ws.string_value = "E (0)"
+            return ws
+        if self.index is not None and len(self.options) > 0:
+            ws.string_value = self.options[self.index]
+        return ws
+
+    monkeypatch.setattr(Selectbox, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        if st.button("Replace"):
+            st.session_state["options"] = ["X", "Y"]
+        options = st.session_state.get("options", ["D", "E"])
+        with st.form("pending"):
+            st.selectbox(
+                "Pending",
+                options,
+                index=None,
+                format_func=lambda option: f"{option} (0)",
+                key="pending",
+            )
+            st.form_submit_button("Submit pending")
+
+    at = AppTest.from_function(script).run()
+    widget_id["id"] = at.selectbox(key="pending").id
+    at = _click(at, "Replace")
+    assert list(at.selectbox(key="pending").proto.previous_labels) == []
+
+    send_stale["on"] = True
+    at = _click(at, "Submit pending")
+    assert at.selectbox(key="pending").value is None
