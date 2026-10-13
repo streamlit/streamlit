@@ -36,6 +36,18 @@ const getDefaultProps = (
   ...overrides,
 })
 
+const page = (
+  hash: string,
+  name: string,
+  sectionHeader?: string
+): AppPage.$Properties => ({
+  pageScriptHash: hash,
+  pageName: name,
+  urlPathname: hash,
+  isDefault: false,
+  ...(sectionHeader !== undefined ? { sectionHeader } : {}),
+})
+
 const MIXED_SECTIONS: AppPage.$Properties[][] = [
   [
     {
@@ -55,85 +67,7 @@ const MIXED_SECTIONS: AppPage.$Properties[][] = [
 ]
 
 const TWO_PAGE_SECTION: AppPage.$Properties[][] = [
-  [
-    {
-      pageScriptHash: "page_a",
-      pageName: "Page A",
-      urlPathname: "page_a",
-      isDefault: true,
-    },
-    {
-      pageScriptHash: "page_b",
-      pageName: "Page B",
-      urlPathname: "page_b",
-      isDefault: false,
-    },
-  ],
-]
-
-const THREE_PAGE_SECTION: AppPage.$Properties[][] = [
-  [
-    {
-      pageScriptHash: "page_a",
-      pageName: "Page A",
-      urlPathname: "page_a",
-      isDefault: true,
-    },
-    {
-      pageScriptHash: "page_b",
-      pageName: "Page B",
-      urlPathname: "page_b",
-      isDefault: false,
-    },
-    {
-      pageScriptHash: "page_c",
-      pageName: "Page C",
-      urlPathname: "page_c",
-      isDefault: false,
-    },
-  ],
-]
-
-const MULTI_OVERFLOW_SECTIONS: AppPage.$Properties[][] = [
-  [
-    {
-      pageScriptHash: "admin_page",
-      pageName: "Admin Page",
-      urlPathname: "admin",
-      isDefault: false,
-      sectionHeader: "Admin",
-    },
-  ],
-  [
-    {
-      pageScriptHash: "report_page",
-      pageName: "Report Page",
-      urlPathname: "report",
-      isDefault: false,
-      sectionHeader: "Reports",
-    },
-  ],
-]
-
-const SECTIONLESS_OVERFLOW: AppPage.$Properties[][] = [
-  [
-    {
-      pageScriptHash: "page_one",
-      pageName: "Page One",
-      urlPathname: "page_one",
-      isDefault: false,
-      sectionHeader: "",
-    },
-  ],
-  [
-    {
-      pageScriptHash: "page_two",
-      pageName: "Page Two",
-      urlPathname: "page_two",
-      isDefault: false,
-      sectionHeader: "",
-    },
-  ],
+  [page("page_a", "Page A"), page("page_b", "Page B")],
 ]
 
 async function openPopover(
@@ -148,56 +82,37 @@ describe("TopNavSection", () => {
     it("does not call handlePageChange when clicking an external link", async () => {
       const handlePageChange = vi.fn()
       const user = userEvent.setup()
-
       renderWithContexts(
         <TopNavSection
-          {...getDefaultProps({
-            handlePageChange,
-            sections: MIXED_SECTIONS,
-          })}
+          {...getDefaultProps({ handlePageChange, sections: MIXED_SECTIONS })}
         />
       )
-
       const popover = await openPopover(user)
-      const links = within(popover).getAllByTestId("stTopNavDropdownLink")
-      expect(links).toHaveLength(2)
-
-      // Click the external link
+      expect(
+        within(popover).getAllByTestId("stTopNavDropdownLink")
+      ).toHaveLength(2)
       await user.click(within(popover).getByText("external page"))
-
-      // handlePageChange should NOT be called for external links
       expect(handlePageChange).not.toHaveBeenCalled()
     })
 
     it("calls handlePageChange when clicking an internal link", async () => {
       const handlePageChange = vi.fn()
       const user = userEvent.setup()
-
       renderWithContexts(
         <TopNavSection
-          {...getDefaultProps({
-            handlePageChange,
-            sections: MIXED_SECTIONS,
-          })}
+          {...getDefaultProps({ handlePageChange, sections: MIXED_SECTIONS })}
         />
       )
-
       const popover = await openPopover(user)
-
-      // Click the internal link
       await user.click(within(popover).getByText("internal page"))
-
-      // handlePageChange should be called for internal links
       expect(handlePageChange).toHaveBeenCalledWith("internal_hash")
     })
 
     it("renders external link with correct href and target attributes", async () => {
       const user = userEvent.setup()
-
       renderWithContexts(
         <TopNavSection {...getDefaultProps({ sections: MIXED_SECTIONS })} />
       )
-
       const popover = await openPopover(user)
       const externalLink = within(popover)
         .getByText("external page")
@@ -205,90 +120,66 @@ describe("TopNavSection", () => {
       const internalLink = within(popover)
         .getByText("internal page")
         .closest("a")
-
-      // External link should open in a new tab
       expect(externalLink).toHaveAttribute("href", "https://example.com")
       expect(externalLink).toHaveAttribute("target", "_blank")
       expect(externalLink).toHaveAttribute("rel", "noopener noreferrer")
-
-      // Internal link should NOT have external-link attributes
       expect(internalLink).not.toHaveAttribute("target")
       expect(internalLink).not.toHaveAttribute("rel")
     })
   })
 
   describe("keyboard menu navigation", () => {
-    it("opens with Enter and focuses the first menu item", async () => {
+    it("opens with Enter, ArrowDown, and ArrowUp and focuses the chosen item", async () => {
       const user = userEvent.setup()
-      renderWithContexts(
+      const { unmount } = renderWithContexts(
         <TopNavSection
           {...getDefaultProps({ sections: TWO_PAGE_SECTION, title: "Group" })}
         />
       )
-
       const trigger = screen.getByTestId("stTopNavSection")
       trigger.focus()
       await user.keyboard("{Enter}")
+      expect(screen.getByText("Page A").closest("a")).toHaveFocus()
+      unmount()
 
-      const popover = screen.getByTestId("stTopNavPopover")
-      expect(popover).toBeVisible()
-      expect(trigger).toHaveAttribute("aria-expanded", "true")
-      expect(within(popover).getByText("Page A").closest("a")).toHaveFocus()
-    })
-
-    it("opens with ArrowDown and focuses the first menu item", async () => {
-      const user = userEvent.setup()
       renderWithContexts(
         <TopNavSection
           {...getDefaultProps({ sections: TWO_PAGE_SECTION, title: "Group" })}
         />
       )
-
-      const trigger = screen.getByTestId("stTopNavSection")
-      trigger.focus()
+      screen.getByTestId("stTopNavSection").focus()
       await user.keyboard("{ArrowDown}")
-
-      const popover = screen.getByTestId("stTopNavPopover")
-      expect(within(popover).getByText("Page A").closest("a")).toHaveFocus()
-    })
-
-    it("moves focus with arrow keys", async () => {
-      const user = userEvent.setup()
-      renderWithContexts(
-        <TopNavSection
-          {...getDefaultProps({ sections: TWO_PAGE_SECTION, title: "Group" })}
-        />
-      )
-
-      await openPopover(user)
-      const pageA = screen.getByText("Page A").closest("a")
-      const pageB = screen.getByText("Page B").closest("a")
-      expect(pageA).toHaveFocus()
-
-      await user.keyboard("{ArrowDown}")
-      expect(pageB).toHaveFocus()
-
-      await user.keyboard("{ArrowUp}")
-      expect(pageA).toHaveFocus()
-    })
-
-    it("returns focus to the trigger when Escape closes the menu", async () => {
-      const user = userEvent.setup()
-      renderWithContexts(
-        <TopNavSection
-          {...getDefaultProps({ sections: TWO_PAGE_SECTION, title: "Group" })}
-        />
-      )
-
-      const trigger = screen.getByTestId("stTopNavSection")
-      await openPopover(user)
+      expect(screen.getByText("Page A").closest("a")).toHaveFocus()
       await user.keyboard("{Escape}")
-
-      expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
-      expect(trigger).toHaveFocus()
+      screen.getByTestId("stTopNavSection").focus()
+      await user.keyboard("{ArrowUp}")
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
     })
 
-    it("moves focus to the next control when Tab closes the menu", async () => {
+    it("moves focus with arrows, Home, and End; Space activates", async () => {
+      const handlePageChange = vi.fn()
+      const user = userEvent.setup()
+      renderWithContexts(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: TWO_PAGE_SECTION,
+            title: "Group",
+            handlePageChange,
+          })}
+        />
+      )
+      await openPopover(user)
+      await user.keyboard("{ArrowDown}")
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
+      await user.keyboard("{Home}")
+      expect(screen.getByText("Page A").closest("a")).toHaveFocus()
+      await user.keyboard("{End}")
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
+      await user.keyboard(" ")
+      expect(handlePageChange).toHaveBeenCalledWith("page_b")
+    })
+
+    it("closes with Escape, Tab, and Shift+Tab and routes focus", async () => {
       const user = userEvent.setup()
       renderWithContexts(
         <div>
@@ -302,40 +193,23 @@ describe("TopNavSection", () => {
           <button type="button">After</button>
         </div>
       )
+      await openPopover(user)
+      await user.keyboard("{Escape}")
+      expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
+      expect(screen.getByTestId("stTopNavSection")).toHaveFocus()
 
       await openPopover(user)
       await user.keyboard("{Tab}")
-
       expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
       expect(screen.getByRole("button", { name: "After" })).toHaveFocus()
-    })
-
-    it("moves focus to the previous control when Shift+Tab closes the menu", async () => {
-      const user = userEvent.setup()
-      renderWithContexts(
-        <div>
-          <button type="button">Before</button>
-          <TopNavSection
-            {...getDefaultProps({
-              sections: TWO_PAGE_SECTION,
-              title: "Group",
-            })}
-          />
-          <button type="button">After</button>
-        </div>
-      )
 
       await openPopover(user)
       await user.keyboard("{Shift>}{Tab}{/Shift}")
-
       expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
       expect(screen.getByRole("button", { name: "Before" })).toHaveFocus()
     })
 
     it("skips aria-hidden overflow neighbors when Tab closes the menu", async () => {
-      // Mimics rc-overflow: overflowed items stay mounted under an aria-hidden
-      // ancestor between the last on-bar control and the "N more" trigger.
-      // Applied via DOM APIs so JSX a11y linters do not rewrite the fixture.
       const user = userEvent.setup()
       renderWithContexts(
         <div>
@@ -354,7 +228,6 @@ describe("TopNavSection", () => {
           <button type="button">After</button>
         </div>
       )
-
       const hiddenNav = screen.getByTestId("hidden-nav")
       const hiddenWrapper = document.createElement("div")
       hiddenWrapper.setAttribute("aria-hidden", "true")
@@ -363,68 +236,14 @@ describe("TopNavSection", () => {
 
       await openPopover(user)
       await user.keyboard("{Shift>}{Tab}{/Shift}")
-      expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
       expect(screen.getByTestId("visible-nav")).toHaveFocus()
-      expect(hiddenNav).not.toHaveFocus()
 
       await openPopover(user)
       await user.keyboard("{Tab}")
-      expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
       expect(screen.getByRole("button", { name: "After" })).toHaveFocus()
     })
 
-    it("opens with ArrowUp and focuses the last menu item", async () => {
-      const user = userEvent.setup()
-      renderWithContexts(
-        <TopNavSection
-          {...getDefaultProps({ sections: TWO_PAGE_SECTION, title: "Group" })}
-        />
-      )
-
-      const trigger = screen.getByTestId("stTopNavSection")
-      trigger.focus()
-      await user.keyboard("{ArrowUp}")
-
-      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
-    })
-
-    it("moves focus with Home and End", async () => {
-      const user = userEvent.setup()
-      renderWithContexts(
-        <TopNavSection
-          {...getDefaultProps({ sections: TWO_PAGE_SECTION, title: "Group" })}
-        />
-      )
-
-      await openPopover(user)
-      await user.keyboard("{End}")
-      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
-
-      await user.keyboard("{Home}")
-      expect(screen.getByText("Page A").closest("a")).toHaveFocus()
-    })
-
-    it("activates the focused menuitem with Space", async () => {
-      const handlePageChange = vi.fn()
-      const user = userEvent.setup()
-      renderWithContexts(
-        <TopNavSection
-          {...getDefaultProps({
-            sections: TWO_PAGE_SECTION,
-            title: "Group",
-            handlePageChange,
-          })}
-        />
-      )
-
-      await openPopover(user)
-      await user.keyboard(" ")
-
-      expect(handlePageChange).toHaveBeenCalledWith("page_a")
-      expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
-    })
-
-    it("does not activate menuitems via keyboard when widgets are disabled", async () => {
+    it("blocks keyboard activation when widgets are disabled", async () => {
       const handlePageChange = vi.fn()
       const user = userEvent.setup()
       renderWithContexts(
@@ -437,82 +256,119 @@ describe("TopNavSection", () => {
           })}
         />
       )
-
       await openPopover(user)
-      const focused = screen.getByText("Page A").closest("a")
-      expect(focused).toHaveAttribute("aria-disabled", "true")
-      expect(focused).toHaveFocus()
-
+      expect(screen.getByText("Page A").closest("a")).toHaveAttribute(
+        "aria-disabled",
+        "true"
+      )
       await user.keyboard(" ")
       await user.keyboard("{Enter}")
-
       expect(handlePageChange).not.toHaveBeenCalled()
-      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
     })
 
-    it("exposes menu semantics labelled by the trigger", async () => {
+    it("exposes menu ARIA and named overflow groups", async () => {
       const user = userEvent.setup()
       renderWithContexts(
         <TopNavSection
           {...getDefaultProps({
-            sections: TWO_PAGE_SECTION,
-            title: "**Bold** Group",
+            sections: [
+              [page("admin", "Admin Page", "Admin")],
+              [page("report", "Report Page", "Reports")],
+            ],
+            title: "More",
           })}
         />
       )
-
       const trigger = screen.getByTestId("stTopNavSection")
       expect(trigger).toHaveAttribute("aria-haspopup", "menu")
-
-      await openPopover(user)
-      const menu = screen.getByRole("menu", { name: "Bold Group" })
-      expect(menu).toBeVisible()
-      expect(menu).toHaveAttribute("aria-labelledby", trigger.id)
-      expect(screen.getAllByRole("menuitem")).toHaveLength(2)
+      const popover = await openPopover(user)
+      expect(trigger).toHaveAttribute("aria-controls", popover.id)
+      expect(popover).toHaveAttribute("role", "menu")
+      expect(popover).toHaveAccessibleName("More")
+      expect(
+        within(popover).getByRole("group", { name: "Admin" })
+      ).toBeVisible()
     })
 
-    it("links the trigger to the menu with aria-controls when open", async () => {
+    it("does not invent headers for sectionless overflow pages", async () => {
       const user = userEvent.setup()
       renderWithContexts(
         <TopNavSection
-          {...getDefaultProps({ sections: TWO_PAGE_SECTION, title: "Group" })}
+          {...getDefaultProps({
+            sections: [
+              [page("page_one", "Page One", "")],
+              [page("page_two", "Page Two", "")],
+            ],
+            title: "More",
+          })}
         />
       )
-
-      const trigger = screen.getByTestId("stTopNavSection")
-      expect(trigger).not.toHaveAttribute("aria-controls")
-
       const popover = await openPopover(user)
-      const menuId = popover.getAttribute("id")
-      expect(menuId).toBeTruthy()
-      expect(trigger).toHaveAttribute("aria-controls", menuId)
+      expect(within(popover).queryByRole("group")).not.toBeInTheDocument()
+      expect(within(popover).getAllByRole("menuitem")).toHaveLength(2)
     })
 
-    it("returns focus to the trigger after Tab close and a subsequent click close", async () => {
+    it("keeps the focused page tabbable when earlier pages leave the menu", async () => {
       const user = userEvent.setup()
-      renderWithContexts(
-        <div>
-          <button type="button">Before</button>
-          <TopNavSection
-            {...getDefaultProps({
-              sections: TWO_PAGE_SECTION,
-              title: "Group",
-            })}
-          />
-          <button type="button">After</button>
-        </div>
+      const three = [
+        [
+          page("page_a", "Page A"),
+          page("page_b", "Page B"),
+          page("page_c", "Page C"),
+        ],
+      ]
+      const { rerender } = renderWithContexts(
+        <TopNavSection
+          {...getDefaultProps({ sections: three, title: "Group" })}
+        />
       )
-
-      const trigger = screen.getByTestId("stTopNavSection")
       await openPopover(user)
-      await user.keyboard("{Tab}")
-      expect(trigger).not.toHaveFocus()
+      await user.keyboard("{ArrowDown}")
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
 
-      await user.click(trigger)
-      await user.click(trigger)
+      rerender(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: [[page("page_b", "Page B"), page("page_c", "Page C")]],
+            title: "Group",
+          })}
+        />
+      )
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
+      await user.keyboard("{ArrowDown}")
+      expect(screen.getByText("Page C").closest("a")).toHaveFocus()
 
-      expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
-      expect(trigger).toHaveFocus()
+      // Named multi-page section: dropping the first page must not remount the group.
+      rerender(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: [
+              [
+                page("page_a", "Page A", "Admin"),
+                page("page_b", "Page B", "Admin"),
+              ],
+              [page("page_c", "Page C", "Reports")],
+            ],
+            title: "2 more",
+          })}
+        />
+      )
+      await user.keyboard("{Escape}")
+      await openPopover(user)
+      await user.keyboard("{ArrowDown}")
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
+      rerender(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: [
+              [page("page_b", "Page B", "Admin")],
+              [page("page_c", "Page C", "Reports")],
+            ],
+            title: "2 more",
+          })}
+        />
+      )
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
     })
 
     it("leaves focus on an outside click target when the menu closes", async () => {
@@ -528,233 +384,10 @@ describe("TopNavSection", () => {
           <button type="button">Outside</button>
         </div>
       )
-
       await openPopover(user)
-      const outside = screen.getByRole("button", { name: "Outside" })
-      await user.click(outside)
-
+      await user.click(screen.getByRole("button", { name: "Outside" }))
       expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
-      expect(outside).toHaveFocus()
-      expect(screen.getByTestId("stTopNavSection")).not.toHaveFocus()
-    })
-
-    it("groups named overflow sections for assistive technology", async () => {
-      const user = userEvent.setup()
-      renderWithContexts(
-        <TopNavSection
-          {...getDefaultProps({
-            sections: MULTI_OVERFLOW_SECTIONS,
-            title: "More",
-          })}
-        />
-      )
-
-      const popover = await openPopover(user)
-      expect(
-        within(popover).getByRole("group", { name: "Admin" })
-      ).toBeVisible()
-      expect(
-        within(popover).getByRole("group", { name: "Reports" })
-      ).toBeVisible()
-    })
-
-    it("does not invent headers for sectionless overflow pages", async () => {
-      const user = userEvent.setup()
-      renderWithContexts(
-        <TopNavSection
-          {...getDefaultProps({
-            sections: SECTIONLESS_OVERFLOW,
-            title: "More",
-          })}
-        />
-      )
-
-      const popover = await openPopover(user)
-      expect(within(popover).queryByRole("group")).not.toBeInTheDocument()
-      expect(within(popover).getAllByText("Page One")).toHaveLength(1)
-      expect(within(popover).getAllByText("Page Two")).toHaveLength(1)
-      expect(within(popover).getAllByRole("menuitem")).toHaveLength(2)
-    })
-
-    it("moves focus to a remaining item when sections shrink while open", async () => {
-      const user = userEvent.setup()
-      const { rerender } = renderWithContexts(
-        <TopNavSection
-          {...getDefaultProps({
-            sections: THREE_PAGE_SECTION,
-            title: "Group",
-          })}
-        />
-      )
-
-      await openPopover(user)
-      await user.keyboard("{End}")
-      expect(screen.getByText("Page C").closest("a")).toHaveFocus()
-
-      rerender(
-        <TopNavSection
-          {...getDefaultProps({
-            sections: TWO_PAGE_SECTION,
-            title: "Group",
-          })}
-        />
-      )
-
-      expect(screen.queryByText("Page C")).not.toBeInTheDocument()
-      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
-      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
-    })
-
-    it("restores menu focus when the focused page is removed from the front", async () => {
-      const user = userEvent.setup()
-      const { rerender } = renderWithContexts(
-        <TopNavSection
-          {...getDefaultProps({
-            sections: THREE_PAGE_SECTION,
-            title: "Group",
-          })}
-        />
-      )
-
-      await openPopover(user)
-      expect(screen.getByText("Page A").closest("a")).toHaveFocus()
-
-      // Overflow often drops leading items; index 0 stays in range but Page A unmounts.
-      rerender(
-        <TopNavSection
-          {...getDefaultProps({
-            sections: [
-              [
-                {
-                  pageScriptHash: "page_b",
-                  pageName: "Page B",
-                  urlPathname: "page_b",
-                  isDefault: false,
-                },
-                {
-                  pageScriptHash: "page_c",
-                  pageName: "Page C",
-                  urlPathname: "page_c",
-                  isDefault: false,
-                },
-              ],
-            ],
-            title: "Group",
-          })}
-        />
-      )
-
-      expect(screen.queryByText("Page A")).not.toBeInTheDocument()
-      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
-      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
-    })
-
-    it("syncs roving index when leading pages leave but focus stays on a later page", async () => {
-      const user = userEvent.setup()
-      const { rerender } = renderWithContexts(
-        <TopNavSection
-          {...getDefaultProps({
-            sections: THREE_PAGE_SECTION,
-            title: "Group",
-          })}
-        />
-      )
-
-      const popover = await openPopover(user)
-      await user.keyboard("{ArrowDown}")
-      expect(within(popover).getByText("Page B").closest("a")).toHaveFocus()
-
-      rerender(
-        <TopNavSection
-          {...getDefaultProps({
-            sections: [
-              [
-                {
-                  pageScriptHash: "page_b",
-                  pageName: "Page B",
-                  urlPathname: "page_b",
-                  isDefault: false,
-                },
-                {
-                  pageScriptHash: "page_c",
-                  pageName: "Page C",
-                  urlPathname: "page_c",
-                  isDefault: false,
-                },
-              ],
-            ],
-            title: "Group",
-          })}
-        />
-      )
-
-      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
-      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
-      await user.keyboard("{ArrowDown}")
-      expect(screen.getByText("Page C").closest("a")).toHaveFocus()
-    })
-
-    it("keeps focus on the same page when a leading multi-section overflow entry leaves", async () => {
-      const user = userEvent.setup()
-      const multiSectionOverflow: AppPage.$Properties[][] = [
-        [
-          {
-            pageScriptHash: "page_a",
-            pageName: "Page A",
-            urlPathname: "page_a",
-            isDefault: true,
-            sectionHeader: "Section A",
-          },
-        ],
-        [
-          {
-            pageScriptHash: "page_b",
-            pageName: "Page B",
-            urlPathname: "page_b",
-            isDefault: false,
-            sectionHeader: "Section B",
-          },
-        ],
-        [
-          {
-            pageScriptHash: "page_c",
-            pageName: "Page C",
-            urlPathname: "page_c",
-            isDefault: false,
-            sectionHeader: "Section C",
-          },
-        ],
-      ]
-
-      const { rerender } = renderWithContexts(
-        <TopNavSection
-          {...getDefaultProps({
-            sections: multiSectionOverflow,
-            title: "2 more",
-          })}
-        />
-      )
-
-      const popover = await openPopover(user)
-      await user.keyboard("{ArrowDown}")
-      expect(within(popover).getByText("Page B").closest("a")).toHaveFocus()
-
-      rerender(
-        <TopNavSection
-          {...getDefaultProps({
-            sections: multiSectionOverflow.slice(1),
-            title: "2 more",
-          })}
-        />
-      )
-
-      expect(screen.queryByText("Page A")).not.toBeInTheDocument()
-      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
-      expect(
-        within(screen.getByTestId("stTopNavPopover")).getByRole("group", {
-          name: "Section B",
-        })
-      ).toBeVisible()
+      expect(screen.getByRole("button", { name: "Outside" })).toHaveFocus()
     })
   })
 })

@@ -453,7 +453,7 @@ def test_mixed_empty_and_named_sections(app: Page):
 
 
 def test_top_nav_section_keyboard_and_aria(app: Page):
-    """Test that Escape closes a section menu and refocuses the trigger, and ArrowDown opens it on the first page."""
+    """Escape closes and refocuses; ArrowDown opens on the first page; trigger exposes menu ARIA."""
     app.set_viewport_size({"width": 1280, "height": 800})
 
     click_checkbox(app, "Test Sections")

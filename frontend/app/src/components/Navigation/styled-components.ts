@@ -279,8 +279,8 @@ export const StyledOverflowContainer = styled.div(({ theme }) => ({
   flexShrink: 1,
   overflow: "hidden",
   paddingInline: theme.spacing.lg,
-  // overflow:hidden clips the 0.2rem focus ring on section triggers and links.
-  // Vertical padding makes room; negative margin keeps header layout unchanged.
+  // overflow: hidden clips focus rings on section triggers and links.
+  // Block padding makes room; a matching negative margin keeps header height.
   paddingBlock: theme.sizes.focusRingWidth,
   marginBlock: `-${theme.sizes.focusRingWidth}`,
 }))

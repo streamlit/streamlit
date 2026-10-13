@@ -134,7 +134,7 @@ const TopNavSection = ({
 
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: open,
-    onClose: () => closeMenu("other"),
+    onClose: closeMenu,
     floatingSetFn: setFloating,
     referenceSetFn: setReference,
   })
@@ -150,10 +150,9 @@ const TopNavSection = ({
         } else if (reason === "shift-tab") {
           focusPrevTabbable(button)
         } else {
-          // Escape and item activation unmount the menu and drop focus to body,
-          // so restore it to the trigger. Outside clicks close on capture-phase
-          // pointerdown before the browser moves focus; activeElement may still
-          // be body here, but the later focus move lands on the clicked target.
+          // Return focus to the trigger when closing drops it to body (Escape or
+          // activating a page). If focus already moved elsewhere, leave it.
+          // An outside click runs this before the browser focuses the clicked control.
           const active = document.activeElement
           if (
             !active ||
@@ -182,9 +181,8 @@ const TopNavSection = ({
     menuItemLinksRef.current[index]?.focus()
   }, [])
 
-  // When overflow changes the open menu, keep the roving index on the link
-  // that still has focus. If that link unmounted, move focus to the nearest
-  // remaining item.
+  // When rc-overflow moves pages in or out of the open "N more" menu, keep
+  // focus on the same page, or on the nearest remaining item if that page left.
   useLayoutEffect(() => {
     if (!open) {
       return
@@ -194,14 +192,21 @@ const TopNavSection = ({
       return
     }
     const active = document.activeElement
-    const activeIndex = menuItemLinksRef.current.findIndex(el => el === active)
+    const activeIndex =
+      active instanceof HTMLElement
+        ? menuItemLinksRef.current.findIndex(el => el === active)
+        : -1
     if (activeIndex !== -1) {
       if (activeIndex !== focusedIndex) {
         setFocusedIndex(activeIndex)
       }
       return
     }
-    focusLinkAtIndex(clampedIndex)
+    // Only restore when focus fell to body (item unmounted). Skip null
+    // activeElement (blurred document / embed) and other focused controls.
+    if (active === document.body) {
+      focusLinkAtIndex(clampedIndex)
+    }
   }, [
     open,
     flatLinkCount,
@@ -222,9 +227,10 @@ const TopNavSection = ({
   )
 
   /**
-   * Focuses the item in `initialFocusIndexRef` when the menu mounts (last item
-   * for ArrowUp, otherwise the first). Child anchor refs run first so the
-   * target exists; the layout effect alone is not enough through FloatingPortal.
+   * Focuses the initial item (last for ArrowUp, otherwise first) once the menu
+   * DOM mounts. A layout effect can't do this: FloatingPortal mounts its
+   * children one commit after `open` turns true. Child anchor refs run before
+   * this ref, so the target already exists.
    */
   const menuListRef = useCallback((node: HTMLDivElement | null): void => {
     if (node) {
@@ -255,18 +261,23 @@ const TopNavSection = ({
     }
 
     const target = event.target
-    // Activate menuitems on Space and Enter (anchors natively handle only
-    // Enter), and prevent Space from scrolling the page.
     if (
-      (event.key === " " || event.key === "Enter") &&
       target instanceof HTMLAnchorElement &&
       target.getAttribute("role") === "menuitem"
     ) {
-      event.preventDefault()
-      if (!widgetsDisabled) {
-        target.click()
+      // Space needs a synthetic click (anchors only activate on Enter natively).
+      // Leave Enter alone when enabled so Ctrl/Cmd+Enter keeps browser modifiers.
+      if (event.key === " ") {
+        event.preventDefault()
+        if (!widgetsDisabled) {
+          target.click()
+        }
+        return
       }
-      return
+      if (event.key === "Enter" && widgetsDisabled) {
+        event.preventDefault()
+        return
+      }
     }
 
     // Escape closes through useOverlayDismissal. The layout effect then focuses
@@ -400,9 +411,12 @@ const TopNavSection = ({
       return links
     }
 
-    // Key by page identity, not position, so overflow shrinks that drop a
-    // leading entry do not remount surviving sections and steal focus.
-    const sectionKey = section[0].pageScriptHash ?? `section-${sectionIndex}`
+    // Named groups key by section header (same identity TopNav uses). Sectionless
+    // rows key by page hash so dropping a leading overflow entry does not remount
+    // the groups that remain.
+    const sectionKey = trimmedSectionName
+      ? trimmedSectionName
+      : (section[0].pageScriptHash ?? `section-${sectionIndex}`)
 
     // Sectionless overflow pages render as plain menuitems, without a header
     // or group wrapper.
