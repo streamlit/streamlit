@@ -136,11 +136,11 @@ def _close_awaitable(awaitable: Any) -> None:
 
 
 def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
-    """Call a retained App entrypoint and reject coroutine or generator results.
+    """Call the App entrypoint and reject coroutine or generator results.
 
-    Construction validates the wrapper Streamlit will call. A synchronous
-    ``@functools.wraps`` wrapper can still return a coroutine or generator, so
-    this guard closes that result and raises. Wrappers that drive the inner
+    ``App`` inspects only the outer callable, so a sync ``functools.wraps``
+    wrapper around an async function passes construction. This closes a
+    returned coroutine or generator and raises. Wrappers that drive the inner
     coroutine themselves return ``None`` and are allowed.
     """
     result: Any = entrypoint()
@@ -164,6 +164,19 @@ def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
                     "Failed to close a rejected coroutine or generator entrypoint.",
                     exc_info=True,
                 )
+        else:
+            # Futures and Tasks are awaitable but have cancel(), not close().
+            # Leaving them pending would keep the wrapper's work running after
+            # the entrypoint error.
+            cancel = getattr(result, "cancel", None)
+            if callable(cancel):
+                try:
+                    cancel()
+                except Exception:
+                    _LOGGER.debug(
+                        "Failed to cancel a rejected future or task entrypoint.",
+                        exc_info=True,
+                    )
 
     raise StreamlitAPIException(
         "st.App callable entrypoints must not return a coroutine or generator. "
@@ -872,11 +885,12 @@ class ScriptRunner:
             # If we get here, we've successfully prepared the entrypoint. Errors
             # thrown during execution will be shown to the user as ExceptionElements.
 
-            # Callable entrypoints keep the process's real ``__main__`` module.
-            # Installing a fake ``__main__`` would re-enter
-            # ``if __name__ == "__main__": app.run()`` for same-file
-            # ``python app.py`` launchers, and would break pickle of classes
-            # defined on the real launcher module.
+            # Keep the module the callable already lives on. Replacing
+            # sys.modules["__main__"] would not re-execute the launcher; it
+            # would only split pickle and cache identity from that callable.
+            # Launch mode still changes __module__: python app.py defines
+            # objects as __main__.*, while streamlit run and uvicorn import
+            # a named module. Cache keys include __module__.
             module: types.ModuleType | None = None
             if self._script_entrypoint is None:
                 # Create fake module. This gives us a named global namespace to
@@ -1039,6 +1053,10 @@ class ScriptRunner:
                         )
                         try:
                             if self._script_entrypoint is not None:
+                                # Callable apps never run pages/ as MPA v1.
+                                # Clear the flag so st.switch_page uses the
+                                # st.navigation error instead of the pages/ hint.
+                                PagesManager.uses_pages_directory = False
                                 _invoke_script_entrypoint(self._script_entrypoint)
                             elif PagesManager.uses_pages_directory:
                                 _mpa_v1(self._main_script_path)

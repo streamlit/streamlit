@@ -321,6 +321,27 @@ class ScriptRunnerTest(unittest.TestCase):
 
         assert exc_info.value.error_id == "app-callable-returns-coroutine-or-generator"
 
+    def test_invoke_script_entrypoint_cancels_task(self) -> None:
+        """A rejected task is cancelled and does not run after the error."""
+        ran = False
+        with _installed_event_loop() as loop:
+
+            async def work() -> None:
+                nonlocal ran
+                ran = True
+
+            task = loop.create_task(work())
+
+            def entrypoint() -> Any:
+                return task
+
+            with pytest.raises(StreamlitAPIException, match="coroutine or generator"):
+                _invoke_script_entrypoint(entrypoint)
+
+            loop.run_until_complete(asyncio.sleep(0))
+            assert ran is False
+            assert task.cancelled()
+
     def test_callable_entrypoint_uses_normal_error_handling(self):
         """Exceptions from callable entrypoints use the standard script error path."""
         error_handler = MagicMock(return_value=None)
@@ -376,6 +397,7 @@ class ScriptRunnerTest(unittest.TestCase):
 
         main.assert_called_once_with()
         mpa_v1.assert_not_called()
+        assert PagesManager.uses_pages_directory is False
 
     def test_yield_on_enqueue(self):
         """Make sure we try to handle execution control requests whenever

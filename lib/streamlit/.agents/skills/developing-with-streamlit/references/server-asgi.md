@@ -160,19 +160,25 @@ Callable requirements and behavior:
 - Must be invokable without arguments. Async and generator callables are not
   supported.
 - Must be defined in a filesystem-backed Python source file. The innermost
-  source file anchors `static/` files and source watching, including when that
-  file lives in a library (for example a `functools.partial` of a package
-  callable under site-packages).
-- Script-level `.streamlit/config.toml` and `secrets.toml` follow
-  `config._main_script_path`. Under `streamlit run` that is the launched file.
-  When that path is unset (for example under uvicorn/`App` construction), the
-  callable source file pins config and secrets.
+  source file is used for `static/` files and source watching. A file outside
+  site-packages wins over one inside it. If every candidate is inside
+  site-packages, that library file is the anchor.
+- Script-level `config.toml` and `secrets.toml` come from the launched file
+  under `streamlit run` and `App.run()` (`python app.py`). They come from the
+  callable source only when no launched file is set, such as under uvicorn.
 - Streamlit invokes the callable once per full rerun, and the script health
-  check invokes that same retained object. Locals are created afresh; closure
-  cells and module globals are shared across reruns, sessions, and health
-  checks. Use `st.session_state` for per-session values.
+  check invokes that same retained object when the check is enabled. Locals
+  are created afresh; closure cells and module globals are shared across
+  reruns, sessions, and health checks. Use `st.session_state` for per-session
+  values.
 - Streamlit retains the original callable object for the lifetime of the `App`.
-  Restart the process after changing the callable's definition.
+  Restart the process after changing its definition. Saving the source file
+  can still rerun that original object until the process restarts.
+- `python app.py` defines the callable as `__main__`. `streamlit run` and
+  uvicorn import a named module. Cache keys include that module name, so a
+  string hash func such as `"__main__.MyClass"` matches in only one launch mode.
+- Create `st.Page` objects inside the entrypoint. A page created while the
+  module is imported has no script run and `st.navigation` rejects it.
 
 ## Custom routes
 

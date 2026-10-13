@@ -1724,6 +1724,36 @@ class TestAppInit:
         assert app.script_path == app_file.resolve()
         assert app._script_entrypoint is app_mod.main
 
+    def test_app_prefers_source_outside_site_packages(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A wrapper around a library callable anchors at the wrapper, not site-packages."""
+        lib_dir = tmp_path / "site-packages"
+        lib_dir.mkdir()
+        (lib_dir / "st_app_callable_lib.py").write_text("def render():\n    pass\n")
+        app_file = tmp_path / "st_app_callable_wrapper.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_lib import render\n"
+            "\n"
+            "@functools.wraps(render)\n"
+            "def main():\n"
+            "    return render()\n"
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(tmp_path))
+        for module_name in ("st_app_callable_lib", "st_app_callable_wrapper"):
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_wrapper")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in ("st_app_callable_lib", "st_app_callable_wrapper"):
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+        assert app._script_entrypoint is app_mod.main
+
     def test_app_rejects_async_callable(self) -> None:
         """st.App rejects async function callables."""
 

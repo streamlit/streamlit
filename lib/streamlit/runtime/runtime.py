@@ -124,8 +124,9 @@ class RuntimeConfig:
     # Callback to invoke when an uncaught exception occurs in user script code.
     on_script_error: OnScriptErrorHandler | None = None
 
-    # Optional callable executed instead of compiling the main script path.
-    # The script path remains the filesystem anchor for the app.
+    # Callable that ScriptRunner invokes instead of executing script_path.
+    # script_path is then the callable's source file and still determines
+    # static file serving, source watching, and sys.path during runs.
     script_entrypoint: Callable[[], None] | None = None
 
     # TODO(vdonato): Eventually add a new fragment_storage_class field enabling the code

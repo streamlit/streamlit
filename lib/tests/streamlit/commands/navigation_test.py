@@ -34,6 +34,18 @@ from tests.testutil import patch_config_options
 class NavigationTest(DeltaGeneratorTestCase):
     """Test st.navigation"""
 
+    def test_navigation_rejects_page_created_outside_script_run(self) -> None:
+        """Import-time st.Page objects are rejected once a script is running."""
+        with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
+            page = st.Page("home.py", title="Home")
+
+        with pytest.raises(
+            StreamlitAPIException, match="while the Streamlit script is running"
+        ) as exc_info:
+            st.navigation([page])
+
+        assert exc_info.value.error_id == "page-created-outside-script-run"
+
     def test_no_pages(self):
         """Test that an error is thrown with no pages"""
         with pytest.raises(StreamlitMissingRequiredParameterError) as exc:

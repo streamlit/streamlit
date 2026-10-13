@@ -228,12 +228,12 @@ def _resolve_callable_source_path(obj: Any) -> Path:
 
     Candidates are walked from the outer object inward. The innermost
     existing source file wins, so a decorated function defined in the app
-    module is not anchored to the decorator's module. The same rule applies
-    to partials and callable instances: a library callable anchors ``static/``
-    files, ``pages/``, ``sys.path``, and watching at that package file, including
-    under site-packages.
+    module is not anchored to the decorator's module. A file outside
+    site-packages wins over one inside it, so a wrapper around a library
+    callable stays anchored at the wrapper.
     """
     script_path: Path | None = None
+    outside_site_packages: Path | None = None
     for candidate in _callable_source_candidates(obj):
         try:
             source_file = inspect.getsourcefile(candidate) or inspect.getfile(candidate)
@@ -242,6 +242,11 @@ def _resolve_callable_source_path(obj: Any) -> Path:
         candidate_path = Path(source_file).resolve()
         if candidate_path.is_file():
             script_path = candidate_path
+            if "site-packages" not in candidate_path.parts:
+                outside_site_packages = candidate_path
+
+    if outside_site_packages is not None:
+        script_path = outside_site_packages
 
     if script_path is None:
         raise StreamlitAPIException(
@@ -428,19 +433,25 @@ class App:
           current working directory.
         - Callable:
 
-          - Invoked once per full rerun. Locals are fresh each run; closures
-            and module globals are shared across reruns and sessions. Use
-            ``st.session_state`` for per-session values.
-          - The callable's source file anchors the Runtime script path,
-            ``static/`` file serving, and source watching.
+          - Invoked once per full rerun, and again by the script health check
+            when that check is enabled. Locals are fresh each run; closures
+            and module globals are shared across reruns, sessions, and health
+            checks. Use ``st.session_state`` for per-session values.
+          - The callable's source file is used for ``static/`` file serving
+            and source watching. Saving that file can rerun the original
+            object until the process restarts.
           - Script-level ``config.toml`` and ``secrets.toml`` come from the
-            launched file under ``streamlit run``. When no launched file is
-            set (for example under uvicorn), the callable's source file pins
-            them instead.
+            launched file under ``streamlit run`` and ``App.run()``. They
+            come from the callable source only when no launched file is set,
+            such as under uvicorn.
           - Streamlit retains the callable object for the lifetime of the
             ``App``; restart the process after changing its definition.
+            ``python app.py`` defines that callable as ``__main__``, while
+            ``streamlit run`` and uvicorn import a named module. Cache keys
+            include that module name.
           - Callable execution takes precedence over a legacy ``pages/``
             directory. Use ``st.navigation`` for multipage callable apps.
+            Create ``st.Page`` objects inside the entrypoint, not at import.
     secrets : Mapping[str, SecretsValue] | None
         A dictionary of secrets to make available via ``st.secrets``. Supported
         value types are: ``str``, ``int``, ``float``, ``bool``, ``list``, and nested
@@ -583,8 +594,8 @@ class App:
         from streamlit.runtime.secrets import _validate_secrets_value
 
         self._script_entrypoint: Callable[[], None] | None = None
-        # PathLike before callable: Path() used to accept PurePath and other
-        # path-like values, and a path-like object can also be callable.
+        # Check PathLike before callable so path-like objects that are also
+        # callable, such as PurePath, stay on the path branch.
         if isinstance(script_path, (str, os.PathLike)):
             self._script_path = Path(script_path)
         elif callable(script_path):
