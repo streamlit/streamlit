@@ -489,6 +489,11 @@ class Page:
         to the external URL is handled by the frontend.
 
         """
+        # Import-time pages never receive _page or _can_be_called. Reject them
+        # before those attributes are read, once a script run exists.
+        if get_script_run_ctx() is not None:
+            raise_if_page_created_outside_run(self)
+
         if not self._can_be_called:
             raise StreamlitAPIException(
                 "This page cannot be called directly. Only the page returned from st.navigation can be called once.",
@@ -542,7 +547,8 @@ def raise_if_page_created_outside_run(page: Page) -> None:
     """Reject a ``Page`` that ``st.Page`` returned before a script run existed.
 
     Importing a callable app creates module-level pages with no script run.
-    Those objects never receive ``_page``, so later navigation APIs would
+    Those objects never receive ``_page``. ``st.navigation`` can still return
+    one when it also runs at import, and a later ``Page.run()`` would then
     raise ``AttributeError``.
     """
     if not getattr(page, "_created_outside_run", False):

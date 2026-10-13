@@ -1813,6 +1813,133 @@ class TestAppInit:
 
         assert app.script_path == sub_file.resolve()
 
+    def test_app_anchors_wrapper_between_installed_decorator_and_library(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An app wrapper between an installed decorator and a library stays on the app."""
+        site_dir = tmp_path / "site-packages"
+        site_dir.mkdir()
+        (site_dir / "st_app_callable_nested_lib.py").write_text(
+            "import functools\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper(*args, **kwargs):\n"
+            "        return fn(*args, **kwargs)\n"
+            "    return wrapper\n"
+            "\n"
+            "def render():\n"
+            "    pass\n"
+        )
+        app_file = tmp_path / "st_app_callable_nested_app.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_nested_lib import deco, render\n"
+            "\n"
+            "@deco\n"
+            "@functools.wraps(render)\n"
+            "def main():\n"
+            "    return render()\n"
+        )
+        monkeypatch.syspath_prepend(str(site_dir))
+        monkeypatch.syspath_prepend(str(tmp_path))
+        module_names = ("st_app_callable_nested_lib", "st_app_callable_nested_app")
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_nested_app")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_wrapper_around_in_repo_library(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A wrapper around a library outside site-packages stays on the wrapper."""
+        lib_dir = tmp_path / "repo_lib"
+        app_dir = tmp_path / "repo_app"
+        lib_dir.mkdir()
+        app_dir.mkdir()
+        (lib_dir / "st_app_callable_repo_lib.py").write_text(
+            "def render():\n    pass\n"
+        )
+        app_file = app_dir / "st_app_callable_repo_app.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_repo_lib import render\n"
+            "\n"
+            "@functools.wraps(render)\n"
+            "def main():\n"
+            "    return render()\n"
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(app_dir))
+        module_names = ("st_app_callable_repo_lib", "st_app_callable_repo_app")
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_repo_app")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_partial_subclass_that_overrides_call(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A partial subclass with its own __call__ is not classified via .func."""
+        lib_dir = tmp_path / "partial_lib"
+        app_dir = tmp_path / "partial_app"
+        lib_dir.mkdir()
+        app_dir.mkdir()
+        (lib_dir / "st_app_callable_partial_lib.py").write_text(
+            "async def render(required: str):\n    return required\n"
+        )
+        app_file = app_dir / "st_app_callable_partial_app.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_partial_lib import render\n"
+            "\n"
+            "class SyncPartial(functools.partial):\n"
+            "    def __call__(self):\n"
+            "        return None\n"
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(app_dir))
+        module_names = ("st_app_callable_partial_lib", "st_app_callable_partial_app")
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_partial_app")
+        lib_mod = importlib.import_module("st_app_callable_partial_lib")
+        try:
+            app = App(app_mod.SyncPartial(lib_mod.render))
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_rejects_async_partial_subclass_override(self) -> None:
+        """An async __call__ on a partial subclass is rejected even if .func is sync."""
+
+        class AsyncPartial(partial):
+            async def __call__(self) -> None:
+                return None
+
+        def render() -> None:
+            return None
+
+        with pytest.raises(
+            StreamlitAPIException, match="does not support async"
+        ) as exc_info:
+            App(AsyncPartial(render))
+        assert exc_info.value.error_id == "app-async-callable-not-supported"
+
     def test_uninspectable_signature_typeerror_is_not_argument_error(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

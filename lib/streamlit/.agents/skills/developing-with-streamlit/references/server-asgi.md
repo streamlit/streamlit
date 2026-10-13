@@ -159,11 +159,12 @@ Run with `streamlit run app.py`, `python app.py`, or `uv run app.py`.
 Callable requirements and behavior:
 - Must be invokable without arguments. Async and generator callables are not
   supported.
-- Must be defined in a filesystem-backed Python source file. Streamlit prefers
-  the innermost source candidate outside installed-package directories
-  (`site-packages`, `dist-packages`, and this interpreter's site roots). If
-  every candidate is inside one, it uses that library file. That file is used
-  for `static/` files and source watching.
+- Must be defined in a filesystem-backed Python source file. Streamlit uses
+  that callable's file for `static/` files and source watching. A decorator
+  defined in another module does not replace it, and a wrapper around another
+  function stays on the wrapper. If the only source file is inside an
+  installed package (`site-packages`, `dist-packages`, or this interpreter's
+  site roots), Streamlit uses that library file.
 - Script-level `config.toml` and `secrets.toml` come from the launched file
   under `streamlit run` and `App.run()` (`python app.py`). They come from the
   callable source only when no launched file is set, such as under uvicorn.
@@ -176,8 +177,8 @@ Callable requirements and behavior:
   Restart the process after changing its definition. Saving the source file
   can still rerun that original object until the process restarts.
 - Create `st.Page` objects inside the entrypoint. A page created while the
-  module is imported has no script run. `st.navigation`, `st.switch_page`, and
-  `st.page_link` reject it.
+  module is imported has no script run. `st.navigation`, `st.switch_page`,
+  `st.page_link`, and `Page.run()` reject it.
 
 ## Custom routes
 

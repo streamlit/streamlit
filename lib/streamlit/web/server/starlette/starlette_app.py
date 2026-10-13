@@ -147,10 +147,22 @@ def _set_anyio_thread_limiter() -> None:
     )
 
 
+def _uses_inherited_partial_call(obj: Any) -> bool:
+    """Return whether ``obj`` still uses ``functools.partial.__call__``."""
+    return (
+        isinstance(obj, functools.partial)
+        and type(obj).__call__ is functools.partial.__call__
+    )
+
+
 def _is_async_callable(obj: Any) -> bool:
     """Return True if ``obj`` is an async function or async callable instance."""
-    if isinstance(obj, functools.partial):
+    if _uses_inherited_partial_call(obj):
         return _is_async_callable(obj.func)
+    # partial instances are routines, which would hide an overridden __call__.
+    if isinstance(obj, functools.partial):
+        call = type(obj).__call__
+        return inspect.iscoroutinefunction(call) or inspect.isasyncgenfunction(call)
     if inspect.iscoroutinefunction(obj) or inspect.isasyncgenfunction(obj):
         return True
     if inspect.isroutine(obj):
@@ -161,13 +173,28 @@ def _is_async_callable(obj: Any) -> bool:
 
 def _is_generator_callable(obj: Any) -> bool:
     """Return True if ``obj`` is a sync generator function or generator callable."""
-    if isinstance(obj, functools.partial):
+    if _uses_inherited_partial_call(obj):
         return _is_generator_callable(obj.func)
+    # partial instances are routines, which would hide an overridden __call__.
+    if isinstance(obj, functools.partial):
+        return inspect.isgeneratorfunction(type(obj).__call__)
     if inspect.isgeneratorfunction(obj):
         return True
     if inspect.isroutine(obj):
         return False
     return inspect.isgeneratorfunction(type(obj).__call__)
+
+
+def _callable_for_signature(obj: Any) -> Any:
+    """Return the callable whose signature Streamlit actually invokes.
+
+    ``inspect.signature`` special-cases ``functools.partial`` and ignores an
+    overridden ``__call__``. A partial subclass that replaces ``__call__`` is
+    inspected through that bound method instead.
+    """
+    if isinstance(obj, functools.partial) and not _uses_inherited_partial_call(obj):
+        return obj.__call__
+    return obj
 
 
 def _require_zero_arg_callable(obj: Any) -> None:
@@ -179,7 +206,9 @@ def _require_zero_arg_callable(obj: Any) -> None:
     be rejected even when the wrapper supplies those arguments.
     """
     try:
-        signature = inspect.signature(obj, follow_wrapped=False)
+        signature = inspect.signature(
+            _callable_for_signature(obj), follow_wrapped=False
+        )
     except TypeError:
         # signature() itself failed to inspect the object. That is not
         # "this callable requires arguments".
@@ -197,43 +226,100 @@ def _require_zero_arg_callable(obj: Any) -> None:
         ) from ex
 
 
+def _next_wrapped(obj: Any) -> Any | None:
+    """Return the next ``__wrapped__`` object, one edge only."""
+    try:
+        wrapped = getattr(obj, "__wrapped__", None)
+    except (AttributeError, TypeError, ValueError):
+        return None
+    if wrapped is None or wrapped is obj:
+        return None
+    return wrapped
+
+
+def _is_decorator_local(candidate: Any) -> bool:
+    """Return whether ``candidate`` was defined inside another function.
+
+    Decorator wrappers are usually nested functions (``deco.<locals>.wrapper``).
+    ``functools.wraps`` overwrites ``__qualname__``, so the code object's
+    original qualname is what distinguishes that wrapper from the app callable.
+    """
+    qualname = None
+    try:
+        code = getattr(candidate, "__code__", None)
+        if code is not None:
+            qualname = getattr(code, "co_qualname", None)
+        if not isinstance(qualname, str):
+            qualname = getattr(candidate, "__qualname__", None)
+    except (AttributeError, TypeError, ValueError):
+        return False
+    return isinstance(qualname, str) and "<locals>" in qualname
+
+
 def _callable_source_candidates(obj: Any) -> list[Any]:
     """Return objects to try when resolving a callable's source file.
 
-    Candidates are listed from the outer object inward: the original
-    callable, then ``inspect.unwrap`` results, ``functools.partial.func``,
-    and a callable instance's class. When ``__call__`` is inherited, the
-    subclass is preferred over the base ``__call__``. Nested partials and
-    partials wrapping callable instances are included.
+    Candidates are listed from the outer object inward. ``__wrapped__`` is
+    followed one edge at a time, so an app wrapper between a decorator and a
+    library stays in the list. ``functools.partial.func`` is followed only
+    when the instance still uses ``partial.__call__``. A callable instance
+    contributes its class, and a subclass that inherits ``__call__`` is
+    visited before that base method.
     """
     candidates: list[Any] = []
     seen: set[int] = set()
     stack: list[Any] = [obj]
-    while stack:
+    # A __wrapped__ chain that manufactures a new object on each access would
+    # otherwise walk forever. inspect.unwrap uses the same bound.
+    limit = sys.getrecursionlimit()
+    while stack and len(candidates) < limit:
         current = stack.pop()
         current_id = id(current)
         if current_id in seen:
             continue
         seen.add(current_id)
         candidates.append(current)
+        wrapped = _next_wrapped(current)
 
-        try:
-            unwrapped = inspect.unwrap(current)
-        except (ValueError, TypeError):
-            unwrapped = None
-        if unwrapped is not None and id(unwrapped) not in seen:
-            stack.append(unwrapped)
+        if _uses_inherited_partial_call(current):
+            # .func is the object partial.__call__ invokes. Push it last so
+            # it is visited next, ahead of any __wrapped__ edge.
+            if wrapped is not None and id(wrapped) not in seen:
+                stack.append(wrapped)
+            if id(current.func) not in seen:
+                stack.append(current.func)
+            continue
 
-        if isinstance(current, functools.partial):
-            stack.append(current.func)
-        elif not inspect.isroutine(current) and not isinstance(current, type):
-            # Callable class instances. Push the subclass before the inherited
-            # __call__ so the subclass is visited last and wins.
+        # Partial instances are routines, but an overridden __call__ is still
+        # the body Streamlit invokes. Other routines are functions or methods.
+        if isinstance(current, functools.partial) or (
+            not inspect.isroutine(current) and not isinstance(current, type)
+        ):
+            # Push the base __call__ first and the subclass after it so the
+            # subclass is visited next and can win over the inherited method.
             owner = type(current)
-            if "__call__" not in owner.__dict__:
+            call = owner.__call__
+            if id(call) not in seen:
+                stack.append(call)
+            if "__call__" not in owner.__dict__ and id(owner) not in seen:
                 stack.append(owner)
-            stack.append(owner.__call__)
+        if wrapped is not None and id(wrapped) not in seen:
+            stack.append(wrapped)
     return candidates
+
+
+def _candidate_source_file(candidate: Any) -> Path | None:
+    """Return ``candidate``'s source file when it exists on disk."""
+    try:
+        source_file = inspect.getsourcefile(candidate) or inspect.getfile(candidate)
+    except (OSError, TypeError):
+        return None
+    if not source_file:
+        return None
+    candidate_path = Path(source_file).resolve()
+    if candidate_path.is_file():
+        return candidate_path
+    return None
 
 
 def _is_installed_package_path(path: Path) -> bool:
@@ -254,6 +340,8 @@ def _is_installed_package_path(path: Path) -> bool:
         if user_site:
             roots.append(Path(user_site))
     except (AttributeError, OSError, TypeError):
+        # Fall back to conventional package-directory names when interpreter
+        # roots are unavailable.
         pass
     try:
         for key in ("purelib", "platlib"):
@@ -261,6 +349,8 @@ def _is_installed_package_path(path: Path) -> bool:
             if value:
                 roots.append(Path(value))
     except (KeyError, OSError, TypeError):
+        # Fall back to conventional package-directory names when interpreter
+        # roots are unavailable.
         pass
 
     resolved = path.resolve()
@@ -274,28 +364,29 @@ def _is_installed_package_path(path: Path) -> bool:
 def _resolve_callable_source_path(obj: Any) -> Path:
     """Resolve the filesystem source path for a callable entrypoint.
 
-    Candidates are walked from the outer object inward. The innermost
-    existing source file wins, so a decorated function defined in the app
-    module is not anchored to the decorator's module. A file outside
-    installed-package directories wins over one inside them, so a wrapper
-    around a library callable stays anchored at the wrapper.
+    The outermost source file outside an installed package wins, so a wrapper
+    around an in-repo or editable library stays on the wrapper. Nested
+    decorator wrappers (``<locals>``) are skipped, so a decorator defined in
+    another module does not hide the app callable. When every file is inside
+    an installed package, the innermost library file is used.
     """
-    script_path: Path | None = None
-    outside_install: Path | None = None
+    fallback: Path | None = None
+    decorator_local: Path | None = None
+    chosen: Path | None = None
     for candidate in _callable_source_candidates(obj):
-        try:
-            source_file = inspect.getsourcefile(candidate) or inspect.getfile(candidate)
-        except (OSError, TypeError):
+        candidate_path = _candidate_source_file(candidate)
+        if candidate_path is None:
             continue
-        candidate_path = Path(source_file).resolve()
-        if candidate_path.is_file():
-            script_path = candidate_path
-            if not _is_installed_package_path(candidate_path):
-                outside_install = candidate_path
+        fallback = candidate_path
+        if _is_installed_package_path(candidate_path):
+            continue
+        if _is_decorator_local(candidate):
+            decorator_local = candidate_path
+            continue
+        chosen = candidate_path
+        break
 
-    if outside_install is not None:
-        script_path = outside_install
-
+    script_path = chosen or decorator_local or fallback
     if script_path is None:
         raise StreamlitAPIException(
             "The st.App callable entrypoint must be defined in a "
@@ -479,27 +570,20 @@ class App:
         - Path: absolute or relative. Relative paths resolve against the main
           script when started via ``streamlit run``, otherwise against the
           current working directory.
-        - Callable:
+        - Callable: A zero-argument synchronous callable defined in a
+          filesystem-backed Python source file. Streamlit calls it on every
+          full rerun. Locals are fresh each run, and module globals are shared
+          across reruns and sessions. Use ``st.session_state`` for per-session
+          values. Restart the process after editing the callable.
 
-          - Invoked once per full rerun, and again by the script health check
-            when that check is enabled. Locals are fresh each run; closures
-            and module globals are shared across reruns, sessions, and health
-            checks. Use ``st.session_state`` for per-session values.
-          - The callable's source file is used for ``static/`` file serving
-            and source watching. Saving that file can rerun the original
-            object until the process restarts.
-          - Script-level ``config.toml`` and ``secrets.toml`` come from the
-            launched file under ``streamlit run`` and ``App.run()``. They
-            come from the callable source only when no launched file is set,
-            such as under uvicorn.
-          - Streamlit retains the callable object for the lifetime of the
-            ``App``; restart the process after changing its definition.
-            ``python app.py`` defines that callable as ``__main__``, while
-            ``streamlit run`` and uvicorn import a named module. Cache keys
-            include that module name.
-          - Callable execution takes precedence over a legacy ``pages/``
-            directory. Use ``st.navigation`` for multipage callable apps.
-            Create ``st.Page`` objects inside the entrypoint, not at import.
+          .. note::
+              ``static/`` files and source watching use the callable's source
+              file. Script-level ``config.toml`` and ``secrets.toml`` come
+              from the launched file under ``streamlit run`` and ``App.run()``,
+              and from the callable source only when no launched file is set,
+              such as under uvicorn. Callable execution takes precedence over
+              a legacy ``pages/`` directory. Use ``st.navigation``, and create
+              ``st.Page`` objects inside the entrypoint rather than at import.
     secrets : Mapping[str, SecretsValue] | None
         A dictionary of secrets to make available via ``st.secrets``. Supported
         value types are: ``str``, ``int``, ``float``, ``bool``, ``list``, and nested

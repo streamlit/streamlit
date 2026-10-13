@@ -73,7 +73,8 @@ Executes user scripts in isolated thread.
 
 `ScriptData` / `RuntimeConfig` carry `main_script_path` and an optional
 `script_entrypoint` callable. For a callable entrypoint, `main_script_path` is
-the callable source file: it is used for static files, source watching, and
+the callable's own source file (not a decorator module, and not a library the
+callable wraps): it is used for static files, source watching, and
 `sys.path` during runs. Script-level config and secrets come from the launched
 file under `streamlit run` and `App.run()`, and from the callable source only
 when no launched file is set (uvicorn). When `script_entrypoint` is set (via

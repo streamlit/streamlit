@@ -150,14 +150,19 @@ app = st.App(main)
   process after changing its definition. A save-triggered rerun still executes that
   retained object until the process restarts.
 - The callable must be defined in a filesystem-backed Python source file. That file
-  is used for `static/` serving and source watching.
+  is used for `static/` serving and source watching. A decorator defined in another
+  module does not replace it, and a wrapper around another function stays on the
+  wrapper. If the only source file is inside an installed package, that library
+  file is used.
 - Script-level `config.toml` and `secrets.toml` follow the launched file under
   `streamlit run` and `App.run()`. They follow the callable source only when no
   launched file is set, such as under uvicorn.
 - Async functions, generator functions, and callables that require arguments are
   rejected.
 - Callable execution takes precedence over a legacy `pages/` directory. Use
-  `st.navigation` for multipage callable apps.
+  `st.navigation` for multipage callable apps. Create `st.Page` objects inside
+  the entrypoint. `st.navigation`, `st.switch_page`, `st.page_link`, and
+  `Page.run()` reject a page created at import time.
 
 Direct launch with `python app.py` is specified in
 [`App.run()`](../2026-06-14-app-run-method/product-spec.md). `st.App(__file__)` is not
