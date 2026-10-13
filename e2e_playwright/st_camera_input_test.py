@@ -115,9 +115,9 @@ def test_take_photo_button_styling(app: Page):
     # state between sequential expect() calls when the webcam layout reflows.
     take_photo_button.scroll_into_view_if_needed()
     take_photo_button.hover()
-    expect(take_photo_button).to_have_css("color", "rgb(255, 75, 75)")
+    expect(take_photo_button).to_have_css("color", "rgb(197, 57, 72)")
     take_photo_button.hover()
-    expect(take_photo_button).to_have_css("border-color", "rgb(255, 75, 75)")
+    expect(take_photo_button).to_have_css("border-color", "rgb(197, 57, 72)")
     take_photo_button.hover()
     expect(take_photo_button).to_have_css("background-color", "rgb(255, 255, 255)")
 
@@ -131,8 +131,8 @@ def test_take_photo_button_styling(app: Page):
 
     # Check that the button is styled correctly when hovered over
     take_photo_button.hover()
-    expect(take_photo_button).to_have_css("color", "rgba(49, 51, 63, 0.4)")
-    expect(take_photo_button).to_have_css("border-color", "rgba(49, 51, 63, 0.2)")
+    expect(take_photo_button).to_have_css("color", "rgba(47, 45, 43, 0.4)")
+    expect(take_photo_button).to_have_css("border-color", "rgba(47, 45, 43, 0.2)")
     expect(take_photo_button).to_have_css("background-color", "rgb(255, 255, 255)")
 
 

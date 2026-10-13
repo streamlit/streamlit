@@ -19,7 +19,6 @@ import { screen } from "@testing-library/react"
 import {
   createSidebarTheme,
   createTheme,
-  emotionLightTheme,
   mockEndpoints,
   mockTheme,
   type ThemeConfig,
@@ -55,11 +54,11 @@ describe("ThemedSidebar Component", () => {
     expect(screen.getByTestId("stSidebar")).toBeInTheDocument()
   })
 
-  it("should switch bgColor and secondaryBgColor", () => {
+  it("uses the stock light sidebar background color", () => {
     renderThemedSidebar()
 
     expect(screen.getByTestId("stSidebar")).toHaveStyle({
-      backgroundColor: emotionLightTheme.colors.secondaryBg,
+      backgroundColor: "#F8F8F7",
     })
   })
 
@@ -205,7 +204,7 @@ describe("createSidebarTheme", () => {
     expect(sidebarTheme.themeInput?.backgroundColor).toBe("#FF0000")
   })
 
-  it("uses secondary background color as fallback when no sidebar background specified", () => {
+  it("uses stock sidebar surfaces when no sidebar background is specified", () => {
     const theme = createMockTheme({
       emotion: {
         colors: {
@@ -215,10 +214,11 @@ describe("createSidebarTheme", () => {
       },
     })
     const sidebarTheme = createSidebarTheme(theme)
-    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#CCCCCC")
+    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#F8F8F7")
+    expect(sidebarTheme.themeInput?.secondaryBackgroundColor).toBe("#F8F8F7")
   })
 
-  it("uses secondary background color as fallback when sidebar background is empty string", () => {
+  it("uses stock sidebar surfaces when sidebar background is an empty string", () => {
     const theme = createMockTheme({
       themeInput: {
         sidebar: {
@@ -233,7 +233,22 @@ describe("createSidebarTheme", () => {
       },
     })
     const sidebarTheme = createSidebarTheme(theme)
-    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#CCCCCC")
+    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#F8F8F7")
+    expect(sidebarTheme.themeInput?.secondaryBackgroundColor).toBe("#F8F8F7")
+  })
+
+  it("uses stock dark sidebar surfaces for dark main themes", () => {
+    const theme = createMockTheme({
+      emotion: {
+        colors: {
+          secondaryBg: "#000000",
+          bgColor: "#1A1A1A",
+        },
+      },
+    })
+    const sidebarTheme = createSidebarTheme(theme)
+    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#21201D")
+    expect(sidebarTheme.themeInput?.secondaryBackgroundColor).toBe("#2D2B27")
   })
 
   it("applies sidebar-specific overrides", () => {

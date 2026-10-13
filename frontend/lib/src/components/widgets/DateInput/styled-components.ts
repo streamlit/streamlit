@@ -247,9 +247,8 @@ export const StyledVisuallyHidden = styled.span(visuallyHiddenStyle)
 // ---------------------------------------------------------------------------
 
 export const StyledCalendarPopover = styled.div(({ theme }) => {
-  // In the sidebar, bgColor and secondaryBg are swapped (bgColor = sidebar
-  // background, secondaryBg = main panel white). Overlays should always use the
-  // "main panel" white regardless of which container triggered them.
+  // In the sidebar, secondaryBg is the widget/surface color. Overlays opened
+  // from the sidebar should use that surface rather than the sidebar page bg.
   const overlayBg = theme.inSidebar
     ? theme.colors.secondaryBg
     : theme.colors.bgColor

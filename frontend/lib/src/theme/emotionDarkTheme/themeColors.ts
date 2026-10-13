@@ -18,11 +18,12 @@ import { colors } from "~lib/theme/primitives/colors"
 
 export default {
   ...colors,
-  bgColor: colors.gray100,
-  bodyText: colors.gray10,
+  // Page surface defaults from the design spec (not the primitives scale).
+  bgColor: "#171614",
+  bodyText: "#EDEBE8",
 
-  primary: colors.red70,
-  secondaryBg: colors.gray90,
+  primary: "#CF4250",
+  secondaryBg: "#2D2B27",
 
   // Solid design defaults. Dark text matches the main color for every hue
   // except gray.

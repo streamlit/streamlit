@@ -49,6 +49,7 @@ import {
   removeCachedTheme,
   setCachedThemeSelection,
   sortThemeInputKeys,
+  stockSidebarSurfaces,
   toThemeInput,
 } from "~lib/theme/utils"
 import { LocalStore } from "~lib/util/storageUtils"
@@ -385,6 +386,22 @@ describe("Cached theme helpers", () => {
 
       expect(result).toBe(null)
     })
+  })
+})
+
+describe("stock theme surfaces", () => {
+  it("uses stock light main surface colors", () => {
+    expect(lightTheme.emotion.colors.bgColor).toBe("#FFFFFF")
+    expect(lightTheme.emotion.colors.secondaryBg).toBe("#F8F8F7")
+    expect(lightTheme.emotion.colors.bodyText).toBe("#2F2D2B")
+    expect(lightTheme.emotion.colors.primary).toBe("#C53948")
+  })
+
+  it("uses stock dark main surface colors", () => {
+    expect(darkTheme.emotion.colors.bgColor).toBe("#171614")
+    expect(darkTheme.emotion.colors.secondaryBg).toBe("#2D2B27")
+    expect(darkTheme.emotion.colors.bodyText).toBe("#EDEBE8")
+    expect(darkTheme.emotion.colors.primary).toBe("#CF4250")
   })
 })
 
@@ -4759,19 +4776,33 @@ describe("Custom theme creation", () => {
 
 describe("Sidebar theme creation", () => {
   describe("createSidebarTheme", () => {
-    it("creates sidebar theme with swapped background colors by default", () => {
+    it("uses stock sidebar surface colors when sidebar backgrounds are unset", () => {
       const mainTheme = createTheme(CUSTOM_THEME_NAME, {
         backgroundColor: "white",
         secondaryBackgroundColor: "lightgray",
       })
 
       const sidebarTheme = createSidebarTheme(mainTheme)
+      const stockLight =
+        stockSidebarSurfaces[CustomThemeConfig.BaseTheme.LIGHT]
 
-      // Sidebar background should be main theme's secondary background
-      expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
-      // Sidebar secondary background should be main theme's background
-      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
+      expect(sidebarTheme.emotion.colors.bgColor).toBe(
+        stockLight.backgroundColor
+      )
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe(
+        stockLight.secondaryBackgroundColor
+      )
       expect(sidebarTheme.emotion.inSidebar).toBe(true)
+    })
+
+    it("uses stock sidebar surfaces for preset light and dark themes", () => {
+      const lightSidebarTheme = createSidebarTheme(lightTheme)
+      const darkSidebarTheme = createSidebarTheme(darkTheme)
+
+      expect(lightSidebarTheme.emotion.colors.bgColor).toBe("#F8F8F7")
+      expect(lightSidebarTheme.emotion.colors.secondaryBg).toBe("#F8F8F7")
+      expect(darkSidebarTheme.emotion.colors.bgColor).toBe("#21201D")
+      expect(darkSidebarTheme.emotion.colors.secondaryBg).toBe("#2D2B27")
     })
 
     it("uses configured sidebar backgroundColor when provided", () => {
@@ -4787,8 +4818,8 @@ describe("Sidebar theme creation", () => {
 
       // Should use configured sidebar background
       expect(sidebarTheme.emotion.colors.bgColor).toBe("darkblue")
-      // Secondary should still swap to main background
-      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
+      // Unset sidebar secondary uses stock light sidebar surface
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("#F8F8F7")
     })
 
     it("treats a blank sidebar backgroundColor as unset", () => {
@@ -4802,8 +4833,8 @@ describe("Sidebar theme creation", () => {
 
       const sidebarTheme = createSidebarTheme(mainTheme)
 
-      expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
-      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("#F8F8F7")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("#F8F8F7")
     })
 
     it("uses configured sidebar secondaryBackgroundColor when provided", () => {
@@ -4817,8 +4848,8 @@ describe("Sidebar theme creation", () => {
 
       const sidebarTheme = createSidebarTheme(mainTheme)
 
-      // Background should still swap to main secondary
-      expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
+      // Unset sidebar background uses stock light sidebar surface
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("#F8F8F7")
       // Should use configured sidebar secondary background
       expect(sidebarTheme.emotion.colors.secondaryBg).toBe("blue")
     })
@@ -4834,8 +4865,8 @@ describe("Sidebar theme creation", () => {
 
       const sidebarTheme = createSidebarTheme(mainTheme)
 
-      expect(sidebarTheme.emotion.colors.bgColor).toBe("lightgray")
-      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white")
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("#F8F8F7")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("#F8F8F7")
     })
 
     it("applies sidebar theme overrides", () => {
@@ -4981,7 +5012,8 @@ describe("Sidebar theme creation", () => {
       expect(sidebarTheme.emotion.colors.primary).toBe("blue")
       expect(sidebarTheme.emotion.colors.bgColor).toBe("darkblue")
       expect(sidebarTheme.emotion.colors.bodyText).toBe("white")
-      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("white") // Swapped from main bg
+      // Unset sidebar secondary uses stock light sidebar surface
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("#F8F8F7")
       expect(sidebarTheme.emotion.fontSizes.h1FontSize).toBe("1.75rem")
       expect(sidebarTheme.emotion.fontSizes.h2FontSize).toBe("1.5rem")
       // Should inherit main theme font
