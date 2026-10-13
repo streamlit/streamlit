@@ -917,8 +917,7 @@ class DataCache(Cache[R]):
         The value must be pickleable.
         """
         pickled_entry = self._pickle_result(value_key, value, messages)
-        self._maybe_log_memory_pressure(len(pickled_entry))
-        self.storage.set(value_key, pickled_entry)
+        self._write_to_storage(value_key, pickled_entry)
 
     def _pickle_result(
         self, value_key: str, value: R, messages: list[MsgData]
@@ -969,8 +968,7 @@ class DataCache(Cache[R]):
         with self._write_lock:
             if not self._invalidation_token_is_current(value_key, invalidation_token):
                 return False
-            self._maybe_log_memory_pressure(len(pickled_entry))
-            self.storage.set(value_key, pickled_entry)
+            self._write_to_storage(value_key, pickled_entry)
             return True
 
     def write_background_refresh_result(
@@ -1027,15 +1025,22 @@ class DataCache(Cache[R]):
                     return
             except CacheStorageError:
                 return
-            self._maybe_log_memory_pressure(len(pickled_entry))
-            self.storage.set(value_key, pickled_entry)
+            self._write_to_storage(value_key, pickled_entry)
 
-    def _maybe_log_memory_pressure(self, pending_entry_bytes: int) -> None:
-        cache_memory_pressure.maybe_log_cache_memory_pressure(
+    def _write_to_storage(self, value_key: str, pickled_entry: bytes) -> None:
+        reservation = cache_memory_pressure.maybe_log_cache_memory_pressure(
             current_function=self.display_name,
-            pending_entry_bytes=pending_entry_bytes,
+            pending_entry_bytes=len(pickled_entry),
             get_cache_summary=_data_caches.get_memory_pressure_summary,
         )
+        try:
+            self.storage.set(value_key, pickled_entry)
+        except Exception:
+            cache_memory_pressure.record_cache_write_result(
+                reservation, succeeded=False
+            )
+            raise
+        cache_memory_pressure.record_cache_write_result(reservation, succeeded=True)
 
     def _clear(self, key: str | None = None) -> None:
         with self._write_lock:

@@ -79,10 +79,21 @@ class _WarningContext:
     fallback: bool
 
 
+@dataclass(frozen=True)
+class CacheWriteReservation:
+    """A pending cache write tracked against one memory-sample generation."""
+
+    generation: int
+    byte_length: int
+    counted_as_growth: bool
+
+
 @dataclass
 class _DiagnosticState:
     next_probe_at: float = 0.0
     last_sample: MemorySample | None = None
+    sample_generation: int = 0
+    unobserved_growth_bytes: int = 0
     cgroup_warning_active: bool = False
     last_fallback_warning_at: float = float("-inf")
 
@@ -130,18 +141,17 @@ def maybe_log_cache_memory_pressure(
     current_function: str,
     pending_entry_bytes: int,
     get_cache_summary: Callable[[], CacheUsageSummary],
-) -> None:
+) -> CacheWriteReservation | None:
     """Log a warning before a cache write when memory pressure is detected."""
+    reservation: CacheWriteReservation | None = None
     try:
         now = time.monotonic()
-        sample = _get_rate_limited_memory_sample(now)
-        warning_context = _reserve_warning(
-            sample=sample,
+        reservation, warning_context = _prepare_cache_write(
             pending_entry_bytes=pending_entry_bytes,
             now=now,
         )
         if warning_context is None:
-            return
+            return reservation
 
         summary = get_cache_summary()
         _LOGGER.warning(
@@ -155,41 +165,85 @@ def maybe_log_cache_memory_pressure(
         )
     except Exception:
         # Diagnostics must never interfere with a cache write.
+        return reservation
+    return reservation
+
+
+def record_cache_write_result(
+    reservation: CacheWriteReservation | None, *, succeeded: bool
+) -> None:
+    """Finish tracking a reserved cache write without affecting cache behavior."""
+    if reservation is None or succeeded:
+        return
+    try:
+        with _state_lock:
+            if (
+                reservation.counted_as_growth
+                and reservation.generation == _state.sample_generation
+            ):
+                _state.unobserved_growth_bytes = max(
+                    0,
+                    _state.unobserved_growth_bytes - reservation.byte_length,
+                )
+    except Exception:
         return
 
 
-def _get_rate_limited_memory_sample(now: float) -> MemorySample | None:
+def _prepare_cache_write(
+    *, pending_entry_bytes: int, now: float
+) -> tuple[CacheWriteReservation, _WarningContext | None]:
     with _state_lock:
-        if now < _state.next_probe_at:
-            return _state.last_sample
-        _state.next_probe_at = now + _PROBE_INTERVAL_SECONDS
+        sample_was_refreshed = False
+        if now >= _state.next_probe_at:
+            _refresh_memory_sample(now)
+            sample_was_refreshed = True
 
-    sample = _read_memory_sample()
-    with _state_lock:
-        _state.last_sample = sample
-    return sample
+        sample = _state.last_sample
+        if (
+            not sample_was_refreshed
+            and not _state.cgroup_warning_active
+            and sample is not None
+            and sample.limit_bytes is not None
+            and (
+                sample.usage_bytes
+                + _state.unobserved_growth_bytes
+                + pending_entry_bytes
+            )
+            >= sample.limit_bytes * _PRESSURE_RATIO
+        ):
+            _refresh_memory_sample(now)
+            sample_was_refreshed = True
+            sample = _state.last_sample
 
+        counted_as_growth = not sample_was_refreshed
+        reservation = CacheWriteReservation(
+            generation=_state.sample_generation,
+            byte_length=pending_entry_bytes,
+            counted_as_growth=counted_as_growth,
+        )
+        if counted_as_growth:
+            _state.unobserved_growth_bytes += pending_entry_bytes
 
-def _reserve_warning(
-    *,
-    sample: MemorySample | None,
-    pending_entry_bytes: int,
-    now: float,
-) -> _WarningContext | None:
-    with _state_lock:
         if sample is not None and sample.limit_bytes is not None:
-            projected_usage = sample.usage_bytes + pending_entry_bytes
+            projected_usage = sample.usage_bytes + (
+                pending_entry_bytes
+                if sample_was_refreshed
+                else _state.unobserved_growth_bytes
+            )
             pressure_ratio = projected_usage / sample.limit_bytes
             if pressure_ratio <= _RESET_RATIO:
                 _state.cgroup_warning_active = False
             if pressure_ratio >= _PRESSURE_RATIO and not _state.cgroup_warning_active:
                 _state.cgroup_warning_active = True
-                return _WarningContext(
-                    sample=sample,
-                    projected_usage_bytes=projected_usage,
-                    fallback=False,
+                return (
+                    reservation,
+                    _WarningContext(
+                        sample=sample,
+                        projected_usage_bytes=projected_usage,
+                        fallback=False,
+                    ),
                 )
-            return None
+            return reservation, None
 
         if (
             pending_entry_bytes >= _LARGE_ENTRY_BYTES
@@ -197,12 +251,22 @@ def _reserve_warning(
             >= _FALLBACK_WARNING_INTERVAL_SECONDS
         ):
             _state.last_fallback_warning_at = now
-            return _WarningContext(
-                sample=sample,
-                projected_usage_bytes=None,
-                fallback=True,
+            return (
+                reservation,
+                _WarningContext(
+                    sample=sample,
+                    projected_usage_bytes=None,
+                    fallback=True,
+                ),
             )
-        return None
+        return reservation, None
+
+
+def _refresh_memory_sample(now: float) -> None:
+    _state.last_sample = _read_memory_sample()
+    _state.sample_generation += 1
+    _state.unobserved_growth_bytes = 0
+    _state.next_probe_at = now + _PROBE_INTERVAL_SECONDS
 
 
 def _read_memory_sample() -> MemorySample | None:
@@ -434,5 +498,7 @@ def _reset_state_for_testing() -> None:
     with _state_lock:
         _state.next_probe_at = 0.0
         _state.last_sample = None
+        _state.sample_generation = 0
+        _state.unobserved_growth_bytes = 0
         _state.cgroup_warning_active = False
         _state.last_fallback_warning_at = float("-inf")

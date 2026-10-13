@@ -167,12 +167,94 @@ def test_pending_entry_crosses_pressure_threshold(
 def test_probe_is_rate_limited(monkeypatch: pytest.MonkeyPatch) -> None:
     probe = Mock(return_value=cache_memory_pressure.MemorySample(1, 100, "test memory"))
     monkeypatch.setattr(cache_memory_pressure, "_read_memory_sample", probe)
+    monkeypatch.setattr(
+        cache_memory_pressure.time,
+        "monotonic",
+        Mock(side_effect=[0, 1, 5]),
+    )
 
-    cache_memory_pressure._get_rate_limited_memory_sample(0)
-    cache_memory_pressure._get_rate_limited_memory_sample(1)
-    cache_memory_pressure._get_rate_limited_memory_sample(5)
+    for _ in range(3):
+        reservation = cache_memory_pressure.maybe_log_cache_memory_pressure(
+            current_function="function",
+            pending_entry_bytes=0,
+            get_cache_summary=_summary,
+        )
+        cache_memory_pressure.record_cache_write_result(reservation, succeeded=True)
 
     assert probe.call_count == 2
+
+
+def test_cumulative_writes_force_probe_before_interval_expires(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    logger = Mock()
+    probe = Mock(
+        side_effect=[
+            cache_memory_pressure.MemorySample(40, 100, "test memory"),
+            cache_memory_pressure.MemorySample(76, 100, "test memory"),
+        ]
+    )
+    monkeypatch.setattr(cache_memory_pressure, "_LOGGER", logger)
+    monkeypatch.setattr(cache_memory_pressure, "_read_memory_sample", probe)
+    monkeypatch.setattr(
+        cache_memory_pressure.time,
+        "monotonic",
+        Mock(side_effect=[0, 1, 2, 3]),
+    )
+
+    for _ in range(4):
+        reservation = cache_memory_pressure.maybe_log_cache_memory_pressure(
+            current_function="function",
+            pending_entry_bytes=15,
+            get_cache_summary=_summary,
+        )
+        cache_memory_pressure.record_cache_write_result(reservation, succeeded=True)
+
+    assert probe.call_count == 2
+    logger.warning.assert_called_once()
+    assert "76.0 B of 100.0 B" in logger.warning.call_args.args[1]
+    assert "91.0 B (91.0%)" in logger.warning.call_args.args[1]
+
+
+def test_write_growth_is_counted_once_and_failed_write_is_removed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        cache_memory_pressure,
+        "_read_memory_sample",
+        lambda: cache_memory_pressure.MemorySample(20, 100, "test memory"),
+    )
+    monkeypatch.setattr(
+        cache_memory_pressure.time,
+        "monotonic",
+        Mock(side_effect=[0, 1, 2]),
+    )
+
+    sampled_reservation = cache_memory_pressure.maybe_log_cache_memory_pressure(
+        current_function="function",
+        pending_entry_bytes=10,
+        get_cache_summary=_summary,
+    )
+    cache_memory_pressure.record_cache_write_result(sampled_reservation, succeeded=True)
+    counted_reservation = cache_memory_pressure.maybe_log_cache_memory_pressure(
+        current_function="function",
+        pending_entry_bytes=10,
+        get_cache_summary=_summary,
+    )
+    cache_memory_pressure.record_cache_write_result(counted_reservation, succeeded=True)
+
+    assert cache_memory_pressure._state.unobserved_growth_bytes == 10
+
+    failed_reservation = cache_memory_pressure.maybe_log_cache_memory_pressure(
+        current_function="function",
+        pending_entry_bytes=15,
+        get_cache_summary=_summary,
+    )
+    assert cache_memory_pressure._state.unobserved_growth_bytes == 25
+
+    cache_memory_pressure.record_cache_write_result(failed_reservation, succeeded=False)
+
+    assert cache_memory_pressure._state.unobserved_growth_bytes == 10
 
 
 def test_warning_uses_hysteresis(
@@ -279,6 +361,47 @@ def test_concurrent_writes_emit_one_warning(
     with ThreadPoolExecutor(max_workers=8) as executor:
         list(executor.map(lambda _index: warn(), range(8)))
 
+    logger.warning.assert_called_once()
+
+
+def test_concurrent_cumulative_writes_force_one_probe_and_warning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    logger = Mock()
+    probe = Mock(
+        side_effect=[
+            cache_memory_pressure.MemorySample(10, 100, "test memory"),
+            cache_memory_pressure.MemorySample(75, 100, "test memory"),
+        ]
+    )
+    monkeypatch.setattr(cache_memory_pressure, "_LOGGER", logger)
+    monkeypatch.setattr(cache_memory_pressure, "_read_memory_sample", probe)
+    monkeypatch.setattr(cache_memory_pressure.time, "monotonic", lambda: 1)
+
+    initial_reservation = cache_memory_pressure.maybe_log_cache_memory_pressure(
+        current_function="function",
+        pending_entry_bytes=0,
+        get_cache_summary=_summary,
+    )
+    cache_memory_pressure.record_cache_write_result(initial_reservation, succeeded=True)
+
+    start_barrier = threading.Barrier(8)
+    reserved_barrier = threading.Barrier(8)
+
+    def reserve_write() -> None:
+        start_barrier.wait()
+        reservation = cache_memory_pressure.maybe_log_cache_memory_pressure(
+            current_function="function",
+            pending_entry_bytes=10,
+            get_cache_summary=_summary,
+        )
+        reserved_barrier.wait()
+        cache_memory_pressure.record_cache_write_result(reservation, succeeded=True)
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        list(executor.map(lambda _index: reserve_write(), range(8)))
+
+    assert probe.call_count == 2
     logger.warning.assert_called_once()
 
 
