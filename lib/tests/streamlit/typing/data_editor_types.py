@@ -113,6 +113,12 @@ if TYPE_CHECKING:
         pd.DataFrame,
     )
 
+    # on_change modes all return a DataFrame.
+    assert_type(data_editor(df, on_change=None), pd.DataFrame)
+    assert_type(data_editor(df, on_change="rerun"), pd.DataFrame)
+    assert_type(data_editor(df, on_change="ignore"), pd.DataFrame)
+    assert_type(data_editor(df, on_change=lambda: None), pd.DataFrame)
+
     # Return type preserved with optional parameters for non-DataFrame types
     assert_type(data_editor(list_data, num_rows="dynamic"), list[dict[str, int]])
     assert_type(data_editor(dict_data, disabled=True), dict[str, list[str]])

@@ -85,6 +85,12 @@ text_utf2 = "complete2! 👨‍🎤"
 text_no_encoding = text_utf
 text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
 
+# Cache-waiter tests disable runner.postScriptGC because its gc.collect(2)
+# runs on the script thread after every execution (including between reruns)
+# and can outlast these tests' waits under coverage. This timeout is only
+# slack for a busy runner.
+_CACHE_WAITER_THREAD_TIMEOUT_SECS = 5
+
 
 def _create_widget(id: str, states: WidgetStates) -> WidgetState:
     """
@@ -1853,10 +1859,11 @@ class ScriptRunnerTest(unittest.TestCase):
         except BaseException:
             release_compute.set()
             if owner._script_thread is not None:
-                owner._script_thread.join(timeout=1)
+                owner._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
             raise
         return owner, waiter, release_compute, waiter_call_started
 
+    @testutil.patch_config_options({"runner.postScriptGC": False})
     def test_stop_ends_cache_waiter_while_owner_keeps_computing(self):
         """Stopping a cache waiter does not interrupt the compute owner."""
         owner, waiter, release_compute, waiter_call_started = (
@@ -1869,21 +1876,22 @@ class ScriptRunnerTest(unittest.TestCase):
 
             waiter.request_stop()
             assert waiter._script_thread is not None
-            waiter._script_thread.join(timeout=1)
+            waiter._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
             assert not waiter._script_thread.is_alive()
             assert not release_compute.is_set()
         finally:
             release_compute.set()
             if owner._script_thread is not None:
-                owner._script_thread.join(timeout=1)
+                owner._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
             if waiter._script_thread is not None:
-                waiter._script_thread.join(timeout=1)
+                waiter._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
 
         assert owner._script_thread is not None
         assert not owner._script_thread.is_alive()
         self._assert_no_exceptions(owner)
         self._assert_no_exceptions(waiter)
 
+    @testutil.patch_config_options({"runner.postScriptGC": False})
     def test_rerun_restarts_cache_waiter_before_owner_finishes(self):
         """A slow rerun restarts a cache waiter before the owner finishes."""
         owner, waiter, release_compute, waiter_call_started = (
@@ -1903,9 +1911,9 @@ class ScriptRunnerTest(unittest.TestCase):
         finally:
             release_compute.set()
             if owner._script_thread is not None:
-                owner._script_thread.join(timeout=1)
+                owner._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
             if waiter._script_thread is not None:
-                waiter._script_thread.join(timeout=1)
+                waiter._script_thread.join(timeout=_CACHE_WAITER_THREAD_TIMEOUT_SECS)
 
         assert owner._script_thread is not None
         assert waiter._script_thread is not None

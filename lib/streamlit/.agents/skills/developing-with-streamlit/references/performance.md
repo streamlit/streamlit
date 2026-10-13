@@ -294,25 +294,29 @@ with st.form("invite", border=False):
 - Text inputs where typing triggers expensive operations
 - Any UI where "submit" semantics make sense
 
-**When NOT to use forms:** If inputs depend on each other (e.g., selecting a country should update available cities), forms won't work since there's no rerun until submit.
+**When NOT to use forms:** If inputs depend on each other (e.g., selecting a country should update available cities), forms won't work since there's no rerun until submit. See [Skip reruns on individual widgets](#skip-reruns-on-individual-widgets-advanced) for an alternative.
 
-## Skip reruns on individual widgets
+## Skip reruns on individual widgets (advanced)
 
-Some input widgets accept `on_change="ignore"` instead of a callback or `"rerun"`. The widget still updates in the UI, but Streamlit does not rerun the script. Python sees the new value only on the next rerun triggered by something else (a button, another widget, and so on).
+With `on_change="ignore"`, most stateful input widgets update in the browser without a rerun. Python receives the new value on the next browser-triggered rerun, such as a button click.
+
+Use it to build dynamic forms that `st.form` can't express: defer inputs that don't change other fields, and let the ones that do rerun normally.
 
 ```python
-threshold = st.slider("Threshold", 0.0, 1.0, 0.5, on_change="ignore")
-if st.button("Apply"):
-    run_model(threshold)
+country = st.selectbox("Country", countries)  # Reruns to refresh the city options
+city = st.selectbox("City", get_cities(country), on_change="ignore")
+name = st.text_input("Name", on_change="ignore")
+
+if st.button("Save"):
+    save_contact(country, city, name)
 ```
 
-Use this when a single control should not rerun the app until the user applies it. Use a form when several related inputs should commit together.
+Prefer caching, fragments, and forms first, and only use this where the user doesn't expect an immediate reaction:
 
-Caveats for `on_change="ignore"`:
-
-- The browser holds the pending value until the next rerun. A page refresh before then loses it, unless the widget also sets `bind="query-params"`.
-- Inside `st.form`, `on_change="ignore"` has no effect; the form already defers commits until submit.
-- `st.file_uploader`, `st.camera_input`, and `st.audio_input` still upload the file, photo, or recording immediately; only the rerun is deferred.
+- Don't use it on widgets that drive other UI (options, conditional fields, charts). Nothing else reacts, so the app looks broken.
+- Any browser-triggered rerun, even from an unrelated widget, delivers all pending values. Gate the work that uses them behind a button.
+- Pending values are lost on a page refresh unless the widget sets `key` and `bind="query-params"`.
+- It has no effect inside `st.form`. File, camera, and audio inputs still upload immediately; only the rerun is deferred.
 
 ## Client-side validation
 

@@ -239,10 +239,6 @@ const RawElementNodeRenderer = (
   const { node, isStale } = props
   const { isInRoot, isInHorizontalLayout } = useRequiredContext(FlexContext)
 
-  if (!node) {
-    throw new Error("ElementNode not found.")
-  }
-
   const elementProps = {
     disableFullscreenMode: props.disableFullscreenMode,
     widthConfig: node.element.widthConfig,

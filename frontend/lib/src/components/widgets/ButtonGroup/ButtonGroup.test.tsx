@@ -1295,6 +1295,17 @@ describe("on_change='ignore' mode", () => {
       buttonIndex: 1,
       expected: ["apple"],
     },
+    {
+      label: "selecting a segmented control option",
+      elementProps: {
+        style: ButtonGroupProto.Style.SEGMENTED_CONTROL,
+        clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+        default: [],
+        ignoreRerun: true,
+      },
+      buttonIndex: 0,
+      expected: ["apple"],
+    },
   ])(
     "passes triggerRerun: false when $label",
     async ({ elementProps, buttonIndex, expected }) => {
