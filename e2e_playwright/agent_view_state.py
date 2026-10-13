@@ -70,6 +70,8 @@ view = {
     "ref": st.query_params.get("ref"),
 }
 st.text("VIEW " + json.dumps(view, sort_keys=True))
+# App HTML that reuses the document's ID, which must not shadow it.
+st.html('<div id="streamlit-agent-view-state">{"version": 1}</div>')
 
 
 @st.fragment

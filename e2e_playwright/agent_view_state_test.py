@@ -58,6 +58,17 @@ def _scrape_state(app: Page) -> dict[str, Any]:
     return state
 
 
+def _call_state_function(app: Page, max_length: int | None = None) -> str:
+    """Read the state the way an in-page bridge would, through its function."""
+    raw = app.evaluate(
+        "maxLength => window.streamlitAgentViewState("
+        "maxLength === null ? undefined : { maxLength })",
+        max_length,
+    )
+    assert isinstance(raw, str)
+    return raw
+
+
 def _browser_text(app: Page, prefix: str) -> str:
     text = app.get_by_test_id("stText").filter(has_text=prefix).text_content()
     assert text is not None
@@ -81,6 +92,39 @@ def _snapshot_text(snapshot: Any, prefix: str) -> str | None:
     return None
 
 
+def _find_node(snapshot: Any, key: str) -> dict[str, Any] | None:
+    """Find the snapshot node with the given key."""
+    if isinstance(snapshot, dict):
+        if snapshot.get("key") == key:
+            return snapshot
+        children: Any = snapshot.values()
+    elif isinstance(snapshot, list):
+        children = snapshot
+    else:
+        return None
+    for child in children:
+        if (found := _find_node(child, key)) is not None:
+            return found
+    return None
+
+
+def _accepts(snapshot: dict[str, Any], key: str, value: Any) -> bool:
+    """Whether the snapshot offers `key`, and `value` among its options."""
+    settable = {
+        action["key"]
+        for action in snapshot.get("actions", [])
+        if action.get("kind") == "value"
+    }
+    if key not in settable:
+        return False
+    props = (_find_node(snapshot, key) or {}).get("props") or {}
+    options = props.get("options")
+    if not isinstance(options, list) or props.get("accept_new_options"):
+        return True
+    items = value if isinstance(value, list) else [value]
+    return all(item is None or str(item) in options for item in items)
+
+
 class _AgentClient:
     """The agent's side: its own session, driven through the agent API."""
 
@@ -89,6 +133,8 @@ class _AgentClient:
         self._url = build_app_url(app_base_url, path="/_stcore/agent/v1/interact")
         self.session_id: str | None = None
         self.requests_sent = 0
+        # Values the session never offered, or refused on their own.
+        self.unapplied: dict[str, Any] = {}
 
     def interact(self, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         if self.session_id is not None:
@@ -103,45 +149,42 @@ class _AgentClient:
     def apply(self, state: dict[str, Any]) -> dict[str, Any]:
         """Reproduce a scraped view: navigate, set values, then submit forms.
 
-        `widget_state` goes in one request when the values are independent.
-        The agent API validates a request against the options the session
-        currently offers, so a value whose options depend on another value in
-        the same request is refused, and nothing is applied. The fallback sends
-        the values one at a time in the order given, retrying any that are not
-        valid yet once the others have landed.
+        The agent API checks a request against the options its session offers
+        now and refuses it whole, so a value whose options depend on another
+        value cannot share its request. Each request therefore holds every
+        value the latest snapshot accepts: one request per level of
+        dependency, rather than one per value. A request refused anyway is
+        retried one value at a time, so one bad value cannot hold back the
+        rest.
         """
         status, snapshot = self.interact(
             {"page": state["page"], "query_params": state["query_params"]}
         )
         assert status == 200, snapshot
 
-        if state["widget_state"]:
-            status, result = self.interact({"widget_state": state["widget_state"]})
+        pending = dict(state["widget_state"])
+        while ready := {
+            key: value
+            for key, value in pending.items()
+            if _accepts(snapshot, key, value)
+        }:
+            for key in ready:
+                del pending[key]
+            status, result = self.interact({"widget_state": ready})
             if status == 200:
                 snapshot = result
-            else:
-                snapshot = self._apply_one_at_a_time(state["widget_state"])
+                continue
+            for key, value in ready.items():
+                status, result = self.interact({"widget_state": {key: value}})
+                if status == 200:
+                    snapshot = result
+                else:
+                    self.unapplied[key] = result
+        self.unapplied.update(pending)
 
         for form in state["forms"]:
             status, snapshot = self.interact(form)
             assert status == 200, snapshot
-        return snapshot
-
-    def _apply_one_at_a_time(self, widget_state: dict[str, Any]) -> dict[str, Any]:
-        pending = dict(widget_state)
-        snapshot: dict[str, Any] = {}
-        last_refusal: dict[str, Any] = {}
-        while pending:
-            applied = False
-            for key, value in list(pending.items()):
-                status, result = self.interact({"widget_state": {key: value}})
-                if status == 200:
-                    snapshot = result
-                    del pending[key]
-                    applied = True
-                else:
-                    last_refusal = result
-            assert applied, f"Could not apply {pending}: {last_refusal}"
         return snapshot
 
 
@@ -200,11 +243,28 @@ def test_agent_reproduces_view_with_dependent_filters(
     assert len(state["forms"]) == 1
     assert state["forms"][0]["trigger"] == {"key": "FormSubmitter:limits-Apply"}
 
+    # The function a bridge calls returns the same document, and keeps a
+    # smaller budget it is given without breaking the JSON.
+    assert json.loads(_call_state_function(app)) == state
+    short = _call_state_function(app, max_length=300)
+    assert len(short) <= 300
+    assert json.loads(short)["complete"] is False
+    # The page's own element with the same ID does not shadow the document.
+    assert app.evaluate(
+        "id => [document.querySelectorAll('#' + id).length,"
+        " document.getElementById(id).tagName]",
+        "streamlit-agent-view-state",
+    ) == [2, "SCRIPT"]
+
     agent = _AgentClient(app.request, app_base_url)
     snapshot = agent.apply(state)
 
     assert _snapshot_text(snapshot, "VIEW ") == browser_view
     assert _snapshot_text(snapshot, "FRAGMENT ") == _browser_text(app, "FRAGMENT ")
+    assert agent.unapplied == {}
+    # Create, then region with the independent values, then country, then the
+    # keyless city whose ID only exists once country is set, then the form.
+    assert agent.requests_sent == 5
 
 
 def test_agent_reproduces_independent_values_in_one_request(
