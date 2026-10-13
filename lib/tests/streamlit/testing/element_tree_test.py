@@ -1784,20 +1784,24 @@ def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
 def test_inspectable_elements_reject_unsupported_interactions() -> None:
     """Inspectable-only nodes reject set_value and click with AppTestError.
 
-    ``st.camera_input`` is an untyped element. Typed ``Markdown`` is covered
+    ``st.plotly_chart`` is an untyped element. Typed ``Markdown`` is covered
     too.
     """
 
     def script():
         import streamlit as st
 
-        st.camera_input("Cam", key="cam")
+        st.plotly_chart(
+            {"data": [{"x": [1], "y": [2], "type": "scatter"}]},
+            key="chart",
+            on_select="rerun",
+        )
         st.markdown("hi")
 
     at = AppTest.from_function(script).run()
-    node = at.get("camera_input")[0]
+    node = at.get("plotly_chart")[0]
     assert isinstance(node, UnknownElement)
-    assert node.key == "cam"
+    assert node.key == "chart"
 
     inspectable_guidance = (
         "AppTest can inspect this element but does not implement "
@@ -1805,15 +1809,15 @@ def test_inspectable_elements_reject_unsupported_interactions() -> None:
         "has a key, or use a Playwright e2e test."
     )
     with pytest.raises(AppTestError) as set_value_info:
-        node.set_value(b"jpg")
+        node.set_value({"selection": {}})
     assert str(set_value_info.value) == (
-        "set_value() is not supported for camera_input (key='cam'). "
+        "set_value() is not supported for plotly_chart (key='chart'). "
         f"{inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as click_info:
         node.click()
     assert str(click_info.value) == (
-        f"click() is not supported for camera_input (key='cam'). {inspectable_guidance}"
+        f"click() is not supported for plotly_chart (key='chart'). {inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as markdown_info:
         at.markdown[0].set_value("nope")
@@ -1959,6 +1963,161 @@ def test_audio_input_form_applies_only_on_submit() -> None:
     at.button[0].click().run()
     assert at.text[0].value == "yes"
     assert at.audio_input[0].value.getvalue() == b"hi"
+
+    at.button[1].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
+
+
+def test_camera_input_captures_one_jpeg() -> None:
+    """``st.camera_input`` accepts one JPEG and keeps it across reruns."""
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("changes", 0)
+
+        def on_change() -> None:
+            st.session_state.changes += 1
+
+        photo = st.camera_input(
+            "Cam", key="cam", resolution="720p", on_change=on_change
+        )
+        st.sidebar.camera_input("Side", key="side")
+        if photo is None:
+            st.text("empty")
+        else:
+            st.text(f"name={photo.name}")
+            st.text(f"type={photo.type}")
+            st.text(f"bytes={photo.getvalue()!r}")
+
+    at = AppTest.from_function(script).run()
+    cam = at.camera_input(key="cam")
+    assert cam.value is None
+    assert cam.label == "Cam"
+    assert cam.resolution == "720p"
+    assert at.sidebar.camera_input(key="side").resolution is None
+    assert at.session_state["cam"] is None
+    assert at.text[0].value == "empty"
+    assert at.get("camera_input")[0] is cam
+
+    at = cam.set_value(("shot.jpg", b"jpeg", "image/jpeg")).run()
+    captured = at.camera_input(key="cam").value
+    assert captured is not None
+    assert captured.name == "shot.jpg"
+    assert captured.type == "image/jpeg"
+    assert captured.getvalue() == b"jpeg"
+    assert at.session_state["cam"].getvalue() == b"jpeg"
+    assert at.session_state["changes"] == 1
+    assert at.text[0].value == "name=shot.jpg"
+    assert at.text[2].value == "bytes=b'jpeg'"
+
+    camera = at.camera_input(key="cam")
+    committed = camera.value
+    assert committed is not None
+    assert committed.getvalue() == b"jpeg"
+    camera.upload("first.jpg", b"one")
+    camera.upload("other.JPG", b"more", mime_type="Image/JPEG")
+    assert camera.value is committed
+    camera.run()
+    assert at.camera_input(key="cam").value.name == "other.JPG"
+    assert at.camera_input(key="cam").value.type == "image/jpeg"
+    assert at.camera_input(key="cam").value.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    at.run()
+    assert at.camera_input(key="cam").value.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    camera = at.camera_input(key="cam")
+    camera_repr = repr(camera)
+    assert camera_repr.startswith("CameraInput(")
+    assert "resolution='720p'" in camera_repr
+    with pytest.raises(
+        AppTestError, match=r"click\(\) is not supported for camera_input \(key='cam'\)"
+    ):
+        camera.click()
+
+    at.camera_input(key="cam").clear().run()
+    assert at.camera_input(key="cam").value is None
+    assert at.session_state["cam"] is None
+    assert at.text[0].value == "empty"
+    assert at.session_state["changes"] == 3
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        (("notes.png", b"hi", "image/jpeg"), r"\.jpg"),
+        (("shot.jpeg", b"hi", "image/jpeg"), r"\.jpg"),
+        (("shot.jpg", b"hi", "image/png"), "image/jpeg"),
+        (
+            [("a.jpg", b"a", "image/jpeg"), ("b.jpg", b"b", "image/jpeg")],
+            "list is not accepted",
+        ),
+        (("shot.jpg", "jpeg", "image/jpeg"), "Got tuple"),
+        (b"raw-bytes", "Got bytes"),
+    ],
+    ids=[
+        "png_extension",
+        "jpeg_extension",
+        "wrong_mime",
+        "multiple_files",
+        "str_content",
+        "raw_bytes",
+    ],
+)
+def test_camera_input_rejects_invalid_photos(value: Any, match: str) -> None:
+    """Invalid photos raise AppTestError and leave the widget empty."""
+
+    def script():
+        import streamlit as st
+
+        st.camera_input("Cam", key="cam")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=match):
+        at.camera_input(key="cam").set_value(value)
+    assert at.camera_input(key="cam").value is None
+
+
+def test_camera_input_disabled_rejects_update() -> None:
+    """A disabled camera_input widget cannot accept a photo or be cleared."""
+
+    at = AppTest.from_string(
+        "import streamlit as st\nst.camera_input('Cam', disabled=True, key='cam')\n"
+    ).run()
+    with pytest.raises(AppTestError, match="disabled"):
+        at.camera_input(key="cam").upload("shot.jpg", b"hi")
+    with pytest.raises(AppTestError, match="disabled"):
+        at.camera_input(key="cam").clear()
+
+
+def test_camera_input_form_applies_only_on_submit() -> None:
+    """A form photo stays uncommitted until submit.
+
+    ``clear_on_submit`` clears it on the next submit.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("cam-form", clear_on_submit=True):
+            photo = st.camera_input("Cam")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text("yes" if photo is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.camera_input[0].set_value(("a.jpg", b"hi", "image/jpeg")).run()
+    assert at.text[0].value == "no"
+
+    at.camera_input[0].set_value(("a.jpg", b"hi", "image/jpeg"))
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+    assert at.camera_input[0].value.getvalue() == b"hi"
 
     at.button[1].click().run()
     assert at.text[0].value == "yes"
