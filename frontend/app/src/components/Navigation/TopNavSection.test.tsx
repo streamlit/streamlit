@@ -333,10 +333,9 @@ describe("TopNavSection", () => {
     })
 
     it("skips aria-hidden overflow neighbors when Tab closes the menu", async () => {
-      // Mimics rc-overflow items that stay mounted but are excluded from the
-      // a11y tree. aria-hidden is on the control itself so the fixture does
-      // not trip no-aria-hidden-with-focusable-children; focusTabbable rejects
-      // either the node or an aria-hidden ancestor via Element.closest.
+      // Mimics rc-overflow: overflowed items stay mounted under an aria-hidden
+      // ancestor between the last on-bar control and the "N more" trigger.
+      // Applied via DOM APIs so JSX a11y linters do not rewrite the fixture.
       const user = userEvent.setup()
       renderWithContexts(
         <div>
@@ -356,11 +355,17 @@ describe("TopNavSection", () => {
         </div>
       )
 
+      const hiddenNav = screen.getByTestId("hidden-nav")
+      const hiddenWrapper = document.createElement("div")
+      hiddenWrapper.setAttribute("aria-hidden", "true")
+      hiddenNav.parentElement?.insertBefore(hiddenWrapper, hiddenNav)
+      hiddenWrapper.appendChild(hiddenNav)
+
       await openPopover(user)
       await user.keyboard("{Shift>}{Tab}{/Shift}")
       expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
       expect(screen.getByTestId("visible-nav")).toHaveFocus()
-      expect(screen.getByTestId("hidden-nav")).not.toHaveFocus()
+      expect(hiddenNav).not.toHaveFocus()
 
       await openPopover(user)
       await user.keyboard("{Tab}")
