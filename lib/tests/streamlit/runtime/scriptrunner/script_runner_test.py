@@ -85,10 +85,10 @@ text_utf2 = "complete2! 👨‍🎤"
 text_no_encoding = text_utf
 text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
 
-# runner.postScriptGC runs gc.collect(2) on the script thread before it exits.
-# These cache-waiter tests turn that off: in the coverage CI job that full
-# collection can take longer than a 1s join, so the thread is still alive
-# after the run has finished. The timeout below is only slack for a busy runner.
+# Cache-waiter tests disable runner.postScriptGC because its gc.collect(2)
+# runs on the script thread after every execution (including between reruns)
+# and can outlast these tests' waits under coverage. This timeout is only
+# slack for a busy runner.
 _CACHE_WAITER_THREAD_TIMEOUT_SECS = 5
 
 
