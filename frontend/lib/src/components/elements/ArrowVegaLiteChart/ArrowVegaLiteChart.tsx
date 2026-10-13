@@ -332,6 +332,19 @@ const ArrowVegaLiteChart: FC<Props> = ({
       !hasFallbackHeight ||
       Boolean(heightConfig?.pixelHeight))
 
+  // Height of Vega's parameter-binding controls, which it renders inside the
+  // chart container below the chart. The measurement is tied to the spec that
+  // produced it, so a chart that no longer has bindings does not keep the
+  // previous height subtracted when its view is created.
+  const [bindingMeasurement, setBindingMeasurement] = useState({
+    spec: inputElement.spec,
+    height: 0,
+  })
+  const bindingsHeight =
+    bindingMeasurement.spec === inputElement.spec
+      ? bindingMeasurement.height
+      : 0
+
   // The dimensions to apply to the chart. Facet charts in fullscreen use
   // fullScreenWidth; outside fullscreen they use natural sizing (0). Non-facet
   // charts always use the measured container width. Height follows fullscreen
@@ -341,7 +354,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       ? (fullScreenWidth ?? 0)
       : 0
     : chartContainerWidth
-  const currentHeight =
+  const availableHeight =
     (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0
 
   // Whether each dimension is container-driven (stretch / fullscreen) rather than
@@ -354,6 +367,13 @@ const ArrowVegaLiteChart: FC<Props> = ({
       ? true
       : useStretchWidth || isContentWidthContained
   const forceStretchHeight = isFullScreen || passesContainerHeight
+
+  // A container-driven height has to fit the binding controls too, so the
+  // chart gets the height left above them.
+  const currentHeight =
+    forceStretchHeight && bindingsHeight > 0 && availableHeight > 0
+      ? Math.max(availableHeight - bindingsHeight, 1)
+      : availableHeight
 
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
@@ -528,6 +548,38 @@ const ArrowVegaLiteChart: FC<Props> = ({
     currentWidth,
     currentHeight,
   ])
+
+  // Vega creates the binding controls with the view, so look for them again
+  // whenever a view becomes ready. Their height depends only on the chart
+  // width, so shrinking the chart to fit them can't feed back into it.
+  useEffect(() => {
+    if (!isViewReady || !forceStretchHeight) {
+      return
+    }
+
+    const bindingsForm = containerRef.current?.querySelector(
+      "form.vega-bindings"
+    )
+    if (!bindingsForm?.querySelector(".vega-bind")) {
+      setBindingMeasurement({ spec: inputElement.spec, height: 0 })
+      return
+    }
+
+    const observer = new ResizeObserver(entries => {
+      const entry = entries[0]
+      setBindingMeasurement({
+        spec: inputElement.spec,
+        height:
+          entry?.borderBoxSize?.[0]?.blockSize ??
+          entry?.contentRect?.height ??
+          0,
+      })
+    })
+    observer.observe(bindingsForm)
+    return () => {
+      observer.disconnect()
+    }
+  }, [isViewReady, forceStretchHeight, containerRef, inputElement.spec])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so

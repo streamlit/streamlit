@@ -92,7 +92,7 @@ export default defineConfig({
     setupFiles: ["../vitest.setup.ts"],
     deps: {
       optimizer: {
-        web: {
+        client: {
           include: ["vitest-canvas-mock"],
         },
       },

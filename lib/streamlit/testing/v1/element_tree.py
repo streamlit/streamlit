@@ -66,6 +66,7 @@ if TYPE_CHECKING:
     from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
     from streamlit.proto.Block_pb2 import Block as BlockProto
     from streamlit.proto.Button_pb2 import Button as ButtonProto
+    from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
@@ -1728,6 +1729,230 @@ class AudioInput(Widget):
         return cast("UploadedFile | None", state[self.id])
 
 
+_CAMERA_INPUT_MIME: Final = "image/jpeg"
+_CAMERA_RESOLUTION_BY_HEIGHT: Final[dict[int, str]] = {
+    480: "480p",
+    720: "720p",
+    1080: "1080p",
+}
+
+
+def _parse_camera_input_file(file: object) -> tuple[str, bytes, str]:
+    """Return one ``(filename, content, mime_type)`` JPEG photo.
+
+    ``st.camera_input`` captures one ``image/jpeg`` file whose name ends in
+    ``.jpg``. ``AppTest`` rejects any other shape, including a list, so a test
+    cannot stage a payload the browser widget cannot produce.
+    """
+    if (
+        isinstance(file, tuple)
+        and len(file) == 3
+        and isinstance(file[0], str)
+        and isinstance(file[1], (bytes, bytearray))
+        and isinstance(file[2], str)
+    ):
+        filename, content, mime_type = file
+        if not filename.lower().endswith(".jpg"):
+            raise AppTestError(
+                f"st.camera_input only captures .jpg files. Got filename {filename!r}."
+            )
+        if mime_type.lower() != _CAMERA_INPUT_MIME:
+            raise AppTestError(
+                f"st.camera_input photos use MIME type {_CAMERA_INPUT_MIME!r}. "
+                f"Got {mime_type!r}."
+            )
+        # Return the browser MIME type for case-variants such as "Image/JPEG".
+        return filename, bytes(content), _CAMERA_INPUT_MIME
+    if isinstance(file, list):
+        raise AppTestError(
+            "st.camera_input captures one photo. A list is not accepted."
+        )
+    raise AppTestError(
+        "st.camera_input captures one photo. "
+        "Pass one (filename, content, mime_type) tuple whose content is bytes, "
+        f"or None to clear. Got {type(file).__name__}."
+    )
+
+
+@dataclass(repr=False)
+class CameraInput(Widget):
+    r"""A representation of ``st.camera_input``.
+
+    The photo is one JPEG file, ``(filename, content, mime_type)``.
+    ``.upload()`` replaces any staged photo. Unlike ``FileUploader``, this
+    widget does not accept a list or append files.
+
+    ``AppTest`` accepts a photo only when:
+
+    - the filename ends in ``.jpg``
+    - the MIME type is ``image/jpeg``
+
+    ``resolution`` is the value passed to ``st.camera_input``:
+    ``"480p"``, ``"720p"``, ``"1080p"``, or ``None`` when the script omits it.
+
+    Example
+    -------
+    >>> at = AppTest.from_string('''
+    ...     import streamlit as st
+    ...     photo = st.camera_input("Take a picture")
+    ...     if photo:
+    ...         st.write(photo.name)
+    ... ''')
+    >>> at.run()
+    >>> at.camera_input[0].set_value(("shot.jpg", b"jpeg", "image/jpeg"))
+    >>> at.run()
+    >>> at.markdown[0].value
+    'shot.jpg'
+    """
+
+    # (file_id, filename, content, mime_type). InitialValue means the test
+    # has not called set_value/upload/clear. None means the photo was cleared.
+    _files: list[tuple[str, str, bytes, str]] | InitialValue | None
+
+    proto: CameraInputProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+    resolution: str | None
+
+    def __init__(self, proto: CameraInputProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._files = InitialValue()
+        self.type = "camera_input"
+        # An unset optional int reads as 0, which is not a mapped height, so
+        # an omitted resolution and any other unmapped height are both None.
+        self.resolution = _CAMERA_RESOLUTION_BY_HEIGHT.get(proto.resolution_height)
+
+    def set_value(  # ty: ignore[invalid-method-override]
+        self,
+        file: tuple[str, bytes, str] | None,
+    ) -> Self:
+        """Set the photo, or ``None`` to clear it.
+
+        Parameters
+        ----------
+        file
+            ``(filename, content, mime_type)`` for one JPEG photo.
+            ``filename`` must end in ``.jpg`` and ``mime_type`` must be
+            ``image/jpeg``. ``None`` clears the photo.
+
+        Returns
+        -------
+        CameraInput
+            The CameraInput instance for method chaining.
+        """
+        from uuid import uuid4
+
+        self._assert_can_interact()
+        if file is None:
+            self._files = None
+            return self
+        filename, content, mime_type = _parse_camera_input_file(file)
+        self._files = [(str(uuid4()), filename, content, mime_type)]
+        return self
+
+    def upload(
+        self,
+        filename: str,
+        content: bytes,
+        mime_type: str = _CAMERA_INPUT_MIME,
+    ) -> Self:
+        """Stage one photo, replacing any photo already staged.
+
+        Parameters
+        ----------
+        filename
+            The file name. Must end in ``.jpg``.
+        content
+            The file content as bytes.
+        mime_type
+            MIME type of the photo. Defaults to ``image/jpeg``. Any other
+            value raises ``AppTestError``.
+
+        Returns
+        -------
+        CameraInput
+            The CameraInput instance for method chaining.
+        """
+        return self.set_value((filename, content, mime_type))
+
+    def clear(self) -> Self:
+        """Clear the photo.
+
+        Returns
+        -------
+        CameraInput
+            The CameraInput instance for method chaining.
+        """
+        return self.set_value(None)
+
+    def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
+        """Return the photo to register, if any.
+
+        When the test has not staged a change, reuse the ``UploadedFile``
+        already in session state so the photo survives later ``run()`` calls.
+        """
+        if not isinstance(self._files, InitialValue):
+            return self._files or []
+
+        from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+        state = self.root.session_state
+        if not state:
+            return []
+        try:
+            current_value = state[self.id]
+        except KeyError:
+            return []
+        if not isinstance(current_value, UploadedFile):
+            return []
+        return [
+            (
+                current_value.file_id,
+                current_value.name,
+                current_value.getvalue(),
+                current_value.type,
+            )
+        ]
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget."""
+        from streamlit.proto.Common_pb2 import (
+            FileUploaderState as FileUploaderStateProto,
+        )
+
+        ws = WidgetState()
+        ws.id = self.id
+        files_to_use = self._get_files_to_register()
+        if not files_to_use:
+            return ws
+
+        state_proto = FileUploaderStateProto()
+        for file_id, filename, content, _mime_type in files_to_use:
+            file_info = state_proto.uploaded_file_info.add()
+            file_info.file_id = file_id
+            file_info.name = filename
+            file_info.size = len(content)
+            file_info.file_urls.file_id = file_id
+            file_info.file_urls.upload_url = f"/mock/upload/test session id/{file_id}"
+            file_info.file_urls.delete_url = f"/mock/upload/test session id/{file_id}"
+        ws.file_uploader_state_value.CopyFrom(state_proto)
+        return ws
+
+    @property
+    def value(self) -> UploadedFile | None:
+        """The photo committed by the last ``run()``.
+
+        ``set_value`` stages a photo without updating this property.
+        The value is an ``UploadedFile``, or ``None`` when no photo is
+        committed.
+        """
+        state = self.root.session_state
+        assert state
+        return cast("UploadedFile | None", state[self.id])
+
+
 @dataclass(repr=False)
 class FileUploader(Widget):
     r"""A representation of ``st.file_uploader``.
@@ -2918,6 +3143,10 @@ class Block:
         )
 
     @property
+    def camera_input(self) -> WidgetList[CameraInput]:
+        return WidgetList(self.get("camera_input"))  # type: ignore
+
+    @property
     def caption(self) -> ElementList[Caption]:
         return ElementList(self.get("caption"))  # type: ignore
 
@@ -3440,7 +3669,7 @@ def _unset_value_marker(node: Widget) -> tuple[str, Any]:
     Each widget class uses a different "not staged" marker: ``InitialValue``,
     ``None``, or ``False`` for buttons.
     """
-    if isinstance(node, (AudioInput, FileUploader)):
+    if isinstance(node, (AudioInput, CameraInput, FileUploader)):
         return ("_files", InitialValue())
     if isinstance(node, (Button, DownloadButton)):
         return ("_value", False)
@@ -3713,6 +3942,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Feedback(elt.feedback, root=root)
             elif ty == "audio_input":
                 new_node = AudioInput(elt.audio_input, root=root)
+            elif ty == "camera_input":
+                new_node = CameraInput(elt.camera_input, root=root)
             elif ty == "file_uploader":
                 new_node = FileUploader(elt.file_uploader, root=root)
             elif ty == "heading":
