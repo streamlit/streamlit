@@ -333,19 +333,19 @@ describe("TopNavSection", () => {
     })
 
     it("skips aria-hidden overflow neighbors when Tab closes the menu", async () => {
-      // Mimics rc-overflow: overflowed pages stay mounted with aria-hidden
-      // between the last on-bar control and the "N more" trigger.
+      // Mimics rc-overflow items that stay mounted but are excluded from the
+      // a11y tree. aria-hidden is on the control itself so the fixture does
+      // not trip no-aria-hidden-with-focusable-children; focusTabbable rejects
+      // either the node or an aria-hidden ancestor via Element.closest.
       const user = userEvent.setup()
       renderWithContexts(
         <div>
           <a href="/visible" data-testid="visible-nav">
             Visible Page
           </a>
-          <div aria-hidden="true">
-            <a href="/hidden" data-testid="hidden-nav">
-              Hidden Page
-            </a>
-          </div>
+          <a href="/hidden" data-testid="hidden-nav">
+            Hidden Page
+          </a>
           <TopNavSection
             {...getDefaultProps({
               sections: TWO_PAGE_SECTION,
