@@ -129,12 +129,6 @@ Component deltas are transported over protobuf, but frontend assets are served o
 
 `proto/streamlit/proto/WidgetStates.proto` defines widget value transport. Each `WidgetState` has an `id` and a `oneof value` union supporting various types (bool, double, int, string, arrays, JSON, Arrow tables, file uploader state, etc.).
 
-**Important**: `trigger_value`, `string_trigger_value`, `chat_input_value`, and
-`json_trigger_value` reset after each script run. When the server coalesces
-pending reruns, it keeps an older active trigger unless the newer request has
-an active trigger of the same type or a different value type. It concatenates
-`json_trigger_value` batches for the same widget in request order.
-
 ## Message flow diagrams
 
 ### Script execution to browser update
