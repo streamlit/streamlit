@@ -634,7 +634,7 @@ const Multiselect: FC<Props> = props => {
         }
       } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault()
-        // `at(idx)` wraps a missing tag (idx -1) onto the last value.
+        // idx is -1 when the tag isn't in tags; value.at(-1) would remove the last value instead.
         const tagValue =
           idx >= 0 && idx < value.length ? value[idx] : undefined
         if (tagValue !== undefined) {
@@ -643,7 +643,7 @@ const Multiselect: FC<Props> = props => {
           const nextFocus = next ?? prev
           handleTagGroupRemove(new Set([tagValue]))
           if (nextFocus && nextFocus !== tag) {
-            // Right neighbor keeps this index after removal; left neighbor stays at idx - 1.
+            // After removal, the right neighbor shifts into idx; the left neighbor stays at idx - 1.
             focusedTagIndexRef.current = nextFocus === next ? idx : idx - 1
             nextFocus.tabIndex = 0
             nextFocus.focus({ preventScroll: true })

@@ -161,7 +161,7 @@ describe("ButtonGroup widget", () => {
     expect(icon.textContent).toContain(materialIconNames[1])
   })
 
-  it("ignores a negative or missing default index", () => {
+  it("ignores negative and out-of-range default indexes", () => {
     const props = getProps({ default: [-1, 99] })
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
 

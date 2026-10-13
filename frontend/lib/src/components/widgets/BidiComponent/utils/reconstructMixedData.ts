@@ -36,8 +36,9 @@ type ParsedData =
   | Table
 
 /**
- * Missing refs are undefined at runtime. The index signature types every key
- * as `Uint8Array`, so a bare lookup looks non-nullish to the type checker.
+ * Returns the Arrow bytes for `refId`, or undefined when that ref is absent.
+ * The index signature types every key as `Uint8Array`, so a bare lookup looks
+ * non-nullish. `Object.hasOwn` also skips inherited keys such as `constructor`.
  */
 function arrowBytesForRef(
   arrowBlobs: { [key: string]: Uint8Array<ArrayBufferLike> },

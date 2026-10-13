@@ -368,8 +368,9 @@ function TimeInput({
       if (match) {
         const hours = Number(match[1])
         const minutes = Number(match[2])
-        // HH:MM matches have no third group. Capture groups are typed as
-        // string even when that alternative omitted them.
+        // HH:MM and digit-only matches have no seconds group. TypeScript still
+        // types every capture as string, so at(3) is what makes a missing
+        // group undefined.
         const secondsGroup = match.at(3)
         const seconds = secondsGroup !== undefined ? Number(secondsGroup) : 0
         e.preventDefault()

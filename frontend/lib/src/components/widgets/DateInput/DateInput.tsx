@@ -215,8 +215,9 @@ function DateInput({
 
       let errorType: DateValidationErrorType = null
       const newIsoDates: string[] = []
-      // `for...of` so the assignment is visible to control flow. `forEach`
-      // hides it, and the error check below then looks always false.
+      // for...of lets TypeScript see errorType reassigned. Inside a forEach
+      // callback it stays narrowed to null, so the check below would look
+      // always false.
       for (const d of dates) {
         const err = validateDate(d, minDateCalendar, maxDateCalendar)
         if (err) errorType = err

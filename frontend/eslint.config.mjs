@@ -666,7 +666,7 @@ export default defineConfig([
   },
   // Flags redundant optional chains and always-true checks.
   // DataFrame stays excluded: index access and casts there still hide missing values.
-  // Tests stay excluded.
+  // Tests stay excluded until a later slice. This queue only covers production source.
   {
     files: ["lib/src/components/widgets/**/*.{ts,tsx}"],
     ignores: ["**/*.test.ts", "**/*.test.tsx", "**/widgets/DataFrame/**"],
