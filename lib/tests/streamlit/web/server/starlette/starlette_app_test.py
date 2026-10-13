@@ -70,7 +70,7 @@ from streamlit.web.server.starlette.starlette_static_routes import (
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Iterator
+    from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 
     from starlette.requests import Request
 
@@ -1742,6 +1742,19 @@ class TestAppInit:
         @deco
         async def main() -> None:
             pass
+
+        app = App(main)
+        assert app._script_entrypoint is main
+
+    def test_app_accepts_zero_arg_wrapper_around_required_args(self) -> None:
+        """A zero-arg @wraps wrapper is accepted even if the wrapped function is not."""
+
+        def inner(required: str) -> None:
+            pass
+
+        @wraps(inner)
+        def main() -> None:
+            inner("value")
 
         app = App(main)
         assert app._script_entrypoint is main

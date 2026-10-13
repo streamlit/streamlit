@@ -168,9 +168,15 @@ def _is_generator_callable(obj: Any) -> bool:
 
 
 def _require_zero_arg_callable(obj: Any) -> None:
-    """Raise if ``obj`` requires arguments when its signature is inspectable."""
+    """Raise if ``obj`` requires arguments when its signature is inspectable.
+
+    ``follow_wrapped=False`` inspects the callable Streamlit actually invokes.
+    ``functools.wraps`` would otherwise expose the inner function's parameters,
+    so a zero-argument wrapper around a function that requires arguments would
+    be rejected even when the wrapper supplies those arguments.
+    """
     try:
-        inspect.signature(obj).bind()
+        inspect.signature(obj, follow_wrapped=False).bind()
     except TypeError as ex:
         raise StreamlitAPIException(
             "The st.App callable entrypoint must be callable without arguments.",
