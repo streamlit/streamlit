@@ -128,11 +128,13 @@ def _coalesce_widget_states(
     old_states: WidgetStates | None,
     new_states: WidgetStates | None,
 ) -> WidgetStates | None:
-    """Merge an older WidgetStates into a newer one, returning the result.
+    """Merge an older ``WidgetStates`` into a newer one.
 
-    For most widgets the newer value wins. Active triggers in ``old_states``
-    carry forward so rapid interactions aren't lost. Custom Components v2
-    trigger events for the same widget are concatenated in request order.
+    The client clears a trigger as soon as it sends the rerun, so a later request
+    often omits it. The merge keeps active triggers from ``old_states``. The newer
+    value still wins for ordinary widgets, for a different value type, and for a
+    newer active button, chat, or string trigger. For one Custom Components v2
+    widget, the merge concatenates ``json_trigger_value`` events in request order.
     """
     if not old_states and not new_states:
         return None
@@ -151,9 +153,6 @@ def _coalesce_widget_states(
 
         old_trigger_type = old_state.WhichOneof("value")
         new_state = states_by_id.get(old_state.id)
-        # Trigger values are normally deleted from the client's
-        # WidgetStateManager as soon as it sends a rerun request. The end-to-end
-        # test verifies carry-forward against real client state.
         if new_state is None:
             states_by_id[old_state.id] = old_state
             continue
@@ -163,13 +162,14 @@ def _coalesce_widget_states(
         if new_state.WhichOneof("value") != old_trigger_type:
             continue
 
+        # A newer active button, chat, or string trigger replaces the older one.
+        # JSON collisions merge below.
         if not _has_active_trigger_value(new_state):
             states_by_id[old_state.id] = old_state
         elif old_trigger_type == "json_trigger_value":
             states_by_id[old_state.id] = _merge_json_trigger_states(
                 old_state, new_state
             )
-        # For active non-JSON collisions, the newer trigger remains authoritative.
 
     coalesced = WidgetStates()
     coalesced.widgets.extend(states_by_id.values())
@@ -178,7 +178,11 @@ def _coalesce_widget_states(
 
 
 def _normalize_json_trigger_events(payload: str) -> list[Any]:
-    """Normalize a Custom Components v2 trigger payload into an event list."""
+    """Return the event list for one Custom Components v2 trigger payload.
+
+    A JSON array is that list. Any other JSON value, or text that is not JSON,
+    becomes one entry so a bad batch does not drop the events next to it.
+    """
     try:
         events = json.loads(payload)
     except json.JSONDecodeError:
