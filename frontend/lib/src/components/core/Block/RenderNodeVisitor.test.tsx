@@ -240,6 +240,42 @@ describe("RenderNodeVisitor", () => {
       expect(result).toEqual([])
     })
 
+    it("skips a later block that reuses a keyed block id", () => {
+      // A rerun can leave the previous keyed container in place until stale
+      // nodes are cleared. The updated block is at the earlier index.
+      const blockId = "$$ID-abc123-nowrap-fixed"
+      const currentBlock = blockWithId(blockId, [text("current")])
+      const staleBlock = blockWithId(blockId, [text("stale")])
+      const parentBlock = block([currentBlock, text("between"), staleBlock])
+
+      const result = RenderNodeVisitor.collectReactElements(
+        createMockProps(parentBlock)
+      )
+
+      expect(result).toHaveLength(2)
+      expect(result[0].key).toBe(blockId)
+      expect(result[0].props.node).toBe(currentBlock)
+      expect(result.some(element => element.props.node === staleBlock)).toBe(
+        false
+      )
+    })
+
+    it("renders keyed blocks that have different ids", () => {
+      const parentBlock = block([
+        blockWithId("$$ID-abc123-one"),
+        blockWithId("$$ID-def456-two"),
+      ])
+
+      const result = RenderNodeVisitor.collectReactElements(
+        createMockProps(parentBlock)
+      )
+
+      expect(result.map(element => element.key)).toEqual([
+        "$$ID-abc123-one",
+        "$$ID-def456-two",
+      ])
+    })
+
     it("collects React elements from block children", () => {
       const childBlock = block([text("child element")])
       const parentBlock = block([

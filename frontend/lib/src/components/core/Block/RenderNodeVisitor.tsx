@@ -33,7 +33,8 @@ type OptionalReactElements = ReactElement | ReactElement[] | null | undefined
  * boundaries.
  *
  * This visitor accumulates React elements in a mutable array and tracks
- * rendered element IDs to prevent duplicate rendering of widgets.
+ * rendered element and block IDs so a rerun cannot mount the same widget or
+ * keyed container twice.
  *
  * Usage:
  * ```typescript
@@ -88,8 +89,22 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     // maintain component identity across positional shifts (e.g. when a
     // conditional element above the container causes it to move).
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
-    const key = this.getCurrentKey(node.deltaBlock?.id || undefined)
+    const blockId = node.deltaBlock?.id || undefined
+    const key = this.getCurrentKey(blockId)
     this.index += 1
+    // A rerun writes the block at its new index before stale nodes are
+    // cleared, so the previous copy can still be a later sibling. Both would
+    // share this key: React warns and may remount the container, dropping the
+    // state the blockId key is there to preserve. Keep the earlier node (the
+    // updated one) and skip the stale copy, matching element nodes. Positional
+    // keys and transient key overrides stay unique on their own.
+    if (blockId && !this.elementKeyOverride && this.elementKeySet.has(key)) {
+      return null
+    }
+    if (blockId && !this.elementKeyOverride) {
+      this.elementKeySet.add(key)
+    }
+
     const renderer = <BlockNodeRenderer key={key} {...childProps} />
     this.reactElements.push(renderer)
 
