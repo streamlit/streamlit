@@ -157,18 +157,7 @@ The `st.skeleton` context manager shows the placeholder while its block runs (af
 
 Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns, and add `refresh_mode="background"` so an expired entry serves instantly and refreshes off-thread instead of blocking. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching, including the `refresh_mode="background"` caveats.
 
-If a filter should refresh several cards at once, put it in the main script rather than inside a card. A main-script widget reruns the whole script and refreshes every card together and stays responsive during a slow load; a widget *inside* a parallel fragment only reruns that card and, while the other cards are still loading, waits for them to finish before it applies. Per-card controls can stay inside their own card.
-
-## Which tool when
-
-Reach for the smallest tool that fixes the bottleneck:
-
-- **Repeated or expensive data loads** → `@st.cache_data` (add `ttl`/`max_entries`; `refresh_mode="background"` for stale-while-revalidate). Cache the source data, filter cheaply outside the cache.
-- **Independent slow cards** → `@st.fragment(parallel=True)` so they load concurrently (total time ≈ slowest card).
-- **Many cards, one source query** → have each card call the same cached function; the per-key cache lock dedups it to a single run.
-- **A section that should refresh on its own** (live metrics/clock) → `@st.fragment(run_every=...)`.
-- **A shared/global filter that must stay responsive while cards load** → keep it in the main script so it refreshes every card; per-card controls can stay inside their own card.
-- **One very slow query that shouldn't freeze the page** → run it in a `@st.fragment(parallel=True)` and keep the rest of the page in the main script, so it loads in the background while the page stays interactive (cache it with `refresh_mode="background"` so later loads don't block).
+Where you put a control depends on how balanced the cards' load times are. When cards load in a similar time, controls can live inside their own card. But when one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes—so put controls that must stay responsive during the slow load in the main script, where a widget reruns the whole script, preempts the in-progress run, and refreshes every card together.
 
 ## Sidebar filters
 

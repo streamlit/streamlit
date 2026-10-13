@@ -12,22 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Responsive dashboard with a slow query running in the background.
+"""Responsive dashboard with a slow operation running in the background.
 
-The pattern: one query is much slower than everything else on the page (a heavy
-report, a full reconciliation, an export). Run that slow query in a
-``@st.fragment(parallel=True)`` so it loads on a worker thread, and keep the
-filter and the quick overview in the main script so the page stays interactive
-while the slow report is still loading.
+The pattern: one piece of work on the page is much slower than everything else
+(a heavy report, a full reconciliation, an export, a slow API call — a database
+query is just one example). Run that slow work in a ``@st.fragment(parallel=True)``
+so it loads on a worker thread, and keep the rest of the page interactive while it
+finishes.
 
-Demonstrates:
-- ``@st.fragment(parallel=True)`` to run a slow query in the background
-- A filter in the main script, so changing it stays responsive (a full rerun
-  preempts the in-progress run; a control *inside* the slow fragment would be
-  queued behind it until the report finishes)
-- ``@st.cache_data(ttl=..., refresh_mode="background")`` so a warm report serves
-  instantly and refreshes off-thread when it goes stale
-- ``st.skeleton`` as the loading placeholder while the report fills in
+Before reaching for this pattern, check whether the slow work can be split into
+smaller, independent operations. Parallel fragments overlap independent loads, so
+splitting is often more performant than hiding one monolithic slow call.
+
+Notes on this template:
+- The slow report does not depend on the region filter, so changing the filter
+  doesn't restart it — it stays a cache hit and only the quick cards reload.
+- The filter lives in the sidebar (i.e. the main script), so changing it triggers a
+  full rerun that preempts the in-progress run and stays responsive. A control
+  *inside* a fragment would instead be queued behind the in-progress run — which
+  includes the slow report — until it finishes. When every card loads in a similar
+  time this rarely matters and per-card controls are fine; it matters here because
+  one card is much slower than the rest.
+- The quick cards still use caching + parallel fragments: they are much faster than
+  the report but slow enough that overlapping them and caching their results pays off.
 
 This template uses synthetic data with ``time.sleep`` to stand in for slow work.
 Replace ``run_freshness_report()`` and the ``load_*`` loaders with your real data
@@ -58,10 +65,12 @@ REGIONS = ["us-west-2", "us-east-1", "eu-west-1", "ap-northeast-1"]
 CHART_HEIGHT = 280
 REPORT_HEIGHT = 320
 
-# How long the slow report takes. Stands in for a heavy warehouse query; real
-# ones can take much longer. The quick loaders below are deliberately fast.
+# The slow operation stands in for heavy work (a big warehouse query, a full
+# reconciliation, an export); real ones can take much longer. The quick loaders are
+# *relatively* fast — fast enough to feel responsive, but slow enough that caching
+# them and overlapping them as parallel fragments still pays off.
 REPORT_SECONDS = 8
-QUICK_SECONDS = 0.2
+QUICK_SECONDS = 1.5
 
 
 # =============================================================================
@@ -77,7 +86,7 @@ def _rng(*parts: str) -> np.random.Generator:
 
 @st.cache_data(ttl="5m", show_spinner=False)
 def load_kpis(region: str) -> dict[str, float]:
-    """Quick summary metrics for the selected region (fast query)."""
+    """Summary metrics for the selected region (relatively fast)."""
     time.sleep(QUICK_SECONDS)
     rng = _rng("kpis", region)
     return {
@@ -89,7 +98,7 @@ def load_kpis(region: str) -> dict[str, float]:
 
 @st.cache_data(ttl="5m", show_spinner=False)
 def load_throughput(region: str) -> pd.DataFrame:
-    """Quick 30-day throughput trend for the selected region (fast query)."""
+    """30-day throughput trend for the selected region (relatively fast)."""
     time.sleep(QUICK_SECONDS)
     rng = _rng("throughput", region)
     days = pd.date_range(end=date.today(), periods=30, freq="D")
@@ -99,18 +108,19 @@ def load_throughput(region: str) -> pd.DataFrame:
 
 
 @st.cache_data(ttl="10m", refresh_mode="background", show_spinner=False)
-def run_freshness_report(region: str) -> pd.DataFrame:
-    """Slow per-pipeline freshness report (the heavy query).
+def run_freshness_report() -> pd.DataFrame:
+    """Slow, account-wide freshness report (the heavy operation).
 
-    ``refresh_mode="background"`` serves the cached result instantly once warm and
-    refreshes it off-thread when the ``ttl`` expires, so the page never blocks on a
-    stale-but-acceptable report. Background refresh requires a ``ttl`` and the
-    function must not render Streamlit elements or touch ``st.session_state`` — it
-    only returns data.
+    It intentionally does *not* take the region filter, so changing the filter
+    doesn't restart it. ``refresh_mode="background"`` serves the cached result
+    instantly once warm and refreshes it off-thread when the ``ttl`` expires, so the
+    page never blocks on a stale-but-acceptable report. Background refresh requires a
+    ``ttl`` and the function must not render Streamlit elements or touch
+    ``st.session_state`` — it only returns data.
     """
     time.sleep(REPORT_SECONDS)
-    rng = _rng("report", region)
-    names = [f"{region}-pipeline-{i:02d}" for i in range(1, 13)]
+    rng = _rng("report")
+    names = [f"pipeline-{i:02d}" for i in range(1, 16)]
     last_refresh = [
         pd.Timestamp.now() - timedelta(minutes=int(m))
         for m in rng.integers(2, 240, len(names))
@@ -129,27 +139,54 @@ def run_freshness_report(region: str) -> pd.DataFrame:
 
 
 # =============================================================================
-# Components
+# Cards (each a parallel fragment, so they load concurrently on a full rerun)
 # =============================================================================
 
 
 @st.fragment(parallel=True)
-def freshness_report(region: str) -> None:
-    """Render the slow report inside a parallel fragment.
+def kpis_card(region: str) -> None:
+    """Quick KPI row for the selected region."""
+    with st.skeleton(height=110):
+        kpis = load_kpis(region)
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Active pipelines", kpis["pipelines"])
+        col2.metric("On-time", f"{kpis['on_time_pct']:.1f}%")
+        col3.metric("Avg latency", f"{kpis['avg_latency_min']:.0f} min")
 
-    On a full app rerun this is dispatched to a worker thread, so the rest of the
-    page (the filter and the overview below) renders and stays interactive while
-    the report is still loading. ``st.skeleton`` holds the space until the data is
-    ready.
+
+@st.fragment(parallel=True)
+def throughput_card(region: str) -> None:
+    """Quick throughput chart for the selected region."""
+    with st.container(border=True):
+        st.subheader("Throughput (last 30 days)")
+        with st.skeleton(height=CHART_HEIGHT):
+            throughput = load_throughput(region)
+            st.line_chart(
+                throughput,
+                x="date",
+                y="rows_processed",
+                height=CHART_HEIGHT,
+                alt="Rows processed per day",
+            )
+
+
+@st.fragment(parallel=True)
+def freshness_report() -> None:
+    """The slow report, loaded in the background via a parallel fragment.
+
+    On a full app rerun this is dispatched to a worker thread, so the filter and the
+    quick cards stay interactive while the report is still loading. ``st.skeleton``
+    holds the space until the data is ready.
     """
     with st.container(border=True):
         st.subheader("Pipeline freshness report")
         st.caption(
-            f"Heavy query (~{REPORT_SECONDS}s). It loads in the background — the "
-            "filter above and the overview below stay responsive while it runs."
+            f"Heavy, account-wide work (~{REPORT_SECONDS}s). It loads in the "
+            "background, so the filter and the cards above stay responsive while it "
+            "fills in."
         )
         with st.skeleton(height=REPORT_HEIGHT):
-            report = run_freshness_report(region)
+            report = run_freshness_report()
             overdue = int((~report["within_sla"]).sum())
             if overdue:
                 st.warning(f"{overdue} of {len(report)} pipelines are past their SLA.")
@@ -163,44 +200,21 @@ def freshness_report(region: str) -> None:
             )
 
 
-def render_overview(region: str) -> None:
-    """Quick, always-responsive summary rendered inline in the main script."""
-    kpis = load_kpis(region)
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Active pipelines", kpis["pipelines"])
-    col2.metric("On-time", f"{kpis['on_time_pct']:.1f}%")
-    col3.metric("Avg latency", f"{kpis['avg_latency_min']:.0f} min")
-
-    with st.container(border=True):
-        st.subheader("Throughput (last 30 days)")
-        throughput = load_throughput(region)
-        st.line_chart(
-            throughput,
-            x="date",
-            y="rows_processed",
-            height=CHART_HEIGHT,
-            alt="Rows processed per day",
-        )
-
-
 # =============================================================================
 # Page layout
 # =============================================================================
 
-with st.container(
-    horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"
-):
-    st.markdown("# :material/monitoring: Operations Dashboard")
-    if st.button(":material/restart_alt: Reset", type="tertiary"):
-        st.session_state.clear()
-        st.rerun()
+st.title("Operations dashboard")
 
-# Filter lives in the main script: changing it triggers a full rerun that
-# preempts the in-progress run, so it stays responsive while the report reloads.
-region = st.selectbox("Region", REGIONS, key="region")
+# Global filter in the sidebar (the main script): changing it triggers a full rerun
+# that preempts the in-progress run, so it stays responsive while the slow report is
+# still loading.
+with st.sidebar:
+    region = st.selectbox("Region", REGIONS)
 
-# Slow report: dispatched to a worker thread so it loads in the background.
-freshness_report(region)
+# Quick, region-specific cards: they reload fast and update when the region changes.
+kpis_card(region)
+throughput_card(region)
 
-# Quick overview: renders immediately and updates instantly when the region changes.
-render_overview(region)
+# Slow, region-independent report: loads in the background while the page stays usable.
+freshness_report()
