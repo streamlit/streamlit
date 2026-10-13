@@ -2339,13 +2339,29 @@ describe("required", () => {
     ).not.toBeInTheDocument()
   })
 
+  /** Required and invalid state live on the spinbuttons, not the group. */
+  function expectSegmentAttribute(name: string, value: string | null): void {
+    const segments = screen.getAllByRole("spinbutton")
+    expect(segments.length).toBeGreaterThan(0)
+    for (const segment of segments) {
+      if (value === null) {
+        expect(segment).not.toHaveAttribute(name)
+      } else {
+        expect(segment).toHaveAttribute(name, value)
+      }
+    }
+    expect(screen.getByRole("group")).not.toHaveAttribute(name)
+  }
+
   it("sets aria-required only when required is true", () => {
     const { unmount } = render(<TimeInput {...getRequiredEmptyProps()} />)
-    expect(screen.getByRole("group")).toHaveAttribute("aria-required", "true")
+    expectSegmentAttribute("aria-required", "true")
+    expectSegmentAttribute("aria-invalid", null)
+    expect(screen.getByRole("group")).not.toHaveAttribute("aria-required")
     unmount()
 
     render(<TimeInput {...getProps({ required: false })} />)
-    expect(screen.getByRole("group")).not.toHaveAttribute("aria-required")
+    expectSegmentAttribute("aria-required", null)
   })
 
   it("shows the required marker when the label is visible", () => {
@@ -2373,10 +2389,7 @@ describe("required", () => {
       expect(
         screen.queryByTestId("stWidgetLabelRequired")
       ).not.toBeInTheDocument()
-      expect(screen.getByRole("group")).toHaveAttribute(
-        "aria-required",
-        "true"
-      )
+      expectSegmentAttribute("aria-required", "true")
     }
   )
 
@@ -2410,15 +2423,16 @@ describe("required", () => {
         expect.anything()
       )
       expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
-      expect(screen.getByRole("group")).toHaveAttribute("aria-invalid", "true")
+      expectSegmentAttribute("aria-invalid", "true")
       expect(screen.getByRole("alert")).toHaveTextContent(
         "This field is required."
       )
       expect(screen.getByRole("alert")).not.toHaveTextContent("Error:")
-      expect(screen.getByRole("group")).toHaveAttribute(
-        "aria-required",
-        "true"
-      )
+      expectSegmentAttribute("aria-required", "true")
+      const alertId = screen.getByRole("alert").id
+      for (const segment of screen.getAllByRole("spinbutton")) {
+        expect(segment.getAttribute("aria-describedby")).toContain(alertId)
+      }
       const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
       expect(hourSegment).toHaveTextContent("HH")
       expect(minuteSegment).toHaveTextContent("mm")
@@ -2681,8 +2695,8 @@ describe("required", () => {
     expect(
       screen.queryByTestId("stTooltipErrorHoverTarget")
     ).not.toBeInTheDocument()
-    expect(screen.getByRole("group")).not.toHaveAttribute("aria-invalid")
-    expect(screen.getByRole("group")).not.toHaveAttribute("aria-required")
+    expectSegmentAttribute("aria-invalid", null)
+    expectSegmentAttribute("aria-required", null)
 
     await user.click(hourSegment)
     await user.keyboard("{Backspace}")
@@ -2727,7 +2741,7 @@ describe("required", () => {
     expect(
       screen.queryByTestId("stTooltipErrorHoverTarget")
     ).not.toBeInTheDocument()
-    expect(screen.getByRole("group")).not.toHaveAttribute("aria-invalid")
+    expectSegmentAttribute("aria-invalid", null)
   })
 
   it("clears a leftover required error after a programmatic refill and clear", () => {
@@ -2762,7 +2776,7 @@ describe("required", () => {
     expect(
       screen.queryByTestId("stTooltipErrorHoverTarget")
     ).not.toBeInTheDocument()
-    expect(screen.getByRole("group")).not.toHaveAttribute("aria-invalid")
+    expectSegmentAttribute("aria-invalid", null)
 
     rerender(
       <TimeInput
@@ -2781,7 +2795,7 @@ describe("required", () => {
     expect(
       screen.queryByTestId("stTooltipErrorHoverTarget")
     ).not.toBeInTheDocument()
-    expect(screen.getByRole("group")).not.toHaveAttribute("aria-invalid")
+    expectSegmentAttribute("aria-invalid", null)
   })
 
   it("keeps the last accepted ignore pending value when a required empty commit is blocked", async () => {

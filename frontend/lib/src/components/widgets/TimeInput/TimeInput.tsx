@@ -806,8 +806,18 @@ function TimeInput({
           onPaste={handlePaste}
         >
           <I18nProvider locale={locale}>
+            {/*
+             * isInvalid and isRequired are forwarded to each spinbutton.
+             * The group role does not allow aria-required or aria-invalid.
+             * validationBehavior="aria" keeps the hidden input from using
+             * the native required attribute.
+             */}
             <StyledTimeField
               aria-label={element.label}
+              aria-describedby={displayedError ? validationErrorId : undefined}
+              isInvalid={!!displayedError}
+              isRequired={element.required}
+              validationBehavior="aria"
               value={
                 isNullOrUndefined(displayValue)
                   ? null
@@ -819,25 +829,15 @@ function TimeInput({
               shouldForceLeadingZeros
               isDisabled={disabled}
             >
-              {/*
-               * React Aria's DateInput is the group. TimeField does not
-               * forward aria-required or aria-invalid onto it, so set them
-               * here.
-               */}
-              <StyledTimeFieldInput
-                aria-required={element.required ? true : undefined}
-                aria-invalid={displayedError ? true : undefined}
-                aria-describedby={
-                  displayedError ? validationErrorId : undefined
-                }
-              >
+              <StyledTimeFieldInput>
                 {segment => (
                   <StyledTimeSegment segment={segment}>
                     {({ text, isPlaceholder, type }) => {
-                      // Override visible text only — React Aria still controls
+                      // Override visible text only. React Aria still controls
                       // aria-valuenow/aria-valuetext from the last valid Time, so
                       // screen readers may announce stale values during the brief
-                      // error window. Mitigated by role="alert" + aria-invalid.
+                      // error window. The focused segment is aria-invalid and
+                      // described by the alert while the error is shown.
                       if (pasteOverride) {
                         if (type === "hour") return pasteOverride.hour
                         if (type === "minute") return pasteOverride.minute

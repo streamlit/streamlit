@@ -706,12 +706,13 @@ def test_time_input_required_blocks_empty_commits_and_form_submits(app: Page) ->
     """Required time inputs block empty form submits and later empty commits."""
     start_widget = get_element_by_key(app, "required_start")
     end_widget = get_element_by_key(app, "required_end")
-    start_field = start_widget.get_by_role("group")
+    start_segments = start_widget.get_by_role("spinbutton")
 
     expect_markdown(app, "required form submitted: False")
     expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
     expect(start_widget.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
-    expect(start_field).to_have_attribute("aria-required", "true")
+    expect(start_segments.first).to_have_attribute("aria-required", "true")
+    expect(start_widget.get_by_role("group")).not_to_have_attribute("aria-required")
     expect(start_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
 
     submit_button = app.get_by_role(
@@ -775,9 +776,8 @@ def test_time_input_required_blocks_empty_commits_and_form_submits(app: Page) ->
     hidden_hour.blur()
     expect(hidden_widget.get_by_role("alert")).to_have_count(0)
     expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
-    expect(hidden_widget.get_by_role("group")).to_have_attribute(
-        "aria-required", "true"
-    )
+    expect(hidden_hour).to_have_attribute("aria-required", "true")
+    expect(hidden_widget.get_by_role("group")).not_to_have_attribute("aria-required")
     expect(hidden_widget.get_by_test_id("stWidgetLabelRequired")).to_have_count(0)
 
 
