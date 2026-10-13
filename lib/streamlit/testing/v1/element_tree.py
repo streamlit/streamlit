@@ -1819,12 +1819,9 @@ class CameraInput(Widget):
         super().__init__(proto, root)
         self._files = InitialValue()
         self.type = "camera_input"
-        # An omitted resolution leaves the proto field unset. An unset int
-        # reads as 0, so HasField skips it. Any other height stays None.
-        if proto.HasField("resolution_height"):
-            self.resolution = _CAMERA_RESOLUTION_BY_HEIGHT.get(proto.resolution_height)
-        else:
-            self.resolution = None
+        # An unset optional int reads as 0, which is not a mapped height, so
+        # an omitted resolution and any other unmapped height are both None.
+        self.resolution = _CAMERA_RESOLUTION_BY_HEIGHT.get(proto.resolution_height)
 
     def set_value(  # ty: ignore[invalid-method-override]
         self,
