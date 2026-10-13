@@ -46,7 +46,7 @@ export interface SidebarNavLinkProps {
   menuTabIndex?: number
   /** Stores the anchor so top-nav dropdown menus can move focus between items. */
   setMenuItemRef?: (index: number, element: HTMLAnchorElement | null) => void
-  /** Index for setMenuItemRef in top-nav dropdown menus. */
+  /** Position of this link among the top-nav dropdown menuitems. */
   menuItemIndex?: number
 }
 
@@ -99,6 +99,7 @@ const SidebarNavLink = ({
     <StyledSidebarNavLinkContainer
       disabled={disableSidebarNavLinks}
       data-testid={navLinkContainerTestId}
+      role={isInDropdown ? "none" : undefined}
     >
       <StyledSidebarNavLink
         ref={setAnchorRef}
@@ -109,7 +110,8 @@ const SidebarNavLink = ({
         href={isExternal ? (externalUrl ?? pageUrl) : pageUrl}
         onClick={onClick}
         aria-current={effectiveIsActive ? "page" : undefined}
-        // Dropdown menuitems stay focusable when disabled (WAI-ARIA); pointer-events block clicks.
+        // Disabled dropdown menuitems stay focusable (WAI-ARIA). pointer-events:
+        // none blocks clicks, and TopNavSection blocks keyboard activation.
         aria-disabled={
           isInDropdown && disableSidebarNavLinks ? true : undefined
         }

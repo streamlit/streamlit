@@ -182,9 +182,9 @@ const TopNavSection = ({
     menuItemLinksRef.current[index]?.focus()
   }, [])
 
-  // Keep the roving index on the focused node when overflow changes the menu
-  // while open. Restore focus only if that node unmounted (for example when
-  // leading items move back into the nav bar, or the focused page itself leaves).
+  // When overflow changes the open menu, keep the roving index on the link
+  // that still has focus. If that link unmounted, move focus to the nearest
+  // remaining item.
   useLayoutEffect(() => {
     if (!open) {
       return
@@ -222,9 +222,9 @@ const TopNavSection = ({
   )
 
   /**
-   * Focuses the initial menu item on mount (last item for ArrowUp, first item
-   * otherwise). Resets `initialFocusIndexRef` so subsequent opens default to
-   * the first item.
+   * Focuses the item in `initialFocusIndexRef` when the menu mounts (last item
+   * for ArrowUp, otherwise the first). Child anchor refs run first so the
+   * target exists; the layout effect alone is not enough through FloatingPortal.
    */
   const menuListRef = useCallback((node: HTMLDivElement | null): void => {
     if (node) {
@@ -255,8 +255,8 @@ const TopNavSection = ({
     }
 
     const target = event.target
-    // Menuitems activate on Space as well as Enter (anchors natively handle
-    // only Enter); prevent the default page scroll.
+    // Activate menuitems on Space and Enter (anchors natively handle only
+    // Enter), and prevent Space from scrolling the page.
     if (
       (event.key === " " || event.key === "Enter") &&
       target instanceof HTMLAnchorElement &&
@@ -366,6 +366,7 @@ const TopNavSection = ({
     return (
       <StyledTopNavSidebarNavLinkContainer
         key={`${item.pageScriptHash}-${pageName}`}
+        role="none"
       >
         <SidebarNavLink
           // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank icon means no icon
@@ -399,7 +400,9 @@ const TopNavSection = ({
       return links
     }
 
-    const sectionKey = `${section[0].pageScriptHash ?? ""}-${sectionIndex}`
+    // Key by page identity, not position, so overflow shrinks that drop a
+    // leading entry do not remount surviving sections and steal focus.
+    const sectionKey = section[0].pageScriptHash ?? `section-${sectionIndex}`
 
     // Sectionless overflow pages render as plain menuitems, without a header
     // or group wrapper.

@@ -17,8 +17,11 @@
 /**
  * TreeWalker filter that accepts tabbable elements: non-negative tabIndex,
  * not disabled, not hidden, visible (checkVisibility gate for display:none /
- * visibility:hidden ancestors), and not inside an inert subtree (FILTER_REJECT
- * prunes the entire inert subtree so descendants are never visited).
+ * visibility:hidden ancestors), and not inside an inert or aria-hidden
+ * subtree (FILTER_REJECT prunes that subtree so descendants are never
+ * visited). aria-hidden is required because rc-overflow keeps overflowed
+ * items mounted with opacity:0 and aria-hidden="true", which checkVisibility
+ * still treats as visible.
  *
  * Note: this uses document order, not tab order — positive tabIndex values
  * are not visited first. This is sufficient for header-bar focus routing
@@ -32,7 +35,8 @@ function acceptTabbableNode(node: Node): number {
   if ("disabled" in node && (node as HTMLButtonElement).disabled)
     return NodeFilter.FILTER_SKIP
   if (node.hidden) return NodeFilter.FILTER_SKIP
-  if (node.closest("[inert]")) return NodeFilter.FILTER_REJECT
+  if (node.closest("[inert], [aria-hidden='true']"))
+    return NodeFilter.FILTER_REJECT
   if (
     "checkVisibility" in node &&
     !node.checkVisibility({ visibilityProperty: true })

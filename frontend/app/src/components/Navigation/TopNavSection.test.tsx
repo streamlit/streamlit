@@ -652,5 +652,68 @@ describe("TopNavSection", () => {
       await user.keyboard("{ArrowDown}")
       expect(screen.getByText("Page C").closest("a")).toHaveFocus()
     })
+
+    it("keeps focus on the same page when a leading multi-section overflow entry leaves", async () => {
+      const user = userEvent.setup()
+      const multiSectionOverflow: AppPage.$Properties[][] = [
+        [
+          {
+            pageScriptHash: "page_a",
+            pageName: "Page A",
+            urlPathname: "page_a",
+            isDefault: true,
+            sectionHeader: "Section A",
+          },
+        ],
+        [
+          {
+            pageScriptHash: "page_b",
+            pageName: "Page B",
+            urlPathname: "page_b",
+            isDefault: false,
+            sectionHeader: "Section B",
+          },
+        ],
+        [
+          {
+            pageScriptHash: "page_c",
+            pageName: "Page C",
+            urlPathname: "page_c",
+            isDefault: false,
+            sectionHeader: "Section C",
+          },
+        ],
+      ]
+
+      const { rerender } = renderWithContexts(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: multiSectionOverflow,
+            title: "2 more",
+          })}
+        />
+      )
+
+      const popover = await openPopover(user)
+      await user.keyboard("{ArrowDown}")
+      expect(within(popover).getByText("Page B").closest("a")).toHaveFocus()
+
+      rerender(
+        <TopNavSection
+          {...getDefaultProps({
+            sections: multiSectionOverflow.slice(1),
+            title: "2 more",
+          })}
+        />
+      )
+
+      expect(screen.queryByText("Page A")).not.toBeInTheDocument()
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
+      expect(
+        within(screen.getByTestId("stTopNavPopover")).getByRole("group", {
+          name: "Section B",
+        })
+      ).toBeVisible()
+    })
   })
 })
