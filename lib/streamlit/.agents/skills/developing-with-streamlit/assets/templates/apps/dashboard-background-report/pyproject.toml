@@ -2,7 +2,7 @@
 name = "dashboard-background-report"
 version = "1.0.0"
 description = "A responsive dashboard that runs a slow query in the background with parallel fragments and background cache refresh"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.26.0",
     "pandas>=2.2.3",

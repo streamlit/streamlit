@@ -22,11 +22,13 @@ finishes.
 
 Before reaching for this pattern, check whether the slow work can be split into
 smaller, independent operations. Parallel fragments overlap independent loads, so
-splitting is often more performant than hiding one monolithic slow call.
+splitting the work is often more performant than running it as a single long
+operation.
 
 Notes on this template:
-- The slow report does not depend on the region filter, so changing the filter
-  doesn't restart it — it stays a cache hit and only the quick cards reload.
+- The slow report loads without blocking the page: it runs in a parallel fragment
+  (off the main thread), and with ``refresh_mode="background"`` the cached result is
+  served instantly once warm and refreshed off-thread when it goes stale.
 - The filter lives in the sidebar (i.e. the main script), so changing it triggers a
   full rerun that preempts the in-progress run and stays responsive. A control
   *inside* a fragment would instead be queued behind the in-progress run — which
@@ -111,12 +113,9 @@ def load_throughput(region: str) -> pd.DataFrame:
 def run_freshness_report() -> pd.DataFrame:
     """Slow, account-wide freshness report (the heavy operation).
 
-    It intentionally does *not* take the region filter, so changing the filter
-    doesn't restart it. ``refresh_mode="background"`` serves the cached result
-    instantly once warm and refreshes it off-thread when the ``ttl`` expires, so the
-    page never blocks on a stale-but-acceptable report. Background refresh requires a
-    ``ttl`` and the function must not render Streamlit elements or touch
-    ``st.session_state`` — it only returns data.
+    Cached with ``refresh_mode="background"``: once warm, the page gets the cached
+    result instantly and the refresh runs off-thread when the ``ttl`` expires. The
+    function only returns data; see ``performance.md`` for background-refresh caveats.
     """
     time.sleep(REPORT_SECONDS)
     rng = _rng("report")
@@ -146,12 +145,12 @@ def run_freshness_report() -> pd.DataFrame:
 @st.fragment(parallel=True)
 def kpis_card(region: str) -> None:
     """Quick KPI row for the selected region."""
-    with st.skeleton(height=110):
+    with st.skeleton(height=120):
         kpis = load_kpis(region)
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Active pipelines", kpis["pipelines"])
-        col2.metric("On-time", f"{kpis['on_time_pct']:.1f}%")
-        col3.metric("Avg latency", f"{kpis['avg_latency_min']:.0f} min")
+        with st.container(horizontal=True):
+            st.metric("Active pipelines", kpis["pipelines"], border=True)
+            st.metric("On-time", f"{kpis['on_time_pct']:.1f}%", border=True)
+            st.metric("Avg latency", f"{kpis['avg_latency_min']:.0f} min", border=True)
 
 
 @st.fragment(parallel=True)
@@ -175,8 +174,8 @@ def freshness_report() -> None:
     """The slow report, loaded in the background via a parallel fragment.
 
     On a full app rerun this is dispatched to a worker thread, so the filter and the
-    quick cards stay interactive while the report is still loading. ``st.skeleton``
-    holds the space until the data is ready.
+    quick cards stay interactive while the report is still loading. A loading message
+    shows while the long report runs (a skeleton is better suited to quick loads).
     """
     with st.container(border=True):
         st.subheader("Pipeline freshness report")
@@ -185,19 +184,19 @@ def freshness_report() -> None:
             "background, so the filter and the cards above stay responsive while it "
             "fills in."
         )
-        with st.skeleton(height=REPORT_HEIGHT):
+        with st.spinner(f"Running the account-wide report… (~{REPORT_SECONDS}s)"):
             report = run_freshness_report()
-            overdue = int((~report["within_sla"]).sum())
-            if overdue:
-                st.warning(f"{overdue} of {len(report)} pipelines are past their SLA.")
-            else:
-                st.success(f"All {len(report)} pipelines are within their SLA.")
-            st.dataframe(
-                report,
-                hide_index=True,
-                height=REPORT_HEIGHT,
-                alt="Per-pipeline freshness report",
-            )
+        overdue = int((~report["within_sla"]).sum())
+        if overdue:
+            st.warning(f"{overdue} of {len(report)} pipelines are past their SLA.")
+        else:
+            st.success(f"All {len(report)} pipelines are within their SLA.")
+        st.dataframe(
+            report,
+            hide_index=True,
+            height=REPORT_HEIGHT,
+            alt="Per-pipeline freshness report",
+        )
 
 
 # =============================================================================
