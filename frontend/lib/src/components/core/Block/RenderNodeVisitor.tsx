@@ -92,15 +92,12 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     const blockId = node.deltaBlock?.id || undefined
     const key = this.getCurrentKey(blockId)
     this.index += 1
-    // A rerun writes the block at its new index before stale nodes are
-    // cleared, so the previous copy can still be a later sibling. Both would
-    // share this key: React warns and may remount the container, dropping the
-    // state the blockId key is there to preserve. Keep the earlier node (the
-    // updated one) and skip the stale copy, the same way visitElementNode
-    // dedupes widgets. Positional keys and transient key overrides stay
-    // unique on their own.
-    const isTrackedKey = Boolean(blockId) && !this.elementKeyOverride
-    if (isTrackedKey) {
+    // Keep the first sibling with this block id and skip later copies. During
+    // a rerun the updated block is written before stale nodes are cleared, so
+    // the old copy can still be a later sibling. Rendering both shares a React
+    // key, which warns and can remount the container. This matches the widget
+    // dedupe in visitElementNode.
+    if (blockId) {
       if (this.elementKeySet.has(key)) {
         return null
       }

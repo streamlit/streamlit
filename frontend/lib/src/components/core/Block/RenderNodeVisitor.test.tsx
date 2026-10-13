@@ -243,7 +243,7 @@ describe("RenderNodeVisitor", () => {
     it("skips a later block that reuses a keyed block id", () => {
       // A rerun can leave the previous keyed container in place until stale
       // nodes are cleared. The updated block is at the earlier index.
-      const blockId = "$$ID-abc123-nowrap-fixed"
+      const blockId = "$$ID-abc123-my_key"
       const currentBlock = blockWithId(blockId, [text("current")])
       const staleBlock = blockWithId(blockId, [text("stale")])
       const parentBlock = block([currentBlock, text("between"), staleBlock])
