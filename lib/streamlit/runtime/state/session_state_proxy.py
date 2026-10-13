@@ -121,7 +121,7 @@ class SessionStateProxy(MutableMapping[Key, Any]):
     """
 
     def __iter__(self) -> Iterator[str]:
-        """Iterator over user state and keyed widget keys."""
+        """Keys of user state and keyed widgets."""
         # TODO: this is unsafe if fastReruns is true! Let's deprecate/remove.
         return iter(get_session_state().filtered_state)
 
