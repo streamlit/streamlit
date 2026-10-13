@@ -78,6 +78,63 @@ if TYPE_CHECKING:
 _LOGGER: Final = get_logger(__name__)
 
 
+def _close_async_generator(async_gen: Any) -> None:
+    """Finalize an async generator returned by a rejected entrypoint.
+
+    ``aclose()`` returns an awaitable. Closing that awaitable only suppresses
+    the "never awaited" warning on Python 3.12 and earlier and leaves the
+    generator open. On Python 3.13 and later it can raise ``RuntimeError``
+    when cleanup awaits. The script thread keeps a non-running loop so
+    ``run_until_complete`` can drive ``aclose`` without nesting.
+    """
+    closer = async_gen.aclose()
+    temporary_loop: asyncio.AbstractEventLoop | None = None
+    try:
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            # Cannot drive aclose while this thread is already running a loop.
+            # Closing the awaitable avoids an un-awaited warning; the running
+            # loop's asyncgen finalizer owns the generator.
+            _close_awaitable(closer)
+            return
+
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = None
+        if loop is None or loop.is_closed():
+            temporary_loop = asyncio.new_event_loop()
+            loop = temporary_loop
+
+        try:
+            loop.run_until_complete(closer)
+        except Exception:
+            # Drop the awaitable so the entrypoint error is not shadowed by
+            # "coroutine was never awaited", then continue to that error.
+            _LOGGER.debug(
+                "Failed to finalize a rejected async generator entrypoint.",
+                exc_info=True,
+            )
+            _close_awaitable(closer)
+    finally:
+        if temporary_loop is not None:
+            temporary_loop.close()
+
+
+def _close_awaitable(awaitable: Any) -> None:
+    """Close an awaitable, ignoring failures while abandoning it."""
+    closer = getattr(awaitable, "close", None)
+    if not callable(closer):
+        return
+    try:
+        closer()
+    except Exception:
+        _LOGGER.debug("Failed to close awaitable.", exc_info=True)
+
+
 def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
     """Call a retained App entrypoint and reject coroutine or generator results.
 
@@ -96,7 +153,7 @@ def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
         return
 
     if inspect.isasyncgen(result):
-        result.aclose().close()
+        _close_async_generator(result)
     else:
         closer = getattr(result, "close", None)
         if callable(closer):
@@ -104,7 +161,8 @@ def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
 
     raise StreamlitAPIException(
         "st.App callable entrypoints must not return a coroutine or generator. "
-        "Pass a synchronous callable instead."
+        "Pass a synchronous callable instead.",
+        error_id="app-callable-returns-awaitable",
     )
 
 

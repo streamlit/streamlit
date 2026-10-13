@@ -173,7 +173,8 @@ def _require_zero_arg_callable(obj: Any) -> None:
         inspect.signature(obj).bind()
     except TypeError as ex:
         raise StreamlitAPIException(
-            "The st.App callable entrypoint must be callable without arguments."
+            "The st.App callable entrypoint must be callable without arguments.",
+            error_id="app-callable-requires-arguments",
         ) from ex
     except ValueError:
         # Some callables do not expose a signature. Argument mismatches then
@@ -235,7 +236,8 @@ def _resolve_callable_source_path(obj: Any) -> Path:
     if script_path is None:
         raise StreamlitAPIException(
             "The st.App callable entrypoint must be defined in a "
-            "filesystem-backed Python source file."
+            "filesystem-backed Python source file.",
+            error_id="app-callable-missing-source-file",
         )
     return script_path
 
@@ -577,12 +579,14 @@ class App:
             if _is_async_callable(script_path):
                 raise StreamlitAPIException(
                     "st.App does not support async callable entrypoints. "
-                    "Pass a synchronous callable instead."
+                    "Pass a synchronous callable instead.",
+                    error_id="app-async-callable-not-supported",
                 )
             if _is_generator_callable(script_path):
                 raise StreamlitAPIException(
                     "st.App does not support generator callable entrypoints. "
-                    "Pass a synchronous non-generator callable instead."
+                    "Pass a synchronous non-generator callable instead.",
+                    error_id="app-generator-callable-not-supported",
                 )
             _require_zero_arg_callable(script_path)
             self._script_path = _resolve_callable_source_path(script_path)

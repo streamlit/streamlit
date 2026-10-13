@@ -1723,8 +1723,11 @@ class TestAppInit:
         async def main() -> None:
             pass
 
-        with pytest.raises(StreamlitAPIException, match="does not support async"):
+        with pytest.raises(
+            StreamlitAPIException, match="does not support async"
+        ) as exc_info:
             App(main)
+        assert exc_info.value.error_id == "app-async-callable-not-supported"
 
     def test_app_accepts_sync_wraps_wrapper_around_async(self) -> None:
         """Construction does not unwrap @wraps; a sync wrapper around async is accepted."""
@@ -1749,8 +1752,11 @@ class TestAppInit:
         async def main() -> None:
             pass
 
-        with pytest.raises(StreamlitAPIException, match="does not support async"):
+        with pytest.raises(
+            StreamlitAPIException, match="does not support async"
+        ) as exc_info:
             App(partial(main))
+        assert exc_info.value.error_id == "app-async-callable-not-supported"
 
     def test_app_rejects_async_generator_callable(self) -> None:
         """st.App rejects async generator callables."""
@@ -1758,8 +1764,11 @@ class TestAppInit:
         async def main() -> AsyncIterator[None]:
             yield
 
-        with pytest.raises(StreamlitAPIException, match="does not support async"):
+        with pytest.raises(
+            StreamlitAPIException, match="does not support async"
+        ) as exc_info:
             App(main)  # type: ignore[arg-type]
+        assert exc_info.value.error_id == "app-async-callable-not-supported"
 
     def test_app_rejects_generator_callable(self) -> None:
         """st.App rejects sync generator callables."""
@@ -1767,8 +1776,11 @@ class TestAppInit:
         def main() -> Iterator[None]:
             yield
 
-        with pytest.raises(StreamlitAPIException, match="does not support generator"):
+        with pytest.raises(
+            StreamlitAPIException, match="does not support generator"
+        ) as exc_info:
             App(main)  # type: ignore[arg-type]
+        assert exc_info.value.error_id == "app-generator-callable-not-supported"
 
     def test_app_rejects_callable_that_requires_arguments(self) -> None:
         """st.App rejects callables that require arguments."""
@@ -1776,8 +1788,11 @@ class TestAppInit:
         def main(required: str) -> None:
             pass
 
-        with pytest.raises(StreamlitAPIException, match="without arguments"):
+        with pytest.raises(
+            StreamlitAPIException, match="without arguments"
+        ) as exc_info:
             App(main)
+        assert exc_info.value.error_id == "app-callable-requires-arguments"
 
     def test_app_rejects_callable_without_source_file(self) -> None:
         """st.App rejects callables that are not backed by a source file."""
@@ -1788,9 +1803,10 @@ class TestAppInit:
         with (
             patch.object(inspect, "getsourcefile", return_value=None),
             patch.object(inspect, "getfile", side_effect=TypeError),
-            pytest.raises(StreamlitAPIException, match="filesystem-backed"),
+            pytest.raises(StreamlitAPIException, match="filesystem-backed") as exc_info,
         ):
             App(main)
+        assert exc_info.value.error_id == "app-callable-missing-source-file"
 
     def test_app_rejects_unsupported_entrypoint_type(self) -> None:
         """Non-path, non-callable entrypoints raise StreamlitInvalidParameterTypeError."""
