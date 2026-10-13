@@ -321,9 +321,9 @@ with st.form("invite", border=False):
 
 ## Skip reruns on individual widgets (advanced)
 
-With `on_change="ignore"`, most stateful input widgets update in the browser without a rerun. Python receives the new value on the next rerun triggered by something else, such as a button.
+With `on_change="ignore"`, most stateful input widgets update in the browser without a rerun. Python receives the new value on the next browser-triggered rerun, such as a button click.
 
-Use it to build dynamic forms that `st.form` can't express: defer the plain inputs, but let inputs that change other fields rerun normally.
+Use it to build dynamic forms that `st.form` can't express: defer inputs that don't change other fields, and let the ones that do rerun normally.
 
 ```python
 country = st.selectbox("Country", countries)  # Reruns to refresh the city options
