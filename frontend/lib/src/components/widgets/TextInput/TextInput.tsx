@@ -908,7 +908,12 @@ const DOM_INPUT_TYPE_BY_PROTO: Record<number, string> = {
 }
 
 function getTypeString(element: TextInputProto): string {
-  return DOM_INPUT_TYPE_BY_PROTO[element.type] ?? "text"
+  // Unknown proto enum values are missing from the map. The index signature
+  // types every number as string, so `??` cannot see that hole.
+  if (!(element.type in DOM_INPUT_TYPE_BY_PROTO)) {
+    return "text"
+  }
+  return DOM_INPUT_TYPE_BY_PROTO[element.type]
 }
 
 // Prevents the toggle button from stealing focus from the input on mousedown,

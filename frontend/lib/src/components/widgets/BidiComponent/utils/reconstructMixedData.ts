@@ -36,6 +36,20 @@ type ParsedData =
   | Table
 
 /**
+ * Missing refs are undefined at runtime. The index signature types every key
+ * as `Uint8Array`, so a bare lookup looks non-nullish to the type checker.
+ */
+function arrowBytesForRef(
+  arrowBlobs: { [key: string]: Uint8Array<ArrayBufferLike> },
+  refId: string
+): Uint8Array<ArrayBufferLike> | undefined {
+  if (!Object.hasOwn(arrowBlobs, refId)) {
+    return undefined
+  }
+  return arrowBlobs[refId]
+}
+
+/**
  * Reconstruct data by replacing Arrow references with actual Arrow Tables
  * (first level of object only).
  */
@@ -50,7 +64,7 @@ export const reconstructMixedData = (
     const record = data as Record<string, unknown>
     if (typeof record[ARROW_REF_KEY] === "string") {
       const refId = record[ARROW_REF_KEY]
-      const arrowBytes = arrowBlobs[refId]
+      const arrowBytes = arrowBytesForRef(arrowBlobs, refId)
       if (arrowBytes) {
         try {
           // Parse Arrow bytes and return Arrow Table
@@ -72,7 +86,7 @@ export const reconstructMixedData = (
         typeof (value as MixedData)[ARROW_REF_KEY] === "string"
       ) {
         const refId = (value as MixedData)[ARROW_REF_KEY]
-        const arrowBytes = arrowBlobs[refId]
+        const arrowBytes = arrowBytesForRef(arrowBlobs, refId)
         if (arrowBytes) {
           try {
             result[key] = tableFromIPC(arrowBytes)

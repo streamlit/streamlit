@@ -215,11 +215,13 @@ function DateInput({
 
       let errorType: DateValidationErrorType = null
       const newIsoDates: string[] = []
-      dates.forEach(d => {
+      // `for...of` so the assignment is visible to control flow. `forEach`
+      // hides it, and the error check below then looks always false.
+      for (const d of dates) {
         const err = validateDate(d, minDateCalendar, maxDateCalendar)
         if (err) errorType = err
         newIsoDates.push(calendarDateToIso(d))
-      })
+      }
 
       if (errorType) {
         setError(buildErrorMessage(errorType))
@@ -397,11 +399,11 @@ function getStateFromWidgetMgr(
 }
 
 function getDefaultStateFromProto(element: DateInputProto): string[] {
-  return element.default ?? []
+  return element.default
 }
 
 function getCurrStateFromProto(element: DateInputProto): string[] {
-  return element.value ?? []
+  return element.value
 }
 
 function updateWidgetMgrState(
@@ -416,7 +418,7 @@ function updateWidgetMgrState(
   // Guard: invalid values must never reach the backend. This catches
   // out-of-range dates and unparsable ISO strings (e.g. malformed
   // query-param seeds). Empty arrays are valid (cleared input).
-  const isValid = (vws.value || []).every(iso => {
+  const isValid = vws.value.every(iso => {
     const calendarDate = isoToCalendarDate(iso)
     if (!calendarDate) return false
     return !validateDate(calendarDate, minDate, maxDate)

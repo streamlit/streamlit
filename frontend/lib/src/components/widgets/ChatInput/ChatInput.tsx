@@ -178,7 +178,7 @@ function ChatInput({
   // Forces dropzone to remount when files are cleared
   const [dropzoneResetCounter, setDropzoneResetCounter] = useState(0)
 
-  const acceptAudio = element.acceptAudio ?? false
+  const acceptAudio = element.acceptAudio
 
   const {
     scriptRunFinishedFragmentIds,
@@ -635,11 +635,14 @@ function ChatInput({
         return
       }
 
-      if (!e.clipboardData) {
+      // React types clipboardData as DataTransfer. The native event is nullable
+      // when the browser does not attach paste data.
+      const clipboardData = e.nativeEvent.clipboardData
+      if (!clipboardData) {
         return
       }
 
-      const pastedFiles = getPastedFiles(e.clipboardData)
+      const pastedFiles = getPastedFiles(clipboardData)
       if (pastedFiles.length === 0) {
         return
       }

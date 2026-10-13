@@ -142,17 +142,21 @@ function getInitialValue(
 function getDefaultStateFromProto(
   element: ButtonGroupProto
 ): ButtonGroupValue {
-  const defaultIndices = element.default ?? []
-  return defaultIndices
+  return element.default
     .map(index => {
-      const option = element.options[index]
+      // Bracket access is undefined for a negative or missing index.
+      // `at` would wrap negatives to the last option.
+      const option =
+        index >= 0 && index < element.options.length
+          ? element.options[index]
+          : undefined
       return option ? getOptionBaseContent(option) : ""
     })
     .filter(s => s !== "")
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  return element.rawValues ?? []
+  return element.rawValues
 }
 
 function syncWithWidgetManager(

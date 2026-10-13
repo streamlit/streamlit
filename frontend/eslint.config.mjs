@@ -664,6 +664,16 @@ export default defineConfig([
       "@typescript-eslint/prefer-nullish-coalescing": "error",
     },
   },
+  // Redundant optional chains and always-true checks. Enabled per directory
+  // as each slice is cleaned. DataFrame still has index access and casts that
+  // hide missing values. Tests stay off.
+  {
+    files: ["lib/src/components/widgets/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.ts", "**/*.test.tsx", "**/widgets/DataFrame/**"],
+    rules: {
+      "@typescript-eslint/no-unnecessary-condition": "error",
+    },
+  },
   // Styled components files
   {
     files: ["**/styled-components.ts", "**/styled-components.tsx"],
