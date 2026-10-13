@@ -20,7 +20,9 @@ import copy
 import functools
 import inspect
 import os
+import site
 import sys
+import sysconfig
 from collections.abc import Mapping as MappingABC
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -177,16 +179,22 @@ def _require_zero_arg_callable(obj: Any) -> None:
     be rejected even when the wrapper supplies those arguments.
     """
     try:
-        inspect.signature(obj, follow_wrapped=False).bind()
+        signature = inspect.signature(obj, follow_wrapped=False)
+    except TypeError:
+        # signature() itself failed to inspect the object. That is not
+        # "this callable requires arguments".
+        raise
+    except ValueError:
+        # Some callables do not expose a signature. Argument mismatches then
+        # surface as normal user-code exceptions at invocation time.
+        return
+    try:
+        signature.bind()
     except TypeError as ex:
         raise StreamlitAPIException(
             "The st.App callable entrypoint must be callable without arguments.",
             error_id="app-callable-requires-arguments",
         ) from ex
-    except ValueError:
-        # Some callables do not expose a signature. Argument mismatches then
-        # surface as normal user-code exceptions at invocation time.
-        pass
 
 
 def _callable_source_candidates(obj: Any) -> list[Any]:
@@ -194,7 +202,8 @@ def _callable_source_candidates(obj: Any) -> list[Any]:
 
     Candidates are listed from the outer object inward: the original
     callable, then ``inspect.unwrap`` results, ``functools.partial.func``,
-    and a callable instance's ``type.__call__``. Nested partials and
+    and a callable instance's class. When ``__call__`` is inherited, the
+    subclass is preferred over the base ``__call__``. Nested partials and
     partials wrapping callable instances are included.
     """
     candidates: list[Any] = []
@@ -218,9 +227,48 @@ def _callable_source_candidates(obj: Any) -> list[Any]:
         if isinstance(current, functools.partial):
             stack.append(current.func)
         elif not inspect.isroutine(current) and not isinstance(current, type):
-            # Callable class instances: resolve via the type's __call__.
-            stack.append(type(current).__call__)
+            # Callable class instances. Push the subclass before the inherited
+            # __call__ so the subclass is visited last and wins.
+            owner = type(current)
+            if "__call__" not in owner.__dict__:
+                stack.append(owner)
+            stack.append(owner.__call__)
     return candidates
+
+
+def _is_installed_package_path(path: Path) -> bool:
+    """Return whether ``path`` is inside an installed-package directory.
+
+    Matches conventional directory names (``site-packages``, ``dist-packages``,
+    ``__pypackages__``) and this interpreter's site and sysconfig library roots,
+    so a custom prefix is recognized even when the directory is not named
+    ``site-packages``.
+    """
+    if {"site-packages", "dist-packages", "__pypackages__"}.intersection(path.parts):
+        return True
+
+    roots: list[Path] = []
+    try:
+        roots.extend(Path(item) for item in site.getsitepackages())
+        user_site = site.getusersitepackages()
+        if user_site:
+            roots.append(Path(user_site))
+    except (AttributeError, OSError, TypeError):
+        pass
+    try:
+        for key in ("purelib", "platlib"):
+            value = sysconfig.get_path(key)
+            if value:
+                roots.append(Path(value))
+    except (KeyError, OSError, TypeError):
+        pass
+
+    resolved = path.resolve()
+    for root in roots:
+        root_path = root.resolve()
+        if resolved == root_path or root_path in resolved.parents:
+            return True
+    return False
 
 
 def _resolve_callable_source_path(obj: Any) -> Path:
@@ -229,11 +277,11 @@ def _resolve_callable_source_path(obj: Any) -> Path:
     Candidates are walked from the outer object inward. The innermost
     existing source file wins, so a decorated function defined in the app
     module is not anchored to the decorator's module. A file outside
-    site-packages wins over one inside it, so a wrapper around a library
-    callable stays anchored at the wrapper.
+    installed-package directories wins over one inside them, so a wrapper
+    around a library callable stays anchored at the wrapper.
     """
     script_path: Path | None = None
-    outside_site_packages: Path | None = None
+    outside_install: Path | None = None
     for candidate in _callable_source_candidates(obj):
         try:
             source_file = inspect.getsourcefile(candidate) or inspect.getfile(candidate)
@@ -242,11 +290,11 @@ def _resolve_callable_source_path(obj: Any) -> Path:
         candidate_path = Path(source_file).resolve()
         if candidate_path.is_file():
             script_path = candidate_path
-            if "site-packages" not in candidate_path.parts:
-                outside_site_packages = candidate_path
+            if not _is_installed_package_path(candidate_path):
+                outside_install = candidate_path
 
-    if outside_site_packages is not None:
-        script_path = outside_site_packages
+    if outside_install is not None:
+        script_path = outside_install
 
     if script_path is None:
         raise StreamlitAPIException(
@@ -594,8 +642,8 @@ class App:
         from streamlit.runtime.secrets import _validate_secrets_value
 
         self._script_entrypoint: Callable[[], None] | None = None
-        # Check PathLike before callable so path-like objects that are also
-        # callable, such as PurePath, stay on the path branch.
+        # Check PathLike before callable so an object that implements both
+        # __fspath__ and __call__ is treated as a path.
         if isinstance(script_path, (str, os.PathLike)):
             self._script_path = Path(script_path)
         elif callable(script_path):

@@ -143,12 +143,17 @@ def main() -> None:
 app = st.App(main)
 ```
 
-- Invoked once per full rerun. Locals are fresh each run; closures and module globals
-  are shared across reruns and sessions. Use `st.session_state` for per-session values.
+- Invoked once per full rerun, and again by the script health check when that check
+  is enabled. Locals are fresh each run; closures and module globals are shared across
+  reruns, sessions, and health checks. Use `st.session_state` for per-session values.
 - Streamlit retains the callable object for the lifetime of the `App`. Restart the
-  process after changing its definition.
+  process after changing its definition. A save-triggered rerun still executes that
+  retained object until the process restarts.
 - The callable must be defined in a filesystem-backed Python source file. That file
-  anchors the Runtime script path, `static/` serving, and source watching.
+  is used for `static/` serving and source watching.
+- Script-level `config.toml` and `secrets.toml` follow the launched file under
+  `streamlit run` and `App.run()`. They follow the callable source only when no
+  launched file is set, such as under uvicorn.
 - Async functions, generator functions, and callables that require arguments are
   rejected.
 - Callable execution takes precedence over a legacy `pages/` directory. Use

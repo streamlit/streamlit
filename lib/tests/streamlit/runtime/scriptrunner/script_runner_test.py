@@ -394,10 +394,10 @@ class ScriptRunnerTest(unittest.TestCase):
         ):
             scriptrunner.start()
             scriptrunner.join()
+            assert PagesManager.uses_pages_directory is False
 
         main.assert_called_once_with()
         mpa_v1.assert_not_called()
-        assert PagesManager.uses_pages_directory is False
 
     def test_yield_on_enqueue(self):
         """Make sure we try to handle execution control requests whenever

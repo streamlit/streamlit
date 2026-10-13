@@ -1754,6 +1754,82 @@ class TestAppInit:
         assert app.script_path == app_file.resolve()
         assert app._script_entrypoint is app_mod.main
 
+    def test_app_prefers_source_outside_interpreter_site_root(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A site root is an installed library even when it is not named site-packages."""
+        lib_dir = tmp_path / "installed-lib"
+        lib_dir.mkdir()
+        (lib_dir / "st_app_callable_distlib.py").write_text("def render():\n    pass\n")
+        app_file = tmp_path / "st_app_callable_dist_wrapper.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_distlib import render\n"
+            "\n"
+            "@functools.wraps(render)\n"
+            "def main():\n"
+            "    return render()\n"
+        )
+        monkeypatch.setattr(
+            "streamlit.web.server.starlette.starlette_app.site.getsitepackages",
+            lambda: [str(lib_dir)],
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(tmp_path))
+        for module_name in ("st_app_callable_distlib", "st_app_callable_dist_wrapper"):
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_dist_wrapper")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in (
+                "st_app_callable_distlib",
+                "st_app_callable_dist_wrapper",
+            ):
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_subclass_when_call_is_inherited(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A subclass that inherits __call__ anchors at the subclass file."""
+        (tmp_path / "st_app_callable_base.py").write_text(
+            "class Base:\n    def __call__(self):\n        pass\n"
+        )
+        sub_file = tmp_path / "st_app_callable_sub.py"
+        sub_file.write_text(
+            "from st_app_callable_base import Base\nclass Sub(Base):\n    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        for module_name in ("st_app_callable_base", "st_app_callable_sub"):
+            sys.modules.pop(module_name, None)
+        sub_mod = importlib.import_module("st_app_callable_sub")
+        try:
+            app = App(sub_mod.Sub())
+        finally:
+            for module_name in ("st_app_callable_base", "st_app_callable_sub"):
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == sub_file.resolve()
+
+    def test_uninspectable_signature_typeerror_is_not_argument_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A TypeError from inspect.signature is not reported as a required argument."""
+
+        def main() -> None:
+            pass
+
+        def boom(*_args: Any, **_kwargs: Any) -> Any:
+            raise TypeError("cannot inspect")
+
+        monkeypatch.setattr(
+            "streamlit.web.server.starlette.starlette_app.inspect.signature", boom
+        )
+        with pytest.raises(TypeError, match="cannot inspect"):
+            App(main)
+
     def test_app_rejects_async_callable(self) -> None:
         """st.App rejects async function callables."""
 

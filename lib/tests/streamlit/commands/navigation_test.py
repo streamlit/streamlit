@@ -46,6 +46,30 @@ class NavigationTest(DeltaGeneratorTestCase):
 
         assert exc_info.value.error_id == "page-created-outside-script-run"
 
+    def test_switch_page_rejects_page_created_outside_script_run(self) -> None:
+        """st.switch_page uses the same error as st.navigation."""
+        with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
+            page = st.Page("home.py", title="Home")
+
+        with pytest.raises(
+            StreamlitAPIException, match="while the Streamlit script is running"
+        ) as exc_info:
+            st.switch_page(page)
+
+        assert exc_info.value.error_id == "page-created-outside-script-run"
+
+    def test_page_link_rejects_page_created_outside_script_run(self) -> None:
+        """st.page_link uses the same error as st.navigation."""
+        with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
+            page = st.Page("home.py", title="Home")
+
+        with pytest.raises(
+            StreamlitAPIException, match="while the Streamlit script is running"
+        ) as exc_info:
+            st.page_link(page)
+
+        assert exc_info.value.error_id == "page-created-outside-script-run"
+
     def test_no_pages(self):
         """Test that an error is thrown with no pages"""
         with pytest.raises(StreamlitMissingRequiredParameterError) as exc:

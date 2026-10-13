@@ -180,7 +180,7 @@ def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
 
     raise StreamlitAPIException(
         "st.App callable entrypoints must not return a coroutine or generator. "
-        "Pass a synchronous callable instead.",
+        "Run that work synchronously and return a normal value instead.",
         error_id="app-callable-returns-coroutine-or-generator",
     )
 
@@ -885,12 +885,9 @@ class ScriptRunner:
             # If we get here, we've successfully prepared the entrypoint. Errors
             # thrown during execution will be shown to the user as ExceptionElements.
 
-            # Keep the module the callable already lives on. Replacing
-            # sys.modules["__main__"] would not re-execute the launcher; it
-            # would only split pickle and cache identity from that callable.
-            # Launch mode still changes __module__: python app.py defines
-            # objects as __main__.*, while streamlit run and uvicorn import
-            # a named module. Cache keys include __module__.
+            # Callable entrypoints keep running in the module that defines
+            # them, so pickle and cache keys resolve to that module. Only
+            # file-based scripts get a fresh fake __main__ module.
             module: types.ModuleType | None = None
             if self._script_entrypoint is None:
                 # Create fake module. This gives us a named global namespace to

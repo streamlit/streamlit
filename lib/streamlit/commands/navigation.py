@@ -25,7 +25,7 @@ from streamlit.errors import (
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
-from streamlit.navigation.page import Page
+from streamlit.navigation.page import Page, raise_if_page_created_outside_run
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -49,16 +49,11 @@ def convert_to_streamlit_page(
 ) -> Page:
     """Convert various input types to Page objects."""
     if isinstance(page_input, Page):
-        # st.Page returns early when there is no script run, which is the
-        # case while a callable app module is imported. Those objects never
-        # get _page, so using them inside the entrypoint would raise
-        # AttributeError.
-        if get_script_run_ctx() is not None and not hasattr(page_input, "_page"):
-            raise StreamlitAPIException(
-                "st.Page must be created while the Streamlit script is running. "
-                "Call st.Page inside the app entrypoint, not at module import time.",
-                error_id="page-created-outside-script-run",
-            )
+        # Bare execution has no script run; leave the incomplete page alone
+        # so import-time navigation can still return it. Inside a run, reject
+        # it before later code touches attributes that were never set.
+        if get_script_run_ctx() is not None:
+            raise_if_page_created_outside_run(page_input)
         return page_input
 
     if isinstance(page_input, str):

@@ -35,6 +35,7 @@ from streamlit.navigation.page import (
     Page,
     _raise_if_unsafe_page_path,
     _validate_registered_page,
+    raise_if_page_created_outside_run,
 )
 from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.metrics_util import gather_metrics
@@ -466,6 +467,7 @@ def switch_page(  # type: ignore[misc]
 
     page_script_hash = ""
     if isinstance(page, Page):
+        raise_if_page_created_outside_run(page)
         if page.is_external:
             raise StreamlitAPIException(
                 "Cannot use st.switch_page with external URL pages. "

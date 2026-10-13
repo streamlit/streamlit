@@ -303,7 +303,10 @@ class Page:
 
         ctx = get_script_run_ctx()
         if not ctx:
+            # Later navigation APIs use this instead of missing attributes.
+            self._created_outside_run = True
             return
+        self._created_outside_run = False
 
         # Check if page is an external URL
         if isinstance(page, str) and is_url(page):
@@ -533,6 +536,22 @@ def _create_page(page: str | Path, *, default: bool = False) -> Page:
         page_object, page, default=default
     )
     return page_object
+
+
+def raise_if_page_created_outside_run(page: Page) -> None:
+    """Reject a ``Page`` that ``st.Page`` returned before a script run existed.
+
+    Importing a callable app creates module-level pages with no script run.
+    Those objects never receive ``_page``, so later navigation APIs would
+    raise ``AttributeError``.
+    """
+    if not getattr(page, "_created_outside_run", False):
+        return
+    raise StreamlitAPIException(
+        "st.Page must be created while the Streamlit script is running. "
+        "Call st.Page inside the app entrypoint, not at module import time.",
+        error_id="page-created-outside-script-run",
+    )
 
 
 def _validate_registered_page(page: Page) -> None:
