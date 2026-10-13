@@ -96,12 +96,14 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     // cleared, so the previous copy can still be a later sibling. Both would
     // share this key: React warns and may remount the container, dropping the
     // state the blockId key is there to preserve. Keep the earlier node (the
-    // updated one) and skip the stale copy, matching element nodes. Positional
-    // keys and transient key overrides stay unique on their own.
-    if (blockId && !this.elementKeyOverride && this.elementKeySet.has(key)) {
-      return null
-    }
-    if (blockId && !this.elementKeyOverride) {
+    // updated one) and skip the stale copy, the same way visitElementNode
+    // dedupes widgets. Positional keys and transient key overrides stay
+    // unique on their own.
+    const isTrackedKey = Boolean(blockId) && !this.elementKeyOverride
+    if (isTrackedKey) {
+      if (this.elementKeySet.has(key)) {
+        return null
+      }
       this.elementKeySet.add(key)
     }
 
