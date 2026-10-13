@@ -303,21 +303,19 @@ def test_stretch_blocks_grow_in_fixed_height_parents(app: Page):
 
     wait_until(app, _tabs_stay_capped)
 
-    # Stretch code scrolls inside the card instead of growing it.
+    # Stretch code scrolls inside the card instead of growing it. The scroll
+    # container is the inner `pre`; the `stCode` wrapper only fills the card.
     code_parent = get_element_by_key(app, "fixed-parent-stretch-code")
     code_card = get_element_by_key(app, "stretch-code-card")
-    code = code_card.get_by_test_id("stCode")
-    expect(code).to_be_visible()
+    code_pre = code_card.get_by_test_id("stCode").locator("pre")
+    expect(code_pre).to_be_visible()
 
     def _code_scrolls_inside_card() -> bool:
         card_height = _height(code_card)
         parent_height = _height(code_parent)
-        code_scrolls = bool(
-            code.evaluate("el => el.scrollHeight - el.clientHeight > 1")
-        )
         return (
             _content_fits(code_parent)
-            and code_scrolls
+            and _scrolls(code_pre)
             and card_height is not None
             and parent_height is not None
             and card_height <= parent_height
