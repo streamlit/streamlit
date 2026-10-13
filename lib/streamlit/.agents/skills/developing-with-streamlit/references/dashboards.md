@@ -155,9 +155,9 @@ with col2:
 
 The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible. Keep the card title outside the `with` block so it stays stable while the body loads, and cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. See `performance.md` for more on parallel fragments and caching.
 
-## Fan-out caching: many cards, one query
+### Sharing one data source across cards
 
-When several cards draw from the *same* source data, call one `@st.cache_data` loader with the same arguments from each parallel fragment. The cache's per-key lock runs the query once and every card shares that one result, so N cards cost one query instead of N. Add `refresh_mode="background"` so an expired entry serves instantly and refreshes off-thread, keeping all cards consistent without blocking.
+The example above gives each card its own query. When several cards instead summarize the *same* source data, call one `@st.cache_data` loader with the same arguments from each parallel fragment. The cache's per-key lock runs the query once and every card shares that one result, so N cards cost one query instead of N. Add `refresh_mode="background"` so an expired entry serves instantly and refreshes off-thread, keeping all cards consistent without blocking.
 
 ```python
 @st.cache_data(ttl="5m", refresh_mode="background")
@@ -189,7 +189,7 @@ with col2:
     orders_card(region)
 ```
 
-Keep the filter (`region`) in the main script, not inside a card. A main-script widget reruns the whole script and refreshes every card together; a widget *inside* a parallel fragment only reruns that card, and while the other cards are still loading it waits for them to finish before it applies. Put controls that must stay responsive during a slow load in the main script. See `performance.md` for `refresh_mode="background"` caveats.
+Keep the shared filter (`region`) in the main script, not inside a card. A main-script widget reruns the whole script and refreshes every card together; a widget *inside* a parallel fragment only reruns that card, and while the other cards are still loading it waits for them to finish before it applies. So put shared filters that must stay responsive during a slow load in the main script—per-card controls can stay inside their own card. See `performance.md` for `refresh_mode="background"` caveats.
 
 ## Which tool when
 
@@ -197,9 +197,9 @@ Reach for the smallest tool that fixes the bottleneck:
 
 - **Repeated or expensive data loads** → `@st.cache_data` (add `ttl`/`max_entries`; `refresh_mode="background"` for stale-while-revalidate). Cache the source data, filter cheaply outside the cache.
 - **Independent slow cards** → `@st.fragment(parallel=True)` so they load concurrently (total time ≈ slowest card).
-- **Many cards, one source query** → fan-out caching (above).
+- **Many cards, one source query** → share one cached loader across the cards (above).
 - **A section that should refresh on its own** (live metrics/clock) → `@st.fragment(run_every=...)`.
-- **Filters/controls that must stay responsive while cards load** → keep them in the main script, not inside a card.
+- **A shared/global filter that must stay responsive while cards load** → keep it in the main script so it refreshes every card; per-card controls can stay inside their own card.
 - **One very slow (30s+) operation that shouldn't freeze the app** → `st.background_task` (see `performance.md`).
 
 ## Sidebar filters
