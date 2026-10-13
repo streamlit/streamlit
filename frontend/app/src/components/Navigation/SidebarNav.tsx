@@ -356,7 +356,10 @@ const SidebarNav = ({
   }
 
   return (
-    <StyledSidebarNavContainer data-testid="stSidebarNav">
+    <StyledSidebarNavContainer
+      aria-label="App pages"
+      data-testid="stSidebarNav"
+    >
       <StyledSidebarNavItems data-testid="stSidebarNavItems">
         {contents}
       </StyledSidebarNavItems>

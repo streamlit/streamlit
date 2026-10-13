@@ -191,6 +191,28 @@ describe("AppView element", () => {
     expect(appViewContainer).toHaveClass("stAppViewContainer")
   })
 
+  it("exposes a main landmark targeted by the skip link", async () => {
+    const user = userEvent.setup()
+    const hashBefore = window.location.hash
+    render(<AppView {...getProps()} />)
+
+    const main = screen.getByRole("main")
+    expect(main).toHaveAttribute("id", "stMain")
+    expect(main).toHaveAttribute("data-testid", "stMain")
+
+    const skipLink = screen.getByRole("link", { name: "Skip to main content" })
+    expect(skipLink).toHaveAttribute("href", "#stMain")
+    expect(skipLink).toHaveAttribute("data-testid", "stSkipToContent")
+    // The app shell renders the skip link before all other chrome.
+    expect(screen.getByTestId("stAppViewContainer").firstChild).toBe(skipLink)
+
+    // Activation focuses main without writing location.hash (embed hosts
+    // mirror hashchange as UPDATE_HASH).
+    await user.click(skipLink)
+    expect(main).toHaveFocus()
+    expect(window.location.hash).toBe(hashBefore)
+  })
+
   it("renders the toast container when toasts are present", () => {
     render(<AppView {...getProps()} />)
 
