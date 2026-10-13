@@ -141,7 +141,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.bottom` | Bottom-pinned container for the main app area. Use it as a container object, not as a function. |
 | `st.context` | Read-only access to user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. Attribute and bracket access are equivalent (`st.context.timezone` and `st.context["timezone"]`), but it is not a dict: no `.get()`, `.keys()`, or iteration. |
 | `st.query_params` | Mutable mapping for the browser URL query parameters. Use it to read or update URL state; to sync a widget's value to the URL, bind the widget to query params instead. |
-| `st.secrets` | Read-only mapping of secrets loaded from `secrets.toml`. Use it for credentials and configuration that should not be hard-coded. Assignment raises `TypeError`; change `secrets.toml` or pass `st.App(secrets=...)`. |
+| `st.secrets` | Read-only mapping of secrets. Use it for credentials and configuration that should not be hard-coded. Assignment and deletion raise `TypeError`; change `secrets.toml` or pass `st.App(secrets=...)`. |
 | `st.session_state` | Per-session mutable mapping for app state. Use it to persist values across reruns and share state between widgets and app logic. |
 | `st.sidebar` | Sidebar container that exposes most element methods as `st.sidebar.<command>()` and supports `with st.sidebar:` blocks. |
 | `st.user` | Read-only dict-like object for current user information. Values depend on the hosting and authentication configuration. |

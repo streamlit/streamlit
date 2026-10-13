@@ -246,7 +246,7 @@ Tamper-proof configuration mechanism for host platforms. Hosts can override the 
 
 ### PostMessage protocol
 
-Bidirectional postMessage communication between host and guest (Streamlit app). Guest-to-host messages always post to `window.parent`. When the app is embedded, an in-window copy is echoed first (tagged `isGuestToHostEcho: true`, target `"/"`) so an in-iframe host still receives it when the parent is a third-party page or the app origin is opaque (`"null"`). See `frontend/lib/src/hostComm/types.ts` for complete message definitions and `HostCommunicationManager` for the echo and trust rules.
+Bidirectional postMessage communication between host and guest (Streamlit app). Guest-to-host messages always post to `window.parent`. When the app is embedded, the guest echoes an in-window copy first (tagged `isGuestToHostEcho: true`, `postMessage` target `"/"`). An in-iframe host can read that copy when the parent is a third-party page. Echoing first with target `"/"` also keeps the copy from being skipped when the app origin is opaque (`"null"`). See `frontend/lib/src/hostComm/types.ts` for complete message definitions and `HostCommunicationManager` for the echo and trust rules.
 
 **Host-to-Guest** (`IHostToGuestMessage`) - essential types:
 - `SET_AUTH_TOKEN`: Provide auth token for WebSocket connection
