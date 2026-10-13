@@ -251,13 +251,17 @@ message CustomThemeConfig {
   optional string metric_value_font_size = 64;
   optional int32 metric_value_font_weight = 65;
 
+  // Page content padding:
+  optional string padding_top = 67;
+  optional string padding_bottom = 68;
+
   // Theme sections:
   optional CustomThemeConfig sidebar = 24;
   optional CustomThemeConfig light = 60;
   optional CustomThemeConfig dark = 61;
 
   reserved 5, 7, 8, 9, 16, 17;
-  // Next ID: 67
+  // Next ID: 69
 }
 
 message FontFace {

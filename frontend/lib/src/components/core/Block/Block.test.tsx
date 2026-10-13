@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { ReactElement } from "react"
+import { type ReactElement, useContext } from "react"
 
 import { screen, within } from "@testing-library/react"
 import type * as ReactAriaComponents from "react-aria-components"
@@ -28,6 +28,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { type AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { text } from "~lib/render-tree/test-utils"
@@ -36,6 +37,7 @@ import { mockEllipsizedLabels, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
+import { RenderNodeVisitor } from "./RenderNodeVisitor"
 
 // SelectionIndicator uses SharedElementTransition which calls getAnimations() in an
 // async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
@@ -135,6 +137,12 @@ function makeHorizontalBlock(children: AppNode[]): BlockNode {
 function makeColumnsBlock(columnChildren: AppNode[]): BlockNode {
   return makeHorizontalBlock([makeColumn(1, columnChildren)])
 }
+
+const DefiniteHeightProbe = (): ReactElement => (
+  <div data-testid="definiteHeightProbe">
+    {String(useContext(FlexContext)?.hasDefiniteHeight)}
+  </div>
+)
 
 function makeVerticalBlockComponent(node: BlockNode): ReactElement {
   return (
@@ -482,15 +490,17 @@ describe("FlexBoxContainer layout props", () => {
     ).getByTestId("stLayoutWrapper")
     expect(layoutWrapper).toHaveStyle("align-self: stretch;")
     expect(layoutWrapper).toHaveStyle("min-height: 100%;")
-    expect(layoutWrapper).toHaveStyle("max-height: 100%;")
+    // No max height, so taller content can grow it past a fixed-height row.
+    expect(layoutWrapper).not.toHaveStyle("max-height: 100%;")
     expect(layoutWrapper).not.toHaveStyle("height: 100%;")
-    // The bordered block still fills its stretched wrapper.
-    expect(within(layoutWrapper).getByTestId("stVerticalBlock")).toHaveStyle(
-      "height: 100%;"
-    )
+    // The bordered block fills its stretched wrapper through flex, without a
+    // percentage height that would let it shrink below its content.
+    const innerBlock = within(layoutWrapper).getByTestId("stVerticalBlock")
+    expect(innerBlock).toHaveStyle("height: auto;")
+    expect(innerBlock).toHaveStyle("flex: 1;")
   })
 
-  it("keeps a percentage height for a stretch-height container in a vertical parent", () => {
+  it("fills a vertical parent with a flex basis for a stretch-height container", () => {
     const stretchChild = makeVerticalBlock([], {
       heightConfig: { useStretch: true },
       flexContainer: {
@@ -502,8 +512,28 @@ describe("FlexBoxContainer layout props", () => {
     )
 
     const layoutWrapper = screen.getByTestId("stLayoutWrapper")
-    expect(layoutWrapper).toHaveStyle("height: 100%;")
+    // A percentage height would cap the container at its parent's height.
+    expect(layoutWrapper).toHaveStyle("flex: 0 1 100%;")
+    expect(layoutWrapper).toHaveStyle("height: auto;")
     expect(layoutWrapper).not.toHaveStyle("align-self: stretch;")
+  })
+
+  it("does not apply the stretch overrides to a content-height container", () => {
+    const contentChild = makeVerticalBlock([], {
+      heightConfig: { useContent: true },
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+      },
+    })
+    renderWithContexts(
+      makeVerticalBlockComponent(makeVerticalBlock([contentChild]))
+    )
+
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).not.toHaveStyle("flex: 0 1 100%;")
+    expect(within(layoutWrapper).getByTestId("stVerticalBlock")).toHaveStyle(
+      "height: auto;"
+    )
   })
 
   it("does not stretch st.space along the cross axis of a horizontal parent", () => {
@@ -924,6 +954,26 @@ describe("BlockNodeRenderer container types", () => {
       true,
       false
     )
+    // A content-height form keeps filling its layout wrapper.
+    expect(screen.getByTestId("stForm")).toHaveStyle("height: 100%;")
+  })
+
+  it("renders a stretch-height form that grows with its content", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("form child")], {
+          heightConfig: { useStretch: true },
+          form: { formId: "stretch-form", border: true },
+        })
+      )
+    )
+
+    expect(screen.getByTestId("stLayoutWrapper")).toHaveStyle(
+      "flex: 0 1 100%;"
+    )
+    const form = screen.getByTestId("stForm")
+    expect(form).toHaveStyle("height: auto;")
+    expect(form).toHaveStyle("flex: 1 1 0%;")
   })
 
   it("renders a chat message block", () => {
@@ -1109,6 +1159,35 @@ describe("BlockNodeRenderer container types", () => {
     expect(screen.getByRole("tab", { name: "Tab 0" })).toBeVisible()
     expect(screen.getByTestId("stTabs")).toHaveStyle({ height: "400px" })
   })
+
+  it.each([
+    ["a pixel-height", { pixelHeight: 300 }, "true"],
+    ["a stretch-height root-level", { useStretch: true }, "false"],
+    ["a content-height", { useContent: true }, "false"],
+  ])(
+    "derives the panel's definite height from %s tab container",
+    (_label, heightConfig, expected) => {
+      const collectElements = vi
+        .spyOn(RenderNodeVisitor, "collectReactElements")
+        .mockReturnValue([<DefiniteHeightProbe key="probe" />])
+      try {
+        const tab = makeVerticalBlock([text("tab body")], {
+          tab: { label: "Tab 0" },
+        })
+        renderWithContexts(
+          makeBlockNodeComponent(
+            makeVerticalBlock([tab], { tabContainer: {}, heightConfig })
+          )
+        )
+
+        expect(screen.getByTestId("definiteHeightProbe")).toHaveTextContent(
+          expected
+        )
+      } finally {
+        collectElements.mockRestore()
+      }
+    }
+  )
 
   it("stretches a stretch-height tab container to the row in a horizontal parent", () => {
     const tab = makeVerticalBlock([text("tab body")], {

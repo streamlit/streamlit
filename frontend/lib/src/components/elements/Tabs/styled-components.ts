@@ -46,15 +46,15 @@ export const StyledTabContainer = styled.div<StyledTabContainerProps>(
     maxHeight,
   }) => ({
     position: isOverflowing ? "relative" : undefined,
-    width: width || undefined,
-    height: height || undefined,
+    width: width ?? undefined,
+    height: height ?? undefined,
     // When the container has a constrained height, lay out the tab list and
     // panel as a column so the active panel can grow and scroll internally,
     // and clip the outer container so only the active panel scrolls.
     ...(height
       ? { display: "flex", flexDirection: "column", overflow: "hidden" }
       : {}),
-    flex: flex || undefined,
+    flex: flex ?? undefined,
     alignSelf,
     minHeight,
     maxHeight,

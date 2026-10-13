@@ -16,6 +16,28 @@
 
 import styled from "@emotion/styled"
 
-export const StyledPlotlyChartContainer = styled.div({
-  height: "100%",
-})
+interface StyledPlotlyChartContainerProps {
+  /**
+   * Whether the container is size-contained, so the rendered plot can't feed
+   * back into its parent's height.
+   */
+  isSizeContained: boolean
+  /**
+   * Pixel height of a size-contained container when its parent has no
+   * definite height to fill. Without it, the container claims no height of
+   * its own and only fills its parent.
+   */
+  fallbackHeight?: number
+}
+
+export const StyledPlotlyChartContainer =
+  styled.div<StyledPlotlyChartContainerProps>(
+    ({ isSizeContained, fallbackHeight }) => ({
+      height: "100%",
+      ...(isSizeContained && {
+        contain: "size",
+        containIntrinsicHeight:
+          fallbackHeight === undefined ? "none" : `${fallbackHeight}px`,
+      }),
+    })
+  )

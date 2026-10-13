@@ -321,8 +321,8 @@ function useWidgetState({
   )
 
   /**
-   * Inner function to sync editing state with widget manager.
-   * This is wrapped with debounce below.
+   * Inner sync of editing state to the widget manager.
+   * `syncEditState` debounces this, except when `on_change="ignore"`.
    */
   const innerSyncEditState = useCallback(() => {
     if (!widgetMgr) {
@@ -344,13 +344,58 @@ function useWidgetState({
         formId: element.formId ?? undefined,
         fragmentId,
         fromUser: true,
+        // on_change="ignore" buffers the value without scheduling a rerun.
+        // WidgetStateManager ignores triggerRerun inside forms (the form owns
+        // commit timing).
+        ...(element.ignoreRerun ? { triggerRerun: false } : {}),
       })
     }
-  }, [originalColumns, element.id, element.formId, widgetMgr, fragmentId])
+  }, [
+    originalColumns,
+    element.id,
+    element.formId,
+    element.ignoreRerun,
+    widgetMgr,
+    fragmentId,
+  ])
 
-  // Debounced version of syncEditState to prevent rapid updates
-  const { debouncedCallback: syncEditState, flush: flushEditState } =
-    useDebouncedCallback(innerSyncEditState, DEBOUNCE_TIME_MS)
+  const {
+    debouncedCallback: debouncedSyncEditState,
+    flush: flushEditState,
+    cancel: cancelSyncEditState,
+  } = useDebouncedCallback(innerSyncEditState, DEBOUNCE_TIME_MS)
+
+  const innerSyncEditStateRef = useRef(innerSyncEditState)
+  // Assigned during render (not in an effect) so a microtask queued by
+  // render-time edit reconciliation uses this render's columns and id.
+  innerSyncEditStateRef.current = innerSyncEditState
+  const ignoreSyncScheduledRef = useRef(false)
+
+  /**
+   * Writes the editing state to the widget manager.
+   *
+   * - Default mode: debounced, to coalesce reruns.
+   * - `on_change="ignore"`: written in a microtask, so a button click right
+   *   after the commit still includes the edit. One microtask covers a
+   *   multi-row paste and also runs after render-time reconciliation.
+   */
+  const syncEditState = useCallback(() => {
+    if (element.ignoreRerun) {
+      cancelSyncEditState()
+      if (ignoreSyncScheduledRef.current) {
+        return
+      }
+      ignoreSyncScheduledRef.current = true
+      queueMicrotask(() => {
+        ignoreSyncScheduledRef.current = false
+        // Not cancelled on unmount. This microtask runs before passive-effect
+        // cleanup, and a same-turn remount hydrates the edit from this write.
+        innerSyncEditStateRef.current()
+      })
+      return
+    }
+    debouncedSyncEditState()
+  }, [element.ignoreRerun, cancelSyncEditState, debouncedSyncEditState])
 
   /**
    * Creates a function to sync selection state with the widget manager.

@@ -61,6 +61,7 @@ import {
 import { Navigation } from "@streamlit/protobuf"
 
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
+import SkipToContentLink, { MAIN_ELEMENT_ID } from "./SkipToContentLink"
 import {
   StyledAppViewBlockContainer,
   StyledAppViewBlockSpacer,
@@ -384,6 +385,7 @@ function AppView(props: AppViewProps): ReactElement {
     shouldShowNavigation(appPages)
 
   const hasHeaderUserContent =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false flag still lets later header content count
     shouldShowLogo || shouldShowExpandButton || shouldShowTopNav || showToolbar
 
   // The tabindex is required to support scrolling by arrow keys.
@@ -393,6 +395,7 @@ function AppView(props: AppViewProps): ReactElement {
       data-testid="stAppViewContainer"
       data-layout={layout}
     >
+      <SkipToContentLink />
       {showSidebar && (
         <Profiler id="Sidebar">
           <ThemedSidebar
@@ -427,6 +430,7 @@ function AppView(props: AppViewProps): ReactElement {
           showToolbar={showToolbar}
         />
         <Component
+          id={MAIN_ELEMENT_ID}
           tabIndex={0}
           isEmbedded={embedded}
           disableScrolling={disableScrolling}
