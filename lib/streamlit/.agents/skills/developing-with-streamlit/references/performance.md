@@ -59,10 +59,7 @@ def load_reference_data():
 
 ### Background refresh (serve stale while updating)
 
-By default, when a cached entry's `ttl` expires, the next call blocks while the function
-recomputes. Use `refresh_mode="background"` to instead return the expired value immediately
-and recompute in the background—ideal when slightly stale data is acceptable but latency
-isn't.
+By default, when a cached entry's `ttl` expires, the next call blocks while the function recomputes. Use `refresh_mode="background"` to instead return the expired value immediately and recompute in the background—ideal when slightly stale data is acceptable but latency isn't.
 
 ```python
 @st.cache_data(ttl="5m", refresh_mode="background")
@@ -70,19 +67,9 @@ def get_metrics():
     return api.fetch()
 ```
 
-Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be
-combined with `persist`. The function can't use session-specific features (e.g.
-`st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works
-with both `st.cache_data` and `st.cache_resource`. Combining it with an `async def` cached
-function raises an error at decoration time; use `refresh_mode="foreground"` instead.
+Requirements and caveats: a `ttl` is required, and `refresh_mode="background"` can't be combined with `persist`. The function can't use session-specific features (e.g. `st.session_state`) or render Streamlit elements—pass any needed values as arguments. Works with both `st.cache_data` and `st.cache_resource`. Combining it with an `async def` cached function raises an error at decoration time; use `refresh_mode="foreground"` instead.
 
-By default Streamlit hard-expires a background-refresh entry at `2 × ttl`, serving
-it stale for one extra `ttl`. Set `runner.cacheBackgroundRefreshTTLMultiplier` to a
-finite number greater than `1.0` to move that bound: a multiplier of `M`
-hard-expires at `M × ttl`, giving a stale window of `(M - 1) × ttl`. Invalid
-values warn and fall back to `2.0`. Raising it avoids blocking recomputes after
-idle periods or failed refreshes; lowering it serves fresher data and frees
-memory sooner.
+By default Streamlit hard-expires a background-refresh entry at `2 × ttl`, serving it stale for one extra `ttl`. Set `runner.cacheBackgroundRefreshTTLMultiplier` to a finite number greater than `1.0` to move that bound: a multiplier of `M` hard-expires at `M × ttl`, giving a stale window of `(M - 1) × ttl`. Invalid values warn and fall back to `2.0`. Raising it avoids blocking recomputes after idle periods or failed refreshes; lowering it serves fresher data and frees memory sooner.
 
 ```toml
 # .streamlit/config.toml
@@ -90,18 +77,11 @@ memory sooner.
 cacheBackgroundRefreshTTLMultiplier = 4.0
 ```
 
-Background refresh is access-driven: it starts only after a call observes an expired entry,
-so the caller may briefly receive stale data. For advanced cases that need the server to
-initiate background refreshes for specific global cache keys even without user traffic, use
-an `st.App` lifespan task to periodically call the cached function with those arguments. See
-[Scheduled background refresh for specific
-keys](server-asgi.md#scheduled-background-refresh-for-specific-keys).
+Background refresh is access-driven: it starts only after a call observes an expired entry, so the caller may briefly receive stale data. For advanced cases that need the server to initiate background refreshes for specific global cache keys even without user traffic, use an `st.App` lifespan task to periodically call the cached function with those arguments. See [Scheduled background refresh for specific keys](server-asgi.md#scheduled-background-refresh-for-specific-keys).
 
 ### Async functions
 
-`@st.cache_data` and `@st.cache_resource` can decorate `async def` functions. The decorated
-call returns an awaitable; you must await it (for example with `asyncio.run()` in a Streamlit
-script). Streamlit caches the awaited return value, not the coroutine.
+`@st.cache_data` and `@st.cache_resource` can decorate `async def` functions. The decorated call returns an awaitable; you must await it (for example with `asyncio.run()` in a Streamlit script). Streamlit caches the awaited return value, not the coroutine.
 
 ```python
 import asyncio
@@ -117,10 +97,7 @@ async def load_config():
 config = asyncio.run(load_config())
 ```
 
-Do not cache live async clients or connections bound to the event loop that created
-them — that loop may already be closed on a later rerun, and the object will raise
-`Event loop closed`. Cache results that stay valid across loops, such as API payloads,
-dataframes, and config.
+Do not cache live async clients or connections bound to the event loop that created them — that loop may already be closed on a later rerun, and the object will raise `Event loop closed`. Cache results that stay valid across loops, such as API payloads, dataframes, and config.
 
 ### Prevent unbounded cache growth
 
