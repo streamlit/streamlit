@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, within } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -289,6 +289,47 @@ describe("Sidebar Component", () => {
         writable: true,
         configurable: true,
       })
+    })
+  })
+
+  describe("Auto-collapse on resize", () => {
+    const setWindowWidth = (width: number): void => {
+      Object.defineProperty(window, "innerWidth", {
+        value: width,
+        writable: true,
+        configurable: true,
+      })
+    }
+
+    afterEach(() => {
+      setWindowWidth(1024)
+    })
+
+    it("collapses an expanded sidebar when the window narrows to mobile", () => {
+      setWindowWidth(1024)
+      const onToggleCollapse = vi.fn()
+      renderSidebar({ isCollapsed: false, onToggleCollapse })
+      expect(onToggleCollapse).not.toHaveBeenCalled()
+
+      act(() => {
+        setWindowWidth(500)
+        window.dispatchEvent(new Event("resize"))
+      })
+
+      expect(onToggleCollapse).toHaveBeenCalledExactlyOnceWith(true, false)
+    })
+
+    it("does not collapse when the window widens", () => {
+      setWindowWidth(500)
+      const onToggleCollapse = vi.fn()
+      renderSidebar({ isCollapsed: false, onToggleCollapse })
+
+      act(() => {
+        setWindowWidth(1024)
+        window.dispatchEvent(new Event("resize"))
+      })
+
+      expect(onToggleCollapse).not.toHaveBeenCalled()
     })
   })
 

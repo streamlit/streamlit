@@ -490,15 +490,17 @@ describe("FlexBoxContainer layout props", () => {
     ).getByTestId("stLayoutWrapper")
     expect(layoutWrapper).toHaveStyle("align-self: stretch;")
     expect(layoutWrapper).toHaveStyle("min-height: 100%;")
-    expect(layoutWrapper).toHaveStyle("max-height: 100%;")
+    // No max height, so taller content can grow it past a fixed-height row.
+    expect(layoutWrapper).not.toHaveStyle("max-height: 100%;")
     expect(layoutWrapper).not.toHaveStyle("height: 100%;")
-    // The bordered block still fills its stretched wrapper.
-    expect(within(layoutWrapper).getByTestId("stVerticalBlock")).toHaveStyle(
-      "height: 100%;"
-    )
+    // The bordered block fills its stretched wrapper through flex, without a
+    // percentage height that would let it shrink below its content.
+    const innerBlock = within(layoutWrapper).getByTestId("stVerticalBlock")
+    expect(innerBlock).toHaveStyle("height: auto;")
+    expect(innerBlock).toHaveStyle("flex: 1;")
   })
 
-  it("keeps a percentage height for a stretch-height container in a vertical parent", () => {
+  it("fills a vertical parent with a flex basis for a stretch-height container", () => {
     const stretchChild = makeVerticalBlock([], {
       heightConfig: { useStretch: true },
       flexContainer: {
@@ -510,8 +512,28 @@ describe("FlexBoxContainer layout props", () => {
     )
 
     const layoutWrapper = screen.getByTestId("stLayoutWrapper")
-    expect(layoutWrapper).toHaveStyle("height: 100%;")
+    // A percentage height would cap the container at its parent's height.
+    expect(layoutWrapper).toHaveStyle("flex: 0 1 100%;")
+    expect(layoutWrapper).toHaveStyle("height: auto;")
     expect(layoutWrapper).not.toHaveStyle("align-self: stretch;")
+  })
+
+  it("does not apply the stretch overrides to a content-height container", () => {
+    const contentChild = makeVerticalBlock([], {
+      heightConfig: { useContent: true },
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+      },
+    })
+    renderWithContexts(
+      makeVerticalBlockComponent(makeVerticalBlock([contentChild]))
+    )
+
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).not.toHaveStyle("flex: 0 1 100%;")
+    expect(within(layoutWrapper).getByTestId("stVerticalBlock")).toHaveStyle(
+      "height: auto;"
+    )
   })
 
   it("does not stretch st.space along the cross axis of a horizontal parent", () => {
@@ -932,6 +954,26 @@ describe("BlockNodeRenderer container types", () => {
       true,
       false
     )
+    // A content-height form keeps filling its layout wrapper.
+    expect(screen.getByTestId("stForm")).toHaveStyle("height: 100%;")
+  })
+
+  it("renders a stretch-height form that grows with its content", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("form child")], {
+          heightConfig: { useStretch: true },
+          form: { formId: "stretch-form", border: true },
+        })
+      )
+    )
+
+    expect(screen.getByTestId("stLayoutWrapper")).toHaveStyle(
+      "flex: 0 1 100%;"
+    )
+    const form = screen.getByTestId("stForm")
+    expect(form).toHaveStyle("height: auto;")
+    expect(form).toHaveStyle("flex: 1 1 0%;")
   })
 
   it("renders a chat message block", () => {

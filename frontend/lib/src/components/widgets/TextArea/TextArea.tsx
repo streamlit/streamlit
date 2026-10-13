@@ -252,6 +252,7 @@ const TextArea: FC<Props> = ({
       className="stTextArea"
       data-testid="stTextArea"
       ref={elementRef}
+      $isStretchHeight={isStretchHeight}
     >
       <WidgetLabel
         label={element.label}

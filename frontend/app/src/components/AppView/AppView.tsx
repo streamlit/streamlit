@@ -61,6 +61,7 @@ import {
 import { Navigation } from "@streamlit/protobuf"
 
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
+import SkipToContentLink, { MAIN_ELEMENT_ID } from "./SkipToContentLink"
 import {
   StyledAppViewBlockContainer,
   StyledAppViewBlockSpacer,
@@ -394,6 +395,7 @@ function AppView(props: AppViewProps): ReactElement {
       data-testid="stAppViewContainer"
       data-layout={layout}
     >
+      <SkipToContentLink />
       {showSidebar && (
         <Profiler id="Sidebar">
           <ThemedSidebar
@@ -428,6 +430,7 @@ function AppView(props: AppViewProps): ReactElement {
           showToolbar={showToolbar}
         />
         <Component
+          id={MAIN_ELEMENT_ID}
           tabIndex={0}
           isEmbedded={embedded}
           disableScrolling={disableScrolling}
