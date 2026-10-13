@@ -523,7 +523,7 @@ class AppTest:
         # Only modify global secrets stuff if we have been given secrets
         if self.secrets:
             new_secrets = Secrets()
-            new_secrets._secrets = self.secrets
+            new_secrets._secrets = self.secrets  # ty: ignore[invalid-assignment]
             st.secrets = new_secrets
 
         script_runner = LocalScriptRunner(
