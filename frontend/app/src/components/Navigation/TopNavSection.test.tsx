@@ -332,6 +332,42 @@ describe("TopNavSection", () => {
       expect(screen.getByRole("button", { name: "Before" })).toHaveFocus()
     })
 
+    it("skips aria-hidden overflow neighbors when Tab closes the menu", async () => {
+      // Mimics rc-overflow: overflowed pages stay mounted with aria-hidden
+      // between the last on-bar control and the "N more" trigger.
+      const user = userEvent.setup()
+      renderWithContexts(
+        <div>
+          <a href="/visible" data-testid="visible-nav">
+            Visible Page
+          </a>
+          <div aria-hidden="true">
+            <a href="/hidden" data-testid="hidden-nav">
+              Hidden Page
+            </a>
+          </div>
+          <TopNavSection
+            {...getDefaultProps({
+              sections: TWO_PAGE_SECTION,
+              title: "2 more",
+            })}
+          />
+          <button type="button">After</button>
+        </div>
+      )
+
+      await openPopover(user)
+      await user.keyboard("{Shift>}{Tab}{/Shift}")
+      expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
+      expect(screen.getByTestId("visible-nav")).toHaveFocus()
+      expect(screen.getByTestId("hidden-nav")).not.toHaveFocus()
+
+      await openPopover(user)
+      await user.keyboard("{Tab}")
+      expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
+      expect(screen.getByRole("button", { name: "After" })).toHaveFocus()
+    })
+
     it("opens with ArrowUp and focuses the last menu item", async () => {
       const user = userEvent.setup()
       renderWithContexts(

@@ -487,31 +487,6 @@ def test_top_nav_section_keyboard_and_aria(app: Page):
     expect(first_link).to_be_focused()
 
 
-def test_top_nav_overflow_tab_skips_hidden_items(app: Page):
-    """Tab/Shift+Tab skip rc-overflow items that are mounted but aria-hidden."""
-    click_checkbox(app, "Test Overflow (5 pages)")
-    wait_for_app_run(app)
-
-    # Narrow enough that some pages leave the bar and appear only under "N more".
-    app.set_viewport_size({"width": 520, "height": 600})
-
-    more_trigger = app.get_by_test_id("stTopNavSection").filter(has_text="more")
-    expect(more_trigger).to_be_visible()
-
-    visible_links = app.get_by_test_id("stTopNavLink")
-    expect(visible_links.first).to_be_visible()
-    last_visible_link = visible_links.last
-    expect(last_visible_link).to_be_visible()
-
-    last_visible_link.focus()
-    app.keyboard.press("Tab")
-    expect(more_trigger).to_be_focused()
-
-    more_trigger.focus()
-    app.keyboard.press("Shift+Tab")
-    expect(last_visible_link).to_be_focused()
-
-
 def test_mixed_sections_visual_regression(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
