@@ -19,6 +19,7 @@ from __future__ import annotations
 import copy
 import functools
 import inspect
+import os
 import sys
 from collections.abc import Mapping as MappingABC
 from contextlib import asynccontextmanager
@@ -227,7 +228,10 @@ def _resolve_callable_source_path(obj: Any) -> Path:
 
     Candidates are walked from the outer object inward. The innermost
     existing source file wins, so a decorated function defined in the app
-    module is not anchored to the decorator's module.
+    module is not anchored to the decorator's module. The same rule applies
+    to partials and callable instances: a library callable anchors ``static/``
+    files, ``pages/``, ``sys.path``, and watching at that package file, including
+    under site-packages.
     """
     script_path: Path | None = None
     for candidate in _callable_source_candidates(obj):
@@ -579,7 +583,9 @@ class App:
         from streamlit.runtime.secrets import _validate_secrets_value
 
         self._script_entrypoint: Callable[[], None] | None = None
-        if isinstance(script_path, (str, Path)):
+        # PathLike before callable: Path() used to accept PurePath and other
+        # path-like values, and a path-like object can also be callable.
+        if isinstance(script_path, (str, os.PathLike)):
             self._script_path = Path(script_path)
         elif callable(script_path):
             if _is_async_callable(script_path):

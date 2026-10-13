@@ -138,11 +138,10 @@ def _close_awaitable(awaitable: Any) -> None:
 def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
     """Call a retained App entrypoint and reject coroutine or generator results.
 
-    Construction-time checks cannot follow ``@functools.wraps`` wrappers, so a
-    synchronous wrapper around an async or generator function can still be
-    retained. Invoking it would otherwise discard the returned coroutine or
-    generator. Valid sync wrappers that drive the inner coroutine themselves
-    return ``None`` and are allowed.
+    Construction validates the wrapper Streamlit will call. A synchronous
+    ``@functools.wraps`` wrapper can still return a coroutine or generator, so
+    this guard closes that result and raises. Wrappers that drive the inner
+    coroutine themselves return ``None`` and are allowed.
     """
     result: Any = entrypoint()
     if not (
@@ -157,12 +156,19 @@ def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
     else:
         closer = getattr(result, "close", None)
         if callable(closer):
-            closer()
+            try:
+                closer()
+            except Exception:
+                # A failing close() must not hide the entrypoint error.
+                _LOGGER.debug(
+                    "Failed to close a rejected coroutine or generator entrypoint.",
+                    exc_info=True,
+                )
 
     raise StreamlitAPIException(
         "st.App callable entrypoints must not return a coroutine or generator. "
         "Pass a synchronous callable instead.",
-        error_id="app-callable-returns-awaitable",
+        error_id="app-callable-returns-coroutine-or-generator",
     )
 
 

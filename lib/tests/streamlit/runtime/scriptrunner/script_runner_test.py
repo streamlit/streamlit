@@ -23,6 +23,7 @@ import sys
 import threading
 import time
 import unittest
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, call, patch
 
@@ -77,11 +78,28 @@ from streamlit.runtime.state.session_state import SessionState
 from tests import testutil
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Generator
 
     from streamlit.proto.Delta_pb2 import Delta
     from streamlit.proto.Element_pb2 import Element
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+
+@contextmanager
+def _installed_event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+    """Install a fresh loop and restore whatever loop the thread had before."""
+    try:
+        previous_loop: asyncio.AbstractEventLoop | None = asyncio.get_event_loop()
+    except RuntimeError:
+        previous_loop = None
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        yield loop
+    finally:
+        asyncio.set_event_loop(previous_loop)
+        loop.close()
+
 
 text_utf = "complete! 👨‍🎤"
 text_utf2 = "complete2! 👨‍🎤"
@@ -233,10 +251,8 @@ class ScriptRunnerTest(unittest.TestCase):
 
     def test_invoke_script_entrypoint_closes_async_generator(self) -> None:
         """Rejected async-generator returns run cleanup instead of leaking."""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
         closed = False
-        try:
+        with _installed_event_loop():
 
             async def agen() -> Any:
                 nonlocal closed
@@ -260,18 +276,15 @@ class ScriptRunnerTest(unittest.TestCase):
             ) as exc_info:
                 _invoke_script_entrypoint(entrypoint)
 
-            assert exc_info.value.error_id == "app-callable-returns-awaitable"
+            assert (
+                exc_info.value.error_id == "app-callable-returns-coroutine-or-generator"
+            )
             assert closed is True
             assert gen.ag_frame is None
-        finally:
-            asyncio.set_event_loop(None)
-            loop.close()
 
     def test_invoke_script_entrypoint_closes_unstarted_async_generator(self) -> None:
         """An unstarted async generator is closed before the entrypoint error."""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
+        with _installed_event_loop():
 
             async def agen() -> Any:
                 yield None
@@ -285,9 +298,28 @@ class ScriptRunnerTest(unittest.TestCase):
                 _invoke_script_entrypoint(entrypoint)
 
             assert gen.ag_frame is None
-        finally:
-            asyncio.set_event_loop(None)
-            loop.close()
+
+    def test_invoke_script_entrypoint_raises_when_close_fails(self) -> None:
+        """A failing close() does not hide the entrypoint error."""
+
+        def gen() -> Any:
+            try:
+                yield None
+            finally:
+                raise RuntimeError("close failed")
+
+        generator = gen()
+        next(generator)
+
+        def entrypoint() -> Any:
+            return generator
+
+        with pytest.raises(
+            StreamlitAPIException, match="coroutine or generator"
+        ) as exc_info:
+            _invoke_script_entrypoint(entrypoint)
+
+        assert exc_info.value.error_id == "app-callable-returns-coroutine-or-generator"
 
     def test_callable_entrypoint_uses_normal_error_handling(self):
         """Exceptions from callable entrypoints use the standard script error path."""

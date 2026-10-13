@@ -71,11 +71,14 @@ This ordering explains why `connect_session()` alone does not start user code ex
 
 Executes user scripts in isolated thread.
 
-`ScriptData` / `RuntimeConfig` carry `main_script_path` (filesystem anchor for
-config, secrets, static files, and watching) and an optional
-`script_entrypoint` callable. When `script_entrypoint` is set (via
-`st.App(callable)`), ScriptRunner invokes that callable instead of compiling and
-`exec()`-ing the main script file; the path still anchors the app on disk.
+`ScriptData` / `RuntimeConfig` carry `main_script_path` and an optional
+`script_entrypoint` callable. For a callable entrypoint, `main_script_path` is
+the callable source file: it anchors static files and source watching.
+Script-level config and secrets use `config._main_script_path`, which stays the
+launched file under `streamlit run` and falls back to the callable source when
+that path is unset. When `script_entrypoint` is set (via `st.App(callable)`),
+ScriptRunner invokes that callable instead of compiling and `exec()`-ing the
+main script file.
 
 **Execution flow**:
 1. Prepare the app entrypoint: compile a script to bytecode (cached via

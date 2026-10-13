@@ -1619,6 +1619,13 @@ class TestAppInit:
         app = App(Path("main.py"))
         assert app.script_path == Path("main.py")
 
+    def test_app_accepts_pathlike(self) -> None:
+        """Path-like values such as PurePath stay on the path branch."""
+        from pathlib import PurePath
+
+        app = App(PurePath("main.py"))
+        assert app.script_path == Path("main.py")
+
     def test_app_preserves_script_path_keyword(self) -> None:
         """The script_path constructor keyword still accepts path strings."""
         app = App(script_path="main.py")

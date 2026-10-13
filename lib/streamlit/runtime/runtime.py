@@ -636,6 +636,10 @@ class Runtime:
         Notes
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
+
+        Callable entrypoints are process-retained. This probe invokes that same
+        object, so it can observe and mutate closures, module globals, and
+        callable-instance attributes shared with live sessions.
         """
         # NOTE: We create an AppSession directly here instead of using the
         # SessionManager intentionally. This isn't a "real" session and is only being

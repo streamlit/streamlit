@@ -159,14 +159,18 @@ Run with `streamlit run app.py`, `python app.py`, or `uv run app.py`.
 Callable requirements and behavior:
 - Must be invokable without arguments. Async and generator callables are not
   supported.
-- Must be defined in a filesystem-backed Python source file. That source file
-  is the Runtime filesystem anchor for secrets, `static/` files, and source
-  watching. Under `streamlit run`, script-level `.streamlit/config.toml`
-  comes from the launched file; when that path is unset (for example under
-  uvicorn/`App` construction), the source file also pins config.
-- Streamlit invokes the callable once per full rerun. Locals are created afresh;
-  closure cells and module globals are shared across reruns and sessions. Use
-  `st.session_state` for per-session values.
+- Must be defined in a filesystem-backed Python source file. The innermost
+  source file anchors `static/` files and source watching, including when that
+  file lives in a library (for example a `functools.partial` of a package
+  callable under site-packages).
+- Script-level `.streamlit/config.toml` and `secrets.toml` follow
+  `config._main_script_path`. Under `streamlit run` that is the launched file.
+  When that path is unset (for example under uvicorn/`App` construction), the
+  callable source file pins config and secrets.
+- Streamlit invokes the callable once per full rerun, and the script health
+  check invokes that same retained object. Locals are created afresh; closure
+  cells and module globals are shared across reruns, sessions, and health
+  checks. Use `st.session_state` for per-session values.
 - Streamlit retains the original callable object for the lifetime of the `App`.
   Restart the process after changing the callable's definition.
 
