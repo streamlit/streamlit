@@ -92,11 +92,11 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     const blockId = node.deltaBlock?.id || undefined
     const key = this.getCurrentKey(blockId)
     this.index += 1
-    // Keep the first sibling with this block id and skip later copies. During
-    // a rerun the updated block is written before stale nodes are cleared, so
-    // the old copy can still be a later sibling. Rendering both shares a React
-    // key, which warns and can remount the container. This matches the widget
-    // dedupe in visitElementNode.
+    // Keep the first sibling with this block id and skip later copies. A rerun
+    // writes the updated block at its new index but only clears stale nodes when
+    // the run finishes, so the old copy can still sit at a later index. Rendering
+    // both would give two siblings the same React key, which makes React warn and
+    // can remount the container. visitElementNode dedupes widgets the same way.
     if (blockId) {
       if (this.elementKeySet.has(key)) {
         return null

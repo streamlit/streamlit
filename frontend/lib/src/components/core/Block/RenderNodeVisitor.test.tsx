@@ -242,19 +242,28 @@ describe("RenderNodeVisitor", () => {
 
     it("skips a later block that reuses a keyed block id", () => {
       // A rerun can leave the previous keyed container in place until stale
-      // nodes are cleared. The updated block is at the earlier index.
+      // nodes are cleared. The updated block is at the earlier index. The
+      // skipped copy still consumes an index, so a later unkeyed sibling keeps
+      // the positional key it would have had if that copy were rendered.
       const blockId = "$$ID-abc123-my_key"
       const currentBlock = blockWithId(blockId, [text("current")])
       const staleBlock = blockWithId(blockId, [text("stale")])
-      const parentBlock = block([currentBlock, text("between"), staleBlock])
+      const parentBlock = block([
+        currentBlock,
+        text("between"),
+        staleBlock,
+        text("after"),
+      ])
 
       const result = RenderNodeVisitor.collectReactElements(
         createMockProps(parentBlock)
       )
 
-      expect(result).toHaveLength(2)
+      expect(result).toHaveLength(3)
       expect(result[0].key).toBe(blockId)
       expect(result[0].props.node).toBe(currentBlock)
+      expect(result[1].key).toBe("1")
+      expect(result[2].key).toBe("3")
       expect(result.some(element => element.props.node === staleBlock)).toBe(
         false
       )
