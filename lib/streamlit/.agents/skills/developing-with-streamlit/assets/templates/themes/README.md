@@ -13,11 +13,16 @@ not from `config.toml`. For a single app, copy a template straight into
 `.streamlit/config.toml`. Choose single or dual mode from the goal below;
 use dual mode only when users should control appearance.
 
+**Defaults:** start from `shadcn-dual` for a general brand with the appearance
+toggle; `dense-dashboard` for KPI layouts that need compact padding and the
+toggle; `shadcn` (locked light) or `vscode` (locked dark) when appearance must
+stay fixed. Treat the other single-mode themes as aesthetic variants.
+
 | Goal | Approach |
 |------|----------|
 | Same brand across many apps | Shared TOML/URL via `theme.base`; tweak in each app’s `config.toml` |
-| Locked single look | Single-mode template or `[theme]` only |
-| User can toggle light/dark | Dual-mode template (`shadcn-dual`, `dense-dashboard`) |
+| Locked single look | `shadcn` (light) or `vscode` (dark), or another single-mode variant |
+| User can toggle light/dark | `shadcn-dual` (general) or `dense-dashboard` (compact KPI padding) |
 
 ## Dual-mode (settings toggle stays available)
 

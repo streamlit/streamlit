@@ -167,6 +167,16 @@ with st.sidebar:
 # Main area is all dashboard content
 ```
 
+## Theme and polish
+
+When the user wants a branded or dense KPI look, pair the dashboard with a theme — do not inject CSS for colors or `.block-container` padding.
+
+- Copy `assets/templates/themes/configs/dense-dashboard.toml` into the app’s `.streamlit/config.toml` (compact `paddingTop`/`paddingBottom` + light/dark toggle), or point `theme.base` at a shared brand file
+- Set chart and dataframe brand colors in config (`chartCategoricalColors`, `dataframe*`), not as one-off per-chart hardcodes
+- Start with the cheat sheet and Content padding in `theme.md`
+
+`dashboard-metrics` ships a sample `.streamlit/config.toml` based on `dense-dashboard`.
+
 ## Dashboard templates
 
 Ready-to-use dashboard templates are available in `assets/templates/apps/`:
@@ -184,6 +194,7 @@ Each template uses synthetic data that can be replaced with real queries. See `a
 
 ## References
 
+- `theme.md` — Config theming, dense padding, chart palettes (cheat sheet first)
 - `layouts.md` — Columns, containers, tabs, dialogs
 - `data-display.md` — Charts, dataframes, column configuration
 - `performance.md` — Caching and fragments for heavy dashboards

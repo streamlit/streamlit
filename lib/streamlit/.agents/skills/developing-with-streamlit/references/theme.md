@@ -29,8 +29,26 @@ Relative `theme.base` paths resolve from the `streamlit run` working directory, 
 3. Sidebar should contrast or match? → `[theme.sidebar]` for a locked theme; `[theme.light.sidebar]` / `[theme.dark.sidebar]` when the appearance toggle stays on. Shared sidebar padding can sit on `[theme.sidebar]`
 4. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` on the section for that mode (light, dark, or locked `[theme]`)
 
+## Cheat sheet: common customization intents
+
+Start here for most polish/brand asks. Use **Choose a config shape** and **Where to put keys** above, then open deeper sections only when the ask needs them.
+
+| Intent | Put in `config.toml` | Start from |
+|--------|----------------------|------------|
+| Brand accent (buttons, links) | `primaryColor`, usually also `linkColor` | Any template; retint primary |
+| Page / panel surfaces | `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `borderColor` | `shadcn` / `shadcn-dual` |
+| User can toggle light/dark | `[theme.light]` + `[theme.dark]` (and sidebars if needed) | `shadcn-dual` |
+| Dense KPI / less chrome gap | `paddingTop` / `paddingBottom` (main + optional `[theme.sidebar]`) | `dense-dashboard` |
+| Contrasting sidebar | Full contrast set on `[theme.sidebar]` or per-mode sidebars — not only `backgroundColor` | Dual example or `shadcn-dual` |
+| Chart / dataframe brand | `chartCategoricalColors` (and sequential/diverging), `dataframe*` | `dense-dashboard` or dual example |
+| Fonts, radii, widget borders | `font` / `headingFont` / `codeFont`, `baseRadius`, `showWidgetBorder` | Most templates |
+| Same brand across many apps | Shared file/URL via `theme.base`; app-only overrides in each `config.toml` | Adapt a template into the shared file |
+
+Prefer these over CSS. Full option detail is in the sections below; inventory via `streamlit config show`.
+
 ## Contents
 
+- [Cheat sheet: common customization intents](#cheat-sheet-common-customization-intents)
 - [Valid theme sections](#valid-theme-sections)
 - [How theme config is applied](#how-theme-config-is-applied)
 - [Shared base themes across apps](#shared-base-themes-across-apps)
@@ -517,11 +535,13 @@ Most options hot-reload on save + rerun. `fontFaces` additions and updates apply
 
 ## Theme templates
 
-Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Choose a single- or dual-mode template based on whether users should control appearance; use dual mode only when the settings appearance toggle should stay available.
+Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it.
+
+**Picker defaults:** `shadcn-dual` for a general brand with the appearance toggle; `dense-dashboard` for KPI layouts that need compact padding and the toggle; `shadcn` (locked light) or `vscode` (locked dark) when appearance must stay fixed. Treat the other single-mode themes as aesthetic variants. Use dual mode only when the settings appearance toggle should stay available.
 
 | Theme | Mode | Primary | Fonts | Notes |
 |-------|------|---------|-------|-------|
-| **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Inter, JetBrains Mono | Dual-mode + sidebars when users should toggle appearance |
+| **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Inter, JetBrains Mono | Default dual-mode + sidebars |
 | **dense-dashboard** | Light + dark | `#1D4ED8` / `#2563EB` | Inter, JetBrains Mono | Dual-mode + compact `paddingTop`/`paddingBottom` for KPI layouts |
 | **dracula** | Dark (locked) | `#BD93F9` | Fira Sans, JetBrains Mono | |
 | **financial-dashboard** | Dark (locked) | `#60A5FA` | Inter, JetBrains Mono | |

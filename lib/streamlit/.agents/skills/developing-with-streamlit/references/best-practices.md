@@ -29,11 +29,14 @@ st.markdown(
 
 ```toml
 # GOOD: Configure theme tokens in .streamlit/config.toml
+# See theme.md cheat sheet for dual-mode, padding, charts, and shared theme.base
 [theme]
 primaryColor = "#ff4b4b"
 backgroundColor = "#ffffff"
 secondaryBackgroundColor = "#f6f8fa"
 textColor = "#262730"
+baseRadius = "0.5rem"
+showWidgetBorder = true
 ```
 
 Prefer Material Symbols icons over emojis in UI labels, and use sentence casing.

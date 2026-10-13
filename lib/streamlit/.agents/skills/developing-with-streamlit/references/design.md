@@ -24,7 +24,7 @@ st.html("<style>.stButton button { background: #0969da; }</style>")
 primaryColor = "#0969da"
 ```
 
-Read `theme.md` for the full option set, ready-made theme configs, and the narrow escape hatch for when the user explicitly asks for CSS.
+Read `theme.md` — start with **Choose a config shape** and the **Cheat sheet** for dual-mode, padding, charts, and fonts. Use the deeper sections and templates when the ask needs them. CSS only when the user explicitly asks.
 
 ## Page config
 
@@ -103,6 +103,11 @@ Avoid the old verbose syntax:
 # OLD (still works but cluttered)
 st.markdown(":orange-background[:orange[Pending]]")
 ```
+
+## Which spacing?
+
+- **Page / sidebar chrome** (gap under the header or before the first widget): `paddingTop` / `paddingBottom` in `.streamlit/config.toml` — see Content padding in `theme.md`. Do not inject CSS for `.block-container`.
+- **Between widgets or sections:** `st.space` or container `gap` (see `layouts.md`). Prefer removing heavy `st.divider()` / `---` first.
 
 ## Spacing: remove dividers
 
