@@ -155,7 +155,7 @@ with col2:
 
 The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible. Keep the card title outside the `with` block so it stays stable while the body loads.
 
-Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns, and add `refresh_mode="background"` so an expired entry serves instantly and refreshes off-thread instead of blocking. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching, including the `refresh_mode="background"` caveats.
+Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching.
 
 Put a control that must stay responsive during a slow load in the main script, not inside a card. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
 
@@ -183,7 +183,7 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 | `dashboard-feature-usage` | Feature adoption tracking, trend analysis, conditional "Raw data" expander |
 | `dashboard-seattle-weather` | Weather data visualization |
 | `dashboard-stock-peers` | Stock peer comparison |
-| `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a main-script filter and `refresh_mode="background"` caching, so the page stays responsive while the report loads |
+| `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a main-script filter, so the page stays responsive while the report loads |
 
 Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.
 

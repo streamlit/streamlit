@@ -277,7 +277,11 @@ orders()
 - Each parallel fragment should write to its own Session State keys
 - Avoid unsynchronized mutations of shared mutable objects across fragments
 
-**Where to put controls during a long load.** Put a control in the main script when it must stay responsive while one fragment is much slower than the rest. While a full-app run is still in progress (for example on initial load, with slow parallel fragments still filling in), a widget *inside* a fragment is queued until that run finishes (including the slow fragments), whereas a main-script widget reruns the whole script and preempts the run. Once the app is idle, an in-fragment widget reruns just that fragment; when cards load in a similar time, per-card controls are fine.
+**Where to put controls during a long load.** Put a control in the main script when it must stay responsive while one fragment is much slower than the rest.
+
+- While a full-app run is still in progress, a widget *inside* a fragment waits until that run finishes, including the slow fragments.
+- A main-script widget starts a new full-app run and preempts the in-progress one, so every card refreshes together.
+- Once the app is idle, an in-fragment widget reruns just that fragment; when cards load in a similar time, per-card controls are fine.
 
 Note: `parallel=True` applies to full-app reruns; `run_every` triggers fragment-scoped reruns, which execute sequentially.
 

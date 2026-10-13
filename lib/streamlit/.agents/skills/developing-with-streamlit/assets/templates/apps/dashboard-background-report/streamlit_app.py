@@ -17,8 +17,8 @@
 The pattern: one piece of work on the page is much slower than everything else
 (a heavy report, a full reconciliation, an export, a slow API call — a database
 query is just one example). Run that slow work in a ``@st.fragment(parallel=True)``
-so it loads on a worker thread, and keep the rest of the page interactive while it
-finishes.
+so it loads on a worker thread. Keep controls that must stay responsive in the main
+script; a widget inside a fragment waits until the in-progress full run finishes.
 
 Before reaching for this pattern, check whether the slow work can be split into
 smaller, independent operations. Parallel fragments overlap independent loads, so
@@ -115,7 +115,8 @@ def run_freshness_report() -> pd.DataFrame:
 
     Cached with ``refresh_mode="background"``: once warm, the page gets the cached
     result instantly and the refresh runs off-thread when the ``ttl`` expires. The
-    function only returns data; see ``performance.md`` for background-refresh caveats.
+    function only returns data. A background refresh runs off the script thread and
+    does not replay ``st.*`` output, so don't call ``st.*`` commands here.
     """
     time.sleep(REPORT_SECONDS)
     rng = _rng("report")
@@ -173,9 +174,10 @@ def throughput_card(region: str) -> None:
 def freshness_report() -> None:
     """The slow report, loaded in the background via a parallel fragment.
 
-    On a full app rerun this is dispatched to a worker thread, so the filter and the
-    quick cards stay interactive while the report is still loading. A loading message
-    shows while the long report runs (a skeleton is better suited to quick loads).
+    On a full app rerun this is dispatched to a worker thread, so the main-script
+    filter stays responsive and the quick cards fill in while the report is still
+    loading. A loading message shows while the long report runs (a skeleton is better
+    suited to quick loads).
     """
     with st.container(border=True):
         st.subheader("Pipeline freshness report")
