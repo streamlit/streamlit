@@ -317,7 +317,7 @@ can be revisited if there's clear demand.
 
 | Item                       | ✅ or comment                                                                                                                                                              |
 |----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Works on SiS, Cloud, etc?  | ⚠️ Pure Python, no new dependency. SiS's cache storage manager may enforce its own cache limits and ignore `max_size`, the same way it may ignore `max_entries`. The library default stays `"2gb"`, but SiS keeps the global budget off (`"0"`) until SiS confirms a non-zero default. |
+| Works on SiS, Cloud, etc?  | ✅ Pure Python, no new dependency. SiS and Community Cloud use Streamlit's built-in cache storage, so `max_size` and the `"2gb"` global budget behave the same as locally. |
 | No breaking API changes    | ✅ `max_size` is a new optional parameter defaulting to `None`. ⚠️ A non-zero global default (Option B/C) is a behavior change — but only evicts recomputable data, never errors. Option A avoids even that. |
 | No new dependencies        | ✅ Byte sizes come from `len(pickled_bytes)`. Option C (memory-fraction default) is the only variant that would need memory detection; the recommendation (Option B) avoids it. |
 | Metrics collected          | ✅ `cache_memory_bytes` already reports per-cache serialized size, and the existing `cache_data` command metrics record `max_size` usage. Global-budget eviction counts need a new counter (tech spec). |
