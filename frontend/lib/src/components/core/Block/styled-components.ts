@@ -77,6 +77,7 @@ interface StyledElementContainerProps {
   alignSelf?: React.CSSProperties["alignSelf"]
   minHeight?: React.CSSProperties["minHeight"]
   maxHeight?: React.CSSProperties["maxHeight"]
+  contain?: React.CSSProperties["contain"]
 }
 
 export const StyledSpace = styled.div({
@@ -101,12 +102,14 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     alignSelf,
     minHeight,
     maxHeight,
+    contain,
   }) => ({
     width,
     height,
     alignSelf,
     minHeight,
     maxHeight,
+    ...(contain !== undefined ? { contain } : {}),
     textAlign,
     maxWidth: "100%",
     // Important so that individual elements don't take up too much space
