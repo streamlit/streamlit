@@ -161,6 +161,19 @@ describe("ButtonGroup widget", () => {
     expect(icon.textContent).toContain(materialIconNames[1])
   })
 
+  it("ignores negative and out-of-range default indexes", () => {
+    const props = getProps({ default: [-1, 99] })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      [],
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
+    )
+  })
+
   it("sets widget value on mount", () => {
     const props = getProps()
     vi.spyOn(props.widgetMgr, "setStringArrayValue")
