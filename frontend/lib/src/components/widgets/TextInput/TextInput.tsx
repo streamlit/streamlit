@@ -898,7 +898,7 @@ function updateWidgetMgrState(
  * Maps each `TextInputProto.Type` enum value to its native DOM `<input type>`.
  * `PHONE` is the only entry whose DOM type (`"tel"`) differs from its name.
  */
-const DOM_INPUT_TYPE_BY_PROTO: Record<number, string> = {
+const DOM_INPUT_TYPE_BY_PROTO: Partial<Record<number, string>> = {
   [TextInputProto.Type.DEFAULT]: "text",
   [TextInputProto.Type.PASSWORD]: "password",
   [TextInputProto.Type.EMAIL]: "email",
@@ -908,12 +908,7 @@ const DOM_INPUT_TYPE_BY_PROTO: Record<number, string> = {
 }
 
 function getTypeString(element: TextInputProto): string {
-  // Unknown proto enum values are missing from the map. The index signature
-  // types every number as string, so `??` cannot see that hole.
-  if (!(element.type in DOM_INPUT_TYPE_BY_PROTO)) {
-    return "text"
-  }
-  return DOM_INPUT_TYPE_BY_PROTO[element.type]
+  return DOM_INPUT_TYPE_BY_PROTO[element.type] ?? "text"
 }
 
 // Prevents the toggle button from stealing focus from the input on mousedown,

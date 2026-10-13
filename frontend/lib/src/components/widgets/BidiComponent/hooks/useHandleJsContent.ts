@@ -360,8 +360,9 @@ export const useHandleJsContent = ({
       if (maybeCleanup) {
         void Promise.resolve(maybeCleanup)
           .then(result => {
-            // Return the cleanup result so a thenable teardown stays in the
-            // chain; `result(); return` would drop async cleanup rejections.
+            // Return the cleanup result so a rejected async cleanup reaches the
+            // error logger. Calling `result()` without returning it would
+            // detach that rejection.
             return result()
           })
           .catch((error: unknown) => {

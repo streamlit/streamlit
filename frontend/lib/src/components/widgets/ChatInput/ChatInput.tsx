@@ -635,8 +635,8 @@ function ChatInput({
         return
       }
 
-      // React types clipboardData as DataTransfer. The native event is nullable
-      // when the browser does not attach paste data.
+      // The browser leaves paste data null when a paste has none. React types
+      // `clipboardData` as always present, so read the native event.
       const clipboardData = e.nativeEvent.clipboardData
       if (!clipboardData) {
         return

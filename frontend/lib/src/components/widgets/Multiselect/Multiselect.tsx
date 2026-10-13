@@ -643,7 +643,7 @@ const Multiselect: FC<Props> = props => {
           const nextFocus = next ?? prev
           handleTagGroupRemove(new Set([tagValue]))
           if (nextFocus && nextFocus !== tag) {
-            // After removal, right neighbor slides to idx; left stays at idx-1
+            // Right neighbor keeps this index after removal; left neighbor stays at idx - 1.
             focusedTagIndexRef.current = nextFocus === next ? idx : idx - 1
             nextFocus.tabIndex = 0
             nextFocus.focus({ preventScroll: true })

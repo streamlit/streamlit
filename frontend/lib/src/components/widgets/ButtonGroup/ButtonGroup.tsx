@@ -144,8 +144,8 @@ function getDefaultStateFromProto(
 ): ButtonGroupValue {
   return element.default
     .map(index => {
-      // Bracket access is undefined for a negative or missing index.
-      // `at` would wrap negatives to the last option.
+      // A negative or missing index must stay missing. `at` would wrap
+      // negatives to the last option.
       const option =
         index >= 0 && index < element.options.length
           ? element.options[index]

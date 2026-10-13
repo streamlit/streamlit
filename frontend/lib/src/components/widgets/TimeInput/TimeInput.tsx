@@ -785,11 +785,7 @@ function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: TimeInputProto
 ): string | null | undefined {
-  const storedValue = widgetMgr.getStringValue(element)
-  if (storedValue === undefined) {
-    return undefined
-  }
-  return storedValue
+  return widgetMgr.getStringValue(element)
 }
 
 function getDefaultStateFromProto(element: TimeInputProto): string | null {

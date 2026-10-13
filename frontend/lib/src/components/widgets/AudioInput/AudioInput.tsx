@@ -71,9 +71,9 @@ export interface Props {
 }
 
 /**
- * Read `AbortSignal.aborted` without letting control-flow analysis treat it
- * as stuck false. A direct property check narrows later reads, including
- * reads after `await`, even though `abort()` can still run.
+ * Re-read whether `signal` is aborted. TypeScript treats an earlier
+ * `signal.aborted` check as stuck false, including across `await`, but
+ * `abort()` can still run.
  */
 function isSignalAborted(signal: AbortSignal): boolean {
   return signal.aborted
