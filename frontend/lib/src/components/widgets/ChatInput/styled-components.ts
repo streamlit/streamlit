@@ -19,7 +19,6 @@ import {
   getSecondaryIconButtonColorStyles,
   SECONDARY_ICON_DISABLED_SELECTOR,
 } from "~lib/components/shared/Base/styled-components"
-import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 export const StyledChatInputContainer = styled.div<{
   isStretchHeight?: boolean
@@ -187,15 +186,17 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       }
     }
 
+    const { redColor, redTextColor, bodyText } = theme.colors
+    // Prefer redColor on hover when it differs from rest. Dark named defaults
+    // use the same hex for both, so fall back to bodyText for a visible cue.
+    const errorHoverColor = redColor !== redTextColor ? redColor : bodyText
+
     const secondaryColorStyles = getSecondaryIconButtonColorStyles(
       theme,
       hasError
         ? {
-            restColor: theme.colors.redTextColor,
-            // Dark named defaults use the same hex for red text and red main.
-            hoverColor: hasLightBackgroundColor(theme)
-              ? theme.colors.redColor
-              : theme.colors.bodyText,
+            restColor: redTextColor,
+            hoverColor: errorHoverColor,
           }
         : undefined
     )
