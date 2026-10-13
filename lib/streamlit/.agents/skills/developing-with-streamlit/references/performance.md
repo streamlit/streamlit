@@ -147,6 +147,25 @@ def get_user_data(user_id):
 
 Use `ttl` for time-based expiration OR `max_entries` for size-based limits. You usually don't need both.
 
+### Diagnose cache memory pressure
+
+In supported Linux containers, Streamlit automatically writes a server-log warning when
+an `st.cache_data` write approaches 80% of the detected cgroup memory limit. The warning
+includes current cgroup memory and its limit, total serialized cache bytes and entries,
+the largest cached functions, and the pending write size. When no finite cgroup limit is
+available, a conservative, rate-limited warning is emitted for serialized entries of
+256 MiB or larger; this fallback does not estimate total available memory.
+
+If the process is OOM-killed, the warning survives only when the terminal, container
+runtime, or hosting platform retains Streamlit's server logs. Actual process memory can
+be higher than the reported serialized cache size because callers hold deserialized
+copies and the app has other live state. An OOM during result computation or
+serialization can happen before the cache-write hook runs.
+
+Use the warning's function breakdown to reduce cached result sizes, add `ttl` or
+`max_entries`, or clear unused entries with `st.cache_data.clear()`. Function names are
+included, but cache keys, arguments, and values are never logged.
+
 ## Fragments
 
 Use `@st.fragment` to isolate reruns for self-contained UI pieces.

@@ -35,7 +35,7 @@ import streamlit as st
 from streamlit import runtime
 from streamlit.errors import StreamlitIncompatibleParametersError, StreamlitValueError
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.caching import cache_memory_pressure, cache_utils
 from streamlit.runtime.caching.cache_errors import CacheError, CacheKeyNotFoundError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
@@ -339,6 +339,26 @@ class DataCaches(StatsProvider):
         # that it was one of those requested if we make it here.
         return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}
 
+    def get_memory_pressure_summary(
+        self,
+    ) -> cache_memory_pressure.CacheUsageSummary:
+        """Return exact serialized cache usage for memory-pressure diagnostics."""
+        with self._caches_lock:
+            function_caches = [
+                cache
+                for caches in self._function_caches.values()
+                for cache in caches.values()
+            ]
+
+        stats: list[CacheStat] = []
+        for cache in function_caches:
+            try:
+                cache_stats = cache.get_stats()
+            except Exception:
+                cache_stats = {}
+            stats.extend(cache_stats.get(CACHE_MEMORY_FAMILY, ()))
+        return cache_memory_pressure.summarize_cache_stats(stats)
+
     def validate_cache_params(
         self,
         function_name: str,
@@ -503,6 +523,18 @@ class CacheDataAPI:
         Cached objects are stored in "pickled" form, which means that the return
         value of a cached function must be pickleable. Each caller of the cached
         function gets its own copy of the cached data.
+
+        .. note::
+            In supported Linux containers, Streamlit logs a server warning when an
+            ``st.cache_data`` write approaches the detected memory limit. The warning
+            reports serialized cache usage and its largest function contributors,
+            without logging cached values, arguments, or keys. Preserve server or
+            container logs if you need this evidence after an out-of-memory kill.
+
+            Actual process memory can be higher than serialized cache usage because
+            callers hold deserialized copies and apps hold other state. An
+            out-of-memory kill during result computation or serialization can happen
+            before Streamlit reaches the cache-write warning hook.
 
         You can clear a function's cache with ``func.clear()`` or clear the entire
         cache with ``st.cache_data.clear()``.
@@ -885,6 +917,7 @@ class DataCache(Cache[R]):
         The value must be pickleable.
         """
         pickled_entry = self._pickle_result(value_key, value, messages)
+        self._maybe_log_memory_pressure(len(pickled_entry))
         self.storage.set(value_key, pickled_entry)
 
     def _pickle_result(
@@ -936,6 +969,7 @@ class DataCache(Cache[R]):
         with self._write_lock:
             if not self._invalidation_token_is_current(value_key, invalidation_token):
                 return False
+            self._maybe_log_memory_pressure(len(pickled_entry))
             self.storage.set(value_key, pickled_entry)
             return True
 
@@ -993,7 +1027,15 @@ class DataCache(Cache[R]):
                     return
             except CacheStorageError:
                 return
+            self._maybe_log_memory_pressure(len(pickled_entry))
             self.storage.set(value_key, pickled_entry)
+
+    def _maybe_log_memory_pressure(self, pending_entry_bytes: int) -> None:
+        cache_memory_pressure.maybe_log_cache_memory_pressure(
+            current_function=self.display_name,
+            pending_entry_bytes=pending_entry_bytes,
+            get_cache_summary=_data_caches.get_memory_pressure_summary,
+        )
 
     def _clear(self, key: str | None = None) -> None:
         with self._write_lock:
