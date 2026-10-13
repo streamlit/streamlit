@@ -45,7 +45,7 @@ type OptionalReactElements = ReactElement | ReactElement[] | null | undefined
 export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> {
   private readonly props: BlockPropsWithoutWidth
   private readonly elementKeyOverride?: string
-  private readonly elementKeySet: Set<string>
+  private readonly renderedKeySet: Set<string>
   public readonly reactElements: ReactElement[]
   private index: number
   private transientElementCount: number
@@ -53,7 +53,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   constructor(props: BlockPropsWithoutWidth, elementKeyOverride?: string) {
     this.props = props
     this.elementKeyOverride = elementKeyOverride
-    this.elementKeySet = new Set<string>()
+    this.renderedKeySet = new Set<string>()
     this.reactElements = []
     // Initialize index to 0 as we will use it as a key in the React component
     this.index = 0
@@ -98,10 +98,10 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     // both would give two siblings the same React key, which makes React warn and
     // can remount the container. visitElementNode dedupes widgets the same way.
     if (blockId) {
-      if (this.elementKeySet.has(key)) {
+      if (this.renderedKeySet.has(key)) {
         return null
       }
-      this.elementKeySet.add(key)
+      this.renderedKeySet.add(key)
     }
 
     const renderer = <BlockNodeRenderer key={key} {...childProps} />
@@ -150,11 +150,11 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     // correctly and we assume the second one is therefore stale (or throw an error).
     // Also, our setIn logic pushes stale widgets down in the list of elements, so the
     // most recent one should always come first.
-    if (this.elementKeySet.has(key)) {
+    if (this.renderedKeySet.has(key)) {
       return null
     }
 
-    this.elementKeySet.add(key)
+    this.renderedKeySet.add(key)
 
     const renderer = <ElementNodeRenderer key={key} {...childProps} />
     this.reactElements.push(renderer)
