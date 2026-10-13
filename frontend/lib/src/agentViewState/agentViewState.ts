@@ -20,8 +20,9 @@
  * A co-browsing agent reads the page the user is looking at, then answers in a
  * session of its own through the agent API. The rendered page shows what the
  * user sees, but not which values produced it, so the agent's session would
- * otherwise answer about the app's defaults. This module keeps a JSON document
- * in the DOM that says which values to send:
+ * otherwise answer about the app's defaults. While the agent API is on, this
+ * module hands an in-page reader a JSON document that says which values to
+ * send, from `window.streamlitAgentViewState()` and from an element:
  *
  * ```html
  * <script id="streamlit-agent-view-state" type="application/json">
@@ -62,11 +63,28 @@ import {
 /** The `id` of the `<script type="application/json">` that holds the state. */
 export const AGENT_VIEW_STATE_ELEMENT_ID = "streamlit-agent-view-state"
 
-/** A value longer than this, as JSON, is omitted as `too_large`. */
+/** A value longer than this, as written, is omitted as `too_large`. */
 const MAX_VALUE_LENGTH = 4096
 
-/** Once the values reach this length, as JSON, the rest are `too_large`. */
-const MAX_TOTAL_LENGTH = 32768
+/**
+ * The longest document the page holds, in characters, and the default for
+ * `window.streamlitAgentViewState`. It fits the smallest field a page-context
+ * reader is known to give it, 10,000 characters.
+ */
+export const DEFAULT_MAX_LENGTH = 8192
+
+declare global {
+  interface Window {
+    /**
+     * The document, computed when called and at most `maxLength` characters
+     * long, or `null` if not even an empty one fits. Defined only while the
+     * agent API is on.
+     */
+    streamlitAgentViewState?: (options?: {
+      maxLength?: number
+    }) => string | null
+  }
+}
 
 /**
  * Element types whose value the agent API can set, and so can be handed over.
@@ -140,9 +158,9 @@ type JsonValue =
  * - `disabled`: the agent API refuses to set a disabled widget.
  * - `in_dialog`: inside an open `st.dialog`, which the agent's session only
  *   shows after it fires whatever opened it.
- * - `no_submit_button`: in a form with no enabled submit button, so there is
- *   no trigger to send the form's fields with.
- * - `too_large`: over the size budget.
+ * - `no_submit_button`: in a form whose submit button the user used is no
+ *   longer enabled, so there is no trigger to send the form's fields with.
+ * - `too_large`: longer than 4,096 characters as written.
  */
 type OmittedReason =
   | "sensitive"
@@ -172,6 +190,12 @@ export interface AgentViewState {
   forms: FormRequest[]
   /** Values the user holds that are not handed over, and why. */
   omitted: Record<string, OmittedReason>
+  /**
+   * `false` when the document ran out of room. The widgets after the last one
+   * it lists are missing, and so are the query parameters if they alone did
+   * not fit.
+   */
+  complete: boolean
 }
 
 /** What the page says about one widget, beyond its value. */
@@ -191,10 +215,10 @@ interface IndexedWidget {
   hasDefault?: boolean
 }
 
-/** The widgets on the page in document order, and each form's submit button. */
+/** The widgets on the page in document order, and the enabled submit buttons. */
 export interface WidgetIndex {
   widgets: Map<string, IndexedWidget>
-  submitButtonIds: Map<string, string>
+  enabledSubmitButtonIds: Set<string>
 }
 
 interface WidgetPayload {
@@ -218,7 +242,7 @@ export function agentKeyFromElementId(elementId: string): string {
 class WidgetIndexVisitor implements AppNodeVisitor<void> {
   public readonly widgets = new Map<string, IndexedWidget>()
 
-  public readonly submitButtonIds = new Map<string, string>()
+  public readonly enabledSubmitButtonIds = new Set<string>()
 
   private dialogDepth = 0
 
@@ -233,8 +257,8 @@ class WidgetIndexVisitor implements AppNodeVisitor<void> {
     const payload = element[type] as WidgetPayload
     const formId = payload.formId ?? ""
     if (element.button?.isFormSubmitter) {
-      if (formId && !payload.disabled && !this.submitButtonIds.has(formId)) {
-        this.submitButtonIds.set(formId, elementId)
+      if (formId && !payload.disabled) {
+        this.enabledSubmitButtonIds.add(elementId)
       }
       return
     }
@@ -301,7 +325,7 @@ export function indexWidgets(appRoot: AppRoot): WidgetIndex {
   appRoot.bottom.accept(visitor)
   return {
     widgets: visitor.widgets,
-    submitButtonIds: visitor.submitButtonIds,
+    enabledSubmitButtonIds: visitor.enabledSubmitButtonIds,
   }
 }
 
@@ -396,10 +420,33 @@ interface BuildArgs {
   index: WidgetIndex
   /** Committed widget values, keyed by widget ID. */
   committed: ReadonlyMap<string, WidgetState>
-  /** Forms the user has submitted at least once. */
-  submittedFormIds: ReadonlySet<string>
+  /** Forms the user has submitted, mapped to the submit button they used. */
+  submittedForms: ReadonlyMap<string, string>
   page: string
   queryString: string
+  /** The longest the document may be once written, in characters. */
+  maxLength: number
+}
+
+/** The length of `text` once `toScriptSafeJson` has escaped it. */
+function scriptSafeLength(text: string): number {
+  return text.length + 5 * (text.match(SCRIPT_UNSAFE_CHARACTERS)?.length ?? 0)
+}
+
+/** The length of a value as the document writes it. */
+function writtenLength(
+  value: JsonValue | AgentViewState | FormRequest
+): number {
+  return scriptSafeLength(JSON.stringify(value))
+}
+
+/** The length a member adds to an object that already has `count` members. */
+function memberLength(
+  count: number,
+  key: string,
+  valueLength: number
+): number {
+  return (count > 0 ? 1 : 0) + writtenLength(key) + 1 + valueLength
 }
 
 /**
@@ -413,85 +460,163 @@ interface BuildArgs {
  * the user never saw.
  *
  * Keys follow the order of `indexWidgets`, which is usually the order widgets'
- * options depend on each other's values.
+ * options depend on each other's values. That is also the order in which the
+ * document gives up when it runs out of room: it holds the widgets up to the
+ * first one that does not fit, and says it is not `complete`. A prefix keeps
+ * every value's parents, which a value picked to fill the space could lack.
+ *
+ * Returns `null` when not even a document without any values fits.
  */
 export function buildAgentViewState({
   index,
   committed,
-  submittedFormIds,
+  submittedForms,
   page,
   queryString,
-}: BuildArgs): AgentViewState {
-  const widgetState: Record<string, JsonValue> = {}
-  const forms = new Map<string, FormRequest>()
-  const omitted: Record<string, OmittedReason> = {}
-  let totalLength = 0
+  maxLength,
+}: BuildArgs): AgentViewState | null {
+  const state: AgentViewState = {
+    version: 1,
+    page,
+    query_params: parseQueryParams(queryString),
+    widget_state: {},
+    forms: [],
+    omitted: {},
+    complete: true,
+  }
+  // Measured with `complete: false`, the longer of the two, so the document
+  // still fits once it says so.
+  let length = writtenLength({ ...state, complete: false })
+  if (length > maxLength) {
+    state.query_params = {}
+    state.complete = false
+    length = writtenLength(state)
+  }
+  if (length > maxLength) {
+    return null
+  }
 
-  index.widgets.forEach((widget, widgetId) => {
-    const state = committed.get(widgetId)
-    if (!state) {
-      return
+  const forms = new Map<string, { request: FormRequest; count: number }>()
+  let widgetCount = 0
+  let omittedCount = 0
+
+  /** Spend `entryLength` of the budget, unless that would exceed it. */
+  const fits = (entryLength: number): boolean => {
+    if (length + entryLength > maxLength) {
+      state.complete = false
+      return false
     }
-    const wire = readWireValue(state)
+    length += entryLength
+    return true
+  }
+
+  const omit = (key: string, reason: OmittedReason): boolean => {
+    if (!fits(memberLength(omittedCount, key, writtenLength(reason)))) {
+      return false
+    }
+    state.omitted[key] = reason
+    omittedCount += 1
+    return true
+  }
+
+  for (const [widgetId, widget] of index.widgets) {
+    const wireState = committed.get(widgetId)
+    if (!wireState) {
+      continue
+    }
+    const wire = readWireValue(wireState)
     if (wire.kind === "trigger") {
       // A trigger resets after the run that observed it, so it is not state.
-      return
+      continue
     }
-    if (widget.formId && !submittedFormIds.has(widget.formId)) {
-      return
+    const submitButtonId = submittedForms.get(widget.formId)
+    if (widget.formId && !submitButtonId) {
+      continue
     }
 
     const key = agentKeyFromElementId(widgetId)
     const reason = omissionReason(widget)
     if (reason || wire.kind === "opaque") {
-      omitted[key] = reason ?? "unsupported"
-      return
+      if (!omit(key, reason ?? "unsupported")) {
+        break
+      }
+      continue
     }
     if (widget.type === "feedback" && widget.hasDefault && wire.value === "") {
       // Cleared by the user, which `null` would turn back into the default.
-      omitted[key] = "unsupported"
-      return
+      if (!omit(key, "unsupported")) {
+        break
+      }
+      continue
     }
-
-    const submitButtonId = index.submitButtonIds.get(widget.formId)
-    if (widget.formId && !submitButtonId) {
-      omitted[key] = "no_submit_button"
-      return
+    // Firing a different button than the user did could run a different
+    // branch of the app, so only the one they used will do.
+    if (submitButtonId && !index.enabledSubmitButtonIds.has(submitButtonId)) {
+      if (!omit(key, "no_submit_button")) {
+        break
+      }
+      continue
     }
 
     const value = toRequestValue(widget, wire.value)
-    // JSON is never shorter than the string it encodes, so a huge string is
-    // refused without serializing it.
-    const length =
+    // Escaping never shortens a string, so a huge one is refused without
+    // serializing it.
+    const valueLength =
       typeof value === "string" && value.length > MAX_VALUE_LENGTH
         ? value.length
-        : JSON.stringify(value).length
-    if (length > MAX_VALUE_LENGTH || totalLength + length > MAX_TOTAL_LENGTH) {
-      omitted[key] = "too_large"
-      return
+        : writtenLength(value)
+    if (valueLength > MAX_VALUE_LENGTH) {
+      if (!omit(key, "too_large")) {
+        break
+      }
+      continue
     }
-    totalLength += length
 
     if (!submitButtonId) {
-      widgetState[key] = value
-      return
+      if (!fits(memberLength(widgetCount, key, valueLength))) {
+        break
+      }
+      state.widget_state[key] = value
+      widgetCount += 1
+      continue
     }
-    const form = forms.get(widget.formId) ?? {
-      widget_state: {},
-      trigger: { key: agentKeyFromElementId(submitButtonId) },
-    }
-    form.widget_state[key] = value
-    forms.set(widget.formId, form)
-  })
 
-  return {
-    version: 1,
-    page,
-    query_params: parseQueryParams(queryString),
-    widget_state: widgetState,
-    forms: [...forms.values()],
-    omitted,
+    const form = forms.get(widget.formId) ?? {
+      request: {
+        widget_state: {},
+        trigger: { key: agentKeyFromElementId(submitButtonId) },
+      },
+      count: 0,
+    }
+    const formLength =
+      form.count > 0
+        ? 0
+        : (forms.size > 0 ? 1 : 0) + writtenLength(form.request)
+    if (!fits(formLength + memberLength(form.count, key, valueLength))) {
+      break
+    }
+    form.request.widget_state[key] = value
+    form.count += 1
+    forms.set(widget.formId, form)
   }
+
+  state.forms = [...forms.values()].map(form => form.request)
+  return state
+}
+
+/**
+ * Build the document and write it as JSON for a `<script>` body, at most
+ * `maxLength` characters long, or `null` if not even an empty one fits.
+ */
+export function writeAgentViewState(args: BuildArgs): string | null {
+  const state = buildAgentViewState(args)
+  if (!state) {
+    return null
+  }
+  const json = toScriptSafeJson(state)
+  // The length is counted entry by entry. This keeps a slip in that count
+  // from ever handing a reader more than it asked for.
+  return json.length <= args.maxLength ? json : null
 }
 
 /** A query string in the agent API's `query_params` shape. */
@@ -524,41 +649,76 @@ interface PublisherProps {
   getLocation: () => { page: string; queryString: string }
 }
 
+/** A caller's `maxLength`, or the default when it gave no usable one. */
+function requestedMaxLength(maxLength: unknown): number {
+  return typeof maxLength === "number" && maxLength > 0
+    ? Math.floor(maxLength)
+    : DEFAULT_MAX_LENGTH
+}
+
 /**
- * Keeps the embedded document current.
+ * Hands the user's widget state to an in-page reader, while the agent API is
+ * on: as `window.streamlitAgentViewState()`, computed when called, and as a
+ * `<script>` element kept current.
  *
- * Values are re-read on every widget change, so the document never waits for
- * a rerun. The widget index is rebuilt from the tree as it is at that moment,
- * only when the tree has changed since the last write. A stale index could
- * report a field that has just become a password field, so it is never
- * reused across trees.
+ * The element is rewritten on every widget change, so it never waits for a
+ * rerun. Both read the widget index from the tree as it is at that moment,
+ * rebuilt only when the tree has changed since. A stale index could report a
+ * field that has just become a password field, so it is never reused across
+ * trees.
  */
 export class AgentViewStatePublisher {
   private readonly props: PublisherProps
 
   private index: WidgetIndex = {
     widgets: new Map(),
-    submitButtonIds: new Map(),
+    enabledSubmitButtonIds: new Set(),
   }
 
   private indexedAppRoot: AppRoot | undefined
+
+  private isEnabled = false
 
   private isUpdateScheduled = false
 
   private isDisposed = false
 
-  private lastJson = ""
+  /**
+   * The element this publisher owns. It is never looked up by ID, because the
+   * app's own HTML could hold an element with the same ID.
+   */
+  private script: HTMLScriptElement | undefined
 
   constructor(props: PublisherProps) {
     this.props = props
   }
 
   /**
-   * Rewrite the document once the current task is done, so a burst of value
+   * Start or stop handing the state over, as `server.enableAgentApi` says.
+   * Stopping removes both the element and the window function.
+   */
+  public setEnabled(enabled: boolean): void {
+    if (this.isDisposed || enabled === this.isEnabled) {
+      return
+    }
+    this.isEnabled = enabled
+    if (enabled) {
+      window.streamlitAgentViewState = this.read
+      this.scheduleUpdate()
+      return
+    }
+    if (window.streamlitAgentViewState === this.read) {
+      delete window.streamlitAgentViewState
+    }
+    this.removeScript()
+  }
+
+  /**
+   * Rewrite the element once the current task is done, so a burst of value
    * changes, such as every widget writing its default on mount, is one write.
    */
   public scheduleUpdate(): void {
-    if (this.isUpdateScheduled || this.isDisposed) {
+    if (this.isUpdateScheduled || !this.isEnabled) {
       return
     }
     this.isUpdateScheduled = true
@@ -568,16 +728,16 @@ export class AgentViewStatePublisher {
     })
   }
 
-  /** Remove the document from the page, and stop writing it. */
+  /** Remove the element and the window function, and stop writing them. */
   public dispose(): void {
+    this.setEnabled(false)
     this.isDisposed = true
-    document.getElementById(AGENT_VIEW_STATE_ELEMENT_ID)?.remove()
   }
 
-  private publish(): void {
-    if (this.isDisposed) {
-      return
-    }
+  private readonly read = (options?: { maxLength?: number }): string | null =>
+    this.isEnabled ? this.write(requestedMaxLength(options?.maxLength)) : null
+
+  private write(maxLength: number): string | null {
     const { widgetMgr, getAppRoot, getLocation } = this.props
     const appRoot = getAppRoot()
     if (appRoot !== this.indexedAppRoot) {
@@ -594,30 +754,41 @@ export class AgentViewStatePublisher {
         }
       })
 
-    const json = toScriptSafeJson(
-      buildAgentViewState({
-        index: this.index,
-        committed,
-        submittedFormIds: widgetMgr.getSubmittedFormIds(),
-        ...getLocation(),
-      })
-    )
-    if (json === this.lastJson) {
+    return writeAgentViewState({
+      index: this.index,
+      committed,
+      submittedForms: widgetMgr.getSubmittedForms(),
+      maxLength,
+      ...getLocation(),
+    })
+  }
+
+  private publish(): void {
+    if (!this.isEnabled) {
       return
     }
-    this.lastJson = json
-    getOrCreateScriptElement().textContent = json
+    const json = this.write(DEFAULT_MAX_LENGTH)
+    if (json === null) {
+      this.removeScript()
+      return
+    }
+    if (!this.script) {
+      this.script = document.createElement("script")
+      this.script.id = AGENT_VIEW_STATE_ELEMENT_ID
+      this.script.type = "application/json"
+    }
+    if (!this.script.isConnected) {
+      // First in the body, so a lookup by ID finds it before anything the
+      // app renders.
+      document.body.prepend(this.script)
+    }
+    if (this.script.textContent !== json) {
+      this.script.textContent = json
+    }
   }
-}
 
-function getOrCreateScriptElement(): HTMLScriptElement {
-  const existing = document.getElementById(AGENT_VIEW_STATE_ELEMENT_ID)
-  if (existing instanceof HTMLScriptElement) {
-    return existing
+  private removeScript(): void {
+    this.script?.remove()
+    this.script = undefined
   }
-  const script = document.createElement("script")
-  script.id = AGENT_VIEW_STATE_ELEMENT_ID
-  script.type = "application/json"
-  document.body.appendChild(script)
-  return script
 }

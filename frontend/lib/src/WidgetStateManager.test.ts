@@ -1438,13 +1438,13 @@ describe("widgetStatesChanged and submitted forms", () => {
   it("is not notified for a user's pending form edit, only for its submit", () => {
     widgetMgr.setStringValue(MOCK_FORM_WIDGET.id, "pending", formUpdate)
     expect(widgetStatesChanged).not.toHaveBeenCalled()
-    expect(widgetMgr.getSubmittedFormIds()).toEqual(new Set())
+    expect(widgetMgr.getSubmittedForms()).toEqual(new Map())
 
     widgetMgr.submitForm(MOCK_FORM_WIDGET.formId, undefined)
 
     expect(widgetStatesChanged).toHaveBeenCalledOnce()
-    expect(widgetMgr.getSubmittedFormIds()).toEqual(
-      new Set([MOCK_FORM_WIDGET.formId])
+    expect(widgetMgr.getSubmittedForms()).toEqual(
+      new Map([[MOCK_FORM_WIDGET.formId, SUBMIT_BUTTON.id]])
     )
     expect(
       widgetMgr
@@ -1466,12 +1466,12 @@ describe("widgetStatesChanged and submitted forms", () => {
     widgetMgr.submitForm(MOCK_FORM_WIDGET.formId, undefined)
 
     widgetMgr.removeInactive(new Set([SUBMIT_BUTTON.id]))
-    expect(widgetMgr.getSubmittedFormIds()).toEqual(
-      new Set([MOCK_FORM_WIDGET.formId])
+    expect(widgetMgr.getSubmittedForms()).toEqual(
+      new Map([[MOCK_FORM_WIDGET.formId, SUBMIT_BUTTON.id]])
     )
 
     widgetMgr.removeInactive(new Set())
-    expect(widgetMgr.getSubmittedFormIds()).toEqual(new Set())
+    expect(widgetMgr.getSubmittedForms()).toEqual(new Map())
   })
 
   it("does not record a form whose submit a validator blocked", () => {
@@ -1485,7 +1485,7 @@ describe("widgetStatesChanged and submitted forms", () => {
       false
     )
 
-    expect(widgetMgr.getSubmittedFormIds()).toEqual(new Set())
+    expect(widgetMgr.getSubmittedForms()).toEqual(new Map())
     expect(widgetStatesChanged).not.toHaveBeenCalled()
   })
 })

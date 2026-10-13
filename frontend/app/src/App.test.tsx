@@ -1417,6 +1417,41 @@ describe("App", () => {
     })
   })
 
+  describe("agent view state", () => {
+    const viewStateElement = (): HTMLElement | null =>
+      document.getElementById("streamlit-agent-view-state")
+
+    it("hands over nothing while server.enableAgentApi is off", async () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      await act(() => Promise.resolve())
+
+      expect(viewStateElement()).toBeNull()
+      expect(window.streamlitAgentViewState).toBeUndefined()
+    })
+
+    it("follows server.enableAgentApi on each new session", async () => {
+      renderApp(getProps())
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: { ...NEW_SESSION_JSON.config, enableAgentApi: true },
+      })
+      await act(() => Promise.resolve())
+
+      expect(JSON.parse(viewStateElement()?.textContent ?? "")).toMatchObject({
+        version: 1,
+        widget_state: {},
+      })
+      expect(window.streamlitAgentViewState).toBeTypeOf("function")
+
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      await act(() => Promise.resolve())
+
+      expect(viewStateElement()).toBeNull()
+      expect(window.streamlitAgentViewState).toBeUndefined()
+    })
+  })
+
   describe("Header", () => {
     afterEach(() => {
       vi.mocked(isEmbed).mockReset()
