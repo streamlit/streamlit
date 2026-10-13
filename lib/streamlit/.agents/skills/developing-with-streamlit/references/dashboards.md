@@ -117,15 +117,15 @@ with st.container(border=True):
 
 ## Smooth loading with parallel fragments + skeletons
 
-When a dashboard has multiple cards with independent, compute-intensive data loads (separate queries or API calls), combine `@st.fragment(parallel=True)` with `st.skeleton`. The fragments load concurrently, and each card shows a skeleton until its own data is ready—so the dashboard fills in card-by-card instead of blocking on the slowest query.
+When a dashboard has multiple cards with compute-intensive data loads (queries or API calls), combine `@st.fragment(parallel=True)` with `st.skeleton`. The fragments load concurrently on a full app rerun, and each card shows a skeleton until its data is ready—so the dashboard fills in card-by-card instead of blocking on the slowest query.
 
 ```python
-@st.cache_data(ttl="15m")
+@st.cache_data(ttl="15m", refresh_mode="background")
 def load_revenue(): ...  # Slow query / API call
 
 
-@st.cache_data(ttl="15m")
-def load_orders(): ...  # Independent slow query / API call
+@st.cache_data(ttl="15m", refresh_mode="background")
+def load_orders(): ...  # Another slow query / API call
 
 
 @st.fragment(parallel=True)
@@ -153,43 +153,11 @@ with col2:
     orders_card()
 ```
 
-The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible. Keep the card title outside the `with` block so it stays stable while the body loads, and cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. See `performance.md` for more on parallel fragments and caching.
+The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible. Keep the card title outside the `with` block so it stays stable while the body loads.
 
-### Sharing one data source across cards
+Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns, and add `refresh_mode="background"` so an expired entry serves instantly and refreshes off-thread instead of blocking. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching, including the `refresh_mode="background"` caveats.
 
-The example above gives each card its own query. When several cards instead summarize the *same* source data, call one `@st.cache_data` loader with the same arguments from each parallel fragment. The cache's per-key lock runs the query once and every card shares that one result, so N cards cost one query instead of N. Add `refresh_mode="background"` so an expired entry serves instantly and refreshes off-thread, keeping all cards consistent without blocking.
-
-```python
-@st.cache_data(ttl="5m", refresh_mode="background")
-def load_sales(region):  # one query, shared by every card
-    return db.query("SELECT ... WHERE region = %(region)s", {"region": region})
-
-
-@st.fragment(parallel=True)
-def revenue_card(region):
-    with st.container(border=True):
-        st.subheader("Revenue by region")
-        sales = load_sales(region)  # same key as the other cards → runs once
-        st.bar_chart(sales, x="region", y="revenue", alt="Revenue by region")
-
-
-@st.fragment(parallel=True)
-def orders_card(region):
-    with st.container(border=True):
-        st.subheader("Recent orders")
-        sales = load_sales(region)  # cache hit — shares the one result
-        st.dataframe(sales.head(10), hide_index=True, alt="Recent orders")
-
-
-region = st.selectbox("Region", regions)  # control in the main script
-col1, col2 = st.columns(2)
-with col1:
-    revenue_card(region)
-with col2:
-    orders_card(region)
-```
-
-Keep the shared filter (`region`) in the main script, not inside a card. A main-script widget reruns the whole script and refreshes every card together; a widget *inside* a parallel fragment only reruns that card, and while the other cards are still loading it waits for them to finish before it applies. So put shared filters that must stay responsive during a slow load in the main script—per-card controls can stay inside their own card. See `performance.md` for `refresh_mode="background"` caveats.
+If a filter should refresh several cards at once, put it in the main script rather than inside a card. A main-script widget reruns the whole script and refreshes every card together and stays responsive during a slow load; a widget *inside* a parallel fragment only reruns that card and, while the other cards are still loading, waits for them to finish before it applies. Per-card controls can stay inside their own card.
 
 ## Which tool when
 
@@ -197,10 +165,10 @@ Reach for the smallest tool that fixes the bottleneck:
 
 - **Repeated or expensive data loads** → `@st.cache_data` (add `ttl`/`max_entries`; `refresh_mode="background"` for stale-while-revalidate). Cache the source data, filter cheaply outside the cache.
 - **Independent slow cards** → `@st.fragment(parallel=True)` so they load concurrently (total time ≈ slowest card).
-- **Many cards, one source query** → share one cached loader across the cards (above).
+- **Many cards, one source query** → have each card call the same cached function; the per-key cache lock dedups it to a single run.
 - **A section that should refresh on its own** (live metrics/clock) → `@st.fragment(run_every=...)`.
 - **A shared/global filter that must stay responsive while cards load** → keep it in the main script so it refreshes every card; per-card controls can stay inside their own card.
-- **One very slow (30s+) operation that shouldn't freeze the app** → `st.background_task` (see `performance.md`).
+- **One very slow query that shouldn't freeze the page** → run it in a `@st.fragment(parallel=True)` and keep the rest of the page in the main script, so it loads in the background while the page stays interactive (cache it with `refresh_mode="background"` so later loads don't block).
 
 ## Sidebar filters
 
@@ -226,6 +194,7 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 | `dashboard-feature-usage` | Feature adoption tracking, trend analysis, conditional "Raw data" expander |
 | `dashboard-seattle-weather` | Weather data visualization |
 | `dashboard-stock-peers` | Stock peer comparison |
+| `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a main-script filter and `refresh_mode="background"` caching, so the page stays responsive while the report loads |
 
 Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.
 

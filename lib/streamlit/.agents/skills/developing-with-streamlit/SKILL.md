@@ -180,6 +180,7 @@ When creating a **new dashboard app**, prefer starting from a template in `asset
   - `dashboard-feature-usage` — feature adoption tracking
   - `dashboard-seattle-weather` — public dataset exploration
   - `dashboard-stock-peers` — financial peer analysis
+  - `dashboard-background-report` — responsive page while a slow query loads in the background
 - If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
 - See `assets/templates/apps/README.md` for template descriptions
 

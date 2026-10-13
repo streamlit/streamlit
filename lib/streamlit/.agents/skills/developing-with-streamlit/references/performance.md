@@ -277,7 +277,7 @@ orders()
 - Each parallel fragment should write to its own Session State keys
 - Avoid unsynchronized mutations of shared mutable objects across fragments
 
-**Fan-out caching.** If several parallel fragments call the same `@st.cache_data` function with the same arguments, the cache's per-key lock runs it once and the others share that result — a shared base query called in every fragment costs one computation, not one per fragment. See the fan-out recipe in `dashboards.md`.
+**Sharing a cached query across fragments.** If several parallel fragments call the same `@st.cache_data` function with the same arguments, the cache's per-key lock runs it once and the others share that result — a shared base query called in every fragment costs one computation, not one per fragment. See the card pattern in `dashboards.md`.
 
 **Keep controls that must react during a long load in the main script.** Once the app is idle, a widget inside a fragment reruns just that fragment, quickly. But while a full-app run is still in progress (for example on initial load, with slow parallel fragments still filling in), an interaction behaves differently depending on where the widget lives: a main-script widget reruns the whole script and preempts the in-progress run, so it stays responsive; a widget *inside* a fragment triggers a fragment-scoped rerun that is queued behind the in-progress run and only applies once its parallel fragments finish. So if a control must react *while* a long load is still happening, put it in the main script, not inside the slow fragment.
 
