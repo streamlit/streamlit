@@ -120,11 +120,11 @@ with st.container(border=True):
 When a dashboard has multiple cards with compute-intensive data loads (queries or API calls), combine `@st.fragment(parallel=True)` with `st.skeleton`. The fragments load concurrently on a full app rerun, and each card shows a skeleton until its data is ready—so the dashboard fills in card-by-card instead of blocking on the slowest query.
 
 ```python
-@st.cache_data(ttl="15m", refresh_mode="background")
+@st.cache_data(ttl="15m")
 def load_revenue(): ...  # Slow query / API call
 
 
-@st.cache_data(ttl="15m", refresh_mode="background")
+@st.cache_data(ttl="15m")
 def load_orders(): ...  # Another slow query / API call
 
 
@@ -157,7 +157,7 @@ The `st.skeleton` context manager shows the placeholder while its block runs (af
 
 Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns, and add `refresh_mode="background"` so an expired entry serves instantly and refreshes off-thread instead of blocking. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching, including the `refresh_mode="background"` caveats.
 
-Where you put a control depends on how balanced the cards' load times are. When cards load in a similar time, controls can live inside their own card. But when one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes—so put controls that must stay responsive during the slow load in the main script, where a widget reruns the whole script, preempts the in-progress run, and refreshes every card together.
+Put a control that must stay responsive during a slow load in the main script, not inside a card. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
 
 ## Sidebar filters
 
