@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import styled from "@emotion/styled"
+import { toHex } from "color2k"
 
 import {
   getSecondaryIconButtonColorStyles,
@@ -187,9 +188,11 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
     }
 
     const { redColor, redTextColor, bodyText } = theme.colors
-    // Prefer redColor on hover when it differs from rest. Dark named defaults
-    // use the same hex for both, so fall back to bodyText for a visible cue.
-    const errorHoverColor = redColor !== redTextColor ? redColor : bodyText
+    // Prefer redColor on hover when it differs from rest. Compare normalized
+    // hex so casing/spelling differences (e.g. #f2919a vs #F2919A) still fall
+    // back to bodyText for a visible cue.
+    const errorHoverColor =
+      toHex(redColor) !== toHex(redTextColor) ? redColor : bodyText
 
     const secondaryColorStyles = getSecondaryIconButtonColorStyles(
       theme,
