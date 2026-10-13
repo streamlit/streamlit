@@ -132,7 +132,7 @@ def run_freshness_report() -> pd.DataFrame:
             "pipeline": names,
             "last_refresh": last_refresh,
             "sla_minutes": sla_minutes,
-            "within_sla": [a <= s for a, s in zip(age, sla_minutes)],
+            "within_sla": [a <= s for a, s in zip(age, sla_minutes, strict=True)],
             "rows_loaded": rng.integers(10_000, 500_000, len(names)),
         }
     )
