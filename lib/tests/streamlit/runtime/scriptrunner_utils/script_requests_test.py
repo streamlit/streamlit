@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -41,6 +42,57 @@ def _get_widget(id: str, states: WidgetStates) -> WidgetState | None:
         if state.id == id:
             return state
     return None
+
+
+def _set_trigger(
+    state: WidgetState,
+    trigger_field: str,
+    *,
+    active: bool,
+    value: str = "value",
+) -> None:
+    """Set one trigger field to an active or inactive value."""
+    if trigger_field == "trigger_value":
+        state.trigger_value = active
+    elif trigger_field == "string_trigger_value":
+        state.string_trigger_value.SetInParent()
+        if active:
+            state.string_trigger_value.data = value
+    elif trigger_field == "chat_input_value":
+        state.chat_input_value.SetInParent()
+        if active:
+            state.chat_input_value.data = value
+    elif trigger_field == "json_trigger_value":
+        state.json_trigger_value = f'[{{"event": "{value}"}}]' if active else ""
+    else:
+        raise ValueError(f"Unknown trigger field: {trigger_field}")
+
+
+def _queue_and_get_coalesced_widget_states(
+    old_states: WidgetStates, new_states: WidgetStates
+) -> WidgetStates:
+    """Queue two reruns and return their coalesced fresh widget states."""
+    reqs = ScriptRequests()
+    reqs.request_rerun(RerunData(widget_states=old_states))
+    reqs.request_rerun(RerunData(widget_states=new_states))
+    result = reqs._rerun_data.widget_states
+    assert result is not None
+    return result
+
+
+def _coalesce_json_trigger_values(old_payload: str, new_payload: str) -> list[object]:
+    """Coalesce two JSON trigger payloads and return their decoded events."""
+    old_states = WidgetStates()
+    _create_widget("component", old_states).json_trigger_value = old_payload
+    new_states = WidgetStates()
+    _create_widget("component", new_states).json_trigger_value = new_payload
+
+    result = _queue_and_get_coalesced_widget_states(old_states, new_states)
+    component = _get_widget("component", result)
+    assert component is not None
+    events = json.loads(component.json_trigger_value)
+    assert isinstance(events, list)
+    return events
 
 
 class ScriptRequestsTest(unittest.TestCase):
@@ -671,3 +723,194 @@ def test_on_scriptrunner_yield_returns_none_when_state_changes_under_lock() -> N
 
     assert result is None
     assert reqs._state == ScriptRequestType.RERUN
+
+
+_TRIGGER_FIELDS = (
+    "trigger_value",
+    "string_trigger_value",
+    "chat_input_value",
+    "json_trigger_value",
+)
+
+
+@pytest.mark.parametrize("trigger_field", _TRIGGER_FIELDS, ids=_TRIGGER_FIELDS)
+def test_older_active_trigger_survives_newer_widget_update(
+    trigger_field: str,
+) -> None:
+    """Every active trigger type survives an unrelated newer widget update."""
+    old_states = WidgetStates()
+    _set_trigger(_create_widget("trigger", old_states), trigger_field, active=True)
+    _create_widget("persistent", old_states).string_value = "old"
+    new_states = WidgetStates()
+    _create_widget("persistent", new_states).string_value = "new"
+
+    result = _queue_and_get_coalesced_widget_states(old_states, new_states)
+
+    trigger = _get_widget("trigger", result)
+    assert trigger is not None
+    assert trigger.WhichOneof("value") == trigger_field
+    assert _get_widget("persistent", result).string_value == "new"
+
+
+@pytest.mark.parametrize("trigger_field", _TRIGGER_FIELDS, ids=_TRIGGER_FIELDS)
+def test_older_active_trigger_replaces_newer_inactive_trigger(
+    trigger_field: str,
+) -> None:
+    """Every active trigger type replaces an inactive newer value of its type."""
+    old_states = WidgetStates()
+    old_trigger = _create_widget("trigger", old_states)
+    _set_trigger(old_trigger, trigger_field, active=True)
+    new_states = WidgetStates()
+    _set_trigger(_create_widget("trigger", new_states), trigger_field, active=False)
+
+    result = _queue_and_get_coalesced_widget_states(old_states, new_states)
+
+    assert _get_widget("trigger", result) == old_trigger
+
+
+@pytest.mark.parametrize(
+    ("trigger_field", "old_value", "new_value"),
+    [
+        ("trigger_value", "unused-old", "unused-new"),
+        ("string_trigger_value", "old-menu-item", "new-menu-item"),
+        ("chat_input_value", "old-message", "new-message"),
+    ],
+    ids=["boolean", "string", "chat-input"],
+)
+def test_newer_active_non_json_trigger_wins_same_id_collision(
+    trigger_field: str, old_value: str, new_value: str
+) -> None:
+    """Active non-JSON trigger collisions retain the newer state."""
+    old_states = WidgetStates()
+    _set_trigger(
+        _create_widget("trigger", old_states),
+        trigger_field,
+        active=True,
+        value=old_value,
+    )
+    new_states = WidgetStates()
+    new_trigger = _create_widget("trigger", new_states)
+    _set_trigger(new_trigger, trigger_field, active=True, value=new_value)
+
+    result = _queue_and_get_coalesced_widget_states(old_states, new_states)
+
+    assert _get_widget("trigger", result) == new_trigger
+    assert len(result.widgets) == 1
+
+
+@pytest.mark.parametrize("trigger_field", _TRIGGER_FIELDS, ids=_TRIGGER_FIELDS)
+def test_newer_value_type_wins_over_older_active_trigger(
+    trigger_field: str,
+) -> None:
+    """A changed value type prevents an older trigger from being resurrected."""
+    old_states = WidgetStates()
+    _set_trigger(_create_widget("widget", old_states), trigger_field, active=True)
+    new_states = WidgetStates()
+    _create_widget("widget", new_states).int_value = 42
+
+    result = _queue_and_get_coalesced_widget_states(old_states, new_states)
+
+    widget = _get_widget("widget", result)
+    assert widget is not None
+    assert widget.WhichOneof("value") == "int_value"
+    assert widget.int_value == 42
+
+
+@pytest.mark.parametrize("trigger_field", _TRIGGER_FIELDS, ids=_TRIGGER_FIELDS)
+def test_inactive_older_trigger_is_not_carried_forward(trigger_field: str) -> None:
+    """Inactive older triggers do not reappear in a newer request."""
+    old_states = WidgetStates()
+    _set_trigger(_create_widget("trigger", old_states), trigger_field, active=False)
+    new_states = WidgetStates()
+    _create_widget("persistent", new_states).string_value = "new"
+
+    result = _queue_and_get_coalesced_widget_states(old_states, new_states)
+
+    assert _get_widget("trigger", result) is None
+    assert _get_widget("persistent", result).string_value == "new"
+
+
+def test_json_trigger_arrays_are_concatenated_in_order() -> None:
+    """JSON trigger arrays retain old-before-new and within-request ordering."""
+    assert _coalesce_json_trigger_values(
+        '[{"event": "old-1"}, {"event": "old-2"}]',
+        '[{"event": "new-1"}, {"event": "new-2"}]',
+    ) == [
+        {"event": "old-1"},
+        {"event": "old-2"},
+        {"event": "new-1"},
+        {"event": "new-2"},
+    ]
+
+
+@pytest.mark.parametrize(
+    ("old_payload", "new_payload", "expected"),
+    [
+        (
+            '{"event": "old"}',
+            '[{"event": "new"}]',
+            [{"event": "old"}, {"event": "new"}],
+        ),
+        (
+            '[{"event": "old"}]',
+            '{"event": "new"}',
+            [{"event": "old"}, {"event": "new"}],
+        ),
+    ],
+    ids=["old-singleton", "new-singleton"],
+)
+def test_json_trigger_singletons_are_normalized(
+    old_payload: str, new_payload: str, expected: list[object]
+) -> None:
+    """Valid singleton payloads are wrapped before merging with event arrays."""
+    assert _coalesce_json_trigger_values(old_payload, new_payload) == expected
+
+
+@pytest.mark.parametrize(
+    ("old_payload", "new_payload", "expected"),
+    [
+        (
+            "malformed old",
+            '[{"event": "new"}]',
+            ["malformed old", {"event": "new"}],
+        ),
+        (
+            '[{"event": "old"}]',
+            "malformed new",
+            [{"event": "old"}, "malformed new"],
+        ),
+    ],
+    ids=["malformed-old", "malformed-new"],
+)
+def test_malformed_json_trigger_payload_is_preserved(
+    old_payload: str, new_payload: str, expected: list[object]
+) -> None:
+    """Malformed payloads remain opaque items without discarding valid events."""
+    assert _coalesce_json_trigger_values(old_payload, new_payload) == expected
+
+
+def test_unexpected_json_trigger_values_are_preserved_without_flattening() -> None:
+    """Valid scalars and nested lists remain opaque top-level event entries."""
+    assert _coalesce_json_trigger_values(
+        "42", '[null, ["nested"], {"event": "new"}]'
+    ) == [
+        42,
+        None,
+        ["nested"],
+        {"event": "new"},
+    ]
+
+
+def test_json_trigger_merge_does_not_mutate_inputs() -> None:
+    """Merging JSON trigger events leaves both source protobufs unchanged."""
+    old_states = WidgetStates()
+    _create_widget("component", old_states).json_trigger_value = '[{"event": "old"}]'
+    new_states = WidgetStates()
+    _create_widget("component", new_states).json_trigger_value = '[{"event": "new"}]'
+    old_before = old_states.SerializeToString()
+    new_before = new_states.SerializeToString()
+
+    _queue_and_get_coalesced_widget_states(old_states, new_states)
+
+    assert old_states.SerializeToString() == old_before
+    assert new_states.SerializeToString() == new_before
