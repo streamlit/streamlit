@@ -278,6 +278,8 @@ if submitted:
 
 For as-you-type search, use `st.text_input(..., type="search", live=True)` inside a `@st.fragment` instead of a form. Keep expensive work out of that fragment, or use a longer delay such as `live="500ms"`.
 
+If some inputs must rerun to update others (for example, dependent options), use `on_change="ignore"` on the remaining inputs instead of a form. This is an advanced pattern; see "Skip reruns on individual widgets" in `performance.md` for an example and caveats.
+
 Do not put expensive work unguarded inside tabs or expanders. Hidden tab content and collapsed expander content still compute unless you opt into dynamic state and guard the work.
 
 ```python
