@@ -29,7 +29,7 @@ Notes on this template:
 - The slow report loads without blocking the page: it runs in a parallel fragment
   (off the main thread), and with ``refresh_mode="background"`` the cached result is
   served instantly once warm and refreshed off-thread when it goes stale.
-- The filter lives in the sidebar (i.e. the main script), so changing it triggers a
+- The filter lives in the main script (above the cards), so changing it triggers a
   full rerun that preempts the in-progress run and stays responsive. A control
   *inside* a fragment would instead be queued behind the in-progress run — which
   includes the slow report — until it finishes. When every card loads in a similar
@@ -205,11 +205,11 @@ def freshness_report() -> None:
 
 st.title("Operations dashboard")
 
-# Global filter in the sidebar (the main script): changing it triggers a full rerun
-# that preempts the in-progress run, so it stays responsive while the slow report is
-# still loading.
-with st.sidebar:
-    region = st.selectbox("Region", REGIONS)
+# Global filter in the main script, just above the cards: changing it triggers a full
+# rerun that preempts the in-progress run, so it stays responsive while the slow report
+# is still loading.
+filter_col, _ = st.columns([1, 3])
+region = filter_col.selectbox("Region", REGIONS)
 
 # Quick, region-specific cards: they reload fast and update when the region changes.
 kpis_card(region)
