@@ -104,8 +104,8 @@ if TYPE_CHECKING:
     # Views, iteration, and to_dict
     #
     # Stored keys are strings, so iteration yields str. keys(), items(), and
-    # popitem() keep the inherited MutableMapping key type str | int. Lookup
-    # already accepts integer widget keys; narrowing those views can wait.
+    # popitem() still report str | int because they inherit that key type from
+    # MutableMapping[Key, Any].
     # =====================================================================
 
     assert_type(st.session_state.popitem(), tuple[str | int, Any])
