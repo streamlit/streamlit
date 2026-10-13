@@ -120,8 +120,8 @@ class SessionStateProxy(MutableMapping[Key, Any]):
     >>> st.button("Done", key="done_btn", on_click=mark_done)
     """
 
-    def __iter__(self) -> Iterator[Any]:
-        """Iterator over user state and keyed widget values."""
+    def __iter__(self) -> Iterator[str]:
+        """Keys of user state and keyed widgets."""
         # TODO: this is unsafe if fastReruns is true! Let's deprecate/remove.
         return iter(get_session_state().filtered_state)
 
