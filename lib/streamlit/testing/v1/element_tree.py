@@ -1740,9 +1740,9 @@ _CAMERA_RESOLUTION_BY_HEIGHT: Final[dict[int, str]] = {
 def _parse_camera_input_file(file: object) -> tuple[str, bytes, str]:
     """Return one ``(filename, content, mime_type)`` JPEG photo.
 
-    ``st.camera_input`` captures a single ``image/jpeg`` file whose name ends
-    in ``.jpg``. Sequences and other types are rejected so a test cannot stage
-    a payload the browser widget cannot produce.
+    ``st.camera_input`` captures one ``image/jpeg`` file whose name ends in
+    ``.jpg``. ``AppTest`` rejects any other shape, including a list, so a test
+    cannot stage a payload the browser widget cannot produce.
     """
     if (
         isinstance(file, tuple)
@@ -1761,8 +1761,7 @@ def _parse_camera_input_file(file: object) -> tuple[str, bytes, str]:
                 f"st.camera_input photos use MIME type {_CAMERA_INPUT_MIME!r}. "
                 f"Got {mime_type!r}."
             )
-        # Normalize case-variants such as "Image/JPEG" to the MIME type the
-        # browser widget reports.
+        # Return the browser MIME type for case-variants such as "Image/JPEG".
         return filename, bytes(content), _CAMERA_INPUT_MIME
     if isinstance(file, list):
         raise AppTestError(
@@ -1779,10 +1778,14 @@ def _parse_camera_input_file(file: object) -> tuple[str, bytes, str]:
 class CameraInput(Widget):
     r"""A representation of ``st.camera_input``.
 
-    The photo is one JPEG file, ``(filename, content, mime_type)``, with
-    MIME type ``image/jpeg`` and a name ending in ``.jpg``. ``.upload()``
-    replaces any staged photo. Unlike ``FileUploader``, this widget does not
-    accept a list or append files.
+    The photo is one JPEG file, ``(filename, content, mime_type)``.
+    ``.upload()`` replaces any staged photo. Unlike ``FileUploader``, this
+    widget does not accept a list or append files.
+
+    ``AppTest`` accepts a photo only when:
+
+    - the filename ends in ``.jpg``
+    - the MIME type is ``image/jpeg``
 
     ``resolution`` is the value passed to ``st.camera_input``:
     ``"480p"``, ``"720p"``, ``"1080p"``, or ``None`` when the script omits it.
@@ -1816,8 +1819,8 @@ class CameraInput(Widget):
         super().__init__(proto, root)
         self._files = InitialValue()
         self.type = "camera_input"
-        # None means the script omitted resolution. An unset proto field
-        # reads as 0, which is not that signal.
+        # An omitted resolution leaves the proto field unset. An unset int
+        # reads as 0, so HasField skips it. Any other height stays None.
         if proto.HasField("resolution_height"):
             self.resolution = _CAMERA_RESOLUTION_BY_HEIGHT.get(proto.resolution_height)
         else:
@@ -1942,11 +1945,11 @@ class CameraInput(Widget):
 
     @property
     def value(self) -> UploadedFile | None:
-        """The current photo.
+        """The photo committed by the last ``run()``.
 
-        Returns the ``UploadedFile`` or ``None`` committed by the last
-        ``run()``. A photo staged with ``set_value`` is not visible
-        here until ``run()``.
+        ``set_value`` stages a photo without updating this property.
+        The value is an ``UploadedFile``, or ``None`` when no photo is
+        committed.
         """
         state = self.root.session_state
         assert state

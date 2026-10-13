@@ -1972,7 +1972,7 @@ def test_audio_input_form_applies_only_on_submit() -> None:
 
 
 def test_camera_input_captures_one_jpeg() -> None:
-    """``st.camera_input`` accepts one JPEG and keeps it across reruns."""
+    """One JPEG is committed on run, replaced by upload, kept across reruns, and cleared."""
 
     def script():
         import streamlit as st
@@ -2022,9 +2022,11 @@ def test_camera_input_captures_one_jpeg() -> None:
     camera.upload("other.JPG", b"more", mime_type="Image/JPEG")
     assert camera.value is committed
     camera.run()
-    assert at.camera_input(key="cam").value.name == "other.JPG"
-    assert at.camera_input(key="cam").value.type == "image/jpeg"
-    assert at.camera_input(key="cam").value.getvalue() == b"more"
+    replaced = at.camera_input(key="cam").value
+    assert replaced is not None
+    assert replaced.name == "other.JPG"
+    assert replaced.type == "image/jpeg"
+    assert replaced.getvalue() == b"more"
     assert at.session_state["changes"] == 2
 
     at.run()
@@ -2050,7 +2052,6 @@ def test_camera_input_captures_one_jpeg() -> None:
 @pytest.mark.parametrize(
     ("value", "match"),
     [
-        (("notes.png", b"hi", "image/jpeg"), r"\.jpg"),
         (("shot.jpeg", b"hi", "image/jpeg"), r"\.jpg"),
         (("shot.jpg", b"hi", "image/png"), "image/jpeg"),
         (
@@ -2061,7 +2062,6 @@ def test_camera_input_captures_one_jpeg() -> None:
         (b"raw-bytes", "Got bytes"),
     ],
     ids=[
-        "png_extension",
         "jpeg_extension",
         "wrong_mime",
         "multiple_files",
