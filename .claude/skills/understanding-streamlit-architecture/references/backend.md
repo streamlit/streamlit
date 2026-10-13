@@ -87,7 +87,7 @@ Executes user scripts in isolated thread.
 - `FRAGMENT_STOPPED_WITH_SUCCESS`
 - `SHUTDOWN` (the ScriptRunner is exiting)
 
-**Interrupt points**: Most `st.*` commands check for stop/rerun requests and raise `RerunException` or `StopException`.
+**Interrupt points**: Most `st.*` commands check for stop/rerun requests and raise `RerunException` or `StopException`. Waiting on a cache compute lock is also an interrupt point, so an abandoned run stops waiting instead of sleeping until that computation finishes. The thread that is computing the value is left alone.
 
 ## ScriptRunContext (`lib/streamlit/runtime/scriptrunner_utils/script_run_context.py`)
 

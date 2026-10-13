@@ -338,7 +338,7 @@ Prefer caching, fragments, and forms first, and only use this where the user doe
 
 - Don't use it on widgets that drive other UI (options, conditional fields, charts). Nothing else reacts, so the app looks broken.
 - Any browser-triggered rerun, even from an unrelated widget, delivers all pending values. Gate the work that uses them behind a button.
-- Pending values are lost on a page refresh unless the widget sets `key` and `bind="query-params"`.
+- Pending values are lost on a page refresh unless the widget sets `key` and `bind="query-params"`. `st.data_editor` and `st.pagination` support this mode. `st.data_editor` cannot use `bind`, so ignored edits are lost on refresh.
 - It has no effect inside `st.form`. File, camera, and audio inputs still upload immediately; only the rerun is deferred.
 
 ## Client-side validation

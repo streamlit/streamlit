@@ -54,6 +54,8 @@ st.area_chart(df, x="date", y="value", alt="Value over time")
 
 Native charts support additional parameters: `color` for series grouping, `stack` for bar/area stacking, `size` for scatter point sizing, `horizontal` for horizontal bars. See the [chart API reference](https://docs.streamlit.io/develop/api-reference/charts) for full options.
 
+`height="stretch"` on Vega-based charts and `st.plotly_chart` fills a parent that already has a bounded height (a pixel height, or a stretch container or tab that fills one). Otherwise those charts keep their default height and can still grow to match a taller sibling. Use an integer height when a chart must stay visible inside a crowded fixed-height card.
+
 ## Human-readable labels
 
 Use clear labels—not column names or abbreviations. Skip `x_label`/`y_label` if the column names are already readable.
