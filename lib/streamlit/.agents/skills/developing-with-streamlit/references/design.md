@@ -24,7 +24,7 @@ st.html("<style>.stButton button { background: #0969da; }</style>")
 primaryColor = "#0969da"
 ```
 
-Read `theme.md` — start with **Choose a config shape** and the **Cheat sheet** for dual-mode, padding, charts, and fonts. Use the deeper sections and templates when the ask needs them. CSS only when the user explicitly asks.
+Read `theme.md` — start with **Choose a config shape** and the **Cheat sheet**. Use deeper sections and templates when the ask needs them. CSS only when the user explicitly asks.
 
 ## Page config
 
@@ -104,12 +104,10 @@ Avoid the old verbose syntax:
 st.markdown(":orange-background[:orange[Pending]]")
 ```
 
-## Which spacing?
+## Spacing
 
-- **Page / sidebar chrome** (gap under the header or before the first widget): `paddingTop` / `paddingBottom` in `.streamlit/config.toml` — see Content padding in `theme.md`. Do not inject CSS for `.block-container`.
-- **Between widgets or sections:** `st.space` or container `gap` (see `layouts.md`). Prefer removing heavy `st.divider()` / `---` first.
-
-## Spacing: remove dividers
+- **Page / sidebar chrome:** `paddingTop` (gap under the header, or before the first sidebar widget) and `paddingBottom` (bottom inset) in `.streamlit/config.toml` — see Content padding in `theme.md`. Do not inject CSS for `.block-container`.
+- **Between widgets or sections:** prefer removing heavy `st.divider()` / `---` first; use `st.space` or container `gap` when you genuinely need a gap (see `layouts.md`).
 
 Dividers (`st.divider()` or `---`) look heavy. Just remove them—Streamlit's default spacing is usually enough.
 

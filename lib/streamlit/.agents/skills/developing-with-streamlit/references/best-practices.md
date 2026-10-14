@@ -29,7 +29,7 @@ st.markdown(
 
 ```toml
 # GOOD: Configure theme tokens in .streamlit/config.toml
-# See theme.md cheat sheet for dual-mode, padding, charts, and shared theme.base
+# Locked look: colors on [theme]. For light/dark, padding, charts, or theme.base, use the theme.md cheat sheet.
 [theme]
 primaryColor = "#ff4b4b"
 backgroundColor = "#ffffff"

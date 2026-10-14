@@ -1,4 +1,4 @@
-# Sample theme for dashboard-metrics (from dense-dashboard).
+# Copy of assets/templates/themes/configs/dense-dashboard.toml; keep in sync.
 # Dense dual-mode dashboard theme
 # Compact padding for KPI layouts; settings appearance toggle stays available
 

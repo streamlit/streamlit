@@ -87,9 +87,10 @@ coverage/
 ########################################################################
 .streamlit/
 !e2e_playwright/.streamlit/
-# Skill app templates may ship sample theme configs:
+# Skill app templates may ship sample theme configs (config.toml only):
 !lib/streamlit/.agents/skills/developing-with-streamlit/assets/templates/apps/**/.streamlit/
-!lib/streamlit/.agents/skills/developing-with-streamlit/assets/templates/apps/**/.streamlit/**
+lib/streamlit/.agents/skills/developing-with-streamlit/assets/templates/apps/**/.streamlit/**
+!lib/streamlit/.agents/skills/developing-with-streamlit/assets/templates/apps/**/.streamlit/config.toml
 lib/streamlit/static
 streamlit-storage
 # Directory for temporary files (can be used by agents):

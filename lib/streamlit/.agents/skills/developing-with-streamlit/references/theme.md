@@ -12,13 +12,13 @@ Theme options can't be changed from the script (`st.set_option` rejects them). S
 
 ## Choose a config shape
 
-| Goal | Use |
-|------|-----|
-| Brand many apps the same way | Shared TOML/URL via `theme.base`, per-app overrides in each `config.toml` |
-| Single locked look | `[theme]` only (`base = "light"` or `"dark"`) |
-| User can toggle light/dark | `[theme]` + `[theme.light]` + `[theme.dark]` (define both for full control) |
-| Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` |
-| Tighter page / sidebar spacing | `paddingTop` / `paddingBottom` (prefer over `.block-container` CSS) |
+| Goal | Use | Start from |
+|------|-----|------------|
+| Brand many apps the same way | Shared TOML/URL via `theme.base`, per-app overrides in each `config.toml` | Adapt a template into the shared file |
+| Single locked look | `[theme]` only (`base = "light"` or `"dark"`) | `shadcn` (light) or `vscode` (dark) |
+| User can toggle light/dark | `[theme]` + `[theme.light]` + `[theme.dark]` (define both for full control) | `shadcn-dual` |
+| Distinct sidebar | `[theme.sidebar]` and/or `[theme.light.sidebar]` / `[theme.dark.sidebar]` — full contrast set, not only `backgroundColor` | Dual example or `shadcn-dual` |
+| Tighter page / sidebar spacing | `paddingTop` / `paddingBottom` (prefer over `.block-container` CSS) | `dense-dashboard` |
 
 Relative `theme.base` paths resolve from the `streamlit run` working directory, not from `config.toml`.
 
@@ -31,18 +31,14 @@ Relative `theme.base` paths resolve from the `streamlit run` working directory, 
 
 ## Cheat sheet: common customization intents
 
-Start here for most polish/brand asks. Use **Choose a config shape** and **Where to put keys** above, then open deeper sections only when the ask needs them.
+Start here for token-level polish/brand asks. Use **Choose a config shape** (and its Start from column) for layout/mode choices, then open deeper sections only when the ask needs them.
 
 | Intent | Put in `config.toml` | Start from |
 |--------|----------------------|------------|
 | Brand accent (buttons, links) | `primaryColor`, usually also `linkColor` | Any template; retint primary |
 | Page / panel surfaces | `backgroundColor`, `secondaryBackgroundColor`, `textColor`, `borderColor` | `shadcn` / `shadcn-dual` |
-| User can toggle light/dark | `[theme.light]` + `[theme.dark]` (and sidebars if needed) | `shadcn-dual` |
-| Dense KPI / less chrome gap | `paddingTop` / `paddingBottom` (main + optional `[theme.sidebar]`) | `dense-dashboard` |
-| Contrasting sidebar | Full contrast set on `[theme.sidebar]` or per-mode sidebars — not only `backgroundColor` | Dual example or `shadcn-dual` |
-| Chart / dataframe brand | `chartCategoricalColors` (and sequential/diverging), `dataframe*` | `dense-dashboard` or dual example |
+| Chart / dataframe brand | `chartCategoricalColors`; `chartSequentialColors` / `chartDivergingColors` must be exactly 10 colors each; `dataframe*` | `dense-dashboard` or dual example |
 | Fonts, radii, widget borders | `font` / `headingFont` / `codeFont`, `baseRadius`, `showWidgetBorder` | Most templates |
-| Same brand across many apps | Shared file/URL via `theme.base`; app-only overrides in each `config.toml` | Adapt a template into the shared file |
 
 Prefer these over CSS. Full option detail is in the sections below; inventory via `streamlit config show`.
 
@@ -535,9 +531,7 @@ Most options hot-reload on save + rerun. `fontFaces` additions and updates apply
 
 ## Theme templates
 
-Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it.
-
-**Picker defaults:** `shadcn-dual` for a general brand with the appearance toggle; `dense-dashboard` for KPI layouts that need compact padding and the toggle; `shadcn` (locked light) or `vscode` (locked dark) when appearance must stay fixed. Treat the other single-mode themes as aesthetic variants. Use dual mode only when the settings appearance toggle should stay available.
+Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Picker defaults and dual vs locked guidance live in `assets/templates/themes/README.md` — use dual mode only when the settings appearance toggle should stay available.
 
 | Theme | Mode | Primary | Fonts | Notes |
 |-------|------|---------|-------|-------|
