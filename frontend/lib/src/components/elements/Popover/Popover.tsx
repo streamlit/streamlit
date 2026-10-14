@@ -53,6 +53,7 @@ import {
   SHIFT_VIEWPORT_PADDING,
   useFloatingOverlay,
 } from "~lib/hooks/useFloatingOverlay"
+import useTimeout from "~lib/hooks/useTimeout"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -128,7 +129,8 @@ const TRIGGER_VISIBILITY_ATTRIBUTES = [
  *   attribute count.
  */
 function isPopoverTriggerHidden(trigger: HTMLElement): boolean {
-  // Expander inert only; dialog inert sits outside <details>.
+  // `closest` returns the nearest inert ancestor. Only an inert host inside
+  // `<details>` is a collapsed expander.
   const inertHost = trigger.closest("[inert]")
   if (inertHost?.closest("details")) {
     return true
@@ -236,8 +238,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
    * `fromUser` is `true` for outside click, Escape, and a later hide of the
    * trigger, and `false` when the popover mounts already hidden. The user
    * never saw that popover, so its close must not start a rerun. A later hide
-   * can also come from script. The observer only sees the attribute change,
-   * so it cannot drop that rerun without also dropping the user callback.
+   * can also be caused by a backend-driven tab or expander change. The
+   * observer cannot tell that apart from a user hide, so it records
+   * `fromUser: true` either way, which may start a rerun.
    */
   const closePopover = useCallback(
     (fromUser: boolean): void => {
@@ -471,70 +474,133 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [open, handleClose])
 
-  // Close an open popover before paint when its trigger is hidden. The body
-  // is portaled, so hiding the trigger leaves it mounted and Floating UI
-  // pins it to the viewport corner.
+  // While this is true the trigger is hidden and the body stays out of the
+  // portal, so Floating UI cannot pin it to the viewport corner. `open` itself
+  // stays unchanged until a close below.
+  const [deferBody, setDeferBody] = useState(false)
+  const deferBodyRef = useRef(false)
+  const setBodyDeferred = useCallback((deferred: boolean): void => {
+    if (deferBodyRef.current === deferred) return
+    deferBodyRef.current = deferred
+    setDeferBody(deferred)
+  }, [])
+  // Latest close, read from the deferred timer so it is not a stale callback.
+  const closePopoverRef = useRef(closePopover)
+  closePopoverRef.current = closePopover
+  const visibilityCheckCancelledRef = useRef(false)
+  const sawTriggerVisibleRef = useRef(false)
+  const closeIfStillHidden = useCallback((): void => {
+    if (visibilityCheckCancelledRef.current || sawTriggerVisibleRef.current) {
+      return
+    }
+    const trigger = triggerRef.current
+    if (!trigger) return
+    if (!isPopoverTriggerHidden(trigger)) {
+      sawTriggerVisibleRef.current = true
+      setBodyDeferred(false)
+      return
+    }
+    /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
+     * The body is portaled. Flush so it unmounts before paint instead
+     * of sitting on the viewport corner for a frame.
+     */
+    flushSync(() => {
+      closePopoverRef.current(false)
+    })
+  }, [setBodyDeferred])
+  // Armed only when the trigger is still hidden after ancestor refs. A parent
+  // passive effect can reveal it before this fires.
+  const { clear: clearStayHiddenTimer, restart: restartStayHiddenTimer } =
+    useTimeout(closeIfStillHidden, 0, { autoStart: false })
+
+  // Close when the trigger goes from visible to hidden. The body is portaled,
+  // so hiding the trigger would otherwise leave it mounted.
   //
-  // Wait one microtask before the first check. Expander sets `<details open>`
-  // from a ref after this layout effect. A trigger that is still hidden then
-  // was never shown, so that close uses `fromUser: false`. The observer
-  // starts only after the check, so the ref's `open` write is not recorded
-  // as a user close.
+  // Do not close on the first hidden check. A parent may reveal the trigger
+  // in the same update: Expander sets `<details open>` from a ref after this
+  // layout effect, and Tabs / Expander apply a backend selection in a passive
+  // effect. Closing here would overwrite that programmatic open. The body is
+  // withheld until the trigger is visible. A trigger that is still hidden
+  // after that parent update closes with `fromUser: false`.
   //
-  // Later hides pass `fromUser: true`, same as outside click and Escape:
+  // A later hide passes `fromUser: true`:
   // - an inactive tab sets `display: none`, and React Aria stops the tab
   //   click before the document click listener
   // - a collapsed expander sets `inert` before the height animation ends
-  // Both closes flush so the portal unmounts before paint.
   useLayoutEffect(() => {
-    if (!open) return
+    if (!open) {
+      setBodyDeferred(false)
+      return
+    }
     const trigger = triggerRef.current
     if (!trigger) return
 
-    let cancelled = false
-    let observer: MutationObserver | null = null
+    visibilityCheckCancelledRef.current = false
+    sawTriggerVisibleRef.current = !isPopoverTriggerHidden(trigger)
+    setBodyDeferred(!sawTriggerVisibleRef.current)
 
-    const closeBeforePaint = (fromUser: boolean): void => {
+    const closeBeforePaint = (): void => {
       /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
        * The body is portaled. Flush so it unmounts before paint instead
        * of sitting on the viewport corner for a frame.
        */
       flushSync(() => {
-        closePopover(fromUser)
+        closePopover(true)
       })
     }
 
-    queueMicrotask(() => {
-      if (cancelled) return
-      // Ancestor refs have run. If the trigger is still hidden, it mounted
-      // that way and the user never saw it.
-      if (isPopoverTriggerHidden(trigger)) {
-        closeBeforePaint(false)
+    const noteVisibility = (): void => {
+      if (visibilityCheckCancelledRef.current) return
+      if (!isPopoverTriggerHidden(trigger)) {
+        sawTriggerVisibleRef.current = true
+        setBodyDeferred(false)
         return
       }
-
-      // The tab panel or expander is the node that changes. MutationObserver
-      // does not bubble, so observe each ancestor.
-      observer = new MutationObserver(() => {
-        if (isPopoverTriggerHidden(trigger)) {
-          closeBeforePaint(true)
-        }
-      })
-      let node: HTMLElement | null = trigger
-      while (node) {
-        observer.observe(node, {
-          attributes: true,
-          attributeFilter: TRIGGER_VISIBILITY_ATTRIBUTES,
-        })
-        node = node.parentElement
+      if (sawTriggerVisibleRef.current) {
+        closeBeforePaint()
       }
+    }
+
+    // The tab panel or expander is the node that changes. MutationObserver
+    // does not bubble, so observe each ancestor. A reveal in a later commit
+    // is noticed here, before the deferred close below.
+    const observer = new MutationObserver(noteVisibility)
+    let node: HTMLElement | null = trigger
+    while (node) {
+      observer.observe(node, {
+        attributes: true,
+        attributeFilter: TRIGGER_VISIBILITY_ATTRIBUTES,
+      })
+      node = node.parentElement
+    }
+
+    // Refs have run by the next microtask. Parent passive effects commit on
+    // a later task, so a trigger that is still hidden waits for that task
+    // before it counts as never shown.
+    queueMicrotask(() => {
+      if (visibilityCheckCancelledRef.current) return
+      noteVisibility()
+      if (
+        visibilityCheckCancelledRef.current ||
+        sawTriggerVisibleRef.current
+      ) {
+        return
+      }
+      restartStayHiddenTimer(0)
     })
 
     return () => {
-      cancelled = true
-      observer?.disconnect()
+      visibilityCheckCancelledRef.current = true
+      observer.disconnect()
+      clearStayHiddenTimer()
     }
-  }, [open, closePopover])
+  }, [
+    open,
+    closePopover,
+    setBodyDeferred,
+    clearStayHiddenTimer,
+    restartStayHiddenTimer,
+  ])
 
   // Merge the floating ref with our local popoverBodyRef for dismissal logic.
   const setFloatingRef = useCallback(
@@ -597,7 +663,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           </BaseButton>
         </BaseButtonTooltip>
       </div>
-      {open && (
+      {open && !deferBody && (
         <FloatingPortal id={FLOATING_OVERLAY_PORTAL_ID}>
           <StyledPopoverBody
             ref={setFloatingRef}

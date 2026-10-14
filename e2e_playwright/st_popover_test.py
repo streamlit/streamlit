@@ -29,6 +29,7 @@ from e2e_playwright.shared.app_utils import (
     expect_label_truncated,
     expect_markdown,
     get_element_by_key,
+    get_expander,
     get_popover,
     open_popover,
     reset_hovering,
@@ -758,16 +759,16 @@ def test_popover_closes_when_its_trigger_is_hidden(app: Page):
 
     # Collapsed expander (inert). The body is portaled outside the expander,
     # so it has to be looked up from the page.
-    expander = app.get_by_test_id("stExpander").filter(has_text="Expander with popover")
+    expander = get_expander(app, "Expander with popover")
     popover_body = open_popover(app, "Popover in expander")
     expect(popover_body).to_be_visible()
     expect_markdown(popover_body, "Popover in expander content")
 
-    expander.locator("summary").click()
+    expander.get_by_text("Expander with popover").click()
 
     expect(app.get_by_test_id("stPopoverBody")).to_have_count(0)
     # Reopening the expander leaves the popover closed.
-    expander.locator("summary").click()
+    expander.get_by_text("Expander with popover").click()
     expect(app.get_by_text("Popover in expander content")).not_to_be_visible()
     expect(
         get_popover(app, "Popover in expander").get_by_role("button")

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import type { ReactElement, ReactNode } from "react"
+import { type ReactElement, type ReactNode, useEffect, useState } from "react"
 
-import { act, screen, waitFor } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
@@ -29,11 +29,21 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Popover, { clampPopoverSize, type PopoverProps } from "./Popover"
 
-/** Let the popover's post-ref visibility check run inside `act`. */
+/**
+ * Let the popover's visibility check run inside `act`.
+ *
+ * The first check is a microtask (after ancestor refs). A trigger that is
+ * still hidden waits one macrotask so a parent effect can reveal it first.
+ */
 async function flushPopoverVisibilityCheck(): Promise<void> {
   await act(async () => {
     await new Promise<void>(resolve => {
       queueMicrotask(resolve)
+    })
+  })
+  await act(async () => {
+    await new Promise<void>(resolve => {
+      setTimeout(resolve, 0)
     })
   })
 }
@@ -500,6 +510,57 @@ describe("Popover container", () => {
         fragmentId,
         fromUser: false,
       })
+    })
+
+    it("stays open when a parent effect reveals the trigger in the same update", async () => {
+      // Tabs and Expander apply a backend selection in useEffect, after this
+      // popover's layout effect. Opening the popover in that same update must
+      // not write it closed before the panel is shown.
+      function RevealFromEffect({
+        children,
+      }: {
+        children: ReactNode
+      }): ReactElement {
+        const [shown, setShown] = useState(false)
+        useEffect(() => {
+          setShown(true)
+        }, [])
+        return (
+          <div className={shown ? undefined : "is-hidden"} data-testid="panel">
+            {children}
+          </div>
+        )
+      }
+
+      const widgetMgr = createWidgetMgr()
+      const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+      const widgetId = "popover-widget-id"
+      const fragmentId = "frag-1"
+
+      render(
+        <RevealFromEffect>
+          <Popover
+            {...getProps(
+              { id: widgetId, open: true },
+              { widgetMgr, fragmentId }
+            )}
+          >
+            <div>popover content</div>
+          </Popover>
+        </RevealFromEffect>
+      )
+      await flushPopoverVisibilityCheck()
+
+      expect(screen.getByText("popover content")).toBeVisible()
+      expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+        widgetId,
+        false,
+        expect.anything()
+      )
     })
 
     it("stays open inside nested expanded expanders", async () => {
@@ -1153,9 +1214,8 @@ describe("passive state persistence", () => {
 
     panel.setAttribute("inert", "")
 
-    await waitFor(() => {
-      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
-    })
+    await flushPopoverVisibilityCheck()
+    expect(screen.queryByText("popover content")).not.toBeInTheDocument()
     expect(widgetMgr.getElementState(blockId, "open")).toBe(false)
   })
 

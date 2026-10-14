@@ -295,10 +295,8 @@ with st.popover(
 ):
     st.write("wrap popover content")
 
-# The popover closes when an inactive tab (display: none) or a collapsed
-# expander (inert) hides its trigger. The portaled body would otherwise stay
-# open in the viewport corner, and tab clicks never reach outside-click
-# dismissal.
+# Popovers inside a tab and an expander. Switching tabs or collapsing the
+# expander should close the open popover.
 tab_with_popover, tab_without_popover = st.tabs(
     ["Tab with popover", "Tab without popover"]
 )
