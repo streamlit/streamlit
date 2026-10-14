@@ -48,7 +48,7 @@ const createChainableMethods = (renderDotImpl?: Mock): MockGraphvizChain => {
     scale: () => chainable,
     engine: () => chainable,
     renderDot:
-      renderDotImpl ||
+      renderDotImpl ??
       vi.fn((_spec: string, callback?: () => void) => {
         callback?.()
 
@@ -129,6 +129,28 @@ describe("GraphVizChart Element", () => {
 
     expect(logErrorSpy).not.toHaveBeenCalled()
     expect(graphviz).toHaveBeenCalled()
+  })
+
+  it("keeps the natural SVG size for a stretch-height chart", () => {
+    const chain = createChainableMethods()
+    const widthSpy = vi.spyOn(chain, "width")
+    const heightSpy = vi.spyOn(chain, "height")
+    ;(graphviz as Mock).mockReturnValue(chain)
+
+    render(
+      <GraphVizChart
+        {...getProps()}
+        widthConfig={{ useContent: true }}
+        heightConfig={{ useStretch: true }}
+      />
+    )
+
+    expect(chain.renderDot).toHaveBeenCalled()
+    // Measured sizes written into the SVG would feed back into the layout.
+    expect(widthSpy).not.toHaveBeenCalled()
+    expect(heightSpy).not.toHaveBeenCalled()
+    // CSS scales the chart to the stretched height instead.
+    expect(screen.getByTestId("stGraphVizChart")).toHaveStyle("height: 100%;")
   })
 
   it("should update chart and log error when crashes", () => {

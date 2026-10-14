@@ -219,7 +219,7 @@ function isFieldFullyCleared(field: Element): boolean {
     return false
   }
   return Array.from(segs).every(segment => {
-    const text = segment.textContent?.trim() ?? ""
+    const text = segment.textContent.trim()
     return segment.matches('[data-placeholder="true"]') && !/^\d+$/.test(text)
   })
 }
@@ -296,7 +296,7 @@ function isRangeFullyCleared(container: HTMLElement | null): boolean {
     !!segments &&
     segments.length > 0 &&
     Array.from(segments).every(segment => {
-      const text = segment.textContent?.trim() ?? ""
+      const text = segment.textContent.trim()
       return (
         segment.matches('[data-placeholder="true"]') && !/^\d+$/.test(text)
       )
@@ -1430,7 +1430,7 @@ function RangeDateInput({
                 commitBehavior="reset"
                 minValue={minDate}
                 maxValue={maxDate}
-                focusedValue={focusedValue ?? undefined}
+                focusedValue={focusedValue}
                 onFocusChange={onFocusChange}
               >
                 <AnchorDateWatcher

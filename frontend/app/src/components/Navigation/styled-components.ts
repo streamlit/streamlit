@@ -55,7 +55,7 @@ const getNavTextColor = (
     : transparentize(theme.colors.bodyText, 0.25)
 }
 
-export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
+export const StyledSidebarNavContainer = styled.nav(({ theme }) => ({
   position: "relative",
   fontFamily: theme.genericFonts.bodyFont,
 }))
@@ -261,13 +261,17 @@ export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
 }))
 
 export const StyledNavSectionContainer = styled.div(({ theme }) => ({
-  "&:not(:first-child)": {
+  // Matches any section with a preceding sibling. Emotion flags :first-child
+  // as unsafe for server-side rendering, and :first-of-type would miss a
+  // section that follows individual page links (`li`) in the same list.
+  "* + &": {
     marginTop: theme.spacing.lg,
   },
 }))
 
-// TopNav styled components
-export const StyledOverflowContainer = styled.div(({ theme }) => ({
+// TopNav styled components. StyledOverflowContainer is rc-overflow's root and
+// the "App pages" <nav> landmark (see TopNav).
+export const StyledOverflowContainer = styled.nav(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   width: "100%",

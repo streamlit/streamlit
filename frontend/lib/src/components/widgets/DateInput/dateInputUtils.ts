@@ -471,7 +471,7 @@ export function calendarDateFromSegments(
     if (type !== "year" && type !== "month" && type !== "day") {
       continue
     }
-    const text = segment.textContent?.trim() ?? ""
+    const text = segment.textContent.trim()
     if (!/^\d+$/.test(text)) {
       if (lenient) {
         continue

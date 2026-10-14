@@ -94,7 +94,7 @@ function DateInput({
   }, [])
 
   const handleFormCleared = useCallback(() => {
-    const defaultIso = element.default ?? []
+    const defaultIso = element.default
     lastWrittenIsoRef.current = defaultIso
     pendingIsoRef.current = defaultIso
     setDirty(false)
@@ -352,9 +352,8 @@ function DateInput({
   const protoValue = element.value
   useEffect(() => {
     if (incomingSetValue) {
-      const incoming = protoValue ?? []
-      lastWrittenIsoRef.current = incoming
-      pendingIsoRef.current = incoming
+      lastWrittenIsoRef.current = protoValue
+      pendingIsoRef.current = protoValue
       setDirty(false)
       setHasRequiredError(false)
       return
@@ -543,11 +542,11 @@ function getStateFromWidgetMgr(
 }
 
 function getDefaultStateFromProto(element: DateInputProto): string[] {
-  return element.default ?? []
+  return element.default
 }
 
 function getCurrStateFromProto(element: DateInputProto): string[] {
-  return element.value ?? []
+  return element.value
 }
 
 function updateWidgetMgrState(
@@ -562,7 +561,7 @@ function updateWidgetMgrState(
   // Guard: invalid values must never reach the backend. This catches
   // out-of-range dates and unparsable ISO strings (e.g. malformed
   // query-param seeds). Empty arrays are valid (cleared input).
-  const isValid = (vws.value || []).every(iso => {
+  const isValid = vws.value.every(iso => {
     const calendarDate = isoToCalendarDate(iso)
     if (!calendarDate) return false
     return !validateDate(calendarDate, minDate, maxDate)

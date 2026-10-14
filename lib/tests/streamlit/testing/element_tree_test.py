@@ -1784,20 +1784,24 @@ def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
 def test_inspectable_elements_reject_unsupported_interactions() -> None:
     """Inspectable-only nodes reject set_value and click with AppTestError.
 
-    ``st.camera_input`` is an untyped element. Typed ``Markdown`` is covered
+    ``st.plotly_chart`` is an untyped element. Typed ``Markdown`` is covered
     too.
     """
 
     def script():
         import streamlit as st
 
-        st.camera_input("Cam", key="cam")
+        st.plotly_chart(
+            {"data": [{"x": [1], "y": [2], "type": "scatter"}]},
+            key="chart",
+            on_select="rerun",
+        )
         st.markdown("hi")
 
     at = AppTest.from_function(script).run()
-    node = at.get("camera_input")[0]
+    node = at.get("plotly_chart")[0]
     assert isinstance(node, UnknownElement)
-    assert node.key == "cam"
+    assert node.key == "chart"
 
     inspectable_guidance = (
         "AppTest can inspect this element but does not implement "
@@ -1805,15 +1809,15 @@ def test_inspectable_elements_reject_unsupported_interactions() -> None:
         "has a key, or use a Playwright e2e test."
     )
     with pytest.raises(AppTestError) as set_value_info:
-        node.set_value(b"jpg")
+        node.set_value({"selection": {}})
     assert str(set_value_info.value) == (
-        "set_value() is not supported for camera_input (key='cam'). "
+        "set_value() is not supported for plotly_chart (key='chart'). "
         f"{inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as click_info:
         node.click()
     assert str(click_info.value) == (
-        f"click() is not supported for camera_input (key='cam'). {inspectable_guidance}"
+        f"click() is not supported for plotly_chart (key='chart'). {inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as markdown_info:
         at.markdown[0].set_value("nope")
@@ -1959,6 +1963,161 @@ def test_audio_input_form_applies_only_on_submit() -> None:
     at.button[0].click().run()
     assert at.text[0].value == "yes"
     assert at.audio_input[0].value.getvalue() == b"hi"
+
+    at.button[1].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
+
+
+def test_camera_input_captures_one_jpeg() -> None:
+    """One JPEG is committed on run, replaced by upload, kept across reruns, and cleared."""
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("changes", 0)
+
+        def on_change() -> None:
+            st.session_state.changes += 1
+
+        photo = st.camera_input(
+            "Cam", key="cam", resolution="720p", on_change=on_change
+        )
+        st.sidebar.camera_input("Side", key="side")
+        if photo is None:
+            st.text("empty")
+        else:
+            st.text(f"name={photo.name}")
+            st.text(f"type={photo.type}")
+            st.text(f"bytes={photo.getvalue()!r}")
+
+    at = AppTest.from_function(script).run()
+    cam = at.camera_input(key="cam")
+    assert cam.value is None
+    assert cam.label == "Cam"
+    assert cam.resolution == "720p"
+    assert at.sidebar.camera_input(key="side").resolution is None
+    assert at.session_state["cam"] is None
+    assert at.text[0].value == "empty"
+    assert at.get("camera_input")[0] is cam
+
+    at = cam.set_value(("shot.jpg", b"jpeg", "image/jpeg")).run()
+    captured = at.camera_input(key="cam").value
+    assert captured is not None
+    assert captured.name == "shot.jpg"
+    assert captured.type == "image/jpeg"
+    assert captured.getvalue() == b"jpeg"
+    assert at.session_state["cam"].getvalue() == b"jpeg"
+    assert at.session_state["changes"] == 1
+    assert at.text[0].value == "name=shot.jpg"
+    assert at.text[2].value == "bytes=b'jpeg'"
+
+    camera = at.camera_input(key="cam")
+    committed = camera.value
+    assert committed is not None
+    assert committed.getvalue() == b"jpeg"
+    camera.upload("first.jpg", b"one")
+    camera.upload("other.JPG", b"more", mime_type="Image/JPEG")
+    assert camera.value is committed
+    camera.run()
+    replaced = at.camera_input(key="cam").value
+    assert replaced is not None
+    assert replaced.name == "other.JPG"
+    assert replaced.type == "image/jpeg"
+    assert replaced.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    at.run()
+    assert at.camera_input(key="cam").value.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    camera = at.camera_input(key="cam")
+    camera_repr = repr(camera)
+    assert camera_repr.startswith("CameraInput(")
+    assert "resolution='720p'" in camera_repr
+    with pytest.raises(
+        AppTestError, match=r"click\(\) is not supported for camera_input \(key='cam'\)"
+    ):
+        camera.click()
+
+    at.camera_input(key="cam").clear().run()
+    assert at.camera_input(key="cam").value is None
+    assert at.session_state["cam"] is None
+    assert at.text[0].value == "empty"
+    assert at.session_state["changes"] == 3
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        (("shot.jpeg", b"hi", "image/jpeg"), r"\.jpg"),
+        (("shot.jpg", b"hi", "image/png"), "image/jpeg"),
+        (
+            [("a.jpg", b"a", "image/jpeg"), ("b.jpg", b"b", "image/jpeg")],
+            "list is not accepted",
+        ),
+        (("shot.jpg", "jpeg", "image/jpeg"), "Got tuple"),
+        (b"raw-bytes", "Got bytes"),
+    ],
+    ids=[
+        "jpeg_extension",
+        "wrong_mime",
+        "multiple_files",
+        "str_content",
+        "raw_bytes",
+    ],
+)
+def test_camera_input_rejects_invalid_photos(value: Any, match: str) -> None:
+    """Invalid photos raise AppTestError and leave the widget empty."""
+
+    def script():
+        import streamlit as st
+
+        st.camera_input("Cam", key="cam")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=match):
+        at.camera_input(key="cam").set_value(value)
+    assert at.camera_input(key="cam").value is None
+
+
+def test_camera_input_disabled_rejects_update() -> None:
+    """A disabled camera_input widget cannot accept a photo or be cleared."""
+
+    at = AppTest.from_string(
+        "import streamlit as st\nst.camera_input('Cam', disabled=True, key='cam')\n"
+    ).run()
+    with pytest.raises(AppTestError, match="disabled"):
+        at.camera_input(key="cam").upload("shot.jpg", b"hi")
+    with pytest.raises(AppTestError, match="disabled"):
+        at.camera_input(key="cam").clear()
+
+
+def test_camera_input_form_applies_only_on_submit() -> None:
+    """A form photo stays uncommitted until submit.
+
+    ``clear_on_submit`` clears it on the next submit.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("cam-form", clear_on_submit=True):
+            photo = st.camera_input("Cam")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text("yes" if photo is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.camera_input[0].set_value(("a.jpg", b"hi", "image/jpeg")).run()
+    assert at.text[0].value == "no"
+
+    at.camera_input[0].set_value(("a.jpg", b"hi", "image/jpeg"))
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+    assert at.camera_input[0].value.getvalue() == b"hi"
 
     at.button[1].click().run()
     assert at.text[0].value == "yes"
@@ -2687,6 +2846,228 @@ def test_chat_input_value_repr_when_accept_file() -> None:
     value = at.chat_input[0].value
     assert isinstance(value, ChatInputValue)
     assert repr(value) == "ChatInputValue(text='hello', files=[])"
+
+
+def test_chat_input_uploads_files_with_text() -> None:
+    """Files staged with upload() arrive once, together with the message text."""
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("submits", 0)
+
+        def on_submit() -> None:
+            st.session_state.submits += 1
+
+        prompt = st.chat_input(
+            "Say something",
+            key="chat",
+            accept_file=True,
+            file_type=["txt"],
+            on_submit=on_submit,
+        )
+        if prompt is None:
+            st.text("empty")
+        else:
+            st.text(f"text={prompt.text}")
+            st.text(f"nfiles={len(prompt.files)}")
+            uploaded = prompt.files[0]
+            st.text(f"file={uploaded.name}:{uploaded.type}:{uploaded.getvalue()!r}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "empty"
+    chat = at.chat_input(key="chat")
+    assert chat.value is None
+
+    # Pending text stays a string. The file is not visible until run().
+    chat.set_value("hello").upload("notes.txt", b"hello", "text/plain")
+    assert chat.value == "hello"
+
+    at = chat.run()
+    value = at.chat_input(key="chat").value
+    assert isinstance(value, ChatInputValue)
+    assert value.text == "hello"
+    assert len(value.files) == 1
+    assert value.files[0].name == "notes.txt"
+    assert value.files[0].type == "text/plain"
+    assert value.files[0].getvalue() == b"hello"
+    assert "audio=" not in repr(value)
+    assert at.session_state["submits"] == 1
+    assert at.text[0].value == "text=hello"
+    assert at.text[2].value == "file=notes.txt:text/plain:b'hello'"
+
+    # A trigger submit is not replayed on the next run.
+    at = at.run()
+    assert at.chat_input(key="chat").value is None
+    assert at.session_state["submits"] == 1
+    assert at.text[0].value == "empty"
+
+
+def test_chat_input_file_only_submit_uses_empty_text() -> None:
+    """A file without text still submits, with data set to an empty string."""
+
+    def script():
+        import streamlit as st
+
+        prompt = st.chat_input("Say something", accept_file=True)
+        if prompt is None:
+            st.text("empty")
+        else:
+            st.text(f"text={prompt.text!r}")
+            st.text(f"name={prompt.files[0].name}")
+
+    at = AppTest.from_function(script).run()
+    at.chat_input[0].upload("pic.bin", b"\x00\x01").run()
+    value = at.chat_input[0].value
+    assert isinstance(value, ChatInputValue)
+    assert value.text == ""
+    assert value.files[0].name == "pic.bin"
+    assert value.files[0].type == "application/octet-stream"
+    assert value.files[0].getvalue() == b"\x00\x01"
+    assert at.text[0].value == "text=''"
+    assert at.text[1].value == "name=pic.bin"
+
+
+def test_chat_input_single_file_upload_replaces() -> None:
+    """accept_file=True keeps only the latest staged file."""
+
+    def script():
+        import streamlit as st
+
+        prompt = st.chat_input("Say something", accept_file=True)
+        if prompt and prompt.files:
+            st.text(prompt.files[0].name)
+
+    at = AppTest.from_function(script).run()
+    at.chat_input[0].upload("first.txt", b"a").upload("second.txt", b"b").run()
+    value = at.chat_input[0].value
+    assert isinstance(value, ChatInputValue)
+    assert [f.name for f in value.files] == ["second.txt"]
+    assert value.files[0].getvalue() == b"b"
+    assert at.text[0].value == "second.txt"
+
+
+def test_chat_input_multiple_and_directory_uploads_accumulate() -> None:
+    """multiple and directory chat inputs keep every staged file."""
+
+    def script():
+        import streamlit as st
+
+        many = st.chat_input("Many", accept_file="multiple", key="many")
+        folder = st.chat_input("Folder", accept_file="directory", key="folder")
+        if many and many.files:
+            st.text("many=" + ",".join(f.name for f in many.files))
+        if folder and folder.files:
+            st.text("folder=" + folder.files[0].name)
+            st.text(f"folder_bytes={folder.files[0].getvalue()!r}")
+
+    at = AppTest.from_function(script).run()
+    at.chat_input(key="many").upload("a.txt", b"a").upload("b.txt", b"b")
+    at.chat_input(key="folder").upload("docs/notes.txt", b"nested", "text/plain")
+    at.run()
+
+    many = at.chat_input(key="many").value
+    folder = at.chat_input(key="folder").value
+    assert isinstance(many, ChatInputValue)
+    assert isinstance(folder, ChatInputValue)
+    assert [f.name for f in many.files] == ["a.txt", "b.txt"]
+    assert folder.files[0].name == "docs/notes.txt"
+    assert folder.files[0].getvalue() == b"nested"
+    assert at.text[0].value == "many=a.txt,b.txt"
+    assert at.text[1].value == "folder=docs/notes.txt"
+
+
+def test_chat_input_clear_drops_staged_files_only() -> None:
+    """clear() removes staged files and leaves pending text in place."""
+
+    def script():
+        import streamlit as st
+
+        prompt = st.chat_input("Say something", accept_file=True)
+        if prompt is None:
+            st.text("empty")
+        else:
+            st.text(f"text={prompt.text}")
+            st.text(f"nfiles={len(prompt.files)}")
+
+    at = AppTest.from_function(script).run()
+    chat = at.chat_input[0]
+    chat.set_value("keep me").upload("gone.txt", b"x").clear()
+    assert chat.value == "keep me"
+    at = chat.run()
+    value = at.chat_input[0].value
+    assert isinstance(value, ChatInputValue)
+    assert value.text == "keep me"
+    assert value.files == []
+    assert at.text[0].value == "text=keep me"
+    assert at.text[1].value == "nfiles=0"
+
+    # Clearing the only staged file, with no text, does not submit.
+    at.chat_input[0].upload("gone.txt", b"x").clear().run()
+    assert at.chat_input[0].value is None
+    assert at.text[0].value == "empty"
+
+
+@pytest.mark.parametrize(
+    ("script_kwargs", "upload_args", "match"),
+    [
+        (
+            {},
+            ("notes.txt", b"hi"),
+            r"does not accept files",
+        ),
+        (
+            {"accept_file": True, "file_type": ["png"]},
+            ("notes.txt", b"hi"),
+            r"Invalid file extension",
+        ),
+        (
+            {"accept_file": True, "disabled": True},
+            ("notes.txt", b"hi"),
+            r"Cannot update a disabled chat_input",
+        ),
+        (
+            {"accept_file": True},
+            ("", b"hi"),
+            r"file names must be a non-empty string",
+        ),
+        (
+            {"accept_file": True},
+            ("notes.txt", "hi"),
+            r"file content must be bytes",
+        ),
+    ],
+)
+def test_chat_input_upload_rejects_invalid_files(
+    script_kwargs: dict[str, Any],
+    upload_args: tuple[Any, ...],
+    match: str,
+) -> None:
+    """upload() fails before run() when the widget cannot accept that file."""
+    # from_function rewrites the script into a new module, so bake kwargs
+    # into the source instead of closing over the test parameter.
+    kwargs_src = ", ".join(f"{key}={value!r}" for key, value in script_kwargs.items())
+    call = "st.chat_input('Say something', key='chat'"
+    if kwargs_src:
+        call += f", {kwargs_src}"
+    script = f"import streamlit as st\n{call})\n"
+    at = AppTest.from_string(script).run()
+    with pytest.raises(AppTestError, match=match):
+        at.chat_input(key="chat").upload(*upload_args)
+    assert at.chat_input(key="chat").value is None
+
+
+def test_chat_input_disabled_clear_rejects_update() -> None:
+    """A disabled chat input cannot clear staged files."""
+
+    def script():
+        import streamlit as st
+
+        st.chat_input("Say something", accept_file=True, disabled=True, key="chat")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=r"Cannot update a disabled chat_input"):
+        at.chat_input(key="chat").clear()
 
 
 def test_color_picker_pick_adds_hash_prefix():

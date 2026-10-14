@@ -90,17 +90,12 @@ const noHardcodedThemeValues = createRule<[], MessageIds>({
         if (
           node.tag.type !== AST_NODE_TYPES.MemberExpression ||
           node.tag.object.type !== AST_NODE_TYPES.Identifier ||
-          node.tag.object.name !== "styled" ||
-          !node.quasi
+          node.tag.object.name !== "styled"
         ) {
           return
         }
 
         node.quasi.quasis.forEach(quasi => {
-          if (quasi.type !== AST_NODE_TYPES.TemplateElement) {
-            return
-          }
-
           const styleProperties = quasi.value.raw.split(";")
           for (const styleProperty of styleProperties) {
             const [property, value] = styleProperty.split(":")
