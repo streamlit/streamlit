@@ -169,8 +169,8 @@ function useColumnSort({
       direction?: "asc" | "desc" | "auto",
       autoReset?: boolean
     ): void => {
-      // Bracket access is typed as always present. The index can still be
-      // outside the column list.
+      // `columns[index]` is typed as always defined, but `index` can fall
+      // outside the list.
       if (index < 0 || index >= columns.length) {
         return
       }

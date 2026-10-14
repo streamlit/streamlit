@@ -152,7 +152,7 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
       }
     },
     getCellValue(cell: TextCell): string | null {
-      // getCell stores null for a missing value, then casts to TextCell.
+      // TextCell.data is typed as string, but a missing value is stored as null.
       const data = cell.data as string | null | undefined
       return data ?? null
     },

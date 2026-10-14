@@ -178,8 +178,8 @@ export function applyPandasStylerCss(
     themeOverride.baseFontStyle = `${fontWeight} ${fontSizes.sm}`
   }
 
-  // CSS extraction writes onto this object. An empty object is still attached
-  // when nothing matched.
+  // Attach themeOverride whenever the CSS id is present, including when no
+  // supported property was extracted.
   return {
     ...cell,
     themeOverride,

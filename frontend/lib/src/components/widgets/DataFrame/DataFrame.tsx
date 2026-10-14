@@ -245,8 +245,8 @@ function DataFrame({
     []
   )
 
-  // Old Arrow proto messages omit editingMode. The generated class types it
-  // as present, so the fallback stays.
+  // Old Arrow proto messages omit editingMode, even though the generated type
+  // marks it as required.
   const editingMode =
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- legacy messages omit editingMode
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
