@@ -45,7 +45,7 @@ interface TextColumnParams {
  * A column that supports rendering & editing of text values.
  */
 function TextColumn(props: BaseColumnProps): BaseColumn {
-  const parameters = (props.columnTypeOptions as TextColumnParams) || {}
+  const parameters = (props.columnTypeOptions ?? {}) as TextColumnParams
 
   let validateRegex: RegExp | string | undefined = undefined
 
@@ -152,7 +152,9 @@ function TextColumn(props: BaseColumnProps): BaseColumn {
       }
     },
     getCellValue(cell: TextCell): string | null {
-      return cell.data ?? null
+      // TextCell.data is typed as string, but a missing value is stored as null.
+      const data = cell.data as string | null | undefined
+      return data ?? null
     },
   }
 }

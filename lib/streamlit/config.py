@@ -1565,12 +1565,13 @@ _create_theme_options(
     description="""
         Red color used in the basic color palette.
 
-        By default, this is #ff4b4b for the light theme and #ff2b2b for the
+        By default, this is #d94a57 for the light theme and #f2919a for the
         dark theme.
 
-        If `redColor` is provided, and `redBackgroundColor` isn't, then
-        `redBackgroundColor` will be derived from `redColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `redColor` without `redBackgroundColor` replaces the opaque
+        `redBackgroundColor` default with a translucent color Streamlit derives
+        from `redColor` (10% opacity in light themes, 20% in dark), even when
+        `redColor` equals its documented default.
     """,
 )
 
@@ -1587,12 +1588,13 @@ _create_theme_options(
     description="""
         Orange color used in the basic color palette.
 
-        By default, this is #ffa421 for the light theme and #ff8700 for the
+        By default, this is #e0682b for the light theme and #f2a56d for the
         dark theme.
 
-        If `orangeColor` is provided, and `orangeBackgroundColor` isn't, then
-        `orangeBackgroundColor` will be derived from `orangeColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `orangeColor` without `orangeBackgroundColor` replaces the opaque
+        `orangeBackgroundColor` default with a translucent color Streamlit derives
+        from `orangeColor` (10% opacity in light themes, 20% in dark), even when
+        `orangeColor` equals its documented default.
     """,
 )
 
@@ -1609,12 +1611,13 @@ _create_theme_options(
     description="""
         Yellow color used in the basic color palette.
 
-        By default, this is #faca2b for the light theme and #ffe312 for the
+        By default, this is #bb8300 for the light theme and #fbd54f for the
         dark theme.
 
-        If `yellowColor` is provided, and `yellowBackgroundColor` isn't, then
-        `yellowBackgroundColor` will be derived from `yellowColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `yellowColor` without `yellowBackgroundColor` replaces the opaque
+        `yellowBackgroundColor` default with a translucent color Streamlit derives
+        from `yellowColor` (10% opacity in light themes, 20% in dark), even when
+        `yellowColor` equals its documented default.
     """,
 )
 
@@ -1631,12 +1634,13 @@ _create_theme_options(
     description="""
         Blue color used in the basic color palette.
 
-        By default, this is #1c83e1 for the light theme and #0068c9 for the
+        By default, this is #3b82f6 for the light theme and #85b8f8 for the
         dark theme.
 
-        If a `blueColor` is provided, and `blueBackgroundColor` isn't, then
-        `blueBackgroundColor` will be derived from `blueColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `blueColor` without `blueBackgroundColor` replaces the opaque
+        `blueBackgroundColor` default with a translucent color Streamlit derives
+        from `blueColor` (10% opacity in light themes, 20% in dark), even when
+        `blueColor` equals its documented default.
     """,
 )
 
@@ -1653,12 +1657,13 @@ _create_theme_options(
     description="""
         Green color used in the basic color palette.
 
-        By default, this is #21c354 for the light theme and #09ab3b for the
+        By default, this is #079464 for the light theme and #7ed5b0 for the
         dark theme.
 
-        If `greenColor` is provided, and `greenBackgroundColor` isn't, then
-        `greenBackgroundColor` will be derived from `greenColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `greenColor` without `greenBackgroundColor` replaces the opaque
+        `greenBackgroundColor` default with a translucent color Streamlit derives
+        from `greenColor` (10% opacity in light themes, 20% in dark), even when
+        `greenColor` equals its documented default.
     """,
 )
 
@@ -1675,11 +1680,13 @@ _create_theme_options(
     description="""
         Violet color used in the basic color palette.
 
-        By default, this is #803df5 for both the light and dark themes.
+        By default, this is #9b5de5 for the light theme and #bf8ef7 for the
+        dark theme.
 
-        If a `violetColor` is provided, and `violetBackgroundColor` isn't, then
-        `violetBackgroundColor` will be derived from `violetColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `violetColor` without `violetBackgroundColor` replaces the opaque
+        `violetBackgroundColor` default with a translucent color Streamlit derives
+        from `violetColor` (10% opacity in light themes, 20% in dark), even when
+        `violetColor` equals its documented default.
     """,
 )
 
@@ -1696,12 +1703,13 @@ _create_theme_options(
     description="""
         Gray color used in the basic color palette.
 
-        By default, this is #a3a8b8 for the light theme and #555867 for the
+        By default, this is #6b7280 for the light theme and #a9a5a0 for the
         dark theme.
 
-        If `grayColor` is provided, and `grayBackgroundColor` isn't, then
-        `grayBackgroundColor` will be derived from `grayColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `grayColor` without `grayBackgroundColor` replaces the opaque
+        `grayBackgroundColor` default with a translucent color Streamlit derives
+        from `grayColor` (10% opacity in light themes, 20% in dark), even when
+        `grayColor` equals its documented default.
     """,
 )
 
@@ -1718,11 +1726,13 @@ _create_theme_options(
     description="""
         Red background color used in the basic color palette.
 
-        If `redColor` is provided, this defaults to `redColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #fff1f2 for the light theme and #412023 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #ff2b2b with 10% opacity for light theme and
-        #ff6c6c with 20% opacity for dark theme.
+        If `redColor` is set and this option is unset, Streamlit derives a
+        translucent background from `redColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `redColor` equals its
+        documented default.
     """,
 )
 
@@ -1739,11 +1749,13 @@ _create_theme_options(
     description="""
         Orange background color used for the basic color palette.
 
-        If `orangeColor` is provided, this defaults to `orangeColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #fff6ed for the light theme and #342414 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #ffa421 with 10% opacity for the light theme and
-        #ff8700 with 20% opacity for the dark theme.
+        If `orangeColor` is set and this option is unset, Streamlit derives a
+        translucent background from `orangeColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `orangeColor` equals its
+        documented default.
     """,
 )
 
@@ -1760,11 +1772,13 @@ _create_theme_options(
     description="""
         Yellow background color used for the basic color palette.
 
-        If `yellowColor` is provided, this defaults to `yellowColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #fffae5 for the light theme and #302917 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #ffff12 with 10% opacity for the light theme and
-        #ffff12 with 20% opacity for the dark theme.
+        If `yellowColor` is set and this option is unset, Streamlit derives a
+        translucent background from `yellowColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `yellowColor` equals its
+        documented default.
     """,
 )
 
@@ -1781,11 +1795,13 @@ _create_theme_options(
     description="""
         Blue background color used for the basic color palette.
 
-        If `blueColor` is provided, this defaults to `blueColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #edf5ff for the light theme and #1e2a3d for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #1c83ff with 10% opacity for the light theme and
-        #3d9df3 with 20% opacity for the dark theme.
+        If `blueColor` is set and this option is unset, Streamlit derives a
+        translucent background from `blueColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `blueColor` equals its
+        documented default.
     """,
 )
 
@@ -1802,11 +1818,13 @@ _create_theme_options(
     description="""
         Green background color used for the basic color palette.
 
-        If `greenColor` is provided, this defaults to `greenColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #f1fbf6 for the light theme and #0e2f24 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #21c354 with 10% opacity for the light theme and
-        #3dd56d with 20% opacity for the dark theme.
+        If `greenColor` is set and this option is unset, Streamlit derives a
+        translucent background from `greenColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `greenColor` equals its
+        documented default.
     """,
 )
 
@@ -1823,11 +1841,13 @@ _create_theme_options(
     description="""
         Violet background color used for the basic color palette.
 
-        If `violetColor` is provided, this defaults to `violetColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #f8f2ff for the light theme and #332244 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #9a5dff with 10% opacity for light theme and
-        #9a5dff with 20% opacity for dark theme.
+        If `violetColor` is set and this option is unset, Streamlit derives a
+        translucent background from `violetColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `violetColor` equals its
+        documented default.
     """,
 )
 
@@ -1844,11 +1864,13 @@ _create_theme_options(
     description="""
         Gray background color used for the basic color palette.
 
-        If `grayColor` is provided, this defaults to `grayColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #f5f4f2 for the light theme and #2c2925 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #31333f with 10% opacity for the light theme and
-        #808495 with 20% opacity for the dark theme.
+        If `grayColor` is set and this option is unset, Streamlit derives a
+        translucent background from `grayColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `grayColor` equals its
+        documented default.
     """,
 )
 
@@ -1865,11 +1887,13 @@ _create_theme_options(
     description="""
         Red text color used for the basic color palette.
 
-        If `redColor` is provided, this defaults to `redColor`, darkened by 15%
-        for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #bd4043 for the light theme and #ff6c6c for the dark
+        Defaults to #9e303b for the light theme and #f2919a for the dark
         theme.
+
+        If `redColor` is set and this option is unset, Streamlit derives the
+        text color from `redColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `redColor` equals
+        its documented default.
     """,
 )
 
@@ -1886,11 +1910,13 @@ _create_theme_options(
     description="""
         Orange text color used for the basic color palette.
 
-        If `orangeColor` is provided, this defaults to `orangeColor`, darkened
-        by 15% for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #e2660c for the light theme and #ffbd45 for the dark
+        Defaults to #9b4519 for the light theme and #f2a56d for the dark
         theme.
+
+        If `orangeColor` is set and this option is unset, Streamlit derives the
+        text color from `orangeColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `orangeColor` equals
+        its documented default.
     """,
 )
 
@@ -1907,11 +1933,13 @@ _create_theme_options(
     description="""
         Yellow text color used for the basic color palette.
 
-        If `yellowColor` is provided, this defaults to `yellowColor`, darkened
-        by 15% for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #926c05 for the light theme and #ffffc2 for the dark
+        Defaults to #956b0f for the light theme and #fbd54f for the dark
         theme.
+
+        If `yellowColor` is set and this option is unset, Streamlit derives the
+        text color from `yellowColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `yellowColor` equals
+        its documented default.
     """,
 )
 
@@ -1928,11 +1956,13 @@ _create_theme_options(
     description="""
         Blue text color used for the basic color palette.
 
-        If `blueColor` is provided, this defaults to `blueColor`, darkened by
-        15% for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #0054a3 for the light theme and #3d9df3 for the dark
+        Defaults to #244fb4 for the light theme and #85b8f8 for the dark
         theme.
+
+        If `blueColor` is set and this option is unset, Streamlit derives the
+        text color from `blueColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `blueColor` equals
+        its documented default.
     """,
 )
 
@@ -1949,11 +1979,13 @@ _create_theme_options(
     description="""
         Green text color used for the basic color palette.
 
-        If `greenColor` is provided, this defaults to `greenColor`, darkened by
-        15% for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #158237 for the light theme and #5ce488 for the dark
+        Defaults to #0c5a44 for the light theme and #7ed5b0 for the dark
         theme.
+
+        If `greenColor` is set and this option is unset, Streamlit derives the
+        text color from `greenColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `greenColor` equals
+        its documented default.
     """,
 )
 
@@ -1970,11 +2002,13 @@ _create_theme_options(
     description="""
         Violet text color used for the basic color palette.
 
-        If `violetColor` is provided, this defaults to `violetColor`, darkened
-        by 15% for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #583f84 for the light theme and #b27eff for the dark
+        Defaults to #6f33b8 for the light theme and #bf8ef7 for the dark
         theme.
+
+        If `violetColor` is set and this option is unset, Streamlit derives the
+        text color from `violetColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `violetColor` equals
+        its documented default.
     """,
 )
 
@@ -1991,11 +2025,13 @@ _create_theme_options(
     description="""
         Gray text color used for the basic color palette.
 
-        If `grayColor` is provided, this defaults to `grayColor`, darkened by
-        15% for the light theme and lightened by 15% for the dark theme.
+        Defaults to #686255 for the light theme and #b8b3a8 for the dark
+        theme.
 
-        Otherwise, this is #31333f with 60% opacity for the light theme and
-        #fafafa with 60% opacity for the dark theme.
+        If `grayColor` is set and this option is unset, Streamlit derives the
+        text color from `grayColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `grayColor` equals
+        its documented default.
     """,
 )
 
@@ -2412,6 +2448,81 @@ _create_theme_options(
 
         If this isn't set, Streamlit uses `theme.baseRadius` instead.
     """,
+)
+
+_create_theme_options(
+    "paddingTop",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The gap under the header to the first widget in the main content area
+        or sidebar.
+
+        Set this as a quoted string in "rem" or "px" (for example "1rem",
+        "16px", or "16"). A numeric string without a unit is treated as
+        pixels ("16" is 16px; "1.5" is 1.5px). Zero is allowed ("0", "0rem",
+        "0px"). An integer or float without quotes is ignored. Negative
+        values, percentages, and other CSS units are rejected and fall back to
+        the default.
+
+        Prefer rem (for example "1.5rem") so spacing scales with font size.
+
+        Main area: The value is the gap below any visible header chrome
+        (toolbar, logo, expand button, top nav). Streamlit adds the header
+        height automatically so content clears the overlay. A value of "0"
+        places the first widget flush under that chrome (not flush to the top
+        of the viewport). Embed options such as show_padding / show_toolbar
+        do not override a configured value. In a bare embed with no header
+        chrome, the configured value is used alone — very small values
+        (including "0") can clip the first element's overlay toolbar. Leave
+        this unset for compact embeds that need the default clearance, or use
+        a small non-zero gap. Print uses the configured value with no header
+        reservation. If unset, Streamlit uses its built-in defaults
+        (typically 6rem, or 8rem with top nav).
+
+        Sidebar: The same gap under the sidebar's own chrome (the logo and
+        collapse row, plus page navigation when it is shown). Streamlit does
+        not add the main header height on top of this value. With page
+        navigation, the gap is from the nav to the first widget. Without page
+        navigation, the gap is from the header row to the first widget. If
+        unset, Streamlit uses its built-in sidebar spacing.
+    """,
+    type_=str,
+)
+
+_create_theme_options(
+    "paddingBottom",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The aesthetic bottom inset after the last widget in the main content
+        area or sidebar.
+
+        Set this as a quoted string in "rem" or "px" (for example "2rem" or
+        "32px"). A numeric string without a unit is treated as pixels. Zero
+        is allowed. An integer or float without quotes is ignored. Negative
+        values, percentages, and other CSS units are rejected and fall back
+        to the default.
+
+        When set, this replaces Streamlit's built-in bottom spacing: typically
+        10rem in the main area with no st.bottom content (or 1rem when
+        st.bottom is present), and 6rem in the sidebar. Sticky st.bottom
+        content is not affected. Horizontal padding is not configurable yet.
+        If unset, Streamlit uses its built-in defaults.
+    """,
+    type_=str,
 )
 
 _create_theme_options(

@@ -34,8 +34,6 @@ lazy_loaded_modules = [
     "pyarrow",
     "pydeck",
     "rich",
-    # Only imported when writing TOML (`streamlit config show`, credentials save).
-    "tomli_w",
     # Internal modules:
     "streamlit.emojis",
     "streamlit.material_icon_names",

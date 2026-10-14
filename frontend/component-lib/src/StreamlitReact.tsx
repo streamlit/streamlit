@@ -93,14 +93,17 @@ export function withStreamlitConnection<ArgType = any>(
     }
 
     /**
-     * Error boundary function. This will be called if our wrapped
-     * component throws an error. We store the caught error in our state,
-     * and display it in the next render().
+     * Error boundary function. React passes the raw thrown value, which is
+     * not always an Error. Store an Error so the next render can read
+     * `message` without throwing again.
      */
     public static getDerivedStateFromError = (
-      error: Error
+      error: unknown
     ): Partial<WrapperState> => {
-      return { componentError: error }
+      return {
+        componentError:
+          error instanceof Error ? error : new Error(String(error)),
+      }
     }
 
     public override componentDidMount = (): void => {
@@ -118,10 +121,7 @@ export function withStreamlitConnection<ArgType = any>(
       // case, the child won't be mounted and therefore won't call
       // `setFrameHeight` on its own. We do it here so that the rendered
       // error will be visible.
-      if (
-        this.state.componentError !== undefined &&
-        this.state.componentError !== null
-      ) {
+      if (this.state.componentError !== undefined) {
         Streamlit.setFrameHeight()
       }
     }
@@ -147,10 +147,7 @@ export function withStreamlitConnection<ArgType = any>(
 
     public override render(): ReactNode {
       // If our wrapped component threw an error, display it.
-      if (
-        this.state.componentError !== undefined &&
-        this.state.componentError !== null
-      ) {
+      if (this.state.componentError !== undefined) {
         return (
           <div>
             <h1>Component Error</h1>
@@ -160,10 +157,7 @@ export function withStreamlitConnection<ArgType = any>(
       }
 
       // Don't render until we've gotten our first RENDER_EVENT from Streamlit.
-      if (
-        this.state.renderData === undefined ||
-        this.state.renderData === null
-      ) {
+      if (this.state.renderData === undefined) {
         return null
       }
 

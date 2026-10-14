@@ -273,8 +273,6 @@ const enforceMemo = createRule<[], MessageIds>({
       node: TSESTree.Node,
       results: TSESTree.ReturnStatement[] = []
     ): TSESTree.ReturnStatement[] => {
-      if (!node) return results
-
       if (node.type === AST_NODE_TYPES.ReturnStatement) {
         results.push(node)
       } else if ("body" in node && node.body) {

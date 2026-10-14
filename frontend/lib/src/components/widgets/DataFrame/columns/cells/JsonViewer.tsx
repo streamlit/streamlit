@@ -78,7 +78,7 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
         highlight={true}
         autoFocus={false}
         disabled={true}
-        value={toJsonString(jsonValue) ?? ""}
+        value={toJsonString(jsonValue)}
         onChange={() => undefined}
       />
     )

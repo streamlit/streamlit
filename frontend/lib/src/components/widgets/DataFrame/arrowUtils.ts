@@ -22,10 +22,7 @@ import {
   type TextCell,
   type UriCell,
 } from "@glideapps/glide-data-grid"
-import type {
-  DatePickerType,
-  MultiSelectCellType,
-} from "@glideapps/glide-data-grid-cells"
+import type { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import { Field, Null } from "apache-arrow"
 import moment from "moment"
 
@@ -143,7 +140,8 @@ export function applyPandasStylerCss(
     if (
       cell.kind === GridCellKind.Bubble ||
       (cell.kind === GridCellKind.Custom &&
-        (cell as MultiSelectCellType).data?.kind === "multi-select-cell")
+        (cell.data as { kind?: string } | null | undefined)?.kind ===
+          "multi-select-cell")
     ) {
       themeOverride.textBubble = fontColor
     }
@@ -180,14 +178,12 @@ export function applyPandasStylerCss(
     themeOverride.baseFontStyle = `${fontWeight} ${fontSizes.sm}`
   }
 
-  if (themeOverride) {
-    // Apply the background and font color in the theme override
-    return {
-      ...cell,
-      themeOverride,
-    }
+  // Attach themeOverride whenever the CSS id is present, including when no
+  // supported property was extracted.
+  return {
+    ...cell,
+    themeOverride,
   }
-  return cell
 }
 
 /**
@@ -468,7 +464,7 @@ export function getCellFromArrow(
     let parsedDate
     if (
       isTimeType(arrowCell.contentType) &&
-      notNullOrUndefined(arrowCell.field?.type?.unit)
+      notNullOrUndefined(arrowCell.field.type?.unit)
     ) {
       // Time values needs to be adjusted to seconds based on the unit
       parsedDate = convertTimeToDate(arrowCell.content, arrowCell.field)
@@ -497,7 +493,7 @@ export function getCellFromArrow(
 
   if (!column.isEditable) {
     // Only apply display content and css styles to non-editable cells.
-    if (styledCell && notNullOrUndefined(styledCell?.displayContent)) {
+    if (styledCell && notNullOrUndefined(styledCell.displayContent)) {
       const displayData = removeLineBreaks(styledCell.displayContent)
       // If the display content is set, use that instead of the content.
       // This is only supported for text, object, date, datetime, time and number cells.
@@ -512,7 +508,7 @@ export function getCellFromArrow(
         cellTemplate.kind === GridCellKind.Number &&
         // Only apply styler value if format was not explicitly set by the user.
         isNullOrUndefined(
-          (column.columnTypeOptions as NumberColumnParams)?.format
+          (column.columnTypeOptions as NumberColumnParams | undefined)?.format
         )
       ) {
         cellTemplate = {
@@ -523,7 +519,8 @@ export function getCellFromArrow(
         cellTemplate.kind === GridCellKind.Uri &&
         // Only apply styler value if display text was not explicitly set by the user.
         isNullOrUndefined(
-          (column.columnTypeOptions as LinkColumnParams)?.display_text
+          (column.columnTypeOptions as LinkColumnParams | undefined)
+            ?.display_text
         )
       ) {
         cellTemplate = {
@@ -532,10 +529,12 @@ export function getCellFromArrow(
         } as UriCell
       } else if (
         cellTemplate.kind === GridCellKind.Custom &&
-        (cellTemplate as DatePickerType).data?.kind === "date-picker-cell" &&
+        (cellTemplate.data as { kind?: string } | null | undefined)?.kind ===
+          "date-picker-cell" &&
         // Only apply styler value if format was not explicitly set by the user.
         isNullOrUndefined(
-          (column.columnTypeOptions as DateTimeColumnParams)?.format
+          (column.columnTypeOptions as DateTimeColumnParams | undefined)
+            ?.format
         )
       ) {
         cellTemplate = {

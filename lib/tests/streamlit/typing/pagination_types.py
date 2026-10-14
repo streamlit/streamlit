@@ -67,6 +67,8 @@ if TYPE_CHECKING:
         pagination(10, on_change=callback_with_args, kwargs={"x": 1, "y": "a"}), int
     )
     assert_type(pagination(10, on_change=None), int)
+    assert_type(pagination(10, on_change="rerun"), int)
+    assert_type(pagination(10, on_change="ignore"), int)
 
     # Pagination with all parameters combined
     assert_type(
