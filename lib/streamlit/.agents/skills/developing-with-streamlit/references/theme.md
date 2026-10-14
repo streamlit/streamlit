@@ -108,7 +108,7 @@ Dark mode uses `[theme.dark]` / `[theme.dark.sidebar]` the same way.
 
 Unset sidebar surfaces depend on whether the resolved main backgrounds still match the built-in light/dark pair:
 
-- **Built-in main backgrounds:** light sidebar `#F8F8F7` / `#F1F0EE`, dark sidebar `#21201D` / `#2D2B27`.
+- **Main backgrounds still match the built-in pair:** the sidebar uses light `#F8F8F7` / `#F1F0EE` or dark `#21201D` / `#2D2B27` (background / secondary background).
 - **Either resolved main surface differs from that built-in pair:** unset sidebar background uses the main secondary background, and unset sidebar secondary uses the main background.
 
 Set both sidebar surfaces explicitly when the sidebar should use another custom pair.

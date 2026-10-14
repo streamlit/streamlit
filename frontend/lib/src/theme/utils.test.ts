@@ -4851,6 +4851,35 @@ describe("Sidebar theme creation", () => {
       )
     })
 
+    it("swaps when only one main surface differs from the built-in pair", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        secondaryBackgroundColor: "#EEEEEE",
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+
+      expect(sidebarTheme.emotion.colors.bgColor).toBe("#EEEEEE")
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe("#FFFFFF")
+    })
+
+    it("treats equivalent built-in color spellings as the stock main pair", () => {
+      const mainTheme = createTheme(CUSTOM_THEME_NAME, {
+        backgroundColor: "white",
+        secondaryBackgroundColor: "#f8f8f7",
+      })
+
+      const sidebarTheme = createSidebarTheme(mainTheme)
+      const stockLight =
+        stockSidebarSurfaces[CustomThemeConfig.BaseTheme.LIGHT]
+
+      expect(sidebarTheme.emotion.colors.bgColor).toBe(
+        stockLight.backgroundColor
+      )
+      expect(sidebarTheme.emotion.colors.secondaryBg).toBe(
+        stockLight.secondaryBackgroundColor
+      )
+    })
+
     it("treats a blank sidebar backgroundColor as unset", () => {
       const mainTheme = createTheme(CUSTOM_THEME_NAME, {
         backgroundColor: "white",

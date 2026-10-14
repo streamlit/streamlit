@@ -1677,7 +1677,7 @@ const setSidebarHeadingFontSizes = (
 /**
  * Resolves the main theme's light/dark base. Named custom light and dark
  * themes keep that base even when main-background luminance would imply the
- * other one. Every other theme is classified by main-background luminance.
+ * other one. Every other theme uses the main background's luminance.
  */
 const getActiveThemeBase = (
   activeTheme: ThemeConfig
@@ -1706,11 +1706,12 @@ const stockMainSurfaces = {
   },
 } as const
 
-/** Stock sidebar surface colors when `[theme.sidebar]` does not set them. */
+/** Sidebar backgrounds used when main surfaces still match the built-in pair and `[theme.sidebar]` leaves a side unset. */
 export const stockSidebarSurfaces = {
   [CustomThemeConfig.BaseTheme.LIGHT]: {
     backgroundColor: "#F8F8F7",
-    // Distinct from page bg so widgets stay visible while showWidgetBorder is off.
+    // Distinct from the sidebar background so widgets stay visible while
+    // showWidgetBorder is off.
     secondaryBackgroundColor: "#F1F0EE",
   },
   [CustomThemeConfig.BaseTheme.DARK]: {
@@ -1725,6 +1726,9 @@ const mainSurfacesAreStock = (
 ): boolean => {
   const stock = stockMainSurfaces[mainThemeBase]
   const { bgColor, secondaryBg } = activeTheme.emotion.colors
+  // Normalize both sides so equivalent spellings (white, #fff, #FFFFFF) still
+  // count as the built-in pair. A raw string compare would treat those as
+  // customized and swap the sidebar.
   return (
     toHex(bgColor) === toHex(stock.bgColor) &&
     toHex(secondaryBg) === toHex(stock.secondaryBg)

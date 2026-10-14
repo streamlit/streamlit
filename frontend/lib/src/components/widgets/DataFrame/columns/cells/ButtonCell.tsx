@@ -428,8 +428,9 @@ const renderer: CustomRenderer<ButtonCell> = {
         bgColor = isHovered ? primaryBgHover : primaryBg
         borderColor = undefined
         // White text provides good contrast with most primary colors including the
-        // default red (#ff4b4b). While readableColor() could auto-switch to black
-        // for very light themes, it incorrectly returns black for the default red.
+        // default red (#C53948 light / #CF4250 dark). While readableColor() could
+        // auto-switch to black for very light themes, it incorrectly returns black
+        // for those default reds.
         textColor = "#ffffff"
         break
       case "secondary":

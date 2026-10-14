@@ -26,9 +26,9 @@ export const requiredThemeColors = {
   primary: "#C53948",
   secondary: colors.blue70, // Used in progress bar
 
-  // Named palette defaults (main / background / text) come from the design
-  // handoff, not the primitives scale. Backgrounds are opaque and tuned for the
-  // default `bgColor`.
+  // Named palette defaults (main / background / text) are design-defined
+  // values, independent of the primitives scale. Backgrounds are opaque and
+  // tuned for the default `bgColor`.
   redColor: "#D94A57",
   orangeColor: "#E0682B",
   yellowColor: "#BB8300",
