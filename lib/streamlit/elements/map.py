@@ -57,7 +57,7 @@ _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 # Other default parameters for st.map.
 _DEFAULT_LAT_COL_NAMES: Final = {"lat", "latitude", "LAT", "LATITUDE"}
 _DEFAULT_LON_COL_NAMES: Final = {"lon", "longitude", "LON", "LONGITUDE"}
-# Placeholder resolved on the frontend to theme.colors.primary at alpha 160.
+# The frontend resolves this placeholder to the theme primary color at alpha 160.
 _DEFAULT_COLOR: Final = "primary"
 _DEFAULT_SIZE: Final = 100
 _DEFAULT_ZOOM_LEVEL: Final = 12
@@ -152,8 +152,10 @@ class MapMixin:
 
             Can be:
 
-            - None, to use the theme primary color (with the same translucency
-              as Streamlit's historical default map markers).
+            - ``None``, to use the theme's primary color with partial
+              transparency.
+            - ``"primary"``, to use the theme's primary color (same as
+              ``None``). Ignored if a column with that name exists.
             - A hex string like "#ffaa00" or "#ffaa0088".
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
@@ -481,8 +483,8 @@ def _convert_color_arg_or_column(
         color_arg_out = color_arg
 
     elif color_arg is not None:
-        # "primary" is a placeholder resolved to theme.colors.primary on the
-        # frontend (with the historical default marker alpha). Other values are
+        # "primary" is a placeholder that the frontend resolves to
+        # theme.colors.primary at a fixed marker alpha. Other values are
         # converted to Deck.gl int color tuples here.
         if isinstance(color_arg, str) and color_arg.lower() == "primary":
             color_arg_out = "primary"

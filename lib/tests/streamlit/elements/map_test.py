@@ -69,7 +69,7 @@ class StMapTest(DeltaGeneratorTestCase):
         assert c["layers"][0]["getFillColor"] == "primary"
 
     def test_explicit_primary_color_passes_placeholder(self):
-        """color='primary' (when not a column name) is passed through for FE resolve."""
+        """color="primary" is sent as the theme placeholder when it is not a column name."""
         st.map(mock_df, color="primary")
         c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
         assert c["layers"][0]["getFillColor"] == "primary"

@@ -22,14 +22,14 @@ import { parseToRgba } from "color2k"
 import { jsonConverter } from "./jsonConverter"
 
 /**
- * Placeholder emitted by st.map when color is omitted. Resolved on the
- * frontend to theme.colors.primary with MAP_DEFAULT_MARKER_ALPHA.
+ * st.map sends this when it wants the theme primary color. The frontend
+ * replaces it with theme.colors.primary at MAP_DEFAULT_MARKER_ALPHA.
  */
 export const MAP_PRIMARY_FILL_PLACEHOLDER = "primary"
 
 /**
- * Default st.map marker alpha so theme-primary fills keep the same
- * translucency as the previous default markers.
+ * Alpha applied to st.map's theme-primary default markers so overlapping
+ * points stay visible.
  */
 export const MAP_DEFAULT_MARKER_ALPHA = 160
 
