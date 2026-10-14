@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { MouseEvent, ReactElement } from "react"
+import { type MouseEvent, type ReactElement, useCallback } from "react"
 
 import {
   DynamicIcon,
@@ -42,6 +42,12 @@ export interface SidebarNavLinkProps {
   widgetsDisabled: boolean
   isExternal?: boolean
   externalUrl?: string | null
+  /** Roving tabindex for top-nav dropdown menu keyboard navigation. */
+  menuTabIndex?: number
+  /** Stores the anchor so top-nav dropdown menus can move focus between items. */
+  setMenuItemRef?: (index: number, element: HTMLAnchorElement | null) => void
+  /** Position of this link among the top-nav dropdown menuitems. */
+  menuItemIndex?: number
 }
 
 const SidebarNavLink = ({
@@ -55,6 +61,9 @@ const SidebarNavLink = ({
   widgetsDisabled,
   isExternal,
   externalUrl,
+  menuTabIndex,
+  setMenuItemRef,
+  menuItemIndex,
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
   // If connection state not connected, or host has disabled inputs,
@@ -77,20 +86,39 @@ const SidebarNavLink = ({
   // External pages can never be the current page
   const effectiveIsActive = isExternal ? false : isActive
 
+  const setAnchorRef = useCallback(
+    (element: HTMLAnchorElement | null): void => {
+      if (setMenuItemRef && menuItemIndex !== undefined) {
+        setMenuItemRef(menuItemIndex, element)
+      }
+    },
+    [setMenuItemRef, menuItemIndex]
+  )
+
   return (
     <StyledSidebarNavLinkContainer
       disabled={disableSidebarNavLinks}
       data-testid={navLinkContainerTestId}
+      role={isInDropdown ? "none" : undefined}
     >
       <StyledSidebarNavLink
+        ref={setAnchorRef}
         data-testid={navLinkTestId}
         isActive={effectiveIsActive}
         disabled={disableSidebarNavLinks}
+        isInDropdown={isInDropdown}
         href={isExternal ? (externalUrl ?? pageUrl) : pageUrl}
         onClick={onClick}
         aria-current={effectiveIsActive ? "page" : undefined}
+        // Disabled dropdown menuitems stay focusable (WAI-ARIA). pointer-events:
+        // none blocks clicks, and TopNavSection blocks keyboard activation.
+        aria-disabled={
+          isInDropdown && disableSidebarNavLinks ? true : undefined
+        }
         target={isExternal ? "_blank" : undefined}
         rel={isExternal ? "noopener noreferrer" : undefined}
+        role={isInDropdown ? "menuitem" : undefined}
+        tabIndex={isInDropdown ? menuTabIndex : undefined}
       >
         {icon?.length ? (
           <StyledSidebarNavIcon isActive={effectiveIsActive}>

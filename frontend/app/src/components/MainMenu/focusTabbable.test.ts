@@ -90,6 +90,19 @@ describe("focusNextTabbable", () => {
     expect(document.activeElement).toBe(c)
   })
 
+  it("skips elements inside an aria-hidden subtree", () => {
+    setup(`
+      <button id="a">A</button>
+      <div aria-hidden="true"><button id="b">B</button></div>
+      <button id="c">C</button>
+    `)
+    const a = document.getElementById("a") as HTMLElement
+    const c = document.getElementById("c") as HTMLElement
+
+    focusNextTabbable(a)
+    expect(document.activeElement).toBe(c)
+  })
+
   it("descends into non-tabbable wrapper elements", () => {
     setup(`
       <button id="a">A</button>
@@ -137,6 +150,19 @@ describe("focusPrevTabbable", () => {
     setup(`
       <button id="a">A</button>
       <button id="b" disabled>B</button>
+      <button id="c">C</button>
+    `)
+    const a = document.getElementById("a") as HTMLElement
+    const c = document.getElementById("c") as HTMLElement
+
+    focusPrevTabbable(c)
+    expect(document.activeElement).toBe(a)
+  })
+
+  it("skips aria-hidden elements going backwards", () => {
+    setup(`
+      <button id="a">A</button>
+      <div aria-hidden="true"><button id="b">B</button></div>
       <button id="c">C</button>
     `)
     const a = document.getElementById("a") as HTMLElement
