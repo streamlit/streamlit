@@ -1162,8 +1162,9 @@ class Dataframe(Element):
             return str(mode)
 
     def _raise_unsupported_interaction(self, method: str) -> NoReturn:
-        # Callers can still assign selection state for a read-only dataframe
-        # through session state. st.data_editor rejects those writes.
+        # Read-only dataframes keep the generic message, which points to session
+        # state (selection state accepts writes). Editors need their own message
+        # because st.data_editor rejects session state writes.
         if self.editing_mode == "read_only":
             super()._raise_unsupported_interaction(method)
         key_part = f" (key={self.key!r})" if self.key else ""
@@ -1172,7 +1173,7 @@ class Dataframe(Element):
             " The editor's session state key is read-only." if self.key else ""
         )
         raise AppTestError(
-            f"{method}() is not supported for dataframe{key_part}. "
+            f"{method}() is not supported for data_editor{key_part}. "
             "AppTest can read the table and editing_mode, but it does not "
             f"apply cell edits.{session_state_note} Use a Playwright e2e test."
         )

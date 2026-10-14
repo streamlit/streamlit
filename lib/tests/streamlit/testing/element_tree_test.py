@@ -27,11 +27,13 @@ from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.elements.lib.layout_utils import SIZE_TO_REM_MAPPING
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
+    _DATAFRAME_EDITING_MODE_NAMES,
     AppTestError,
     BlockList,
     Help,
@@ -2788,7 +2790,7 @@ def test_data_editor_set_value_is_unsupported() -> None:
     with pytest.raises(AppTestError, match="Playwright") as exc_info:
         at.data_editor[0].set_value(pd.DataFrame({"a": [9]}))
     message = str(exc_info.value)
-    assert "set_value() is not supported for dataframe" in message
+    assert "set_value() is not supported for data_editor" in message
     assert "at.session_state" not in message
     assert "session state key is read-only" in message
     assert at.data_editor[0].value["a"].tolist() == [1, 2]
@@ -2797,6 +2799,88 @@ def test_data_editor_set_value_is_unsupported() -> None:
         at.data_editor[1].set_value(pd.DataFrame({"a": [9]}))
     assert "session state key" not in str(keyless_info.value)
     assert at.data_editor[1].value["a"].tolist() == [3]
+
+
+def test_selectable_dataframe_set_value_points_at_session_state() -> None:
+    """A selection dataframe keeps the generic interaction error.
+
+    That message points at ``at.session_state``. Editors use a different
+    message because their keys reject writes.
+    """
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": [1]}), key="selectable", on_select="rerun")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=r"at\.session_state") as exc_info:
+        at.dataframe[0].set_value({"rows": [0]})
+    message = str(exc_info.value)
+    assert "set_value() is not supported for dataframe" in message
+    assert at.dataframe[0].editing_mode == "read_only"
+
+
+def test_data_editor_session_state_is_edit_state() -> None:
+    """A keyed editor's session state is the edit payload, not the table.
+
+    Assigning that key on ``at.session_state`` before ``.run()`` does not
+    apply cell edits. AppTest stores the assignment before the script, so
+    it is not the in-script write that ``st.data_editor`` rejects.
+    """
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        st.data_editor(pd.DataFrame({"a": [1, 2]}), key="editor")
+
+    at = AppTest.from_function(script).run()
+    state = at.session_state["editor"]
+    assert state["edited_rows"] == {}
+    assert state["added_rows"] == []
+    assert state["deleted_rows"] == []
+
+    at.session_state["editor"] = {
+        "edited_rows": {0: {"a": 9}},
+        "added_rows": [],
+        "deleted_rows": [],
+    }
+    at = at.run()
+    assert not at.exception
+    assert at.data_editor[0].value["a"].tolist() == [1, 2]
+
+
+def test_data_editor_rejects_session_state_write_in_script() -> None:
+    """``st.data_editor`` rejects a session-state write made earlier in the run."""
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        if st.session_state.get("armed"):
+            st.session_state["editor"] = {
+                "edited_rows": {0: {"a": 9}},
+                "added_rows": [],
+                "deleted_rows": [],
+            }
+        st.data_editor(pd.DataFrame({"a": [1, 2]}), key="editor")
+        st.session_state["armed"] = True
+
+    at = AppTest.from_function(script).run().run()
+    assert "StreamlitValueAssignmentNotAllowedError" in at.exception[0].proto.type
+    assert "read-only" in at.exception[0].value
+
+
+def test_dataframe_editing_mode_names_match_proto_enum() -> None:
+    """Every proto editing mode has a public AppTest name."""
+    assert set(_DATAFRAME_EDITING_MODE_NAMES) == set(
+        DataframeProto.EditingMode.values()
+    )
 
 
 def test_data_editor_is_scoped_to_container() -> None:
