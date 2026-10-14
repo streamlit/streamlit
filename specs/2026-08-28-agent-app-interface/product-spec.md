@@ -327,8 +327,10 @@ not:
   `st.user` comes from the deployment's trusted identity headers when it maps them, and
   is anonymous otherwise.
 - **Absent, because a browser supplies it:** `st.context.cookies` is empty, since the
-  route reads no cookie, and the URL, theme, and embedding fields are `None` rather than
-  guessed. Timezone and locale are `None` too unless the request states them in
+  route reads no cookie. Cookies are the one credential a browser attaches on its own,
+  so reading none keeps a forged cross-site request without authority even where
+  `server.corsAllowedOrigins` is broad, and agents, being programs, rarely have any.
+  The URL, theme, and embedding fields are `None` rather than guessed. Timezone and locale are `None` too unless the request states them in
   `context`, which is what lets an app that formats times from `st.context.timezone`
   render them as it would for a user.
 
@@ -1253,9 +1255,10 @@ numbered for reference rather than ranked.
    and the specification's own guidance for this shape is the opaque-handle pattern
    `session_id` already implements. `interact` must never be annotated read-only. A
    second, read-only `get_data` tool serves the files a result references, tables as
-   pages of rows, because chat clients cannot resolve or parse a `data.url`. It is
-   written by hand rather than on the MCP SDK, which keeps it free of new
-   dependencies.
+   pages of rows, because chat clients cannot resolve or parse a `data.url`. Each tool
+   call takes the same path as an `interact` request, so its HTTP request's headers
+   supply `st.user` and `st.context.headers` in the same way. It is written by hand
+   rather than on the MCP SDK, which keeps it free of new dependencies.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2
@@ -1318,6 +1321,9 @@ Smaller potential follow-ups and alternatives considered while building the prot
   round; the column's Arrow type keeps their meaning.
 - Marking pandas index columns in `data.columns`, so `__index_level_0__` does not read
   as a leaked internal name.
+- Cookies in `st.context.cookies` from requests without an `Origin` header, which
+  browsers always send on a `POST`, so only a program that set the cookies on purpose
+  supplies them.
 - Starting an agent session from a browser session's state: widget values the page
   carries ([#17394](https://github.com/streamlit/streamlit/pull/17394)), or a fork that
   also copies code-only state and uploads
