@@ -246,7 +246,6 @@ Later calls reference keys from the snapshot they just read:
 | `page`         | Optional `url_path` of a page listed in the snapshot's `pages`, resolved by normal navigation. Defaults to the app's default page on creation, the current page otherwise. Never a Python path or internal script hash. |
 | `query_params` | Optional replacement mapping of name → list of strings; omission preserves. Parameters bound to a widget follow the rules in [The snapshot](#the-snapshot).                                                            |
 | `context`      | Optional `timezone` and `locale`, read by the app as `st.context`. What a browser reports about itself without authentication, so accepting it grants nothing. Held for the session; omission preserves, and a new one replaces it. It never changes how values are encoded. |
-| `rerun`        | Optional `true` to run the app again without other changes. Without it, a request with no changes returns the latest result and runs nothing. |
 
 **The request blocks until the app settles, and returns its end state.** One interaction
 is one client submission, which can cause several script runs through callbacks,
@@ -263,7 +262,7 @@ calls are unaffected:
 
 | Session state                                | A retry: only `session_id`, or the same request again | A different request with the same `session_id` |
 | -------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------- |
-| Idle                                         | Only `session_id` returns the latest result; the same request with changes runs | Runs |
+| Idle                                         | Runs                                   | Runs                                        |
 | Serving a request                            | `session_busy`                         | `session_busy`                              |
 | Running a timed-out interaction              | Waits for it and returns its result    | `session_busy`                              |
 | Holding a timed-out interaction's result     | Returns that result at once            | Discards it and runs as a new interaction   |
@@ -277,11 +276,11 @@ too. Where a browser interaction would interrupt a running run, v1 answers
 
 The limits of that guarantee:
 
-- **It covers a lost response too, except a creating call's.** A client that lost a final
-  `200` gets it back by sending only `session_id`, which returns the latest result and
-  runs nothing. A lost response to a creating call leaves no `session_id` to send, so a
-  retry starts another session and run; general retry idempotency is the `request_id`
-  of follow-up #4.
+- **It covers a `202` the client received.** A lost final response, or a lost response to
+  a creating call, leaves nothing to collect, so a retry is a new interaction. After a
+  lost final response, sending only `session_id` reruns the app and re-applies nothing,
+  so a trigger never fires twice. General retry idempotency is the `request_id` of
+  follow-up #4.
 - **A disconnect only helps if it reaches the server**, and a proxy that keeps the
   upstream connection open hides it. So the run timeout should stay below the timeouts
   of the clients a deployment expects, such as the 60 seconds MCP clients built on the
@@ -300,15 +299,15 @@ response carried.
 nothing to close. A client should still reuse one: every creating call runs the app from
 the start and holds a session until it idles out.
 
-**An interaction with no changes reads; `rerun: true` runs.** Nothing changes an agent
-session between interactions — `run_every` timers belong to the browser, a file edit
-waits for a run, and no other client shares the session — so the latest result stays
-current, and a request with no changes returns it as it was sent, collecting a timed-out
-run if one is pending. That makes the natural retry safe and gives a client that lost a
-result, such as a model whose context dropped it, a way back without side effects.
-`rerun: true` runs the app again: to close a dialog, to pick up an edited script, or to
-refresh data that changed outside the app, which a read would not show. There is no
-delete route.
+**There is no read or delete route.** An `interact` with no changes is an explicit rerun,
+apart from collecting a timed-out run. It re-applies nothing, so a trigger never fires
+twice, but code that runs on every rerun runs again, as it does for any browser
+interaction. Most requests with no changes want exactly that: to re-check an edited
+script, close a dialog, or see data that changed outside the app, where a read would
+return the old result without saying so. Otherwise nothing changes an agent session
+between interactions — `run_every` timers belong to the browser, and no other client
+shares the session — so the last snapshot stays current. A client that lost it, such as
+a model whose context dropped the result, gets a non-executing read with follow-up #4.
 
 **An agent session is an ordinary Streamlit session with a different client.** The
 runtime treats it as one more browser tab, which settles what it shares and what it does
@@ -319,10 +318,10 @@ not:
   users do.
 - **Its own:** `st.session_state`, widget values, and the query string, kept across its
   interactions until the session is reclaimed.
-- **The script on disk:** an edit takes effect on the session's next run, such as one
-  `rerun: true` asks for, with its session state kept, so a coding agent can edit and
-  re-check in one session, or omit `session_id` for a clean start. `server.runOnSave`
-  does not apply: an edit never starts a run the client did not ask for.
+- **The script on disk:** an edit takes effect on the session's next interaction, with
+  its session state kept, so a coding agent can edit and re-check in one session, or omit
+  `session_id` for a clean start. `server.runOnSave` does not apply: an edit never starts
+  a run the client did not ask for.
 - **From the request:** `st.context.headers` are the request's, minus `Cookie` and the
   credentials meant for whatever fronts the app (`Authorization`,
   `Proxy-Authorization`), refreshed on every interaction, and only when a run starts,
@@ -868,7 +867,8 @@ follow-up.
   client reads the scope from the node it intends to act on.
 - **The overlay is addressable only when `on_dismiss` registered a widget for it**, and
   firing it closes the dialog deliberately. With the default `on_dismiss="ignore"` the
-  overlay carries no key, and closing is any full rerun, such as `rerun: true`. The dialog reports `on_dismiss` as `"ignore"` or `"rerun"`, so a client can
+  overlay carries no key, and closing is any full rerun, such as an interaction with no
+  changes. The dialog reports `on_dismiss` as `"ignore"` or `"rerun"`, so a client can
   tell which applies.
 - **A scoped rerun still returns the whole page, with nothing marked stale.** The rest of
   the tree is as the last run left it, which is where a browser is too: keeping fragments
@@ -993,7 +993,7 @@ back to a browser rather than mistake it for missing content:
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context.headers` are the request's, minus `Cookie`, `Authorization`, and `Proxy-Authorization`; cookies are empty, and the other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
 | Output shown while a run is in progress                                    | Only the end state is reported: an `st.spinner` never appears, and `st.write_stream` output arrives as the finished text rather than chunk by chunk. A toast the run raised does appear. See [v1 is one operation](#v1-is-one-operation). |
-| Polling a slow run                                                         | No partial results: a slow run is collected by a retry after `run_timed_out`. Follow-up #4 adds an operation handle. |
+| Reading without running, polling                                           | Every `interact` executes the script; one with no changes is an explicit rerun, and the last snapshot stays current until the client acts. A slow run is collected by a retry after `run_timed_out`, with no partial results. Follow-up #4 adds a read and an operation handle. |
 
 ### Limits and configuration
 
@@ -1246,12 +1246,15 @@ numbered for reference rather than ranked.
    ([#3133](https://github.com/streamlit/streamlit/issues/3133)).
 3. **Lazy continuation.** Range reads for lazy dataframes, reusing the existing chunk
    machinery and its limits rather than building a query API.
-4. **Long-run handling.** An operation handle in the `202` a timed-out run returns, and
-   `DELETE` to close early. v1 already makes the common cases safe — a retry after
-   `run_timed_out` collects the run, and a request with only `session_id` returns the
-   latest result without running — so what remains is general: optional `request_id`
-   for retry idempotency on a creating call, whose lost response leaves no session to
-   ask,
+4. **Long-run handling and recovery.** An operation handle in the `202` a timed-out run
+   returns, a read that returns the session's latest result without executing code,
+   and `DELETE` to close early. The read matters most for model clients: their context
+   management drops or moves older tool results, and without it the only way back to
+   the current state is a rerun, which can repeat side effects. Exposed through MCP
+   too, it lets `get_data` serve that result's files again. v1 already makes the common
+   timeout case safe — a retry after `run_timed_out` collects the run instead of
+   repeating it — so what remains is general: optional `request_id` for retry
+   idempotency beyond timeouts, including a lost response to a creating call,
    `expected_revision` to reject actions based on a stale observation, for callers that
    batch or parallelize, and letting a new action replace a run still going after
    `run_timed_out`, as a browser interaction would.
@@ -1272,8 +1275,8 @@ numbered for reference rather than ranked.
    supply `st.user` and `st.context.headers` in the same way. `get_data` gets an HTTP
    route as well, so an HTTP client without an Arrow reader can page a table as JSON.
    It is written by hand rather than on the MCP SDK, which keeps it free of new
-   dependencies. Nearly every client that tried the prototype used MCP, so this
-   belongs in the same release cycle as v1 if possible, together with #9.
+   dependencies. MCP is how most AI applications connect to tools, so this belongs in
+   the same release cycle as v1 if possible, together with #9.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2

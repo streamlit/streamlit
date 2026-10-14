@@ -106,9 +106,8 @@ say which values are legal.
 be combined with widget changes.
 - A slow run returns `run_timed_out`: send only the returned `session_id` to \
 collect it. A trigger never fires twice.
-- A call with only `session_id` runs nothing: it returns the latest result, \
-so it is safe to repeat, such as after a lost response. Add `rerun: true` to \
-run the app again, such as to refresh data that changed outside it.
+- A call with no changes reruns the app. You rarely need one: the last result \
+stays current until you act.
 
 **Reading the result.** `tree` holds the app's containers and elements. An \
 element's `type` is the Streamlit command that produced it, and its `props` \
@@ -135,8 +134,8 @@ as a table or chart selection, cannot be sent yet.
 regions rerun the whole app, except that an open dialog's keys must be sent on \
 their own. A dialog's own `fragment` is that of the code that opened it; its \
 contents carry the dialog's.
-- A dialog's `on_dismiss` says how to close it. With `"ignore"`, send \
-`rerun: true`: a full rerun closes it, as closing it does in a browser. With \
+- A dialog's `on_dismiss` says how to close it. With `"ignore"`, send a call \
+with no changes: a full rerun closes it, as closing it does in a browser. With \
 `"rerun"`, fire its overlay's key from `actions`.
 - `data.complete` says whether `data` holds everything. If not, `data.url` \
 serves the rest, or `data.unavailable` says why it cannot: \

@@ -1313,15 +1313,15 @@ otherwise matches bare hashes against the tree; a `not_on_page` for a generated 
 says so; a repeated timeout says how long the run has gone; and the MCP description
 corrects what setting a bound widget does to `query_params`.
 
-A spec review then turned the read into v1 behavior. A request with only `session_id`
-used to mean "collect a timed-out run" or "rerun the app", depending on timing, so a
-client that lost a final `200` and retried reran the app and could repeat side effects.
-A request with no changes now returns the latest result as it was sent, and
-`rerun: true` runs the app again. The natural retry is safe, the read that model
-clients losing context asked for comes free, and the cost is one stored document per
-session, smaller than the message buffer each session already holds. What needs
-`rerun: true`: closing a default dialog, picking up an edited script, and refreshing
-data that changed outside the app.
+A spec review proposed making a request with no changes a read, with `rerun: true` to
+run, so a retry after a lost `200` would rerun nothing. The prototype tried it and went
+back. Most requests with no changes want a run: a coding agent re-checking an edited
+script, a client closing a default dialog, or one refreshing data that changed outside
+the app. A forgotten `rerun: true` returned the old result with no error, so a coding
+agent would conclude its edit changed nothing. Meanwhile the retry it protected was
+already safe: a rerun with no changes re-applies nothing and fires no trigger again,
+so all the read saved was one run. A request with no changes stays a rerun, and the
+read stays in follow-up #4, opt-in.
 
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview

@@ -326,10 +326,6 @@ class AgentSession:
     element_states: dict[str, ElementState] = field(default_factory=dict)
     # The last snapshot's `pages`, which an `unknown_page` error lists.
     pages: list[dict[str, Any]] = field(default_factory=list)
-    # The latest result, returned as it was sent by a request with no changes.
-    # That makes the natural retry, only `session_id`, safe even after a lost
-    # response, and lets a client that dropped a result read it again.
-    last_document: dict[str, Any] | None = None
     # Set while an interaction is in flight; a second one is refused, not queued.
     busy: bool = False
     # An interaction that outlasted the run timeout and whose result nobody has
@@ -496,7 +492,6 @@ async def interact(
         session.media_ids = snapshot_module.media_file_ids(
             document, media_path=registry.media_path
         )
-        session.last_document = document
         return document
     except AgentRequestError as exc:
         # A creating call that fails after the session exists has still run the
@@ -540,10 +535,6 @@ async def _run_interaction(
             "This session is still running an interaction that timed out. "
             "Send only `session_id` to wait for it, then send this request.",
         )
-    if not action and not request.get("rerun") and session.last_document is not None:
-        # Nothing to change and no rerun asked for: the latest result is still
-        # current, since nothing changes an agent session between interactions.
-        return session.last_document
 
     widget_state = request.get("widget_state")
     trigger = request.get("trigger")
@@ -822,23 +813,13 @@ def _app_session(runtime: Runtime, session: AgentSession) -> Any:
 
 
 def _validate_request_shape(request: dict[str, Any]) -> None:
-    known = {
-        "session_id",
-        "widget_state",
-        "trigger",
-        "page",
-        "query_params",
-        "context",
-        "rerun",
-    }
+    known = {"session_id", "widget_state", "trigger", "page", "query_params", "context"}
     unknown = set(request) - known
     if unknown:
         raise AgentRequestError(
             "invalid_request",
             f"Unknown request fields: {', '.join(sorted(unknown))}.",
         )
-    if "rerun" in request and not isinstance(request["rerun"], bool):
-        raise AgentRequestError("invalid_request", "`rerun` must be true or false.")
 
     widget_state = request.get("widget_state")
     if widget_state is not None and not isinstance(widget_state, dict):
