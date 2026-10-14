@@ -480,12 +480,12 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             # result says to call again, and the retry collects the run.
             return result, status >= 400
 
-        def call_get_data(
+        async def call_get_data(
             arguments: dict[str, Any],
         ) -> tuple[data_access.FileContent | dict[str, Any], bool]:
             assert registry is not None  # noqa: S101 - guarded by `enabled`
             try:
-                return data_access.get_data(
+                return await data_access.get_data(
                     runtime,
                     registry,
                     arguments,

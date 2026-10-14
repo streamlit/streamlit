@@ -161,8 +161,7 @@ ERROR_CATALOG: Final[dict[str, tuple[int, str]]] = {
         202,
         (
             "Not a failure: the run outlasted `server.agentRunTimeout` and is "
-            "still going. Send the same request again, or only `session_id`, to "
-            "collect it."
+            "still going. Send only `session_id` to collect it."
         ),
     ),
     "internal_error": (
@@ -438,8 +437,10 @@ _MCP_PATH_ITEM: Final = {
             "The Model Context Protocol over HTTP: send JSON-RPC 2.0 messages "
             "(`initialize`, `tools/list`, `tools/call`). Its `interact` tool "
             "takes the interact operation's request body as its arguments and "
-            "returns the snapshot both as `structuredContent` and as a JSON text "
-            "block, for clients that only read text. Its `get_data` tool reads a "
+            "returns the snapshot as one JSON text block, which every client "
+            "reads; it is not repeated as `structuredContent`, which a client "
+            "that shows both would put in the model's context twice. Its "
+            "`get_data` tool reads a "
             "file a result references, such as the full table behind a "
             "`data.url`, for clients that cannot fetch the URL. There is no "
             "server-sent stream, so `GET` answers `405`, as the MCP specification "
@@ -535,10 +536,11 @@ current until you act.
 **A timeout is not a failure.** Slow work, such as an app's first load of data \
 it has not cached, can outlast `server.agentRunTimeout`. The request then \
 returns `202` with `run_timed_out` and the `session_id` while the app keeps \
-running. Send the same request again, or only `session_id`: the retry waits \
-for that run instead of starting it over, so a slow run completes over several \
-retries and a trigger fires once. Any other request gets `session_busy` until \
-the run finishes.
+running. Send only `session_id`: the retry waits for that run instead of \
+starting it over, so a slow run completes over several retries and a trigger \
+fires once. The same request again also collects it, except after a creating \
+call, where sending `{}` again would create another session. Any other request \
+gets `session_busy` until the run finishes.
 
 Reuse one session for a sequence of interactions rather than creating one per \
 request. Each creating call runs the app from the start and holds a session \
@@ -588,9 +590,10 @@ def schemas() -> dict[str, Any]:
                         "- The wrong JSON type, which the element's "
                         "`value_schema` states. A number counts as text only "
                         "where it names an option, and dates and times are ISO "
-                        "text, a date or time slider's included. A single "
-                        "value and a one-item list are interchangeable for a "
-                        "list-valued element.\n"
+                        "text, a date or time slider's included; a date-time or "
+                        "time input takes any ISO 8601 form without an offset. "
+                        "A single value and a one-item list are interchangeable "
+                        "for a list-valued element.\n"
                         "- A value outside the element's `options` or over its "
                         "selection limit.\n"
                         "- A value the widget cannot read.\n\n"
@@ -600,9 +603,10 @@ def schemas() -> dict[str, Any]:
                         "color string, or a slider range with the wrong number "
                         "of values resets to the default; a fraction sent to a "
                         "whole-number input is truncated; text past "
-                        "`max_chars` is cut; and a reversed slider range or a "
-                        "date range of any length is stored as sent, so send "
-                        "two values, lowest first.\n\n"
+                        "`max_chars` is cut; and a reversed slider range is "
+                        "stored as sent, so send its two values lowest first. "
+                        "`null` clears a widget that can be empty and resets "
+                        "one that cannot to its default.\n\n"
                         "A batch is one rerun, so a widget the batch itself "
                         "removes, such as a field of a mode it switches away "
                         "from, is gone afterwards along with its value: check "
@@ -926,8 +930,9 @@ def schemas() -> dict[str, Any]:
                         "reported, so sending that back always matches: the "
                         "JSON type, a `format` for dates, and how many items a "
                         "range has. The legal values are the element's `props` "
-                        "-- `options`, bounds, `max_chars` -- and `null` clears "
-                        "a widget that can be empty.\n\n"
+                        "-- `options`, bounds, `max_chars`. An empty widget "
+                        "reports `null`, which is accepted on top of the "
+                        "schema.\n\n"
                         "It says what to send, not what is refused: what the "
                         "server refuses, and what it adjusts instead, is listed "
                         "under `widget_state`."

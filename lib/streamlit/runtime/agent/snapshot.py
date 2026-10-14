@@ -212,6 +212,9 @@ class ElementState(NamedTuple):
     # to the dialog's fragment keeps it open, so a request that cannot be
     # scoped that way would discard what it sent to the dialog.
     in_dialog: bool
+    # The command that emitted it, for checks that only apply to some, such as
+    # reading ISO text for a date-time input.
+    command: str = ""
 
 
 @dataclass
@@ -465,6 +468,7 @@ class _SnapshotBuilder:
             options_open=bool(props.get("accept_new_options")),
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
+            command=description["type"],
         )
         if actionable:
             self.actions.append(

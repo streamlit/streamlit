@@ -33,6 +33,7 @@ from __future__ import annotations
 import datetime
 import json
 import math
+from collections import Counter
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
@@ -68,6 +69,13 @@ _UNSETTABLE_VALUE_TYPES: Final[frozenset[str]] = frozenset(
 
 # How many legal options an `invalid_value` error spells out.
 _LISTED_OPTIONS: Final = 20
+
+# Inputs whose wire form is ISO text in one fixed layout, and the type their
+# value parses as.
+_ISO_TEXT_INPUTS: Final[dict[str, type[datetime.datetime | datetime.time]]] = {
+    "datetime_input": datetime.datetime,
+    "time_input": datetime.time,
+}
 
 # What each wire type takes, for errors that cannot quote the value.
 _EXPECTED: Final[dict[str, str]] = {
@@ -211,10 +219,13 @@ def build_widget_states(
             value,
             advertised=None if state.options_open else state.options,
         )
+        wire_value = _temporal_to_wire(
+            key, metadata, _iso_text_to_wire(key, metadata, state.command, value)
+        )
         encoded = _encode(
             element_id,
             metadata.value_type,
-            _temporal_to_wire(key, metadata, value),
+            wire_value,
             key,
             # An option's reported value can be a number, such as
             # `st.feedback`'s index; free text cannot.
@@ -363,35 +374,8 @@ def _validate_options(
     widget that registers none, such as `st.select_slider`. Neither exists for
     a widget that accepts new options.
     """
-    options = (
-        metadata.formatted_options
-        if metadata.formatted_options is not None
-        else advertised
-    )
-    if options is None:
-        return
-
-    candidates = value if isinstance(value, list) else [value]
-    for candidate in candidates:
-        if candidate is None:
-            continue
-        if str(candidate) not in options:
-            listed = ", ".join(repr(option) for option in options[:_LISTED_OPTIONS])
-            more = len(options) - _LISTED_OPTIONS
-            raise AgentRequestError(
-                "invalid_value",
-                f"{candidate!r} is not one of the options for {key!r}: {listed}"
-                + (f", and {more} more." if more > 0 else "."),
-            )
-        if options.count(str(candidate)) > 1:
-            # The runtime would resolve a shared label to one of its options
-            # without saying which, so the caller could not tell what it set.
-            raise AgentRequestError(
-                "invalid_value",
-                f"Several options for {key!r} display as {candidate!r}, so it "
-                "does not identify one.",
-            )
-
+    # Checked first, so an oversized list is refused before anything is
+    # looked up.
     if (
         metadata.max_array_length is not None
         and isinstance(value, list)
@@ -401,6 +385,38 @@ def _validate_options(
             "invalid_value",
             f"{key!r} accepts at most {metadata.max_array_length} selections.",
         )
+
+    options = (
+        metadata.formatted_options
+        if metadata.formatted_options is not None
+        else advertised
+    )
+    if options is None:
+        return
+
+    # Counted once, so each candidate is one lookup however long the list is.
+    counts = Counter(options)
+    candidates = value if isinstance(value, list) else [value]
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        count = counts.get(str(candidate), 0)
+        if count == 0:
+            listed = ", ".join(repr(option) for option in options[:_LISTED_OPTIONS])
+            more = len(options) - _LISTED_OPTIONS
+            raise AgentRequestError(
+                "invalid_value",
+                f"{candidate!r} is not one of the options for {key!r}: {listed}"
+                + (f", and {more} more." if more > 0 else "."),
+            )
+        if count > 1:
+            # The runtime would resolve a shared label to one of its options
+            # without saying which, so the caller could not tell what it set.
+            raise AgentRequestError(
+                "invalid_value",
+                f"Several options for {key!r} display as {candidate!r}, so it "
+                "does not identify one.",
+            )
 
 
 def _check_readable(
@@ -453,6 +469,44 @@ def _temporal_to_wire(key: str, metadata: WidgetMetadata[Any], value: Any) -> An
         )
     try:
         return metadata.serializer(parsed if isinstance(value, list) else parsed[0])
+    except Exception as exc:
+        raise AgentRequestError(
+            "invalid_value", f"The value sent for {key!r} is not one it accepts."
+        ) from exc
+
+
+def _iso_text_to_wire(
+    key: str, metadata: WidgetMetadata[Any], command: str, value: Any
+) -> Any:
+    """Turn any ISO 8601 form into the one layout a date-time or time input reads.
+
+    `st.datetime_input` reads only `YYYY-MM-DDTHH:MM` and `st.time_input` only
+    `HH:MM` or `HH:MM:SS`, and each replaces anything else with its default
+    without an error. So a value with seconds, a fraction, or a space would
+    change nothing while the request succeeded. The widget's own serializer
+    writes the layout it reads. These widgets hold no offset, so a value with
+    one is refused rather than converted to some time zone.
+    """
+    kind = _ISO_TEXT_INPUTS.get(command)
+    if kind is None:
+        return value
+    if isinstance(value, list) and len(value) == 1:
+        value = value[0]
+    if not isinstance(value, str):
+        return value
+    try:
+        parsed: datetime.datetime | datetime.time | None = kind.fromisoformat(value)
+    except ValueError:
+        parsed = None
+    if parsed is None or parsed.tzinfo is not None:
+        what = "date and time" if kind is datetime.datetime else "time"
+        raise AgentRequestError(
+            "invalid_value",
+            f"The value for {key!r} must be an ISO 8601 {what} without an "
+            "offset, like the snapshot reports.",
+        )
+    try:
+        return metadata.serializer(parsed)
     except Exception as exc:
         raise AgentRequestError(
             "invalid_value", f"The value sent for {key!r} is not one it accepts."

@@ -21,6 +21,15 @@ until its own PR. Sizes are estimates measured from the prototype.
 - **The OpenAPI document grows with the code.** Each PR adds the request fields, error
   codes, and schema it implements, so the document never describes something that is not
   there yet.
+- **Nothing heavy on the event loop.** Building a snapshot reads every table's Arrow data
+  and runs the app's `format_func`s, and `get_data` decodes whole tables, so both run in
+  a worker thread, as the prototype does, or one agent request stalls every browser
+  session on the server. Session bookkeeping that can close sessions stays on the loop.
+- **Public hooks over private internals.** The prototype reaches into `AppSession`
+  (`_run_on_save`, `_client_state`), the session manager (`_session_mgr`), session
+  state (`_new_widget_state`), and the in-memory media storage. Each PR that ports such
+  code adds a small public method instead, and `get_data` reads files through the media
+  manager so a custom media storage works.
 - **The spec goes first, on its own.** `product-spec.md` and `potential-follow-ups.md`
   land on `develop` in a spec-only PR before PR 1, as the specs process requires.
   `mcp-support.md` waits for the MCP PR. `prototype-feedback.md` and
@@ -94,12 +103,14 @@ and run a parameterized report in one call.
 - `AgentSessionClient`, buffering the latest full run and settling when the script
   runner shuts down rather than after the prototype's 50 ms quiet period;
   `AgentSessionRegistry` with the session cap, idle TTL, and identity binding from
-  `server.trustedUserHeaders`.
+  `server.trustedUserHeaders`. Idle sessions are swept on a timer, not only when a
+  request arrives, so a quiet server releases their memory and media; and the config
+  options refuse values of zero or below.
 - `interact` for creating calls and reruns; `page` and `query_params`, including the
   browser's page-change rule, listing widget states with a page change, and the
-  unknown-page check after a creating call; the run timeout as a `202` that the same
-  request or an empty one collects, with `session_busy` for anything else while the run
-  is still going.
+  unknown-page check after a creating call; the run timeout as a `202` that a request
+  with only `session_id` collects (the same request also does, except after a creating
+  call), with `session_busy` for anything else while the run is still going.
 - `POST interact` and `GET openapi.json` routes, `405` for other methods, and the security
   rules: Host allow-list, `Origin` refusal, bounded body, strict JSON, no cookies read.
   Also the `Link` header, the debug audit log, `errors.py`, and the config options.
@@ -129,7 +140,9 @@ cookie not authenticating a call, and the app shell still loading with the new
 
 - Key resolution, and the checks against the last snapshot: `not_on_page`,
   `disabled_widget`, `unsupported_element`, `not_a_value`, `not_a_trigger`.
-- Encoding each value type, including temporal values; triggers with payloads
+- Encoding each value type, including temporal values, and any ISO form for a
+  date-time or time input, rewritten through its own serializer since its parser
+  silently drops anything else; triggers with payloads
   (`st.chat_input`, `st.menu_button`); form rules (`missing_form_submit`,
   `cross_form_batch`); the options check, and running the widget's deserializer on the
   encoded value so one it cannot read is refused instead of failing every later run.
@@ -149,7 +162,9 @@ another changes.
 Complete data for tables and charts, without putting it in the snapshot.
 
 - `elements/lib/data_offload.py`: Arrow registered in media storage, the
-  `server.maxMessageSize` ceiling, re-registration on cache replay.
+  `server.maxMessageSize` ceiling, re-registration on cache replay into an agent
+  session. A browser session replaying the same entry skips it: it never fetches the
+  file, which would otherwise be held in memory for nothing.
 - Descriptions for dataframes, tables, the Vega charts, Plotly, ECharts, PyDeck, and maps,
   with `data_url` and the selection `support` tags.
 - The `data` contract: `complete`, `url`, `unavailable` (`too_large_to_serve`,
@@ -190,7 +205,7 @@ product spec describes v1 without them.
 | --------- | ----- | ------------------ | --------------------- |
 | The MCP endpoint (`mcp.py`, `data_access.py` for its `get_data` tool, its route, its OpenAPI path) | ~550 lines, plus tracking a fast-moving external protocol | Low. The same `interact` is available over HTTP, and the spec already lists MCP as follow-up #6. | A PR after the stack, with `mcp-support.md` as its design |
 | Compacting the message buffer | ~90 lines, and a second code path for every table's and chart's `data`, run inside the runtime's message loop | Memory only: a 50,000-row table holds 1.7 MB per session instead of 38 KB, within `server.maxMessageSize`, the session cap, and the TTL | [Potential follow-up](potential-follow-ups.md#keep-only-summaries-in-the-session-buffer) if profiling asks for it. Keep the small path that lets `st.map` supply its own summary. |
-| Input checks beyond options and the widget's own deserializer (bounds, whole numbers, `max_chars`, string formats, range shape and order) | ~170 lines | Low. The runtime already resets an out-of-range, malformed, or wrong-shape value to the widget's default, so the request succeeds and `value` shows the reset; a fraction sent to an integer input is truncated and over-long text is cut. A reversed slider range and a date range of any length are stored as sent, which the OpenAPI text warns about. | [#16203](https://github.com/streamlit/streamlit/issues/16203), in the runtime for every client |
+| Input checks beyond options and the widget's own deserializer (bounds, whole numbers, `max_chars`, string formats, range shape and order) | ~170 lines | Low. The runtime already resets an out-of-range, malformed, or wrong-shape value to the widget's default, so the request succeeds and `value` shows the reset; a fraction sent to an integer input is truncated and over-long text is cut. A reversed slider range is stored as sent, which the OpenAPI text warns about. | [#16203](https://github.com/streamlit/streamlit/issues/16203), in the runtime for every client |
 | A new action replacing a run still going after `run_timed_out` | ~25 lines, the `_awaiting_run` gate, and the race where a replaced run's result answers the wrong request — the most stateful code in `interaction.py` | Low. The same request or an empty one still collects the run; anything else gets `session_busy` until it finishes. | Follow-up #4 |
 | The idle-reclaim timer | ~30 lines | Low. A session idle past its TTL is reclaimed on the next request instead of on a timer, so an idle server holds it a little longer. | Add back if idle memory matters |
 

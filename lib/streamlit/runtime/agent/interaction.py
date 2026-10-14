@@ -631,8 +631,8 @@ async def _settle(
         raise AgentRequestError(
             "run_timed_out",
             f"The app did not finish within {timeout:g} seconds, and is still "
-            "running. Nothing is lost: send this request again, or an empty one "
-            "with only `session_id`, to wait for it without starting it over.",
+            "running. Nothing is lost: send a request with only `session_id` to "
+            "wait for it without starting it over.",
             # Always included, because the remedy is a request on this session.
             session_id=session.handle,
         ) from exc
@@ -646,12 +646,24 @@ async def _settle(
     else:
         session.query_string = interaction.query_string
 
-    result = snapshot_module.build_snapshot(
-        session_id=session.handle,
-        messages=session.client.messages,
-        session_state=app_session.session_state,
-        query_params=_decode_query_params(session.query_string),
-    )
+    # Built off the event loop, because it reads every table's Arrow data and
+    # runs the app's `format_func`s, which would stall every session on the
+    # server. Safe while the session is claimed: no other run can start, and the
+    # message list is copied here, on the loop that appends to it.
+    messages = session.client.messages
+    try:
+        result = await asyncio.to_thread(
+            snapshot_module.build_snapshot,
+            session_id=session.handle,
+            messages=messages,
+            session_state=app_session.session_state,
+            query_params=_decode_query_params(session.query_string),
+        )
+    except asyncio.CancelledError:
+        # The client left while the snapshot was built. The run has settled, so
+        # its retry collects it, exactly as for a client that left earlier.
+        session.timed_out = interaction
+        raise
     session.element_states = result.element_states
     session.pages = result.document.get("pages", [])
     session.last_used = time.monotonic()

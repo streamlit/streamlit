@@ -27,10 +27,12 @@ an Arrow stream; any other file comes back as itself.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final, cast
 
+from streamlit.elements.lib.data_offload import ARROW_MIMETYPE
 from streamlit.runtime.agent import snapshot as snapshot_module
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.media_file_storage import MediaFileStorageError
@@ -39,8 +41,6 @@ if TYPE_CHECKING:
     from streamlit.runtime import Runtime
     from streamlit.runtime.agent.interaction import AgentSessionRegistry
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-
-ARROW_MIMETYPE: Final = "application/vnd.apache.arrow.stream"
 
 # A response is bounded rather than truncated: a cut-off image or table page
 # is useless, and the caller can always ask for fewer rows.
@@ -61,14 +61,18 @@ class FileContent:
     content: bytes = b""
 
 
-def get_data(
+async def get_data(
     runtime: Runtime,
     registry: AgentSessionRegistry,
     arguments: dict[str, Any],
     *,
     user_info: dict[str, Any],
 ) -> FileContent:
-    """Resolve ``arguments["url"]`` against the session and read the file."""
+    """Resolve ``arguments["url"]`` against the session and read the file.
+
+    The session lookup stays on the event loop, since it can close idle
+    sessions; only decoding a table, the expensive part, runs in a thread.
+    """
     if unknown := set(arguments) - _ARGUMENTS:
         raise AgentRequestError(
             "invalid_request", f"Unknown arguments: {', '.join(sorted(unknown))}."
@@ -102,8 +106,9 @@ def get_data(
         ) from exc
 
     if stored.mimetype == ARROW_MIMETYPE:
-        table = _table_page(stored.content, offset, limit)
-        size = len(json.dumps(table, allow_nan=False))
+        table, size = await asyncio.to_thread(
+            _table_page_and_size, stored.content, offset, limit
+        )
         if size > MAX_RESULT_BYTES:
             raise AgentRequestError(
                 "result_too_large",
@@ -123,20 +128,25 @@ def get_data(
     )
 
 
-def _table_page(arrow_bytes: bytes, offset: int, limit: int) -> dict[str, Any]:
-    """``limit`` rows from ``offset``, in the shape of a snapshot's preview."""
+def _table_page_and_size(
+    arrow_bytes: bytes, offset: int, limit: int
+) -> tuple[dict[str, Any], int]:
+    """``limit`` rows from ``offset``, in the shape of a snapshot's preview,
+    and the size of that page as JSON.
+    """
     import pyarrow as pa
 
     table = pa.RecordBatchStreamReader(arrow_bytes).read_all()
     rows = snapshot_module.arrow_rows(table, offset, limit)
     end = offset + len(rows)
-    return {
+    page = {
         "columns": snapshot_module.arrow_columns(table),
         "row_count": table.num_rows,
         "offset": offset,
         "rows": rows,
         "next_offset": end if end < table.num_rows else None,
     }
+    return page, len(json.dumps(page, allow_nan=False))
 
 
 def _whole_number(value: Any, name: str, *, minimum: int) -> int:

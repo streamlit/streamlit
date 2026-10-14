@@ -47,7 +47,8 @@ if TYPE_CHECKING:
     InteractCall = Callable[[dict[str, Any]], Awaitable[tuple[dict[str, Any], bool]]]
     # Reads one file. Returns it, or an error body and True.
     GetDataCall = Callable[
-        [dict[str, Any]], tuple[data_access.FileContent | dict[str, Any], bool]
+        [dict[str, Any]],
+        Awaitable[tuple[data_access.FileContent | dict[str, Any], bool]],
     ]
 
 # Newest first. A client that asks for one of these gets it back; any other
@@ -101,8 +102,8 @@ say which values are legal.
 - An `st.form`'s fields go together with one of its submit triggers.
 - `page`, a `url_path` from `pages`, and `query_params` navigate, and cannot \
 be combined with widget changes.
-- A slow run returns `run_timed_out`: send the same request again, or only \
-`session_id`, to collect it. A trigger never fires twice.
+- A slow run returns `run_timed_out`: send only the returned `session_id` to \
+collect it. A trigger never fires twice.
 - A call with no changes reruns the app. You rarely need one: the last result \
 stays current until you act.
 
@@ -320,13 +321,24 @@ async def handle(payload: Any, interact: InteractCall, get_data: GetDataCall) ->
     return await _handle_one(payload, interact, get_data)
 
 
+def _reply_id(message: Any) -> str | int | None:
+    """The id an error reply may echo: the request's, if it is a valid one.
+
+    A malformed message can carry any JSON as its id, and echoing an object or
+    a list back would make the reply itself invalid JSON-RPC.
+    """
+    request_id = message.get("id") if isinstance(message, dict) else None
+    if isinstance(request_id, bool) or not isinstance(request_id, (str, int)):
+        return None
+    return request_id
+
+
 async def _handle_one(
     message: Any, interact: InteractCall, get_data: GetDataCall
 ) -> dict[str, Any] | None:
     if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
-        request_id = message.get("id") if isinstance(message, dict) else None
         return error_response(
-            request_id, INVALID_REQUEST, "Not a JSON-RPC 2.0 message."
+            _reply_id(message), INVALID_REQUEST, "Not a JSON-RPC 2.0 message."
         )
 
     method = message.get("method")
@@ -336,7 +348,7 @@ async def _handle_one(
         return None
     if not isinstance(method, str):
         return error_response(
-            message.get("id"), INVALID_REQUEST, "A request needs a `method`."
+            _reply_id(message), INVALID_REQUEST, "A request needs a `method`."
         )
     if "id" not in message:
         # A notification, such as `notifications/initialized`. Nothing to answer,
@@ -420,7 +432,7 @@ async def _call_tool(
         )
 
     if name == GET_DATA_TOOL_NAME:
-        result, is_error = get_data(arguments)
+        result, is_error = await get_data(arguments)
         if isinstance(result, data_access.FileContent):
             return _result(request_id, _file_result(result))
         return _json_result(request_id, result, is_error)

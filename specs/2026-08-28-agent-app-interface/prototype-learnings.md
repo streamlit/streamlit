@@ -1228,6 +1228,30 @@ headers broke apps that act on them, such as SiS caller's-rights apps, which fai
 expires after about 120 seconds, and an MCP tool call supplies them the same way, since
 it takes the `interact` path.
 
+A QA round and a branch review after that found, in v1 scope:
+
+- **`st.datetime_input` and `st.time_input` silently ignored valid ISO text.** Their
+  parsers read one layout each and fall back to the default for anything else, so
+  seconds, a fraction, or a space changed nothing while the request succeeded. The
+  agent layer now parses any ISO form and writes it through the widget's own
+  serializer, and refuses a value with an offset, which these widgets cannot hold.
+- **The timeout advice was wrong for creating calls**: resending `{}` starts another
+  session. The message now always says to send only `session_id`.
+- **The snapshot and `get_data` ran on the event loop.** Arrow reads and `format_func`
+  stalled every browser session during a large agent response. Both now run in a
+  worker thread. The message list is copied on the loop first, and a client that
+  leaves during the build is treated like one that left during the wait, so its retry
+  collects rather than reruns. `get_data`'s session lookup stays on the loop, because
+  it can close idle sessions.
+- **Option validation was quadratic** in the number of submitted values; it now checks
+  the selection limit first and counts options once.
+- Smaller: `null` is accepted on top of `value_schema`, documented with its reset for a
+  widget that cannot be empty; the OpenAPI text no longer claims `structuredContent`;
+  `on_change` is reported for `datetime_input` and `feedback`; and an invalid JSON-RPC
+  `id` is not echoed. Production-only items (an idle-session timer, config bounds,
+  public hooks instead of private internals, skipping agent Arrow files on browser
+  cache replay) went to the implementation plan.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`

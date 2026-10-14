@@ -269,9 +269,11 @@ calls are unaffected:
 | Running a timed-out interaction              | Waits for it and returns its result    | `session_busy`                              |
 | Holding a timed-out interaction's result     | Returns that result at once            | Discards it and runs as a new interaction   |
 
-A result is collected once; after that, the same request is a new interaction. A client
-that disconnects while waiting is treated as timed out, so its retry collects the run
-too. Where a browser interaction would interrupt a running run, v1 answers
+A result is collected once; after that, the same request is a new interaction. After a
+creating call, the retry is only `session_id`, since the same request, `{}`, would
+create another session, which is why the timeout message always says to send only
+`session_id`. A client that disconnects while waiting is treated as timed out, so its
+retry collects the run too. Where a browser interaction would interrupt a running run, v1 answers
 `session_busy`, because the client may still come back for the result.
 
 The limits of that guarantee:
@@ -664,7 +666,7 @@ Rules:
 | `Decimal`                           | String, to keep its digits                              | `"0.10"`                                      | `decimal`, from OpenAPI's format registry                               |
 | NaN, infinity, a missing table cell | `null`                                                  | `null`                                        | —                                                                       |
 | `bytes`                             | Its size                                                | `{"bytes": 3}`                                | None: `byte` would be base64 content, which stays behind `data.url`     |
-| `Enum`                              | Its value                                               | `"red"`                                       | That of the value                                                       |
+| `Enum`                              | Its value; as an option, its `format_func` label, like any option object | `"red"`                                       | That of the value                                                       |
 | Set, tuple                          | List                                                    | `["a", "b"]`                                  | —                                                                       |
 | Range widget value                  | Two-item list                                           | `[20, 80]`                                    | —                                                                       |
 | Option object                       | Its `format_func` label                                 | `"December"`                                  | — (the labels are the element's `options`)                              |
@@ -791,7 +793,9 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
   `max_value`, and `max_chars` are already there under the names models know, copying
   an option list would double the largest part of many snapshots, and bounds would make
   the schema stricter than v1, which resets an out-of-range number rather than refusing
-  it. `null` clears a widget that can be empty.
+  it.
+- **`null` is accepted on top of it.** An empty widget reports `null`, and sending
+  `null` clears a widget that can be empty and resets one that cannot to its default.
 - **Each command declares it, with the rest of its description.** Only the command knows
   for certain whether it holds a range, a whole number, or a date, including while it is
   empty, so an empty `st.feedback` still says `integer`. A few shared building blocks
@@ -804,9 +808,11 @@ refused with `invalid_value`:
 
 - **The JSON type**, which the element's `value_schema` states. A number is not text except
   where it names an option, and dates and times are ISO text, even for a slider that
-  carries them as microseconds. The server is a little more lenient than the schema: a
-  single value and a one-item list are interchangeable, because single-select button
-  groups and single sliders carry one value in a list.
+  carries them as microseconds. A date-time or time input takes any ISO 8601 form
+  without an offset and stores it in the layout it reads, since its own parser would
+  silently replace any other form with the default. The server is a little more
+  lenient than the schema: a single value and a one-item list are interchangeable,
+  because single-select button groups and single sliders carry one value in a list.
 - **The options.** A value must be one of the widget's `options`, the most common
   mistake, and the error lists the legal values. A widget with `accept_new_options` also
   takes new text, as it does in the browser.
@@ -816,8 +822,8 @@ refused with `invalid_value`:
 Everything else shows in the next snapshot's `value`: an out-of-range number, a
 malformed date, time, or color string, or a slider range with the wrong number of values
 is reset to the default, a fraction sent to an integer input is truncated, and text past
-`max_chars` is cut. A reversed slider range and a date range of any length are stored as
-sent, so a client sends two values, lowest first.
+`max_chars` is cut. A reversed slider range is stored as sent, so a client sends its two
+values lowest first.
 A per-key note saying how each value landed is a potential follow-up.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -1381,8 +1387,9 @@ v1 ships when:
 - JSON encodings are pinned, each with a codec test fixture, for dates, datetimes,
   decimals, large integers, non-finite numbers, ranges, nulls, and object-valued options,
   including options that share a label.
-- Whatever the snapshot reports as the value of an element in `actions` matches its
-  `value_schema` and can be sent straight back, except a label several options share.
+- Whatever the snapshot reports as the value of an element in `actions` can be sent
+  straight back, except a label several options share, and matches its
+  `value_schema` unless it is `null`.
 - A filtered dashboard, a form with two submit buttons, a chat flow, and a multi-turn
   dialog all complete without a browser, through Streamlit's production execution path,
   and conformance tests show each matches an equivalent browser session on callback

@@ -360,6 +360,7 @@ class FeedbackMixin:
                 value_schema=agent_spec.INTEGER,
                 options=options,
                 disabled=disabled,
+                on_change="ignore" if on_change == "ignore" else "rerun",
             ),
         )
 
