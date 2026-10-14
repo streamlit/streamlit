@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version == '3.15.*' and sys_platform != 'emscripten'",
@@ -4206,7 +4206,7 @@ wheels = [
 
 [[package]]
 name = "streamlit"
-version = "1.65.0"
+version = "1.66.0"
 source = { editable = "lib" }
 dependencies = [
     { name = "altair" },
