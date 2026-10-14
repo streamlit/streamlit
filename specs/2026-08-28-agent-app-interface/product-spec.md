@@ -277,8 +277,10 @@ too. Where a browser interaction would interrupt a running run, v1 answers
 The limits of that guarantee:
 
 - **It covers a `202` the client received.** A lost final response, or a lost response to
-  a creating call, leaves nothing to collect, so a retry is a new interaction and can
-  repeat side effects. General retry idempotency is the `request_id` of follow-up #4.
+  a creating call, leaves nothing to collect, so a retry is a new interaction. After a
+  lost final response, sending only `session_id` reruns the app and re-applies nothing,
+  so a trigger never fires twice. General retry idempotency is the `request_id` of
+  follow-up #4.
 - **A disconnect only helps if it reaches the server**, and a proxy that keeps the
   upstream connection open hides it. So the run timeout should stay below the timeouts
   of the clients a deployment expects, such as the 60 seconds MCP clients built on the
@@ -298,12 +300,14 @@ nothing to close. A client should still reuse one: every creating call runs the 
 the start and holds a session until it idles out.
 
 **There is no read or delete route.** An `interact` with no changes is an explicit rerun,
-apart from collecting a timed-out run, and can repeat side effects like any rerun. A
-client rarely needs a read: nothing changes an agent session between interactions, since
-`run_every` timers belong to the browser, a file edit waits for the next interaction, and
-no other client shares the session, so the last snapshot stays current. A client that
-lost it, such as a model whose context dropped the result, gets a non-executing read
-with follow-up #4.
+apart from collecting a timed-out run. It re-applies nothing, so a trigger never fires
+twice, but code that runs on every rerun runs again, as it does for any browser
+interaction. Most requests with no changes want exactly that: to re-check an edited
+script, close a dialog, or see data that changed outside the app, where a read would
+return the old result without saying so. Otherwise nothing changes an agent session
+between interactions — `run_every` timers belong to the browser, and no other client
+shares the session — so the last snapshot stays current. A client that lost it, such as
+a model whose context dropped the result, gets a non-executing read with follow-up #4.
 
 **An agent session is an ordinary Streamlit session with a different client.** The
 runtime treats it as one more browser tab, which settles what it shares and what it does
@@ -370,7 +374,8 @@ right now. Naming follows the public API, for the reason above:
   outside the top-level namespace is spelled by its path from `st`, such as
   `components.v1.html`, and a custom component is typed by the API that declared it
   (`components.v1.declare_component`, `components.v2.component`), with its own name in
-  `props.component_name`.
+  `props.component_name`. The containers `st.columns` and `st.tabs` return are typed
+  `column` and `tab`.
 - `props` keys are the command's **parameter names**, spelled exactly as a user would
   write them: `label`, `help`, `options`, `format`, `disabled`, `expanded`, `icon`,
   `column_config`. Never a proto field name, never a synonym.
@@ -381,7 +386,8 @@ right now. Naming follows the public API, for the reason above:
   exceptions are few, and the coverage test lists each with what it is derived from:
   state a container has no `value` for (a dialog's `is_open`, a popover's or tab's
   `open`), facts read from the object a command was given (an exception's `message`,
-  the `doc_string` `st.help` shows), and a media element's `url`. A parameter
+  the `doc_string` `st.help` shows), whether an exception went uncaught, and a media
+  element's `url`. A parameter
   Streamlit normalized, such as `column_config` with its defaults applied, is still a
   parameter.
 - **Effective values, not just authored ones.** Include every public property that
@@ -585,7 +591,8 @@ Rules:
   default page). The internal page script hash stays internal.
 - **The app's title and the page's title are separate fields.** `page.title` is the
   current page; a top-level `app_title` carries what `st.set_page_config(page_title=...)`
-  set, usually the app's name, so a report can cite both without confusing them. An app
+  set, usually the app's name, or the script's name when nothing set one, as in the
+  browser tab, so a report can cite both without confusing them. An app
   that calls `st.set_page_config` on each page makes `app_title` follow the page, since
   that is what it asked the browser tab to say; `page.url_path` is the reliable identity
   of where a client is.
@@ -615,16 +622,18 @@ Rules:
   element that can be set (`value`) or fired (`trigger`) right now, with its `type` and
   `label`, so a model can see the action space at a glance and match a generated key
   without walking the tree; `value_schema` and constraints are read from the element.
-  A `disabled` widget appears in the tree but not in `actions`. Form membership is
-  visible from nesting.
+  A `disabled` widget, or one with a `support` reason, appears in the tree but not in
+  `actions`. Form membership is visible from nesting, and each keyed element in a form
+  carries the form's `form_id`.
 - **Unsupported things stay visible, on the element itself.** An element that is not
   fully supported carries a `support` field with a machine-readable reason, and absent
   means fully supported. There are two: `browser_required` where what renders may differ
   from what is reported, such as a custom component, and `read_only_in_v1` where what is
-  reported is accurate but some input the element accepts cannot be sent, such as an
-  upload. Keeping it on the node means an agent never has to cross-reference a summary
+  reported is accurate but the element cannot be driven yet, such as an upload. Keeping
+  it on the node means an agent never has to cross-reference a summary
   list to find out which element a gap belongs to. A table or chart is fully supported
-  until the app enables selections on it; then it is `read_only_in_v1`, which marks
+  until the app enables selections on it or gives a dataframe a button column; then it
+  is `read_only_in_v1`, which marks
   exactly the element an app's "select a row" caption is talking about. Tagging every
   table would mark gaps a display-only element does not have, and teach clients to ignore
   the field. A container's `support` binds its contents: an element inside an undrivable
@@ -650,7 +659,8 @@ Rules:
   of it as data, not instructions. Only the envelope — `schema_version`, `session_id`,
   `status`, `observed_at`, and error codes — is server-generated.
 - **The `status` field reports the run, not the transport.** `ready` means the run chain
-  settled and the app did not raise. See [When a run fails](#when-a-run-fails).
+  settled and the page shows no uncaught exception, including one an earlier full run
+  left outside a fragment that reran since. See [When a run fails](#when-a-run-fails).
 - **Versioned, and self-describing.** Additive optional fields are compatible within
   `schema_version: 1`; clients tolerate unknown fields and unknown element types. The
   rest moves with Streamlit: each app serves the OpenAPI document for its own version,
@@ -660,23 +670,23 @@ Rules:
   additive rule, and authored keys keep its addressing stable.
 - **Values are plain JSON, encoded one way everywhere**, as the table below lists. The
   same encoding applies to `value`, `props`, and table rows, and is what a request sends
-  back; each element's `value_schema` states it for that element, with the format in
-  the last column.
+  back; each element's `value_schema` states its JSON type for that element, with
+  `format: date` for dates.
 
-| Python value                        | JSON                                                    | Example                                       | JSON Schema format                                                      |
-| ----------------------------------- | ------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------- |
-| `date`                              | ISO 8601 text                                           | `"2026-10-12"`                                | `date`                                                                  |
-| `datetime`, `time`                  | ISO 8601 text, with an offset only when the value has one | `"2026-10-12T09:30:00+00:00"`, `"09:30:00"` | `date-time`, `time` with an offset; none without one, which the standard requires |
-| `timedelta`                         | Seconds                                                 | `5400.0`                                      | None: `duration` would be ISO text such as `"PT1H30M"`, harder to compute with |
-| `Decimal`                           | String, to keep its digits                              | `"0.10"`                                      | `decimal`, from OpenAPI's format registry                               |
-| NaN, infinity, a missing table cell | `null`                                                  | `null`                                        | —                                                                       |
-| `bytes`                             | Its size                                                | `{"bytes": 3}`                                | None: `byte` would be base64 content, which stays behind `data.url`     |
-| `Enum`                              | Its value; as an option, its `format_func` label, like any option object | `"red"`                                       | That of the value                                                       |
-| Set, tuple                          | List                                                    | `["a", "b"]`                                  | —                                                                       |
-| Range widget value                  | List, lowest first; a date range may hold fewer than two | `[20, 80]`                                   | —                                                                       |
-| Option object                       | Its `format_func` label                                 | `"December"`                                  | — (the labels are the element's `options`)                              |
-| Integer                             | Number, at any size; a JavaScript client rounds one beyond 2^53 | `9223372036854775807`                         | `int64`, from OpenAPI                                                   |
-| Anything else                       | `str(value)`                                            | `"Point(1, 2)"`                               | None                                                                    |
+| Python value                        | JSON                                                                                                                       | Example                                       |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `date`                              | ISO 8601 text                                                                                                              | `"2026-10-12"`                                |
+| `datetime`, `time`                  | ISO 8601 text, with an offset only when the value has one; a widget's value keeps the widget's precision                  | `"2026-10-12T09:30:00+00:00"`, `"09:30"`      |
+| `timedelta`                         | Seconds, which are easier to compute with than ISO durations                                                               | `5400.0`                                      |
+| `Decimal`                           | String, to keep its digits                                                                                                 | `"0.10"`                                      |
+| NaN, infinity, a missing table cell | `null`                                                                                                                     | `null`                                        |
+| `bytes`                             | Its size; the content stays behind `data.url`                                                                              | `{"bytes": 3}`                                |
+| `Enum`                              | Its value; as an option, its `format_func` label, like any option object                                                   | `"red"`                                       |
+| Set, tuple                          | List                                                                                                                       | `["a", "b"]`                                  |
+| Range widget value                  | List, lowest first; a date range may hold fewer than two                                                                   | `[20, 80]`                                    |
+| Option object                       | Its `format_func` label                                                                                                    | `"December"`                                  |
+| Integer                             | Number, at any size; a JavaScript client rounds one beyond 2^53                                                            | `9223372036854775807`                         |
+| Anything else                       | `str(value)`                                                                                                               | `"Point(1, 2)"`                               |
 
 ### When a run fails
 
@@ -704,7 +714,8 @@ Four details matter for an agent reading that snapshot:
   catches a `ValueError` and renders it deliberately would flip the whole interaction to
   `error`. The two cases are distinguishable because only the runtime's own error
   display applies `client.showErrorDetails` redaction, so the element records whether it
-  was uncaught and only that sets `status`. A caught-and-displayed exception stays in
+  was uncaught as `props.uncaught`, and only that sets `status`. A caught-and-displayed
+  exception stays in
   the tree, marked as handled, which is more useful than either hiding it or calling
   the run broken.
 
@@ -715,10 +726,10 @@ Every outcome a client has to handle:
 
 | Outcome                                                                              | Response                                                                                                                                 |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Invalid request — an unknown key, a disabled or unsupported element, a value the checks in [Actions in v1](#actions-in-v1) refuse, a missing form submit, or a cross-form or cross-dialog batch | Error before any execution, naming which of those it was. Nothing ran and the app is unchanged. |
+| Invalid request — an unknown key, a disabled or unsupported element, a value the checks in [Actions in v1](#actions-in-v1) refuse, a missing form submit, or a cross-form or cross-dialog batch | Error before any execution, naming which of those it was in its `code`; the OpenAPI document lists every code with its HTTP status. Nothing ran and the app is unchanged. |
 | Unrecognized `page`                                                                  | On a creating call, an error after the run, carrying the `session_id` of the session it created, which stays usable; on a later call, refused before anything runs. Both list the available `pages` as data. |
 | App raised during the run                                                            | `200` with `status: "error"` and the truncated snapshot described above.                                                                 |
-| Script failed to compile                                                             | `200` with `status: "error"`, the compile error, and no actions.                                                                         |
+| Script failed to compile                                                             | `200` with `status: "error"`, the compile error as an uncaught `exception` in `main`, and no actions.                                     |
 | Another request on the same session is still being served, or a different request arrives while a timed-out run is still going | `session_busy`. One interaction per session at a time, so a client never interrupts its own run by accident. |
 | Run exceeded `server.agentRunTimeout`                                                | `202` with `run_timed_out`, while the app keeps running; a retry collects the run, as described above.                                   |
 
@@ -807,31 +818,34 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
   for certain whether it holds a range, a whole number, or a date, including while it is
   empty, so an empty `st.feedback` still says `integer`. A few shared building blocks
   keep each declaration to one line, and the coverage test fails for a widget without
-  one. A value with a richer shape, such as a dataframe selection, is declared the same
-  way.
+  one. A value with a richer shape, such as a dataframe selection once it can be sent,
+  is declared the same way.
 
 Until #16203 moves the checks into the widgets, v1 checks three things itself, each
 refused with `invalid_value`:
 
 - **The JSON type**, which the element's `value_schema` states. A number is not text except
   where it names an option, text is not a number where the schema says number — so
-  `st.feedback` takes its index as `1`, not `"1"` — and dates and times are ISO text, even for a slider that
-  carries them as microseconds. A date-time or time input takes any ISO 8601 form
-  without an offset and stores it in the layout it reads, since its own parser would
-  silently replace any other form with the default. A list longer than the schema's
-  `maxItems`, such as a third date for a range, is refused, since the app would get a
-  value it cannot unpack. The server is a little more lenient than the schema
-  otherwise: a single value and a one-item list are interchangeable, because
-  single-select button groups and single sliders carry one value in a list.
+  `st.feedback` takes its index as `1`, not `"1"` — and dates and times are ISO text,
+  even for a slider that carries them as microseconds. A date-time or time input takes
+  any ISO 8601 form without an offset and stores it in the layout it reads, since its
+  own parser would silently replace any other form with the default. A list longer than
+  the schema's `maxItems`, such as a third date for a range, is refused, since the app
+  would get a value it cannot unpack. The server is a little more lenient than the
+  schema otherwise: for a list-valued element, a single value and a one-item list are
+  interchangeable, because single-select button groups and single sliders carry one
+  value in a list.
 - **The options.** A value must be one of the widget's `options`, the most common
-  mistake, and the error lists the legal values. A widget with `accept_new_options` also
-  takes new text, as it does in the browser.
+  mistake, and the error lists the legal values; a list may hold no more than
+  `max_selections`. A widget with `accept_new_options` also takes new text, as it does
+  in the browser.
 - **That the widget can read it.** Its own deserializer must accept the value, because
   one it cannot read raises in the app's run, and on every later run too.
 
 Everything else shows in the next snapshot's `value`: an out-of-range number, a
-malformed date, time, or color string, or a slider range with too few values is reset
-to the default, a fraction sent to an integer input is truncated, and text past
+malformed `st.date_input` date or color string, or a slider range with too few values
+is reset to the default, a fraction sent to an integer `st.number_input` or slider is
+truncated, and text past
 `max_chars` is cut. A reversed slider range is stored as sent, so a client sends its two
 values lowest first. A per-key note saying how each value landed is a potential
 follow-up.
@@ -902,11 +916,11 @@ without introducing a new authorization surface.
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, `complete`, a bounded typed `preview`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order rather than objects, since repeating the column names per row is most of a long preview's size. Values are the data as stored, not as displayed, and an unnamed pandas index stays a column even under `hide_index`, as a column `column_config` hides does. |
 | Lazy dataframe                 | The same shape, with the chunk already emitted as the preview, `complete: false`, and `unavailable: "lazy_loading"` in place of a `url`: serving the chunk would pass part of the table off as all of it. Fetching row ranges is a follow-up.                |
-| Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped and its base64 typed arrays expanded into numbers, and chart data under `data` exactly as a dataframe's.                                     |
+| Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped and its base64 typed arrays expanded into numbers, and chart data under `data` exactly as a dataframe's. A Vega-Lite chart's data travels as Arrow beside its specification, so it appears once, under `data`. |
 | Map                            | `st.map`'s plotted table under `data`, exactly as a dataframe's, without the Deck.gl specification generated from it. `st.pydeck_chart` reports its specification like any chart.                                                                          |
-| Image, audio, video, PDF       | Caption, `alt`, the `format` audio and video take, and the media URL the app already exposed to its own client. `st.image` reports them as the author passed the images: single values for one image, parallel lists for several. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way. |
-| HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML is fully readable. A URL iframe reports its `src`; the page it embeds is not observed. |
-| Download                       | Label, `file_name`, `mime` when the author set it, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, and its click — a rerun or the `on_click` callback — is an ordinary trigger, unless `on_click="ignore"` makes it a no-op. Only deferred generation, which carries a file ID instead of a URL, is unsupported. |
+| Image, audio, video            | Caption, `alt`, the `format` audio and video take, and the media URL the app already exposed to its own client. `st.image` reports them as the author passed the images: single values for one image, parallel lists for several. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way. |
+| HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML is fully readable. A URL iframe reports its `src`; the page it embeds is not observed. `st.pdf` renders through the `streamlit-pdf` custom component and is reported as one. |
+| Download                       | Label, `file_name`, `mime` when the author set it, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, and its click — a rerun or the `on_click` callback — is an ordinary trigger, unless `on_click="ignore"` leaves nothing to fire. Only deferred generation, which carries a file ID instead of a URL, is unsupported. |
 
 **`data.complete` is the field a client branches on, and it always resolves:**
 
@@ -925,7 +939,8 @@ Charts and maps:
 
 - **A chart given a specification rather than a dataframe is `complete`.**
   `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification,
-  so there is no table to serve and a client should stop looking for one. Plotly's theme
+  and an `st.vega_lite_chart` whose specification loads its data from a URL carries
+  that URL, so there is no table to serve and a client should stop looking for one. Plotly's theme
   styling is about nine tenths of a small figure, so it is dropped and named in
   `spec_omitted`; content a template adds, such as a "DRAFT" annotation, a shape, or an
   image, is kept, since removing decoration must not remove meaning. Base64 typed arrays
@@ -987,7 +1002,7 @@ back to a browser rather than mistake it for missing content:
 | Options that share a label                                                 | A value whose `format_func` label several options share is refused with `invalid_value` rather than resolved to one of them, so those options cannot be selected. |
 | `bind="query-params"` write-back                                           | Setting a bound widget drops its parameter from `query_params` instead of rewriting it, until the app writes it back. See [Actions in v1](#actions-in-v1); follow-up #8.      |
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context.headers` are the request's, minus `Cookie`, `Authorization`, and `Proxy-Authorization`; cookies are empty, and the other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
-| Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
+| Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`, and a table's rows beyond the preview are `unavailable: "undescribed"`. |
 | Output shown while a run is in progress                                    | Only the end state is reported: an `st.spinner` never appears, and `st.write_stream` output arrives as the finished text rather than chunk by chunk. A toast the run raised does appear. See [v1 is one operation](#v1-is-one-operation). |
 | Reading without running, polling                                           | Every `interact` executes the script; one with no changes is an explicit rerun, and the last snapshot stays current until the client acts. A slow run is collected by a retry after `run_timed_out`, with no partial results. Follow-up #4 adds a read and an operation handle. |
 
@@ -1017,6 +1032,7 @@ tests rather than for tuning per app.
 | Who the caller is                      | Anonymous                                             | `server.trustedUserHeaders`                                                   |
 | Error detail in a failed run           | As in the browser                                     | `client.showErrorDetails`                                                     |
 | Where the routes live                  | `/_stcore/agent/v1/…`                                 | `server.baseUrlPath`                                                          |
+| Where a session lives                  | One server process. Behind several replicas, requests need sticky routing, which a load balancer cannot derive from the `session_id` in the JSON body, so without it a later call gets `unknown_session` | The deployment; follow-up #1 |
 
 ### Security
 
@@ -1124,7 +1140,9 @@ cannot always tell where it is: Community Cloud strips its `/~/+/` prefix and te
 TLS without saying so, so the app sees `http://example.streamlit.app/_stcore/...` for a
 request to `https://example.streamlit.app/~/+/_stcore/...`, and any URL built from that
 points at the platform. The URL the client called is the one base that is always right.
-So the OpenAPI `servers` entry is `../../..`, resolved against the document's own URL, and
+So the OpenAPI `servers` entry is `../../..`, with one more `..` per segment of
+`server.baseUrlPath`, which the documented paths include, resolved against the
+document's own URL, and
 every `data.url` and media URL is relative to the request, such as `../../../media/<id>`:
 ordinary URL joining climbs out of `_stcore/agent/v1/` to the app's root, whatever prefix
 sits in front. The MCP endpoint and the `index.html` links use the same form.
@@ -1233,8 +1251,8 @@ numbered for reference rather than ranked.
    merits. Element-level alternative text has landed
    ([#8563](https://github.com/streamlit/streamlit/issues/8563)): `alt` exists on
    images, `st.pyplot`, tables, dataframes, the data editor, charts, maps, Mermaid and
-   Graphviz diagrams, audio, video, iframes, and `st.pdf`, and the snapshot reports it
-   as `props.alt` — exactly the author-written meaning this interface exists to surface.
+   Graphviz diagrams, audio, video, and iframes, and the snapshot reports it as
+   `props.alt` — exactly the author-written meaning this interface exists to surface.
    What remains is the app and page level: static `app_title`/`app_description` on
    `st.App`, `page_description` on `st.set_page_config` and optionally `st.Page`
    ([#16878](https://github.com/streamlit/streamlit/issues/16878)), and `help` on media
@@ -1268,7 +1286,9 @@ numbered for reference rather than ranked.
    pages of rows, because chat clients cannot resolve or parse a `data.url`. Each tool
    call takes the same path as an `interact` request, so its HTTP request's headers
    supply `st.user` and `st.context.headers` in the same way. It is written by hand
-   rather than on the MCP SDK, which keeps it free of new dependencies.
+   rather than on the MCP SDK, which keeps it free of new dependencies. MCP is how most
+   AI applications connect to tools, so this belongs in the same release cycle as v1 if
+   possible, together with #9.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2
@@ -1298,7 +1318,9 @@ numbered for reference rather than ranked.
    a 10,000-option selectbox adds about 80 KB to every call on its page, and a long
    Markdown document shown twice can pass half a megabyte. Through MCP every one of
    those bytes lands in a model's context, and a response over a client's tool-result
-   limit is lost to the model, which makes this the first follow-up to take after v1.
+   limit is lost to the model, which makes this, with #6, the first follow-up to take
+   after v1. A cheap first step is to leave Plotly's base64 `bdata` arrays unexpanded
+   above a size threshold, which keeps every value, though not in a form a model reads.
 10. **Agent sign-in for `st.login` apps.** In v1 an app that uses `st.login` shows
     agents its signed-out state: its identity is a signed cookie the browser gets at
     the end of the OAuth/OIDC redirect, which an agent cannot present. Every other
@@ -1326,20 +1348,26 @@ Smaller potential follow-ups and alternatives considered while building the prot
   dataset of a layered chart under `data.datasets`, with its own columns, preview, and
   URL, instead of `unavailable: multiple_datasets`; dropping an unnamed pandas index
   under `hide_index`, so `__index_level_0__` is not a meaningless extra column;
-  reporting a media element's URL as `data.url`, as a table's is; letting `get_data`
-  read the files of the last few results rather than only the latest; and keeping
-  only summaries in the session's message buffer.
+  reporting a media element's URL as `data.url`, as a table's is; describing `st.pdf`
+  as media rather than as the custom component it renders through; letting `get_data`
+  read the files of the last few results rather than only the latest; an HTTP route for
+  `get_data`, for HTTP clients without an Arrow reader that need rows beyond the
+  preview; and keeping only summaries in the session's message buffer.
 - **Sessions:** starting an agent session from a browser session's state, from widget
   values the page carries
   ([#17394](https://github.com/streamlit/streamlit/pull/17394)) or a fork that also
   copies code-only state and uploads
-  ([#17401](https://github.com/streamlit/streamlit/pull/17401)); and cookies from
-  requests without an `Origin` header, which browsers always send on a `POST`, so only
-  a program that set them on purpose supplies them.
+  ([#17401](https://github.com/streamlit/streamlit/pull/17401)); cookies from requests
+  without an `Origin` header, which browsers always send on a `POST`, so only a program
+  that set them on purpose supplies them; and accepting the `session_id` as a request
+  header too, which a load balancer can route on.
 - **Implementation:** generating descriptions at the public API boundary instead of per
-  command, building the snapshot's values on the script thread, one headless client
-  shared by `AppTest` and this interface, and a browser-versus-agent fidelity harness
-  covering every command.
+  command, building the snapshot's values on the script thread, recording descriptions
+  when a browser session fills an `st.cache_data` entry while the API is enabled, one
+  headless client shared by `AppTest` and this interface, and a browser-versus-agent
+  fidelity harness covering every command.
+- **Testing:** layout facts such as `st.columns` weights, for a coding agent checking its
+  own layout, which an e2e testing API would likely serve better than the snapshot.
 
 ## Beyond the app surface
 
