@@ -1374,6 +1374,32 @@ QA round 6 found the remaining gaps small, and all were fixed:
 Still open: a client that leaves during the snapshot build waits for it and then pays
 for a second build. The click still fires once.
 
+QA round 7 found the `null` fix overreaching. Sending an empty list to every single-value
+widget on a list wire also emptied a `required` group and a date input with a default.
+Neither can be emptied in a browser, and both are typed to never return `None`. So `null`
+now clears only what a browser user can empty despite a default: a single-select group
+that is not required, and `st.feedback`. Everything else is reset, as before.
+
+The same round also fixed these:
+
+- **`st.link_button(on_click=...)`:** it arrived with the `develop` merge as a trigger
+  the snapshot did not show. It is now a trigger, and the coverage test requires
+  `on_click` wherever a click can stay in the browser.
+- **Timed-out runs:** a session whose timed-out run was still going was reclaimed after
+  the TTL. The run now counts as activity. Checking that fix turned up an older race.
+  When a retry's wait ran out just as the run ended, the session already reported
+  "not running", but the run's last messages had not reached the client yet. The
+  retry then returned an empty page. A run that has just ended now gets a moment for
+  them.
+- **Agent options:** they refuse fractions, NaN, and infinity from `config.toml`.
+- **Integer values:** an integer widget takes `1.0` as `1`.
+- **`context`:** `context.locale` must look like a language tag, and
+  `context.timezone` must be an exact IANA name. On a case-insensitive filesystem,
+  loading the zone also found "europe/berlin".
+- **Smaller ones:**
+  - A chart with URL data no longer registers Arrow bytes nothing serves.
+  - `OPTIONS` gets the routes' own `405` with `Allow: POST`.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`

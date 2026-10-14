@@ -24,15 +24,18 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import hashlib
+import re
 import secrets
 import threading
 import time
+import zoneinfo
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import parse_qs, parse_qsl, urlencode
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from zoneinfo import ZoneInfo
 
 from streamlit import config
 from streamlit.elements.lib import agent_spec
@@ -67,6 +70,9 @@ _LOGGER: Final = get_logger(__name__)
 # st.rerun() starts another one. The browser has no equivalent because it
 # renders continuously; a single response has to know when to stop.
 _RUN_CHAIN_SETTLE_SECONDS: Final = 0.05
+
+# How long a run that has just ended gets for its last messages to arrive.
+_FINISH_GRACE_SECONDS: Final = 1.0
 
 # The longest an idle session outlives its TTL while no request arrives.
 _SWEEP_SECONDS: Final = 60.0
@@ -291,6 +297,16 @@ REQUEST_FIELDS: Final = frozenset({"session_id", *_ACTION_FIELDS})
 # Generous for a BCP 47 tag with extensions, which is what a browser reports.
 _MAX_LOCALE_LENGTH: Final = 64
 
+# The shape of a BCP 47 language tag: a language, then hyphenated subtags, as
+# in "de-DE" or "zh-Hans-CN". Not a POSIX locale such as "en_US.UTF-8", which a
+# browser never reports and a locale library would refuse.
+_LANGUAGE_TAG: Final = re.compile(r"[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*")
+
+
+@functools.cache
+def _known_timezones() -> frozenset[str]:
+    return frozenset(zoneinfo.available_timezones())
+
 
 @dataclass
 class _Interaction:
@@ -443,11 +459,13 @@ def _idle_since(session: AgentSession) -> float | None:
     """When a session last did anything, or None while a request is in flight.
 
     Activity is the client's last request or the last run finishing, whichever
-    is later. A run that outlasted `run_timed_out` is therefore kept while the
-    client keeps coming back for it, and gets a full TTL after it finishes to
-    be collected.
+    is later. A run that outlasted `run_timed_out` is still activity while it
+    goes, however long the client waits, and gets a full TTL after it finishes
+    to be collected.
     """
-    if session.busy:
+    if session.busy or (
+        session.timed_out is not None and not session.client.run_finished
+    ):
         return None
     return max(session.last_used, session.client.finished_at)
 
@@ -670,8 +688,9 @@ async def _settle(
         session.timed_out = interaction
         raise
     except TimeoutError as exc:
-        if _app_is_running(app_session):
-            session.timed_out = interaction
+        # Held while deciding, so a client that leaves meanwhile can collect.
+        session.timed_out = interaction
+        if not await _no_run_coming(app_session, session.client):
             elapsed = time.monotonic() - interaction.started
             raise AgentRequestError(
                 "run_timed_out",
@@ -682,9 +701,11 @@ async def _settle(
                 # Always included, because the remedy is a request on this session.
                 session_id=session.handle,
             ) from exc
-        # Nothing is running, so no run is coming: the runtime dropped the
-        # request, as it does after shutdown. Marking it timed out would make
-        # every retry wait for that run forever, so report the state as it is.
+        # The run settled after all, or nothing is running and no run is
+        # coming: the runtime dropped the request, as it does after shutdown.
+        # Holding it as timed out would make every retry wait for that run
+        # forever, so report the state as it is.
+        session.timed_out = None
 
     # Keep the query string the way a browser keeps its address bar: what was
     # sent, unless the run reported a change. Streamlit scopes widget-bound
@@ -786,6 +807,22 @@ def _app_is_running(app_session: Any) -> bool:
     from streamlit.runtime.app_session import AppSessionState
 
     return bool(app_session._state == AppSessionState.APP_IS_RUNNING)
+
+
+async def _no_run_coming(app_session: Any, client: AgentSessionClient) -> bool:
+    """After a timeout, whether the session has nothing left to settle.
+
+    The session stops reporting a run as running a moment before that run's
+    last messages reach this client. So a run that ended as the wait ran out
+    looks like no run at all, and its snapshot would be empty. Its messages
+    get a moment to arrive first.
+    """
+    if _app_is_running(app_session):
+        return False
+    with contextlib.suppress(TimeoutError):
+        await client.wait_until_settled(_FINISH_GRACE_SECONDS)
+        return True
+    return not _app_is_running(app_session)
 
 
 def _verify_page_exists(
@@ -1009,12 +1046,14 @@ def _parse_context(context: Any) -> ContextInfo:
     info = ContextInfo()
     timezone = context.get("timezone")
     if timezone is not None:
-        try:
-            zone = ZoneInfo(timezone) if isinstance(timezone, str) else None
-        # OSError: some Python versions raise IsADirectoryError for a name
-        # that is a directory of zones, such as "America".
-        except (ZoneInfoNotFoundError, ValueError, OSError):
-            zone = None
+        # Checked against the IANA names themselves rather than by loading the
+        # zone, which on a case-insensitive filesystem also finds
+        # "europe/berlin" and would hand the app that spelling.
+        zone = (
+            ZoneInfo(timezone)
+            if isinstance(timezone, str) and timezone in _known_timezones()
+            else None
+        )
         if zone is None:
             raise AgentRequestError(
                 "invalid_request",
@@ -1034,8 +1073,8 @@ def _parse_context(context: Any) -> ContextInfo:
     if locale is not None:
         if (
             not isinstance(locale, str)
-            or not locale
             or len(locale) > _MAX_LOCALE_LENGTH
+            or not _LANGUAGE_TAG.fullmatch(locale)
         ):
             raise AgentRequestError(
                 "invalid_request",

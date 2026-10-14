@@ -223,6 +223,9 @@ class ElementState(NamedTuple):
     # The JSON type its `value_schema` names, so a number is not accepted as
     # text where the wire form happens to be a string, as for `st.feedback`.
     schema_type: str | None = None
+    # Whether a browser user can empty it although it has a default, which
+    # decides whether `null` clears it or resets it.
+    clearable: bool = False
 
 
 @dataclass
@@ -483,6 +486,14 @@ class _SnapshotBuilder:
             command=description["type"],
             max_items=(description.get("value_schema") or {}).get("maxItems"),
             schema_type=(description.get("value_schema") or {}).get("type"),
+            # Clicking the selected option empties a single-select group
+            # unless it is required, and `st.feedback` always.
+            clearable=description["type"] == "feedback"
+            or (
+                description["type"] in {"segmented_control", "pills"}
+                and props.get("selection_mode") == "single"
+                and not props.get("required")
+            ),
         )
         if actionable:
             # The type and label name the entry, so a client can pick a generated
@@ -687,7 +698,7 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
         spec = _parse_json(payload.spec)
         if len(buffers) > 1:
             data = {"complete": False, "unavailable": "multiple_datasets"}
-        elif _loads_from_url(spec):
+        elif agent_spec.vega_loads_from_url(spec):
             # The browser fetches some or all of it from a URL in the
             # specification, which nothing here holds. Like a chart over
             # several dataframes, none of it is served then, rather than a
@@ -728,20 +739,6 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
         return map_data
 
     return None
-
-
-def _loads_from_url(spec: Any) -> bool:
-    """Whether a Vega-Lite specification loads any of its data from a URL,
-    at the top level, in a layer, or in a lookup.
-    """
-    if isinstance(spec, dict):
-        data = spec.get("data")
-        if isinstance(data, dict) and "url" in data:
-            return True
-        return any(_loads_from_url(value) for value in spec.values())
-    if isinstance(spec, list):
-        return any(_loads_from_url(item) for item in spec)
-    return False
 
 
 def _figure_data(spec: Any) -> dict[str, Any] | None:

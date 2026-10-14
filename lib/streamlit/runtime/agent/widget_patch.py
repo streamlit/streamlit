@@ -205,7 +205,7 @@ def build_widget_states(
     states = WidgetStates()
     touched_forms: set[str] = set()
 
-    for key, value in (widget_state or {}).items():
+    for key, sent in (widget_state or {}).items():
         element_id = resolve_element_id(session_state, key, element_states)
         metadata = _metadata(session_state, element_id, key, element_states)
 
@@ -223,11 +223,20 @@ def build_widget_states(
             )
 
         state = element_states[element_id]
-        if state.schema_type in {"integer", "number"} and isinstance(value, str):
+        if state.schema_type in {"integer", "number"} and isinstance(sent, str):
             raise AgentRequestError(
                 "invalid_value",
                 f"{key!r} takes a number, as its `value_schema` says, not text.",
             )
+        # JSON Schema counts 1.0 as an integer, and some JSON writers emit whole
+        # numbers that way; `st.feedback` matches its index as text.
+        value = (
+            int(sent)
+            if state.schema_type == "integer"
+            and isinstance(sent, float)
+            and sent.is_integer()
+            else sent
+        )
         if (
             state.max_items is not None
             and isinstance(value, list)
@@ -257,7 +266,7 @@ def build_widget_states(
             # An option's reported value can be a number, such as
             # `st.feedback`'s index; free text cannot.
             option_labels=frozenset(metadata.formatted_options or state.options or ()),
-            schema_type=state.schema_type,
+            clearable=state.clearable,
         )
         _check_readable(key, metadata, encoded)
         states.widgets.append(encoded)
@@ -604,7 +613,7 @@ def _encode(
     key: str,
     *,
     option_labels: frozenset[str],
-    schema_type: str | None = None,
+    clearable: bool = False,
 ) -> WidgetState:
     """Write a JSON value into the ``WidgetState`` arm the widget registered.
 
@@ -621,16 +630,14 @@ def _encode(
     state.id = element_id
 
     if value is None:
-        # `null` clears a widget whose empty value is null, as clearing it in
-        # the browser does, and resets any other to its default. An unset value
-        # means "use the default" to every widget, so a widget that tells
-        # "cleared" apart gets the form its browser sends.
-        if is_array_value_field_name(value_type) and schema_type != "array":
-            # A single-select button group clears on an empty list; a single
-            # slider reads one as its default.
+        # An unset value means "use the default" to every widget, which is what
+        # `null` does unless a browser user could empty the widget instead.
+        # Then it gets the form that browser sends.
+        if clearable and is_array_value_field_name(value_type):
+            # A single-select button group: an empty list.
             getattr(state, value_type).SetInParent()
-        elif value_type == "string_value" and schema_type == "integer":
-            # `st.feedback` carries its index as text, and "" is cleared.
+        elif clearable and value_type == "string_value":
+            # `st.feedback`, which carries its index as text: "".
             state.string_value = ""
         return state
 

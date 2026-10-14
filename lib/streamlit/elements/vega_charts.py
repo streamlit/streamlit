@@ -2868,10 +2868,12 @@ class VegaChartsMixin:
             # Selections cannot be sent through this interface. A chart without
             # them has nothing to send, so it is fully supported.
             support="read_only_in_v1" if selection_mode else None,
+            # Not registered when other data comes from a URL: the snapshot
+            # then serves none of it, so the copy would only hold memory.
             data_url=data_offload.serve_arrow_over_http(
                 buffers[0], coordinates=self.dg._get_delta_path_str()
             )
-            if len(buffers) == 1
+            if len(buffers) == 1 and not agent_spec.vega_loads_from_url(proto.spec)
             else None,
             alt=agent_spec.proto_alt(proto),
             **own_arguments,

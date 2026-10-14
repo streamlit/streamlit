@@ -321,7 +321,8 @@ not:
 - **The script on disk:** an edit takes effect on the session's next interaction, with
   its session state kept, so a coding agent can edit and re-check in one session, or omit
   `session_id` for a clean start. `server.runOnSave` does not apply: an edit never starts
-  a run the client did not ask for.
+  a run the client did not ask for. As for a browser session, the edit is noticed by the
+  file watcher, so with `server.fileWatcherType = "none"` the old script keeps running.
 - **From the request:** `st.context.headers` are the request's, minus `Cookie` and the
   credentials meant for whatever fronts the app (`Authorization`,
   `Proxy-Authorization`), refreshed on every interaction, and only when a run starts,
@@ -815,8 +816,10 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
   the schema stricter than v1, which resets an out-of-range number rather than refusing
   it.
 - **`null` is accepted on top of it.** An empty widget reports `null`, and sending
-  `null` clears a widget whose empty value is `null` and resets any other to its
-  default, so a list-valued widget is cleared with `[]`.
+  `null` resets a widget to its default, as the browser does, except where a browser
+  user can empty a widget that has one: a single-select `st.segmented_control` or
+  `st.pills` that is not `required`, and `st.feedback`, which `null` clears. A
+  list-valued widget is cleared with `[]`.
 - **Each command declares it, with the rest of its description.** Only the command knows
   for certain whether it holds a range, a whole number, or a date, including while it is
   empty, so an empty `st.feedback` still says `integer`. A few shared building blocks

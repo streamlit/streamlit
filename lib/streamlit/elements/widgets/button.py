@@ -1637,12 +1637,18 @@ class ButtonMixin:
             layout_config=layout_config,
             agent_props=agent_spec.element(
                 "link_button",
+                # With `on_click`, a click also reaches the server, as a rerun
+                # or the callback, and a client can fire that without opening
+                # the URL.
+                key=link_button_proto.id or key,
+                action="trigger" if is_rerun_mode else None,
                 label=label,
                 url=url,
                 help=help,
                 icon=icon,
                 type=type,
                 disabled=disabled,
+                on_click="rerun" if is_rerun_mode else "ignore",
             ),
         )
 

@@ -19,6 +19,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import math
 import os
 import re
 import secrets
@@ -3328,19 +3329,27 @@ WebSocket connection.
                 "iframe) will not work."
             )
 
-    # The agent API's bounds only bound something when they are positive: a
+    # The agent API's bounds only bound something as positive whole numbers: a
     # TTL of zero reclaims every session at once, a run timeout of zero answers
     # every request with `run_timed_out`, and a session cap of zero refuses all.
+    # `config.toml` can also set a fraction, NaN, or infinity, which the CLI and
+    # environment variables cannot.
     for name in (
         "server.agentMaxSessions",
         "server.agentRunTimeout",
         "server.agentSessionTTL",
     ):
         value = get_option(name)
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+            or value != int(value)
+            or value <= 0
+        ):
             raise RuntimeError(
                 f"Invalid value for config option {name}: {value!r}. It must be "
-                "a number greater than 0."
+                "a whole number greater than 0."
             )
 
 

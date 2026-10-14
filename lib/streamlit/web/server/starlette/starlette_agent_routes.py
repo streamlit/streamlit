@@ -531,8 +531,8 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         Route(
             interact_path,
             _interact_endpoint,
-            methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+            methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         ),
         Route(schema_path, _schema_endpoint, methods=["GET"]),
-        Route(mcp_path, _mcp_endpoint, methods=["GET", "POST", "DELETE"]),
+        Route(mcp_path, _mcp_endpoint, methods=["GET", "POST", "DELETE", "OPTIONS"]),
     ]

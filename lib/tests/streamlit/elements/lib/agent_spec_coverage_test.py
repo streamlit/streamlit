@@ -321,6 +321,27 @@ class AgentDescriptionCoverageTest(DeltaGeneratorTestCase):
         )
 
     @parameterized.expand(_DESCRIBED_COMMANDS)
+    def test_optional_triggers_report_on_click(self, command: str) -> None:
+        """A button whose click may stay in the browser says whether it does.
+
+        With `on_click="ignore"` a click never reaches the server, so whether
+        the element is a trigger at all depends on the mode.
+        """
+        on_click = inspect.signature(getattr(st, command)).parameters.get("on_click")
+        if on_click is None or "ignore" not in str(on_click.annotation):
+            return
+        unreported = [
+            keywords
+            for keywords in self._own_calls(command)
+            if "on_click" not in keywords
+        ]
+        assert not unreported, (
+            f"st.{command} can keep a click in the browser with "
+            "`on_click='ignore'`, but its description does not report `on_click`. "
+            "Pass the mode, and `action='trigger'` when a click reaches the server."
+        )
+
+    @parameterized.expand(_DESCRIBED_COMMANDS)
     def test_description_matches_signature(self, command: str) -> None:
         described = self._described_names(command)
         assert described is not None, (

@@ -329,6 +329,28 @@ def vega_arrow_buffers(proto: Any) -> list[bytes]:
     return buffers
 
 
+def vega_loads_from_url(spec: Any) -> bool:
+    """Whether a Vega-Lite specification loads any of its data from a URL,
+    at the top level, in a layer, or in a lookup.
+
+    The browser fetches that data itself, so no Arrow buffer holds all of the
+    chart's data. ``spec`` is the parsed specification or its JSON text.
+    """
+    if isinstance(spec, str):
+        try:
+            spec = json.loads(spec)
+        except ValueError:
+            return False
+    if isinstance(spec, dict):
+        data = spec.get("data")
+        if isinstance(data, dict) and "url" in data:
+            return True
+        return any(vega_loads_from_url(value) for value in spec.values())
+    if isinstance(spec, list):
+        return any(vega_loads_from_url(item) for item in spec)
+    return False
+
+
 def described_column_config(column_config_mapping: Any) -> Any:
     """Describe a column configuration from the mapping Streamlit resolved.
 
