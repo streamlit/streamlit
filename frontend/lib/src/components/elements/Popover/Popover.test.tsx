@@ -16,7 +16,7 @@
 
 import type { ReactElement, ReactNode } from "react"
 
-import { screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
@@ -28,6 +28,15 @@ import { iconSizes } from "~lib/theme/primitives/iconSizes"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Popover, { clampPopoverSize, type PopoverProps } from "./Popover"
+
+/** Let the popover's post-ref visibility check run inside `act`. */
+async function flushPopoverVisibilityCheck(): Promise<void> {
+  await act(async () => {
+    await new Promise<void>(resolve => {
+      queueMicrotask(resolve)
+    })
+  })
+}
 
 const createWidgetMgr = (): WidgetStateManager =>
   new WidgetStateManager({
@@ -350,7 +359,7 @@ describe("Popover container", () => {
       restoreCheckVisibility()
     })
 
-    it("stays open when mounted inside an expanded expander", () => {
+    it("stays open when mounted inside an expanded expander", async () => {
       const widgetMgr = createWidgetMgr()
       const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
       const widgetId = "popover-widget-id"
@@ -368,6 +377,7 @@ describe("Popover container", () => {
           </Popover>
         </DetailsOpenFromRef>
       )
+      await flushPopoverVisibilityCheck()
 
       expect(screen.getByText("popover content")).toBeInTheDocument()
       expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
@@ -381,7 +391,7 @@ describe("Popover container", () => {
       )
     })
 
-    it("keeps a restored passive open state inside an expanded expander", () => {
+    it("keeps a restored passive open state inside an expanded expander", async () => {
       const blockId = "$$ID-abc123-my_popover"
       const widgetMgr = createWidgetMgr()
       widgetMgr.setElementState(blockId, "open", true)
@@ -393,12 +403,13 @@ describe("Popover container", () => {
           </Popover>
         </DetailsOpenFromRef>
       )
+      await flushPopoverVisibilityCheck()
 
       expect(screen.getByText("popover content")).toBeInTheDocument()
       expect(widgetMgr.getElementState(blockId, "open")).toBe(true)
     })
 
-    it("still closes when mounted inside a collapsed expander", () => {
+    it("still closes when mounted inside a collapsed expander", async () => {
       const widgetMgr = createWidgetMgr()
       const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
       const widgetId = "popover-widget-id"
@@ -416,6 +427,7 @@ describe("Popover container", () => {
           </Popover>
         </DetailsOpenFromRef>
       )
+      await flushPopoverVisibilityCheck()
 
       expect(screen.queryByText("popover content")).not.toBeInTheDocument()
       expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
@@ -425,7 +437,7 @@ describe("Popover container", () => {
       })
     })
 
-    it("records a non-user close when the expanded expander is inside a hidden tab", () => {
+    it("records a non-user close when the expanded expander is inside a hidden tab", async () => {
       // The closed <details> must not hide an inactive tab. The user never
       // saw this popover, so the close is not a user action.
       const widgetMgr = createWidgetMgr()
@@ -447,6 +459,7 @@ describe("Popover container", () => {
           </DetailsOpenFromRef>
         </div>
       )
+      await flushPopoverVisibilityCheck()
 
       expect(screen.queryByText("popover content")).not.toBeInTheDocument()
       expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
@@ -454,6 +467,68 @@ describe("Popover container", () => {
         fragmentId,
         fromUser: false,
       })
+    })
+
+    it("records a non-user close when an inactive tab is inside an expanded expander", async () => {
+      // The tab hides the trigger even though the expander's <details> is
+      // visible. The ref's open mutation must not record a user close.
+      const widgetMgr = createWidgetMgr()
+      const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+      const widgetId = "popover-widget-id"
+      const fragmentId = "frag-1"
+
+      render(
+        <DetailsOpenFromRef expanded={true}>
+          <div className="is-hidden">
+            <Popover
+              {...getProps(
+                { id: widgetId, open: true },
+                { widgetMgr, fragmentId }
+              )}
+            >
+              <div>popover content</div>
+            </Popover>
+          </div>
+        </DetailsOpenFromRef>
+      )
+      await flushPopoverVisibilityCheck()
+
+      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+      expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
+        formId: undefined,
+        fragmentId,
+        fromUser: false,
+      })
+    })
+
+    it("stays open inside nested expanded expanders", async () => {
+      const widgetMgr = createWidgetMgr()
+      const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+      const widgetId = "popover-widget-id"
+
+      render(
+        <DetailsOpenFromRef expanded={true}>
+          <DetailsOpenFromRef expanded={true}>
+            <Popover
+              {...getProps({ id: widgetId, open: true }, { widgetMgr })}
+            >
+              <div>popover content</div>
+            </Popover>
+          </DetailsOpenFromRef>
+        </DetailsOpenFromRef>
+      )
+      await flushPopoverVisibilityCheck()
+
+      expect(screen.getByText("popover content")).toBeInTheDocument()
+      expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+        widgetId,
+        false,
+        expect.anything()
+      )
     })
   })
 
@@ -747,7 +822,7 @@ describe("Dynamic popover (widget mode)", () => {
     })
   })
 
-  it("does not record a user close when it mounts already hidden", () => {
+  it("does not record a user close when it mounts already hidden", async () => {
     // Restored open inside a collapsed expander. The user never saw it, so
     // the close must not use fromUser and must not start a rerun.
     const widgetMgr = createWidgetMgr()
@@ -770,6 +845,7 @@ describe("Dynamic popover (widget mode)", () => {
         </div>
       </details>
     )
+    await flushPopoverVisibilityCheck()
 
     expect(screen.queryByText("popover content")).not.toBeInTheDocument()
     expect(setBoolValueSpy).not.toHaveBeenCalledWith(

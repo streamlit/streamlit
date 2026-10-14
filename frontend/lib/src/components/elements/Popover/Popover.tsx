@@ -27,6 +27,7 @@ import {
 } from "react"
 
 import { FloatingPortal, type Middleware, size } from "@floating-ui/react"
+import { flushSync } from "react-dom"
 
 import type { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -123,11 +124,6 @@ const TRIGGER_VISIBILITY_ATTRIBUTES = [
  * - Expander collapse sets `inert` on the panel inside `<details>` before the
  *   height animation finishes, so that `inert` counts as hidden.
  * - Dialog `inert` sits on an ancestor outside `<details>` and leaves the popover open.
- * - A still-closed `<details>` hides its contents before Expander's ref sets
- *   `open`. When that panel has no `inert` and the `<details>` element itself
- *   is visible, the expander is expanded and this check must not close the
- *   popover. The ref's `open` mutation rechecks. A hidden ancestor of the
- *   `<details>` (an inactive tab) still counts.
  * - When `checkVisibility` is missing, only expander `inert` and the `hidden`
  *   attribute count.
  */
@@ -144,17 +140,7 @@ function isPopoverTriggerHidden(trigger: HTMLElement): boolean {
   if (typeof trigger.checkVisibility !== "function") {
     return false
   }
-  if (trigger.checkVisibility()) {
-    return false
-  }
-  // Closed `<details>` content is `display: none` until `attachDetails` sets
-  // `open`. Collapsed expanders already returned above via `inert`. If the
-  // `<details>` element itself is hidden, an ancestor (inactive tab) hid it.
-  const details = trigger.closest("details")
-  if (details !== null && !details.open && details.checkVisibility()) {
-    return false
-  }
-  return true
+  return !trigger.checkVisibility()
 }
 
 const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
@@ -490,14 +476,17 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // - an inactive tab sets `display: none`, and React Aria stops the tab
   //   click before the document click listener
   // - a collapsed expander sets `inert` before the height animation ends
-  // The first check covers a trigger that mounted already hidden, and that
-  // close is not a user action. A still-closed `<details>` with no `inert`
-  // is an expanded expander whose ref has not set `open` yet, so that check
-  // leaves it open.
+  // The first check waits until ancestor refs have run. Expander sets
+  // `<details open>` in a ref, which React attaches after this layout
+  // effect. That close is not a user action. The observer starts after the
+  // check, so that ref mutation is not recorded as a user close.
   useLayoutEffect(() => {
     if (!open) return
     const trigger = triggerRef.current
     if (!trigger) return
+
+    let cancelled = false
+    let observer: MutationObserver | null = null
 
     const closeIfHidden = (fromUser: boolean): void => {
       if (isPopoverTriggerHidden(trigger)) {
@@ -505,25 +494,41 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       }
     }
 
-    // An already-hidden trigger produces no later mutation, for example a
-    // popover restored open inside an inactive tab.
-    closeIfHidden(false)
+    queueMicrotask(() => {
+      if (cancelled) return
+      // Ancestor refs have run. A trigger that is still hidden mounted that
+      // way; the user never saw it. Flush so the portal unmounts before paint.
+      if (isPopoverTriggerHidden(trigger)) {
+        /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
+         * The body is already in the portal. Flush so it unmounts before
+         * paint instead of sitting on the viewport corner for a frame.
+         */
+        flushSync(() => {
+          closePopover(false)
+        })
+        return
+      }
+      if (cancelled) return
 
-    // The tab panel or expander is the node that changes. MutationObserver
-    // does not bubble, so observe each ancestor.
-    const observer = new MutationObserver(() => {
-      closeIfHidden(true)
-    })
-    let node: HTMLElement | null = trigger
-    while (node) {
-      observer.observe(node, {
-        attributes: true,
-        attributeFilter: TRIGGER_VISIBILITY_ATTRIBUTES,
+      // The tab panel or expander is the node that changes. MutationObserver
+      // does not bubble, so observe each ancestor.
+      observer = new MutationObserver(() => {
+        closeIfHidden(true)
       })
-      node = node.parentElement
-    }
+      let node: HTMLElement | null = trigger
+      while (node) {
+        observer.observe(node, {
+          attributes: true,
+          attributeFilter: TRIGGER_VISIBILITY_ATTRIBUTES,
+        })
+        node = node.parentElement
+      }
+    })
 
-    return () => observer.disconnect()
+    return () => {
+      cancelled = true
+      observer?.disconnect()
+    }
   }, [open, closePopover])
 
   // Merge the floating ref with our local popoverBodyRef for dismissal logic.
