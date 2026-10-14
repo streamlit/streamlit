@@ -1272,10 +1272,8 @@ numbered for reference rather than ranked.
    second, read-only `get_data` tool serves the files a result references, tables as
    pages of rows, because chat clients cannot resolve or parse a `data.url`. Each tool
    call takes the same path as an `interact` request, so its HTTP request's headers
-   supply `st.user` and `st.context.headers` in the same way. `get_data` gets an HTTP
-   route as well, so an HTTP client without an Arrow reader can page a table as JSON.
-   It is written by hand rather than on the MCP SDK, which keeps it free of new
-   dependencies. MCP is how most AI applications connect to tools, so this belongs in
+   supply `st.user` and `st.context.headers` in the same way. It is written by hand
+   rather than on the MCP SDK, which keeps it free of new dependencies. MCP is how most AI applications connect to tools, so this belongs in
    the same release cycle as v1 if possible, together with #9.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
@@ -1337,8 +1335,9 @@ Smaller potential follow-ups and alternatives considered while building the prot
   URL, instead of `unavailable: multiple_datasets`; dropping an unnamed pandas index
   under `hide_index`, so `__index_level_0__` is not a meaningless extra column;
   reporting a media element's URL as `data.url`, as a table's is; letting `get_data`
-  read the files of the last few results rather than only the latest; and keeping
-  only summaries in the session's message buffer.
+  read the files of the last few results rather than only the latest; an HTTP route for
+  `get_data`, for HTTP clients without an Arrow reader that need rows beyond the
+  preview; and keeping only summaries in the session's message buffer.
 - **Sessions:** starting an agent session from a browser session's state, from widget
   values the page carries
   ([#17394](https://github.com/streamlit/streamlit/pull/17394)) or a fork that also
