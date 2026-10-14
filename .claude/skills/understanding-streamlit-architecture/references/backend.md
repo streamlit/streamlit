@@ -73,9 +73,14 @@ Executes user scripts in isolated thread.
 
 `ScriptData` / `RuntimeConfig` carry `main_script_path` and an optional
 `script_entrypoint` callable. For a callable entrypoint, `main_script_path` is
-the callable's own source file (not a decorator module, and not a library the
-callable wraps): it is used for static files, source watching, and
-`sys.path` during runs. Script-level config and secrets come from the launched
+the outermost non-installed source file. A nested decorator wrapper is skipped
+when the wrapped function's module imports that decorator; a nested wrapper the
+app defines around another module stays on the wrapper. When every candidate
+is installed, the outermost installed file is used, which for `functools.partial`
+of a library function is that library file. The path is used for static files,
+source watching, and `sys.path` during runs. Prepending that directory can load
+a package module twice (`myproj.ui.models` and `models`) when the callable lives
+inside a package. Script-level config and secrets come from the launched
 file under `streamlit run` and `App.run()`, and from the callable source only
 when no launched file is set (uvicorn). When `script_entrypoint` is set (via
 `st.App(callable)`), ScriptRunner invokes that callable instead of compiling

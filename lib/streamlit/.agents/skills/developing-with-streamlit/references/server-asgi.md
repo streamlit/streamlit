@@ -160,11 +160,15 @@ Callable requirements and behavior:
 - Must be invokable without arguments. Async and generator callables are not
   supported.
 - Must be defined in a filesystem-backed Python source file. Streamlit uses
-  that callable's file for `static/` files and source watching. A decorator
-  defined in another module does not replace it, and a wrapper around another
-  function stays on the wrapper. If the only source file is inside an
-  installed package (`site-packages`, `dist-packages`, or this interpreter's
-  site roots), Streamlit uses that library file.
+  that file for `static/` files and source watching. It prefers the outermost
+  source file outside an installed package (`site-packages`, `dist-packages`,
+  or this interpreter's site roots), including a nested wrapper the app
+  defines around another module. A decorator is skipped only when the wrapped
+  function's module imports that decorator. When every source file is inside
+  an installed package, the outermost of those files is used. The callable's
+  directory is also prepended to `sys.path` during runs, so a callable that
+  lives inside a package can be imported under its package name and as a
+  top-level module.
 - Script-level `config.toml` and `secrets.toml` come from the launched file
   under `streamlit run` and `App.run()` (`python app.py`). They come from the
   callable source only when no launched file is set, such as under uvicorn.

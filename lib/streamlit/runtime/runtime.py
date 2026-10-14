@@ -127,6 +127,8 @@ class RuntimeConfig:
     # Callable that ScriptRunner invokes instead of executing script_path.
     # script_path is then the callable's source file and still determines
     # static file serving, source watching, and sys.path during runs.
+    # That directory is prepended to sys.path, so a callable inside a package
+    # can also be imported as a top-level module.
     script_entrypoint: Callable[[], None] | None = None
 
     # TODO(vdonato): Eventually add a new fragment_storage_class field enabling the code

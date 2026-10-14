@@ -161,7 +161,7 @@ class RuntimeTest(RuntimeTestCase):
         self.runtime.disconnect_session(session_id)
         assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
 
-    async def test_connect_session_propagates_script_entrypoint(self):
+    async def test_connect_session_propagates_script_entrypoint(self) -> None:
         """The Runtime retains the callable on each session's ScriptData."""
 
         def main() -> None:

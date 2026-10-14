@@ -1889,6 +1889,123 @@ class TestAppInit:
 
         assert app.script_path == app_file.resolve()
 
+    def test_app_anchors_nested_wrapper_around_in_repo_library(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A nested wrapper around an in-repo library stays on the wrapper file."""
+        lib_dir = tmp_path / "nested_lib"
+        app_dir = tmp_path / "nested_app"
+        lib_dir.mkdir()
+        app_dir.mkdir()
+        (lib_dir / "st_app_callable_nested_repo_lib.py").write_text(
+            "def render():\n    pass\n"
+        )
+        app_file = app_dir / "st_app_callable_nested_repo_app.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_nested_repo_lib import render\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper():\n"
+            "        return fn()\n"
+            "    return wrapper\n"
+            "\n"
+            "entry = deco(render)\n"
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(app_dir))
+        module_names = (
+            "st_app_callable_nested_repo_lib",
+            "st_app_callable_nested_repo_app",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_nested_repo_app")
+        try:
+            app = App(app_mod.entry)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_partial_decorator_on_wrapped_app(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """wraps(fn)(partial(invoke, fn)) anchors on the app, not invoke."""
+        deco_dir = tmp_path / "partial_deco"
+        app_dir = tmp_path / "partial_deco_app"
+        deco_dir.mkdir()
+        app_dir.mkdir()
+        (deco_dir / "st_app_callable_partial_deco.py").write_text(
+            "import functools\n"
+            "\n"
+            "def invoke(fn, *args, **kwargs):\n"
+            "    return fn(*args, **kwargs)\n"
+            "\n"
+            "def deco(fn):\n"
+            "    return functools.wraps(fn)(functools.partial(invoke, fn))\n"
+        )
+        app_file = app_dir / "st_app_callable_partial_deco_app.py"
+        app_file.write_text(
+            "from st_app_callable_partial_deco import deco\n"
+            "\n"
+            "@deco\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(deco_dir))
+        monkeypatch.syspath_prepend(str(app_dir))
+        module_names = (
+            "st_app_callable_partial_deco",
+            "st_app_callable_partial_deco_app",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_partial_deco_app")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_outer_file_when_every_candidate_is_installed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An installed wrapper wins over the installed callable it wraps."""
+        site_dir = tmp_path / "site-packages"
+        site_dir.mkdir()
+        (site_dir / "st_app_callable_installed_inner.py").write_text(
+            "def render():\n    pass\n"
+        )
+        outer_file = site_dir / "st_app_callable_installed_outer.py"
+        outer_file.write_text(
+            "import functools\n"
+            "from st_app_callable_installed_inner import render\n"
+            "\n"
+            "@functools.wraps(render)\n"
+            "def main():\n"
+            "    return render()\n"
+        )
+        monkeypatch.syspath_prepend(str(site_dir))
+        module_names = (
+            "st_app_callable_installed_inner",
+            "st_app_callable_installed_outer",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_installed_outer")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == outer_file.resolve()
+
     def test_app_anchors_partial_subclass_that_overrides_call(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

@@ -237,12 +237,11 @@ def _next_wrapped(obj: Any) -> Any | None:
     return wrapped
 
 
-def _is_decorator_local(candidate: Any) -> bool:
+def _is_nested_function(candidate: Any) -> bool:
     """Return whether ``candidate`` was defined inside another function.
 
-    Decorator wrappers are usually nested functions (``deco.<locals>.wrapper``).
     ``functools.wraps`` overwrites ``__qualname__``, so the code object's
-    original qualname is what distinguishes that wrapper from the app callable.
+    original qualname is what shows the function was nested.
     """
     qualname = None
     try:
@@ -254,6 +253,61 @@ def _is_decorator_local(candidate: Any) -> bool:
     except (AttributeError, TypeError, ValueError):
         return False
     return isinstance(qualname, str) and "<locals>" in qualname
+
+
+def _module_references_module(importer_name: str, target_name: str) -> bool:
+    """Return whether ``importer_name``'s module globals reference ``target_name``."""
+    importer = sys.modules.get(importer_name)
+    if importer is None:
+        return False
+    target = sys.modules.get(target_name)
+    try:
+        values = vars(importer).values()
+    except TypeError:
+        return False
+    for value in values:
+        if target is not None and value is target:
+            return True
+        try:
+            if (
+                inspect.ismodule(value)
+                and getattr(value, "__name__", None) == target_name
+            ):
+                return True
+            if getattr(value, "__module__", None) == target_name:
+                return True
+        except (AttributeError, TypeError, ValueError):
+            continue
+    return False
+
+
+def _is_imported_decorator_wrapper(candidate: Any) -> bool:
+    """Return whether ``candidate`` is a nested decorator another module applied.
+
+    The wrapper's code lives in the decorator module, and the wrapped function's
+    module imports that decorator. A nested wrapper defined in the app around
+    another module has no such back-reference, so the wrapper file stays.
+    """
+    if not _is_nested_function(candidate):
+        return False
+    wrapped = _next_wrapped(candidate)
+    if wrapped is None:
+        return False
+    try:
+        wrapper_globals = getattr(candidate, "__globals__", None)
+        wrapper_module = (
+            wrapper_globals.get("__name__") if wrapper_globals is not None else None
+        )
+        wrapped_module = getattr(wrapped, "__module__", None)
+    except (AttributeError, TypeError, ValueError):
+        return False
+    if (
+        not isinstance(wrapper_module, str)
+        or not isinstance(wrapped_module, str)
+        or wrapper_module == wrapped_module
+    ):
+        return False
+    return _module_references_module(wrapped_module, wrapper_module)
 
 
 def _callable_source_candidates(obj: Any) -> list[Any]:
@@ -282,12 +336,13 @@ def _callable_source_candidates(obj: Any) -> list[Any]:
         wrapped = _next_wrapped(current)
 
         if _uses_inherited_partial_call(current):
-            # .func is the object partial.__call__ invokes. Push it last so
-            # it is visited next, ahead of any __wrapped__ edge.
-            if wrapped is not None and id(wrapped) not in seen:
-                stack.append(wrapped)
+            # wraps(fn)(partial(helper, fn)) stores the app function on
+            # __wrapped__ and the helper on .func. Visit the app function
+            # first so the helper's module does not win.
             if id(current.func) not in seen:
                 stack.append(current.func)
+            if wrapped is not None and id(wrapped) not in seen:
+                stack.append(wrapped)
             continue
 
         # Partial instances are routines, but an overridden __call__ is still
@@ -364,29 +419,35 @@ def _is_installed_package_path(path: Path) -> bool:
 def _resolve_callable_source_path(obj: Any) -> Path:
     """Resolve the filesystem source path for a callable entrypoint.
 
-    The outermost source file outside an installed package wins, so a wrapper
-    around an in-repo or editable library stays on the wrapper. Nested
-    decorator wrappers (``<locals>``) are skipped, so a decorator defined in
-    another module does not hide the app callable. When every file is inside
-    an installed package, the innermost library file is used.
+    The outermost source file outside an installed package wins, including a
+    nested wrapper the app defines around another module. A nested decorator
+    is skipped when the wrapped function's module imports that decorator, so
+    the decorator file does not hide the app callable. When every file is
+    inside an installed package, the outermost of those files is used.
     """
     fallback: Path | None = None
-    decorator_local: Path | None = None
+    installed: Path | None = None
+    decorator_wrapper: Path | None = None
     chosen: Path | None = None
     for candidate in _callable_source_candidates(obj):
         candidate_path = _candidate_source_file(candidate)
         if candidate_path is None:
             continue
-        fallback = candidate_path
+        if fallback is None:
+            fallback = candidate_path
+        imported_decorator = _is_imported_decorator_wrapper(candidate)
         if _is_installed_package_path(candidate_path):
+            if installed is None and not imported_decorator:
+                installed = candidate_path
             continue
-        if _is_decorator_local(candidate):
-            decorator_local = candidate_path
+        if imported_decorator:
+            if decorator_wrapper is None:
+                decorator_wrapper = candidate_path
             continue
         chosen = candidate_path
         break
 
-    script_path = chosen or decorator_local or fallback
+    script_path = chosen or installed or decorator_wrapper or fallback
     if script_path is None:
         raise StreamlitAPIException(
             "The st.App callable entrypoint must be defined in a "

@@ -195,7 +195,7 @@ class ScriptRunnerTest(unittest.TestCase):
         finally:
             scriptrunner.join()
 
-    def test_callable_entrypoint_runs_on_full_rerun(self):
+    def test_callable_entrypoint_runs_on_full_rerun(self) -> None:
         """Callable entrypoints run on full reruns without compiling the script path."""
         call_count = 0
         original_main_module = sys.modules["__main__"]
@@ -221,7 +221,7 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner._script_cache.get_bytecode.assert_not_called()
         assert sys.modules["__main__"] is original_main_module
 
-    def test_callable_entrypoint_rejects_wrapped_async_return(self):
+    def test_callable_entrypoint_rejects_wrapped_async_return(self) -> None:
         """Wrappers that return a coroutine are rejected at invocation."""
 
         def deco(fn: Any) -> Any:
@@ -342,7 +342,7 @@ class ScriptRunnerTest(unittest.TestCase):
             assert ran is False
             assert task.cancelled()
 
-    def test_callable_entrypoint_uses_normal_error_handling(self):
+    def test_callable_entrypoint_uses_normal_error_handling(self) -> None:
         """Exceptions from callable entrypoints use the standard script error path."""
         error_handler = MagicMock(return_value=None)
         error = ValueError("callable failed")
@@ -366,7 +366,7 @@ class ScriptRunnerTest(unittest.TestCase):
             for element in scriptrunner.elements()
         )
 
-    def test_fragment_rerun_does_not_call_callable_entrypoint(self):
+    def test_fragment_rerun_does_not_call_callable_entrypoint(self) -> None:
         """Fragment-only reruns invoke the fragment, not the callable entrypoint."""
         main = MagicMock()
         fragment = MagicMock()
@@ -383,7 +383,7 @@ class ScriptRunnerTest(unittest.TestCase):
         main.assert_not_called()
         fragment.assert_called_once()
 
-    def test_callable_entrypoint_takes_precedence_over_pages_directory(self):
+    def test_callable_entrypoint_takes_precedence_over_pages_directory(self) -> None:
         """A callable entrypoint runs instead of the pages-directory MPA path."""
         main = MagicMock()
         scriptrunner = TestScriptRunner("good_script.py", script_entrypoint=main)

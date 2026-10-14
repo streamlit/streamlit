@@ -150,10 +150,13 @@ app = st.App(main)
   process after changing its definition. A save-triggered rerun still executes that
   retained object until the process restarts.
 - The callable must be defined in a filesystem-backed Python source file. That file
-  is used for `static/` serving and source watching. A decorator defined in another
-  module does not replace it, and a wrapper around another function stays on the
-  wrapper. If the only source file is inside an installed package, that library
-  file is used.
+  is used for `static/` serving and source watching. Streamlit prefers the outermost
+  source file outside an installed package, including a nested wrapper the app defines
+  around another module. A nested decorator is skipped when the wrapped function's
+  module imports that decorator. When every source file is inside an installed package,
+  the outermost of those files is used. The callable's directory is prepended to
+  `sys.path` during runs, so a callable inside a package can also be imported as a
+  top-level module.
 - Script-level `config.toml` and `secrets.toml` follow the launched file under
   `streamlit run` and `App.run()`. They follow the callable source only when no
   launched file is set, such as under uvicorn.
