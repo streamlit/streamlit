@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import logging
 import os
 import sys
 import threading
@@ -306,6 +307,50 @@ class ScriptRunnerTest(unittest.TestCase):
                 _invoke_script_entrypoint(entrypoint)
             assert time.monotonic() - started < 1
             assert gen.ag_frame is None
+
+    def test_invoke_script_entrypoint_retrieves_async_generator_cleanup_error(
+        self,
+    ) -> None:
+        """A failing aclose() is retrieved so asyncio does not report it later."""
+        records: list[logging.LogRecord] = []
+        handler = logging.Handler()
+        handler.emit = records.append  # type: ignore[method-assign]
+        logger = logging.getLogger("streamlit.runtime.scriptrunner.script_runner")
+        previous_level = logger.level
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+        try:
+            with _installed_event_loop():
+
+                async def agen() -> Any:
+                    try:
+                        yield None
+                    finally:
+                        raise RuntimeError("cleanup failed")
+
+                gen = agen()
+                try:
+                    gen.__anext__().send(None)
+                except StopIteration:
+                    pass
+
+                def entrypoint() -> Any:
+                    return gen
+
+                with pytest.raises(
+                    StreamlitAPIException, match="awaitable or generator"
+                ):
+                    _invoke_script_entrypoint(entrypoint)
+        finally:
+            logger.removeHandler(handler)
+            logger.setLevel(previous_level)
+
+        assert any(
+            record.exc_info is not None
+            and isinstance(record.exc_info[1], RuntimeError)
+            and "cleanup failed" in str(record.exc_info[1])
+            for record in records
+        )
 
     def test_invoke_script_entrypoint_closes_unstarted_async_generator(self) -> None:
         """An unstarted async generator is closed before the entrypoint error."""

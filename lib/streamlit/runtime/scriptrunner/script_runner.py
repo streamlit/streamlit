@@ -124,6 +124,7 @@ def _close_async_generator(async_gen: Any) -> None:
                 "Failed to finalize a rejected async generator entrypoint.",
                 exc_info=True,
             )
+        _log_finished_task_exception(task)
         if not task.done():
             # The timeout only stops waiting. Drive the cancellation briefly so
             # a finally that honors CancelledError can release resources.
@@ -137,6 +138,7 @@ def _close_async_generator(async_gen: Any) -> None:
                     "Failed to finish cancelling a rejected async generator.",
                     exc_info=True,
                 )
+            _log_finished_task_exception(task)
             if not task.done():
                 _LOGGER.debug(
                     "Stopped waiting for a rejected async generator to close."
@@ -161,18 +163,51 @@ def _task_event_loop(result: Any) -> asyncio.AbstractEventLoop | None:
     return None
 
 
+def _log_finished_task_exception(task: asyncio.Task[Any]) -> None:
+    """Log a finished task's exception so asyncio does not report it later."""
+    if not task.done() or task.cancelled():
+        return
+    try:
+        error = task.exception()
+    except Exception:
+        _LOGGER.debug(
+            "Failed to read a rejected async generator error.",
+            exc_info=True,
+        )
+        return
+    if error is not None:
+        _LOGGER.debug("Rejected async generator cleanup failed.", exc_info=error)
+
+
 def _cancel_rejected_task(result: Any) -> None:
     """Cancel a returned task without waiting for cleanup that ignores it.
 
     ``cancel()`` only requests cancellation. This thread drives that request
     when it owns the task's loop, and only briefly. A task that swallows
     ``CancelledError`` must not block the entrypoint error. A task owned by
-    another loop is left alone after ``cancel()``; closing its coroutine would
-    race the loop that is still scheduling it.
+    another running loop is cancelled on that loop; closing its coroutine
+    would race the loop that is still scheduling it.
     """
     cancel = getattr(result, "cancel", None)
     if not callable(cancel):
         return
+
+    task_loop = _task_event_loop(result)
+    if task_loop is not None and task_loop.is_running():
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+        if running_loop is not task_loop:
+            try:
+                task_loop.call_soon_threadsafe(cancel)
+            except Exception:
+                _LOGGER.debug(
+                    "Failed to schedule cancellation of a rejected task entrypoint.",
+                    exc_info=True,
+                )
+            return
+
     try:
         cancel()
     except Exception:
@@ -182,7 +217,6 @@ def _cancel_rejected_task(result: Any) -> None:
         )
         return
 
-    task_loop = _task_event_loop(result)
     if task_loop is None or task_loop.is_closed() or task_loop.is_running():
         return
 

@@ -9,7 +9,7 @@ Do not create an ASGI wrapper for a simple app that only needs Streamlit UI and 
 - [When to use it](#when-to-use-it)
 - [Basic ASGI wrapper](#basic-asgi-wrapper)
 - [Direct Python launchers with App.run()](#direct-python-launchers-with-apprun)
-- [Script paths](#script-paths)
+- [Script paths and callable entrypoints](#script-paths-and-callable-entrypoints)
 - [Custom routes](#custom-routes)
 - [Middleware](#middleware)
 - [Lifespan hooks](#lifespan-hooks)

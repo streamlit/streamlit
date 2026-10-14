@@ -374,12 +374,7 @@ def _navigation(
                 default_page = page
 
     if default_page is None:
-        # Use the stored URL rather than Page.is_external. An import-time page
-        # raises from that property, and this path still runs while a launcher
-        # is imported, before a script run exists.
-        non_external_pages = [
-            p for p in page_list if getattr(p, "_external_url", None) is None
-        ]
+        non_external_pages = [p for p in page_list if not p.is_external]
         if not non_external_pages:
             raise StreamlitAPIException(
                 "At least one non-external page is required. "
