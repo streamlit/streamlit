@@ -995,11 +995,11 @@ class AppTest:
     def data_editor(self) -> ElementList[Dataframe]:
         """Sequence of all ``st.data_editor`` elements.
 
-        These are the ``st.dataframe`` elements whose editing mode is not
-        read-only, and they are also included in ``at.dataframe``. AppTest can
-        read ``.key``, ``.editing_mode``, and ``.value`` (the table shown to
-        the script). It does not apply cell edits; those stay in the browser
-        or in ``at.session_state`` when the editor has a key.
+        These are dataframes whose ``editing_mode`` is not ``"read_only"``.
+        ``at.dataframe`` includes them too. ``.value`` is the table passed to
+        the editor, without cell edits. ``set_value()`` raises ``AppTestError``.
+        AppTest cannot apply those edits, and the editor's session state key
+        is read-only. Use a Playwright test to exercise editing.
 
         Returns
         -------

@@ -111,8 +111,8 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
-# Public names for ``Dataframe.editing_mode``. ``st.data_editor``'s ``num_rows``
-# values stay as-is; ``READ_ONLY`` is ``st.dataframe``.
+# Public ``Dataframe.editing_mode`` strings. ``ADD_ONLY`` and ``DELETE_ONLY``
+# match ``num_rows`` (``"add"`` and ``"delete"``), not the proto names.
 _DATAFRAME_EDITING_MODE_NAMES: Final[dict[int, str]] = {
     DataframeProto.EditingMode.READ_ONLY: "read_only",
     DataframeProto.EditingMode.FIXED: "fixed",
@@ -1124,7 +1124,8 @@ class ColorPicker(Widget):
 class Dataframe(Element):
     """A representation of ``st.dataframe`` and ``st.data_editor``.
 
-    Read-only. ``.set_value()`` does not apply cell edits. Editable tables are
+    ``.value`` is the table passed to the command. ``set_value()`` raises
+    ``AppTestError`` and leaves that table unchanged. Editable tables are
     also listed on ``AppTest.data_editor``.
     """
 
@@ -1141,19 +1142,32 @@ class Dataframe(Element):
     def editing_mode(self) -> str:
         """How the table can be edited.
 
-        ``"read_only"`` for ``st.dataframe``. ``"fixed"``, ``"dynamic"``,
-        ``"add"``, or ``"delete"`` for ``st.data_editor``, matching
-        ``num_rows``.
+        One of ``"read_only"`` (``st.dataframe``), ``"fixed"``, ``"dynamic"``,
+        ``"add"``, or ``"delete"`` (``st.data_editor``'s ``num_rows``).
         """
         mode = self.proto.editing_mode
         name = _DATAFRAME_EDITING_MODE_NAMES.get(mode)
         if name is not None:
             return name
-        # A proto value added after this map should stay inspectable.
+        # Unmapped values stay readable: a known enum uses its lowercase proto
+        # name, and any other number stays decimal text.
         try:
             return DataframeProto.EditingMode.Name(mode).lower()
         except ValueError:
             return str(mode)
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        # Selection dataframes can still be written through session state.
+        # st.data_editor rejects those writes.
+        if self.editing_mode == "read_only":
+            super()._raise_unsupported_interaction(method)
+        key_part = f" (key={self.key!r})" if self.key else ""
+        raise AppTestError(
+            f"{method}() is not supported for dataframe{key_part}. "
+            "AppTest can read the table and editing_mode, but it does not "
+            "apply cell edits. The editor's session state key is read-only. "
+            "Use a Playwright e2e test."
+        )
 
     @property
     def value(self) -> PandasDataframe:
@@ -3419,14 +3433,14 @@ class Block:
     def data_editor(self) -> ElementList[Dataframe]:
         """``st.data_editor`` elements (dataframes that are not read-only).
 
-        These elements are also included in ``dataframe``. Cell edits are not
-        an AppTest interaction.
+        ``dataframe`` includes these elements too. AppTest does not apply cell
+        edits.
         """
         return ElementList(
             [
                 dataframe
                 for dataframe in self.dataframe
-                if dataframe.proto.editing_mode != DataframeProto.EditingMode.READ_ONLY
+                if dataframe.editing_mode != "read_only"
             ]
         )
 

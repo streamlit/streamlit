@@ -2753,25 +2753,22 @@ def test_data_editor_filters_read_only_dataframes() -> None:
         st.data_editor(df, key="disabled-editor", disabled=True)
 
     at = AppTest.from_function(script).run()
-    assert len(at.dataframe) == 7
-    assert [editor.key for editor in at.data_editor] == [
-        "fixed-editor",
-        "dynamic-editor",
-        "add-editor",
-        "delete-editor",
-        "disabled-editor",
+    assert [(frame.key, frame.editing_mode) for frame in at.dataframe] == [
+        (None, "read_only"),
+        ("selectable", "read_only"),
+        ("fixed-editor", "fixed"),
+        ("dynamic-editor", "dynamic"),
+        ("add-editor", "add"),
+        ("delete-editor", "delete"),
+        ("disabled-editor", "fixed"),
     ]
-    assert [editor.editing_mode for editor in at.data_editor] == [
-        "fixed",
-        "dynamic",
-        "add",
-        "delete",
-        "fixed",
+    assert [(editor.key, editor.editing_mode) for editor in at.data_editor] == [
+        ("fixed-editor", "fixed"),
+        ("dynamic-editor", "dynamic"),
+        ("add-editor", "add"),
+        ("delete-editor", "delete"),
+        ("disabled-editor", "fixed"),
     ]
-    assert at.dataframe[0].key is None
-    assert at.dataframe[0].editing_mode == "read_only"
-    assert at.dataframe[1].key == "selectable"
-    assert at.dataframe[1].editing_mode == "read_only"
     assert at.data_editor("dynamic-editor").value["a"].tolist() == [1, 2]
     assert list(at.get("data_editor")) == list(at.data_editor)
 
@@ -2787,15 +2784,16 @@ def test_data_editor_set_value_is_unsupported() -> None:
         st.data_editor(pd.DataFrame({"a": [1, 2]}), key="editor")
 
     at = AppTest.from_function(script).run()
-    with pytest.raises(
-        AppTestError, match=r"set_value\(\) is not supported for dataframe"
-    ):
+    with pytest.raises(AppTestError, match="Playwright") as exc_info:
         at.data_editor[0].set_value(pd.DataFrame({"a": [9]}))
+    message = str(exc_info.value)
+    assert "set_value() is not supported for dataframe" in message
+    assert "at.session_state" not in message
     assert at.data_editor[0].value["a"].tolist() == [1, 2]
 
 
 def test_data_editor_is_scoped_to_container() -> None:
-    """A container's ``data_editor`` collection only includes that container."""
+    """A container's ``data_editor`` collection only includes editors inside it."""
 
     def script() -> None:
         import pandas as pd
