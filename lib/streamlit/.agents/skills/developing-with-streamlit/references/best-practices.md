@@ -392,7 +392,7 @@ query = st.text_input(f"Search {category}")
 query = st.text_input(f"Search {category}", key="search_query")
 ```
 
-Keep keys unique across all elements rendered in a run. In loops, derive them from a stable item ID.
+Keep keys unique across all elements created in a run. In loops, derive them from a stable item ID.
 
 ```python
 # BAD: Repeated key raises StreamlitDuplicateElementKey
