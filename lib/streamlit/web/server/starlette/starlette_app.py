@@ -325,14 +325,29 @@ def _values_contain(values: tuple[Any, ...], target: Any) -> bool:
     return any(value is target for value in values)
 
 
-def _module_references_decorator(importer_name: str, decorator: Any) -> bool:
+def _module_reaches_value(module_values: tuple[Any, ...], target: Any) -> bool:
+    """Return whether a module holds ``target`` or imports a module that does."""
+    if _values_contain(module_values, target):
+        return True
+    for value in module_values:
+        if not _is_module_object(value):
+            continue
+        nested = _module_namespace_values(value)
+        if nested is not None and _values_contain(nested, target):
+            return True
+    return False
+
+
+def _module_references_decorator(
+    importer_name: str, decorator: Any, wrapped: Any
+) -> bool:
     """Return whether ``importer_name`` references the decorator function.
 
     A direct import stores that function. ``import helpers`` plus
-    ``@helpers.deco`` stores the package, which re-exports the function, so
-    look one level into imported modules. Importing the decorator's own module
-    is not enough: a library that imports the app module must not hide an app
-    wrapper around one of its functions.
+    ``@helpers.deco`` stores the module, so look inside it when that module
+    defines the decorator and does not also hold the wrapped callable. A
+    library that imports the app holds both, and scanning it would hide the
+    app wrapper.
     """
     importer = sys.modules.get(importer_name)
     if importer is None:
@@ -350,10 +365,14 @@ def _module_references_decorator(importer_name: str, decorator: Any) -> bool:
         if not _is_module_object(value) or value is importer:
             continue
         imported_name = _module_object_name(value)
-        if imported_name == decorator_module:
-            continue
         nested = _module_namespace_values(value)
-        if nested is not None and _values_contain(nested, decorator):
+        if nested is None:
+            continue
+        # The decorator's own module also holding the wrapped callable means a
+        # library imported the app. Scanning it would hide the app file.
+        if imported_name == decorator_module and _module_reaches_value(nested, wrapped):
+            continue
+        if _values_contain(nested, decorator):
             return True
     return False
 
@@ -388,7 +407,7 @@ def _is_imported_decorator_wrapper(candidate: Any) -> bool:
         or wrapper_module == wrapped_module
     ):
         return False
-    return _module_references_decorator(wrapped_module, decorator)
+    return _module_references_decorator(wrapped_module, decorator, wrapped)
 
 
 def _callable_source_candidates(obj: Any) -> list[Any]:
@@ -907,12 +926,6 @@ class App:
             _require_zero_arg_callable(script_path)
             self._script_path = _resolve_callable_source_path(script_path)
             self._script_entrypoint = script_path
-            # Callable apps never run pages/ as MPA v1. Clear the flag here,
-            # not in ScriptRunner, so st.switch_page uses the st.navigation
-            # error instead of the pages/ hint.
-            from streamlit.runtime.pages_manager import PagesManager
-
-            PagesManager.uses_pages_directory = False
         else:
             raise StreamlitInvalidParameterTypeError(
                 "script_path",
@@ -992,7 +1005,7 @@ class App:
 
     @property
     def script_path(self) -> Path:
-        """The script path, or the callable entrypoint's source file."""
+        """Script path as given, or a callable entrypoint's resolved source file."""
         return self._script_path
 
     @property
@@ -1195,6 +1208,15 @@ class App:
 
         media_file_storage = MemoryMediaFileStorage(f"/{BASE_ROUTE_MEDIA}")
         uploaded_file_mgr = MemoryUploadedFileManager(f"/{BASE_ROUTE_UPLOAD_FILE}")
+
+        if self._script_entrypoint is not None:
+            # Sessions build PagesManager after the runtime exists. Clear the
+            # pages/ flag here, not when the App is constructed, so importing a
+            # launcher does not disable pages/ for a later script. st.switch_page
+            # then uses the st.navigation error instead of the pages/ hint.
+            from streamlit.runtime.pages_manager import PagesManager
+
+            PagesManager.uses_pages_directory = False
 
         return Runtime(
             RuntimeConfig(

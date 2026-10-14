@@ -2130,6 +2130,64 @@ class TestAppInit:
 
         assert app.script_path == app_file.resolve()
 
+    def test_app_anchors_same_module_decorator_and_factory_on_wrapped_app(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """import helpers; @helpers.deco and @helpers.deco() anchor on the app."""
+        helpers_file = tmp_path / "st_app_callable_same_mod_helpers.py"
+        helpers_file.write_text(
+            "import functools\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper(*args, **kwargs):\n"
+            "        return fn(*args, **kwargs)\n"
+            "    return wrapper\n"
+            "\n"
+            "def factory(label):\n"
+            "    def inner(fn):\n"
+            "        @functools.wraps(fn)\n"
+            "        def wrapper(*args, **kwargs):\n"
+            "            return fn(*args, **kwargs)\n"
+            "        return wrapper\n"
+            "    return inner\n"
+        )
+        deco_app = tmp_path / "st_app_callable_same_mod_deco_app.py"
+        deco_app.write_text(
+            "import st_app_callable_same_mod_helpers\n"
+            "\n"
+            "@st_app_callable_same_mod_helpers.deco\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        factory_app = tmp_path / "st_app_callable_same_mod_factory_app.py"
+        factory_app.write_text(
+            "import st_app_callable_same_mod_helpers\n"
+            "\n"
+            "@st_app_callable_same_mod_helpers.factory('app')\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        module_names = (
+            "st_app_callable_same_mod_helpers",
+            "st_app_callable_same_mod_deco_app",
+            "st_app_callable_same_mod_factory_app",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        deco_mod = importlib.import_module("st_app_callable_same_mod_deco_app")
+        factory_mod = importlib.import_module("st_app_callable_same_mod_factory_app")
+        try:
+            deco_result = App(deco_mod.main)
+            factory_result = App(factory_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert deco_result.script_path == deco_app.resolve()
+        assert factory_result.script_path == factory_app.resolve()
+
     def test_app_anchors_fragment_decorator_outside_site_packages(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -2265,19 +2323,25 @@ class TestAppInit:
         app = App(entry)
         assert app._script_entrypoint is entry
 
-    def test_callable_app_disables_pages_directory(self) -> None:
-        """A callable App clears the pages-directory flag once, at construction."""
+    def test_callable_runtime_disables_pages_directory(self) -> None:
+        """Importing a callable App leaves pages/ alone until its runtime starts."""
+        from streamlit.runtime import Runtime
 
         def main() -> None:
             pass
 
         previous = PagesManager.uses_pages_directory
+        previous_runtime = Runtime._instance
         PagesManager.uses_pages_directory = True
+        Runtime._instance = None
         try:
-            App(main)
+            app = App(main)
+            assert PagesManager.uses_pages_directory is True
+            app._create_runtime()
             assert PagesManager.uses_pages_directory is False
         finally:
             PagesManager.uses_pages_directory = previous
+            Runtime._instance = previous_runtime
 
     def test_app_rejects_async_callable(self) -> None:
         """st.App rejects async function callables."""

@@ -501,9 +501,10 @@ class Page:
         to the external URL is handled by the frontend.
 
         """
-        # A raw import-time page has no _can_be_called and would raise
-        # AttributeError. st.navigation sets that attribute before returning,
-        # including in bare mode, where run() must stay a no-op.
+        # Reject import-time pages once a script run exists. Outside a run, the
+        # page that bare-mode st.navigation returned must stay a no-op; any
+        # other import-time page lacks _can_be_called and would raise
+        # AttributeError.
         if getattr(self, "_created_outside_run", False) and (
             get_script_run_ctx() is not None or not hasattr(self, "_can_be_called")
         ):
