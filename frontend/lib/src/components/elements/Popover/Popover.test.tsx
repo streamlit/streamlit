@@ -214,6 +214,37 @@ describe("Popover container", () => {
     expect(screen.queryByText("test")).not.toBeInTheDocument()
   })
 
+  it("blurs a focused widget before the body unmounts", async () => {
+    // A tab switch commits before the browser moves focus. The widget must
+    // blur while the body is still mounted so its value is committed.
+    const user = userEvent.setup()
+    let bodyMountedOnBlur: boolean | null = null
+    render(
+      <details open>
+        <div data-testid="panel">
+          <Popover {...getProps()}>
+            <input
+              aria-label="inside"
+              onBlur={() => {
+                bodyMountedOnBlur = Boolean(
+                  screen.queryByTestId("stPopoverBody")
+                )
+              }}
+            />
+          </Popover>
+        </div>
+      </details>
+    )
+    await user.click(screen.getByText("label"))
+    screen.getByRole("textbox", { name: "inside" }).focus()
+
+    screen.getByTestId("panel").setAttribute("inert", "")
+    await flushPopoverVisibilityCheck()
+
+    expect(bodyMountedOnBlur).toBe(true)
+    expect(screen.queryByTestId("stPopoverBody")).not.toBeInTheDocument()
+  })
+
   it("closes when an expander panel becomes inert", async () => {
     // A collapsed expander sets inert on its panel inside <details>.
     // checkVisibility ignores inert. Collapsing via the summary may not

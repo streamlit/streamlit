@@ -773,3 +773,18 @@ def test_popover_closes_when_its_trigger_is_hidden(app: Page):
     expect(
         get_popover(app, "Popover in expander").get_by_role("button")
     ).to_have_attribute("aria-expanded", "false")
+
+
+def test_popover_commits_text_input_when_its_tab_is_hidden(app: Page):
+    """A text input inside a popover keeps its value when the tab changes.
+
+    The tab commits on pointerdown, before focus leaves the input. The popover
+    blurs that input before unmounting so the typed value is not dropped.
+    """
+    popover_body = open_popover(app, "Popover in tab")
+    popover_body.get_by_label("Popover tab input").fill("kept value")
+
+    app.get_by_role("tab", name="Tab without popover").click()
+
+    wait_for_app_run(app)
+    expect(app.get_by_text("Popover tab input value: kept value")).to_be_visible()

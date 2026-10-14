@@ -144,6 +144,26 @@ function isPopoverTriggerHidden(trigger: HTMLElement): boolean {
   return !trigger.checkVisibility()
 }
 
+/**
+ * Blur a widget inside the popover body before the body unmounts.
+ *
+ * A tab switch commits on pointerdown, before the browser moves focus off
+ * the widget. Text input commits on blur, so that blur has to run while the
+ * body is still mounted.
+ */
+function blurFocusedPopoverDescendant(body: HTMLElement | null): void {
+  const active = document.activeElement
+  if (!(active instanceof HTMLElement) || !body?.contains(active)) {
+    return
+  }
+  /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
+   * Flush the widget's blur commit before the body unmounts.
+   */
+  flushSync(() => {
+    active.blur()
+  })
+}
+
 const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   element,
   empty,
@@ -500,6 +520,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       setBodyDeferred(false)
       return
     }
+    blurFocusedPopoverDescendant(popoverBodyRef.current)
     /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
      * The body is portaled. Flush so it unmounts before paint instead
      * of sitting on the viewport corner for a frame.
@@ -540,6 +561,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     setBodyDeferred(!sawTriggerVisibleRef.current)
 
     const closeBeforePaint = (): void => {
+      blurFocusedPopoverDescendant(popoverBodyRef.current)
       /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
        * The body is portaled. Flush so it unmounts before paint instead
        * of sitting on the viewport corner for a frame.

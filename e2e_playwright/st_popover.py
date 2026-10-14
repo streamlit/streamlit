@@ -303,8 +303,10 @@ tab_with_popover, tab_without_popover = st.tabs(
 with tab_with_popover:
     with st.popover("Popover in tab"):
         st.write("Popover in tab content")
+        tab_input = st.text_input("Popover tab input", key="popover_tab_input")
 with tab_without_popover:
     st.write("Tab without popover content")
+st.write(f"Popover tab input value: {tab_input}")
 
 with st.expander("Expander with popover", expanded=True):
     with st.popover("Popover in expander"):
