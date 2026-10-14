@@ -17,8 +17,37 @@
 import * as geoLayers from "@deck.gl/geo-layers"
 import * as layers from "@deck.gl/layers"
 import * as meshLayers from "@deck.gl/mesh-layers"
+import { parseToRgba } from "color2k"
 
 import { jsonConverter } from "./jsonConverter"
+
+/**
+ * Placeholder emitted by st.map when color is omitted. Resolved on the
+ * frontend to theme.colors.primary with MAP_DEFAULT_MARKER_ALPHA.
+ */
+export const MAP_PRIMARY_FILL_PLACEHOLDER = "primary"
+
+/**
+ * Default st.map marker alpha so theme-primary fills keep the same
+ * translucency as the previous default markers.
+ */
+export const MAP_DEFAULT_MARKER_ALPHA = 160
+
+/**
+ * Resolve st.map's primary fill placeholder to an RGBA array, or return the
+ * original value unchanged.
+ */
+export function resolveMapPrimaryFillColor(
+  fillColor: unknown,
+  primaryCssColor: string
+): unknown {
+  if (fillColor !== MAP_PRIMARY_FILL_PLACEHOLDER) {
+    return fillColor
+  }
+
+  const [r, g, b] = parseToRgba(primaryCssColor)
+  return [r, g, b, MAP_DEFAULT_MARKER_ALPHA]
+}
 
 /**
  * @file Utilities for determining fill colors for layers based on their

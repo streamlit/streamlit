@@ -62,6 +62,24 @@ class StMapTest(DeltaGeneratorTestCase):
         assert c.get("initialViewState").get("pitch") == 0
         assert c.get("layers")[0].get("@@type") == "ScatterplotLayer"
 
+    def test_default_color_is_primary_placeholder(self):
+        """Default markers use the primary theme placeholder, not a baked RGBA."""
+        st.map(mock_df)
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        assert c["layers"][0]["getFillColor"] == "primary"
+
+    def test_explicit_primary_color_passes_placeholder(self):
+        """color='primary' (when not a column name) is passed through for FE resolve."""
+        st.map(mock_df, color="primary")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        assert c["layers"][0]["getFillColor"] == "primary"
+
+    def test_explicit_tuple_color_is_not_placeholder(self):
+        """Explicit RGBA colors remain concrete int tuples in the Deck JSON."""
+        st.map(mock_df, color=(200, 30, 0, 160))
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        assert c["layers"][0]["getFillColor"] == [200, 30, 0, 160]
+
     def test_alternative_names_columns(self):
         """Test that it can be called with alternative names of lat/lon columns."""
         name_combination = itertools.product(
