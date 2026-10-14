@@ -227,6 +227,7 @@ class GlobalCacheBudget(StatsProvider):
             "Raise server.maxCachedDataSize, or set it to "
             '"0" to disable the process-wide budget.',
             function_display_name,
+            stack_info=True,
         )
 
     def _storage_display_name(self, storage_id: int) -> str:

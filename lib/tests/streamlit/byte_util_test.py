@@ -106,7 +106,11 @@ def test_config_parser_uses_explicit_units() -> None:
     assert config_max_cached_data_size_to_bytes("2gb") == 2 * 1024**3
 
     for value in (1, "1", True):
-        with pytest.raises(StreamlitAPIException, match="explicit unit"):
+        with pytest.raises(StreamlitAPIException, match="binary-unit"):
+            config_max_cached_data_size_to_bytes(value)
+
+    for value in ("-1mb", "1XB"):
+        with pytest.raises(StreamlitAPIException, match="positive binary-unit"):
             config_max_cached_data_size_to_bytes(value)
 
     with pytest.raises(StreamlitAPIException, match="without a unit"):

@@ -43,7 +43,7 @@ _MULTIPLIERS: Final = {
 }
 _MAX_BYTE_SIZE_DIGITS: Final = 100
 _CONFIG_MAX_CACHED_DATA_SIZE_ERROR: Final = (
-    "`server.maxCachedDataSize` requires an explicit unit string, such as "
+    "`server.maxCachedDataSize` requires a positive binary-unit string, such as "
     '"2gb" or "500mb". Use "0" to disable the global cache budget.'
 )
 _CONFIG_MAX_CACHED_DATA_SIZE_ZERO_ERROR: Final = (

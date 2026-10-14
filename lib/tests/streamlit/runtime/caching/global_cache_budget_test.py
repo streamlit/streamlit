@@ -215,6 +215,7 @@ def test_budget_retains_current_oversized_entry_and_warns_once() -> None:
     assert storage.get("key") == b"large"
     assert budget.total_bytes == 5
     warning.assert_called_once()
+    assert warning.call_args.kwargs["stack_info"] is True
     stats = budget.get_stats()[CACHE_DATA_EVICTIONS_FAMILY]
     assert isinstance(stats[0], CounterStat)
     assert stats[0].value == 0
