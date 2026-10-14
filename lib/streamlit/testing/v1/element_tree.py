@@ -1124,9 +1124,10 @@ class ColorPicker(Widget):
 class Dataframe(Element):
     """A representation of ``st.dataframe`` and ``st.data_editor``.
 
-    ``.value`` is the table passed to the command. ``set_value()`` raises
-    ``AppTestError`` and leaves that table unchanged. Editable tables are
-    also listed on ``AppTest.data_editor``.
+    ``.value`` is the input table as a pandas DataFrame, without cell edits.
+    ``set_value()`` raises ``AppTestError`` and leaves that table unchanged.
+    Tables whose ``editing_mode`` is not ``"read_only"`` are also listed on
+    ``AppTest.data_editor``.
     """
 
     proto: DataframeProto = field(repr=False)
@@ -1142,10 +1143,9 @@ class Dataframe(Element):
     def editing_mode(self) -> str:
         """Configured row-editing mode.
 
-        ``"read_only"`` is ``st.dataframe``. ``"fixed"``, ``"dynamic"``,
-        ``"add"``, and ``"delete"`` match ``st.data_editor``'s ``num_rows``.
-        A disabled editor keeps its configured mode. An unrecognized proto
-        value is returned as text and is not ``"read_only"``.
+        - ``"read_only"``: ``st.dataframe``.
+        - ``"fixed"``, ``"dynamic"``, ``"add"``, or ``"delete"``: ``st.data_editor``,
+          matching its ``num_rows`` value. Disabled editors keep their mode.
         """
         mode = self.proto.editing_mode
         name = _DATAFRAME_EDITING_MODE_NAMES.get(mode)
@@ -1154,8 +1154,10 @@ class Dataframe(Element):
         # Unmapped values stay readable: a known enum uses its lowercase proto
         # name, and any other number stays decimal text. The name branch is
         # unreachable while the map lists every current enum value.
-        try:  # pragma: no cover - defensive
-            return DataframeProto.EditingMode.Name(mode).lower()
+        try:
+            return DataframeProto.EditingMode.Name(
+                mode
+            ).lower()  # pragma: no cover - defensive
         except ValueError:
             return str(mode)
 

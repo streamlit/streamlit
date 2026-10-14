@@ -2732,10 +2732,10 @@ def test_dataframe_non_interactive_has_no_key():
 
 
 def test_data_editor_filters_read_only_dataframes() -> None:
-    """``at.data_editor`` is the editable subset of ``at.dataframe``.
+    """``at.data_editor`` lists dataframes whose editing mode is not ``"read_only"``.
 
-    Selection dataframes stay read-only. Disabled editors stay in the
-    collection because editing mode, not ``disabled``, selects them.
+    Selection dataframes stay on ``at.dataframe`` only. Disabled editors stay
+    in this collection because ``editing_mode``, not ``disabled``, selects them.
     """
 
     def script() -> None:

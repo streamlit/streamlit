@@ -1000,10 +1000,12 @@ class AppTest:
         when ``editing_mode`` is not ``"read_only"``.
 
         - ``.value`` is the table passed to the editor, without cell edits.
-        - ``set_value()`` raises ``AppTestError``. AppTest cannot apply cell
-          edits.
-        - A keyed editor's session state value is read-only. Use a Playwright
-          e2e test to exercise editing.
+        - ``set_value()`` raises ``AppTestError`` because AppTest cannot apply
+          cell edits.
+        - A keyed editor's session state value is the read-only edit state
+          (``edited_rows``, ``added_rows``, ``deleted_rows``).
+
+        Use a Playwright e2e test to exercise editing.
 
         Returns
         -------
