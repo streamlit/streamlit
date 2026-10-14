@@ -1725,6 +1725,46 @@ class TestAppInit:
         assert app.script_path == app_file.resolve()
         assert app._script_entrypoint is app_mod.main
 
+    def test_app_anchors_parameterized_decorator_on_wrapped_app(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """@deco(arg) still anchors on the app when the app imports the factory."""
+        decorator_file = tmp_path / "st_app_callable_factory_deco.py"
+        decorator_file.write_text(
+            "import functools\n"
+            "\n"
+            "def deco(label):\n"
+            "    def inner(fn):\n"
+            "        @functools.wraps(fn)\n"
+            "        def wrapper(*args, **kwargs):\n"
+            "            return fn(*args, **kwargs)\n"
+            "        return wrapper\n"
+            "    return inner\n"
+        )
+        app_file = tmp_path / "st_app_callable_factory_wrapped.py"
+        app_file.write_text(
+            "from st_app_callable_factory_deco import deco\n"
+            "\n"
+            "@deco('app')\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        module_names = (
+            "st_app_callable_factory_deco",
+            "st_app_callable_factory_wrapped",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_factory_wrapped")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
     def test_app_anchors_decorator_without_wrapped_on_decorator_file(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

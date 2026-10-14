@@ -281,13 +281,24 @@ def _module_namespace_values(module: Any) -> tuple[Any, ...] | None:
 
 
 def _code_defines_wrapper(value: Any, code: Any) -> bool:
-    """Return whether ``value``'s code object defines ``code``."""
+    """Return whether ``value``'s code object defines ``code``.
+
+    ``@decorator`` nests the wrapper directly. ``@decorator(arg)`` nests it one
+    function deeper, inside the decorator that the factory returns.
+    """
     try:
-        return code in value.__code__.co_consts
+        consts = value.__code__.co_consts
     except Exception:
         # Proxy objects can raise arbitrary lookup errors. Skip the value so
         # one bad global does not fail App construction.
         return False
+    if code in consts:
+        return True
+    for const in consts:
+        nested = getattr(const, "co_consts", None)
+        if nested and code in nested:
+            return True
+    return False
 
 
 def _decorator_for_wrapper(wrapper: Any) -> Any | None:

@@ -120,18 +120,24 @@ def _close_async_generator(async_gen: Any) -> None:
                 asyncio.wait({task}, timeout=_REJECTED_TASK_CANCEL_WAIT_SECS)
             )
         except Exception:
-            # Drop the awaitable so the entrypoint error is not shadowed by
-            # "coroutine was never awaited", then continue to that error.
             _LOGGER.debug(
                 "Failed to finalize a rejected async generator entrypoint.",
                 exc_info=True,
             )
+        if not task.done():
+            # The timeout only stops waiting. Drive the cancellation briefly so
+            # a finally that honors CancelledError can release resources.
+            task.cancel()
+            try:
+                loop.run_until_complete(
+                    asyncio.wait({task}, timeout=_REJECTED_TASK_CANCEL_WAIT_SECS)
+                )
+            except Exception:
+                _LOGGER.debug(
+                    "Failed to finish cancelling a rejected async generator.",
+                    exc_info=True,
+                )
             if not task.done():
-                task.cancel()
-            _close_awaitable(closer)
-        else:
-            if not task.done():
-                task.cancel()
                 _LOGGER.debug(
                     "Stopped waiting for a rejected async generator to close."
                 )

@@ -305,6 +305,7 @@ class ScriptRunnerTest(unittest.TestCase):
             with pytest.raises(StreamlitAPIException, match="awaitable or generator"):
                 _invoke_script_entrypoint(entrypoint)
             assert time.monotonic() - started < 1
+            assert gen.ag_frame is None
 
     def test_invoke_script_entrypoint_closes_unstarted_async_generator(self) -> None:
         """An unstarted async generator is closed before the entrypoint error."""
