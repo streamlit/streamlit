@@ -2256,7 +2256,7 @@ class TimeWidgetsMixin:
                 "date_input",
                 key=element_id,
                 action="value",
-                value_schema=agent_spec.range_of(agent_spec.DATE)
+                value_schema=agent_spec.range_of(agent_spec.DATE, partial=True)
                 if parsed_values.is_range
                 else agent_spec.DATE,
                 label=label,

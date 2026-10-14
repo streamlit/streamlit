@@ -1198,6 +1198,34 @@ A probe across every v1 widget, including stateful tabs, expanders, and popovers
 confirms each reported value matches its own `value_schema` and sending all of them back
 is accepted.
 
+## 7m. Two spec reviews after hands-on use: guarantees, kept simple
+
+Two chat clients reviewed the spec after three rounds against a deployment that
+predated `value_schema` and ran with a 180-second run timeout, which explains two of
+their findings. Both confirmed the central bet: the public vocabulary was readable
+without schema docs. What they could not infer was wire encoding, coercion, retries,
+and browser-only behavior.
+
+What changed in v1, all small:
+
+- **`value_schema` says what to send, not what is refused.** It declared `integer` and
+  two items while the server truncated `2.5` and stored a one-item range. Rather than
+  enforce the schema, the spec now says what it promises, and a date range declares up
+  to two items, since `st.date_input(value=[])` reports `[]`.
+- **A dialog reports `on_dismiss`**, `"ignore"` or `"rerun"`, read from whether the
+  overlay registered a widget. One client concluded a default dialog could not close.
+- **Wording:** `unknown_key` is named beside `not_on_page`; a batch that removes a key
+  it sets loses that value; `clear_on_submit` can change what a later submit sends, so
+  clients send every field; `context` never changes encoding; MCP clients' 60-second
+  default timeout is named in the run-timeout guidance; and four contradictions are
+  resolved (derived props, the `enum` cell, element IDs as keys, the shared-label
+  exception).
+
+Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
+per-key note, a non-executing read and `request_id`, compact responses and a preview
+byte budget, large integers as strings, an index-column marker, the `clear_on_submit`
+reset, and descriptions for cache entries a browser filled.
+
 ## 8. Open questions the prototype surfaced
 
 1. **How is "the run chain settled" defined?** The prototype's grace period is a

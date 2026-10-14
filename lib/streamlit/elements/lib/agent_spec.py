@@ -114,9 +114,17 @@ def list_of(items: dict[str, Any]) -> dict[str, Any]:
     return {"type": "array", "items": items}
 
 
-def range_of(items: dict[str, Any]) -> dict[str, Any]:
-    """Two values, lowest first: a slider's or a date input's range."""
-    return {"type": "array", "items": items, "minItems": 2, "maxItems": 2}
+def range_of(items: dict[str, Any], *, partial: bool = False) -> dict[str, Any]:
+    """Two values, lowest first: a slider's or a date input's range.
+
+    ``partial`` is for a date input's range, which may also be empty or hold
+    only its start.
+    """
+    schema: dict[str, Any] = {"type": "array", "items": items}
+    if not partial:
+        schema["minItems"] = 2
+    schema["maxItems"] = 2
+    return schema
 
 
 # Sessions created by the agent API. The registry that creates them owns this

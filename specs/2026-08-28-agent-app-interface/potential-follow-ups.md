@@ -123,9 +123,11 @@ put the old value back, and `clear_on_submit` is declared but not applied.
   widget's default) for every field the request omits. About 50 lines across the request
   validator and the snapshot, plus per-session state that outlives a request.
 
-**Why not now:** neither changes whether the app behaves correctly, only how closely the
-snapshot matches what a browser would show. Both reimplement frontend logic that could
-drift from React, which the fidelity harness below would have to watch.
+**Why not now:** the URL rewrite only changes how complete `query_params` is. The reset
+can change what a form does, since a later submit that omits a field resends its old
+value, but a client that sends every field with each submit, as the descriptions tell
+it to, gets the browser's result. Both reimplement frontend logic that could drift from
+React, which the fidelity harness below would have to watch.
 
 **What would make it worth doing:** clients that cite `query_params` or rely on cleared
 forms. Trials so far have recovered from both by reading widget values and the app's own
@@ -257,7 +259,8 @@ changed means reproducing each widget's reset rules, which #16203 moves into the
 widgets, where the note could come from.
 
 **What would make it worth doing:** agents repeatedly misreading a reset as success.
-One chat-client evaluation asked for it.
+Three chat-client evaluations asked for it, one after a batch that switched modes
+silently dropped the field it removed.
 
 ## Read the last snapshot without running
 
@@ -276,4 +279,57 @@ built to tolerate one, and the main client that needs a read is one that lost th
 snapshot from its context.
 
 **What would make it worth doing:** clients rerunning only to re-read, against apps
-whose runs are expensive or have side effects, or the polling work in follow-up #4.
+whose runs are expensive or have side effects, or the polling work in follow-up #4. A
+chat-client evaluation hit exactly this: its context management cleared older tool
+results, after which a rerun was the only way back to the current state, and
+`get_data` could no longer reach the files of a result it had lost.
+
+## Refuse values that do not match `value_schema`
+
+**Today:** `value_schema` says what to send, and three checks decide what is refused:
+the JSON type, the options, and whether the widget can read the value. Anything else
+reaches the widget, which adjusts it: a fraction sent to an integer input is truncated,
+a malformed date resets to the default, and a reversed or one-item range is stored as
+sent. The next `value` shows each outcome.
+
+**The fuller version:** check the request against the element's `value_schema` before
+running, so a whole-number type, a date format, a range's length, and its order are
+refused with `invalid_value`. About 40 lines: a checker for the few keywords the
+building blocks use, and the schema kept in each element's recorded state.
+
+**Why not now:** the adjustments are the widget's own, the same for a scripted WebSocket
+client, and #16203 moves those checks into the widgets, where both paths would share
+them.
+
+**What would make it worth doing:** agents treating an adjusted value as the one they
+sent. A chat-client evaluation preferred refusal before callbacks for this reason.
+
+## Integers beyond JavaScript's exact range as strings
+
+**Today:** an integer is a JSON number at any size. JavaScript parses one beyond
+±(2^53−1) to the nearest double, so `9223372036854775807` reaches a JavaScript client as
+`9223372036854776000`. Widget values never get that large, since Streamlit limits widget
+numbers to that range; table cells can, such as 64-bit IDs.
+
+**The fuller version:** encode integers beyond that range as decimal strings, with the
+column's Arrow type still saying `int64`. One condition in the encoder.
+
+**Why not now:** it changes the type of a value for the clients that handle it exactly,
+and IDs that large are rare in the dashboards agents read so far.
+
+**What would make it worth doing:** an app whose IDs exceed 2^53 read through a
+JavaScript MCP client.
+
+## Mark index columns
+
+**Today:** an unnamed pandas index arrives as a column named `__index_level_0__`, pyarrow's
+name for it. The MCP tool description explains it, but a client without that text can
+read it as a leaked internal name.
+
+**The fuller version:** an `"index": true` on each column entry that the Arrow schema's
+pandas metadata lists as an index. A few lines in the column summary.
+
+**Why not now:** the data is complete either way, and the description already says what
+the column is.
+
+**What would make it worth doing:** clients misreading or dropping the index.

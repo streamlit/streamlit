@@ -603,10 +603,17 @@ def schemas() -> dict[str, Any]:
                         "`max_chars` is cut; and a reversed slider range or a "
                         "date range of any length is stored as sent, so send "
                         "two values, lowest first.\n\n"
+                        "A batch is one rerun, so a widget the batch itself "
+                        "removes, such as a field of a mode it switches away "
+                        "from, is gone afterwards along with its value: check "
+                        "that each key you set is still in the result.\n\n"
                         "An `st.form`'s fields go together with one of its "
                         "submit triggers, because a form defers its values "
-                        "until submitted. Keys inside an open `st.dialog` go on "
-                        "their own; see `fragment` on `Node`."
+                        "until submitted. In a form with `clear_on_submit`, "
+                        "send every field with each submit: fields keep their "
+                        "values here, where a browser would reset them. Keys "
+                        "inside an open `st.dialog` go on their own; see "
+                        "`fragment` on `Node`."
                     ),
                 },
                 "trigger": {
@@ -667,7 +674,10 @@ def schemas() -> dict[str, Any]:
                         "app as `st.context.timezone` and `st.context.locale`. "
                         "Held for the session and resent with every rerun; "
                         "omitting it preserves the last value, and a new one "
-                        "replaces it. Unset, the app reads both as `None`."
+                        "replaces it. Unset, the app reads both as `None`.\n\n"
+                        "It never changes how values are encoded: a timestamp "
+                        "carries an offset only when the value has one, "
+                        "whatever the timezone."
                     ),
                 },
             },
@@ -878,9 +888,11 @@ def schemas() -> dict[str, Any]:
                         "what this interface does: a form's "
                         "`clear_on_submit` is applied by the browser, so "
                         "fields here keep their submitted values after a "
-                        "submit. Read the committed result from the app's own "
-                        "output rather than treating empty fields as a signal "
-                        "that a submit landed."
+                        "submit, and a later submit that omits a field resends "
+                        "its old value. Send every field with each submit, and "
+                        "read the committed result from the app's own output "
+                        "rather than treating empty fields as a signal that a "
+                        "submit landed."
                     ),
                 },
                 "value": {
@@ -890,7 +902,9 @@ def schemas() -> dict[str, Any]:
                         "formatted option rather than the author's underlying "
                         "Python value, and text typed into a widget that "
                         "accepts new options as typed. Sending it unchanged is "
-                        "always valid, and its shape is the shape the element "
+                        "always valid, except a label several options share, "
+                        "which identifies none of them, and its shape is the "
+                        "shape the element "
                         "accepts -- a two-item list stays a two-item list.\n\n"
                         "Present for elements whose `actions` entry has kind "
                         "`value`, except a `text_input` with `type: "
@@ -910,11 +924,13 @@ def schemas() -> dict[str, Any]:
                         "Absent on elements that take no value.\n\n"
                         "It describes the shape, in the form `value` is "
                         "reported, so sending that back always matches: the "
-                        "JSON type, a `format` for dates, and "
-                        "`minItems`/`maxItems` of 2 for a range. The legal "
-                        "values are the element's `props` -- `options`, "
-                        "bounds, `max_chars` -- and `null` clears a widget "
-                        "that can be empty."
+                        "JSON type, a `format` for dates, and how many items a "
+                        "range has. The legal values are the element's `props` "
+                        "-- `options`, bounds, `max_chars` -- and `null` clears "
+                        "a widget that can be empty.\n\n"
+                        "It says what to send, not what is refused: what the "
+                        "server refuses, and what it adjusts instead, is listed "
+                        "under `widget_state`."
                     ),
                 },
                 "data": {

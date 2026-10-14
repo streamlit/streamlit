@@ -78,6 +78,9 @@ def _agent_description(block_proto: BlockProto, is_open: bool) -> dict[str, Any]
         "icon": dialog.icon or None,
         "position": _POSITION_NAMES.get(dialog.position, "center"),
         "dismissible": dialog.dismissible,
+        # How a client closes it: "ignore" means by any full rerun, "rerun"
+        # means by firing the overlay's key. A callback is reported as "rerun".
+        "on_dismiss": "rerun" if dialog.id else "ignore",
         "is_open": is_open,
     }
     if dialog.id:

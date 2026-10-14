@@ -131,9 +131,9 @@ as a table or chart selection, cannot be sent yet.
 regions rerun the whole app, except that an open dialog's keys must be sent on \
 their own. A dialog's own `fragment` is that of the code that opened it; its \
 contents carry the dialog's.
-- To dismiss a dialog, send a call with no changes: a full rerun closes it, as \
-closing it does in a browser. One whose app handles dismissal (`on_dismiss`) \
-also lists its overlay in `actions`, to fire instead.
+- A dialog's `on_dismiss` says how to close it. With `"ignore"`, send a call \
+with no changes: a full rerun closes it, as closing it does in a browser. With \
+`"rerun"`, fire its overlay's key from `actions`.
 - `data.complete` says whether `data` holds everything. If not, `data.url` \
 serves the rest, or `data.unavailable` says why it cannot.
 - Table values are the data as stored, not as displayed: no `format`, no time \
