@@ -63,7 +63,7 @@ def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
 
     Integers are byte counts. Strings need a unit such as ``"500MB"`` or
     ``"1.5GiB"``. Every unit is a power of 1024, so ``"MB"`` and ``"MiB"``
-    are equivalent.
+    are equivalent. Fractional results are rounded down to whole bytes.
     """
     if value is None:
         return None

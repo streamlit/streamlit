@@ -336,6 +336,44 @@ If you think this is actually a Streamlit bug, please
 
         close.assert_called_once_with()
 
+    def test_clear_session_closes_all_storages_when_clear_fails(self) -> None:
+        """A failed cache clear still closes every storage in the session."""
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            first = _data_caches.get_cache(
+                key="first",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="first",
+                scope="session",
+            )
+            second = _data_caches.get_cache(
+                key="second",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="second",
+                scope="session",
+            )
+
+        with (
+            patch.object(first, "clear", side_effect=OSError("clear failed")),
+            patch.object(
+                first.storage, "close", wraps=first.storage.close
+            ) as first_close,
+            patch.object(
+                second.storage, "close", wraps=second.storage.close
+            ) as second_close,
+            pytest.raises(OSError, match="clear failed"),
+        ):
+            clear_session_cache("session")
+
+        first_close.assert_called_once_with()
+        second_close.assert_called_once_with()
+
     def test_cached_class_method_clear_args(self):
         self.x = 0
 

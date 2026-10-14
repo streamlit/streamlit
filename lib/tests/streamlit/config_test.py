@@ -96,7 +96,7 @@ class ConfigTest(unittest.TestCase):
             "[server]\nmaxCachedDataSize = 500", "<test definition>"
         )
 
-        with pytest.raises(StreamlitAPIException, match="explicit unit"):
+        with pytest.raises(StreamlitAPIException, match="binary-unit"):
             config_max_cached_data_size_to_bytes(
                 config.get_option("server.maxCachedDataSize")
             )

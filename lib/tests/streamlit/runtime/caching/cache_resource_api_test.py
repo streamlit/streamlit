@@ -180,6 +180,43 @@ If you think this is actually a Streamlit bug, please
         foo.clear(1)
         assert foo(1) == 2
 
+    def test_clear_invalidates_inflight_sync_write_without_releasing_value(
+        self,
+    ) -> None:
+        """A clear discards an older sync write without releasing its live value."""
+        compute_started = threading.Event()
+        continue_compute = threading.Event()
+        released: list[object] = []
+        calls = 0
+
+        @st.cache_resource(on_release=released.append)
+        def foo() -> object:
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                compute_started.set()
+                assert continue_compute.wait(timeout=5)
+            return object()
+
+        def clear_during_compute() -> None:
+            assert compute_started.wait(timeout=5)
+            foo.clear()
+            continue_compute.set()
+
+        clearer = threading.Thread(target=clear_during_compute)
+        clearer.start()
+        first = foo()
+        clearer.join(timeout=5)
+
+        assert not clearer.is_alive()
+        second = foo()
+        assert second is not first
+        assert foo() is second
+        assert released == []
+
+        foo.clear()
+        assert released == [second]
+
     def test_cached_class_method_clear_args(self):
         self.x = 0
 

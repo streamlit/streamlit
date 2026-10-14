@@ -60,8 +60,8 @@ class GlobalCacheBudget(StatsProvider):
 
     Storages report every write, read, and removal. Because a victim is chosen
     without holding its storage's lock, each record carries the entry's write
-    generation and access version. Eviction is skipped if either changed, so a
-    concurrent read or rewrite cannot make the budget evict the wrong entry.
+    generation and access version. The budget skips eviction when either value has
+    changed, so a concurrent read or rewrite cannot evict the wrong entry.
     """
 
     def __init__(self, max_bytes: int | None) -> None:

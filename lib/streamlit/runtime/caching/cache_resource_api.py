@@ -867,15 +867,18 @@ class ResourceCache(Cache[R]):
         *,
         invalidation_token: cache_utils.CacheInvalidationToken,
     ) -> bool:
-        """Write an async foreground result if no relevant clear invalidated it."""
+        """Write a result if no relevant clear invalidated it."""
         main_id = st._main._id
         sidebar_id = st.sidebar._id
+        stored_at = (
+            cache_utils.TTLCACHE_TIMER() if self.refresh_mode == "background" else None
+        )
         with self._mem_cache_lock:
             if not self._invalidation_token_is_current(value_key, invalidation_token):
                 # The owner still returns this value, so it must remain live.
                 return False
             self._mem_cache[value_key] = CachedResult(
-                value, messages, main_id, sidebar_id
+                value, messages, main_id, sidebar_id, stored_at=stored_at
             )
             return True
 

@@ -271,8 +271,9 @@ class DataCaches(StatsProvider):
                     del session_caches[key]
 
             if cache is not None:
-                # mark_detached() waits for any in-flight write; closing the old
-                # storage below then drops whatever that write stored.
+                # Wait for a write that already holds _write_lock. A computation still
+                # pickling sees the cache as detached and does not store its result.
+                # close() then drops anything the in-flight write stored.
                 cache.mark_detached()
                 _LOGGER.debug(
                     "Closing existing DataCache storage "
@@ -333,10 +334,15 @@ class DataCaches(StatsProvider):
                 session_caches = self._function_caches.pop(session_id, None)
 
             if session_caches is not None:
-                for cache in session_caches.values():
+                caches = list(session_caches.values())
+                for cache in caches:
                     cache.mark_detached()
-                    cache.clear()
-                    cache.storage.close()
+                try:
+                    for cache in caches:
+                        cache.clear()
+                finally:
+                    for cache in caches:
+                        cache.storage.close()
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
@@ -626,19 +632,13 @@ class CacheDataAPI:
             The maximum number of entries to keep in this function's cache, or
             ``None`` (default) for no entry-count limit. When a new entry is added
             to a full cache, Streamlit removes the least-recently-used entry.
-            An explicitly configured process-wide ``server.maxCachedDataSize``
-            budget applies independently.
 
         max_size : int, str, or None
-            The maximum serialized (pickled) size of this function's in-memory
-            cache. If this is an integer, it's a number of bytes. If this is a
-            string, it must include a unit, like ``"500MB"`` or ``"1.5GiB"``.
-            Units are powers of 1024, so ``"MB"`` and ``"MiB"`` are equivalent.
-            If this is ``None`` (default), this function has no per-function limit.
-            An explicitly configured process-wide ``server.maxCachedDataSize``
-            budget applies independently.
-            Reading a cached value refreshes its recency, so a value that is still
-            used is evicted after values that are not.
+            The maximum serialized (pickled) size of this function's in-memory cache.
+            An integer is a number of bytes. A string must include a binary unit, like
+            ``"500MB"`` or ``"1.5GiB"``. Units use powers of 1024, so ``"MB"`` and
+            ``"MiB"`` are equivalent. ``None`` (default) means no per-function limit.
+            Reading a cached value refreshes its LRU recency.
 
             On a write that would exceed the limit, Streamlit drops
             least-recently-used entries until the new value fits. If a single value
@@ -648,7 +648,7 @@ class CacheDataAPI:
             again. This limits pickled bytes, not the total memory used by the Python
             process. With ``scope="session"``, the limit applies separately to each
             session's cache. If configured, ``server.maxCachedDataSize`` counts every
-            session.
+            session and applies independently.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
@@ -1027,7 +1027,7 @@ class DataCache(Cache[R]):
         *,
         invalidation_token: cache_utils.CacheInvalidationToken,
     ) -> bool:
-        """Write an async foreground result if no relevant clear invalidated it."""
+        """Write a result if no relevant clear invalidated it."""
         if not self._invalidation_token_is_current(value_key, invalidation_token):
             return False
 
