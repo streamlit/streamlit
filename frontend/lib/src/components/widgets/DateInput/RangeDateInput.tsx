@@ -1095,7 +1095,7 @@ function RangeDateInput({
                 commitBehavior="reset"
                 minValue={minDate}
                 maxValue={maxDate}
-                focusedValue={focusedValue ?? undefined}
+                focusedValue={focusedValue}
                 onFocusChange={onFocusChange}
               >
                 <AnchorDateWatcher

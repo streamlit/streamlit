@@ -18,7 +18,7 @@ import { colors } from "~lib/theme/primitives/colors"
 
 /** Light-theme defaults shared by `emotionBaseTheme` and `mockTheme`. */
 export const requiredThemeColors = {
-  // Page surface defaults from the design spec (not the primitives scale).
+  // Built-in page surfaces. Literals so they can diverge from the primitives scale.
   bgColor: "#FFFFFF",
   secondaryBg: "#F8F8F7",
   bodyText: "#2F2D2B",
@@ -27,7 +27,7 @@ export const requiredThemeColors = {
   secondary: colors.blue70, // Used in progress bar
 
   // Named palette defaults (main / background / text) come from the design
-  // spec, not the primitives scale. Backgrounds are opaque and tuned for the
+  // handoff, not the primitives scale. Backgrounds are opaque and tuned for the
   // default `bgColor`.
   redColor: "#D94A57",
   orangeColor: "#E0682B",

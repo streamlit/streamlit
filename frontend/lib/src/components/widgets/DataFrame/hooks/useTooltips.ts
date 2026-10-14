@@ -86,7 +86,7 @@ function useTooltips(
       pendingTooltipRef.current = undefined
       setTooltip(undefined)
 
-      if ((args.kind === "header" || args.kind === "cell") && args.location) {
+      if (args.kind === "header" || args.kind === "cell") {
         const colIdx = args.location[0]
         const rowIdx = args.location[1]
         let tooltipContent: string | undefined

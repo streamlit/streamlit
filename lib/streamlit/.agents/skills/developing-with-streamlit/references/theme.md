@@ -106,7 +106,12 @@ Then, for **main** (light mode): `[theme]` → `[theme.light]`.
 For **sidebar** (light mode): resolved main → `[theme.sidebar]` → `[theme.light.sidebar]`.
 Dark mode uses `[theme.dark]` / `[theme.dark.sidebar]` the same way.
 
-Unset sidebar `backgroundColor` falls back to the resolved main `secondaryBackgroundColor`, and unset sidebar `secondaryBackgroundColor` falls back to the main `backgroundColor` (they swap). Leave both unset to keep that swap. Set both explicitly only when the sidebar should use the main pairing or another custom pair.
+Unset sidebar surfaces depend on whether the resolved main page still uses the built-in light/dark backgrounds:
+
+- **Built-in main surfaces:** stock sidebar pair — light `#F8F8F7` / `#FFFFFF`, dark `#21201D` / `#2D2B27`.
+- **Customized main `backgroundColor` or `secondaryBackgroundColor`:** classic swap — unset sidebar `backgroundColor` → main `secondaryBackgroundColor`, unset sidebar `secondaryBackgroundColor` → main `backgroundColor`.
+
+Set both sidebar surfaces explicitly when the sidebar should use another custom pair.
 
 **Sidebar headings:**
 

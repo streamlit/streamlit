@@ -336,13 +336,13 @@ export function getStateFromWidgetMgr(
 export function getDefaultStateFromProto(
   element: DateTimeInputProto
 ): string | null {
-  return element.default?.length ? element.default[0] : null
+  return element.default.length ? element.default[0] : null
 }
 
 export function getCurrStateFromProto(
   element: DateTimeInputProto
 ): string | null {
-  return element.value?.length ? element.value[0] : null
+  return element.value.length ? element.value[0] : null
 }
 
 export function updateWidgetMgrState(

@@ -241,6 +241,8 @@ def test_status_filter():
 
 `AppTest` covers widget interaction and the elements your script produces, but it does **not** reproduce every front-end interaction. In particular, **selections on `st.dataframe` and charts** (click-to-select rows, Altair/Plotly selection events) can't be triggered through `AppTest` — there's no setter for them, so you can't assert on what a user's on-chart selection would return. The same applies to anything that only exists in the rendered browser: custom-component JavaScript, CSS, and scroll/resize behavior. Cover those with Playwright e2e tests instead.
 
+Inspect `st.data_editor` with `at.data_editor`. Those elements also stay on `at.dataframe`. `.value` is the input table. A keyed editor's `at.session_state` value is the edit state (`edited_rows`, `added_rows`, `deleted_rows`). Assigning that state before `.run()` changes the table the script receives; `.value` stays the input table.
+
 Elements that AppTest does not fully model (`st.balloons`, `st.snow`, and similar) do not break `.run()`. Inspect those nodes with `at.get("<type>")`; `.value` returns the element's main proto field where one exists or `None` otherwise. Calling `.set_value()` or `.click()` on those nodes raises `AppTestError` — those names can exist as proto fields, but they are not interaction methods. For a keyed widget AppTest doesn't model, assign through `at.session_state` or use Playwright.
 
 ## References

@@ -18,7 +18,7 @@ import { colors } from "~lib/theme/primitives/colors"
 
 export default {
   ...colors,
-  // Page surface defaults from the design spec (not the primitives scale).
+  // Built-in page surfaces. Literals so they can diverge from the primitives scale.
   bgColor: "#171614",
   bodyText: "#EDEBE8",
 

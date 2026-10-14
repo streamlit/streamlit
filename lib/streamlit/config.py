@@ -1523,8 +1523,11 @@ _create_theme_options(
         Background color of the app.
 
         Defaults to #ffffff for the light theme and #171614 for the dark theme.
-        When unset in ``[theme.sidebar]``, the stock sidebar defaults to
-        #f8f8f7 (light) or #21201d (dark).
+        When unset in ``[theme.sidebar]``, the built-in themes use the stock
+        sidebar background (#f8f8f7 light, #21201d dark). If main
+        ``backgroundColor`` or ``secondaryBackgroundColor`` was customized,
+        an unset sidebar background falls back to the resolved main
+        ``secondaryBackgroundColor``.
     """,
 )
 
@@ -1542,8 +1545,11 @@ _create_theme_options(
         Background color used for most interactive widgets.
 
         Defaults to #f8f8f7 for the light theme and #2d2b27 for the dark theme.
-        When unset in ``[theme.sidebar]``, the stock sidebar defaults to
-        #f8f8f7 (light) or #2d2b27 (dark).
+        When unset in ``[theme.sidebar]``, the built-in themes use the stock
+        sidebar secondary (#ffffff light, #2d2b27 dark). If main
+        ``backgroundColor`` or ``secondaryBackgroundColor`` was customized,
+        an unset sidebar secondary falls back to the resolved main
+        ``backgroundColor``.
     """,
 )
 

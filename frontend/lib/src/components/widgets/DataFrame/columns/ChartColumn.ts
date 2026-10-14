@@ -243,11 +243,16 @@ function BaseChartColumn(
     getCellValue(
       cell: SparklineCellType | LoadingCell
     ): readonly number[] | null {
-      if (cell.kind === GridCellKind.Loading) {
+      // Empty cells are loading cells. Invalid arrays are error text cells.
+      // Neither stores sparkline values.
+      if (
+        cell.kind !== GridCellKind.Custom ||
+        (cell.data as { kind?: string } | null | undefined)?.kind !==
+          "sparkline-cell"
+      ) {
         return null
       }
-
-      return cell.data?.values ?? null
+      return cell.data.values
     },
   }
 }

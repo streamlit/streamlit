@@ -1674,6 +1674,12 @@ const setSidebarHeadingFontSizes = (
   return merge([], defaultHeadingFontSizes, configHeadingFontSizes ?? [])
 }
 
+/**
+ * Picks the light or dark stock sidebar pair for `activeTheme`.
+ * Named custom light and dark themes keep that section even when
+ * background luminance would imply the other pair. Other themes use
+ * main background luminance.
+ */
 const getActiveThemeBase = (
   activeTheme: ThemeConfig
 ): CustomThemeConfig.BaseTheme => {
@@ -1689,17 +1695,42 @@ const getActiveThemeBase = (
     : CustomThemeConfig.BaseTheme.DARK
 }
 
+/** Built-in main page surfaces used to decide stock vs swapped sidebar fallbacks. */
+const stockMainSurfaces = {
+  [CustomThemeConfig.BaseTheme.LIGHT]: {
+    bgColor: "#FFFFFF",
+    secondaryBg: "#F8F8F7",
+  },
+  [CustomThemeConfig.BaseTheme.DARK]: {
+    bgColor: "#171614",
+    secondaryBg: "#2D2B27",
+  },
+} as const
+
 /** Stock sidebar surface colors when `[theme.sidebar]` does not set them. */
 export const stockSidebarSurfaces = {
   [CustomThemeConfig.BaseTheme.LIGHT]: {
     backgroundColor: "#F8F8F7",
-    secondaryBackgroundColor: "#F8F8F7",
+    // Distinct from page bg so widgets stay visible while showWidgetBorder is off.
+    secondaryBackgroundColor: "#FFFFFF",
   },
   [CustomThemeConfig.BaseTheme.DARK]: {
     backgroundColor: "#21201D",
     secondaryBackgroundColor: "#2D2B27",
   },
 } as const
+
+const mainSurfacesAreStock = (
+  activeTheme: ThemeConfig,
+  mainThemeBase: CustomThemeConfig.BaseTheme
+): boolean => {
+  const stock = stockMainSurfaces[mainThemeBase]
+  const { bgColor, secondaryBg } = activeTheme.emotion.colors
+  return (
+    toHex(bgColor) === toHex(stock.bgColor) &&
+    toHex(secondaryBg) === toHex(stock.secondaryBg)
+  )
+}
 
 /**
  * Create the sidebar's theme, including any sidebar custom theme configurations
@@ -1709,19 +1740,31 @@ export const stockSidebarSurfaces = {
  */
 export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   const sidebarThemeInput = activeTheme.themeInput?.sidebar
+  const { bgColor, secondaryBg } = activeTheme.emotion.colors
   const mainThemeBase = getActiveThemeBase(activeTheme)
   const stockSurfaces = stockSidebarSurfaces[mainThemeBase]
 
-  // Use configured sidebar backgrounds, otherwise stock sidebar surfaces
-  // (not a swap of the main page bg / secondaryBg).
+  // Built-in main surfaces → stock sidebar pair. Customized main surfaces →
+  // classic swap (sidebar bg = main secondary, sidebar secondary = main bg).
+  const useStockSidebarSurfaces = mainSurfacesAreStock(
+    activeTheme,
+    mainThemeBase
+  )
+  const fallbackBackground = useStockSidebarSurfaces
+    ? stockSurfaces.backgroundColor
+    : secondaryBg
+  const fallbackSecondary = useStockSidebarSurfaces
+    ? stockSurfaces.secondaryBackgroundColor
+    : bgColor
+
+  // Unset sidebar backgrounds use the stock or swapped fallback above.
   const sidebarBackground =
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank background color means unset
-    sidebarThemeInput?.backgroundColor || stockSurfaces.backgroundColor
+    sidebarThemeInput?.backgroundColor || fallbackBackground
 
   const secondaryBackgroundColor =
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank secondary background color means unset
-    sidebarThemeInput?.secondaryBackgroundColor ||
-    stockSurfaces.secondaryBackgroundColor
+    sidebarThemeInput?.secondaryBackgroundColor || fallbackSecondary
 
   // Handle configured vs. default header font sizes for sidebar
   const headingFontSizes = setSidebarHeadingFontSizes(

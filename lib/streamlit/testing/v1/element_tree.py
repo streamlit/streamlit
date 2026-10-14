@@ -53,6 +53,7 @@ from streamlit.elements.widgets.time_widgets import (
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -70,7 +71,6 @@ if TYPE_CHECKING:
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-    from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
     from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
     from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
     from streamlit.proto.DownloadButton_pb2 import (
@@ -110,6 +110,17 @@ if TYPE_CHECKING:
     from streamlit.typing import ChatInputValue
 
 T = TypeVar("T")
+
+# Public ``Dataframe.editing_mode`` strings. ``ADD_ONLY`` and ``DELETE_ONLY``
+# match ``num_rows`` (``"add"`` and ``"delete"``), not the proto names.
+_DATAFRAME_EDITING_MODE_NAMES: Final[dict[int, str]] = {
+    DataframeProto.EditingMode.READ_ONLY: "read_only",
+    DataframeProto.EditingMode.FIXED: "fixed",
+    DataframeProto.EditingMode.DYNAMIC: "dynamic",
+    DataframeProto.EditingMode.ADD_ONLY: "add",
+    DataframeProto.EditingMode.DELETE_ONLY: "delete",
+}
+
 
 # Public ``get()`` names that are not the node ``type`` string.
 _GET_TYPE_ALIASES: dict[str, str] = {
@@ -780,38 +791,215 @@ class DownloadButton(Widget):
         return self.set_value(True)
 
 
+def _chat_input_accepts_files(accept_file: int) -> bool:
+    """Return whether this ``accept_file`` proto value allows attachments."""
+    from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
+
+    return accept_file != ChatInputProto.AcceptFile.NONE
+
+
+def _chat_input_accepts_multiple_files(accept_file: int) -> bool:
+    """Return whether uploads accumulate instead of replacing one file."""
+    from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
+
+    return accept_file in {
+        ChatInputProto.AcceptFile.MULTIPLE,
+        ChatInputProto.AcceptFile.DIRECTORY,
+    }
+
+
+def _assert_chat_input_filename(filename: str, allowed_types: Sequence[str]) -> None:
+    """Reject a filename the chat-input widget would not deserialize."""
+    if not allowed_types:
+        return
+
+    from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
+    from streamlit.errors import StreamlitAPIException
+
+    try:
+        enforce_filename_restriction(filename, allowed_types)
+    except StreamlitAPIException as exc:
+        raise AppTestError(str(exc)) from exc
+
+
 @dataclass(repr=False)
 class ChatInput(Widget):
-    """A representation of ``st.chat_input``."""
+    r"""A representation of ``st.chat_input``.
+
+    ``set_value`` sets the message text. ``upload`` attaches files when the
+    widget was created with ``accept_file``. Text and files are submitted
+    together on the next ``run()`` and are not kept afterwards, matching the
+    browser widget.
+
+    Example
+    -------
+    >>> at = AppTest.from_string('''
+    ...     import streamlit as st
+    ...     prompt = st.chat_input("Say something", accept_file=True)
+    ...     if prompt and prompt.files:
+    ...         st.write(prompt.files[0].name)
+    ... ''')
+    >>> at.run()
+    >>> at.chat_input[0].upload("notes.txt", b"hello")
+    >>> at.run()
+    >>> at.markdown[0].value
+    'notes.txt'
+    """
 
     _value: str | None
+    # (file_id, filename, content, mime_type). InitialValue means the test
+    # has not called upload/clear. None means staged files were cleared.
+    # Chat input is a trigger, so committed files are not read back from
+    # session state on later runs.
+    _files: list[tuple[str, str, bytes, str]] | InitialValue | None = field(repr=False)
     proto: ChatInputProto = field(repr=False)
     placeholder: str
 
     def __init__(self, proto: ChatInputProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "chat_input"
+        self._files = InitialValue()
 
     def set_value(self, v: str | None) -> ChatInput:
-        """Set the value of the widget."""
+        """Set the message text, or ``None`` to clear pending text.
+
+        This does not attach or remove files. Use ``upload`` and ``clear``
+        for files.
+        """
         return super().set_value(v)
+
+    def _assert_accepts_files(self) -> None:
+        if _chat_input_accepts_files(self.proto.accept_file):
+            return
+        key_part = f" (key={self.key!r})" if self.key else ""
+        raise AppTestError(
+            f"st.chat_input{key_part} does not accept files. "
+            "Pass accept_file=True, 'multiple', or 'directory'."
+        )
+
+    def upload(
+        self,
+        filename: str,
+        content: bytes,
+        mime_type: str = "application/octet-stream",
+    ) -> ChatInput:
+        """Stage one file for the next submit.
+
+        ``accept_file=True`` replaces any file already staged. ``"multiple"``
+        and ``"directory"`` append. A later ``run()`` does not send the files
+        again.
+
+        Parameters
+        ----------
+        filename
+            File name. For ``accept_file="directory"``, this may be a
+            relative path such as ``"docs/notes.txt"``.
+        content
+            File content as bytes.
+        mime_type
+            MIME type. Defaults to ``"application/octet-stream"``.
+
+        Returns
+        -------
+        ChatInput
+            This widget, so calls can chain into ``set_value`` or ``run``.
+        """
+        from uuid import uuid4
+
+        self._assert_can_interact()
+        self._assert_accepts_files()
+        if not isinstance(filename, str) or filename == "":
+            raise AppTestError(
+                "st.chat_input file names must be a non-empty string. "
+                f"Got {filename!r}."
+            )
+        if not isinstance(content, bytes):
+            raise AppTestError(
+                "st.chat_input file content must be bytes. "
+                f"Got {type(content).__name__}."
+            )
+        if not isinstance(mime_type, str) or mime_type == "":
+            raise AppTestError(
+                "st.chat_input file MIME types must be a non-empty string. "
+                f"Got {mime_type!r}."
+            )
+        _assert_chat_input_filename(filename, list(self.proto.file_type))
+
+        record = (str(uuid4()), filename, content, mime_type)
+        if _chat_input_accepts_multiple_files(self.proto.accept_file):
+            staged = self._files if isinstance(self._files, list) else []
+            staged.append(record)
+            self._files = staged
+        else:
+            self._files = [record]
+        return self
+
+    def clear(self) -> ChatInput:
+        """Remove files staged for the next submit.
+
+        Does not clear text set with ``set_value`` and does not submit.
+
+        Returns
+        -------
+        ChatInput
+            This widget, so calls can chain.
+        """
+        self._assert_can_interact()
+        self._assert_accepts_files()
+        self._files = None
+        return self
+
+    def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
+        """Return files staged for this submit.
+
+        Unlike ``FileUploader``, chat input does not replay files from
+        session state. Each submit is one-shot.
+        """
+        files = self._files
+        if not isinstance(files, list):
+            return []
+        return files
 
     @property
     def _widget_state(self) -> WidgetState:
+        from streamlit.proto.Common_pb2 import (
+            FileUploaderState as FileUploaderStateProto,
+        )
+
         ws = WidgetState()
         ws.id = self.id
-        if self._value is not None:
-            ws.chat_input_value.data = self._value
+        files = self._get_files_to_register()
+        if self._value is None and not files:
+            return ws
+
+        # The frontend always sends `data` on submit, including "" when the
+        # user attached files without typing. Omitting the field makes
+        # ChatInputSerde treat the submit as no value.
+        ws.chat_input_value.data = "" if self._value is None else self._value
+        if not files:
+            return ws
+
+        state_proto = FileUploaderStateProto()
+        for file_id, filename, content, _mime_type in files:
+            file_info = state_proto.uploaded_file_info.add()
+            file_info.file_id = file_id
+            file_info.name = filename
+            file_info.size = len(content)
+            file_info.file_urls.file_id = file_id
+            file_info.file_urls.upload_url = f"/mock/upload/test session id/{file_id}"
+            file_info.file_urls.delete_url = f"/mock/upload/test session id/{file_id}"
+        ws.chat_input_value.file_uploader_state.CopyFrom(state_proto)
         return ws
 
     @property
     def value(self) -> str | ChatInputValue | None:
-        """The pending or last submitted chat input value.
+        """The pending text or the last submitted chat input value.
 
-        Before ``.run()``, a pending ``set_value`` is that string (including ``""``).
-        After ``.run()``, this is a plain ``str`` for a text-only chat input, a
-        ``ChatInputValue`` when ``accept_file`` or ``accept_audio`` is enabled, and
-        ``None`` when nothing was submitted.
+        Before ``.run()``, a pending ``set_value`` is that string (including
+        ``""``). Staged files are not included until after ``.run()``.
+        After ``.run()``, this is a plain ``str`` for a text-only chat input,
+        a ``ChatInputValue`` when ``accept_file`` or ``accept_audio`` is
+        enabled, and ``None`` when nothing was submitted.
         """
         if self._value is not None:
             return self._value
@@ -934,6 +1122,14 @@ class ColorPicker(Widget):
 
 @dataclass(repr=False)
 class Dataframe(Element):
+    """A representation of ``st.dataframe`` and ``st.data_editor``.
+
+    ``.value`` is the input table as a pandas DataFrame, without cell edits.
+    ``set_value()`` raises ``AppTestError`` and leaves that table unchanged.
+    Tables whose ``editing_mode`` is not ``"read_only"`` are also listed on
+    ``AppTest.data_editor``.
+    """
+
     proto: DataframeProto = field(repr=False)
 
     def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
@@ -942,6 +1138,48 @@ class Dataframe(Element):
         self.type = "dataframe"
         # Extract user key from the element id if present
         self.key = user_key_from_element_id(proto.id) if proto.id else None
+
+    @property
+    def editing_mode(self) -> str:
+        """Configured row-editing mode.
+
+        - ``"read_only"``: ``st.dataframe``.
+        - ``"fixed"``, ``"dynamic"``, ``"add"``, or ``"delete"``: ``st.data_editor``,
+          matching its ``num_rows`` value. Disabled editors keep their mode.
+        """
+        mode = self.proto.editing_mode
+        name = _DATAFRAME_EDITING_MODE_NAMES.get(mode)
+        if name is not None:
+            return name
+        # Unmapped values stay readable: a known enum uses its lowercase proto
+        # name, and any other number stays decimal text. The name branch is
+        # unreachable while the map lists every current enum value.
+        try:
+            return DataframeProto.EditingMode.Name(
+                mode
+            ).lower()  # pragma: no cover - defensive
+        except ValueError:
+            return str(mode)
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        # Read-only dataframes keep the generic message, which points to session
+        # state (selection state accepts writes). Editors cannot use set_value();
+        # a keyed editor is seeded by assigning its edit state before run().
+        if self.editing_mode == "read_only":
+            super()._raise_unsupported_interaction(method)
+        key_part = f" (key={self.key!r})" if self.key else ""
+        if self.key:
+            session_state_note = (
+                " Assign the edit state (edited_rows, added_rows, deleted_rows)"
+                " on at.session_state before run()."
+            )
+        else:
+            session_state_note = " Use a Playwright e2e test."
+        raise AppTestError(
+            f"{method}() is not supported for data_editor{key_part}. "
+            "AppTest can read the table and editing_mode, but it does not "
+            f"apply cell edits through {method}().{session_state_note}"
+        )
 
     @property
     def value(self) -> PandasDataframe:
@@ -3204,6 +3442,21 @@ class Block:
         return ElementList(self.get("dataframe"))  # type: ignore
 
     @property
+    def data_editor(self) -> ElementList[Dataframe]:
+        """``st.data_editor`` elements (dataframes that are not read-only).
+
+        ``dataframe`` includes these elements too. AppTest does not apply cell
+        edits.
+        """
+        return ElementList(
+            [
+                dataframe
+                for dataframe in self.dataframe
+                if dataframe.editing_mode != "read_only"
+            ]
+        )
+
+    @property
     def date_input(self) -> WidgetList[DateInput]:
         return WidgetList(self.get("date_input"))  # type: ignore
 
@@ -3406,9 +3659,9 @@ class Block:
         ``datetime_input`` vs ``date_time_input``) are accepted. Node type
         names (usually the proto field name) keep working. ``pills`` /
         ``segmented_control`` / ``container`` / ``form`` /
-        ``form_submit_button`` / ``expander`` / ``tabs`` / ``columns`` /
-        ``status`` / ``chat_message`` use the same filtering as the matching
-        attributes.
+        ``form_submit_button`` / ``data_editor`` / ``expander`` / ``tabs`` /
+        ``columns`` / ``status`` / ``chat_message`` use the same filtering as
+        the matching attributes.
         """
         if element_type == "pills":
             return list(self.pills)
@@ -3420,6 +3673,8 @@ class Block:
             return list(self.form)
         if element_type == "form_submit_button":
             return list(self.form_submit_button)
+        if element_type == "data_editor":
+            return list(self.data_editor)
         if element_type == "chat_message":
             return list(self.chat_message)
         if element_type in {"columns", "column"}:

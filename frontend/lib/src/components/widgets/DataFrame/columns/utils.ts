@@ -316,7 +316,7 @@ export function mergeColumnParameters<T = Record<string, unknown>>(
   }
 
   if (isNullOrUndefined(userParams)) {
-    return (defaultParams || {}) as T
+    return defaultParams as T
   }
 
   return merge(defaultParams, userParams) as T

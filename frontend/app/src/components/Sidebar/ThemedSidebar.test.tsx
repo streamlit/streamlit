@@ -57,6 +57,7 @@ describe("ThemedSidebar Component", () => {
   it("uses the stock light sidebar background color", () => {
     renderThemedSidebar()
 
+    // mockTheme keeps built-in light main surfaces → stock sidebar pair
     expect(screen.getByTestId("stSidebar")).toHaveStyle({
       backgroundColor: "#F8F8F7",
     })
@@ -204,7 +205,7 @@ describe("createSidebarTheme", () => {
     expect(sidebarTheme.themeInput?.backgroundColor).toBe("#FF0000")
   })
 
-  it("uses stock sidebar surfaces when no sidebar background is specified", () => {
+  it("swaps main surfaces when custom main colors leave sidebar unset", () => {
     const theme = createMockTheme({
       emotion: {
         colors: {
@@ -214,11 +215,11 @@ describe("createSidebarTheme", () => {
       },
     })
     const sidebarTheme = createSidebarTheme(theme)
-    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#F8F8F7")
-    expect(sidebarTheme.themeInput?.secondaryBackgroundColor).toBe("#F8F8F7")
+    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#CCCCCC")
+    expect(sidebarTheme.themeInput?.secondaryBackgroundColor).toBe("#F0F0F0")
   })
 
-  it("uses stock sidebar surfaces when sidebar background is an empty string", () => {
+  it("swaps main surfaces when sidebar background is an empty string", () => {
     const theme = createMockTheme({
       themeInput: {
         sidebar: {
@@ -233,16 +234,16 @@ describe("createSidebarTheme", () => {
       },
     })
     const sidebarTheme = createSidebarTheme(theme)
-    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#F8F8F7")
-    expect(sidebarTheme.themeInput?.secondaryBackgroundColor).toBe("#F8F8F7")
+    expect(sidebarTheme.themeInput?.backgroundColor).toBe("#CCCCCC")
+    expect(sidebarTheme.themeInput?.secondaryBackgroundColor).toBe("#F0F0F0")
   })
 
-  it("uses stock dark sidebar surfaces for dark main themes", () => {
+  it("uses stock dark sidebar surfaces when main surfaces are built-in dark", () => {
     const theme = createMockTheme({
       emotion: {
         colors: {
-          secondaryBg: "#000000",
-          bgColor: "#1A1A1A",
+          secondaryBg: "#2D2B27",
+          bgColor: "#171614",
         },
       },
     })
