@@ -349,8 +349,13 @@ def _agent_description(
     if data is not None:
         try:
             df = dataframe_util.convert_anything_to_pandas_df(data)
+            # The index is dropped as well: the browser's payload is
+            # `to_dict("records")`, which never includes it, and an index can
+            # hold values such as customer IDs.
             df = df[_plotted_columns(df, latitude, longitude, size, color)]
-            arrow_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+            arrow_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(
+                df.reset_index(drop=True)
+            )
         except Exception:
             # A map accepts shapes the Arrow conversion may reject. The snapshot
             # then falls back to the Deck.gl spec.

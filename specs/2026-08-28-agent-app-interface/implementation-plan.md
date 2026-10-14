@@ -72,7 +72,10 @@ How every `st.*` command describes itself, with no consumer yet.
 **Review focus:** the rule each call site follows: the public command name as `type`,
 public parameter names as `props`, unset parameters dropped, and effective values for
 parameters that change what the element means. Reviewers of each element only need to
-check their own command's call.
+check their own command's call. The call's arguments are evaluated in every session,
+browsers included, so none may raise for an input the command accepts — never
+truth-test a sequence parameter, which a NumPy array or pandas Series turns into an
+error — and expensive preparation goes behind `agent_spec.is_recording()`.
 
 **Tests:** `agent_spec` unit tests; `agent_spec_coverage_test.py`, already in the
 prototype, which runs every element mock with recording forced on and checks each

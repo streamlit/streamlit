@@ -48,9 +48,11 @@ range, a whole number, or a date. Because it is built from the arguments rather 
 from the proto, it carries what the proto cannot: the command's identity where
 several commands share a payload, and parameters that never reach the wire.
 
-Nothing is built unless the agent API is enabled -- ``element`` returns ``None``
-and the caller passes that straight through -- so an ordinary server does no
-work beyond one cached flag read per element.
+A description is only built for sessions the agent API created -- for any other
+session ``element`` returns ``None`` and the caller passes that straight through.
+Its arguments are still evaluated in every session, so they must never raise for
+an input the command accepts, and expensive preparation belongs behind
+``is_recording()``.
 
 Two things deliberately stay out of a command's description, because the command
 cannot know them yet:

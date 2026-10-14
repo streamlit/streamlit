@@ -642,7 +642,10 @@ class RadioMixin:
                 # The formatted options a client must send back, not the
                 # author's Python objects.
                 options=formatted_options,
-                captions=list(captions) if captions else None,
+                # The captions as the browser receives them. Never truth-test
+                # `captions`: arguments here are evaluated in every session, and
+                # a NumPy array or pandas Series has no truth value.
+                captions=list(radio_proto.captions) if captions is not None else None,
                 help=help,
                 horizontal=horizontal,
                 disabled=disabled,

@@ -205,9 +205,13 @@ class AgentSessionClient(SessionClient):
                 return
             self._element_at[position] = len(self._deltas)
         else:
-            # A block written here supersedes the element, and an element
-            # written after it has to come after it, so stop replacing.
-            self._element_at.pop(position, None)
+            # A block written here supersedes what was at and below it, and an
+            # element written after it has to come after it, so stop replacing
+            # there. Otherwise a child of a cleared and rebuilt container would
+            # land in its old slot, before the clear, and be erased by it.
+            depth = len(position)
+            for cached in [p for p in self._element_at if p[:depth] == position]:
+                del self._element_at[cached]
         self._deltas.append((self._run_id, msg))
 
     def _drop_stale_deltas(self) -> None:

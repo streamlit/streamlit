@@ -61,8 +61,8 @@ class ElementMsgData:
     layout_config: LayoutConfig | None = None
     # The command's agent-API description. Recorded so a replayed element is
     # described the same way as one emitted by a live call. It is captured from
-    # the run that populated the cache, so a cache entry filled before the
-    # agent API was enabled replays without one.
+    # the run that populated the cache, so an entry a browser session filled
+    # has none, even on a server with the agent API enabled.
     agent_props: str | None = None
 
 

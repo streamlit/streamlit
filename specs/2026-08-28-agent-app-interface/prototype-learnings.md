@@ -1264,6 +1264,22 @@ A second branch review found two concurrency bugs, both fixed:
   read session state, letting a new run start under it. The session now stays claimed
   until the thread finishes.
 
+A third review found four more, all fixed:
+
+- **A browser regression.** `st.radio` described its captions with
+  `list(captions) if captions else None`, and a description's arguments are evaluated
+  in every session. A pandas Series has no truth value, so an app passing one failed
+  in the browser too. The description now reads the captions from the proto.
+- **The map exported its index.** The plotted columns kept the dataframe's index,
+  which the Arrow conversion turned into a column, while the browser's payload never
+  includes it. An index of customer IDs reached the agent and nobody else. The index
+  is now dropped, as the browser drops it.
+- **A rebuilt container lost its child.** Writing a container did not forget the
+  cached positions beneath it, so a child of a cleared and rebuilt container replaced
+  its predecessor in place, before the clear, and was erased by it.
+- **An object as an MCP tool name** raised a `TypeError` and a 500 instead of
+  `INVALID_PARAMS`.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`

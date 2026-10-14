@@ -416,7 +416,9 @@ async def _call_tool(
     get_data: GetDataCall,
 ) -> dict[str, Any]:
     name = params.get("name")
-    if name not in {TOOL_NAME, GET_DATA_TOOL_NAME}:
+    # Checked as a string first: an object or a list is unhashable, so the set
+    # lookup would raise instead of answering.
+    if not isinstance(name, str) or name not in {TOOL_NAME, GET_DATA_TOOL_NAME}:
         return error_response(
             request_id,
             INVALID_PARAMS,
