@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { ReactElement, ReactNode } from "react"
+
 import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
@@ -195,8 +197,8 @@ describe("Popover container", () => {
 
   it("closes when an expander panel becomes inert", async () => {
     // A collapsed expander sets inert on its panel inside <details>.
-    // checkVisibility ignores inert, and the toggle does not always reach
-    // the document click handler.
+    // checkVisibility ignores inert. Collapsing via the summary may not
+    // dispatch a document click, so outside-click dismissal cannot be relied on.
     const panel = await renderOpenPopoverInPanel(undefined, {
       insideDetails: true,
     })
@@ -274,6 +276,185 @@ describe("Popover container", () => {
         delete proto.checkVisibility
       }
     }
+  })
+
+  describe("expander details.open applied from a ref", () => {
+    // Mirrors Expander: `<details>` has no `open` attribute, and a ref sets
+    // `node.open` after the popover's layout effect. jsdom does not apply the
+    // closed-details user-agent rule, so checkVisibility is stubbed to.
+    let originalCheckVisibility: HTMLElement["checkVisibility"] | undefined
+
+    function installClosedDetailsVisibility(): void {
+      const proto = HTMLElement.prototype as {
+        checkVisibility?: () => boolean
+      }
+      originalCheckVisibility = proto.checkVisibility
+      proto.checkVisibility = function (this: HTMLElement): boolean {
+        // An ancestor marked `.is-hidden` stands in for an inactive tab.
+        if (this.closest(".is-hidden")) {
+          return false
+        }
+        const details = this.closest("details")
+        // The details element itself stays visible. Its contents do not
+        // until `open` is set.
+        if (details && !details.open && this !== details) {
+          return false
+        }
+        return true
+      }
+    }
+
+    function restoreCheckVisibility(): void {
+      const proto = HTMLElement.prototype as {
+        checkVisibility?: () => boolean
+      }
+      if (originalCheckVisibility) {
+        proto.checkVisibility = originalCheckVisibility
+      } else {
+        delete proto.checkVisibility
+      }
+    }
+
+    /**
+     * Parent sets `details.open` from a ref, which React runs after the
+     * popover's useLayoutEffect.
+     */
+    function DetailsOpenFromRef({
+      expanded,
+      children,
+    }: {
+      expanded: boolean
+      children: ReactNode
+    }): ReactElement {
+      return (
+        <details
+          ref={(node: HTMLDetailsElement | null) => {
+            if (node) {
+              node.open = expanded
+            }
+          }}
+        >
+          <summary>Section</summary>
+          <div data-testid="panel" {...(expanded ? {} : { inert: "" })}>
+            {children}
+          </div>
+        </details>
+      )
+    }
+
+    beforeEach(() => {
+      installClosedDetailsVisibility()
+    })
+
+    afterEach(() => {
+      restoreCheckVisibility()
+    })
+
+    it("stays open when mounted inside an expanded expander", () => {
+      const widgetMgr = createWidgetMgr()
+      const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+      const widgetId = "popover-widget-id"
+      const fragmentId = "frag-1"
+
+      render(
+        <DetailsOpenFromRef expanded={true}>
+          <Popover
+            {...getProps(
+              { id: widgetId, open: true },
+              { widgetMgr, fragmentId }
+            )}
+          >
+            <div>popover content</div>
+          </Popover>
+        </DetailsOpenFromRef>
+      )
+
+      expect(screen.getByText("popover content")).toBeInTheDocument()
+      expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
+        "aria-expanded",
+        "true"
+      )
+      expect(setBoolValueSpy).not.toHaveBeenCalledWith(
+        widgetId,
+        false,
+        expect.anything()
+      )
+    })
+
+    it("keeps a restored passive open state inside an expanded expander", () => {
+      const blockId = "$$ID-abc123-my_popover"
+      const widgetMgr = createWidgetMgr()
+      widgetMgr.setElementState(blockId, "open", true)
+
+      render(
+        <DetailsOpenFromRef expanded={true}>
+          <Popover {...getProps({}, { widgetMgr, blockId })}>
+            <div>popover content</div>
+          </Popover>
+        </DetailsOpenFromRef>
+      )
+
+      expect(screen.getByText("popover content")).toBeInTheDocument()
+      expect(widgetMgr.getElementState(blockId, "open")).toBe(true)
+    })
+
+    it("still closes when mounted inside a collapsed expander", () => {
+      const widgetMgr = createWidgetMgr()
+      const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+      const widgetId = "popover-widget-id"
+      const fragmentId = "frag-1"
+
+      render(
+        <DetailsOpenFromRef expanded={false}>
+          <Popover
+            {...getProps(
+              { id: widgetId, open: true },
+              { widgetMgr, fragmentId }
+            )}
+          >
+            <div>popover content</div>
+          </Popover>
+        </DetailsOpenFromRef>
+      )
+
+      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+      expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
+        formId: undefined,
+        fragmentId,
+        fromUser: false,
+      })
+    })
+
+    it("records a non-user close when the expanded expander is inside a hidden tab", () => {
+      // The closed <details> must not hide an inactive tab. The user never
+      // saw this popover, so the close is not a user action.
+      const widgetMgr = createWidgetMgr()
+      const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+      const widgetId = "popover-widget-id"
+      const fragmentId = "frag-1"
+
+      render(
+        <div className="is-hidden">
+          <DetailsOpenFromRef expanded={true}>
+            <Popover
+              {...getProps(
+                { id: widgetId, open: true },
+                { widgetMgr, fragmentId }
+              )}
+            >
+              <div>popover content</div>
+            </Popover>
+          </DetailsOpenFromRef>
+        </div>
+      )
+
+      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
+      expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
+        formId: undefined,
+        fragmentId,
+        fromUser: false,
+      })
+    })
   })
 
   it("stays open when interacting with a Streamlit overlay root", async () => {

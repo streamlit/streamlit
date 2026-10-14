@@ -769,3 +769,6 @@ def test_popover_closes_when_its_trigger_is_hidden(app: Page):
     # Reopening the expander leaves the popover closed.
     expander.locator("summary").click()
     expect(app.get_by_text("Popover in expander content")).not_to_be_visible()
+    expect(
+        get_popover(app, "Popover in expander").get_by_role("button")
+    ).to_have_attribute("aria-expanded", "false")

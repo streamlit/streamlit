@@ -105,8 +105,8 @@ export interface PopoverProps {
 }
 
 /**
- * Attributes the observer watches. A change only closes the popover when
- * `isPopoverTriggerHidden` then reports the trigger as hidden.
+ * Attributes that can hide the trigger. A mutation only wakes the
+ * observer; `isPopoverTriggerHidden` decides whether to close.
  */
 const TRIGGER_VISIBILITY_ATTRIBUTES = [
   "inert",
@@ -119,13 +119,17 @@ const TRIGGER_VISIBILITY_ATTRIBUTES = [
 /**
  * Whether `trigger` is hidden from the user.
  *
- * `checkVisibility()` catches `display: none` (inactive tabs) but ignores
- * `inert`. Expander collapse sets `inert` on the panel inside `<details>`
- * before the height animation finishes, so that `inert` counts. A dialog's
- * modal `inert` sits on an ancestor outside `<details>` and must not close
- * the popover. When `checkVisibility` is missing (jsdom does no layout), only
- * that expander `inert` and the `hidden` attribute count, so unit tests opt
- * in with those or a mock.
+ * - `checkVisibility()` catches `display: none` (inactive tabs) and ignores `inert`.
+ * - Expander collapse sets `inert` on the panel inside `<details>` before the
+ *   height animation finishes, so that `inert` counts as hidden.
+ * - Dialog `inert` sits on an ancestor outside `<details>` and leaves the popover open.
+ * - A still-closed `<details>` hides its contents before Expander's ref sets
+ *   `open`. When that panel has no `inert` and the `<details>` element itself
+ *   is visible, the expander is expanded and this check must not close the
+ *   popover. The ref's `open` mutation rechecks. A hidden ancestor of the
+ *   `<details>` (an inactive tab) still counts.
+ * - When `checkVisibility` is missing, only expander `inert` and the `hidden`
+ *   attribute count.
  */
 function isPopoverTriggerHidden(trigger: HTMLElement): boolean {
   // Only expander inert. A dialog marks an ancestor outside `<details>` inert
@@ -137,10 +141,20 @@ function isPopoverTriggerHidden(trigger: HTMLElement): boolean {
   if (trigger.closest("[hidden]") !== null) {
     return true
   }
-  if (typeof trigger.checkVisibility === "function") {
-    return !trigger.checkVisibility()
+  if (typeof trigger.checkVisibility !== "function") {
+    return false
   }
-  return false
+  if (trigger.checkVisibility()) {
+    return false
+  }
+  // Closed `<details>` content is `display: none` until `attachDetails` sets
+  // `open`. Collapsed expanders already returned above via `inert`. If the
+  // `<details>` element itself is hidden, an ancestor (inactive tab) hid it.
+  const details = trigger.closest("details")
+  if (details !== null && !details.open && details.checkVisibility()) {
+    return false
+  }
+  return true
 }
 
 const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
@@ -231,9 +245,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [open, widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
-  // `fromUser` is false when the popover mounts already hidden: the user
-  // never saw it, so this must not start a rerun. A later hide (tab switch,
-  // expander collapse) is a user action and passes true.
+  /**
+   * Close the popover and record that state.
+   *
+   * Pass `fromUser: false` when the popover mounts already hidden: the user
+   * never saw it, so this must not start a rerun. A later hide (tab switch
+   * or expander collapse) is a user action and passes `true`.
+   */
   const closePopover = useCallback(
     (fromUser: boolean): void => {
       setOpen(false)
@@ -466,13 +484,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [open, handleClose])
 
-  // Close when the trigger is hidden, before paint. The body is portaled, so
-  // hiding the trigger does not unmount it and Floating UI would pin it to the
-  // viewport corner:
-  // - an inactive tab sets `display: none` (its click never bubbles)
-  // - a collapsed expander sets `inert` before the animation ends
+  // Close when the trigger becomes hidden, before paint. The body is in a
+  // portal, so hiding the trigger does not unmount it and Floating UI would
+  // pin it to the viewport corner:
+  // - an inactive tab sets `display: none`, and React Aria stops the tab
+  //   click before the document click listener
+  // - a collapsed expander sets `inert` before the height animation ends
   // The first check covers a trigger that mounted already hidden, and that
-  // close is not a user action.
+  // close is not a user action. A still-closed `<details>` with no `inert`
+  // is an expanded expander whose ref has not set `open` yet, so that check
+  // leaves it open.
   useLayoutEffect(() => {
     if (!open) return
     const trigger = triggerRef.current
