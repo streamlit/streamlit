@@ -200,11 +200,13 @@ agents is the half nobody owns.
 5. **Add a conversational interface to your own app.** An author drops in `st.chat_input`
    and hands the question to an agent that reads the app through this interface, so
    "which region dropped?" is answered from the app's own numbers and definitions. This
-   needs nothing beyond v1, since the agent runs server-side and calls the app's own
-   endpoint. Two caveats: it gets its own session, so it consults the app independently
-   rather than seeing or changing what the human is looking at — not their filters,
-   uploads, or session state; and it does not inherit the asking user's identity unless
-   the deployment maps it, which matters in an app with per-user data access.
+   needs nothing beyond v1: the agent runs server-side and calls the app's own endpoint.
+   It gets its own session, so it neither sees nor changes what the human is looking
+   at, though it can start from the user's filters: the app hands it the user's widget
+   values, or the page carries them for assistants that read it
+   ([#17394](https://github.com/streamlit/streamlit/pull/17394)), and the agent sends
+   them in its first interactions. It does not inherit the asking user's identity
+   unless the deployment maps it, which matters in an app with per-user data access.
 
 ## Proposal
 
@@ -243,7 +245,7 @@ Later calls reference keys from the snapshot they just read:
 | `trigger`      | Optional, at most one `{"key": ...}`. Payload-bearing triggers such as `st.chat_input` also carry `"value"`.                                                                                                            |
 | `page`         | Optional `url_path` of a page listed in the snapshot's `pages`, resolved by normal navigation. Defaults to the app's default page on creation, the current page otherwise. Never a Python path or internal script hash. |
 | `query_params` | Optional replacement mapping of name → list of strings; omission preserves. Parameters bound to a widget follow the rules in [The snapshot](#the-snapshot).                                                            |
-| `context`      | Optional `timezone` and `locale`, read by the app as `st.context`. What a browser reports about itself without authentication, so accepting it grants nothing. Held for the session; omission preserves, and a new one replaces it. |
+| `context`      | Optional `timezone` and `locale`, read by the app as `st.context`. What a browser reports about itself without authentication, so accepting it grants nothing. Held for the session; omission preserves, and a new one replaces it. It never changes how values are encoded. |
 
 **The request blocks until the app settles, and returns its end state.** One interaction
 is one client submission, which can cause several script runs through callbacks,
@@ -258,14 +260,16 @@ outlasts the timeout could never finish, and a retried click would fire twice. W
 request on that session gets depends on the session's state; other sessions and creating
 calls are unaffected:
 
-| Session state                                | A retry: the same request again, or only `session_id` | A different request with the same `session_id` |
+| Session state                                | A retry: only `session_id`, or the same request again | A different request with the same `session_id` |
 | -------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------- |
 | Idle                                         | Runs                                   | Runs                                        |
 | Serving a request                            | `session_busy`                         | `session_busy`                              |
 | Running a timed-out interaction              | Waits for it and returns its result    | `session_busy`                              |
 | Holding a timed-out interaction's result     | Returns that result at once            | Discards it and runs as a new interaction   |
 
-A result is collected once; after that, the same request is a new interaction. A client
+A result is collected once; after that, the same request is a new interaction. Only
+`session_id` is the retry that always works, and the one the timeout message names:
+after a creating call, the same request, `{}`, would create another session. A client
 that disconnects while waiting is treated as timed out, so its retry collects the run
 too. Where a browser interaction would interrupt a running run, v1 answers
 `session_busy`, because the client may still come back for the result.
@@ -277,7 +281,8 @@ The limits of that guarantee:
   repeat side effects. General retry idempotency is the `request_id` of follow-up #4.
 - **A disconnect only helps if it reaches the server**, and a proxy that keeps the
   upstream connection open hides it. So the run timeout should stay below the timeouts
-  of the clients a deployment expects; then the `202` always arrives first.
+  of the clients a deployment expects, such as the 60 seconds MCP clients built on the
+  official TypeScript SDK wait by default; then the `202` always arrives first.
 - **Collection belongs to the session**: whichever request asks first gets the result. A
   session is meant for one client, and a request never interrupts another that is still
   waiting. Letting a retry take over a wait in flight would cover the proxy case without
@@ -296,7 +301,9 @@ the start and holds a session until it idles out.
 apart from collecting a timed-out run, and can repeat side effects like any rerun. A
 client rarely needs a read: nothing changes an agent session between interactions, since
 `run_every` timers belong to the browser, a file edit waits for the next interaction, and
-no other client shares the session, so the last snapshot stays current. A non-executing read arrives with follow-up #4.
+no other client shares the session, so the last snapshot stays current. A client that
+lost it, such as a model whose context dropped the result, gets a non-executing read
+with follow-up #4.
 
 **An agent session is an ordinary Streamlit session with a different client.** The
 runtime treats it as one more browser tab, which settles what it shares and what it does
@@ -311,12 +318,22 @@ not:
   its session state kept, so a coding agent can edit and re-check in one session, or omit
   `session_id` for a clean start. `server.runOnSave` does not apply: an edit never starts
   a run the client did not ask for.
-- **Absent, because a browser supplies it:** `st.context.headers` and `cookies` are
-  empty, and its URL, theme, and embedding fields are `None` rather than guessed.
-  Timezone and locale are `None` too unless the request states them in `context`, which
-  is what lets an app that formats times from `st.context.timezone` render them as it
-  would for a user. `st.user` comes from the deployment's trusted identity headers when
-  it maps them, and is anonymous otherwise.
+- **From the request:** `st.context.headers` are the request's, minus `Cookie` and
+  `Authorization`, refreshed on every interaction, as a browser session's are its
+  WebSocket handshake's. Apps act on headers — identity a proxy set, or the short-lived
+  caller's-rights token a Snowflake app connects with — so empty ones would make an
+  app behave differently for an agent, or fail. This grants nothing new: any client
+  that reaches the WebSocket can send arbitrary handshake headers, so a header is only
+  as trustworthy as what the deployment's proxy sets and strips, on both paths.
+  `st.user` comes from the trusted identity headers when the deployment maps them, and
+  is anonymous otherwise.
+- **Absent, because a browser supplies it:** `st.context.cookies` is empty. Cookies are
+  the one credential a browser attaches on its own, so reading none keeps a forged
+  cross-site request without authority even where `server.corsAllowedOrigins` is
+  broad, and agents, being programs, rarely have any. The URL, theme, and embedding
+  fields are `None` rather than guessed, and so are timezone and locale unless the
+  request states them in `context`, which lets an app that formats times from
+  `st.context.timezone` render them as it would for a user.
 
 **Navigation is the one-round-trip parameterization channel.** Widgets
 declared with `bind="query-params"` can be set on the creating call, so "run this
@@ -359,7 +376,13 @@ right now. Naming follows the public API, for the reason above:
 - Anything Streamlit derived rather than the author wrote stays **out of `props`**, so a
   reader never has to guess which keys are real parameters. Tabular and chart elements
   put it in a sibling `data` object — column schema, row and column counts, the
-  preview, the artifact URL — named after the `data` argument it describes.
+  preview, the artifact URL — named after the `data` argument it describes. The
+  exceptions are few, and the coverage test lists each with what it is derived from:
+  state a container has no `value` for (a dialog's `is_open`, a popover's or tab's
+  `open`), facts read from the object a command was given (an exception's `message`,
+  the `doc_string` `st.help` shows), and a media element's `url`. A parameter
+  Streamlit normalized, such as `column_config` with its defaults applied, is still a
+  parameter.
 - **Effective values, not just authored ones.** Include every public property that
   affects an element's meaning or how it can be interacted with, after backend-known
   defaults are resolved — `disabled: false`, `required: false`, `expanded: false`, the
@@ -537,16 +560,15 @@ Rules:
   first — is left out: `value` says the same thing on the first run and stays true after
   it, and every tab's contents are in the tree regardless of which one a browser shows. A
   display element has no `value`; its content stays in `props`, so an `st.metric` number
-  is `props.value`, and `st.json` reports its decoded body rather than a JSON string. A
-  few containers report state in `props` because they have no `value` to carry it: a
-  dialog's `is_open`, and a popover's or tab's `open`.
+  is `props.value`, and `st.json` reports its decoded body rather than a JSON string.
 - **Reported options and values are the form a request may send back.** For a widget with
   a `format_func`, `st.session_state` holds the author's Python option while the accepted
   wire value is the formatted string, and reporting the authored object would make both
   `options` and `value` unusable as input. Full fidelity is not automatically better here:
   the snapshot's job is to report what the *next request* can say. So
   `st.pills(options=[1, 12], format_func=month_name)` reports `"December"`, not `12`, and
-  a client that echoes a value back is always making a legal request. This holds for
+  a client that echoes a value back is always making a legal request, except with a
+  label several options share, which identifies none of them. This holds for
   every widget that lists options, `st.select_slider` included. Text typed into a widget
   that accepts new options is reported as typed, since formatting it would change it on
   every round trip. A display element is never sent back, so it reports what the author
@@ -642,11 +664,11 @@ Rules:
 | `Decimal`                           | String, to keep its digits                              | `"0.10"`                                      | `decimal`, from OpenAPI's format registry                               |
 | NaN, infinity, a missing table cell | `null`                                                  | `null`                                        | —                                                                       |
 | `bytes`                             | Its size                                                | `{"bytes": 3}`                                | None: `byte` would be base64 content, which stays behind `data.url`     |
-| `Enum`                              | Its value                                               | `"red"`                                       | That of the value                                                       |
+| `Enum`                              | Its value; as an option, its `format_func` label, like any option object | `"red"`                                       | That of the value                                                       |
 | Set, tuple                          | List                                                    | `["a", "b"]`                                  | —                                                                       |
-| Range widget value                  | Two-item list                                           | `[20, 80]`                                    | —                                                                       |
-| Option object                       | Its `format_func` label                                 | `"December"`                                  | — (an `enum` of the labels)                                             |
-| Integer                             | Number, at any size                                     | `9223372036854775807`                         | `int64`, from OpenAPI                                                   |
+| Range widget value                  | List, lowest first; a date range may hold fewer than two | `[20, 80]`                                   | —                                                                       |
+| Option object                       | Its `format_func` label                                 | `"December"`                                  | — (the labels are the element's `options`)                              |
+| Integer                             | Number, at any size; a JavaScript client rounds one beyond 2^53 | `9223372036854775807`                         | `int64`, from OpenAPI                                                   |
 | Anything else                       | `str(value)`                                            | `"Point(1, 2)"`                               | None                                                                    |
 
 ### When a run fails
@@ -673,11 +695,11 @@ Four details matter for an agent reading that snapshot:
 - **An exception the app displayed on purpose is not a failed run.** `st.exception` is a
   display command, so "is there an exception element?" is the wrong question — an app that
   catches a `ValueError` and renders it deliberately would flip the whole interaction to
-  `error`. The two cases are distinguishable because only
-  the runtime's own error display applies `client.showErrorDetails` redaction, so the
-  element records whether it was uncaught and only that sets `status`. A
-  caught-and-displayed exception stays in the tree, marked as handled, which is more
-  useful than either hiding it or calling the run broken.
+  `error`. The two cases are distinguishable because only the runtime's own error
+  display applies `client.showErrorDetails` redaction, so the element records whether it
+  was uncaught and only that sets `status`. A caught-and-displayed exception stays in
+  the tree, marked as handled, which is more useful than either hiding it or calling
+  the run broken.
 
 Callbacks and external side effects that already ran are not rolled back. The session
 stays usable, so an agent can correct its input and interact again.
@@ -724,7 +746,8 @@ against.** The server keeps, per session, what each element advertised — actio
 disabled, `support`, form, options, fragment, and whether it is in a dialog — so a
 rejection names the actual problem: `disabled_widget` for a disabled control,
 `unsupported_element` for one this interface cannot drive, including a keyed display
-element, and `not_on_page` only when the key really is absent.
+element, `not_on_page` for an element of this session that is not in the latest
+snapshot, and `unknown_key` for a key the session never had, such as a typo.
 
 **Widget constraints are a separate layer, and they belong to the widgets.** Whether a
 value is one of a selectbox's `options`, inside a slider's bounds, or a well-formed
@@ -750,7 +773,6 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
   "value_schema": {
     "type": "array",
     "items": { "type": "string", "format": "date" },
-    "minItems": 2,
     "maxItems": 2
   },
   "value": ["2026-01-01", "2026-03-31"]
@@ -759,12 +781,18 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
 
 - **It describes the form `value` is reported in**, so sending that back always
   matches: option labels as strings, `integer` for a whole-number slider, a format for
-  dates, and a two-item list for a range.
+  dates, two items for a slider's range, and up to two for a date range, which may be
+  empty or hold only its start.
+- **It says what to send, not what the server refuses.** The checks below decide what
+  is refused; a value they let through that the widget then adjusts shows in the next
+  `value`.
 - **Legal values stay in `props`.** No `enum` and no bounds: `options`, `min_value`,
   `max_value`, and `max_chars` are already there under the names models know, copying
   an option list would double the largest part of many snapshots, and bounds would make
   the schema stricter than v1, which resets an out-of-range number rather than refusing
-  it. `null` clears a widget that can be empty.
+  it.
+- **`null` is accepted on top of it.** An empty widget reports `null`, and sending
+  `null` clears a widget that can be empty and resets one that cannot to its default.
 - **Each command declares it, with the rest of its description.** Only the command knows
   for certain whether it holds a range, a whole number, or a date, including while it is
   empty, so an empty `st.feedback` still says `integer`. A few shared building blocks
@@ -777,9 +805,11 @@ refused with `invalid_value`:
 
 - **The JSON type**, which the element's `value_schema` states. A number is not text except
   where it names an option, and dates and times are ISO text, even for a slider that
-  carries them as microseconds. The server is a little more lenient than the schema: a
-  single value and a one-item list are interchangeable, because single-select button
-  groups and single sliders carry one value in a list.
+  carries them as microseconds. A date-time or time input takes any ISO 8601 form
+  without an offset and stores it in the layout it reads, since its own parser would
+  silently replace any other form with the default. The server is a little more
+  lenient than the schema: a single value and a one-item list are interchangeable,
+  because single-select button groups and single sliders carry one value in a list.
 - **The options.** A value must be one of the widget's `options`, the most common
   mistake, and the error lists the legal values. A widget with `accept_new_options` also
   takes new text, as it does in the browser.
@@ -789,14 +819,14 @@ refused with `invalid_value`:
 Everything else shows in the next snapshot's `value`: an out-of-range number, a
 malformed date, time, or color string, or a slider range with the wrong number of values
 is reset to the default, a fraction sent to an integer input is truncated, and text past
-`max_chars` is cut. A reversed slider range and a date range of any length are stored as
-sent, so a client sends two values, lowest first.
-A per-key note saying how each value landed is a potential follow-up.
+`max_chars` is cut. A reversed slider range is stored as sent, so a client sends its two
+values lowest first. A per-key note saying how each value landed is a potential
+follow-up.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | One widget change                | Set the value, run normal callbacks, rerun.                                                                                                                                                                                                                                                                                                                                                                                   |
-| Several widget changes           | One batch, one rerun. A request is one **client-state transition**, not a replay of several human gestures: the patch is validated atomically, merged into the session's current widget state, and handed to the same runtime path the browser uses, which decides what changed and which callbacks run. This skips intermediate observations, so a widget that only appears after its parent changes needs a second request. |
+| Several widget changes           | One batch, one rerun. A request is one **client-state transition**, not a replay of several human gestures: the patch is validated atomically, merged into the session's current widget state, and handed to the same runtime path the browser uses, which decides what changed and which callbacks run. This skips intermediate observations, so a widget that only appears after its parent changes needs a second request, and one the batch itself removes, such as a field of a mode it switches away from, is gone afterwards along with its value. |
 | Form                             | Send that form's fields plus exactly one of its submit triggers. Omitted fields keep current values. Reject fields without a submit, fields from two forms, and unrelated controls in the same call. `clear_on_submit` is not applied; see below.                                                                                                        |
 | Trigger                          | At most one per request. Triggers reset and never persist as `true`.                                                                                                                                                                                                                                                                                                                                                          |
 | Navigation                       | `page` and `query_params` are a navigation transition and cannot be combined with widget changes.                                                                                                                                                                                                                                                                                                                             |
@@ -821,7 +851,8 @@ A per-key note saying how each value landed is a potential follow-up.
 - **The overlay is addressable only when `on_dismiss` registered a widget for it**, and
   firing it closes the dialog deliberately. With the default `on_dismiss="ignore"` the
   overlay carries no key, and closing is any full rerun, such as an interaction with no
-  changes.
+  changes. The dialog reports `on_dismiss` as `"ignore"` or `"rerun"`, so a client can
+  tell which applies.
 - **A scoped rerun still returns the whole page, with nothing marked stale.** The rest of
   the tree is as the last run left it, which is where a browser is too: keeping fragments
   coherent is the app's job, and `st.rerun("<key>")` is how one fragment refreshes
@@ -839,8 +870,9 @@ would make the app do something wrong. Two sit on that line today:
   setting a bound widget drops its parameter. Rewriting it the way the browser does would
   make `query_params` complete.
 - `clear_on_submit`, whose reset each widget performs in the browser. Fields keep their
-  submitted values, which is declared rather than emulated: nothing goes wrong, the form
-  just does not clear, and its next submit resends what a browser would have cleared.
+  submitted values, which is declared rather than emulated. That can change what a form
+  does: a later submit that omits a field resends its old value where a browser would
+  send the default, so a client sends every field with each submit.
 
 Doing the rest of either is [follow-up #8](#follow-ups).
 
@@ -937,15 +969,14 @@ back to a browser rather than mistake it for missing content:
 | Data too large to hold a second copy of                                    | Over `server.maxMessageSize` per element, `data.unavailable` instead of a `url`. See [Limits and configuration](#limits-and-configuration).                                   |
 | Charts that combine several dataframes                                     | A layered or concatenated Altair chart over different dataframes reports its `spec` with `data.unavailable: multiple_datasets` and serves none of them, rather than serve the first and claim `complete`. |
 | `run_every` fragment refresh                                               | Nothing refreshes until the client interacts again: the clock is the browser's, and background reruns on the server would be worse. The interval is not reported, since it would not change when a caller reruns and mostly invites a polling loop. |
-| `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal. Follow-up #8.    |
+| `clear_on_submit`                                                          | Reported as authored and not applied — the reset is implemented in the browser. Fields keep their submitted values, so empty fields are not a submit signal, and a later submit that omits a field resends its old value: send every field with each submit. Follow-up #8. |
 | Validation only the browser performs                                       | `required` and `validate` are reported but not enforced, so an agent can submit an empty required field that a browser would block. A test that relies on them proves less than it appears to. [#16203](https://github.com/streamlit/streamlit/issues/16203) moves them server-side. |
 | Options that share a label                                                 | A value whose `format_func` label several options share is refused with `invalid_value` rather than resolved to one of them, so those options cannot be selected. |
 | `bind="query-params"` write-back                                           | Setting a bound widget drops its parameter from `query_params` instead of rewriting it, until the app writes it back. See [Actions in v1](#actions-in-v1); follow-up #8.      |
-| Browser-supplied context (`st.context`, `st.user`)                         | `st.context` headers and cookies are empty, and its other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
+| Browser-supplied context (`st.context`, `st.user`)                         | `st.context.headers` are the request's, minus `Cookie` and `Authorization`; cookies are empty, and the other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
 | Output shown while a run is in progress                                    | Only the end state is reported: an `st.spinner` never appears, and `st.write_stream` output arrives as the finished text rather than chunk by chunk. A toast the run raised does appear. See [v1 is one operation](#v1-is-one-operation). |
-| Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun. The last snapshot stays current until the client acts.                                       |
-| Long-running interactions                                                  | No polling or partial results; a retry after `run_timed_out` collects the run. Follow-up #4 adds an operation handle.                                                         |
+| Reading without running, polling                                           | Every `interact` executes the script; one with no changes is an explicit rerun, and the last snapshot stays current until the client acts. A slow run is collected by a retry after `run_timed_out`, with no partial results. Follow-up #4 adds a read and an operation handle. |
 
 ### Limits and configuration
 
@@ -983,11 +1014,13 @@ This is a new programmatic execution surface and needs an explicit review.
   default flips. Either way the route applies the WebSocket's Host allow-list and
   identity mapping, and serves any program that can reach the app; only a web page from
   an origin the operator did not list is refused.
-- **Validate semantically, then serialize.** Never accept a raw `BackMsg`, element ID,
-  delta path, fragment ID, or `WidgetState` protobuf. Reject stale, disabled, removed,
-  wrong-type, cross-form, cross-dialog, and oversized requests atomically, before any
-  callback runs — against the last snapshot rather than live widget state, for the
-  reasons in [Actions in v1](#actions-in-v1). Widget constraints are enforced mostly in
+- **Validate semantically, then serialize.** Never accept a raw `BackMsg`, delta path,
+  fragment ID, or `WidgetState` protobuf. A generated element ID is accepted only as an
+  opaque `key` read from the latest snapshot, and checked against it exactly as an
+  authored key is. Reject stale, disabled, removed, wrong-type, cross-form,
+  cross-dialog, and oversized requests atomically, before any callback runs — against
+  the last snapshot rather than live widget state, for the reasons in
+  [Actions in v1](#actions-in-v1). Widget constraints are enforced mostly in
   the browser today ([#16203](https://github.com/streamlit/streamlit/issues/16203)). That
   gap predates this interface and is reachable by anyone scripting the WebSocket, so this
   interface neither creates nor widens it, and the fix belongs in the widgets, where both
@@ -1004,9 +1037,6 @@ This is a new programmatic execution surface and needs an explicit review.
 - **Audit without content.** Each interaction is logged, at debug level, with a digest
   of its session handle, the request fields it used, its outcome, and its latency —
   never the handle itself, labels, values, table contents, or queries.
-- **Reuse media storage's protection for data URLs.** A table's `data.url` is a content
-  hash that stops resolving once the element does, like every image and eager download.
-  See [Data, charts, and media](#data-charts-and-media-in-v1).
 
 What stands between opt-in and on-by-default, including why the route reads no cookie and
 refuses web pages, is one list, in [Enablement](#enablement), rather than a second one
@@ -1044,7 +1074,7 @@ and the rest of it is what stands between opt-in and on-by-default:
 | Bulk data access      | A dataframe becomes typed data rather than a scrolled viewport, and its full Arrow bytes are one request away. The same data the app already sent its client, far easier to take.                  | Preview and artifact-size budgets, and URLs protected like all media: a content hash that stops resolving once the element does.                                                                                                                          | Compact responses (follow-up #9), and a per-session budget for data served behind `data.url`, which each session otherwise holds for its TTL. |
 | Request volume        | An agent loops faster than a human clicks, and an agent session outlives the request that created it, where a WebSocket session ends with its connection.                                           | `server.agentMaxSessions`, one in-flight interaction per session, and the idle TTL.                                                                                                                                                                        | Request rate limits, and per-caller session quotas, so one anonymous client cannot hold every slot. |
 | Cross-origin requests | A page on another site can make a visitor's browser send a request to any app that browser can reach, including, through DNS rebinding, an app on the visitor's own machine. | No cookie is read, and any request carrying an `Origin` not listed in `server.corsAllowedOrigins` is refused. A same-origin rule would not stop rebinding, since a rebound page is same-origin with the `Host` it sends, but browsers send `Origin` on every POST and programmatic clients send none, so this refuses web pages without turning away an agent. No browser caller loses anything: the route sends no CORS headers, so no other origin could read a response. | —                                                                                                  |
-| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here. | Agent sign-in for `st.login` apps (follow-up #10). |
+| Identity              | Nothing changes for a public app, where a browser viewer is equally anonymous. The gap is an authenticated app whose identity mapping is skipped, so per-user branches silently take the anonymous path. | The WebSocket's trusted identity headers (`server.trustedUserHeaders`) map into `st.user`, the request's headers reach `st.context.headers` as the handshake's do, and a session only answers requests carrying the identity that created it. The `st.login` cookie is not read: the WebSocket honors it only behind an XSRF token. A deployment that enables the API has to apply its header policy to `/_stcore/agent/` too: a proxy that strips client-supplied identity headers only on the WebSocket path lets a caller claim any identity here, in `st.user` and in the headers an app reads. | Agent sign-in for `st.login` apps (follow-up #10). |
 
 That keeps the decision reversible. An app opts in, deployments that authenticate every
 path — an auth proxy, a private Community Cloud app, SiS — gate the route exactly as they
@@ -1109,9 +1139,8 @@ already address widgets — and are what `st.session_state` is keyed by — whil
 already identifies pages, so the interface exposes those instead of a parallel scheme. A
 freshly invented scheme — positional indices, say — would need its own definition and
 edge cases (is the counter scoped per page or per container? what happens when a fragment
-re-emits?) to buy nothing. Opaque
-revision-scoped handles sound safer, but safety comes from server-side validation against
-the last snapshot, which is required either way.
+re-emits?) to buy nothing. Opaque revision-scoped handles sound safer, but safety comes
+from server-side validation against the last snapshot, which is required either way.
 
 **No `fragment_id` in the request.** The server derives the scope from the chosen action,
 as the browser does — `Delta.fragment_id` already tags every emitted delta with its owning
@@ -1136,8 +1165,8 @@ work: one app, one set of explanations, two clients.
 **Each command describes itself where it fills its proto, not in a central serializer.**
 The obvious design is one registry that maps each proto variant to a description, and it
 cannot work: a proto is a *rendering* contract, so by the time a serializer sees one, the
-semantics are already gone. Three examples of what cannot be
-recovered downstream: a built-in chart's `x` and `y` survive only as compiled Vega
+semantics are already gone. Three examples of what cannot be recovered downstream: a
+built-in chart's `x` and `y` survive only as compiled Vega
 encodings; a selection widget's `options` are the `format_func`-formatted strings, with
 the authored objects no longer present; `st.metric` has formatted its number into a
 display string. Several commands also share one proto, so the command name itself has to
@@ -1199,11 +1228,15 @@ numbered for reference rather than ranked.
    ([#3133](https://github.com/streamlit/streamlit/issues/3133)).
 3. **Lazy continuation.** Range reads for lazy dataframes, reusing the existing chunk
    machinery and its limits rather than building a query API.
-4. **Long-run handling.** An operation handle in the `202` a timed-out run returns,
-   `GET /_stcore/agent/v1/sessions/{id}` to poll the committed snapshot without executing
-   code, and `DELETE` to close early. v1 already makes the common case safe — a retry
-   after `run_timed_out` collects the run instead of repeating it — so what remains is
-   general: optional `request_id` for retry idempotency beyond timeouts,
+4. **Long-run handling and recovery.** An operation handle in the `202` a timed-out run
+   returns, a read that returns the session's latest result without executing code,
+   and `DELETE` to close early. The read matters most for model clients: their context
+   management drops or moves older tool results, and without it the only way back to
+   the current state is a rerun, which can repeat side effects. Exposed through MCP
+   too, it lets `get_data` serve that result's files again. v1 already makes the common
+   timeout case safe — a retry after `run_timed_out` collects the run instead of
+   repeating it — so what remains is general: optional `request_id` for retry
+   idempotency beyond timeouts, including a lost response to a creating call,
    `expected_revision` to reject actions based on a stale observation, for callers that
    batch or parallelize, and letting a new action replace a run still going after
    `run_timed_out`, as a browser interaction would.
@@ -1219,9 +1252,10 @@ numbered for reference rather than ranked.
    and the specification's own guidance for this shape is the opaque-handle pattern
    `session_id` already implements. `interact` must never be annotated read-only. A
    second, read-only `get_data` tool serves the files a result references, tables as
-   pages of rows, because chat clients cannot resolve or parse a `data.url`. It is
-   written by hand rather than on the MCP SDK, which keeps it free of new
-   dependencies.
+   pages of rows, because chat clients cannot resolve or parse a `data.url`. Each tool
+   call takes the same path as an `interact` request, so its HTTP request's headers
+   supply `st.user` and `st.context.headers` in the same way. It is written by hand
+   rather than on the MCP SDK, which keeps it free of new dependencies.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2
@@ -1241,9 +1275,14 @@ numbered for reference rather than ranked.
    already use, instead of staying inline: an oversized figure specification or option
    list is served behind `data.url`, readable through `get_data`, with a short summary
    in the snapshot, and an ECharts `dataset.source` is served as Arrow, as `st.map`
-   serves its table. Nothing that holds data or a legal value is truncated. A page of a
-   few Plotly charts can reach a megabyte per response, and a selectbox of a few
-   hundred options adds tens of kilobytes to every call on its page.
+   serves its table. Table previews get a byte budget beside the row cap, since a few
+   long strings or nested values can make 100 rows enormous; the preview then says
+   `complete: false`, as it does past the row cap. Nothing that holds data or a legal
+   value is truncated, and anything moved is named. A page of a few Plotly charts can
+   reach a megabyte per response, and a selectbox of a few hundred options adds tens of
+   kilobytes to every call on its page. Through MCP every one of those bytes lands in
+   a model's context, which makes this the follow-up that most improves the MCP
+   endpoint.
 10. **Agent sign-in for `st.login` apps.** In v1 an app that uses `st.login` shows
     agents its signed-out state: its identity is a signed cookie the browser gets at
     the end of the OAuth/OIDC redirect, which an agent cannot present. Every other
@@ -1260,17 +1299,27 @@ numbered for reference rather than ranked.
 
 Smaller potential follow-ups and alternatives considered while building the prototype:
 
-- Generating descriptions at the public API boundary instead of per command.
-- Widget constraints checked server-side
-  ([#16203](https://github.com/streamlit/streamlit/issues/16203)), ranked by how much
-  apps rely on each.
-- Keeping only summaries in the session's message buffer.
-- One headless client shared by `AppTest` and this interface.
-- A browser-versus-agent fidelity harness covering every command.
-- Building the snapshot's values on the script thread.
-- Running queries over a large table on the server instead of paging it to the model.
-- Recommending dataframe-backed charts for apps agents read.
-- A per-key note on how each sent value landed.
+- **Values:** a per-key note on how each sent value landed, including a key the batch
+  itself removed; refusing values that do not match `value_schema` — a fraction for a
+  whole number, a malformed date, a wrong-length or reversed range — rather than letting
+  the widget adjust them; widget constraints checked server-side
+  ([#16203](https://github.com/streamlit/streamlit/issues/16203)); and integers beyond
+  ±(2^53−1) as decimal strings, which JavaScript clients otherwise round.
+- **Data:** running queries over a large table on the server instead of paging it to
+  the model; recommending dataframe-backed charts for apps agents read; marking pandas
+  index columns, so `__index_level_0__` does not read as a leaked internal name; and
+  keeping only summaries in the session's message buffer.
+- **Sessions:** starting an agent session from a browser session's state, from widget
+  values the page carries
+  ([#17394](https://github.com/streamlit/streamlit/pull/17394)) or a fork that also
+  copies code-only state and uploads
+  ([#17401](https://github.com/streamlit/streamlit/pull/17401)); and cookies from
+  requests without an `Origin` header, which browsers always send on a `POST`, so only
+  a program that set them on purpose supplies them.
+- **Implementation:** generating descriptions at the public API boundary instead of per
+  command, building the snapshot's values on the script thread, one headless client
+  shared by `AppTest` and this interface, and a browser-versus-agent fidelity harness
+  covering every command.
 
 ## Beyond the app surface
 
@@ -1325,8 +1374,9 @@ v1 ships when:
 - JSON encodings are pinned, each with a codec test fixture, for dates, datetimes,
   decimals, large integers, non-finite numbers, ranges, nulls, and object-valued options,
   including options that share a label.
-- Whatever the snapshot reports as the value of an element in `actions` matches its
-  `value_schema` and can be sent straight back, except a label several options share.
+- Whatever the snapshot reports as the value of an element in `actions` can be sent
+  straight back, except a label several options share, and matches its
+  `value_schema` unless it is `null`.
 - A filtered dashboard, a form with two submit buttons, a chat flow, and a multi-turn
   dialog all complete without a browser, through Streamlit's production execution path,
   and conformance tests show each matches an equivalent browser session on callback
@@ -1359,7 +1409,7 @@ v1 ships when:
 
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until agent sign-in lands (follow-up #10). Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
+| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app that reads the platform's request headers, such as a SiS caller's-rights token, gets each request's. An app behind `st.login` is anonymous to agents until agent sign-in lands (follow-up #10). Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
 | No breaking API changes    | ✅ Additive: `server.enableAgentApi`, off in v1, its budget options, new routes under `/_stcore/agent/`, and the discovery hint in `index.html`. No `st.*` signature changes. One behavior is sharper: an `st.context` field the client never sent reads as `None` rather than an empty default. Browser apps never see it, because the frontend always sends every field, and an explicitly sent `0` or `False` is kept, since the fields track presence. Flipping the default later is itself a reviewed change, not a silent one. |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either, since it is written by hand rather than on the MCP SDK.                                                                                                                                                                                                                                                                                                                                                                                          |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
