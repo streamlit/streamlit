@@ -806,7 +806,8 @@ Until #16203 moves the checks into the widgets, v1 checks three things itself, e
 refused with `invalid_value`:
 
 - **The JSON type**, which the element's `value_schema` states. A number is not text except
-  where it names an option, and dates and times are ISO text, even for a slider that
+  where it names an option, text is not a number where the schema says number — so
+  `st.feedback` takes its index as `1`, not `"1"` — and dates and times are ISO text, even for a slider that
   carries them as microseconds. A date-time or time input takes any ISO 8601 form
   without an offset and stores it in the layout it reads, since its own parser would
   silently replace any other form with the default. A list longer than the schema's
