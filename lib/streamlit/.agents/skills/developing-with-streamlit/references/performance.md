@@ -153,7 +153,7 @@ live_metrics()
 live_search()
 ```
 
-For auto-refreshing metrics, use `run_every`:
+For auto-refreshing metrics, use `run_every` instead of `while True` loops or a timed `st.rerun()`:
 
 ```python
 @st.fragment(run_every="30s")
