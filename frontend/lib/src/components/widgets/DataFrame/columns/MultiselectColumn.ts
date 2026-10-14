@@ -46,7 +46,7 @@ type SelectOption = { value: string; label?: string; color?: string }
  * @returns The prepared options in the format required by the multi-select cell.
  */
 export const prepareOptions = (
-  options: readonly (string | SelectOption)[],
+  options: readonly (string | SelectOption | null)[],
   theme: EmotionTheme
 ): { value: string; label?: string; color?: string }[] => {
   if (isNullOrUndefined(options)) {
@@ -59,7 +59,7 @@ export const prepareOptions = (
   let autoColorIndex = 0
 
   return options
-    .filter(opt => opt !== null && opt !== "")
+    .filter((opt): opt is string | SelectOption => opt !== null && opt !== "")
     .map(option => {
       if (typeof option === "string") {
         return {
@@ -210,7 +210,7 @@ function MultiselectColumn(
       } satisfies MultiSelectCellType
     },
     getCellValue(cell: MultiSelectCellType): string[] | null {
-      if (isNullOrUndefined(cell.data?.values)) {
+      if (isNullOrUndefined(cell.data.values)) {
         return null
       }
 

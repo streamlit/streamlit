@@ -70,7 +70,7 @@ export interface LinkColumnParams {
  * an hyperlink / url and allows the user to click on it.
  */
 function LinkColumn(props: BaseColumnProps): BaseColumn {
-  const parameters = (props.columnTypeOptions as LinkColumnParams) || {}
+  const parameters = (props.columnTypeOptions ?? {}) as LinkColumnParams
 
   let validateRegex: RegExp | string | undefined = undefined
 
