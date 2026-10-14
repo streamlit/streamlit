@@ -114,7 +114,7 @@ element's `type` is the Streamlit command that produced it, and its `props` \
 are that command's parameters, so the Streamlit API reference documents them; \
 a widget's current value is `value`, beside `props`. A table or chart carries \
 `data` with a preview, and `complete: false` means there is more: read it at \
-`data.url`, and any image, PDF, or download, with the `get_data` tool, before \
+`data.url`, and any image, audio, video, or download, with the `get_data` tool, before \
 your next `interact` call replaces the result.
 
 **Fields worth a note.**
@@ -140,7 +140,7 @@ with no changes: a full rerun closes it, as closing it does in a browser. With \
 - `data.complete` says whether `data` holds everything. If not, `data.url` \
 serves the rest, or `data.unavailable` says why it cannot: \
 `too_large_to_serve`, `multiple_datasets` (a chart over several dataframes), \
-or `lazy_loading`.
+`lazy_loading`, or `undescribed` (an element listed in `undescribed_types`).
 - Table values are the data as stored, not as displayed: no `format`, no time \
 zone conversion. An unnamed pandas index appears as `__index_level_0__`, also \
 when `hide_index` hides it in the browser.
@@ -164,7 +164,7 @@ _GET_DATA_TITLE: Final = "Read a file from this Streamlit app"
 _GET_DATA_DESCRIPTION: Final = f"""\
 Read a file an `interact` result references, through this connection, for when \
 you cannot fetch its URL: the full table behind a preview (`data.url`), an \
-image, a PDF, audio, or a download. Pass the `session_id` and the URL exactly \
+image, audio, video, or a download. Pass the `session_id` and the URL exactly \
 as the result shows it, or the bare file ID. Only files in the session's latest \
 result are available, so read them before your next `interact` call.
 

@@ -68,6 +68,9 @@ _LOGGER: Final = get_logger(__name__)
 # renders continuously; a single response has to know when to stop.
 _RUN_CHAIN_SETTLE_SECONDS: Final = 0.05
 
+# The longest an idle session outlives its TTL while no request arrives.
+_SWEEP_SECONDS: Final = 60.0
+
 
 _SETTLING_STATUSES: Final = frozenset(
     {
@@ -282,6 +285,9 @@ class AgentSessionClient(SessionClient):
 # same values ask for the same thing.
 _ACTION_FIELDS: Final = ("widget_state", "trigger", "page", "query_params", "context")
 
+# Every field an `interact` request may carry.
+REQUEST_FIELDS: Final = frozenset({"session_id", *_ACTION_FIELDS})
+
 # Generous for a BCP 47 tag with extensions, which is what a browser reports.
 _MAX_LOCALE_LENGTH: Final = 64
 
@@ -339,14 +345,15 @@ class AgentSession:
 class AgentSessionRegistry:
     """Tracks agent sessions and reclaims them once they go idle.
 
-    Reclaiming happens when the next request arrives rather than on a timer, so
-    an idle server holds expired sessions a little longer. Nothing waits on
-    them: a reclaimed session is gone either way.
+    Reclaiming happens on every request and on a timer while any session
+    exists, so a server that stops getting agent requests still releases each
+    session's app session and media.
     """
 
     def __init__(self, runtime: Runtime, *, media_path: str = "/media") -> None:
         self._runtime = runtime
         self._sessions: dict[str, AgentSession] = {}
+        self._sweeper: asyncio.Task[None] | None = None
         # Where media storage serves files, so a snapshot's media URLs can be
         # told apart from links an app displays.
         self.media_path = media_path
@@ -394,6 +401,8 @@ class AgentSessionRegistry:
         # client is never handed the result of a run it did not ask for.
         _app_session(self._runtime, session)._run_on_save = False
         self._sessions[handle] = session
+        if self._sweeper is None or self._sweeper.done():
+            self._sweeper = asyncio.get_running_loop().create_task(self._sweep())
         return session
 
     def close(self, handle: str) -> None:
@@ -401,6 +410,13 @@ class AgentSessionRegistry:
         if session is not None:
             agent_spec.forget_agent_session(session.session_id)
             self._runtime.close_session(session.session_id)
+
+    async def _sweep(self) -> None:
+        """Reclaim idle sessions on a timer, until none are left."""
+        while self._sessions:
+            ttl = float(config.get_option("server.agentSessionTTL"))
+            await asyncio.sleep(min(ttl, _SWEEP_SECONDS))
+            self._reclaim_idle()
 
     def _reclaim_idle(self) -> None:
         ttl = float(config.get_option("server.agentSessionTTL"))
@@ -813,8 +829,7 @@ def _app_session(runtime: Runtime, session: AgentSession) -> Any:
 
 
 def _validate_request_shape(request: dict[str, Any]) -> None:
-    known = {"session_id", "widget_state", "trigger", "page", "query_params", "context"}
-    unknown = set(request) - known
+    unknown = set(request) - REQUEST_FIELDS
     if unknown:
         raise AgentRequestError(
             "invalid_request",

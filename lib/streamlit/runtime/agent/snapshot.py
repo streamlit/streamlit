@@ -38,7 +38,7 @@ from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.agent import json_encoding
-from streamlit.runtime.state.common import user_key_from_element_id
+from streamlit.runtime.state.common import is_element_id, user_key_from_element_id
 from streamlit.runtime.state.session_state import SCRIPT_RUN_WITHOUT_ERRORS_KEY
 
 if TYPE_CHECKING:
@@ -67,8 +67,10 @@ def _preview_row_limit() -> int:
 
 
 # Commands whose whole contribution is layout or styling: a placeholder nobody
-# filled, blank space, and style-only HTML. See `_SnapshotBuilder._is_contentless`.
-_CONTENTLESS_TYPES: Final = {"empty", "space", "html"}
+# filled, blank space, style-only HTML, and a loading skeleton, which by the
+# time a run settles stands for nothing still to come. See
+# `_SnapshotBuilder._is_contentless`.
+_CONTENTLESS_TYPES: Final = {"empty", "space", "html", "skeleton"}
 
 _DATA_SUMMARY_KEY: Final = "data_summary"
 
@@ -415,10 +417,14 @@ class _SnapshotBuilder:
             data["url"] = data_url
         elif data.get("complete") is False:
             # Incomplete with nowhere to fetch the rest. Unless the data block
-            # already says why, the buffer was too large to hold a second copy
-            # of; say so rather than leaving a client to infer it from a
-            # missing key.
-            data.setdefault("unavailable", "too_large_to_serve")
+            # already says why, either nothing described the element, so
+            # nothing registered its data, or the buffer was too large to hold
+            # a second copy of; say which rather than leaving a client to infer
+            # it from a missing key.
+            data.setdefault(
+                "unavailable",
+                "too_large_to_serve" if node.description else "undescribed",
+            )
         if data:
             result["data"] = data
 
@@ -483,7 +489,7 @@ class _SnapshotBuilder:
             # `$$ID-...` key without walking the tree; constraints stay on the
             # element.
             entry: dict[str, Any] = {
-                "key": user_key_from_element_id(element_id) or element_id,
+                "key": _public_key(element_id),
                 "kind": str(action),
                 "type": description["type"],
             }
@@ -499,9 +505,7 @@ class _SnapshotBuilder:
 
         element_id = description.get("key")
         if element_id:
-            # An authored key is the stable, readable identity; the generated
-            # element ID is an opaque session-scoped handle.
-            result["key"] = user_key_from_element_id(element_id) or element_id
+            result["key"] = _public_key(element_id)
 
         props = description.get("props") or {}
         if props:
@@ -599,6 +603,18 @@ def _keep_typed(stored: Any, serialized: Any, options: list[Any] | None) -> Any:
     return serialized
 
 
+def _public_key(element_id: str) -> str:
+    """The key a client sends back: the author's key, or the opaque element ID.
+
+    A widget's element ID embeds the author's key. Forms, containers, and
+    display elements are recorded under the author's key itself, which may
+    contain the hyphens an element ID is split on.
+    """
+    if is_element_id(element_id):
+        return user_key_from_element_id(element_id) or element_id
+    return element_id
+
+
 def _fallback_description(proto_field: str, payload: Message | None) -> dict[str, Any]:
     """Describe an element whose command has no agent-API description yet.
 
@@ -670,8 +686,12 @@ def _element_data(proto_field: str, payload: Any) -> dict[str, Any] | None:
         buffers = agent_spec.vega_arrow_buffers(payload)
         if len(buffers) > 1:
             data = {"complete": False, "unavailable": "multiple_datasets"}
+        elif buffers:
+            data = summarize_arrow(buffers[0]) or {}
         else:
-            data = (summarize_arrow(buffers[0]) if buffers else None) or {}
+            # Inline values travel as Arrow, so a chart with none has its data
+            # in the specification itself, such as a URL the browser loads.
+            data = {"complete": True}
         spec = _parse_json(payload.spec)
         if isinstance(spec, dict):
             # The built-in charts write 0 for a size the author left unset,

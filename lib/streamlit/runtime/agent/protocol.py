@@ -317,8 +317,9 @@ def build_openapi_document(
     if notice is None and mcp_path:
         description += (
             "\n**Also an MCP server.** The same interaction is offered as one MCP "
-            f"tool at `{mcp_path}`: add that URL to an MCP client, such as an AI "
-            "application that connects to servers by URL.\n"
+            "tool beside this document: its URL is this document's with "
+            "`openapi.json` replaced by `mcp`. Add that URL to an MCP client, "
+            "such as an AI application that connects to servers by URL.\n"
         )
     info: dict[str, Any] = {
         "title": "Streamlit agent API",
@@ -604,10 +605,10 @@ def schemas() -> dict[str, Any]:
                         "- A value the widget cannot read.\n\n"
                         "Applied the way the app applies it to any client, so "
                         "read `value` in the response: a number outside "
-                        "`min_value`/`max_value`, a malformed date, time, or "
-                        "color string, or a slider range with too few values "
-                        "resets to the default; a fraction sent to a "
-                        "whole-number input is truncated; text past "
+                        "`min_value`/`max_value`, a malformed `st.date_input` "
+                        "date or color string, or a slider range with too few "
+                        "values resets to the default; a fraction sent to an "
+                        "integer `st.number_input` or slider is truncated; text past "
                         "`max_chars` is cut; and a reversed slider range is "
                         "stored as sent, so send its two values lowest first. "
                         "`null` clears a widget whose empty value is `null` and "
@@ -1090,7 +1091,12 @@ def schemas() -> dict[str, Any]:
                 },
                 "unavailable": {
                     "type": "string",
-                    "enum": ["too_large_to_serve", "multiple_datasets", "lazy_loading"],
+                    "enum": [
+                        "too_large_to_serve",
+                        "multiple_datasets",
+                        "lazy_loading",
+                        "undescribed",
+                    ],
                     "description": (
                         "Why incomplete data has no `url`. Present only when "
                         "`complete` is false and `url` is absent.\n\n"
@@ -1105,7 +1111,11 @@ def schemas() -> dict[str, Any]:
                         "as Streamlit does for large in-memory tables, and only "
                         "the preview is available here. `row_count` is the "
                         "full table's. Narrow the app's filters to get under "
-                        "the lazy-loading threshold."
+                        "the lazy-loading threshold.\n"
+                        "- `undescribed`: the element is listed in "
+                        "`undescribed_types`, such as one replayed from a cache "
+                        "a browser session filled, so nothing registered its "
+                        "data; only the preview is available."
                     ),
                 },
                 "spec": {

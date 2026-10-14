@@ -42,6 +42,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.agent import data_access, mcp
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.agent.interaction import (
+    REQUEST_FIELDS,
     AgentSessionRegistry,
     interact,
     session_digest,
@@ -196,16 +197,22 @@ def _log_interaction(
     """Log an interaction without its content.
 
     What was asked for, never what was sent: the request's fields, not its
-    keys or values, and a digest of the session handle, never the handle.
+    keys or values, and a digest of the session handle, never the handle. An
+    unknown field is logged as ``unknown``, since its name is the caller's text.
     """
     if not _LOGGER.isEnabledFor(logging.DEBUG):
         return
     handle = payload.get("session_id") or session_id
     session = session_digest(handle) if isinstance(handle, str) else "new"
+    fields = sorted(
+        name for name in payload if name in REQUEST_FIELDS and name != "session_id"
+    )
+    if not set(payload) <= REQUEST_FIELDS:
+        fields.append("unknown")
     _LOGGER.debug(
         "Agent interaction session=%s fields=%s outcome=%s status=%d %.0fms",
         session,
-        ",".join(sorted(name for name in payload if name != "session_id")) or "-",
+        ",".join(fields) or "-",
         outcome,
         status,
         (time.monotonic() - started) * 1000,
@@ -263,7 +270,8 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
 
     disabled_message = (
         "This app does not serve the agent API. Its operator can turn it on with "
-        f"`server.enableAgentApi`; see {schema_path} for what it would offer."
+        "`server.enableAgentApi`; see `openapi.json`, beside this route, for "
+        "what it would offer."
     )
     host_message = (
         "This request's Host is not in `server.allowedHosts`, which the app "
@@ -332,6 +340,9 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             )
         except Exception:
             _LOGGER.exception("Agent API interaction failed")
+            _log_interaction(
+                payload, None, "internal_error", error_status("internal_error"), started
+            )
             # The cause is in the server log; the response does not name it.
             return error_status("internal_error"), _error_body(
                 "internal_error", "The interaction could not be completed."

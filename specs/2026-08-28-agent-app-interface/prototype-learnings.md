@@ -1323,6 +1323,27 @@ already safe: a rerun with no changes re-applies nothing and fires no trigger ag
 so all the read saved was one run. A request with no changes stays a rerun, and the
 read stays in follow-up #4, opt-in.
 
+A spec-versus-prototype pass then found the code behind in a few places. An authored
+key with a hyphen came back cut at the hyphen on forms, containers, and display
+elements, since every key went through the element-ID parser. Idle sessions were only
+reclaimed when another request arrived, so a server whose agent traffic stopped kept
+them. Other fixes:
+
+- A Vega-Lite chart whose specification loads its data from a URL now says
+  `complete`.
+- A table replayed from a cache a browser filled now says `undescribed`, not
+  `too_large_to_serve`.
+- An unfilled `st.skeleton` is left out.
+- A stateful expander no longer reports its current state as `expanded`.
+- A label several options share is refused by widgets that accept new options too.
+- The OpenAPI text names the MCP endpoint relative to the document.
+- The audit line covers internal errors and never logs an unknown field's name.
+
+The spec, in turn, was behind the code in a few places: time inputs refuse malformed
+text rather than reset it, `max_selections` is checked, `st.pdf` is a custom component,
+and `column` and `tab` are container types. It also stopped promising JSON Schema
+formats other than `date`.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`

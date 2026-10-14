@@ -1664,7 +1664,9 @@ class LayoutsMixin:
                     action="value" if is_stateful else None,
                     value_schema=agent_spec.BOOLEAN if is_stateful else None,
                     label=label,
-                    expanded=current_expanded,
+                    # For a stateful expander only the starting state, which
+                    # `value` reports from then on.
+                    expanded=None if is_stateful else expanded,
                     icon=icon,
                     # "compact" and "step" say what the contents are, such as
                     # reasoning or the stages of a timeline.

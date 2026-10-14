@@ -242,7 +242,8 @@ def build_widget_states(
             key,
             metadata,
             value,
-            advertised=None if state.options_open else state.options,
+            advertised=state.options,
+            accepts_new=state.options_open,
         )
         wire_value = _temporal_to_wire(
             key, metadata, _iso_text_to_wire(key, metadata, state.command, value)
@@ -392,12 +393,14 @@ def _validate_options(
     value: Any,
     *,
     advertised: list[Any] | None,
+    accepts_new: bool = False,
 ) -> None:
     """Reject values outside a selection widget's declared options.
 
     The widget registry's list is preferred, and the snapshot's stands in for a
-    widget that registers none, such as `st.select_slider`. Neither exists for
-    a widget that accepts new options.
+    widget that registers none, such as `st.select_slider`. A widget that
+    accepts new options takes any other text too, but a label several options
+    share is still refused.
     """
     # Checked first, so an oversized list is refused before anything is
     # looked up.
@@ -426,7 +429,7 @@ def _validate_options(
         if candidate is None:
             continue
         count = counts.get(str(candidate), 0)
-        if count == 0:
+        if count == 0 and not accepts_new:
             listed = ", ".join(repr(option) for option in options[:_LISTED_OPTIONS])
             more = len(options) - _LISTED_OPTIONS
             raise AgentRequestError(
