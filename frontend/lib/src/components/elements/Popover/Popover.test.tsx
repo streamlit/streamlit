@@ -215,9 +215,9 @@ describe("Popover container", () => {
 
     panel.setAttribute("inert", "")
 
-    await waitFor(() => {
-      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
-    })
+    // The observer closes in a microtask and flushes before paint.
+    await flushPopoverVisibilityCheck()
+    expect(screen.queryByText("popover content")).not.toBeInTheDocument()
     expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
       "aria-expanded",
       "false"
@@ -255,7 +255,7 @@ describe("Popover container", () => {
     expect(setBoolValueSpy).not.toHaveBeenCalled()
   })
 
-  it("closes when checkVisibility reports the trigger hidden", async () => {
+  it("closes when an inactive tab hides the trigger (display: none)", async () => {
     // Inactive tabs hide the panel with display: none, which checkVisibility
     // reports. jsdom lacks that API, so this stubs it. The class change only
     // wakes the observer.
@@ -275,9 +275,9 @@ describe("Popover container", () => {
       visible = false
       panel.classList.add("is-hidden")
 
-      await waitFor(() => {
-        expect(screen.queryByText("popover content")).not.toBeInTheDocument()
-      })
+      // The observer closes in a microtask and flushes before paint.
+      await flushPopoverVisibilityCheck()
+      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
     } finally {
       if (original) {
         proto.checkVisibility = original
@@ -813,9 +813,9 @@ describe("Dynamic popover (widget mode)", () => {
     )
     panel.setAttribute("inert", "")
 
-    await waitFor(() => {
-      expect(screen.queryByText("popover content")).not.toBeInTheDocument()
-    })
+    // The observer closes in a microtask and flushes before paint.
+    await flushPopoverVisibilityCheck()
+    expect(screen.queryByText("popover content")).not.toBeInTheDocument()
     expect(setBoolValueSpy).toHaveBeenLastCalledWith(widgetId, false, {
       formId: undefined,
       fragmentId,

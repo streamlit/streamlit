@@ -128,8 +128,7 @@ const TRIGGER_VISIBILITY_ATTRIBUTES = [
  *   attribute count.
  */
 function isPopoverTriggerHidden(trigger: HTMLElement): boolean {
-  // Only expander inert. A dialog marks an ancestor outside `<details>` inert
-  // while the trigger is still shown.
+  // Expander inert only; dialog inert sits outside <details>.
   const inertHost = trigger.closest("[inert]")
   if (inertHost?.closest("details")) {
     return true
@@ -232,11 +231,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   }, [open, widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
   /**
-   * Close the popover and record that state.
+   * Close the popover and record the closed state.
    *
-   * Pass `fromUser: false` when the popover mounts already hidden: the user
-   * never saw it, so this must not start a rerun. A later hide (tab switch
-   * or expander collapse) is a user action and passes `true`.
+   * `fromUser` is `true` for outside click, Escape, and a later hide of the
+   * trigger, and `false` when the popover mounts already hidden. The user
+   * never saw that popover, so its close must not start a rerun. A later hide
+   * can also come from script. The observer only sees the attribute change,
+   * so it cannot drop that rerun without also dropping the user callback.
    */
   const closePopover = useCallback(
     (fromUser: boolean): void => {
@@ -470,16 +471,21 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [open, handleClose])
 
-  // Close when the trigger becomes hidden, before paint. The body is in a
-  // portal, so hiding the trigger does not unmount it and Floating UI would
-  // pin it to the viewport corner:
+  // Close an open popover before paint when its trigger is hidden. The body
+  // is portaled, so hiding the trigger leaves it mounted and Floating UI
+  // pins it to the viewport corner.
+  //
+  // Wait one microtask before the first check. Expander sets `<details open>`
+  // from a ref after this layout effect. A trigger that is still hidden then
+  // was never shown, so that close uses `fromUser: false`. The observer
+  // starts only after the check, so the ref's `open` write is not recorded
+  // as a user close.
+  //
+  // Later hides pass `fromUser: true`, same as outside click and Escape:
   // - an inactive tab sets `display: none`, and React Aria stops the tab
   //   click before the document click listener
   // - a collapsed expander sets `inert` before the height animation ends
-  // The first check waits until ancestor refs have run. Expander sets
-  // `<details open>` in a ref, which React attaches after this layout
-  // effect. That close is not a user action. The observer starts after the
-  // check, so that ref mutation is not recorded as a user close.
+  // Both closes flush so the portal unmounts before paint.
   useLayoutEffect(() => {
     if (!open) return
     const trigger = triggerRef.current
@@ -488,18 +494,22 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     let cancelled = false
     let observer: MutationObserver | null = null
 
+    const closeBeforePaint = (fromUser: boolean): void => {
+      /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
+       * The body is portaled. Flush so it unmounts before paint instead
+       * of sitting on the viewport corner for a frame.
+       */
+      flushSync(() => {
+        closePopover(fromUser)
+      })
+    }
+
     queueMicrotask(() => {
       if (cancelled) return
-      // Ancestor refs have run. A trigger that is still hidden mounted that
-      // way; the user never saw it. Flush so the portal unmounts before paint.
+      // Ancestor refs have run. If the trigger is still hidden, it mounted
+      // that way and the user never saw it.
       if (isPopoverTriggerHidden(trigger)) {
-        /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
-         * The body is already in the portal. Flush so it unmounts before
-         * paint instead of sitting on the viewport corner for a frame.
-         */
-        flushSync(() => {
-          closePopover(false)
-        })
+        closeBeforePaint(false)
         return
       }
 
@@ -507,7 +517,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       // does not bubble, so observe each ancestor.
       observer = new MutationObserver(() => {
         if (isPopoverTriggerHidden(trigger)) {
-          closePopover(true)
+          closeBeforePaint(true)
         }
       })
       let node: HTMLElement | null = trigger
