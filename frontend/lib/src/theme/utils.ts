@@ -1712,7 +1712,7 @@ export const stockSidebarSurfaces = {
   [CustomThemeConfig.BaseTheme.LIGHT]: {
     backgroundColor: "#F8F8F7",
     // Distinct from page bg so widgets stay visible while showWidgetBorder is off.
-    secondaryBackgroundColor: "#FFFFFF",
+    secondaryBackgroundColor: "#F1F0EE",
   },
   [CustomThemeConfig.BaseTheme.DARK]: {
     backgroundColor: "#21201D",

@@ -108,7 +108,7 @@ Dark mode uses `[theme.dark]` / `[theme.dark.sidebar]` the same way.
 
 Unset sidebar surfaces depend on whether the resolved main page still uses the built-in light/dark backgrounds:
 
-- **Built-in main surfaces:** stock sidebar pair — light `#F8F8F7` / `#FFFFFF`, dark `#21201D` / `#2D2B27`.
+- **Built-in main surfaces:** stock sidebar pair — light `#F8F8F7` / `#F1F0EE`, dark `#21201D` / `#2D2B27`.
 - **Customized main `backgroundColor` or `secondaryBackgroundColor`:** classic swap — unset sidebar `backgroundColor` → main `secondaryBackgroundColor`, unset sidebar `secondaryBackgroundColor` → main `backgroundColor`.
 
 Set both sidebar surfaces explicitly when the sidebar should use another custom pair.

@@ -4811,7 +4811,7 @@ describe("Sidebar theme creation", () => {
       const darkSidebarTheme = createSidebarTheme(darkTheme)
 
       expect(lightSidebarTheme.emotion.colors.bgColor).toBe("#F8F8F7")
-      expect(lightSidebarTheme.emotion.colors.secondaryBg).toBe("#FFFFFF")
+      expect(lightSidebarTheme.emotion.colors.secondaryBg).toBe("#F1F0EE")
       expect(darkSidebarTheme.emotion.colors.bgColor).toBe("#21201D")
       expect(darkSidebarTheme.emotion.colors.secondaryBg).toBe("#2D2B27")
     })
