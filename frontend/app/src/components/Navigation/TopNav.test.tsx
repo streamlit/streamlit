@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { mockEndpoints, type NavigationContextProps } from "@streamlit/lib"
 import { renderWithContexts } from "@streamlit/lib/testing"
 import type { AppPage } from "@streamlit/protobuf"
 
-import TopNav, { type Props } from "./TopNav"
+import TopNav, { type Props, TopNavOverflowItem } from "./TopNav"
 
 // Mock rc-overflow to render all items without responsive behavior
 vi.mock("rc-overflow", () => ({
@@ -79,6 +79,35 @@ function renderTopNav(
     navigationContext: navigationContextValues,
   })
 }
+
+describe("TopNavOverflowItem", () => {
+  it("marks aria-hidden hosts as inert so overflowed links leave tab order", () => {
+    // rc-overflow sets aria-hidden on overflowed item hosts that still contain
+    // anchors; we mirror that prop here and assert we add inert to fix tab order.
+    const props = { "aria-hidden": true as const }
+    const { container } = render(
+      <TopNavOverflowItem {...props}>
+        <a href="/hidden">Hidden page</a>
+      </TopNavOverflowItem>
+    )
+
+    const host = container.firstElementChild
+    expect(host).toHaveAttribute("aria-hidden", "true")
+    expect(host).toHaveAttribute("inert")
+  })
+
+  it("does not mark visible hosts as inert", () => {
+    const { container } = render(
+      <TopNavOverflowItem>
+        <a href="/visible">Visible page</a>
+      </TopNavOverflowItem>
+    )
+
+    const host = container.firstElementChild
+    expect(host).not.toHaveAttribute("aria-hidden")
+    expect(host).not.toHaveAttribute("inert")
+  })
+})
 
 describe("TopNav", () => {
   it("exposes a named navigation landmark", () => {
