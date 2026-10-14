@@ -73,7 +73,9 @@ function ObjectColumn(props: BaseColumnProps): BaseColumn {
       }
     },
     getCellValue(cell: TextCell): string | null {
-      return cell.data ?? null
+      // getCell stores null for a missing value, then casts to TextCell.
+      const data = cell.data as string | null | undefined
+      return data ?? null
     },
   }
 }

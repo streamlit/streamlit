@@ -123,6 +123,9 @@ class EditingState {
           }
         }
       })
+      // `isIncomplete` is set inside `row.forEach`. TypeScript does not treat
+      // that callback as a write, so the flag still looks constant here.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- written in forEach
       if (!isIncomplete) {
         currentState.added_rows.push(addedRow)
       }
@@ -180,12 +183,10 @@ class EditingState {
         const column = columnsByName.get(colName)
         if (column) {
           const cell = column.getCell(cellValue)
-          if (cell) {
-            if (!this.editedCells.has(rowIndex)) {
-              this.editedCells.set(rowIndex, new Map())
-            }
-            this.editedCells.get(rowIndex)?.set(column.indexNumber, cell)
+          if (!this.editedCells.has(rowIndex)) {
+            this.editedCells.set(rowIndex, new Map())
           }
+          this.editedCells.get(rowIndex)?.set(column.indexNumber, cell)
         }
       })
     })
@@ -212,9 +213,7 @@ class EditingState {
 
         if (column) {
           const cell = column.getCell(cellValue)
-          if (cell) {
-            addedRow.set(column.indexNumber, cell)
-          }
+          addedRow.set(column.indexNumber, cell)
         }
       })
       this.addedRows.push(addedRow)

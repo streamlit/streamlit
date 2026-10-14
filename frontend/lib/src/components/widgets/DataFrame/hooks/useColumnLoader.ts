@@ -468,7 +468,7 @@ function useColumnLoader(
     const pinnedColumns: BaseColumn[] = []
     const unpinnedColumns: BaseColumn[] = []
 
-    if (columnOrder?.length) {
+    if (columnOrder.length) {
       // The column order list can contain either column names - if configured by the user -
       // or column ids - if configured by the frontend component.
 

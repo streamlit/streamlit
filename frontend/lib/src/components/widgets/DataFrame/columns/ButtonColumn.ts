@@ -44,7 +44,7 @@ interface ButtonColumnParams {
  * Labels can include leading Material icons using `:material/icon_name:` syntax.
  */
 function ButtonColumn(props: BaseColumnProps): BaseColumn {
-  const parameters = (props.columnTypeOptions as ButtonColumnParams) || {}
+  const parameters = (props.columnTypeOptions ?? {}) as ButtonColumnParams
   const buttonType = parameters.button_type ?? "secondary"
 
   const cellTemplate: ButtonCell = {

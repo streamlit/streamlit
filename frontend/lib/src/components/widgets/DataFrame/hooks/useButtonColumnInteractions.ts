@@ -209,11 +209,14 @@ function useButtonColumnInteractions({
         return
       }
 
-      const column = columns[col]
-      if (column === undefined) {
+      // Bracket access is typed as always present. The index can still be
+      // outside the column list.
+      if (col < 0 || col >= columns.length) {
         clearButtonActionMenuForIgnoredClick()
         return
       }
+
+      const column = columns[col]
 
       const cell = getCellContent([col, row])
       if (!isButtonCell(cell)) {

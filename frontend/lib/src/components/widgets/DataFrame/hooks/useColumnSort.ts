@@ -169,10 +169,12 @@ function useColumnSort({
       direction?: "asc" | "desc" | "auto",
       autoReset?: boolean
     ): void => {
-      const clickedColumn = columns[index]
-      if (clickedColumn === undefined) {
+      // Bracket access is typed as always present. The index can still be
+      // outside the column list.
+      if (index < 0 || index >= columns.length) {
         return
       }
+      const clickedColumn = columns[index]
       // Server-side sorting keys on the backend Arrow field name and requires
       // an orderable type; columns without a field name (e.g. the index column)
       // or with an unorderable nested type cannot be sorted server-side, so we
@@ -194,7 +196,7 @@ function useColumnSort({
     // the source schema), not the displayed header title. The title can be a
     // renamed label (via column_config) or, for multi-level headers, only the
     // last level, neither of which reliably identifies the backend column.
-    const fieldName = column?.arrowType?.arrowField?.name
+    const fieldName = column?.arrowType.arrowField.name
     if (!fieldName) {
       return undefined
     }
