@@ -312,6 +312,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                     # behind an XSRF token, which a cross-site request here
                     # could otherwise ride.
                     user_info=_gather_user_info(request.headers),
+                    headers=request.headers.items(),
                 ),
             )
         except _ClientGoneError:

@@ -1221,6 +1221,13 @@ What changed in v1, all small:
   resolved (derived props, the `enum` cell, element IDs as keys, the shared-label
   exception).
 
+A review comment on the spec PR then changed one v1 rule: agent sessions now see each
+request's headers in `st.context.headers`, minus `Cookie` and `Authorization`. Empty
+headers broke apps that act on them, such as SiS caller's-rights apps, which failed with
+"Token header not found". They are refreshed per interaction because that token
+expires after about 120 seconds, and an MCP tool call supplies them the same way, since
+it takes the `interact` path.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`

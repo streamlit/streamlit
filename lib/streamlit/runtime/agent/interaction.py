@@ -48,7 +48,7 @@ from streamlit.runtime.session_manager import SessionClient
 from streamlit.runtime.state.query_params import EMBED_QUERY_PARAMS_KEYS
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable, Mapping
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.runtime.agent.snapshot import ElementState
@@ -73,6 +73,40 @@ _SETTLING_STATUSES: Final = frozenset(
         ForwardMsg.FINISHED_WITH_COMPILE_ERROR,
     }
 )
+
+# Request headers that never reach `st.context.headers`. The route reads no
+# cookie, and `Authorization` is a credential for whatever fronts the app, not
+# for app code.
+_WITHHELD_HEADERS: Final = frozenset({"cookie", "authorization"})
+
+
+class _RequestContext:
+    """What `st.context` reads for an agent session: the request being served.
+
+    A browser session's headers are those of its WebSocket handshake, fixed for
+    the connection. An agent session's follow each request instead, because a
+    platform can mint a short-lived token per request, such as the
+    caller's-rights token a Snowflake app opens its connection with.
+    """
+
+    def __init__(self, headers: Iterable[tuple[str, str]]) -> None:
+        self._headers = [
+            (name, value)
+            for name, value in headers
+            if name.lower() not in _WITHHELD_HEADERS
+        ]
+
+    @property
+    def headers(self) -> Iterable[tuple[str, str]]:
+        return self._headers
+
+    @property
+    def cookies(self) -> Mapping[str, str]:
+        return {}
+
+    @property
+    def remote_ip(self) -> str | None:
+        return None
 
 
 class AgentSessionClient(SessionClient):
@@ -122,6 +156,8 @@ class AgentSessionClient(SessionClient):
         # The fragments the most recent run re-rendered, which is what that run
         # owns when it finishes and stale deltas are dropped.
         self.fragments_last_run: list[str] = []
+        # The request the current interaction is serving, as `st.context` sees it.
+        self.request_context: _RequestContext | None = None
 
     def write_forward_msg(self, msg: ForwardMsg) -> None:
         """Buffer a message. Never raises.
@@ -201,7 +237,7 @@ class AgentSessionClient(SessionClient):
 
     @property
     def client_context(self) -> ClientContext | None:
-        return None
+        return self.request_context
 
     def begin_interaction(self) -> None:
         self._run_finished.clear()
@@ -394,11 +430,13 @@ async def interact(
     request: dict[str, Any],
     *,
     user_info: dict[str, Any],
+    headers: Iterable[tuple[str, str]] = (),
 ) -> dict[str, Any]:
     """Run one interaction and return the resulting snapshot document.
 
     ``user_info`` is what the deployment's trusted identity headers say about
     the caller, mapped the way the WebSocket maps them for a browser.
+    ``headers`` are the request's, which the app reads as `st.context.headers`.
     """
     _validate_request_shape(request)
 
@@ -431,6 +469,7 @@ async def interact(
             "This session already has an interaction in flight.",
         )
     session.busy = True
+    session.client.request_context = _RequestContext(headers)
 
     try:
         document = await _run_interaction(

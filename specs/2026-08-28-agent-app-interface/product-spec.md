@@ -316,23 +316,22 @@ not:
   its session state kept, so a coding agent can edit and re-check in one session, or omit
   `session_id` for a clean start. `server.runOnSave` does not apply: an edit never starts
   a run the client did not ask for.
-- **From the request:** `st.context.headers` are the headers of the request being
-  served, minus `Cookie` and `Authorization`, as a browser session's are those of its
-  WebSocket handshake. Apps read headers for real behavior — identity a proxy set, or
-  the caller's-rights token a Snowflake app opens its connection with — so empty ones
-  would make an app run differently for an agent, or fail. They are refreshed on every
-  interaction, since such tokens are short-lived. This grants nothing new: any client
-  that can reach the WebSocket can send arbitrary handshake headers, so what makes a
-  header trustworthy is what the deployment's proxy sets and strips, on both paths.
-  `st.user` comes from the deployment's trusted identity headers when it maps them, and
+- **From the request:** `st.context.headers` are the request's, minus `Cookie` and
+  `Authorization`, refreshed on every interaction, as a browser session's are its
+  WebSocket handshake's. Apps act on headers — identity a proxy set, or the short-lived
+  caller's-rights token a Snowflake app connects with — so empty ones would make an
+  app behave differently for an agent, or fail. This grants nothing new: any client
+  that reaches the WebSocket can send arbitrary handshake headers, so a header is only
+  as trustworthy as what the deployment's proxy sets and strips, on both paths.
+  `st.user` comes from the trusted identity headers when the deployment maps them, and
   is anonymous otherwise.
-- **Absent, because a browser supplies it:** `st.context.cookies` is empty, since the
-  route reads no cookie. Cookies are the one credential a browser attaches on its own,
-  so reading none keeps a forged cross-site request without authority even where
-  `server.corsAllowedOrigins` is broad, and agents, being programs, rarely have any.
-  The URL, theme, and embedding fields are `None` rather than guessed. Timezone and locale are `None` too unless the request states them in
-  `context`, which is what lets an app that formats times from `st.context.timezone`
-  render them as it would for a user.
+- **Absent, because a browser supplies it:** `st.context.cookies` is empty. Cookies are
+  the one credential a browser attaches on its own, so reading none keeps a forged
+  cross-site request without authority even where `server.corsAllowedOrigins` is
+  broad, and agents, being programs, rarely have any. The URL, theme, and embedding
+  fields are `None` rather than guessed, and so are timezone and locale unless the
+  request states them in `context`, which lets an app that formats times from
+  `st.context.timezone` render them as it would for a user.
 
 **Navigation is the one-round-trip parameterization channel.** Widgets
 declared with `bind="query-params"` can be set on the creating call, so "run this
@@ -1416,7 +1415,7 @@ v1 ships when:
 
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app behind `st.login` is anonymous to agents until agent sign-in lands (follow-up #10). Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
+| Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app that reads the platform's request headers, such as a SiS caller's-rights token, gets each request's. An app behind `st.login` is anonymous to agents until agent sign-in lands (follow-up #10). Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
 | No breaking API changes    | ✅ Additive: `server.enableAgentApi`, off in v1, its budget options, new routes under `/_stcore/agent/`, and the discovery hint in `index.html`. No `st.*` signature changes. One behavior is sharper: an `st.context` field the client never sent reads as `None` rather than an empty default. Browser apps never see it, because the frontend always sends every field, and an explicitly sent `0` or `False` is kept, since the fields track presence. Flipping the default later is itself a reviewed change, not a silent one. |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either, since it is written by hand rather than on the MCP SDK.                                                                                                                                                                                                                                                                                                                                                                                          |
 | Metrics collected          | Enablement, session opens, action kinds, outcome classes, latency, response sizes, and unsupported-capability hits. No labels, keys, values, queries, URLs, or data.                                                                                                                                                                                                                                                                                                                                          |
