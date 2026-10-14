@@ -202,7 +202,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             self._persist_storage.close()
 
     def _read_from_mem_cache(self, key: str) -> bytes:
-        with self._mem_cache_lock:
+        # Enabled-budget reads share the enforcement lock with writes so their LRU
+        # update cannot invalidate a selected victim and leave the budget exceeded.
+        with self._global_budget.read_enforcement(), self._mem_cache_lock:
             try:
                 entry = bytes(self._mem_cache[key])
             except KeyError:

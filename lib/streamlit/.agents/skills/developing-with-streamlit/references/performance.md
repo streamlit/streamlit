@@ -101,47 +101,18 @@ Do not cache live async clients or connections bound to the event loop that crea
 
 ### Bound cache growth
 
-By default, `st.cache_data` has no serialized-byte limit. For any cached function that
-stores changing objects (user-specific data, parameterized queries), set a limit that
-matches its workload:
+By default, `st.cache_data` has no serialized-byte limit. Combine `ttl` for
+time-based expiration, `max_entries` for a count limit, and `max_size` for a
+serialized-byte limit when values vary substantially in size:
 
 ```python
-# BAD: No workload-specific limit
-@st.cache_data
-def get_user_data(user_id):
-    return fetch_user(user_id)
-
-
-# GOOD: Bounded cache with TTL
-@st.cache_data(ttl="1h")
-def get_user_data(user_id):
-    return fetch_user(user_id)
-
-
-# GOOD: Bounded cache with max entries
-@st.cache_data(max_entries=100)
-def get_user_data(user_id):
-    return fetch_user(user_id)
-
-
-# GOOD: Bounded by serialized byte size
-@st.cache_data(max_size="500MB")
+@st.cache_data(ttl="1h", max_size="500MB")
 def get_large_report(report_id):
     return build_report(report_id)
 ```
 
-Use `ttl` for time-based expiration, `max_entries` for a count limit, and `max_size`
-when values vary substantially in size. These limits can be combined. `max_entries`
-and `max_size` evict least-recently-used entries, while `ttl` expires entries based on
-age. `max_size` measures serialized bytes, not live Python heap size or process RSS.
-A single value larger than `max_size` is retained and logs a warning.
-
-The process-wide `server.maxCachedDataSize` setting covers global and session-scoped
-data caches and is disabled by default. Enable it with a binary unit string such as
-`"4gb"` (powers of 1024, so `"gb"` and `"gib"` are equivalent), or set it to `"0"` to
-disable the budget. It retains a newly written value if that value alone exceeds the
-budget. With `persist="disk"`, both byte limits evict only the in-memory copy and do
-not bound disk usage.
+To cap all `st.cache_data` memory across functions and sessions, set
+`server.maxCachedDataSize` (for example, `"4gb"`); it is disabled by default.
 
 ## Fragments
 

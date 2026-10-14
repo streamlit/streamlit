@@ -149,6 +149,15 @@ class GlobalCacheBudget(StatsProvider):
         with self._enforcement_lock:
             yield
 
+    @contextmanager
+    def read_enforcement(self) -> Generator[None, None, None]:
+        """Keep an enabled-budget read from racing victim enforcement."""
+        if self._max_bytes is None:
+            yield
+            return
+        with self._enforcement_lock:
+            yield
+
     def record_write(
         self,
         storage_id: int,

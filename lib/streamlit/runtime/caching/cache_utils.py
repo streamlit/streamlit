@@ -898,8 +898,8 @@ class CachedFunc(Generic[P, R]):
 
         Shared by the sync and async cache-miss paths. The value has already been
         computed (or awaited); this captures any replay messages, applies the
-        background-mode display rules, conditionally writes async results from the
-        current cache generation, and translates serialization failures into the
+        background-mode display rules, writes the result only if no clear invalidated
+        it during computation, and translates serialization failures into the
         user-facing cache errors.
         """
         # We've computed our value, and now we need to write it back to the cache

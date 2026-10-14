@@ -372,8 +372,8 @@ def test_weakref_cleanup_does_not_reenter_budget_lock() -> None:
     assert budget.total_bytes == 0
 
 
-def test_read_between_selection_and_eviction_retries_current_lru() -> None:
-    """A read after victim selection makes eviction retry with the current LRU."""
+def test_read_between_selection_and_eviction_waits_for_enforcement() -> None:
+    """An enabled-budget read waits so enforcement restores the exact budget."""
     budget = GlobalCacheBudget(max_bytes=6)
     first = _create_storage(budget, "first")
     second = _create_storage(budget, "second")
@@ -382,6 +382,9 @@ def test_read_between_selection_and_eviction_retries_current_lru() -> None:
 
     selected = threading.Event()
     continue_eviction = threading.Event()
+    read_started = threading.Event()
+    read_finished = threading.Event()
+    read_errors: list[CacheStorageKeyNotFoundError] = []
     original_evict = first._evict_from_mem_cache
 
     def delayed_evict(
@@ -391,54 +394,36 @@ def test_read_between_selection_and_eviction_retries_current_lru() -> None:
         assert continue_eviction.wait(timeout=5)
         return original_evict(key, expected_generation, expected_access_version)
 
+    def read_selected_entry() -> None:
+        read_started.set()
+        try:
+            first.get("a")
+        except CacheStorageKeyNotFoundError as ex:
+            read_errors.append(ex)
+        finally:
+            read_finished.set()
+
     with patch.object(first, "_evict_from_mem_cache", side_effect=delayed_evict):
         writer = threading.Thread(target=second.set, args=("c", b"c"))
         writer.start()
         assert selected.wait(timeout=5)
-        assert first.get("a") == b"aaa"
+        reader = threading.Thread(target=read_selected_entry)
+        reader.start()
+        assert read_started.wait(timeout=5)
+        assert not read_finished.wait(timeout=0.1)
         continue_eviction.set()
         writer.join(timeout=5)
+        reader.join(timeout=5)
 
     assert not writer.is_alive()
-    assert first.get("a") == b"aaa"
+    assert not reader.is_alive()
+    assert len(read_errors) == 1
+    assert isinstance(read_errors[0], CacheStorageKeyNotFoundError)
     with pytest.raises(CacheStorageKeyNotFoundError):
-        second.get("b")
+        first.get("a")
+    assert second.get("b") == b"bbb"
     assert second.get("c") == b"c"
     assert budget.total_bytes == 4
-
-
-def test_contended_victim_is_attempted_only_once_per_enforcement() -> None:
-    """A repeatedly refreshed victim cannot stall every cache writer."""
-    budget = GlobalCacheBudget(max_bytes=6)
-    old_storage = _create_storage(budget, "old")
-    writer_storage = _create_storage(budget, "writer")
-    old_storage.set("old", b"aaaaaa")
-    original_evict = old_storage._evict_from_mem_cache
-    attempts = 0
-
-    def refresh_before_evict(
-        key: str,
-        expected_generation: int,
-        expected_access_version: int,
-    ) -> bool:
-        nonlocal attempts
-        attempts += 1
-        if attempts > 1:
-            raise AssertionError("The same contended victim was retried")
-        assert old_storage.get(key) == b"aaaaaa"
-        return original_evict(key, expected_generation, expected_access_version)
-
-    with patch.object(
-        old_storage,
-        "_evict_from_mem_cache",
-        side_effect=refresh_before_evict,
-    ):
-        writer_storage.set("new", b"b")
-
-    assert attempts == 1
-    assert budget.total_bytes == 7
-    assert old_storage.get("old") == b"aaaaaa"
-    assert writer_storage.get("new") == b"b"
 
 
 def test_overlapping_writes_are_serialized_through_enforcement() -> None:
@@ -492,7 +477,8 @@ def test_overlapping_writes_are_serialized_through_enforcement() -> None:
 
         allow_first_enforcement.set()
         assert first_enforced.wait(timeout=5)
-        assert first.get("older") == b"aaaaaa"
+        with first._mem_cache_lock:
+            assert first._mem_cache["older"] == b"aaaaaa"
         assert "newer" not in second._mem_cache
 
         allow_first_return.set()
@@ -507,8 +493,8 @@ def test_overlapping_writes_are_serialized_through_enforcement() -> None:
     assert budget.total_bytes == 1
 
 
-def test_concurrent_read_cannot_make_inflight_write_evict_itself() -> None:
-    """A concurrent read cannot make an in-flight write evict itself."""
+def test_read_waits_for_inflight_write_enforcement() -> None:
+    """A read cannot refresh a victim before an in-flight write is enforced."""
     budget = GlobalCacheBudget(max_bytes=6)
     old_storage = _create_storage(budget, "old")
     writer_storage = _create_storage(budget, "writer")
@@ -516,6 +502,9 @@ def test_concurrent_read_cannot_make_inflight_write_evict_itself() -> None:
 
     insertion_recorded = threading.Event()
     continue_enforcement = threading.Event()
+    read_started = threading.Event()
+    read_finished = threading.Event()
+    read_errors: list[CacheStorageKeyNotFoundError] = []
     original_enforce = budget.enforce_budget
 
     def delayed_enforce(protected: tuple[int, str]) -> None:
@@ -523,18 +512,32 @@ def test_concurrent_read_cannot_make_inflight_write_evict_itself() -> None:
         assert continue_enforcement.wait(timeout=5)
         original_enforce(protected)
 
+    def read_old_entry() -> None:
+        read_started.set()
+        try:
+            old_storage.get("old")
+        except CacheStorageKeyNotFoundError as ex:
+            read_errors.append(ex)
+        finally:
+            read_finished.set()
+
     with patch.object(budget, "enforce_budget", side_effect=delayed_enforce):
         writer = threading.Thread(target=writer_storage.set, args=("new", b"bbbb"))
         writer.start()
         assert insertion_recorded.wait(timeout=5)
 
-        # The read moves the old entry behind the protected insertion in global
-        # LRU order. Enforcement must still retain the in-flight insertion.
-        assert old_storage.get("old") == b"aaa"
+        reader = threading.Thread(target=read_old_entry)
+        reader.start()
+        assert read_started.wait(timeout=5)
+        assert not read_finished.wait(timeout=0.1)
         continue_enforcement.set()
         writer.join(timeout=5)
+        reader.join(timeout=5)
 
     assert not writer.is_alive()
+    assert not reader.is_alive()
+    assert len(read_errors) == 1
+    assert isinstance(read_errors[0], CacheStorageKeyNotFoundError)
     with pytest.raises(CacheStorageKeyNotFoundError):
         old_storage.get("old")
     assert writer_storage.get("new") == b"bbbb"

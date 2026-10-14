@@ -271,9 +271,9 @@ class DataCaches(StatsProvider):
                     del session_caches[key]
 
             if cache is not None:
-                # Wait for a write that already holds _write_lock. A computation still
-                # pickling sees the cache as detached and does not store its result.
-                # close() then drops anything the in-flight write stored.
+                # Detach only after any write holding _write_lock finishes. A
+                # computation still pickling later sees the cache as detached and
+                # skips its store; close() drops entries stored before detachment.
                 cache.mark_detached()
                 _LOGGER.debug(
                     "Closing existing DataCache storage "
@@ -638,7 +638,7 @@ class CacheDataAPI:
             An integer is a number of bytes. A string must include a binary unit, like
             ``"500MB"`` or ``"1.5GiB"``. Units use powers of 1024, so ``"MB"`` and
             ``"MiB"`` are equivalent. ``None`` (default) means no per-function limit.
-            Reading a cached value refreshes its LRU recency.
+            Reading a cached value makes it the most recently used.
 
             On a write that would exceed the limit, Streamlit drops
             least-recently-used entries until the new value fits. If a single value
