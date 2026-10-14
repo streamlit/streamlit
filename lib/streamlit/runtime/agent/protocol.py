@@ -836,9 +836,9 @@ def schemas() -> dict[str, Any]:
                     "items": {"$ref": "#/components/schemas/Action"},
                     "description": (
                         "An index of everything you may do right now, so the "
-                        "action space is visible at a glance. It is an index, "
-                        "not a duplicate: read each element's meaning, "
-                        "`value_schema`, and constraints from the tree. A "
+                        "action space is visible at a glance, naming each "
+                        "entry's `type` and `label`. Read each element's "
+                        "`value_schema` and constraints from the tree. A "
                         "disabled element appears in the tree but not here."
                     ),
                 },
@@ -1132,7 +1132,7 @@ def schemas() -> dict[str, Any]:
         },
         "Action": {
             "type": "object",
-            "required": ["key", "kind"],
+            "required": ["key", "kind", "type"],
             "properties": {
                 "key": {
                     "type": "string",
@@ -1145,6 +1145,18 @@ def schemas() -> dict[str, Any]:
                         "`value` holds a value you set through `widget_state`. "
                         "`trigger` is fired once through `trigger` and resets "
                         "afterwards."
+                    ),
+                },
+                "type": {
+                    "type": "string",
+                    "description": "The element's `type`, as on its node.",
+                },
+                "label": {
+                    "type": "string",
+                    "description": (
+                        "The element's `label`, when it has one, so a generated "
+                        "`$$ID-...` key can be matched without walking the "
+                        "tree. Not an identifier: two elements can share one."
                     ),
                 },
             },

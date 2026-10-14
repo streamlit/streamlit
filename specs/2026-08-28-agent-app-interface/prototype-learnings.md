@@ -1303,6 +1303,16 @@ and the raw option was reported. The context now carries them. The same round's 
 finding, `st.feedback` taking `"1"`, is closed by refusing text where `value_schema`
 says number.
 
+A chat client driving a 21-page app through MCP found the interaction model sound and
+response size the main problem: two responses overflowed its tool-result limit, one
+from a long Markdown document reported twice and one from two 10,000-option
+selectboxes. That made compact responses (follow-up #9) the first follow-up after v1.
+Small v1 tweaks from the same round: `actions` entries carry their element's `type`
+and `label`, because a generated key changes with a widget's parameters and a model
+otherwise matches bare hashes against the tree; a `not_on_page` for a generated key
+says so; a repeated timeout says how long the run has gone; and the MCP description
+corrects what setting a bound widget does to `query_params`.
+
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview
 byte budget, large integers as strings, an index-column marker, the `clear_on_submit`

@@ -532,8 +532,13 @@ right now. Naming follows the public API, for the reason above:
     ]
   },
   "actions": [
-    { "key": "region", "kind": "value" },
-    { "key": "$$ID-8f2c9a1d4b6e7f30-None", "kind": "trigger" }
+    { "key": "region", "kind": "value", "type": "selectbox", "label": "Region" },
+    {
+      "key": "$$ID-8f2c9a1d4b6e7f30-None",
+      "kind": "trigger",
+      "type": "button",
+      "label": "Refresh data"
+    }
   ]
 }
 ```
@@ -606,10 +611,11 @@ Rules:
   same `label` — two `st.metric`s can share one, with one holding a count and the other a
   duration — so a client keying by label silently drops one. Position in the tree, or an
   authored `key` where the element has one, is the identity.
-- **The `actions` list is an index, not a duplicate.** It lists the key of every element that
-  can be set (`value`) or fired (`trigger`) right now, so a model can see the action space
-  at a glance; meaning, `value_schema`, and constraints are read from the element in the
-  tree. A `disabled` widget appears in the tree but not in `actions`. Form membership is
+- **The `actions` list is an index that names its entries.** It lists the key of every
+  element that can be set (`value`) or fired (`trigger`) right now, with its `type` and
+  `label`, so a model can see the action space at a glance and match a generated key
+  without walking the tree; `value_schema` and constraints are read from the element.
+  A `disabled` widget appears in the tree but not in `actions`. Form membership is
   visible from nesting.
 - **Unsupported things stay visible, on the element itself.** An element that is not
   fully supported carries a `support` field with a machine-readable reason, and absent
@@ -727,7 +733,9 @@ How elements are addressed:
 - **A client acts only on keys from the snapshot it just received.** A generated element
   ID is an opaque, session-scoped handle whose format may change, so nothing outside
   Streamlit should construct, parse, or persist one, and since every response is a fresh
-  snapshot, a client never needs to.
+  snapshot, a client never needs to. It also changes when the widget's parameters do,
+  such as a slider whose bound moved, so a `not_on_page` for a generated key says to
+  look the element up by its `label`.
 - **An authored `key` adds durability for text a human writes.** `{"region": "Europe"}`
   survives runs and releases and reads well in a PR, so authored keys are what make a
   saved request or a verification script survive a redeploy. An agent driving an app
@@ -1277,17 +1285,20 @@ numbered for reference rather than ranked.
    browser's half of forms and bound parameters — applying `clear_on_submit` and
    rewriting a bound parameter when its widget is set.
 9. **Compact responses.** Large content moves to media storage, the pattern tables
-   already use, instead of staying inline: an oversized figure specification or option
-   list is served behind `data.url`, readable through `get_data`, with a short summary
-   in the snapshot, and an ECharts `dataset.source` is served as Arrow, as `st.map`
-   serves its table. Table previews get a byte budget beside the row cap, since a few
-   long strings or nested values can make 100 rows enormous; the preview then says
-   `complete: false`, as it does past the row cap. Nothing that holds data or a legal
-   value is truncated, and anything moved is named. A page of a few Plotly charts can
-   reach a megabyte per response, and a selectbox of a few hundred options adds tens of
-   kilobytes to every call on its page. Through MCP every one of those bytes lands in
-   a model's context, which makes this the follow-up that most improves the MCP
-   endpoint.
+   already use, instead of staying inline: an oversized figure specification, option
+   list, or text body — a long Markdown document, or its raw copy in a collapsed
+   expander — is served behind a URL, readable through `get_data`, with the start of
+   it, `truncated: true`, and its full length or option count in the snapshot. An
+   ECharts `dataset.source` is served as Arrow, as `st.map` serves its table. Table
+   previews get a byte budget beside the row cap, since a few long strings or nested
+   values can make 100 rows enormous, and a request can ask for fewer preview rows; the
+   preview then says `complete: false`, as it does past the row cap. Nothing that holds
+   data or a legal value is truncated without saying so, and keyed widgets stay inline
+   wherever they are. A page of a few Plotly charts can reach a megabyte per response,
+   a 10,000-option selectbox adds about 80 KB to every call on its page, and a long
+   Markdown document shown twice can pass half a megabyte. Through MCP every one of
+   those bytes lands in a model's context, and a response over a client's tool-result
+   limit is lost to the model, which makes this the first follow-up to take after v1.
 10. **Agent sign-in for `st.login` apps.** In v1 an app that uses `st.login` shows
     agents its signed-out state: its identity is a signed cookie the browser gets at
     the end of the OAuth/OIDC redirect, which an agent cannot present. Every other
@@ -1311,9 +1322,13 @@ Smaller potential follow-ups and alternatives considered while building the prot
   ([#16203](https://github.com/streamlit/streamlit/issues/16203)); and integers beyond
   ±(2^53−1) as decimal strings, which JavaScript clients otherwise round.
 - **Data:** running queries over a large table on the server instead of paging it to
-  the model; recommending dataframe-backed charts for apps agents read; marking pandas
-  index columns, so `__index_level_0__` does not read as a leaked internal name; and
-  keeping only summaries in the session's message buffer.
+  the model; recommending dataframe-backed charts for apps agents read; serving each
+  dataset of a layered chart under `data.datasets`, with its own columns, preview, and
+  URL, instead of `unavailable: multiple_datasets`; dropping an unnamed pandas index
+  under `hide_index`, so `__index_level_0__` is not a meaningless extra column;
+  reporting a media element's URL as `data.url`, as a table's is; letting `get_data`
+  read the files of the last few results rather than only the latest; and keeping
+  only summaries in the session's message buffer.
 - **Sessions:** starting an agent session from a browser session's state, from widget
   values the page carries
   ([#17394](https://github.com/streamlit/streamlit/pull/17394)) or a fork that also

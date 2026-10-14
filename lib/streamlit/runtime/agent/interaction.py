@@ -297,6 +297,9 @@ class _Interaction:
     # A `page` handed to the runtime unresolved, which can only be checked once
     # the run has produced the page list.
     unverified_page: str | None
+    # When the run was sent, so a retry that times out again can say how long
+    # it has been running.
+    started: float = field(default_factory=time.monotonic)
 
 
 @dataclass
@@ -651,11 +654,13 @@ async def _settle(
     except TimeoutError as exc:
         if _app_is_running(app_session):
             session.timed_out = interaction
+            elapsed = time.monotonic() - interaction.started
             raise AgentRequestError(
                 "run_timed_out",
                 f"The app did not finish within {timeout:g} seconds, and is still "
-                "running. Nothing is lost: send a request with only `session_id` "
-                "to wait for it without starting it over.",
+                f"running, {elapsed:.0f} seconds after this interaction started. "
+                "Nothing is lost: send a request with only `session_id` to wait "
+                "for it without starting it over.",
                 # Always included, because the remedy is a request on this session.
                 session_id=session.handle,
             ) from exc

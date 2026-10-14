@@ -479,12 +479,17 @@ class _SnapshotBuilder:
             schema_type=(description.get("value_schema") or {}).get("type"),
         )
         if actionable:
-            self.actions.append(
-                {
-                    "key": user_key_from_element_id(element_id) or element_id,
-                    "kind": str(action),
-                }
-            )
+            # The type and label name the entry, so a client can pick a generated
+            # `$$ID-...` key without walking the tree; constraints stay on the
+            # element.
+            entry: dict[str, Any] = {
+                "key": user_key_from_element_id(element_id) or element_id,
+                "kind": str(action),
+                "type": description["type"],
+            }
+            if isinstance(label := props.get("label"), str) and label:
+                entry["label"] = label
+            self.actions.append(entry)
 
     def _base(
         self, description: dict[str, Any], inherited_support: str | None = None

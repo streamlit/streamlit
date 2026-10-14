@@ -323,16 +323,18 @@ and IDs that large are rare in the dashboards agents read so far.
 **What would make it worth doing:** an app whose IDs exceed 2^53 read through a
 JavaScript MCP client.
 
-## Mark index columns
+## Drop or mark index columns
 
 **Today:** an unnamed pandas index arrives as a column named `__index_level_0__`, pyarrow's
-name for it. The MCP tool description explains it, but a client without that text can
-read it as a leaked internal name.
+name for it, also when `hide_index` hides it in the browser. The MCP tool description
+explains it, but it reads as a leaked internal name or a meaningless extra column.
 
-**The fuller version:** an `"index": true` on each column entry that the Arrow schema's
-pandas metadata lists as an index. A few lines in the column summary.
+**The fuller version:** drop an unnamed index from the preview and the served Arrow
+under `hide_index`, where the author has said it carries nothing, and mark any other
+index column with `"index": true`, from the Arrow schema's pandas metadata.
 
 **Why not now:** the data is complete either way, and the description already says what
 the column is.
 
-**What would make it worth doing:** clients misreading or dropping the index.
+**What would make it worth doing:** clients misreading or dropping the index. Two
+chat-client evaluations have now flagged it.

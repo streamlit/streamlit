@@ -92,10 +92,12 @@ named after the Streamlit API.
 **Calling it.**
 - Send `{}` to start a session and read the app. Pass the returned \
 `session_id` on every later call.
-- Each result's `actions` lists what you can do now, by `key`. Set `value` \
-keys through `widget_state`, several at once in one rerun; fire one `trigger` \
-key, with a `value` payload for `st.chat_input` or `st.menu_button`. Use only \
-keys from the latest result.
+- Each result's `actions` lists what you can do now, by `key`, with each \
+element's `type` and `label`. Set `value` keys through `widget_state`, several \
+at once in one rerun; fire one `trigger` key, with a `value` payload for \
+`st.chat_input` or `st.menu_button`. Use only keys from the latest result. \
+Widgets in a collapsed expander, a closed popover, or another tab can be set \
+directly.
 - An element's `value_schema` is the JSON Schema of the value it takes, such \
 as a `date` string or a two-item list for a range; its `options` and bounds \
 say which values are legal.
@@ -136,15 +138,18 @@ contents carry the dialog's.
 with no changes: a full rerun closes it, as closing it does in a browser. With \
 `"rerun"`, fire its overlay's key from `actions`.
 - `data.complete` says whether `data` holds everything. If not, `data.url` \
-serves the rest, or `data.unavailable` says why it cannot.
+serves the rest, or `data.unavailable` says why it cannot: \
+`too_large_to_serve`, `multiple_datasets` (a chart over several dataframes), \
+or `lazy_loading`.
 - Table values are the data as stored, not as displayed: no `format`, no time \
 zone conversion. An unnamed pandas index appears as `__index_level_0__`, also \
 when `hide_index` hides it in the browser.
 - `column_config` is the mapping Streamlit resolved, so a `LinkColumn` reads \
 as `{"type_config": {"type": "link", ...}}`.
 - `bind: "query-params"` means the widget mirrors the URL parameter named \
-after its key: setting the widget changes `query_params`, and `query_params` \
-on a creating call can set it.
+after its key, and `query_params` on a creating call can set it. Setting the \
+widget through `widget_state` removes its parameter from `query_params` until \
+the app writes it back, so read the widget's `value`, not `query_params`.
 - A few `props` report state rather than an argument: a dialog's `is_open`, \
 and a popover's or tab's `open`.
 

@@ -144,11 +144,21 @@ def _metadata(
             "Read the keys from the latest snapshot.",
         )
     if state is None:
+        # A generated key encodes the widget's parameters, so the same widget
+        # gets a new key when one of them changes, such as a slider's bound.
+        regenerated = (
+            " A generated key also changes when the widget's parameters do, so "
+            "the element may still be on the page under a new key: find it by "
+            "its `label` in `actions`."
+            if key.startswith(GENERATED_ELEMENT_ID_PREFIX)
+            else ""
+        )
         raise AgentRequestError(
             "not_on_page",
-            f"The element with key {key!r} is not on the current page. It may "
+            f"The element with key {key!r} is not in the latest snapshot. It may "
             "have been on a previous page, or it may only appear after another "
-            "control changes. Read `actions` from the latest snapshot.",
+            f"control changes.{regenerated} Read `actions` from the latest "
+            "snapshot.",
         )
     # Checked before `disabled`: an element this interface cannot drive at all
     # stays undrivable when the app enables it, so reporting it as disabled
