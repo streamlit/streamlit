@@ -430,7 +430,7 @@ class DeltaGenerator(
 
     # Hide ``__getattr__`` from type checkers so unknown container methods such
     # as ``st.sidebar.echo`` stay type errors. mypy only honors the unaliased
-    # ``TYPE_CHECKING`` name here.
+    # ``TYPE_CHECKING`` name here; an alias makes those calls type-check.
     if not TYPE_CHECKING:
         __getattr__ = _raise_for_unknown_command
 

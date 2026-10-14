@@ -31,78 +31,13 @@ if TYPE_CHECKING:
     with st.sidebar as sidebar_ctx:
         assert_type(sidebar_ctx, None)
 
+    # Parameter combinations for individual commands live in their own typing
+    # tests. These calls only check that the sidebar keeps those return types.
     assert_type(st.sidebar.markdown("Hello"), DeltaGenerator)
-    assert_type(st.sidebar.markdown("Hello", help="Help text"), DeltaGenerator)
-    assert_type(st.sidebar.markdown("Hello", help=None), DeltaGenerator)
-    assert_type(st.sidebar.markdown("Hello", width="stretch"), DeltaGenerator)
-    assert_type(st.sidebar.markdown("Hello", width="content"), DeltaGenerator)
-    assert_type(st.sidebar.markdown("Hello", width=300), DeltaGenerator)
-    assert_type(st.sidebar.markdown("Hello", width="auto"), DeltaGenerator)
-    assert_type(st.sidebar.text("Plain"), DeltaGenerator)
-    assert_type(st.sidebar.title("Title"), DeltaGenerator)
-    assert_type(st.sidebar.info("Note"), DeltaGenerator)
-    assert_type(st.sidebar.metric("Users", 10, delta=1), DeltaGenerator)
-    assert_type(st.sidebar.metric("Users", 10, delta=None), DeltaGenerator)
     assert_type(st.sidebar.write("Hello", 1, unsafe_allow_html=False), None)
-
-    def _on_click(x: int, y: str) -> None:
-        pass
-
     assert_type(st.sidebar.button("Click"), bool)
-    assert_type(st.sidebar.button("Click", key="save"), bool)
-    assert_type(st.sidebar.button("Click", key=123), bool)
-    assert_type(st.sidebar.button("Click", key=None), bool)
-    assert_type(st.sidebar.button("Click", help="Help text"), bool)
-    assert_type(st.sidebar.button("Click", help=None), bool)
-    assert_type(st.sidebar.button("Click", disabled=True), bool)
-    assert_type(st.sidebar.button("Click", type="primary"), bool)
-    assert_type(st.sidebar.button("Click", type="secondary"), bool)
-    assert_type(st.sidebar.button("Click", type="tertiary"), bool)
-    assert_type(st.sidebar.button("Click", width="content"), bool)
-    assert_type(st.sidebar.button("Click", width="stretch"), bool)
-    assert_type(st.sidebar.button("Click", width=200), bool)
-    assert_type(
-        st.sidebar.button("Click", on_click=None, args=None, kwargs=None),
-        bool,
-    )
-    assert_type(
-        st.sidebar.button("Click", on_click=_on_click, args=(1, "a")),
-        bool,
-    )
-    assert_type(
-        st.sidebar.button("Click", on_click=_on_click, kwargs={"x": 1, "y": "a"}),
-        bool,
-    )
-    assert_type(
-        st.sidebar.button(
-            "Save",
-            key="save_button",
-            help="Save the form",
-            on_click=_on_click,
-            args=(1, "a"),
-            kwargs=None,
-            type="primary",
-            icon=":material/save:",
-            icon_position="right",
-            disabled=False,
-            width="stretch",
-            shortcut="Ctrl+S",
-            wrap=False,
-        ),
-        bool,
-    )
-
     assert_type(st.sidebar.checkbox("Accept"), bool)
-    assert_type(st.sidebar.checkbox("Accept", value=True), bool)
-    assert_type(st.sidebar.checkbox("Accept", label_visibility="visible"), bool)
-    assert_type(st.sidebar.checkbox("Accept", label_visibility="hidden"), bool)
-    assert_type(st.sidebar.checkbox("Accept", label_visibility="collapsed"), bool)
-    assert_type(st.sidebar.checkbox("Accept", on_change="rerun"), bool)
-    assert_type(st.sidebar.checkbox("Accept", on_change="ignore"), bool)
-    assert_type(st.sidebar.checkbox("Accept", on_change=None), bool)
-
     assert_type(st.sidebar.text_input("Name"), str)
-    assert_type(st.sidebar.text_input("Name", value="Ada"), str)
     assert_type(st.sidebar.text_input("Name", value=None), str | None)
     assert_type(st.sidebar.selectbox("Pick", ["a", "b"]), str)
     assert_type(st.sidebar.selectbox("Pick", [1, 2]), int)
