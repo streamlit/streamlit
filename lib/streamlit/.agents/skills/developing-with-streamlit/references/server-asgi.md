@@ -159,26 +159,21 @@ Run with `streamlit run app.py`, `python app.py`, or `uv run app.py`.
 Callable requirements and behavior:
 - Must be invokable without arguments. Async and generator callables are not
   supported.
-- Must be defined in a filesystem-backed Python source file. Streamlit uses
-  that file for `static/` files and source watching. It prefers the outermost
-  source file outside an installed package (`site-packages`, `dist-packages`,
-  or this interpreter's site roots), including a nested wrapper the app
-  defines around another module. A nested decorator is skipped when the wrapped
-  function's module imports that decorator. The skip follows `__wrapped__`, which
-  `functools.wraps` sets. A decorator that does not set `__wrapped__` keeps the
-  decorator's file. When every source file is inside
-  an installed package, the outermost of those files is used. The callable's
-  directory is also prepended to `sys.path` during runs, so a callable that
-  lives inside a package can be imported under its package name and as a
-  top-level module.
+- Must be defined in a `.py` file. `static/` files and source watching use
+  that file, preferring the app file over installed packages and decorators
+  such as `@st.fragment`. A decorator that does not expose the app function
+  keeps the decorator's file. The callable's directory is also prepended to
+  `sys.path` during runs, so a package module can be imported by its filename
+  as well as its package path.
 - Script-level `config.toml` and `secrets.toml` come from the launched file
   under `streamlit run` and `App.run()` (`python app.py`). They come from the
   callable source only when no launched file is set, such as under uvicorn.
 - Streamlit invokes the callable once per full rerun, and the script health
   check invokes that same retained object when the check is enabled. Locals
-  are created afresh; closure cells and module globals are shared across
-  reruns, sessions, and health checks. Use `st.session_state` for per-session
-  values.
+  are created afresh. Closure cells, module globals, and callable-instance
+  attributes are shared across reruns, sessions, and health checks, so those
+  updates can race. Use `st.session_state` for per-session values and
+  synchronize any other shared mutation.
 - Streamlit retains the original callable object for the lifetime of the `App`.
   Restart the process after changing its definition. Saving the source file
   can still rerun that original object until the process restarts.

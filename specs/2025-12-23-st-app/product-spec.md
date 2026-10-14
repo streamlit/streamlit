@@ -144,8 +144,10 @@ app = st.App(main)
 ```
 
 - Invoked once per full rerun, and again by the script health check when that check
-  is enabled. Locals are fresh each run; closures and module globals are shared across
-  reruns, sessions, and health checks. Use `st.session_state` for per-session values.
+  is enabled. Locals are fresh each run. Closures, module globals, and
+  callable-instance attributes are shared across reruns, sessions, and health checks,
+  so those updates can race. Use `st.session_state` for per-session values and
+  synchronize any other shared mutation.
 - Streamlit retains the callable object for the lifetime of the `App`. Restart the
   process after changing its definition. A save-triggered rerun still executes that
   retained object until the process restarts.

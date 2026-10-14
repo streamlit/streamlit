@@ -251,38 +251,21 @@ def _is_nested_function(candidate: Any) -> bool:
     return isinstance(qualname, str) and "<locals>" in qualname
 
 
+def _module_object_name(value: Any) -> str | None:
+    """Return a module's ``__name__``, ignoring lookup failures."""
+    try:
+        name = value.__name__
+    except Exception:
+        return None
+    return name if isinstance(name, str) else None
+
+
 def _is_module_object(value: Any) -> bool:
     """Return whether ``value`` is a module, ignoring lookup failures."""
     try:
         return inspect.ismodule(value)
     except Exception:
         return False
-
-
-def _object_module_name(value: Any) -> str | None:
-    """Return the module name a global refers to, ignoring lookup failures."""
-    try:
-        if inspect.ismodule(value):
-            name = getattr(value, "__name__", None)
-        else:
-            name = getattr(value, "__module__", None)
-    except Exception:
-        # Proxy objects can raise arbitrary lookup errors. Skip the value so
-        # one bad global does not fail App construction.
-        return None
-    return name if isinstance(name, str) else None
-
-
-def _values_reference_module(
-    values: tuple[Any, ...], target_name: str, target: Any
-) -> bool:
-    """Return whether any value is ``target`` or an object defined in it."""
-    for value in values:
-        if target is not None and value is target:
-            return True
-        if _object_module_name(value) == target_name:
-            return True
-    return False
 
 
 def _module_namespace_values(module: Any) -> tuple[Any, ...] | None:
@@ -295,12 +278,48 @@ def _module_namespace_values(module: Any) -> tuple[Any, ...] | None:
         return None
 
 
-def _module_references_module(importer_name: str, target_name: str) -> bool:
-    """Return whether ``importer_name`` can reach ``target_name``.
+def _code_defines_wrapper(value: Any, code: Any) -> bool:
+    """Return whether ``value``'s code object defines ``code``."""
+    try:
+        return code in value.__code__.co_consts
+    except Exception:
+        # Proxy objects can raise arbitrary lookup errors. Skip the value so
+        # one bad global does not fail App construction.
+        return False
 
-    A direct import stores the decorator or its module in the importer.
-    ``import helpers`` plus ``@helpers.deco`` only stores the package, so also
-    look one level into imported modules for a re-exported decorator.
+
+def _decorator_for_wrapper(wrapper: Any) -> Any | None:
+    """Return the function whose code defines ``wrapper``, if it is a global."""
+    try:
+        code = wrapper.__code__
+        namespace = wrapper.__globals__
+    except AttributeError:
+        return None
+    if not isinstance(namespace, dict):
+        return None
+    try:
+        values = tuple(namespace.values())
+    except RuntimeError:
+        return None
+    for value in values:
+        if _code_defines_wrapper(value, code):
+            return value
+    return None
+
+
+def _values_contain(values: tuple[Any, ...], target: Any) -> bool:
+    """Return whether ``target`` itself is one of ``values``."""
+    return any(value is target for value in values)
+
+
+def _module_references_decorator(importer_name: str, decorator: Any) -> bool:
+    """Return whether ``importer_name`` references the decorator function.
+
+    A direct import stores that function. ``import helpers`` plus
+    ``@helpers.deco`` stores the package, which re-exports the function, so
+    look one level into imported modules. Importing the decorator's own module
+    is not enough: a library that imports the app module must not hide an app
+    wrapper around one of its functions.
     """
     importer = sys.modules.get(importer_name)
     if importer is None:
@@ -308,14 +327,20 @@ def _module_references_module(importer_name: str, target_name: str) -> bool:
     values = _module_namespace_values(importer)
     if values is None:
         return False
-    target = sys.modules.get(target_name)
-    if _values_reference_module(values, target_name, target):
+    if _values_contain(values, decorator):
         return True
+    try:
+        decorator_module = decorator.__module__
+    except Exception:
+        decorator_module = None
     for value in values:
         if not _is_module_object(value) or value is importer:
             continue
+        imported_name = _module_object_name(value)
+        if imported_name == decorator_module:
+            continue
         nested = _module_namespace_values(value)
-        if nested is not None and _values_reference_module(nested, target_name, target):
+        if nested is not None and _values_contain(nested, decorator):
             return True
     return False
 
@@ -324,13 +349,17 @@ def _is_imported_decorator_wrapper(candidate: Any) -> bool:
     """Return whether ``candidate`` is a nested decorator another module applied.
 
     The wrapper's code lives in the decorator module, and the wrapped function's
-    module imports that decorator. A nested wrapper defined in the app around
-    another module has no such back-reference, so the wrapper file stays.
+    module references that decorator function. A nested wrapper defined in the
+    app around another module has no such back-reference, so the wrapper file
+    stays. Importing the app module from the library is not that reference.
     """
     if not _is_nested_function(candidate):
         return False
     wrapped = _next_wrapped(candidate)
     if wrapped is None:
+        return False
+    decorator = _decorator_for_wrapper(candidate)
+    if decorator is None:
         return False
     try:
         wrapper_globals = getattr(candidate, "__globals__", None)
@@ -346,7 +375,7 @@ def _is_imported_decorator_wrapper(candidate: Any) -> bool:
         or wrapper_module == wrapped_module
     ):
         return False
-    return _module_references_module(wrapped_module, wrapper_module)
+    return _module_references_decorator(wrapped_module, decorator)
 
 
 def _callable_source_candidates(obj: Any) -> list[Any]:
@@ -679,17 +708,21 @@ class App:
 
     Parameters
     ----------
-    script_path : str, Path, or callable
+    script_path : str | Path | Callable[[], None]
         The app entrypoint: a script path, or a zero-argument synchronous
         callable defined in a filesystem-backed Python source file.
 
-        - Path: absolute or relative. Relative paths resolve against the main
-          script when started via ``streamlit run``, otherwise against the
-          current working directory.
-        - Callable: Streamlit calls it on every full rerun. Local variables are
-          fresh each run; module globals are shared across reruns and sessions,
-          so use ``st.session_state`` for per-session values. Restart the process
-          after editing the callable or modules it imported at the top level.
+        - Path: absolute or relative. Relative paths resolve against the
+          launched file under ``streamlit run`` and ``App.run()``
+          (``python app.py``). When no launched file is set, such as under
+          uvicorn, they resolve against the current working directory.
+        - Callable: Streamlit calls it on every full rerun, and the script
+          health check calls that same object. Local variables are fresh each
+          run. Closure cells, module globals, and callable-instance attributes
+          are shared across reruns and sessions, so those updates can race.
+          Use ``st.session_state`` for per-session values, and synchronize any
+          other shared mutation. Restart the process after editing the
+          callable or modules it imported at the top level.
 
           .. note::
               ``static/`` files and source watching use the callable's source
@@ -861,6 +894,12 @@ class App:
             _require_zero_arg_callable(script_path)
             self._script_path = _resolve_callable_source_path(script_path)
             self._script_entrypoint = script_path
+            # Callable apps never run pages/ as MPA v1. Clear the flag here,
+            # not in ScriptRunner, so st.switch_page uses the st.navigation
+            # error instead of the pages/ hint.
+            from streamlit.runtime.pages_manager import PagesManager
+
+            PagesManager.uses_pages_directory = False
         else:
             raise StreamlitInvalidParameterTypeError(
                 "script_path",

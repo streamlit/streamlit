@@ -17,11 +17,16 @@
 import streamlit as st
 
 
+def home() -> None:
+    st.write("Callable home page")
+
+
 def main() -> None:
     st.title("Callable st.App")
     st.session_state.call_count = st.session_state.get("call_count", 0) + 1
     st.write(f"Main calls: {st.session_state.call_count}")
     st.button("Rerun callable")
+    st.navigation([st.Page(home, title="Home", default=True)]).run()
 
 
 app = st.App(main)

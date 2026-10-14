@@ -45,6 +45,7 @@ from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMeta
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.starlette import starlette_app_utils
@@ -1965,6 +1966,47 @@ class TestAppInit:
 
         assert app.script_path == app_file.resolve()
 
+    def test_app_keeps_nested_wrapper_when_library_imports_app(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A library that imports the app module does not steal the app file."""
+        lib_dir = tmp_path / "backref_lib"
+        app_dir = tmp_path / "backref_app"
+        lib_dir.mkdir()
+        app_dir.mkdir()
+        (lib_dir / "st_app_callable_backref_lib.py").write_text(
+            "import st_app_callable_backref_app\n\ndef render():\n    pass\n"
+        )
+        app_file = app_dir / "st_app_callable_backref_app.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_backref_lib import render\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper():\n"
+            "        return fn()\n"
+            "    return wrapper\n"
+            "\n"
+            "entry = deco(render)\n"
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(app_dir))
+        module_names = (
+            "st_app_callable_backref_lib",
+            "st_app_callable_backref_app",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_backref_app")
+        try:
+            app = App(app_mod.entry)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
     def test_app_anchors_partial_decorator_on_wrapped_app(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -2167,6 +2209,20 @@ class TestAppInit:
         )
         app = App(main)
         assert app._script_entrypoint is main
+
+    def test_callable_app_disables_pages_directory(self) -> None:
+        """A callable App clears the pages-directory flag once, at construction."""
+
+        def main() -> None:
+            pass
+
+        previous = PagesManager.uses_pages_directory
+        PagesManager.uses_pages_directory = True
+        try:
+            App(main)
+            assert PagesManager.uses_pages_directory is False
+        finally:
+            PagesManager.uses_pages_directory = previous
 
     def test_app_rejects_async_callable(self) -> None:
         """st.App rejects async function callables."""

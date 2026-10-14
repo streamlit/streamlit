@@ -303,7 +303,8 @@ class Page:
 
         ctx = get_script_run_ctx()
         if not ctx:
-            # Later navigation APIs use this instead of missing attributes.
+            # Navigation APIs check this flag so they can raise a clear error
+            # instead of failing on attributes that are never set below.
             self._created_outside_run = True
             return
         self._created_outside_run = False
@@ -422,7 +423,7 @@ class Page:
 
         The title supports GitHub-flavored Markdown as described in ``st.Page``.
         """
-        _reject_import_time_page(self)
+        _raise_if_page_created_outside_run(self)
         return self._title
 
     @property
@@ -431,7 +432,7 @@ class Page:
 
         If no icon was declared in ``st.Page``, this property returns ``""``.
         """
-        _reject_import_time_page(self)
+        _raise_if_page_created_outside_run(self)
         return self._icon
 
     @property
@@ -447,7 +448,7 @@ class Page:
         The default page will always have a ``url_path`` of ``""`` to indicate
         the root URL (e.g. homepage).
         """
-        _reject_import_time_page(self)
+        _raise_if_page_created_outside_run(self)
         return "" if self._default else self._url_path
 
     @property
@@ -470,6 +471,7 @@ class Page:
         the external URL in a new browser tab instead of navigating within
         the app.
         """
+        _raise_if_page_created_outside_run(self)
         return self._external_url is not None
 
     @property
@@ -478,6 +480,7 @@ class Page:
 
         Returns ``None`` if this is not an external URL page.
         """
+        _raise_if_page_created_outside_run(self)
         return self._external_url
 
     def run(self) -> None:
@@ -493,8 +496,8 @@ class Page:
 
         """
         # Import-time pages never receive _page or _can_be_called. Reject them
-        # before those attributes are read, once a script run exists.
-        _reject_import_time_page(self)
+        # before those attributes are read, including outside a script run.
+        _raise_if_page_created_outside_run(self)
 
         if not self._can_be_called:
             raise StreamlitAPIException(
@@ -543,12 +546,6 @@ def _create_page(page: str | Path, *, default: bool = False) -> Page:
         page_object, page, default=default
     )
     return page_object
-
-
-def _reject_import_time_page(page: Page) -> None:
-    """Reject an import-time page once a script run exists."""
-    if get_script_run_ctx() is not None:
-        _raise_if_page_created_outside_run(page)
 
 
 def _raise_if_page_created_outside_run(page: Page) -> None:

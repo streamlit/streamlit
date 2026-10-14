@@ -20,19 +20,28 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import build_app_url, wait_for_app_run
 from e2e_playwright.shared.app_utils import get_button
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page
 
 
-def test_callable_entrypoint_runs_on_each_full_rerun(app: Page) -> None:
+def test_callable_entrypoint_runs_on_each_full_rerun(
+    app: Page, app_base_url: str
+) -> None:
     expect(app.get_by_text("Callable st.App")).to_be_visible()
+    expect(app.get_by_text("Callable home page")).to_be_visible()
     expect(app.get_by_text("Main calls: 1", exact=True)).to_be_visible()
+
+    static_response = app.request.get(
+        build_app_url(app_base_url, path="/app/static/test.css")
+    )
+    expect(static_response).to_be_ok()
 
     get_button(app, "Rerun callable").click()
     wait_for_app_run(app)
 
     expect(app.get_by_text("Main calls: 2", exact=True)).to_be_visible()
     expect(app.get_by_text("Main calls: 1", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Callable home page")).to_be_visible()

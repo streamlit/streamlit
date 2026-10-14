@@ -113,8 +113,12 @@ def _close_async_generator(async_gen: Any) -> None:
             temporary_loop = asyncio.new_event_loop()
             loop = temporary_loop
 
+        task = loop.create_task(closer)
         try:
-            loop.run_until_complete(closer)
+            # A finally that awaits forever must not block the entrypoint error.
+            loop.run_until_complete(
+                asyncio.wait({task}, timeout=_REJECTED_TASK_CANCEL_WAIT_SECS)
+            )
         except Exception:
             # Drop the awaitable so the entrypoint error is not shadowed by
             # "coroutine was never awaited", then continue to that error.
@@ -122,7 +126,15 @@ def _close_async_generator(async_gen: Any) -> None:
                 "Failed to finalize a rejected async generator entrypoint.",
                 exc_info=True,
             )
+            if not task.done():
+                task.cancel()
             _close_awaitable(closer)
+        else:
+            if not task.done():
+                task.cancel()
+                _LOGGER.debug(
+                    "Stopped waiting for a rejected async generator to close."
+                )
     finally:
         if temporary_loop is not None:
             temporary_loop.close()
@@ -205,11 +217,11 @@ def _close_awaitable(awaitable: Any) -> None:
 
 
 def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
-    """Call the App entrypoint and reject coroutine or generator results.
+    """Call the App entrypoint and reject awaitable or generator results.
 
     ``App`` inspects only the outer callable, so a sync ``functools.wraps``
     wrapper around an async function passes construction. This closes a
-    returned coroutine or generator and raises. Wrappers that drive the inner
+    returned awaitable or generator and raises. Wrappers that drive the inner
     coroutine themselves return ``None`` and are allowed.
     """
     result: Any = entrypoint()
@@ -230,7 +242,7 @@ def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
             except Exception:
                 # A failing close() must not hide the entrypoint error.
                 _LOGGER.debug(
-                    "Failed to close a rejected coroutine or generator entrypoint.",
+                    "Failed to close a rejected awaitable or generator entrypoint.",
                     exc_info=True,
                 )
         else:
@@ -240,7 +252,7 @@ def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
             _cancel_rejected_task(result)
 
     raise StreamlitAPIException(
-        "st.App callable entrypoints must not return a coroutine or generator. "
+        "st.App callable entrypoints must not return an awaitable or generator. "
         "Run that work synchronously and return a normal value instead.",
         error_id="app-callable-returns-coroutine-or-generator",
     )
@@ -449,10 +461,6 @@ class ScriptRunner:
         self._pages_manager = pages_manager
         self._local_sources_watcher = local_sources_watcher
         self._script_entrypoint = script_entrypoint
-        if script_entrypoint is not None:
-            # Callable apps never run pages/ as MPA v1. Set this once so
-            # st.switch_page uses the st.navigation error, not the pages/ hint.
-            PagesManager.uses_pages_directory = False
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 

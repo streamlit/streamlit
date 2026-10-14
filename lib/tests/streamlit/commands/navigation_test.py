@@ -108,18 +108,25 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert exc_info.value.error_id == "page-created-outside-script-run"
 
     def test_page_attributes_reject_page_created_outside_script_run(self) -> None:
-        """title, icon, and url_path use the import-time page error."""
+        """title, icon, url_path, and external fields use the import-time page error."""
         with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
 
             def home() -> None:
                 pass
 
             page = st.Page(home)
+            with pytest.raises(
+                StreamlitAPIException, match="while the Streamlit script is running"
+            ) as exc_info:
+                _ = page.title
+            assert exc_info.value.error_id == "page-created-outside-script-run"
 
         for read_attribute in (
             lambda: page.title,
             lambda: page.icon,
             lambda: page.url_path,
+            lambda: page.is_external,
+            lambda: page.external_url,
         ):
             with pytest.raises(
                 StreamlitAPIException, match="while the Streamlit script is running"

@@ -246,7 +246,7 @@ class ScriptRunnerTest(unittest.TestCase):
             if element.WhichOneof("type") == "exception"
         ]
         assert any(
-            "coroutine or generator" in message for message in exception_messages
+            "awaitable or generator" in message for message in exception_messages
         )
 
     def test_invoke_script_entrypoint_closes_async_generator(self) -> None:
@@ -272,7 +272,7 @@ class ScriptRunnerTest(unittest.TestCase):
                 return gen
 
             with pytest.raises(
-                StreamlitAPIException, match="coroutine or generator"
+                StreamlitAPIException, match="awaitable or generator"
             ) as exc_info:
                 _invoke_script_entrypoint(entrypoint)
 
@@ -281,6 +281,30 @@ class ScriptRunnerTest(unittest.TestCase):
             )
             assert closed is True
             assert gen.ag_frame is None
+
+    def test_invoke_script_entrypoint_bounds_async_generator_cleanup(self) -> None:
+        """An async generator whose finally awaits forever does not stall the error."""
+        with _installed_event_loop():
+
+            async def agen() -> Any:
+                try:
+                    yield None
+                finally:
+                    await asyncio.sleep(30)
+
+            gen = agen()
+            try:
+                gen.__anext__().send(None)
+            except StopIteration:
+                pass
+
+            def entrypoint() -> Any:
+                return gen
+
+            started = time.monotonic()
+            with pytest.raises(StreamlitAPIException, match="awaitable or generator"):
+                _invoke_script_entrypoint(entrypoint)
+            assert time.monotonic() - started < 1
 
     def test_invoke_script_entrypoint_closes_unstarted_async_generator(self) -> None:
         """An unstarted async generator is closed before the entrypoint error."""
@@ -294,7 +318,7 @@ class ScriptRunnerTest(unittest.TestCase):
             def entrypoint() -> Any:
                 return gen
 
-            with pytest.raises(StreamlitAPIException, match="coroutine or generator"):
+            with pytest.raises(StreamlitAPIException, match="awaitable or generator"):
                 _invoke_script_entrypoint(entrypoint)
 
             assert gen.ag_frame is None
@@ -315,7 +339,7 @@ class ScriptRunnerTest(unittest.TestCase):
             return generator
 
         with pytest.raises(
-            StreamlitAPIException, match="coroutine or generator"
+            StreamlitAPIException, match="awaitable or generator"
         ) as exc_info:
             _invoke_script_entrypoint(entrypoint)
 
@@ -344,7 +368,7 @@ class ScriptRunnerTest(unittest.TestCase):
             def entrypoint() -> Any:
                 return task
 
-            with pytest.raises(StreamlitAPIException, match="coroutine or generator"):
+            with pytest.raises(StreamlitAPIException, match="awaitable or generator"):
                 _invoke_script_entrypoint(entrypoint)
 
             assert cleaned is True
@@ -368,7 +392,7 @@ class ScriptRunnerTest(unittest.TestCase):
                 return task
 
             started = time.monotonic()
-            with pytest.raises(StreamlitAPIException, match="coroutine or generator"):
+            with pytest.raises(StreamlitAPIException, match="awaitable or generator"):
                 _invoke_script_entrypoint(entrypoint)
             assert time.monotonic() - started < 1
 
@@ -405,7 +429,7 @@ class ScriptRunnerTest(unittest.TestCase):
             with _installed_event_loop():
                 began = time.monotonic()
                 with pytest.raises(
-                    StreamlitAPIException, match="coroutine or generator"
+                    StreamlitAPIException, match="awaitable or generator"
                 ):
                     _invoke_script_entrypoint(entrypoint)
                 assert time.monotonic() - began < 1
@@ -460,7 +484,6 @@ class ScriptRunnerTest(unittest.TestCase):
         """A callable entrypoint runs instead of the pages-directory MPA path."""
         main = MagicMock()
         scriptrunner = TestScriptRunner("good_script.py", script_entrypoint=main)
-        assert PagesManager.uses_pages_directory is False
 
         with (
             patch.object(PagesManager, "uses_pages_directory", True),
