@@ -547,6 +547,10 @@ class CacheResourceAPI:
             The ``on_release`` function isn't guaranteed to be called when an
             app is shut down.
 
+            If ``clear()`` runs during an in-flight computation, Streamlit discards
+            that computation's cache write without calling ``on_release``. The caller
+            still receives and owns the returned resource.
+
         scope : "global" or "session"
             The scope for the resource cache. If this is ``"global"`` (default),
             the resource is cached globally. If this is ``"session"``, the

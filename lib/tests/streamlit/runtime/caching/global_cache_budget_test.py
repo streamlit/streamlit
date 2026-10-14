@@ -242,7 +242,7 @@ def test_disabled_budget_does_not_track_entries() -> None:
 
 
 def test_disabled_budget_skips_storage_version_bookkeeping() -> None:
-    """Default-disabled budgets leave hit and write version maps empty."""
+    """Default-disabled budgets leave the write-generation map empty."""
     budget = GlobalCacheBudget(max_bytes=None)
     storage = _create_storage(budget, "disabled")
 
@@ -250,7 +250,6 @@ def test_disabled_budget_skips_storage_version_bookkeeping() -> None:
     assert storage.get("key") == b"value"
 
     assert storage._generations == {}
-    assert storage._access_versions == {}
 
 
 def test_global_budget_warning_is_emitted_once() -> None:
@@ -387,12 +386,10 @@ def test_read_between_selection_and_eviction_waits_for_enforcement() -> None:
     read_errors: list[CacheStorageKeyNotFoundError] = []
     original_evict = first._evict_from_mem_cache
 
-    def delayed_evict(
-        key: str, expected_generation: int, expected_access_version: int
-    ) -> bool:
+    def delayed_evict(key: str, expected_generation: int) -> bool:
         selected.set()
         assert continue_eviction.wait(timeout=5)
-        return original_evict(key, expected_generation, expected_access_version)
+        return original_evict(key, expected_generation)
 
     def read_selected_entry() -> None:
         read_started.set()
@@ -559,12 +556,10 @@ def test_selected_victim_removed_concurrently_is_reconciled(
     continue_eviction = threading.Event()
     original_evict = first._evict_from_mem_cache
 
-    def delayed_evict(
-        key: str, expected_generation: int, expected_access_version: int
-    ) -> bool:
+    def delayed_evict(key: str, expected_generation: int) -> bool:
         selected.set()
         assert continue_eviction.wait(timeout=5)
-        return original_evict(key, expected_generation, expected_access_version)
+        return original_evict(key, expected_generation)
 
     with patch.object(first, "_evict_from_mem_cache", side_effect=delayed_evict):
         writer = threading.Thread(target=second.set, args=("c", b"c"))
@@ -597,12 +592,10 @@ def test_selected_victim_expired_concurrently_is_reconciled() -> None:
     continue_eviction = threading.Event()
     original_evict = first._evict_from_mem_cache
 
-    def delayed_evict(
-        key: str, expected_generation: int, expected_access_version: int
-    ) -> bool:
+    def delayed_evict(key: str, expected_generation: int) -> bool:
         selected.set()
         assert continue_eviction.wait(timeout=5)
-        return original_evict(key, expected_generation, expected_access_version)
+        return original_evict(key, expected_generation)
 
     with patch.object(first, "_evict_from_mem_cache", side_effect=delayed_evict):
         global_writer = threading.Thread(target=second.set, args=("c", b"c"))

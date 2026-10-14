@@ -336,6 +336,34 @@ If you think this is actually a Streamlit bug, please
 
         close.assert_called_once_with()
 
+    def test_clear_all_attempts_all_storage_closes_after_failure(self) -> None:
+        """A failed storage close does not skip later detached storages."""
+        first = _data_caches.get_cache(
+            key="first",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="first",
+        )
+        second = _data_caches.get_cache(
+            key="second",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="second",
+        )
+
+        with (
+            patch.object(first.storage, "close", side_effect=OSError("close failed")),
+            patch.object(
+                second.storage, "close", wraps=second.storage.close
+            ) as second_close,
+            pytest.raises(OSError, match="close failed"),
+        ):
+            _data_caches.clear_all()
+
+        second_close.assert_called_once_with()
+
     def test_clear_session_closes_all_storages_when_clear_fails(self) -> None:
         """A failed cache clear still closes every storage in the session."""
         with patch(
@@ -372,6 +400,40 @@ If you think this is actually a Streamlit bug, please
             clear_session_cache("session")
 
         first_close.assert_called_once_with()
+        second_close.assert_called_once_with()
+
+    def test_clear_session_attempts_all_storage_closes_after_failure(self) -> None:
+        """A failed storage close does not skip later detached storages."""
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            first = _data_caches.get_cache(
+                key="first",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="first",
+                scope="session",
+            )
+            second = _data_caches.get_cache(
+                key="second",
+                persist=None,
+                max_entries=None,
+                ttl=None,
+                display_name="second",
+                scope="session",
+            )
+
+        with (
+            patch.object(first.storage, "close", side_effect=OSError("close failed")),
+            patch.object(
+                second.storage, "close", wraps=second.storage.close
+            ) as second_close,
+            pytest.raises(OSError, match="close failed"),
+        ):
+            clear_session_cache("session")
+
         second_close.assert_called_once_with()
 
     def test_cached_class_method_clear_args(self):
@@ -1410,7 +1472,6 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         assert storage._evict_from_mem_cache(
             "vk",
             expected_generation=storage._generations["vk"],
-            expected_access_version=storage._access_versions["vk"],
         )
 
         cache.write_background_refresh_result(

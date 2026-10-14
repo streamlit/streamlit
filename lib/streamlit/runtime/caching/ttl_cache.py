@@ -68,12 +68,12 @@ class TTLCache(MutableMapping[K, V]):
         timer : Callable[[], float]
             A zero-argument callable returning the current time. Defaults to
             ``time.monotonic``.
-        getsizeof : Callable[[V], int] or None
+        getsizeof : Callable[[V], int] | None
             Function that measures values against ``maxsize``. By default,
             each value has size one.
-        max_count : int or None
+        max_count : int | None
             Optional entry-count limit enforced in addition to ``maxsize``.
-        on_remove : Callable[[K, V], None] or None
+        on_remove : Callable[[K, V], None] | None
             Callback invoked whenever an entry is removed.
         """
         self._maxsize = maxsize

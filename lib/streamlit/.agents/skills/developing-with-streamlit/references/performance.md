@@ -111,8 +111,9 @@ def get_large_report(report_id):
     return build_report(report_id)
 ```
 
-To cap all `st.cache_data` memory across functions and sessions, set
-`server.maxCachedDataSize` (for example, `"4gb"`); it is disabled by default.
+To cap the combined serialized size of in-memory `st.cache_data` entries across
+functions and sessions, set `server.maxCachedDataSize` (for example, `"4gb"`);
+it is disabled by default.
 
 ## Fragments
 

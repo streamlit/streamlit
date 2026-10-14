@@ -21,7 +21,7 @@ import queue
 import threading
 import weakref
 from collections import OrderedDict
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -31,7 +31,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.stats import CounterStat, StatsProvider
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Sequence
+    from collections.abc import Sequence
 
     from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
         InMemoryCacheStorageWrapper,
@@ -40,28 +40,28 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = get_logger(__name__)
 CACHE_DATA_EVICTIONS_FAMILY: Final = "cache_data_evictions"
+_NO_ENFORCEMENT: Final = nullcontext()
 
 
 @dataclass
 class _EntryRecord:
     """Bookkeeping used to reject a stale eviction candidate.
 
-    ``generation`` changes on every rewrite and ``access_version`` on every read,
-    so an entry selected without its storage lock is evicted only if neither changed.
+    ``generation`` changes on every rewrite, so an entry selected without its
+    storage lock is evicted only if it has not changed.
     """
 
     size: int
     generation: int
-    access_version: int
 
 
 class GlobalCacheBudget(StatsProvider):
     """Enforce one LRU byte budget across in-memory ``st.cache_data`` storages.
 
-    Storages report every write, read, and removal. Because a victim is chosen
-    without holding its storage's lock, each record carries the entry's write
-    generation and access version. The budget skips eviction when either value has
-    changed, so a concurrent read or rewrite cannot evict the wrong entry.
+    Storages report every write, read, and removal. Enabled-budget reads and writes
+    are serialized with eviction. Because a victim is chosen without holding its
+    storage's lock, each record carries the entry's write generation. The storage
+    validates that generation before deletion.
     """
 
     def __init__(self, max_bytes: int | None) -> None:
@@ -140,23 +140,17 @@ class GlobalCacheBudget(StatsProvider):
             if record is not None:
                 self._total_bytes -= record.size
 
-    @contextmanager
-    def write_enforcement(self) -> Generator[None, None, None]:
+    def write_enforcement(self) -> AbstractContextManager[object]:
         """Serialize a storage write with its process-wide budget enforcement."""
         if self._max_bytes is None:
-            yield
-            return
-        with self._enforcement_lock:
-            yield
+            return _NO_ENFORCEMENT
+        return self._enforcement_lock
 
-    @contextmanager
-    def read_enforcement(self) -> Generator[None, None, None]:
+    def read_enforcement(self) -> AbstractContextManager[object]:
         """Keep an enabled-budget read from racing victim enforcement."""
         if self._max_bytes is None:
-            yield
-            return
-        with self._enforcement_lock:
-            yield
+            return _NO_ENFORCEMENT
+        return self._enforcement_lock
 
     def record_write(
         self,
@@ -164,7 +158,6 @@ class GlobalCacheBudget(StatsProvider):
         key: str,
         size: int,
         generation: int,
-        access_version: int,
     ) -> None:
         if self._max_bytes is None:
             return
@@ -177,7 +170,6 @@ class GlobalCacheBudget(StatsProvider):
             self._entries[entry_key] = _EntryRecord(
                 size=size,
                 generation=generation,
-                access_version=access_version,
             )
             storage_entries = self._storage_entries.get(storage_id)
             if storage_entries is None:
@@ -192,7 +184,6 @@ class GlobalCacheBudget(StatsProvider):
         storage_id: int,
         key: str,
         generation: int,
-        access_version: int,
     ) -> None:
         if self._max_bytes is None:
             return
@@ -200,12 +191,7 @@ class GlobalCacheBudget(StatsProvider):
         with self._lock:
             self._drain_pending_unregisters_locked()
             current = self._entries.get(entry_key)
-            if (
-                current is not None
-                and current.generation == generation
-                and access_version >= current.access_version
-            ):
-                current.access_version = access_version
+            if current is not None and current.generation == generation:
                 self._entries.move_to_end(entry_key)
 
     def record_removals(
@@ -284,15 +270,14 @@ class GlobalCacheBudget(StatsProvider):
                     if storage is None:
                         stale_storage_id = entry_key[0]
                         break
-                    # Snapshot versions while holding the budget lock. The live record
-                    # is mutated in place on reads to avoid hit-path allocations.
+                    # Snapshot the generation while holding the budget lock. The
+                    # storage validates it under its own lock before deletion.
                     return (
                         storage,
                         entry_key[1],
                         _EntryRecord(
                             record.size,
                             record.generation,
-                            record.access_version,
                         ),
                     )
                 if stale_storage_id is None:
@@ -338,15 +323,13 @@ class GlobalCacheBudget(StatsProvider):
                 evicted = storage._evict_from_mem_cache(
                     key,
                     expected_generation=record.generation,
-                    expected_access_version=record.access_version,
                 )
                 if evicted:
                     with self._lock:
                         self._global_evictions += 1
                 else:
-                    # A concurrent read, rewrite, delete, or expiry changed this entry
-                    # after selection. Leave it cached; the next write enforces against
-                    # a fresh LRU snapshot.
+                    # A concurrent delete, clear, expiry, or teardown changed or
+                    # removed this entry. Continue with a fresh candidate.
                     continue
 
     def get_stats(
@@ -370,7 +353,7 @@ class GlobalCacheBudget(StatsProvider):
 
 
 class _GlobalCacheBudgetHolder:
-    """Mutable holder for resetting the lazily created budget in tests."""
+    """Mutable holder for the lazily created process-wide budget."""
 
     budget: GlobalCacheBudget | None = None
 

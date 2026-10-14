@@ -41,6 +41,7 @@ _MULTIPLIERS: Final = {
     "tb": 1024**4,
     "tib": 1024**4,
 }
+# Prevent unbounded integer-conversion work from pathological size strings.
 _MAX_BYTE_SIZE_DIGITS: Final = 100
 _CONFIG_MAX_CACHED_DATA_SIZE_ERROR: Final = (
     "`server.maxCachedDataSize` requires a positive binary-unit string, such as "
@@ -59,11 +60,11 @@ _CONFIG_MAX_CACHED_DATA_SIZE_RANGE_ERROR: Final = (
 
 
 def cache_data_max_size_to_bytes(value: int | str | None) -> int | None:
-    """Convert an ``st.cache_data`` max-size value to bytes.
+    """Convert an ``st.cache_data`` max-size value to a positive byte count.
 
-    Integers are byte counts. Strings need a unit such as ``"500MB"`` or
-    ``"1.5GiB"``. Every unit is a power of 1024, so ``"MB"`` and ``"MiB"``
-    are equivalent. Fractional results are rounded down to whole bytes.
+    Integers represent byte counts directly. Strings require an explicit binary
+    unit, such as ``"500MB"`` or ``"1.5GiB"``. Units are powers of 1024, and
+    fractional values are rounded down to whole bytes.
     """
     if value is None:
         return None

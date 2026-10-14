@@ -71,11 +71,11 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self._ttl_seconds = context.ttl_seconds
         self._max_entries = context.max_entries
         self._max_size_bytes = context.max_size_bytes
+        # TTLCache invokes on_remove under _mem_cache_lock. Buffer removals until
+        # the mutation completes, then report them to the global budget in one batch.
         self._pending_removals: list[tuple[str, int]] = []
         self._generations: dict[str, int] = {}
-        self._access_versions: dict[str, int] = {}
         self._next_generation = 0
-        self._next_access_version = 0
         self._oversized_warning_emitted = False
         self._global_budget = get_global_cache_budget()
         self._mem_cache: TTLCache[str, bytes] = TTLCache(
@@ -90,9 +90,9 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             max_count=None if self._max_size_bytes is None else self._max_entries,
             on_remove=self._on_mem_cache_remove,
         )
-        # _lifecycle_lock orders set/close so no write lands after close().
-        # _mem_cache_lock guards the memory cache and its version dictionaries.
-        self._lifecycle_lock = threading.Lock()
+        # _close_lock orders set() against close() so no write lands after close().
+        # _mem_cache_lock guards the memory cache and generation dictionary.
+        self._close_lock = threading.Lock()
         self._mem_cache_lock = threading.Lock()
         self._closed = False
         self._persist_storage = persist_storage
@@ -136,7 +136,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def set(self, key: str, value: bytes) -> None:
         """Sets the value for a given key."""
-        with self._lifecycle_lock:
+        with self._close_lock:
             if self._closed:
                 return
             self._write_to_mem_cache(key, value)
@@ -144,7 +144,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def set_if_present(self, key: str, value: bytes) -> bool:
         """Replace an in-memory value only if it has not been evicted."""
-        with self._lifecycle_lock:
+        with self._close_lock:
             if self._closed:
                 return False
             written = self._write_to_mem_cache(key, value, require_present=True)
@@ -190,7 +190,7 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def close(self) -> None:
         """Closes the cache storage."""
-        with self._lifecycle_lock:
+        with self._close_lock:
             if self._closed:
                 return
             with self._mem_cache_lock:
@@ -215,14 +215,10 @@ class InMemoryCacheStorageWrapper(CacheStorage):
             else:
                 if self._global_budget.is_enabled:
                     generation = self._generations[key]
-                    self._next_access_version += 1
-                    access_version = self._next_access_version
-                    self._access_versions[key] = access_version
                     self._global_budget.record_read(
                         self._global_storage_id,
                         key,
                         generation,
-                        access_version,
                     )
                 _LOGGER.debug("Memory cache HIT: %s", key)
 
@@ -250,9 +246,6 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                     self._next_generation += 1
                     generation = self._next_generation
                     self._generations[key] = generation
-                    self._next_access_version += 1
-                    access_version = self._next_access_version
-                    self._access_versions[key] = access_version
                     removals = self._take_pending_removals()
                     self._report_removals(removals)
                     self._global_budget.record_write(
@@ -260,7 +253,6 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                         key,
                         len(entry_bytes),
                         generation,
-                        access_version,
                     )
             self._global_budget.enforce_budget((self._global_storage_id, key))
         if should_warn:
@@ -282,7 +274,6 @@ class InMemoryCacheStorageWrapper(CacheStorage):
 
     def _on_mem_cache_remove(self, key: str, _value: bytes) -> None:
         generation = self._generations.pop(key, None)
-        self._access_versions.pop(key, None)
         if generation is not None:
             self._pending_removals.append((key, generation))
 
@@ -306,17 +297,13 @@ class InMemoryCacheStorageWrapper(CacheStorage):
         self,
         key: str,
         expected_generation: int,
-        expected_access_version: int,
     ) -> bool:
         """Remove the selected generation without touching persistent storage.
 
         Returns ``False`` if the entry changed or disappeared after selection.
         """
         with self._mem_cache_lock:
-            if (
-                self._generations.get(key) != expected_generation
-                or self._access_versions.get(key) != expected_access_version
-            ):
+            if self._generations.get(key) != expected_generation:
                 return False
             if key not in self._mem_cache:
                 # An expired entry is hidden from "in" but still counted by the

@@ -271,9 +271,9 @@ class DataCaches(StatsProvider):
                     del session_caches[key]
 
             if cache is not None:
-                # Detach only after any write holding _write_lock finishes. A
-                # computation still pickling later sees the cache as detached and
-                # skips its store; close() drops entries stored before detachment.
+                # mark_detached() waits for any in-progress storage write, then:
+                # - computations that finish later skip their write;
+                # - close() drops entries written before detachment.
                 cache.mark_detached()
                 _LOGGER.debug(
                     "Closing existing DataCache storage "
@@ -341,8 +341,20 @@ class DataCaches(StatsProvider):
                     for cache in caches:
                         cache.clear()
                 finally:
-                    for cache in caches:
-                        cache.storage.close()
+                    self._close_storages(caches)
+
+    @staticmethod
+    def _close_storages(caches: list[DataCache[Any]]) -> None:
+        """Attempt every storage close, then raise the first failure."""
+        first_error: Exception | None = None
+        for cache in caches:
+            try:
+                cache.storage.close()
+            except Exception as ex:
+                if first_error is None:
+                    first_error = ex
+        if first_error is not None:
+            raise first_error
 
     def clear_all(self) -> None:
         """Clear all in-memory and on-disk caches."""
@@ -370,8 +382,7 @@ class DataCaches(StatsProvider):
                     for data_cache in all_caches:
                         data_cache.clear()
             finally:
-                for data_cache in all_caches:
-                    data_cache.storage.close()
+                self._close_storages(all_caches)
 
     def get_stats(
         self,
@@ -637,8 +648,9 @@ class CacheDataAPI:
             The maximum serialized (pickled) size of this function's in-memory cache.
             An integer is a number of bytes. A string must include a binary unit, like
             ``"500MB"`` or ``"1.5GiB"``. Units use powers of 1024, so ``"MB"`` and
-            ``"MiB"`` are equivalent. ``None`` (default) means no per-function limit.
-            Reading a cached value makes it the most recently used.
+            ``"MiB"`` are equivalent. If this is ``None`` (default), there is no
+            per-function byte limit. Reading a cached value makes it the most recently
+            used.
 
             On a write that would exceed the limit, Streamlit drops
             least-recently-used entries until the new value fits. If a single value
@@ -647,8 +659,8 @@ class CacheDataAPI:
             only the in-memory copy is dropped; a later read can load the disk copy
             again. This limits pickled bytes, not the total memory used by the Python
             process. With ``scope="session"``, the limit applies separately to each
-            session's cache. If configured, ``server.maxCachedDataSize`` counts every
-            session and applies independently.
+            session's cache. If configured, ``server.maxCachedDataSize`` additionally
+            caps the combined in-memory size across all functions and sessions.
 
         show_spinner : bool or str
             Enable the spinner. Default is True to show a spinner when there is
