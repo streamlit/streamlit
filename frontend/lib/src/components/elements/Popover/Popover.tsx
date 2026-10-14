@@ -488,12 +488,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     let cancelled = false
     let observer: MutationObserver | null = null
 
-    const closeIfHidden = (fromUser: boolean): void => {
-      if (isPopoverTriggerHidden(trigger)) {
-        closePopover(fromUser)
-      }
-    }
-
     queueMicrotask(() => {
       if (cancelled) return
       // Ancestor refs have run. A trigger that is still hidden mounted that
@@ -508,12 +502,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         })
         return
       }
-      if (cancelled) return
 
       // The tab panel or expander is the node that changes. MutationObserver
       // does not bubble, so observe each ancestor.
       observer = new MutationObserver(() => {
-        closeIfHidden(true)
+        if (isPopoverTriggerHidden(trigger)) {
+          closePopover(true)
+        }
       })
       let node: HTMLElement | null = trigger
       while (node) {

@@ -290,7 +290,8 @@ describe("Popover container", () => {
   describe("expander details.open applied from a ref", () => {
     // Mirrors Expander: `<details>` has no `open` attribute, and a ref sets
     // `node.open` after the popover's layout effect. jsdom does not apply the
-    // closed-details user-agent rule, so checkVisibility is stubbed to.
+    // closed-details user-agent rule, so `checkVisibility` is stubbed to
+    // emulate it.
     let originalCheckVisibility: HTMLElement["checkVisibility"] | undefined
 
     function installClosedDetailsVisibility(): void {
@@ -379,7 +380,7 @@ describe("Popover container", () => {
       )
       await flushPopoverVisibilityCheck()
 
-      expect(screen.getByText("popover content")).toBeInTheDocument()
+      expect(screen.getByText("popover content")).toBeVisible()
       expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
         "aria-expanded",
         "true"
@@ -405,7 +406,7 @@ describe("Popover container", () => {
       )
       await flushPopoverVisibilityCheck()
 
-      expect(screen.getByText("popover content")).toBeInTheDocument()
+      expect(screen.getByText("popover content")).toBeVisible()
       expect(widgetMgr.getElementState(blockId, "open")).toBe(true)
     })
 
@@ -519,7 +520,7 @@ describe("Popover container", () => {
       )
       await flushPopoverVisibilityCheck()
 
-      expect(screen.getByText("popover content")).toBeInTheDocument()
+      expect(screen.getByText("popover content")).toBeVisible()
       expect(screen.getByTestId("stPopoverButton")).toHaveAttribute(
         "aria-expanded",
         "true"
