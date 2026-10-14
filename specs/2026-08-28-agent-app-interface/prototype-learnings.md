@@ -1222,7 +1222,8 @@ What changed in v1, all small:
   exception).
 
 A review comment on the spec PR then changed one v1 rule: agent sessions now see each
-request's headers in `st.context.headers`, minus `Cookie` and `Authorization`. Empty
+request's headers in `st.context.headers`, minus `Cookie`, `Authorization`, and
+`Proxy-Authorization`. Empty
 headers broke apps that act on them, such as SiS caller's-rights apps, which failed with
 "Token header not found". They are refreshed per interaction because that token
 expires after about 120 seconds, and an MCP tool call supplies them the same way, since
@@ -1279,6 +1280,21 @@ A third review found four more, all fixed:
   its predecessor in place, before the clear, and was erased by it.
 - **An object as an MCP tool name** raised a `TypeError` and a 500 instead of
   `INVALID_PARAMS`.
+
+QA round 5 then found, in v1 scope:
+
+- **A `format_func` that reads `st.session_state` reported the raw option.** The
+  snapshot runs the widget's serializer outside the script thread, where
+  `st.session_state` has no script context to find the session, so the serializer
+  raised, the raw option was reported, and echoing it back was refused. The build now
+  attaches a stand-in script context for the session, which also silences a
+  "missing ScriptRunContext" warning per value.
+- **A refused request replaced the running script's headers.** They were set before
+  the busy check; they are now set only when a run starts.
+- Smaller: a list longer than `value_schema`'s `maxItems` is refused, since a third
+  date crashed apps that unpack a range; `Proxy-Authorization` is withheld with
+  `Authorization`; `st.popover` reports `on_change`; and an unparseable time and an
+  offset get separate errors.
 
 Kept as follow-ups, to keep v1 simple: refusing values that miss `value_schema`, the
 per-key note, a non-executing read and `request_id`, compact responses and a preview

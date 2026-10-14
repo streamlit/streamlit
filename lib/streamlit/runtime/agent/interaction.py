@@ -26,6 +26,7 @@ import asyncio
 import contextlib
 import hashlib
 import secrets
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -54,6 +55,9 @@ if TYPE_CHECKING:
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.runtime.agent.snapshot import ElementState
     from streamlit.runtime.runtime import Runtime
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        ScriptRunContext,
+    )
     from streamlit.runtime.session_manager import ClientContext
     from streamlit.runtime.state.query_params import QueryParams
 
@@ -76,9 +80,9 @@ _SETTLING_STATUSES: Final = frozenset(
 )
 
 # Request headers that never reach `st.context.headers`. The route reads no
-# cookie, and `Authorization` is a credential for whatever fronts the app, not
-# for app code.
-_WITHHELD_HEADERS: Final = frozenset({"cookie", "authorization"})
+# cookie, and `Authorization` and `Proxy-Authorization` are credentials for
+# whatever fronts the app, not for app code.
+_WITHHELD_HEADERS: Final = frozenset({"cookie", "authorization", "proxy-authorization"})
 
 
 class _RequestContext:
@@ -474,11 +478,13 @@ async def interact(
             "This session already has an interaction in flight.",
         )
     session.busy = True
-    session.client.request_context = _RequestContext(headers)
-
     try:
         document = await _run_interaction(
-            runtime, session, request, is_new_session=is_new_session
+            runtime,
+            session,
+            request,
+            is_new_session=is_new_session,
+            headers=headers,
         )
         session.media_ids = snapshot_module.media_file_ids(
             document, media_path=registry.media_path
@@ -501,6 +507,7 @@ async def _run_interaction(
     request: dict[str, Any],
     *,
     is_new_session: bool,
+    headers: Iterable[tuple[str, str]],
 ) -> dict[str, Any]:
     app_session = _app_session(runtime, session)
 
@@ -611,6 +618,9 @@ async def _run_interaction(
     # A timed-out run that has since finished is left uncollected: the client
     # asked for something else.
     session.timed_out = None
+    # Set only when a run starts: a refused request, or a retry collecting a run
+    # already going, must not change what that run reads.
+    session.client.request_context = _RequestContext(headers)
     session.client.begin_interaction()
     runtime.handle_backmsg(session.session_id, back_msg)
 
@@ -669,7 +679,8 @@ async def _settle(
     messages = session.client.messages
     build = asyncio.ensure_future(
         asyncio.to_thread(
-            snapshot_module.build_snapshot,
+            _build_in_context,
+            _script_context(app_session, session),
             session_id=session.handle,
             messages=messages,
             session_state=app_session.session_state,
@@ -694,6 +705,54 @@ async def _settle(
     if interaction.unverified_page is not None:
         _verify_page_exists(interaction.unverified_page, result.document, session)
     return result.document
+
+
+def _script_context(app_session: Any, session: AgentSession) -> ScriptRunContext:
+    """A script context for building this session's snapshot.
+
+    A widget's `value` goes through its serializer, which runs the app's
+    `format_func`, and one that reads `st.session_state` needs a script context
+    to find the session's state. The build emits nothing, so anything the app's
+    code writes while it runs is dropped.
+    """
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        ScriptRunContext,
+    )
+    from streamlit.runtime.state.safe_session_state import SafeSessionState
+
+    return ScriptRunContext(
+        session_id=session.session_id,
+        _enqueue=lambda _msg: None,
+        query_string=session.query_string,
+        session_state=SafeSessionState(
+            app_session.session_state, yield_callback=lambda: None
+        ),
+        uploaded_file_mgr=app_session._uploaded_file_mgr,
+        main_script_path=app_session._script_data.main_script_path,
+        user_info=app_session._user_info,
+        fragment_storage=app_session._fragment_storage,
+        pages_manager=app_session._pages_manager,
+    )
+
+
+def _build_in_context(
+    context: ScriptRunContext, **kwargs: Any
+) -> snapshot_module.Snapshot:
+    """Build a snapshot with ``context`` attached to the current worker thread.
+
+    Only the attribute `get_script_run_ctx` reads is set, and it is cleared
+    afterwards, because the executor reuses its threads for unrelated work.
+    """
+    from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
+        SCRIPT_RUN_CONTEXT_ATTR_NAME,
+    )
+
+    thread = threading.current_thread()
+    setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, context)
+    try:
+        return snapshot_module.build_snapshot(**kwargs)
+    finally:
+        setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
 
 
 def _app_is_running(app_session: Any) -> bool:

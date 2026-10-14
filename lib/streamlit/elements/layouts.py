@@ -2083,6 +2083,7 @@ class LayoutsMixin:
                     icon=icon,
                     disabled=disabled,
                     open=current_open,
+                    on_change=_reported_on_change(on_change, stateful=is_stateful),
                 ),
             ),
         )

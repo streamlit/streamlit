@@ -213,6 +213,16 @@ def build_widget_states(
             )
 
         state = element_states[element_id]
+        if (
+            state.max_items is not None
+            and isinstance(value, list)
+            and len(value) > state.max_items
+        ):
+            raise AgentRequestError(
+                "invalid_value",
+                f"{key!r} takes at most {state.max_items} values, as its "
+                "`value_schema` says.",
+            )
         _validate_options(
             key,
             metadata,
@@ -494,16 +504,20 @@ def _iso_text_to_wire(
         value = value[0]
     if not isinstance(value, str):
         return value
+    what = "date and time" if kind is datetime.datetime else "time"
     try:
-        parsed: datetime.datetime | datetime.time | None = kind.fromisoformat(value)
-    except ValueError:
-        parsed = None
-    if parsed is None or parsed.tzinfo is not None:
-        what = "date and time" if kind is datetime.datetime else "time"
+        parsed: datetime.datetime | datetime.time = kind.fromisoformat(value)
+    except ValueError as exc:
         raise AgentRequestError(
             "invalid_value",
-            f"The value for {key!r} must be an ISO 8601 {what} without an "
-            "offset, like the snapshot reports.",
+            f"The value for {key!r} is not an ISO 8601 {what}, such as the "
+            "snapshot reports.",
+        ) from exc
+    if parsed.tzinfo is not None:
+        raise AgentRequestError(
+            "invalid_value",
+            f"The value for {key!r} has an offset, which this widget cannot "
+            f"hold. Send the {what} without one, like the snapshot reports.",
         )
     try:
         return metadata.serializer(parsed)

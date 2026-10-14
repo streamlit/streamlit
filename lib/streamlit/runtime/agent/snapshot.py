@@ -215,6 +215,9 @@ class ElementState(NamedTuple):
     # The command that emitted it, for checks that only apply to some, such as
     # reading ISO text for a date-time input.
     command: str = ""
+    # The most items its `value_schema` allows, such as 2 for a range. A longer
+    # list would reach the app, where `start, end = st.date_input(...)` raises.
+    max_items: int | None = None
 
 
 @dataclass
@@ -469,6 +472,7 @@ class _SnapshotBuilder:
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
             command=description["type"],
+            max_items=(description.get("value_schema") or {}).get("maxItems"),
         )
         if actionable:
             self.actions.append(

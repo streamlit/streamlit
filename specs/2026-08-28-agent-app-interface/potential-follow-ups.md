@@ -172,8 +172,10 @@ The snapshot is assembled in a worker thread after the run settles, so a slow
 `format_func` or a large table no longer stalls other sessions. Two parts of it are
 still more than reading: a widget's `value` goes through `st.session_state`, which
 deserializes and caches, and through the widget's serializer, which runs the app's own
-`format_func`. Nothing runs meanwhile today, since the session is claimed and file edits
-wait for the next interaction, but that rests on those two rules holding.
+`format_func`. A `format_func` that reads `st.session_state` needs a script context, so
+the build attaches a stand-in one for the session. Nothing runs meanwhile today, since
+the session is claimed and file edits wait for the next interaction, but that rests on
+those two rules holding.
 
 Capturing those values on the script thread, at the end of the run that produced them,
 would make the snapshot a pure function of finished data. The natural place is the same
@@ -289,7 +291,8 @@ results, after which a rerun was the only way back to the current state, and
 the JSON type, the options, and whether the widget can read the value. Anything else
 reaches the widget, which adjusts it: a fraction sent to an integer input is truncated,
 a malformed date resets to the default, and a reversed or one-item range is stored as
-sent. The next `value` shows each outcome.
+sent. The next `value` shows each outcome. Only `maxItems` is enforced already, because
+a third date for a range made `start, end = st.date_input(...)` raise in the app.
 
 **The fuller version:** check the request against the element's `value_schema` before
 running, so a whole-number type, a date format, a range's length, and its order are
