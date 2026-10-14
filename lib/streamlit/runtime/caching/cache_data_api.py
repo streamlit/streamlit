@@ -524,18 +524,6 @@ class CacheDataAPI:
         value of a cached function must be pickleable. Each caller of the cached
         function gets its own copy of the cached data.
 
-        .. note::
-            In supported Linux containers, Streamlit logs a server warning when an
-            ``st.cache_data`` write approaches the detected memory limit. The warning
-            reports serialized cache usage and its largest function contributors,
-            without logging cached values, arguments, or keys. Preserve server or
-            container logs if you need this evidence after an out-of-memory kill.
-
-            Actual process memory can be higher than serialized cache usage because
-            callers hold deserialized copies and apps hold other state. An
-            out-of-memory kill during result computation or serialization can happen
-            before Streamlit reaches the cache-write warning hook.
-
         You can clear a function's cache with ``func.clear()`` or clear the entire
         cache with ``st.cache_data.clear()``.
 
