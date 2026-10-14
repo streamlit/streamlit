@@ -23,25 +23,46 @@ import type { AppPage } from "@streamlit/protobuf"
 
 import TopNav, { type Props, TopNavOverflowItem } from "./TopNav"
 
-// Mock rc-overflow to render all items without responsive behavior
+/**
+ * When set, items after this index get aria-hidden like rc-overflow collapsed
+ * hosts. Null means every item stays visible (default for most TopNav tests).
+ */
+const overflowMockState = vi.hoisted(() => ({
+  collapseAfterIndex: null as number | null,
+}))
+
+// Mock rc-overflow without real layout measurement, but still render through
+// itemComponent so TopNavOverflowItem wiring is covered.
 vi.mock("rc-overflow", () => ({
   default: ({
     data,
     renderItem,
     itemKey,
     component: Component = "div",
+    itemComponent: ItemComponent = "div",
     ...rest
   }: {
     data: unknown[]
     renderItem: (item: unknown, info: unknown) => React.ReactNode
     itemKey: (item: unknown) => string
     component?: React.ElementType
+    itemComponent?: React.ElementType
     [key: string]: unknown
   }) => (
     <Component {...rest}>
-      {data.map(item => (
-        <div key={itemKey(item)}>{renderItem(item, {})}</div>
-      ))}
+      {data.map((item, index) => {
+        const isCollapsed =
+          overflowMockState.collapseAfterIndex !== null &&
+          index > overflowMockState.collapseAfterIndex
+        return (
+          <ItemComponent
+            key={itemKey(item)}
+            {...(isCollapsed ? { "aria-hidden": true } : {})}
+          >
+            {renderItem(item, { index })}
+          </ItemComponent>
+        )
+      })}
     </Component>
   ),
 }))
@@ -82,10 +103,10 @@ function renderTopNav(
 
 describe("TopNavOverflowItem", () => {
   it("marks aria-hidden hosts as inert so overflowed links leave tab order", () => {
-    // rc-overflow sets aria-hidden on overflowed item hosts that still contain
-    // anchors; we mirror that prop here and assert we add inert to fix tab order.
+    // rc-overflow passes aria-hidden to the item host. This test supplies that
+    // prop directly because the rc-overflow mock does not unless configured.
     const props = { "aria-hidden": true as const }
-    const { container } = render(
+    const { container, rerender } = render(
       <TopNavOverflowItem {...props}>
         <a href="/hidden">Hidden page</a>
       </TopNavOverflowItem>
@@ -94,6 +115,14 @@ describe("TopNavOverflowItem", () => {
     const host = container.firstElementChild
     expect(host).toHaveAttribute("aria-hidden", "true")
     expect(host).toHaveAttribute("inert")
+
+    rerender(
+      <TopNavOverflowItem>
+        <a href="/hidden">Hidden page</a>
+      </TopNavOverflowItem>
+    )
+    expect(container.firstElementChild).not.toHaveAttribute("aria-hidden")
+    expect(container.firstElementChild).not.toHaveAttribute("inert")
   })
 
   it("does not mark visible hosts as inert", () => {
@@ -110,6 +139,10 @@ describe("TopNavOverflowItem", () => {
 })
 
 describe("TopNav", () => {
+  afterEach(() => {
+    overflowMockState.collapseAfterIndex = null
+  })
+
   it("exposes a named navigation landmark", () => {
     const appPages: AppPage.$Properties[] = [
       {
@@ -130,6 +163,37 @@ describe("TopNav", () => {
 
     const nav = screen.getByRole("navigation", { name: "App pages" })
     expect(nav).toHaveAttribute("data-testid", "stTopNav")
+  })
+
+  it("makes overflow-collapsed page links inert via itemComponent", () => {
+    // jsdom does not skip inert hosts on Tab, so assert the host contract here.
+    overflowMockState.collapseAfterIndex = 0
+    const appPages: AppPage.$Properties[] = [
+      {
+        pageScriptHash: "page_1",
+        pageName: "page 1",
+        urlPathname: "page_1",
+        isDefault: true,
+      },
+      {
+        pageScriptHash: "page_2",
+        pageName: "page 2",
+        urlPathname: "page_2",
+        isDefault: false,
+      },
+    ]
+
+    renderTopNav({}, { navigationContext: { appPages } })
+
+    const links = screen.getAllByTestId("stTopNavLink")
+    expect(links).toHaveLength(2)
+
+    expect(links[0].closest("[aria-hidden]")).toBeNull()
+    expect(links[0].closest("[inert]")).toBeNull()
+
+    const collapsedHost = links[1].closest("[aria-hidden='true']")
+    expect(collapsedHost).not.toBeNull()
+    expect(collapsedHost).toHaveAttribute("inert")
   })
 
   describe("hidden pages", () => {

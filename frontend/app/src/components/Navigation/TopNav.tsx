@@ -56,8 +56,8 @@ type OverflowNavItem = AppPage.$Properties | AppPage.$Properties[]
  * aria-hidden, but anchors/buttons inside remain in the native tab order.
  * Mark those hosts inert so Tab skips them (same idea as collapsed expanders).
  *
- * `inert` is typed as "" | undefined because React 18 / our @types/react do
- * not treat boolean inert consistently in jsdom.
+ * Pass `inert=""` rather than `true`: React 18 drops an unknown boolean prop,
+ * and jsdom only sees the attribute when it is a string.
  */
 export const TopNavOverflowItem = forwardRef<
   HTMLDivElement,
