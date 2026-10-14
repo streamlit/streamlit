@@ -41,12 +41,22 @@ import EditingState, { getColumnName } from "./EditingState"
 export const DEBOUNCE_TIME_MS = 150
 
 /**
+ * Selection JSON persisted on the widget. The arrays are optional because a
+ * payload can omit them. {@link DataframeState} requires every array.
+ */
+interface ParsedSelectionState {
+  selection: {
+    rows?: number[]
+    columns?: string[]
+    cells?: ReadonlyArray<readonly [number, string]>
+  }
+}
+
+/**
  * Validate that a parsed JSON value has the minimum shape
  * required to represent dataframe selections.
  */
-function isSelectionState(
-  value: unknown
-): value is Pick<DataframeState, "selection"> {
+function isSelectionState(value: unknown): value is ParsedSelectionState {
   if (typeof value !== "object" || value === null) {
     return false
   }
@@ -89,7 +99,7 @@ function parseSelectionStateToGridSelection(
   let columnSelection = CompactSelection.empty()
   let cellSelection: [number, number] | undefined = undefined
 
-  selectionState.selection?.rows?.forEach(row => {
+  selectionState.selection.rows?.forEach(row => {
     const displayRow = originalToDisplayIndex
       ? originalToDisplayIndex(row)
       : row
@@ -98,7 +108,7 @@ function parseSelectionStateToGridSelection(
     }
   })
 
-  selectionState.selection?.columns?.forEach(column => {
+  selectionState.selection.columns?.forEach(column => {
     const idx = columnNames.indexOf(column)
     if (idx >= 0) {
       columnSelection = columnSelection.add(idx)
@@ -109,7 +119,7 @@ function parseSelectionStateToGridSelection(
   // Multi-cell ranges cannot be properly reconstructed from individual cell positions
   // because they require rectangular range information.
   if (isCellSelectionActivated && !isMultiCellSelectionActivated) {
-    const [rowIdx, columnName] = selectionState.selection?.cells?.[0] ?? []
+    const [rowIdx, columnName] = selectionState.selection.cells?.[0] ?? []
     if (rowIdx !== undefined && columnName !== undefined) {
       const displayRow = originalToDisplayIndex
         ? originalToDisplayIndex(rowIdx)
@@ -300,7 +310,7 @@ function useWidgetState({
 
       const initialWidgetValue = widgetMgr.getStringValue({
         id: element.id,
-        formId: element.formId ?? undefined,
+        formId: element.formId,
       })
 
       if (!initialWidgetValue) {
@@ -332,7 +342,7 @@ function useWidgetState({
     const currentEditingState = editingStateRef.current.toJson(originalColumns)
     let currentWidgetState = widgetMgr.getStringValue({
       id: element.id,
-      formId: element.formId ?? undefined,
+      formId: element.formId,
     })
 
     // Create an empty widget state when the manager has no value yet.
@@ -341,7 +351,7 @@ function useWidgetState({
     // Only update if there is actually a difference between editing and widget state
     if (currentEditingState !== currentWidgetState) {
       widgetMgr.setStringValue(element.id, currentEditingState, {
-        formId: element.formId ?? undefined,
+        formId: element.formId,
         fragmentId,
         fromUser: true,
         // on_change="ignore" buffers the value without scheduling a rerun.
@@ -439,29 +449,18 @@ function useWidgetState({
           .toArray()
           .map(columnIdx => getColumnName(columns[columnIdx]))
 
-        // Parse cell selections into our widget state structure:
+        // Parse cell selections into our widget state structure.
+        // A single selected cell is a 1×1 range.
         if (syncCellSelections && newSelection.current) {
-          const { cell, range } = newSelection.current
-          if (range) {
-            // Multi-cell selection (rectangular structure)
-            for (let r = range.y; r < range.y + range.height; r++) {
-              for (let c = range.x; c < range.x + range.width; c++) {
-                if (!columns[c].isIndex) {
-                  selectionState.selection.cells.push([
-                    getOriginalIndex(r),
-                    getColumnName(columns[c]),
-                  ])
-                }
+          const { range } = newSelection.current
+          for (let r = range.y; r < range.y + range.height; r++) {
+            for (let c = range.x; c < range.x + range.width; c++) {
+              if (!columns[c].isIndex) {
+                selectionState.selection.cells.push([
+                  getOriginalIndex(r),
+                  getColumnName(columns[c]),
+                ])
               }
-            }
-          } else if (cell) {
-            // Single-cell selection
-            const [col, row] = cell
-            if (!columns[col].isIndex) {
-              selectionState.selection.cells.push([
-                getOriginalIndex(row),
-                getColumnName(columns[col]),
-              ])
             }
           }
         }
@@ -469,7 +468,7 @@ function useWidgetState({
         const newWidgetState = JSON.stringify(selectionState)
         const currentWidgetState = widgetMgr.getStringValue({
           id: element.id,
-          formId: element.formId ?? undefined,
+          formId: element.formId,
         })
 
         // Only update if there is actually a difference to the previous selection state
@@ -478,7 +477,7 @@ function useWidgetState({
           currentWidgetState !== newWidgetState
         ) {
           widgetMgr.setStringValue(element.id, newWidgetState, {
-            formId: element.formId ?? undefined,
+            formId: element.formId,
             fragmentId,
             fromUser: true,
           })
@@ -524,7 +523,7 @@ function useWidgetState({
 
       const initialWidgetValue = widgetMgr.getStringValue({
         id: element.id,
-        formId: element.formId ?? undefined,
+        formId: element.formId,
       })
 
       if (initialWidgetValue) {
@@ -548,7 +547,7 @@ function useWidgetState({
 
         if (defaultSelection !== undefined) {
           widgetMgr.setStringValue(element.id, element.selectionDefault, {
-            formId: element.formId ?? undefined,
+            formId: element.formId,
             fragmentId,
             fromUser: false,
           })
@@ -575,7 +574,7 @@ function useWidgetState({
           },
         })
         widgetMgr.setStringValue(element.id, selectionState, {
-          formId: element.formId ?? undefined,
+          formId: element.formId,
           fragmentId,
           fromUser: false,
         })
@@ -662,7 +661,7 @@ function useWidgetState({
       // malformed JSON.
       if (selection !== undefined) {
         widgetMgr.setStringValue(element.id, selectionState, {
-          formId: element.formId ?? undefined,
+          formId: element.formId,
           fragmentId,
           fromUser: false,
         })

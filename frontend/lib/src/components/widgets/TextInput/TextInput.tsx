@@ -898,7 +898,7 @@ function updateWidgetMgrState(
  * Maps each `TextInputProto.Type` enum value to its native DOM `<input type>`.
  * `PHONE` is the only entry whose DOM type (`"tel"`) differs from its name.
  */
-const DOM_INPUT_TYPE_BY_PROTO: Record<number, string> = {
+const DOM_INPUT_TYPE_BY_PROTO: Partial<Record<number, string>> = {
   [TextInputProto.Type.DEFAULT]: "text",
   [TextInputProto.Type.PASSWORD]: "password",
   [TextInputProto.Type.EMAIL]: "email",

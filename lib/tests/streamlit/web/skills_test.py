@@ -4341,6 +4341,9 @@ class TestMetaSkillPackaging:
         assert f"{meta}/SKILL.md" in names
         assert f"{meta}/scripts/discover.py" in names
         assert f"{content}/SKILL.md" in names
+        assert (
+            f"{content}/assets/templates/apps/dashboard-metrics/.streamlit/config.toml"
+        ) in names
 
         allowed_prefixes = (f"{meta}/", f"{content}/")
         unexpected = [

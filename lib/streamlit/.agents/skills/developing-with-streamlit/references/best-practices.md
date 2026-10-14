@@ -250,9 +250,22 @@ with table_slot.skeleton():
 
 See `performance.md` for the rendering-order details and a fuller placeholder example.
 
-Use fragments for independent sections that can rerun separately from the page.
+Use fragments for independent sections that can rerun separately from the page. For live updates, use `run_every` instead of looping the script.
 
 ```python
+# BAD: Blocks the script in an endless loop
+placeholder = st.empty()
+while True:
+    placeholder.metric("Active users", get_active_user_count())
+    time.sleep(30)
+
+# BAD: Reruns the entire app on a timer
+st.metric("Active users", get_active_user_count())
+time.sleep(30)
+st.rerun()
+
+
+# GOOD: Only the fragment reruns on a timer
 @st.fragment(run_every="30s")
 def live_metrics():
     st.metric("Active users", get_active_user_count())
@@ -380,6 +393,18 @@ query = st.text_input(f"Search {category}")
 
 # GOOD: Stable widget identity and session-state access
 query = st.text_input(f"Search {category}", key="search_query")
+```
+
+Keep keys unique across all elements created in a run. In loops, derive them from a stable item ID.
+
+```python
+# BAD: Repeated key raises StreamlitDuplicateElementKey
+for item in items:
+    st.checkbox(item.name, key="done")
+
+# GOOD: Unique, stable key per item
+for item in items:
+    st.checkbox(item.name, key=f"done_{item.id}")
 ```
 
 Sync a widget to the URL with `bind="query-params"` rather than hand-rolling `st.query_params`.

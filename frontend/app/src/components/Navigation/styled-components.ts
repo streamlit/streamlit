@@ -110,11 +110,12 @@ interface StyledSidebarNavLinkProps {
   isActive: boolean
   disabled: boolean
   isTopNav?: boolean
+  isInDropdown?: boolean
   label?: string
 }
 
 export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
-  ({ theme, isActive, disabled }) => {
+  ({ theme, isActive, disabled, isInDropdown }) => {
     const defaultPageLinkStyles = {
       textDecoration: "none",
       fontWeight: isActive ? theme.fontWeights.bold : theme.fontWeights.normal,
@@ -155,6 +156,10 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
       "&:focus-visible": {
         backgroundColor: theme.colors.darkenedBgMix15,
+        // Use the main menu's focus ring for keyboard-focused top-nav dropdown items.
+        ...(isInDropdown && {
+          boxShadow: theme.shadows.focusRingMuted,
+        }),
       },
 
       [`@media print`]: {
@@ -277,7 +282,11 @@ export const StyledOverflowContainer = styled.nav(({ theme }) => ({
   width: "100%",
   flexShrink: 1,
   overflow: "hidden",
-  padding: `0 ${theme.spacing.lg}`,
+  paddingInline: theme.spacing.lg,
+  // overflow: hidden clips focus rings on section triggers and links.
+  // Block padding makes room; a matching negative margin keeps header height.
+  paddingBlock: theme.sizes.focusRingWidth,
+  marginBlock: `-${theme.sizes.focusRingWidth}`,
 }))
 
 interface StyledNavSectionProps {
@@ -299,6 +308,7 @@ export const StyledNavSection = styled.button<StyledNavSectionProps>(
     lineHeight: theme.lineHeights.menuItem,
     fontSize: theme.fontSizes.sm,
     padding: `0 ${theme.spacing.sm}`,
+    minHeight: theme.sizes.headerItemHeight,
     color: getNavTextColor(theme, false, false, true),
     borderRadius: theme.radii.default,
     marginRight: theme.spacing.twoXS,
@@ -309,8 +319,10 @@ export const StyledNavSection = styled.button<StyledNavSectionProps>(
     "&:hover": {
       backgroundColor: theme.colors.darkenedBgMix15,
     },
-    "&:focus-visible": {
+    "&:focus": {
       outline: "none",
+    },
+    "&:focus-visible": {
       boxShadow: theme.shadows.focusRingMuted,
     },
   })

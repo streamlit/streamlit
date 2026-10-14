@@ -43,6 +43,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Always cache compute-intensive or expensive data-loading code. Use `st.cache_data` for serializable data and `st.cache_resource` for shared resources like API clients, raw connectors, and models; do not wrap `st.connection`, which is already cached. Include appropriate `ttl` and/or `max_entries` limits to prevent unbounded growth. Cache the expensive source data, then apply cheap interactive filters outside the cached function.
 - Order scripts so fast UI (titles, layout, widgets) renders before slow computation. Streamlit streams elements top to bottom and temporarily greys out (marks stale) not-yet-redrawn elements from the previous run while a slow step is in progress, clearing each as the new run recreates it; put slow work last, reserve output slots with `st.container()`, or isolate slow sections in fragments.
 - Use `st.fragment` for independent sections that should rerun separately from the rest of the app, such as auto-refreshing charts or controls that do not need to rerun the full page.
+- Never loop the app script with `while True` or with `time.sleep()` followed by `st.rerun()`. For live-updating dashboards, use `@st.fragment(run_every=...)` so only that section reruns on a timer.
 - Use `st.form` to batch related inputs and rerun only on submit, especially when intermediate widget changes would trigger expensive work. If some inputs must rerun to update others (for example, dependent options), use `on_change="ignore"` on the remaining inputs instead of a form (advanced; see "Skip reruns on individual widgets" in `references/performance.md`).
 - Do not put expensive work unguarded inside `st.tabs`, `st.expander`, or `st.popover`: hidden, collapsed, or closed content still computes on every rerun, and caching doesn't change that. Pass `on_change="rerun"` and render each body only when the container's `.open` is `True`, or switch to `st.segmented_control` or `st.toggle` with an `if`.
 - Use `st.secrets` for credentials. Never hard-code secrets in app code, never commit `.streamlit/secrets.toml`, and use parameterized queries for user-provided values.
@@ -51,6 +52,7 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - For about 2–5 options, keep them visible instead of in a dropdown: `st.segmented_control` for a single choice and `st.pills(..., selection_mode="multi")` for several. Use `st.selectbox` or `st.multiselect` for longer lists.
 - Use `st.menu_button` for a button that opens a short list of one-shot actions. Do not build one from `st.popover` with buttons or from `st.selectbox`.
 - Initialize `st.session_state` in one clear place, avoid module-level mutable state for per-user data, and set widget `key` values when widgets repeat, parameters change dynamically, or code needs programmatic access.
+- Element keys must be unique across a run, which in a multipage app spans the entrypoint and the current page. In loops, derive keys from a stable item ID (for example, `key=f"done_{item.id}"`); duplicates raise `StreamlitDuplicateElementKey`.
 - Keep page files as direct scripts; do not wrap page bodies in functions. Move shared business logic into modules.
 
 ## Proactively Look Up API Details
@@ -187,6 +189,7 @@ When creating a **new dashboard app**, prefer starting from a template in `asset
   - `dashboard-feature-usage` — API endpoint usage analytics
   - `dashboard-seattle-weather` — public dataset exploration
   - `dashboard-stock-peers` — financial peer analysis
+  - `dashboard-background-report` — responsive page while a slow query loads in the background
 - If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
 - When the user wants a branded or polished look, pair the dashboard with a theme from `assets/templates/themes/configs/` (`dense-dashboard` only if the app should keep the appearance toggle and use compact padding), or point `theme.base` at an existing shared brand file or URL
 - See `assets/templates/apps/README.md` for template descriptions
@@ -214,6 +217,7 @@ For **performance optimization**, read:
 1. Apply the patterns and recommendations from the loaded reference(s)
 2. Make edits to the source file(s) identified in Step 1
 3. Preserve existing functionality while adding improvements
+4. Type check the edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Streamlit's public API is typed and tested with both, so type checking catches invalid parameters and misused return values before the app runs.
 
 ### Step 4: Check Running Apps and Offer to Run
 
