@@ -200,15 +200,13 @@ agents is the half nobody owns.
 5. **Add a conversational interface to your own app.** An author drops in `st.chat_input`
    and hands the question to an agent that reads the app through this interface, so
    "which region dropped?" is answered from the app's own numbers and definitions. This
-   needs nothing beyond v1, since the agent runs server-side and calls the app's own
-   endpoint. Two caveats: it gets its own session, so it consults the app independently
-   rather than seeing or changing what the human is looking at — not their filters,
-   uploads, or session state; and it does not inherit the asking user's identity unless
-   the deployment maps it, which matters in an app with per-user data access. Its own
-   session can still start from the user's filters: the app can hand the agent the
-   user's widget values, or the page can carry them in `widget_state` form, as
-   [#17394](https://github.com/streamlit/streamlit/pull/17394) prototypes for assistants
-   that read the page, and the agent sends them in its first interactions.
+   needs nothing beyond v1: the agent runs server-side and calls the app's own endpoint.
+   It gets its own session, so it neither sees nor changes what the human is looking
+   at, though it can start from the user's filters: the app hands it the user's widget
+   values, or the page carries them for assistants that read it
+   ([#17394](https://github.com/streamlit/streamlit/pull/17394)), and the agent sends
+   them in its first interactions. It does not inherit the asking user's identity
+   unless the deployment maps it, which matters in an app with per-user data access.
 
 ## Proposal
 
@@ -262,18 +260,18 @@ outlasts the timeout could never finish, and a retried click would fire twice. W
 request on that session gets depends on the session's state; other sessions and creating
 calls are unaffected:
 
-| Session state                                | A retry: the same request again, or only `session_id` | A different request with the same `session_id` |
+| Session state                                | A retry: only `session_id`, or the same request again | A different request with the same `session_id` |
 | -------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------- |
 | Idle                                         | Runs                                   | Runs                                        |
 | Serving a request                            | `session_busy`                         | `session_busy`                              |
 | Running a timed-out interaction              | Waits for it and returns its result    | `session_busy`                              |
 | Holding a timed-out interaction's result     | Returns that result at once            | Discards it and runs as a new interaction   |
 
-A result is collected once; after that, the same request is a new interaction. After a
-creating call, the retry is only `session_id`, since the same request, `{}`, would
-create another session, which is why the timeout message always says to send only
-`session_id`. A client that disconnects while waiting is treated as timed out, so its
-retry collects the run too. Where a browser interaction would interrupt a running run, v1 answers
+A result is collected once; after that, the same request is a new interaction. Only
+`session_id` is the retry that always works, and the one the timeout message names:
+after a creating call, the same request, `{}`, would create another session. A client
+that disconnects while waiting is treated as timed out, so its retry collects the run
+too. Where a browser interaction would interrupt a running run, v1 answers
 `session_busy`, because the client may still come back for the result.
 
 The limits of that guarantee:
@@ -303,7 +301,9 @@ the start and holds a session until it idles out.
 apart from collecting a timed-out run, and can repeat side effects like any rerun. A
 client rarely needs a read: nothing changes an agent session between interactions, since
 `run_every` timers belong to the browser, a file edit waits for the next interaction, and
-no other client shares the session, so the last snapshot stays current. A non-executing read arrives with follow-up #4.
+no other client shares the session, so the last snapshot stays current. A client that
+lost it, such as a model whose context dropped the result, gets a non-executing read
+with follow-up #4.
 
 **An agent session is an ordinary Streamlit session with a different client.** The
 runtime treats it as one more browser tab, which settles what it shares and what it does
@@ -560,9 +560,7 @@ Rules:
   first — is left out: `value` says the same thing on the first run and stays true after
   it, and every tab's contents are in the tree regardless of which one a browser shows. A
   display element has no `value`; its content stays in `props`, so an `st.metric` number
-  is `props.value`, and `st.json` reports its decoded body rather than a JSON string. A
-  few containers report state in `props` because they have no `value` to carry it: a
-  dialog's `is_open`, and a popover's or tab's `open`.
+  is `props.value`, and `st.json` reports its decoded body rather than a JSON string.
 - **Reported options and values are the form a request may send back.** For a widget with
   a `format_func`, `st.session_state` holds the author's Python option while the accepted
   wire value is the formatted string, and reporting the authored object would make both
@@ -668,7 +666,7 @@ Rules:
 | `bytes`                             | Its size                                                | `{"bytes": 3}`                                | None: `byte` would be base64 content, which stays behind `data.url`     |
 | `Enum`                              | Its value; as an option, its `format_func` label, like any option object | `"red"`                                       | That of the value                                                       |
 | Set, tuple                          | List                                                    | `["a", "b"]`                                  | —                                                                       |
-| Range widget value                  | Two-item list                                           | `[20, 80]`                                    | —                                                                       |
+| Range widget value                  | List, lowest first; a date range may hold fewer than two | `[20, 80]`                                   | —                                                                       |
 | Option object                       | Its `format_func` label                                 | `"December"`                                  | — (the labels are the element's `options`)                              |
 | Integer                             | Number, at any size; a JavaScript client rounds one beyond 2^53 | `9223372036854775807`                         | `int64`, from OpenAPI                                                   |
 | Anything else                       | `str(value)`                                            | `"Point(1, 2)"`                               | None                                                                    |
@@ -697,11 +695,11 @@ Four details matter for an agent reading that snapshot:
 - **An exception the app displayed on purpose is not a failed run.** `st.exception` is a
   display command, so "is there an exception element?" is the wrong question — an app that
   catches a `ValueError` and renders it deliberately would flip the whole interaction to
-  `error`. The two cases are distinguishable because only
-  the runtime's own error display applies `client.showErrorDetails` redaction, so the
-  element records whether it was uncaught and only that sets `status`. A
-  caught-and-displayed exception stays in the tree, marked as handled, which is more
-  useful than either hiding it or calling the run broken.
+  `error`. The two cases are distinguishable because only the runtime's own error
+  display applies `client.showErrorDetails` redaction, so the element records whether it
+  was uncaught and only that sets `status`. A caught-and-displayed exception stays in
+  the tree, marked as handled, which is more useful than either hiding it or calling
+  the run broken.
 
 Callbacks and external side effects that already ran are not rolled back. The session
 stays usable, so an agent can correct its input and interact again.
@@ -786,9 +784,8 @@ a widget, and a trigger with a payload such as `st.chat_input`, carries a
   dates, two items for a slider's range, and up to two for a date range, which may be
   empty or hold only its start.
 - **It says what to send, not what the server refuses.** The checks below decide what
-  is refused, and anything else they let through but the widget adjusts shows in the
-  next `value`, so a client compares the two rather than reading the schema as a
-  guarantee.
+  is refused; a value they let through that the widget then adjusts shows in the next
+  `value`.
 - **Legal values stay in `props`.** No `enum` and no bounds: `options`, `min_value`,
   `max_value`, and `max_chars` are already there under the names models know, copying
   an option list would double the largest part of many snapshots, and bounds would make
@@ -823,8 +820,8 @@ Everything else shows in the next snapshot's `value`: an out-of-range number, a
 malformed date, time, or color string, or a slider range with the wrong number of values
 is reset to the default, a fraction sent to an integer input is truncated, and text past
 `max_chars` is cut. A reversed slider range is stored as sent, so a client sends its two
-values lowest first.
-A per-key note saying how each value landed is a potential follow-up.
+values lowest first. A per-key note saying how each value landed is a potential
+follow-up.
 
 | Situation                        | v1 behavior                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -979,8 +976,7 @@ back to a browser rather than mistake it for missing content:
 | Browser-supplied context (`st.context`, `st.user`)                         | `st.context.headers` are the request's, minus `Cookie` and `Authorization`; cookies are empty, and the other fields are `None` except the timezone and locale a request states in `context`, and the offset derived from that timezone. `st.user` comes only from trusted identity headers, so an app behind `st.login` shows its signed-out state; see [Enablement](#enablement). |
 | Elements replayed from a cache a browser filled                            | An element an `st.cache_data` function emitted is replayed from the cache on later runs. If a browser session filled the entry, no description was recorded, so the element is reported by its proto field and listed in `undescribed_types`. |
 | Output shown while a run is in progress                                    | Only the end state is reported: an `st.spinner` never appears, and `st.write_stream` output arrives as the finished text rather than chunk by chunk. A toast the run raised does appear. See [v1 is one operation](#v1-is-one-operation). |
-| Reading without running                                                    | Every `interact` executes the script; one with no changes is an explicit rerun. The last snapshot stays current until the client acts.                                       |
-| Long-running interactions                                                  | No polling or partial results; a retry after `run_timed_out` collects the run. Follow-up #4 adds an operation handle.                                                         |
+| Reading without running, polling                                           | Every `interact` executes the script; one with no changes is an explicit rerun, and the last snapshot stays current until the client acts. A slow run is collected by a retry after `run_timed_out`, with no partial results. Follow-up #4 adds a read and an operation handle. |
 
 ### Limits and configuration
 
@@ -1021,10 +1017,10 @@ This is a new programmatic execution surface and needs an explicit review.
 - **Validate semantically, then serialize.** Never accept a raw `BackMsg`, delta path,
   fragment ID, or `WidgetState` protobuf. A generated element ID is accepted only as an
   opaque `key` read from the latest snapshot, and checked against it exactly as an
-  authored key is. Reject stale, disabled, removed,
-  wrong-type, cross-form, cross-dialog, and oversized requests atomically, before any
-  callback runs — against the last snapshot rather than live widget state, for the
-  reasons in [Actions in v1](#actions-in-v1). Widget constraints are enforced mostly in
+  authored key is. Reject stale, disabled, removed, wrong-type, cross-form,
+  cross-dialog, and oversized requests atomically, before any callback runs — against
+  the last snapshot rather than live widget state, for the reasons in
+  [Actions in v1](#actions-in-v1). Widget constraints are enforced mostly in
   the browser today ([#16203](https://github.com/streamlit/streamlit/issues/16203)). That
   gap predates this interface and is reachable by anyone scripting the WebSocket, so this
   interface neither creates nor widens it, and the fix belongs in the widgets, where both
@@ -1041,9 +1037,6 @@ This is a new programmatic execution surface and needs an explicit review.
 - **Audit without content.** Each interaction is logged, at debug level, with a digest
   of its session handle, the request fields it used, its outcome, and its latency —
   never the handle itself, labels, values, table contents, or queries.
-- **Reuse media storage's protection for data URLs.** A table's `data.url` is a content
-  hash that stops resolving once the element does, like every image and eager download.
-  See [Data, charts, and media](#data-charts-and-media-in-v1).
 
 What stands between opt-in and on-by-default, including why the route reads no cookie and
 refuses web pages, is one list, in [Enablement](#enablement), rather than a second one
@@ -1146,9 +1139,8 @@ already address widgets — and are what `st.session_state` is keyed by — whil
 already identifies pages, so the interface exposes those instead of a parallel scheme. A
 freshly invented scheme — positional indices, say — would need its own definition and
 edge cases (is the counter scoped per page or per container? what happens when a fragment
-re-emits?) to buy nothing. Opaque
-revision-scoped handles sound safer, but safety comes from server-side validation against
-the last snapshot, which is required either way.
+re-emits?) to buy nothing. Opaque revision-scoped handles sound safer, but safety comes
+from server-side validation against the last snapshot, which is required either way.
 
 **No `fragment_id` in the request.** The server derives the scope from the chosen action,
 as the browser does — `Delta.fragment_id` already tags every emitted delta with its owning
@@ -1173,8 +1165,8 @@ work: one app, one set of explanations, two clients.
 **Each command describes itself where it fills its proto, not in a central serializer.**
 The obvious design is one registry that maps each proto variant to a description, and it
 cannot work: a proto is a *rendering* contract, so by the time a serializer sees one, the
-semantics are already gone. Three examples of what cannot be
-recovered downstream: a built-in chart's `x` and `y` survive only as compiled Vega
+semantics are already gone. Three examples of what cannot be recovered downstream: a
+built-in chart's `x` and `y` survive only as compiled Vega
 encodings; a selection widget's `options` are the `format_func`-formatted strings, with
 the authored objects no longer present; `st.metric` has formatted its number into a
 display string. Several commands also share one proto, so the command name itself has to
@@ -1307,32 +1299,27 @@ numbered for reference rather than ranked.
 
 Smaller potential follow-ups and alternatives considered while building the prototype:
 
-- Generating descriptions at the public API boundary instead of per command.
-- Widget constraints checked server-side
-  ([#16203](https://github.com/streamlit/streamlit/issues/16203)), ranked by how much
-  apps rely on each.
-- Keeping only summaries in the session's message buffer.
-- One headless client shared by `AppTest` and this interface.
-- A browser-versus-agent fidelity harness covering every command.
-- Building the snapshot's values on the script thread.
-- Running queries over a large table on the server instead of paging it to the model.
-- Recommending dataframe-backed charts for apps agents read.
-- A per-key note on how each sent value landed, including a key the batch itself
-  removed.
-- Refusing values that do not match `value_schema` — a fraction for a whole number, a
-  malformed date, a range with the wrong number of items or reversed — rather than
-  letting the widget adjust them.
-- Integers beyond ±(2^53−1) as decimal strings, which JavaScript clients otherwise
-  round; the column's Arrow type keeps their meaning.
-- Marking pandas index columns in `data.columns`, so `__index_level_0__` does not read
-  as a leaked internal name.
-- Cookies in `st.context.cookies` from requests without an `Origin` header, which
-  browsers always send on a `POST`, so only a program that set the cookies on purpose
-  supplies them.
-- Starting an agent session from a browser session's state: widget values the page
-  carries ([#17394](https://github.com/streamlit/streamlit/pull/17394)), or a fork that
-  also copies code-only state and uploads
-  ([#17401](https://github.com/streamlit/streamlit/pull/17401)).
+- **Values:** a per-key note on how each sent value landed, including a key the batch
+  itself removed; refusing values that do not match `value_schema` — a fraction for a
+  whole number, a malformed date, a wrong-length or reversed range — rather than letting
+  the widget adjust them; widget constraints checked server-side
+  ([#16203](https://github.com/streamlit/streamlit/issues/16203)); and integers beyond
+  ±(2^53−1) as decimal strings, which JavaScript clients otherwise round.
+- **Data:** running queries over a large table on the server instead of paging it to
+  the model; recommending dataframe-backed charts for apps agents read; marking pandas
+  index columns, so `__index_level_0__` does not read as a leaked internal name; and
+  keeping only summaries in the session's message buffer.
+- **Sessions:** starting an agent session from a browser session's state, from widget
+  values the page carries
+  ([#17394](https://github.com/streamlit/streamlit/pull/17394)) or a fork that also
+  copies code-only state and uploads
+  ([#17401](https://github.com/streamlit/streamlit/pull/17401)); and cookies from
+  requests without an `Origin` header, which browsers always send on a `POST`, so only
+  a program that set them on purpose supplies them.
+- **Implementation:** generating descriptions at the public API boundary instead of per
+  command, building the snapshot's values on the script thread, one headless client
+  shared by `AppTest` and this interface, and a browser-versus-agent fidelity harness
+  covering every command.
 
 ## Beyond the app surface
 

@@ -168,16 +168,15 @@ prototype's grace period.
 
 ## Build the snapshot's values on the script thread
 
-The snapshot is assembled on the server's event loop after the run settles. Two parts of
-it are more than reading: a widget's `value` goes through `st.session_state`, which
+The snapshot is assembled in a worker thread after the run settles, so a slow
+`format_func` or a large table no longer stalls other sessions. Two parts of it are
+still more than reading: a widget's `value` goes through `st.session_state`, which
 deserializes and caches, and through the widget's serializer, which runs the app's own
-`format_func`; and compacting a settled run reads every table's Arrow buffer to build its
-preview. A slow `format_func` or a large table therefore stalls every session the
-server holds, and a run that starts meanwhile — a rerun on file save, or the run a
-timed-out interaction left going — can change the state being read.
+`format_func`. Nothing runs meanwhile today, since the session is claimed and file edits
+wait for the next interaction, but that rests on those two rules holding.
 
 Capturing those values on the script thread, at the end of the run that produced them,
-would leave the event loop only serializing finished data. The natural place is the same
+would make the snapshot a pure function of finished data. The natural place is the same
 hook that already decides when a run's stale deltas are dropped.
 
 ## Query large tables on the server
