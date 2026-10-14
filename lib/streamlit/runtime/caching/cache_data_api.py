@@ -990,6 +990,10 @@ class DataCache(Cache[R]):
         The value must be pickleable.
         """
         pickled_entry = self._pickle_result(value_key, value, messages)
+        # Keep the active-cache check and the complete storage write atomic with
+        # mark_detached(). A storage write can include disk I/O, so writes for one
+        # function are intentionally serialized to prevent clear from returning
+        # before a late persistent write restores the entry.
         with self._write_lock:
             if not self.is_active:
                 return
@@ -1041,6 +1045,7 @@ class DataCache(Cache[R]):
             if not self._invalidation_token_is_current(value_key, invalidation_token):
                 return False
             raise
+        # See write_result: clear must wait through any persistent storage write.
         with self._write_lock:
             if not self._invalidation_token_is_current(value_key, invalidation_token):
                 return False
