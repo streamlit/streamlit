@@ -53,6 +53,7 @@ from streamlit.elements.widgets.time_widgets import (
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -70,7 +71,6 @@ if TYPE_CHECKING:
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-    from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
     from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
     from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
     from streamlit.proto.DownloadButton_pb2 import (
@@ -110,6 +110,17 @@ if TYPE_CHECKING:
     from streamlit.typing import ChatInputValue
 
 T = TypeVar("T")
+
+# Public names for ``Dataframe.editing_mode``. ``st.data_editor``'s ``num_rows``
+# values stay as-is; ``READ_ONLY`` is ``st.dataframe``.
+_DATAFRAME_EDITING_MODE_NAMES: Final[dict[int, str]] = {
+    DataframeProto.EditingMode.READ_ONLY: "read_only",
+    DataframeProto.EditingMode.FIXED: "fixed",
+    DataframeProto.EditingMode.DYNAMIC: "dynamic",
+    DataframeProto.EditingMode.ADD_ONLY: "add",
+    DataframeProto.EditingMode.DELETE_ONLY: "delete",
+}
+
 
 # Public ``get()`` names that are not the node ``type`` string.
 _GET_TYPE_ALIASES: dict[str, str] = {
@@ -1111,6 +1122,12 @@ class ColorPicker(Widget):
 
 @dataclass(repr=False)
 class Dataframe(Element):
+    """A representation of ``st.dataframe`` and ``st.data_editor``.
+
+    Read-only. ``.set_value()`` does not apply cell edits. Editable tables are
+    also listed on ``AppTest.data_editor``.
+    """
+
     proto: DataframeProto = field(repr=False)
 
     def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
@@ -1119,6 +1136,24 @@ class Dataframe(Element):
         self.type = "dataframe"
         # Extract user key from the element id if present
         self.key = user_key_from_element_id(proto.id) if proto.id else None
+
+    @property
+    def editing_mode(self) -> str:
+        """How the table can be edited.
+
+        ``"read_only"`` for ``st.dataframe``. ``"fixed"``, ``"dynamic"``,
+        ``"add"``, or ``"delete"`` for ``st.data_editor``, matching
+        ``num_rows``.
+        """
+        mode = self.proto.editing_mode
+        name = _DATAFRAME_EDITING_MODE_NAMES.get(mode)
+        if name is not None:
+            return name
+        # A proto value added after this map should stay inspectable.
+        try:
+            return DataframeProto.EditingMode.Name(mode).lower()
+        except ValueError:
+            return str(mode)
 
     @property
     def value(self) -> PandasDataframe:
@@ -3381,6 +3416,21 @@ class Block:
         return ElementList(self.get("dataframe"))  # type: ignore
 
     @property
+    def data_editor(self) -> ElementList[Dataframe]:
+        """``st.data_editor`` elements (dataframes that are not read-only).
+
+        These elements are also included in ``dataframe``. Cell edits are not
+        an AppTest interaction.
+        """
+        return ElementList(
+            [
+                dataframe
+                for dataframe in self.dataframe
+                if dataframe.proto.editing_mode != DataframeProto.EditingMode.READ_ONLY
+            ]
+        )
+
+    @property
     def date_input(self) -> WidgetList[DateInput]:
         return WidgetList(self.get("date_input"))  # type: ignore
 
@@ -3583,9 +3633,9 @@ class Block:
         ``datetime_input`` vs ``date_time_input``) are accepted. Node type
         names (usually the proto field name) keep working. ``pills`` /
         ``segmented_control`` / ``container`` / ``form`` /
-        ``form_submit_button`` / ``expander`` / ``tabs`` / ``columns`` /
-        ``status`` / ``chat_message`` use the same filtering as the matching
-        attributes.
+        ``form_submit_button`` / ``data_editor`` / ``expander`` / ``tabs`` /
+        ``columns`` / ``status`` / ``chat_message`` use the same filtering as
+        the matching attributes.
         """
         if element_type == "pills":
             return list(self.pills)
@@ -3597,6 +3647,8 @@ class Block:
             return list(self.form)
         if element_type == "form_submit_button":
             return list(self.form_submit_button)
+        if element_type == "data_editor":
+            return list(self.data_editor)
         if element_type == "chat_message":
             return list(self.chat_message)
         if element_type in {"columns", "column"}:

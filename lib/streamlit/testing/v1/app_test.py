@@ -976,17 +976,41 @@ class AppTest:
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
-        """Sequence of all ``st.dataframe`` elements.
+        """Sequence of all ``st.dataframe`` and ``st.data_editor`` elements.
+
+        ``st.data_editor`` elements are also available from ``at.data_editor``.
 
         Returns
         -------
         ElementList of Dataframe
-            Sequence of all ``st.dataframe`` elements. Individual elements can be
-            accessed from an ElementList by index (order on the page). For
+            Sequence of all ``st.dataframe`` and ``st.data_editor`` elements.
+            Individual elements can be accessed from an ElementList by index
+            (order on the page) or, when the element has a key, by key. For
             example, ``at.dataframe[0]`` for the first element. Dataframe is an
             extension of the Element class.
         """
         return self._tree.dataframe
+
+    @property
+    def data_editor(self) -> ElementList[Dataframe]:
+        """Sequence of all ``st.data_editor`` elements.
+
+        These are the ``st.dataframe`` elements whose editing mode is not
+        read-only, and they are also included in ``at.dataframe``. AppTest can
+        read ``.key``, ``.editing_mode``, and ``.value`` (the table shown to
+        the script). It does not apply cell edits; those stay in the browser
+        or in ``at.session_state`` when the editor has a key.
+
+        Returns
+        -------
+        ElementList of Dataframe
+            Sequence of all ``st.data_editor`` elements. Individual elements
+            can be accessed from an ElementList by index (order on the page)
+            or key. For example, ``at.data_editor[0]`` for the first element
+            or ``at.data_editor(key="editor")`` for an element with a given
+            key.
+        """
+        return self._tree.data_editor
 
     @property
     def date_input(self) -> WidgetList[DateInput]:
@@ -1653,6 +1677,7 @@ class AppTest:
             Internal node type names such as ``"date_time_input"`` and
             ``"help_info"`` also work.
             ``"form_submit_button"`` selects submit buttons inside forms.
+            ``"data_editor"`` selects dataframes that are not read-only.
 
         Returns
         -------

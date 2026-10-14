@@ -2731,6 +2731,121 @@ def test_dataframe_non_interactive_has_no_key():
     assert at.dataframe[0].key is None
 
 
+def test_data_editor_filters_read_only_dataframes() -> None:
+    """``at.data_editor`` is the editable subset of ``at.dataframe``.
+
+    Selection dataframes stay read-only. Disabled editors stay in the
+    collection because editing mode, not ``disabled``, selects them.
+    """
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame({"a": [1, 2]})
+        st.dataframe(df)
+        st.dataframe(df, key="selectable", on_select="rerun")
+        st.data_editor(df, key="fixed-editor")
+        st.data_editor(df, key="dynamic-editor", num_rows="dynamic")
+        st.data_editor(df, key="add-editor", num_rows="add")
+        st.data_editor(df, key="delete-editor", num_rows="delete")
+        st.data_editor(df, key="disabled-editor", disabled=True)
+
+    at = AppTest.from_function(script).run()
+    assert len(at.dataframe) == 7
+    assert [editor.key for editor in at.data_editor] == [
+        "fixed-editor",
+        "dynamic-editor",
+        "add-editor",
+        "delete-editor",
+        "disabled-editor",
+    ]
+    assert [editor.editing_mode for editor in at.data_editor] == [
+        "fixed",
+        "dynamic",
+        "add",
+        "delete",
+        "fixed",
+    ]
+    assert at.dataframe[0].key is None
+    assert at.dataframe[0].editing_mode == "read_only"
+    assert at.dataframe[1].key == "selectable"
+    assert at.dataframe[1].editing_mode == "read_only"
+    assert at.data_editor("dynamic-editor").value["a"].tolist() == [1, 2]
+    assert list(at.get("data_editor")) == list(at.data_editor)
+
+
+def test_data_editor_set_value_is_unsupported() -> None:
+    """Cell edits are not an AppTest interaction and do not change the table."""
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        st.data_editor(pd.DataFrame({"a": [1, 2]}), key="editor")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(
+        AppTestError, match=r"set_value\(\) is not supported for dataframe"
+    ):
+        at.data_editor[0].set_value(pd.DataFrame({"a": [9]}))
+    assert at.data_editor[0].value["a"].tolist() == [1, 2]
+
+
+def test_data_editor_is_scoped_to_container() -> None:
+    """A container's ``data_editor`` collection only includes that container."""
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame({"a": [1]})
+        with st.container(key="box"):
+            st.data_editor(df, key="inside")
+        st.data_editor(df, key="outside")
+
+    at = AppTest.from_function(script).run()
+    assert [editor.key for editor in at.data_editor] == ["inside", "outside"]
+    scoped = at.container("box").data_editor
+    assert [editor.key for editor in scoped] == ["inside"]
+
+
+def test_data_editor_empty_without_editors() -> None:
+    """Read-only dataframes do not populate ``at.data_editor``."""
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": [1]}))
+
+    at = AppTest.from_function(script).run()
+    assert len(at.dataframe) == 1
+    assert at.dataframe[0].editing_mode == "read_only"
+    assert len(at.data_editor) == 0
+    assert at.get("data_editor") == []
+
+
+def test_dataframe_unknown_editing_mode_stays_inspectable() -> None:
+    """An unrecognized proto editing mode stays readable and is not read-only."""
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": [1]}))
+
+    at = AppTest.from_function(script).run()
+    at.dataframe[0].proto.editing_mode = 99
+    assert at.dataframe[0].editing_mode == "99"
+    assert list(at.data_editor) == [at.dataframe[0]]
+
+
 def test_element_list_slice_repr_and_equality():
     """ElementList supports slicing, repr, and equality against plain lists."""
 
